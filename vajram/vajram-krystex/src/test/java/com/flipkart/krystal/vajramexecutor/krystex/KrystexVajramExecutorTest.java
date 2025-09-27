@@ -1,7 +1,9 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
+import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
+import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.DIRECT;
 import static com.flipkart.krystal.vajramexecutor.krystex.batching.DepChainBatcherConfig.autoRegisterSharedBatchers;
 import static java.time.Duration.ofSeconds;
@@ -770,7 +772,7 @@ class KrystexVajramExecutorTest {
 
   public static Stream<Arguments> executorConfigsToTest() {
     return Stream.of(
-        /*Arguments.of(BATCH, DEPTH), Arguments.of(BATCH, BREADTH), */ Arguments.of(DIRECT, DEPTH));
+        Arguments.of(BATCH, DEPTH), Arguments.of(BATCH, BREADTH), Arguments.of(DIRECT, DEPTH));
   }
 
   private InputBatcherConfig singleBatcherConfig(

@@ -358,20 +358,22 @@ public final class KryonExecutor implements KrystalExecutor {
         vajramID,
         _n ->
             switch (executorConfig.kryonExecStrategy()) {
-              case BATCH -> new BatchKryon(
-                  kryonDefinition,
-                  this,
-                  this::getOutputLogicDecorators,
-                  this::getDependencyDecorators,
-                  executorConfig.decorationOrdering(),
-                  preferredReqGenerator);
-              case DIRECT -> new DirectKryon(
-                  kryonDefinition,
-                  this,
-                  this::getOutputLogicDecorators,
-                  this::getDependencyDecorators,
-                  executorConfig.decorationOrdering(),
-                  preferredReqGenerator);
+              case BATCH ->
+                  new BatchKryon(
+                      kryonDefinition,
+                      this,
+                      this::getOutputLogicDecorators,
+                      this::getDependencyDecorators,
+                      executorConfig.decorationOrdering(),
+                      preferredReqGenerator);
+              case DIRECT ->
+                  new DirectKryon(
+                      kryonDefinition,
+                      this,
+                      this::getOutputLogicDecorators,
+                      this::getDependencyDecorators,
+                      executorConfig.decorationOrdering(),
+                      preferredReqGenerator);
             });
   }
 
@@ -535,16 +537,20 @@ public final class KryonExecutor implements KrystalExecutor {
 
   private void computeDisabledDependentChains() {
     depChainsDisabledInAllExecutions.clear();
-    List<ImmutableSet<DependentChain>> disabledDependantChainsPerExecution =
-        unFlushedExecutions.stream()
-            .map(this::getKryonExecution)
-            .map(KryonExecution::executionConfig)
-            .map(KryonExecutionConfig::disabledDependentChains)
-            .toList();
-    disabledDependantChainsPerExecution.stream()
-        .filter(x -> !x.isEmpty())
-        .findAny()
-        .ifPresent(depChainsDisabledInAllExecutions::addAll);
+    List<ImmutableSet<DependentChain>> disabledDependantChainsPerExecution = new ArrayList<>();
+    for (InvocationId unFlushedExecution : unFlushedExecutions) {
+      KryonExecution kryonExecution = getKryonExecution(unFlushedExecution);
+      KryonExecutionConfig executionConfig = kryonExecution.executionConfig();
+      ImmutableSet<DependentChain> disabledDependentChains =
+          executionConfig.disabledDependentChains();
+      disabledDependantChainsPerExecution.add(disabledDependentChains);
+    }
+    for (ImmutableSet<DependentChain> x : disabledDependantChainsPerExecution) {
+      if (!x.isEmpty()) {
+        depChainsDisabledInAllExecutions.addAll(x);
+        break;
+      }
+    }
     for (Set<DependentChain> disabledDepChains : disabledDependantChainsPerExecution) {
       if (depChainsDisabledInAllExecutions.isEmpty()) {
         break;
@@ -563,10 +569,12 @@ public final class KryonExecutor implements KrystalExecutor {
   }
 
   private void submitDirect(Set<InvocationId> unFlushedRequests) {
-    Map<VajramID, List<KryonExecution>> executionsByKryon =
-        unFlushedRequests.stream()
-            .map(this::getKryonExecution)
-            .collect(groupingBy(KryonExecution::vajramID));
+    Map<VajramID, List<KryonExecution>> executionsByKryon = new HashMap<>();
+    for (InvocationId unFlushedRequest : unFlushedRequests) {
+      executionsByKryon
+          .computeIfAbsent(getKryonExecution(unFlushedRequest).vajramID(), k -> new ArrayList<>())
+          .add(getKryonExecution(unFlushedRequest));
+    }
     executionsByKryon.forEach(
         (vajramID, kryonExecutions) -> {
           try {

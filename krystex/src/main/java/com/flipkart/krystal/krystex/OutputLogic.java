@@ -7,5 +7,5 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 
 @FunctionalInterface
 public non-sealed interface OutputLogic<T> extends Logic {
-  OutputLogicExecutionResults<@Initialized @NonNull T> execute(OutputLogicExecutionInput input);
+  void execute(OutputLogicExecutionInput input);
 }

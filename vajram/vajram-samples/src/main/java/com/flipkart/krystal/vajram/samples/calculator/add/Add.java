@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.LongAdder;
@@ -61,7 +62,7 @@ public abstract class Add extends IOVajramDef<Integer> {
 
   @Output.Batched
   static CompletableFuture<BatchAddResult> batchedOutput(
-      ImmutableCollection<Add_BatchItem> _batchItems, @Nullable Boolean fail) {
+      Collection<Add_BatchItem> _batchItems, @Nullable Boolean fail) {
     CALL_COUNTER.increment();
     if (TRUE.equals(fail)) {
       throw new RuntimeException("Adder failed because fail flag was set");

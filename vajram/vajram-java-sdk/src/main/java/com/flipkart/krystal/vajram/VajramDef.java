@@ -61,7 +61,7 @@ public sealed interface VajramDef<T> extends VajramDefRoot<T>
     return getSimpleInputResolvers();
   }
 
-  OutputLogicExecutionResults<T> execute(OutputLogicExecutionInput _logicInput);
+  void execute(OutputLogicExecutionInput _logicInput);
 
   void executeGraph(GraphExecutionData _graphExecData);
 

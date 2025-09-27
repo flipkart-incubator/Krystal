@@ -1,12 +1,12 @@
 package com.flipkart.krystal.krystex.logicdecorators.resilience4j;
 
-import static com.flipkart.krystal.krystex.logicdecorators.resilience4j.R4JUtils.extractResponseMap;
+import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.core.OutputLogicExecutionInput;
-import com.flipkart.krystal.core.OutputLogicExecutionResults;
+import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
@@ -56,8 +56,7 @@ public final class Resilience4JBulkhead implements OutputLogicDecorator {
       OutputLogic<Object> logicToDecorate, OutputLogicDefinition<Object> originalLogicDefinition) {
     BulkheadAdapter bulkhead = this.adaptedBulkhead;
     if (bulkhead != null) {
-      return input ->
-          extractResponseMap(input.facetValues(), bulkhead.decorate(logicToDecorate, input));
+      return input -> bulkhead.decorate(logicToDecorate, input);
     } else {
       return logicToDecorate;
     }
@@ -157,23 +156,27 @@ public final class Resilience4JBulkhead implements OutputLogicDecorator {
     }
 
     @SuppressWarnings("RedundantTypeArguments") // Avoid nullChecker errors
-    CompletionStage<OutputLogicExecutionResults<Object>> decorate(
+    CompletionStage<Void> decorate(
         OutputLogic<Object> logicToDecorate, OutputLogicExecutionInput input) {
       ThreadPoolBulkhead threadPoolBulkhead = this.threadPoolBulkhead;
       Bulkhead bulkhead = this.bulkhead;
       if (threadPoolBulkhead != null) {
-        return threadPoolBulkhead.executeCallable(() -> logicToDecorate.execute(input));
+        return threadPoolBulkhead.executeRunnable(() -> logicToDecorate.execute(input));
       } else if (bulkhead != null) {
         return Decorators.ofCompletionStage(
                 () -> {
-                  OutputLogicExecutionResults<Object> results = logicToDecorate.execute(input);
-                  CompletableFuture<OutputLogicExecutionResults<Object>> handle =
-                      allOf(results.results().values().toArray(CompletableFuture[]::new))
-                          .handle((unused, throwable) -> results);
-                  return handle;
+                  logicToDecorate.execute(input);
+                  return allOf(input.responseFutures());
                 })
             .withBulkhead(bulkhead)
-            .get();
+            .get()
+            .whenComplete(
+                (unused, throwable) -> {
+                  for (CompletableFuture completableFuture : input.responseFutures()) {
+                    completableFuture.completeExceptionally(stackTracelessWrap(throwable));
+                  }
+                });
+
       } else {
         throw new IllegalStateException(
             "Either bulkheadConfig or threadPoolBulkheadConfig must be non-null");

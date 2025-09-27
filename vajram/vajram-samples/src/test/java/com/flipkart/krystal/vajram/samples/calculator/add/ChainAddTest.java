@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
+import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.DIRECT;
 import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
@@ -22,6 +23,7 @@ import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
+import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
 import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonExecutionReport;
@@ -43,6 +45,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
 class ChainAddTest {
@@ -115,8 +118,8 @@ class ChainAddTest {
     assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(0);
   }
 
-  @Disabled("Long running benchmark")
-  @Test
+//  @Disabled("Long running benchmark")
+  @RepeatedTest(5)
   void vajram_benchmark() throws Exception {
     int loopCount = 50_000;
     long javaNativeTimeNs = javaMethodBenchmark(this::chainAdd, loopCount);
@@ -253,7 +256,8 @@ class ChainAddTest {
         .kryonExecutorConfigBuilder(
             KryonExecutorConfig.builder()
                 .executorId("chainAdderTest")
-                .executorService(executorLease.get()));
+                .executorService(executorLease.get())
+                .kryonExecStrategy(DIRECT));
   }
 
   private CompletableFuture<Integer> executeVajram(

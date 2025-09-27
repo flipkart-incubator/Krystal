@@ -1,7 +1,9 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
 import static com.flipkart.krystal.core.VajramID.vajramID;
+import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
 import static com.flipkart.krystal.facets.resolution.ResolverCommand.skip;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.tags.ElementTags.emptyTags;
 import static com.flipkart.krystal.vajram.facets.FacetValidation.validateMandatoryFacet;
 import static com.flipkart.krystal.vajram.utils.VajramLoader.loadVajramsFromClassPath;
@@ -15,6 +17,7 @@ import static java.util.function.Function.identity;
 import com.flipkart.krystal.core.OutputLogicExecutionResults;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FanoutDepResponses;
@@ -44,7 +47,6 @@ import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
 import com.flipkart.krystal.krystex.resolution.Resolver;
 import com.flipkart.krystal.krystex.resolution.ResolverLogic;
 import com.flipkart.krystal.model.IfAbsent;
-import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -400,7 +402,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
           String depName = dependency.name();
 
           ImmutableSet<? extends Facet> sources = inputResolver.definition().sources();
-          ImmutableCollection<FacetSpec> requiredInputs =
+          ImmutableCollection<FacetSpec> sourceFacets =
               facetDefinitions.stream().filter(sources::contains).collect(toImmutableList());
           LogicDefinition<ResolverLogic> inputResolverLogic =
               logicRegistryDecorator.newResolverLogic(
@@ -416,7 +418,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                                   .toList())),
                   sources,
                   (depRequests, facets) -> {
-                    validateMandatory(vajramId, facets, requiredInputs);
+                    validateMandatory(vajramId, facets, sourceFacets);
                     ResolverCommand resolverCommand;
                     try {
                       if (inputResolver instanceof One2OneInputResolver singleInputResolver) {
@@ -450,20 +452,17 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
   }
 
   private void validateMandatory(
-      VajramID vajramID, FacetValues facetValues, ImmutableCollection<FacetSpec> requiredInputs) {
-    @SuppressWarnings("StreamToIterable")
-    Iterable<FacetSpec> mandatoryFacets =
-        requiredInputs.stream()
-                .filter(
-                    facetSpec ->
-                        facetSpec
-                            .tags()
-                            .getAnnotationByType(IfAbsent.class)
-                            .map(ifAbsent -> IfAbsentThen.FAIL.equals(ifAbsent.value()))
-                            .orElse(false))
-            ::iterator;
+      VajramID vajramID, FacetValues facetValues, ImmutableCollection<FacetSpec> sourceFacets) {
     Map<String, Throwable> missingMandatoryValues = new HashMap<>();
-    for (Facet mandatoryFacet : mandatoryFacets) {
+    for (Facet facet : sourceFacets) {
+      if (!facet
+          .tags()
+          .getAnnotationByType(IfAbsent.class)
+          .map(ifAbsent -> FAIL.equals(ifAbsent.value()))
+          .orElse(false)) {
+        continue;
+      }
+      Facet mandatoryFacet = facet;
       FacetValue facetValue = mandatoryFacet.getFacetValue(facetValues);
       Errable<?> value;
       if (facetValue instanceof Errable<?> errable) {
@@ -513,33 +512,22 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
     // Step 4: Create and register Kryon for the output logic
     OutputLogic<@Nullable Object> outputLogicCode =
         input -> {
-          ImmutableList<? extends FacetValues> inputsList = input.facetValues();
-          List<FacetValues> validInputs = new ArrayList<>();
-          Map<ImmutableFacetValues, CompletableFuture<@Nullable Object>> failedValidations =
-              new LinkedHashMap<>();
+          List<ExecutionItem> inputsList = input.facetValueResponses();
+          List<ExecutionItem> validInputs = new ArrayList<>(inputsList.size());
           inputsList.forEach(
               inputs -> {
                 try {
-                  validateMandatory(vajramId, inputs, facetSpecs);
+                  validateMandatory(vajramId, inputs.facetValues(), facetSpecs);
                   validInputs.add(inputs);
                 } catch (Throwable e) {
-                  failedValidations.put(inputs._build(), failedFuture(e));
+                  inputs.response().completeExceptionally(stackTracelessWrap(e));
                 }
               });
-          OutputLogicExecutionResults<Object> validResults;
           try {
-            validResults = vajramDef.execute(input.withFacetValues(validInputs));
+            vajramDef.execute(input.withFacetValueResponses(validInputs));
           } catch (Throwable e) {
-            return new OutputLogicExecutionResults<>(
-                validInputs.stream()
-                    .collect(toImmutableMap(FacetValues::_build, i -> failedFuture(e))));
+            validInputs.forEach(i -> i.response().completeExceptionally(stackTracelessWrap(e)));
           }
-
-          return validResults.withResults(
-              ImmutableMap.<ImmutableFacetValues, CompletableFuture<@Nullable Object>>builder()
-                  .putAll(validResults.results())
-                  .putAll(failedValidations)
-                  .build());
         };
     return logicRegistryDecorator.newOutputLogic(
         vajramDef instanceof IOVajramDef<?>,

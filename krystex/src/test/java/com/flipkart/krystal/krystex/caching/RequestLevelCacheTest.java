@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.caching;
 
+import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.core.VajramID.vajramID;
 import static com.flipkart.krystal.data.Errable.computeErrableFrom;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
@@ -7,14 +8,12 @@ import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStr
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.DIRECT;
 import static com.flipkart.krystal.tags.ElementTags.emptyTags;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Collections.emptySet;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
-import com.flipkart.krystal.core.OutputLogicExecutionResults;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.facets.Facet;
@@ -44,7 +43,6 @@ import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableMap;
 import java.time.Duration;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -201,12 +199,15 @@ class RequestLevelCacheTest {
             new KryonLogicId(kryonId, kryonId.id()),
             inputs,
             input ->
-                new OutputLogicExecutionResults<>(
-                    input.facetValues().stream()
-                        .collect(toImmutableMap(FacetValues::_build, computeErrableFrom(logic)))
-                        .entrySet()
-                        .stream()
-                        .collect(toImmutableMap(Entry::getKey, e -> e.getValue().toFuture()))),
+                input
+                    .facetValueResponses()
+                    .forEach(
+                        executionItem ->
+                            linkFutures(
+                                computeErrableFrom(logic)
+                                    .apply(executionItem.facetValues())
+                                    .toFuture(),
+                                executionItem.response())),
             emptyTags());
 
     logicDefinitionRegistry.addOutputLogic(def);

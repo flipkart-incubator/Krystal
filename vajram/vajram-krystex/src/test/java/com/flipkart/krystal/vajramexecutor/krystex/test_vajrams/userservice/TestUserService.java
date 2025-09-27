@@ -4,6 +4,7 @@ import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.stream.Collectors.toMap;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.data.Errable;
@@ -14,6 +15,8 @@ import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -39,14 +42,14 @@ public abstract class TestUserService extends IOVajramDef<TestUserInfo> {
   public static final Set<TestUserService_Req> REQUESTS = new LinkedHashSet<>();
 
   @Output.Batched
-  static CompletableFuture<ImmutableMap<TestUserService_BatchItem, TestUserInfo>> userServiceOutput(
-      ImmutableCollection<TestUserService_BatchItem> _batchItems) {
+  static CompletableFuture<Map<TestUserService_BatchItem, TestUserInfo>> userServiceOutput(
+      Collection<TestUserService_BatchItem> _batchItems) {
     CALL_COUNTER.increment();
     _batchItems.stream()
         .map(im -> TestUserService_ReqImmutPojo._builder().userId(im.userId())._build())
         .forEach(REQUESTS::add);
 
-    CompletableFuture<ImmutableMap<TestUserService_BatchItem, TestUserInfo>> returnValue =
+    CompletableFuture<Map<TestUserService_BatchItem, TestUserInfo>> returnValue =
         new CompletableFuture<>();
 
     @SuppressWarnings({"FutureReturnValueIgnored", "unused"})
@@ -54,14 +57,13 @@ public abstract class TestUserService extends IOVajramDef<TestUserInfo> {
         LATENCY_INDUCER.schedule(
             () -> {
               // Make a call to user service and get user info
-              returnValue.complete(
-                  _batchItems.stream()
-                      .collect(
-                          toImmutableMap(
-                              inputBatch -> inputBatch,
-                              modInputs ->
-                                  new TestUserInfo(
-                                      "Firstname Lastname (%s)".formatted(modInputs.userId())))));
+              Map<TestUserService_BatchItem, TestUserInfo> map = new HashMap<>();
+              for (TestUserService_BatchItem inputBatch : _batchItems) {
+                map.put(
+                    inputBatch,
+                    new TestUserInfo("Firstname Lastname (%s)".formatted(inputBatch.userId())));
+              }
+              returnValue.complete(map);
             },
             50,
             MILLISECONDS);

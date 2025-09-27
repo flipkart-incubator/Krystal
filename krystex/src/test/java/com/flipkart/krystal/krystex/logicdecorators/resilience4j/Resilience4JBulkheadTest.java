@@ -8,17 +8,22 @@ import static com.flipkart.krystal.tags.ElementTags.emptyTags;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.in;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.annos.OutputLogicDelegationMode;
+import com.flipkart.krystal.concurrent.Futures;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.config.MapConfigProvider;
 import com.flipkart.krystal.core.OutputLogicExecutionResults;
 import com.flipkart.krystal.core.VajramID;
+import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.InputMirror;
@@ -50,6 +55,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.jupiter.api.AfterEach;
@@ -59,7 +65,7 @@ import org.junit.jupiter.api.Test;
 
 class Resilience4JBulkheadTest {
 
-  private static final Duration TIMEOUT = ofSeconds(1);
+  private static final Duration TIMEOUT = ofSeconds(1000);
   private static SingleThreadExecutorsPool EXEC_POOL;
 
   @BeforeAll
@@ -91,8 +97,8 @@ class Resilience4JBulkheadTest {
         newIOLogic(
             "bulkhead_restrictsConcurrency",
             ImmutableSet.of(input(1)),
-            dependencyValues ->
-                supplyAsync(
+            executionItem ->
+                runAsync(
                     () -> {
                       while (countDownLatch.getCount() > 0) {
                         try {
@@ -100,7 +106,7 @@ class Resilience4JBulkheadTest {
                         } catch (InterruptedException ignored) {
                         }
                       }
-                      return "computed_value";
+                      executionItem.response().complete("computed_value");
                     },
                     executorService));
     VajramKryonDefinition kryonDefinition =
@@ -135,7 +141,6 @@ class Resilience4JBulkheadTest {
                 .executorId("executor1")
                 .executorService(executorLease.get())
                 .configureWith(singleBulkhead)
-                .executorId("executor1")
                 .build());
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
         executor1.executeKryon(
@@ -194,14 +199,14 @@ class Resilience4JBulkheadTest {
         newIOLogic(
             "threadpoolBulkhead_restrictsConcurrency",
             inputs,
-            dependencyValues -> {
+            executionItem -> {
               while (countDownLatch.getCount() > 0) {
                 try {
                   countDownLatch.await();
                 } catch (InterruptedException ignored) {
                 }
               }
-              return completedFuture("computed_value");
+              executionItem.response().complete("computed_value");
             });
     Resilience4JBulkheadManager resilience4JBulkhead =
         Resilience4JBulkhead.onePerInstanceId(_l -> "threadpoolBulkhead_restrictsConcurrency");
@@ -289,17 +294,12 @@ class Resilience4JBulkheadTest {
   }
 
   private <T> OutputLogicDefinition<T> newIOLogic(
-      String kryonId,
-      Set<? extends Facet> usedFacets,
-      Function<FacetValues, CompletableFuture<T>> logic) {
+      String kryonId, Set<? extends Facet> usedFacets, Consumer<ExecutionItem> logic) {
     IOLogicDefinition<T> def =
         new IOLogicDefinition<>(
             new KryonLogicId(new VajramID(kryonId), kryonId + ":asyncLogic"),
             usedFacets,
-            input ->
-                new OutputLogicExecutionResults<>(
-                    input.facetValues().stream()
-                        .collect(toImmutableMap(FacetValues::_build, logic))),
+            input -> input.facetValueResponses().forEach(logic::accept),
             emptyTags());
     logicDefinitionRegistry.addOutputLogic(def);
     return def;

@@ -1,7 +1,6 @@
 package com.flipkart.krystal.krystex.logicdecorators.resilience4j;
 
 import static com.flipkart.krystal.krystex.logicdecorators.resilience4j.R4JUtils.decorateAsyncExecute;
-import static com.flipkart.krystal.krystex.logicdecorators.resilience4j.R4JUtils.extractResponseMap;
 
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.krystex.OutputLogic;
@@ -44,11 +43,7 @@ public final class Resilience4JCircuitBreaker implements OutputLogicDecorator {
     CircuitBreaker circuitBreaker = this.circuitBreaker;
     if (circuitBreaker != null) {
       return input ->
-          extractResponseMap(
-              input.facetValues(),
-              decorateAsyncExecute(logicToDecorate, input)
-                  .withCircuitBreaker(circuitBreaker)
-                  .get());
+          decorateAsyncExecute(logicToDecorate, input).withCircuitBreaker(circuitBreaker).get();
     } else {
       return logicToDecorate;
     }

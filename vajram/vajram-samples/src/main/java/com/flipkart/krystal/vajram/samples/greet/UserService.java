@@ -12,6 +12,7 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.google.common.collect.ImmutableCollection;
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -29,7 +30,7 @@ public abstract class UserService extends IOVajramDef<UserInfo> {
   @Output.Batched
   @SuppressWarnings("method.invocation")
   static CompletableFuture<Map<UserService_BatchItem, UserInfo>> callUserService(
-      ImmutableCollection<UserService_BatchItem> _batchItems) {
+      Collection<UserService_BatchItem> _batchItems) {
     // Make a call to user service and get user info
     return completedFuture(
         _batchItems.stream()

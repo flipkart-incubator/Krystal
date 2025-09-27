@@ -17,7 +17,6 @@ import static com.flipkart.krystal.vajram.codegen.common.models.Constants.FACET_
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.FACET_VALUES_VAR;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.GET_INPUT_RESOLVERS;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.GET_SIMPLE_INPUT_RESOLVERS;
-import static com.flipkart.krystal.vajram.codegen.common.models.Constants.INCOMING_FACETS;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.OUTPUT_LOGIC_INPUT_VAR;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.QUALIFIED_FACET_SEPARATOR;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.RESOLVER_REQUEST;
@@ -59,7 +58,7 @@ import com.flipkart.krystal.codegen.common.models.TypeAndName;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.concurrent.Futures;
 import com.flipkart.krystal.core.GraphExecutionData;
-import com.flipkart.krystal.core.OutputLogicExecutionResults;
+import com.flipkart.krystal.core.OutputLogicExecutionInput;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.ExecutionItem;
@@ -74,6 +73,7 @@ import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.data.RequestResponseFuture;
+import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.facets.FacetUtils;
@@ -96,6 +96,7 @@ import com.flipkart.krystal.vajram.VajramInitData;
 import com.flipkart.krystal.vajram.VajramRequestRoot;
 import com.flipkart.krystal.vajram.batching.BatchEnabledFacetValues;
 import com.flipkart.krystal.vajram.batching.BatchEnabledImmutableFacetValues;
+import com.flipkart.krystal.vajram.batching.BatchItemExecutionItem;
 import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.batching.BatchedFacets;
 import com.flipkart.krystal.vajram.batching.BatchesGroupedBy;
@@ -156,6 +157,8 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.annotation.Documented;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -528,7 +531,7 @@ public class VajramCodeGenerator implements CodeGenerator {
       for (DependencyModel dependency : currentVajramInfo.dependencies()) {
         cases.add(
             CodeBlock.of(
-                """
+"""
                 case $S -> {
                   if (_resolver instanceof $T _fanoutResolver) {
 $L
@@ -543,7 +546,7 @@ $L
                 dependency.canFanout()
                     ? CodeBlock.of("_$L_fanoutInputResolver = _fanoutResolver;", dependency.name())
                     : CodeBlock.of(
-                        """
+"""
                     throw new $T(
                         \"""
                         $S vajram's dependency '$L' is not marked as canFanout=true,
@@ -558,7 +561,7 @@ $L
                 dependency.name(),
                 simpleInputResolversMethodPresent
                     ? CodeBlock.of(
-                        """
+"""
                   if(_resolver instanceof $T _simpleResolver){
                     _$L_depFacets.addAll(_simpleResolver.getResolverSpec().sources());
                   }
@@ -655,7 +658,7 @@ $L
 
       Set<FacetGenModel> usedFacetsInResolverMethods =
           resolverMethods.stream()
-              .flatMap(r -> r.getParameters().stream().map(this::inferFacetId))
+              .flatMap(r -> r.getParameters().stream().map(this::inferFacet))
               .filter(f -> !f.isGiven())
               .collect(toSet());
 
@@ -741,7 +744,7 @@ $L
                       dependency.canFanout()
                           ? CodeBlock.builder()
                               .addNamed(
-                                  """
+"""
                       if(_$facetName:L_fanoutInputResolver != null){
                           _$facetName:L_reqBuilders = ($list:T<$reqImmutType:T.Builder>) _$facetName:L_fanoutInputResolver
                               .resolve(_$facetName:L_reqBuilderSupplier.get(), _facetValues)
@@ -761,7 +764,7 @@ $L
                       dependency.canFanout()
                           ? CodeBlock.builder()
                               .addNamed(
-                                  """
+"""
 $list:T<$reqRespFuture:T<$reqBuilder:T, $respType:T>> _$facetName:L_reqRespFutures =
     $reqRespFuture:T.forRequests(_$facetName:L_reqBuilders);
 _$facetName:L_reqs.addAll(_$facetName:L_reqRespFutures);
@@ -799,7 +802,7 @@ _$facetName:L_futures[i] = $completableFuture:T.allOf($reqRespFuture:T.getFuture
                               .build()
                           : CodeBlock.builder()
                               .addNamed(
-                                  """
+"""
 var _$facetName:L_future = new $completableFuture:T<$depType:T>();
 _$facetName:L_futures[i] =
     _$facetName:L_future.whenComplete(
@@ -823,7 +826,7 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
     Set<FacetGenModel> computedOutputLogicSources =
         outputLogicParams.stream()
             .filter(p -> !p.getSimpleName().toString().startsWith("_"))
-            .map(this::inferFacetId)
+            .map(this::inferFacet)
             .filter(f -> !f.isGiven())
             .collect(toSet());
 
@@ -836,7 +839,7 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
       executionCode.add(executeOutputLogic);
     } else {
       executionCode.add(
-          """
+"""
     $L
         .whenComplete(
             (_unused, _throwable) -> {
@@ -844,14 +847,15 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
             });
 """,
           switch (computedOutputLogicSources.size()) {
-            case 1 -> CodeBlock.of(
-                "_$L_ready", computedOutputLogicSources.iterator().next().name());
-            default -> CodeBlock.of(
-                "$T.allOf($L)",
-                CompletableFuture.class,
-                computedOutputLogicSources.stream()
-                    .map(f -> CodeBlock.of("_$L_ready", f.name()))
-                    .collect(CodeBlock.joining(", ")));
+            case 1 ->
+                CodeBlock.of("_$L_ready", computedOutputLogicSources.iterator().next().name());
+            default ->
+                CodeBlock.of(
+                    "$T.allOf($L)",
+                    CompletableFuture.class,
+                    computedOutputLogicSources.stream()
+                        .map(f -> CodeBlock.of("_$L_ready", f.name()))
+                        .collect(CodeBlock.joining(", ")));
           },
           executeOutputLogic);
     }
@@ -883,7 +887,7 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
     return map;
   }
 
-  private FacetGenModel inferFacetId(VariableElement parameter) {
+  private FacetGenModel inferFacet(VariableElement parameter) {
     String facetName = parameter.getSimpleName().toString();
     FacetGenModel facetGenModel = facetModelsByName.get(facetName);
     if (facetGenModel == null) {
@@ -953,7 +957,7 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
                         typeUtils)
                     .addCode(buildInputResolver(resolverMethod, fanoutResolver).build());
             List<FacetGenModel> usedFacets =
-                resolverMethod.getParameters().stream().map(this::inferFacetId).toList();
+                resolverMethod.getParameters().stream().map(this::inferFacet).toList();
             resolveMethodToObjConvCode.add(
                 ".add($L)",
                 anonymousClassBuilder(
@@ -1051,13 +1055,15 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
    * Method to generate "executeCompute" function code for ComputeVajrams Supported DataAccessSpec
    * => VajramID only.
    *
-   * @return generated code for "executeCompute" {@link MethodSpec}
+   * @return generated code for "execute" {@link MethodSpec}
    */
   private MethodSpec computeVajramExecuteMethod() {
 
     MethodSpec.Builder executeBuilder =
-        overriding(util.codegenUtil().getMethod(VajramDef.class, "execute", 1))
-            .returns(OutputLogicExecutionResults.class);
+        overriding(
+            util.codegenUtil()
+                .getMethod(
+                    () -> VajramDef.class.getMethod("execute", OutputLogicExecutionInput.class)));
     if (needsBatching) {
       util.codegenUtil()
           .error(
@@ -1075,29 +1081,6 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
 
   private void nonBatchedExecuteMethodBuilder(
       MethodSpec.Builder executeBuilder, boolean isIOVajram) {
-    CodeBlock.Builder returnBuilder =
-        CodeBlock.builder()
-            .add(
-                """
-                if($L.facetValues().isEmpty()) {
-                  return $T.empty();
-                }
-                return new $T<>(_logicInput.facetValues().stream()
-                    .collect(
-                       $T.toImmutableMap($T::_build,
-                       $L -> {
-                          $T $L = ($T)$L;
-                """,
-                OUTPUT_LOGIC_INPUT_VAR,
-                OutputLogicExecutionResults.class,
-                OutputLogicExecutionResults.class,
-                ImmutableMap.class,
-                FacetValues.class,
-                INCOMING_FACETS,
-                currentVajramInfo.facetsInterfaceType(),
-                FACET_VALUES_VAR,
-                currentVajramInfo.facetsInterfaceType(),
-                INCOMING_FACETS);
     if (!(requireNonNull(getParsedVajramData().logicMethods(), "Vajrams must have output logic.")
             .outputLogics()
         instanceof NoBatching noBatchingOutputLogic)) {
@@ -1107,50 +1090,73 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
               getParsedVajramData().vajramInfo().vajramClassElem());
       return;
     }
-
     ExecutableElement outputLogic = noBatchingOutputLogic.output();
+    CodeBlock outputLogicParams =
+        outputLogic.getParameters().stream()
+            .map(this::generateLogicParams)
+            .collect(CodeBlock.joining(","));
 
-    outputLogic
-        .getParameters()
-        .forEach(
-            parameter ->
-                facetLocalVariable(outputLogic, parameter, returnBuilder, FACET_VALUES_VAR));
+    CodeBlock.Builder returnBuilder = CodeBlock.builder();
 
-    String methodCallSuffix;
+    TypeMirror returnType = outputLogic.getReturnType();
     if (isIOVajram) {
-      TypeMirror returnType = outputLogic.getReturnType();
       if (!util.codegenUtil().isRawAssignable(returnType, CompletableFuture.class)) {
         // TODO: Validate IOVajram response type is CompletableFuture<Type>"
         util.codegenUtil()
             .error(
-                "The OutputLogic of non-batched IO vajramDef %s must return a CompletableFuture"
+                "The OutputLogic of the non-batched IO vajram %s must return a CompletableFuture"
                     .formatted(vajramName),
                 outputLogic);
       }
-
-      returnBuilder.add("\nreturn $L(\n", outputLogic.getSimpleName());
-      methodCallSuffix = ");\n";
-    } else {
       returnBuilder.add(
-          "\nreturn $T.errableFrom(() -> $L(\n", Errable.class, outputLogic.getSimpleName());
-      methodCallSuffix = ")).toFuture();\n";
+          "\n$T.linkFutures($L($L),_executionItem.response());\n",
+          Futures.class,
+          outputLogic.getSimpleName(),
+          outputLogicParams);
+    } else {
+      TypeMirror expectedReturnType =
+          currentVajramInfo.lite().responseType().javaModelType(util.processingEnv());
+      if (!util.processingEnv()
+          .getTypeUtils()
+          .isSameType(
+              util.codegenUtil().box(returnType), util.codegenUtil().box(expectedReturnType))) {
+        util.codegenUtil()
+            .error(
+                "The OutputLogic of the Compute vajram %s must return %s"
+                    .formatted(vajramName, expectedReturnType),
+                outputLogic);
+      }
+      returnBuilder.add(
+          "\n$T.linkFutures($T.errableFrom(() -> $L($L)).toFuture(), _executionItem.response());\n",
+          Futures.class,
+          Errable.class,
+          outputLogic.getSimpleName(),
+          outputLogicParams);
     }
-
-    List<String> outputLogicParamsCode = new ArrayList<>();
-    List<Object> outputLogicParamsCodeArgs = new ArrayList<>();
-    for (VariableElement param : outputLogic.getParameters()) {
-      generateLogicParams(param, outputLogicParamsCode, outputLogicParamsCodeArgs);
-    }
-    returnBuilder.add(
-        String.join(", ", outputLogicParamsCode), outputLogicParamsCodeArgs.toArray());
-
-    returnBuilder.add(methodCallSuffix);
-    returnBuilder.add("})));\n");
-    executeBuilder.addCode(returnBuilder.build());
+    CodeBlock facetLocalVars =
+        outputLogic.getParameters().stream()
+            .map(
+                variableElement ->
+                    facetLocalVariable(outputLogic, variableElement, FACET_VALUES_VAR))
+            .collect(CodeBlock.joining("\n"));
+    executeBuilder.addCode(
+        """
+        for ($T _executionItem : _logicInput.facetValueResponses()) {
+          $T $L = ($T)_executionItem.facetValues();
+          $L
+          $L
+        }
+        """,
+        ExecutionItem.class,
+        currentVajramInfo.facetsInterfaceType(),
+        FACET_VALUES_VAR,
+        currentVajramInfo.facetsInterfaceType(),
+        facetLocalVars,
+        returnBuilder.build());
   }
 
   private CodeBlock generateLogicParams(VariableElement param) {
-    FacetGenModel facetGenModel = inferFacetId(param);
+    FacetGenModel facetGenModel = inferFacet(param);
     if (facetGenModel.isBatched()) {
       util.codegenUtil()
           .error(
@@ -1161,23 +1167,6 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
     return CodeBlock.of("$L", facetGenModel.name());
   }
 
-  private void generateLogicParams(
-      VariableElement param,
-      List<String> outputLogicParamsCode,
-      List<Object> outputLogicParamsCodeArgs) {
-    FacetGenModel facetGenModel = inferFacetId(param);
-    if (facetGenModel.isBatched()) {
-      util.codegenUtil()
-          .error(
-              "Cannot use batch facet '%s' as direct input param for output logic"
-                  .formatted(facetGenModel.id()),
-              param);
-    } else {
-      outputLogicParamsCode.add("$L");
-      outputLogicParamsCodeArgs.add(facetGenModel.name());
-    }
-  }
-
   /**
    * Method to generate "execute" function code for IOVajrams
    *
@@ -1186,8 +1175,10 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
   private MethodSpec ioVajramExecuteMethod() {
 
     MethodSpec.Builder executeMethodBuilder =
-        overriding(util.codegenUtil().getMethod(VajramDef.class, "execute", 1))
-            .returns(OutputLogicExecutionResults.class);
+        overriding(
+            util.codegenUtil()
+                .getMethod(
+                    () -> VajramDef.class.getMethod("execute", OutputLogicExecutionInput.class)));
 
     if (needsBatching) {
       batchedExecuteMethodBuilder(executeMethodBuilder);
@@ -1259,9 +1250,12 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
 
     Map<String, Object> valueMap = new HashMap<>();
     valueMap.put("facetValues", FacetValues.class);
+    valueMap.put("executionItem", ExecutionItem.class);
     valueMap.put("immutableFacetValues", ImmutableFacetValues.class);
-    valueMap.put("batchKeyName", BATCH_KEY_NAME);
+    valueMap.put("stackTracelessException", StackTracelessException.class);
+    valueMap.put("batchItemExecItem", BatchItemExecutionItem.class);
 
+    valueMap.put("batchKeyName", BATCH_KEY_NAME);
     valueMap.put("facetValuesList", FACETS_LIST);
     valueMap.put("logicInput", OUTPUT_LOGIC_INPUT_VAR);
     valueMap.put("facetsVar", FACET_VALUES_VAR);
@@ -1280,22 +1274,24 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
     valueMap.put("linkHashMap", LinkedHashMap.class);
     valueMap.put("map", Map.class);
     valueMap.put("list", List.class);
+    valueMap.put("arrayList", ArrayList.class);
     valueMap.put("valErr", Errable.class);
     valueMap.put("optional", Optional.class);
-    valueMap.put("outputLogicExecutionResult", OutputLogicExecutionResults.class);
 
     codeBuilder.addNamed(
         """
-            var $facetValuesList:L = $logicInput:L.facetValues();
-            if($facetValuesList:L.isEmpty()) {
-              return $outputLogicExecutionResult:T.empty();
+            var _executionItems = $logicInput:L.facetValueResponses();
+            if(_executionItems.isEmpty()) {
+              return;
             }
-            $map:T<$inputBatching:T, $facetValues:T> _batchItems = new $linkHashMap:T<>();
-            $commonInput:T $batchKeyName:L = (($facetsInterface:T)$facetValuesList:L.get(0)).$batchKeyName:L();
-            for ($facetValues:T $facetsVar:L : $facetValuesList:L) {
-              $facetsInterface:T _castFacets = ($facetsInterface:T) $facetsVar:L;
-              $inputBatching:T _batch = _castFacets._batchItem();
-              _batchItems.put(_batch, $facetsVar:L);
+            $commonInput:T $batchKeyName:L = (($facetsInterface:T)_executionItems.get(0).facetValues())._batchKey();
+            $list:T<$inputBatching:T> _batchItems = new $arrayList:T<>();
+            $list:T<$batchItemExecItem:T> _batchItemExecItems = new $arrayList:T<>();
+            for ($executionItem:T _executionItem : _executionItems) {
+              $facetsInterface:T _castFacets = ($facetsInterface:T) _executionItem.facetValues();
+              $inputBatching:T _batchItem = _castFacets._batchItem();
+              _batchItems.add(_batchItem);
+              _batchItemExecItems.add(new $batchItemExecItem:T(_batchItem, _executionItem));
             }
         """,
         valueMap);
@@ -1334,7 +1330,7 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
       for (VariableElement param : withBatchingOutputLogic.batchedOutput().getParameters()) {
         if (param.getSimpleName().contentEquals(BATCHES_VAR)) {
           batchedOutputParamCodes.add(
-              CodeBlock.of("$T.copyOf($L.keySet())", ImmutableList.class, BATCHES_VAR));
+              CodeBlock.of("$T.unmodifiableCollection(_batchItems)", Collections.class));
         } else {
           batchedOutputParamCodes.add(generateLogicParams(param));
         }
@@ -1376,14 +1372,7 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
     codeBuilder.addNamed(
         """
                 var _batchedOutputFuture = $batchedOutputLogic:L($batchedOutputParams:L);
-                $map:T<$immutableFacetValues:T, $comFuture:T<$vajramResponseType:T>> _returnValue = new $linkHashMap:T<>();
 
-                _batchItems
-                    .values()
-                    .forEach(
-                        _facetValues -> {
-                          _returnValue.put(_facetValues._build(), new $comFuture:T<>());
-                        });
                 _batchedOutputFuture.whenCompleteAsync(
                     (_batchedOutput, _throwable) -> {
                       $unbatchOutputExpectedType:T _unbatchedOutput = $imMap:T.of();
@@ -1394,29 +1383,20 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
                           _throwable = _e;
                         }
                       }
-                      for(var _entry : _batchItems.entrySet()) {
-                        var _batchItem = _entry.getKey();
-                        var _facetValues = _entry.getValue()._build();
+                      for(var _entry : _batchItemExecItems) {
+                        var _batchItem = _entry.batchItem();
                         var _result = _unbatchedOutput.get(_batchItem);
+
                         if (_result != null) {
-                          $futuresUtil:T.linkFutures(
-                              _result.toFuture(),
-                              _returnValue.computeIfAbsent(
-                                  _facetValues, _k -> new $comFuture:T<>()));
+                          $futuresUtil:T.linkFutures(_result.toFuture(), _entry.executionItem().response());
+                        } else if (_throwable == null) {
+                            _entry.executionItem().response().complete(null);
                         } else {
-                          if (_throwable == null) {
-                            _returnValue
-                                .computeIfAbsent(_facetValues, _k -> new $comFuture:T<>())
-                                .complete(null);
-                          } else {
-                            _returnValue
-                              .computeIfAbsent(_facetValues, _k -> new $comFuture:T<>())
-                              .completeExceptionally(_throwable);
-                          }
+                          _entry.executionItem().response().completeExceptionally(
+                            $stackTracelessException:T.stackTracelessWrap(_throwable));
                         }
                       }
                     }, $logicInput:L.graphExecutor());
-                return new $outputLogicExecutionResult:T<>($imMap:T.copyOf(_returnValue));
             """,
         valueMap);
     executeMethodBuilder.addCode(codeBuilder.build());
@@ -1473,15 +1453,14 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
                   requireNonNull(
                           util.processingEnv()
                               .getElementUtils()
-                              .getTypeElement(
-                                  requireNonNull(ImmutableCollection.class.getCanonicalName())))
+                              .getTypeElement(requireNonNull(Collection.class.getCanonicalName())))
                       .asType())
           || batchTypeParams.size() != 1
           || !typeUtils.isSameType(expected, batchTypeParams.get(0))) {
         @Nullable Element[] elements = param.elementArray();
         util.codegenUtil()
             .error(
-                "'_batchItems' param must be of type ImmutableCollection<"
+                "'_batchItems' param must be of type Collection<"
                     + expected
                     + "> . Found: "
                     + paramType,
@@ -1531,8 +1510,9 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
         @Nullable Element[] elements = param.elementArray();
         util.codegenUtil().error(message, elements);
       }
-      facetLocalVariable(
-          withBatchingOutputLogic.batchedOutput(), param.element(), codeBuilder, BATCH_KEY_NAME);
+      codeBuilder.add(
+          facetLocalVariable(
+              withBatchingOutputLogic.batchedOutput(), param.element(), BATCH_KEY_NAME));
     }
   }
 
@@ -1581,9 +1561,11 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
     // response for the
     // bind type parameter else error
     // Iterate over the method params and call respective binding methods
-    method
-        .getParameters()
-        .forEach(parameter -> facetLocalVariable(method, parameter, codeBuilder, FACET_VALUES_VAR));
+
+    codeBuilder.add(
+        method.getParameters().stream()
+            .map(parameter -> facetLocalVariable(method, parameter, FACET_VALUES_VAR))
+            .collect(CodeBlock.joining("\n")));
 
     buildResolverInvocation(
         codeBuilder,
@@ -1600,15 +1582,13 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
     return codeBuilder;
   }
 
-  private void facetLocalVariable(
-      ExecutableElement method,
-      VariableElement parameter,
-      CodeBlock.Builder codeBuilder,
-      String facetsVar) {
+  private CodeBlock facetLocalVariable(
+      ExecutableElement method, VariableElement parameter, String facetsVar) {
     // check if the bind param has multiple resolvers
-    FacetGenModel usingFacetModel = inferFacetId(parameter);
+    FacetGenModel usingFacetModel = inferFacet(parameter);
+    CodeBlock facetLocalVarCode = EMPTY_CODE_BLOCK;
     if (usingFacetModel instanceof DependencyModel) {
-      depFacetLocalVariable(method, usingFacetModel.id(), codeBuilder, parameter);
+      facetLocalVarCode = depFacetLocalVariable(method, usingFacetModel.id(), parameter);
     } else if (usingFacetModel instanceof DefaultFacetModel defaultFacetModel) {
       TypeMirror facetType = defaultFacetModel.dataType().javaModelType(util.processingEnv());
       TypeMirror parameterTypeMirror = parameter.asType();
@@ -1621,7 +1601,7 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
                       .formatted(facetType, parameterType),
                   parameter);
         }
-        codeBuilder.add(
+        facetLocalVarCode =
             CodeBlock.builder()
                 .addStatement(
                     "var $L = $T.validateMandatoryFacet($L.$L(), $S, $S)",
@@ -1631,9 +1611,9 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
                     usingFacetModel.name(),
                     currentVajramInfo.lite().vajramId().id(),
                     usingFacetModel.name())
-                .build());
+                .build();
       } else if (util.codegenUtil().isOptional(parameterTypeMirror)) {
-        codeBuilder.add(
+        facetLocalVarCode =
             CodeBlock.builder()
                 .addStatement(
                     "var $L = $T.ofNullable($L.$L())",
@@ -1641,13 +1621,13 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
                     Optional.class,
                     facetsVar,
                     usingFacetModel.name())
-                .build());
+                .build();
       } else if (util.codegenUtil().isAnyNullable(parameterTypeMirror, parameter)) {
-        codeBuilder.add(
+        facetLocalVarCode =
             CodeBlock.builder()
                 .addStatement(
                     "var $L = $L.$L()", usingFacetModel.name(), facetsVar, usingFacetModel.name())
-                .build());
+                .build();
       } else {
         String message =
             String.format(
@@ -1659,6 +1639,7 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
       String message = "No facetDef resolver found for " + usingFacetModel.name();
       util.codegenUtil().error(message, parameter);
     }
+    return facetLocalVarCode;
   }
 
   /**
@@ -1666,14 +1647,11 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
    *
    * @param method Dependency resolver method
    * @param usingFacetId The bind param name in the resolver method
-   * @param codeBuilder The {@link CodeBlock.Builder}
    * @param parameter the bind parameter in the resolver method
    */
-  private void depFacetLocalVariable(
-      ExecutableElement method,
-      final int usingFacetId,
-      CodeBlock.Builder codeBuilder,
-      VariableElement parameter) {
+  private CodeBlock depFacetLocalVariable(
+      ExecutableElement method, final int usingFacetId, VariableElement parameter) {
+    CodeBlock returnValue = EMPTY_CODE_BLOCK;
     FacetGenModel usingFacetDef = checkNotNull(facetModels.get(usingFacetId));
 
     TypeMirror parameterType = parameter.asType();
@@ -1704,13 +1682,13 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
                       .formatted(dependencyModel.name(), parameterType),
                   parameter);
         }
-        String depValueAccessorCode = "$T $L = $L.$L()";
-        codeBuilder.addStatement(
-            depValueAccessorCode,
-            util.responsesType(dependencyModel),
-            variableName,
-            FACET_VALUES_VAR,
-            usingFacetName);
+        returnValue =
+            CodeBlock.of(
+                "$T $L = $L.$L();",
+                util.responsesType(dependencyModel),
+                variableName,
+                FACET_VALUES_VAR,
+                usingFacetName);
       } else {
         // This means the dependency being consumed used is not a fanout dependency
         String depAccessLhs = "var $1L";
@@ -1722,17 +1700,18 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
             // dependency and
             // the dev has requested the value directly. So we extract the only value from
             // dependencyDef response and provide it.
-            codeBuilder.addStatement(
-                depAccessLhs
-                    + "= $4T.validateMandatoryFacet("
-                    + depAccessRhs
-                    + ".response().value(), $5S, $6S)",
-                variableName,
-                FACET_VALUES_VAR,
-                usingFacetName,
-                FacetValidation.class,
-                currentVajramInfo.lite().vajramId().id(),
-                usingFacetName);
+            returnValue =
+                CodeBlock.of(
+                    depAccessLhs
+                        + "= $4T.validateMandatoryFacet("
+                        + depAccessRhs
+                        + ".response().value(), $5S, $6S);",
+                    variableName,
+                    FACET_VALUES_VAR,
+                    usingFacetName,
+                    FacetValidation.class,
+                    currentVajramInfo.lite().vajramId().id(),
+                    usingFacetName);
           } else {
             // This means the dependency being consumed is mandatory, but the type of the
             // parameter
@@ -1750,28 +1729,37 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
             // dev has
             // requested the 'Errable'. So we extract the only Errable from dependencyDef
             // response and provide it.
-            codeBuilder.addStatement(
-                depValueAccessorCode + ".response()",
-                variableName,
-                FACET_VALUES_VAR,
-                usingFacetName);
+            returnValue =
+                CodeBlock.of(
+                    depValueAccessorCode + ".response();",
+                    variableName,
+                    FACET_VALUES_VAR,
+                    usingFacetName);
           } else if (util.codegenUtil().isRawAssignable(parameterType, Optional.class)) {
             // This means this dependencyDef being consumed is not a fanout and the
             // dev has  requested an 'Optional'. So we retrieve the Errable from the
             // response, extract the optional and provide it.
-            String code = depValueAccessorCode + ".response().valueOpt()";
-            codeBuilder.addStatement(code, variableName, FACET_VALUES_VAR, usingFacetName);
+            returnValue =
+                CodeBlock.of(
+                    depValueAccessorCode + ".response().valueOpt();",
+                    variableName,
+                    FACET_VALUES_VAR,
+                    usingFacetName);
           } else if (util.codegenUtil().isAnyNullable(parameterType, parameter)) {
             // This means this dependencyDef being consumed is not a fanout and the
             // dev has  requested a @Nullable value. So we retrieve the Errable from the
             // response, extract the nullable and provide it.
-            String code = depValueAccessorCode + ".response().value()";
-            codeBuilder.addStatement(code, variableName, FACET_VALUES_VAR, usingFacetName);
+            returnValue =
+                CodeBlock.of(
+                    depValueAccessorCode + ".response().value();",
+                    variableName,
+                    FACET_VALUES_VAR,
+                    usingFacetName);
           } else if (util.codegenUtil().isRawAssignable(parameterType, One2OneDepResponse.class)) {
             // This means this dependencyDef being consumed is not a fanout and the  dev has
             // requested a 'One2OneDepResponse'.
-            codeBuilder.addStatement(
-                depValueAccessorCode, variableName, FACET_VALUES_VAR, usingFacetName);
+            returnValue =
+                CodeBlock.of(depValueAccessorCode, variableName, FACET_VALUES_VAR, usingFacetName);
           } else {
             util.codegenUtil()
                 .error(
@@ -1783,6 +1771,7 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
         }
       }
     }
+    return returnValue;
   }
 
   /**
@@ -1821,9 +1810,11 @@ _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$fa
      */
     String resolverResultVar = fanoutResolver ? RESOLVER_RESULTS : RESOLVER_RESULT;
     methodCodeBuilder.add(
-        """
+"""
 try {
-  var $L = $L(""", resolverResultVar, resolverMethod.getSimpleName());
+  var $L = $L(""",
+        resolverResultVar,
+        resolverMethod.getSimpleName());
     ImmutableList<FacetGenModel> resolverSources = getResolverSources(resolverMethod).asList();
     for (int i = 0; i < resolverSources.size(); i++) {
       methodCodeBuilder.add("$L", resolverSources.get(i).name());
@@ -2766,9 +2757,11 @@ try {
           initializerCodeBlock.add("$T.$L,", FacetType.class, facet.facetType().name());
         }
       }
-      initializerCodeBlock.add("""
+      initializerCodeBlock.add(
+          """
                 $T.class,
-              """, vajramReqClass);
+              """,
+          vajramReqClass);
       if (facet instanceof DependencyModel vajramDepDef) {
         ClassName depReqInterfaceClass =
             ClassName.get(
@@ -2884,6 +2877,6 @@ try {
   }
 
   ImmutableSet<FacetGenModel> getResolverSources(ExecutableElement resolve) {
-    return resolve.getParameters().stream().map(this::inferFacetId).collect(toImmutableSet());
+    return resolve.getParameters().stream().map(this::inferFacet).collect(toImmutableSet());
   }
 }

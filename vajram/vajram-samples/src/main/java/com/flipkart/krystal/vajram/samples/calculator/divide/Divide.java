@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.samples.calculator.divide;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.IOVajramDef;
@@ -22,7 +23,7 @@ public abstract class Divide extends IOVajramDef<Integer> {
 
   @Output
   static CompletableFuture<Integer> divide(int numerator, Optional<Integer> denominator) {
-    return CompletableFuture.completedFuture(divide(numerator, denominator.orElse(1)));
+    return completedFuture(divide(numerator, denominator.orElse(1)));
   }
 
   public static int divide(int numerator, int denominator) {

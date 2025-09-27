@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.core.VajramID.vajramID;
 import static com.flipkart.krystal.data.Errable.computeErrableFrom;
 import static com.flipkart.krystal.data.Errable.errableFrom;
@@ -21,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
+import com.flipkart.krystal.concurrent.Futures;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.core.OutputLogicExecutionResults;
@@ -725,13 +727,15 @@ class KryonExecutorTest {
             new KryonLogicId(kryonId, kryonId.id() + "_logic"),
             usedFacets,
             input ->
-                new OutputLogicExecutionResults<>(
-                    input.facetValues().stream()
-                        .collect(
-                            toImmutableMap(
-                                FacetValues::_build,
-                                facetValues ->
-                                    computeErrableFrom(logic).apply(facetValues).toFuture()))),
+                input
+                    .facetValueResponses()
+                    .forEach(
+                        executionItem ->
+                            linkFutures(
+                                computeErrableFrom(logic)
+                                    .apply(executionItem.facetValues())
+                                    .toFuture(),
+                                executionItem.response())),
             emptyTags());
 
     logicDefinitionRegistry.addOutputLogic(def);
@@ -747,9 +751,13 @@ class KryonExecutorTest {
             new KryonLogicId(kryonId, kryonId.id()),
             inputs,
             input ->
-                new OutputLogicExecutionResults<>(
-                    input.facetValues().stream()
-                        .collect(toImmutableMap(FacetValues::_build, logic))),
+                input
+                    .facetValueResponses()
+                    .forEach(
+                        executionItem ->
+                            linkFutures(
+                                logic.apply(executionItem.facetValues()),
+                                executionItem.response())),
             emptyTags());
 
     logicDefinitionRegistry.addOutputLogic(def);

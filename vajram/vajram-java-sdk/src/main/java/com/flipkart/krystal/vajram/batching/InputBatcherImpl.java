@@ -1,12 +1,15 @@
 package com.flipkart.krystal.vajram.batching;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.util.Collections.unmodifiableList;
 
 import com.flipkart.krystal.config.ConfigProvider;
+import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,9 +19,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class InputBatcherImpl implements InputBatcher {
 
   private static final int DEFAULT_BATCH_SIZE = 1;
-  private @Nullable Consumer<ImmutableList<BatchedFacets>> batchingListener;
-  private final Map<ImmutableFacetValuesContainer, List<BatchEnabledFacetValues>>
-      unBatchedRequests = new HashMap<>();
+  private @Nullable Consumer<List<BatchedFacets>> batchingListener;
+  private final Map<ImmutableFacetValuesContainer, List<ExecutionItem>> unBatchedRequests =
+      new HashMap<>();
   private int minBatchSize = DEFAULT_BATCH_SIZE;
 
   public InputBatcherImpl() {}
@@ -28,39 +31,44 @@ public final class InputBatcherImpl implements InputBatcher {
   }
 
   @Override
-  public ImmutableList<BatchedFacets> add(BatchEnabledFacetValues batchEnabledFacets) {
-    ImmutableFacetValuesContainer batchKey = batchEnabledFacets._batchKey();
-    unBatchedRequests.computeIfAbsent(batchKey, k -> new ArrayList<>()).add(batchEnabledFacets);
-    return getBatchedInputs(batchKey, false);
+  public List<BatchedFacets> add(ExecutionItem batchEnabledFacets) {
+    if (batchEnabledFacets.facetValues()
+        instanceof BatchEnabledFacetValues batchEnabledFacetValues) {
+      ImmutableFacetValuesContainer batchKey = batchEnabledFacetValues._batchKey();
+      unBatchedRequests.computeIfAbsent(batchKey, k -> new ArrayList<>()).add(batchEnabledFacets);
+      return getBatchedInputs(batchKey, false);
+    } else {
+      throw new IllegalStateException(
+          "Expected to receive instance of BatchEnabledFacetValues in batcher but received %s for vajram %s"
+              .formatted(
+                  batchEnabledFacets.facetValues(), batchEnabledFacets.facetValues()._vajramID()));
+    }
   }
 
-  private ImmutableList<BatchedFacets> getBatchedInputs(
+  private List<BatchedFacets> getBatchedInputs(
       ImmutableFacetValuesContainer batchKey, boolean force) {
-    List<BatchEnabledFacetValues> batchItems =
-        unBatchedRequests.getOrDefault(batchKey, ImmutableList.of());
+    List<ExecutionItem> batchItems = unBatchedRequests.getOrDefault(batchKey, ImmutableList.of());
     if (force || batchItems.size() >= minBatchSize) {
-      ImmutableList<BatchedFacets> batchedFacets =
-          ImmutableList.of(new BatchedFacets(ImmutableList.copyOf(batchItems)));
+      BatchedFacets batchedFacets = new BatchedFacets(batchItems);
       unBatchedRequests.put(batchKey, new ArrayList<>());
-      return batchedFacets;
+      return List.of(batchedFacets);
     }
-    return ImmutableList.of();
+    return List.of();
   }
 
   @Override
   public void batch() {
-    ImmutableList<BatchedFacets> batchedFacets =
-        unBatchedRequests.keySet().stream()
-            .map(c -> getBatchedInputs(c, true))
-            .flatMap(Collection::stream)
-            .collect(toImmutableList());
     if (batchingListener != null) {
-      batchingListener.accept(batchedFacets);
+      List<BatchedFacets> list = new ArrayList<>();
+      for (ImmutableFacetValuesContainer c : unBatchedRequests.keySet()) {
+        list.addAll(getBatchedInputs(c, true));
+      }
+      batchingListener.accept(unmodifiableList(list));
     }
   }
 
   @Override
-  public void onBatching(Consumer<ImmutableList<BatchedFacets>> listener) {
+  public void onBatching(Consumer<List<BatchedFacets>> listener) {
     batchingListener = listener;
   }
 

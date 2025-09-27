@@ -126,21 +126,12 @@ public final class DirectKryon
       logic = outputLogicDecorator.decorateLogic(logic, outputLogicDefinition);
     }
     OutputLogic<Object> finalLogic = logic;
-    CompletableFuture<@Nullable Object> result;
     try {
-      result =
-          finalLogic
-              .execute(
-                  new OutputLogicExecutionInput(
-                      ImmutableList.of(executionItem.facetValues()), kryonExecutor.commandQueue()))
-              .results()
-              .values()
-              .iterator()
-              .next()
-              .whenCompleteAsync((o, throwable) -> {}, kryonExecutor.commandQueue());
+      finalLogic.execute(
+          new OutputLogicExecutionInput(
+              ImmutableList.of(executionItem), kryonExecutor.commandQueue()));
     } catch (Throwable e) {
-      result = failedFuture(e);
+      executionItem.response().completeExceptionally(stackTracelessWrap(e));
     }
-    Futures.linkFutures(result, executionItem.response());
   }
 }
