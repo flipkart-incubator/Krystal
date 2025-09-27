@@ -118,7 +118,7 @@ class ChainAddTest {
     assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(0);
   }
 
-//  @Disabled("Long running benchmark")
+  @Disabled("Long running benchmark")
   @RepeatedTest(5)
   void vajram_benchmark() throws Exception {
     int loopCount = 50_000;
@@ -182,7 +182,7 @@ class ChainAddTest {
   }
 
   @Disabled("Long running benchmark")
-  @Test
+  @RepeatedTest(5)
   void vajram_benchmark_2() throws Exception {
     int outerLoopCount = 100;
     int innerLoopCount = 500;

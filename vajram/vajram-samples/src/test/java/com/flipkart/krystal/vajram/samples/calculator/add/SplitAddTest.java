@@ -45,6 +45,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
 class SplitAddTest {
@@ -121,7 +122,7 @@ class SplitAddTest {
   }
 
   @Disabled("Long running benchmark")
-  @Test
+  @RepeatedTest(5)
   void vajram_benchmark() throws Exception {
     int loopCount = 50_000;
     long javaNativeTimeNs = javaMethodBenchmark(this::splitAdd, loopCount);
@@ -189,8 +190,8 @@ class SplitAddTest {
         EXEC_POOL);
   }
 
-  @Disabled("Long running benchmark")
-  @Test
+//  @Disabled("Long running benchmark")
+  @RepeatedTest(5)
   void vajram_benchmark_2() throws Exception {
     int outerLoopCount = 100;
     int innerLoopCount = 500;
