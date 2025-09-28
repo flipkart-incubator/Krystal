@@ -190,7 +190,7 @@ class SplitAddTest {
         EXEC_POOL);
   }
 
-//  @Disabled("Long running benchmark")
+  @Disabled("Long running benchmark")
   @RepeatedTest(5)
   void vajram_benchmark_2() throws Exception {
     int outerLoopCount = 100;
