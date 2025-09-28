@@ -12,7 +12,6 @@ import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy
 import static com.flipkart.krystal.krystex.testutils.SimpleFacet.dependency;
 import static com.flipkart.krystal.krystex.testutils.SimpleFacet.input;
 import static com.flipkart.krystal.tags.ElementTags.emptyTags;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Collections.emptySet;
 import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
@@ -22,10 +21,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
-import com.flipkart.krystal.concurrent.Futures;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
-import com.flipkart.krystal.core.OutputLogicExecutionResults;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.ExecutionItem;

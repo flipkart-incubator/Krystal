@@ -1,21 +1,12 @@
 package com.flipkart.krystal.vajramexecutor.krystex.batching;
 
-import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
-import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Collections.unmodifiableSet;
-import static java.util.Objects.requireNonNullElseGet;
-import static java.util.concurrent.CompletableFuture.failedFuture;
 
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.config.NestedConfig;
 import com.flipkart.krystal.core.OutputLogicExecutionInput;
-import com.flipkart.krystal.core.OutputLogicExecutionResults;
 import com.flipkart.krystal.data.ExecutionItem;
-import com.flipkart.krystal.data.FacetValues;
-import com.flipkart.krystal.data.ImmutableFacetValues;
-import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.decoration.DecoratorCommand;
@@ -26,20 +17,13 @@ import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.vajram.batching.BatchEnabledFacetValues;
 import com.flipkart.krystal.vajram.batching.BatchedFacets;
 import com.flipkart.krystal.vajram.batching.InputBatcher;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class InputBatchingDecorator implements OutputLogicDecorator {
 

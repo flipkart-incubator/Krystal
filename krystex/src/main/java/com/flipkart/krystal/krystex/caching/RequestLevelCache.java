@@ -5,7 +5,6 @@ import static com.flipkart.krystal.concurrent.Futures.propagateCompletion;
 import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
 import static java.util.concurrent.CompletableFuture.allOf;
 
-import com.flipkart.krystal.concurrent.Futures;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.FacetValues;

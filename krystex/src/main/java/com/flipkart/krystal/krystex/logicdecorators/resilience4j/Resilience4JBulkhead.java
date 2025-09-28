@@ -6,7 +6,6 @@ import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.core.OutputLogicExecutionInput;
-import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;

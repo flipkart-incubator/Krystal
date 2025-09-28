@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.batching;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Collections.unmodifiableList;
 
 import com.flipkart.krystal.config.ConfigProvider;
@@ -8,8 +7,6 @@ import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

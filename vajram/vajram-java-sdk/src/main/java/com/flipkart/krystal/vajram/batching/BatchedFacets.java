@@ -3,8 +3,6 @@ package com.flipkart.krystal.vajram.batching;
 import static java.util.Collections.unmodifiableList;
 
 import com.flipkart.krystal.data.ExecutionItem;
-import com.google.common.collect.ImmutableList;
-import java.util.Collections;
 import java.util.List;
 
 /**

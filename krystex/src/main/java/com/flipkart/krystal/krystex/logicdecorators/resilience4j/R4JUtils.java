@@ -1,6 +1,5 @@
 package com.flipkart.krystal.krystex.logicdecorators.resilience4j;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.core.OutputLogicExecutionInput;

@@ -11,7 +11,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Collections.unmodifiableSet;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static java.util.concurrent.CompletableFuture.failedFuture;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.flipkart.krystal.core.OutputLogicExecutionInput;
@@ -568,8 +567,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
     OutputLogicDefinition<Object> outputLogicDefinition =
         kryonDefinition.getOutputLogicDefinition();
 
-    Map<InvocationId, ExecutionItem> outputLogicInputs =
-        new LinkedHashMap<>(invocationIds.size());
+    Map<InvocationId, ExecutionItem> outputLogicInputs = new LinkedHashMap<>(invocationIds.size());
 
     for (InvocationId invocationId : invocationIds) {
       outputLogicInputs.put(invocationId, getFacetsForOutputLogic(dependentChain, invocationId));
