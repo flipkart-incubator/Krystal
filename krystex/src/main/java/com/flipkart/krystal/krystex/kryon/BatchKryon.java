@@ -340,8 +340,8 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
   }
 
   @SuppressWarnings("unchecked")
-  private ImmutableRequest.Builder<@Nullable Object> emptyRequestForVajram(VajramID depVajramID) {
-    return (ImmutableRequest.Builder<@Nullable Object>)
+  private ImmutableRequest.Builder<Object> emptyRequestForVajram(VajramID depVajramID) {
+    return (ImmutableRequest.Builder<Object>)
         kryonDefinition
             .kryonDefinitionRegistry()
             .getOrThrow(depVajramID)
@@ -444,12 +444,12 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
 
     depResponse.whenComplete(
         (batchResponse, throwable) -> {
-          Map<InvocationId, DepResponse<Request<@Nullable Object>, @Nullable Object>> results =
+          Map<InvocationId, DepResponse<Request<Object>, Object>> results =
               new LinkedHashMap<>(INITIAL_CAPACITY);
           for (InvocationId invocationId : allInvocationIds) {
-            DepResponse<Request<@Nullable Object>, @Nullable Object> result;
+            DepResponse<Request<Object>, Object> result;
             if (throwable != null) {
-              RequestResponse<Request<@Nullable Object>, @Nullable Object> fail =
+              RequestResponse<Request<Object>, Object> fail =
                   new RequestResponse<>(
                       depRequestsByDepInvocationId.getOrDefault(
                           invocationId, emptyRequestForVajram(depVajramID)._build()),

@@ -18,11 +18,7 @@ import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
 import java.util.Set;
 
-/**
- * A stateless, reusable definition of a Kryon
- *
- * @param dependencyKryons Map of dependency name to kryonId.
- */
+/** A stateless, reusable definition of a Kryon */
 public record VajramKryonDefinition(
     VajramID vajramID,
     ImmutableSet<Facet> facets,

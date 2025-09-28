@@ -144,7 +144,7 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
               Map<InvocationId, Errable<Object>> responses = batchResponse.responses();
               responses.forEach(
                   (requestId, response) -> {
-                    CompletableFuture<@Nullable Object> future = response.toFuture();
+                    CompletableFuture<? extends @Nullable Object> future = response.toFuture();
                     CompletableFuture<@Nullable Object> destinationFuture =
                         newCacheEntries.computeIfAbsent(
                             requestId, _r -> new CompletableFuture<@Nullable Object>());

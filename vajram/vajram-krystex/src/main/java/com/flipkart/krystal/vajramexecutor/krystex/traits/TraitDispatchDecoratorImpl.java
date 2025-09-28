@@ -78,14 +78,14 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
         if (kryonCommand instanceof ForwardSendBatch forwardSend) {
           var originalExecutableRequests = forwardSend.executableRequests();
           Map<InvocationId, String> originalSkippedInvocations = forwardSend.skippedInvocations();
-          Map<VajramID, Map<InvocationId, Request<@Nullable Object>>> dispatchRequests =
+          Map<VajramID, Map<InvocationId, Request<Object>>> dispatchRequests =
               new LinkedHashMap<>();
           Map<VajramID, CompletableFuture<BatchResponse>> dispatchResponses = new LinkedHashMap<>();
           Set<InvocationId> orphanedRequests = new LinkedHashSet<>();
-          for (Entry<InvocationId, ? extends Request<@Nullable Object>> requestEntry :
+          for (Entry<InvocationId, ? extends Request<Object>> requestEntry :
               originalExecutableRequests.entrySet()) {
             InvocationId invocationId = requestEntry.getKey();
-            Request<@Nullable Object> originalRequest = requestEntry.getValue();
+            Request<Object> originalRequest = requestEntry.getValue();
             boolean dispatchTargetNotFound = true;
             for (DispatchCase dispatchCase : dispatchCases) {
               Optional<? extends Class<? extends Request<?>>> dispatchTarget =
@@ -120,7 +120,7 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
                   .build();
           for (Class<? extends Request<?>> dispatchTarget : dispatchTargets) {
             VajramID dispatchTargetId = vajramKryonGraph.getVajramIdByVajramReqType(dispatchTarget);
-            Map<InvocationId, Request<@Nullable Object>> requestsForTarget =
+            Map<InvocationId, Request<Object>> requestsForTarget =
                 dispatchRequests.getOrDefault(dispatchTargetId, Map.of());
             ClientSideCommand<BatchResponse> commandToDispatch;
             if (requestsForTarget.isEmpty()) {
@@ -162,8 +162,7 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
           allOf(dispatchResponses.values().toArray(CompletableFuture[]::new))
               .whenComplete(
                   (unused, throwable) -> {
-                    Map<InvocationId, Errable<@Nullable Object>> mergedResults =
-                        new LinkedHashMap<>();
+                    Map<InvocationId, Errable<Object>> mergedResults = new LinkedHashMap<>();
                     for (Entry<VajramID, CompletableFuture<BatchResponse>> dispatchResponseEntry :
                         dispatchResponses.entrySet()) {
                       VajramID dispatchTarget = dispatchResponseEntry.getKey();

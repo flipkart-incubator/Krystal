@@ -10,7 +10,6 @@ import com.flipkart.krystal.krystex.request.InvocationId;
 import com.google.common.collect.Sets;
 import java.util.Map;
 import java.util.Set;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Command created at the client vajram end to send the requests to invoke the server vajram.
@@ -22,7 +21,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public record ForwardSendBatch(
     VajramID vajramID,
-    Map<InvocationId, Request<@Nullable Object>> executableRequests,
+    Map<InvocationId, Request<Object>> executableRequests,
     DependentChain dependentChain,
     Map<InvocationId, String> skippedInvocations)
     implements MultiRequestCommand<BatchResponse>, ClientSideCommand<BatchResponse> {

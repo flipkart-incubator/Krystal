@@ -183,9 +183,9 @@ configure(subprojects.findAll {
         module('javax.cache:cache-api', 'javax.cache.api')
         module('javax.inject:javax.inject', 'javax.inject')
 
-        module('gradle-api-8.14.2.jar', 'gradle.api')
-        module('gradle-installation-beacon-8.14.2.jar', 'gradle.installation.beacon')
-        module('gradle-test-kit-8.14.2.jar', 'gradle.test.kit')
+        module('gradle-api-8.14.3.jar', 'gradle.api')
+        module('gradle-installation-beacon-8.14.3.jar', 'gradle.installation.beacon')
+        module('gradle-test-kit-8.14.3.jar', 'gradle.test.kit')
 
         module('ch.qos.reload4j:reload4j', 'ch.qos.reload4j')
         module('com.flipkart.krystal:vajram-codegen', 'com.flipkart.krystal.vajram.codegen')
