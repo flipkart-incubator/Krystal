@@ -8,7 +8,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public interface KrystalExecutor extends AutoCloseable {
 
   <T> CompletableFuture<@Nullable T> executeKryon(
-      ImmutableRequest request, KryonExecutionConfig executionConfig);
+      ImmutableRequest<T> request, KryonExecutionConfig executionConfig);
 
   /**
    * This method starts execution of all submitted requests. No new kryon execution requests will be

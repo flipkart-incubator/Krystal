@@ -704,7 +704,7 @@ $L
                   entry(
                       "allUsedFutures",
                       stream(
-                              new CodeBlock[] {
+                              new @NonNull CodeBlock[] {
                                 usedFacetsInResolverMethods.stream()
                                     .map(f -> CodeBlock.of("_$L_ready", f.name()))
                                     .collect(CodeBlock.joining(", ")),

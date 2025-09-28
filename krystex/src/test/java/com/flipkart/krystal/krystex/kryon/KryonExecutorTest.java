@@ -304,7 +304,7 @@ class KryonExecutorTest {
             },
             ElementTags.of(InvocableOutsideGraph.Creator.create()));
 
-    CompletableFuture<Object> future =
+    CompletableFuture<?> future =
         kryonExecutor.executeKryon(
             n2.createNewRequest().logic().newRequestBuilder()._build(),
             KryonExecutionConfig.builder().executionId("r1").build());

@@ -376,7 +376,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
           """
               .formatted(dependency, vajramID));
     }
-    Map<InvocationId, Request<@Nullable Object>> depRequestsByDepInvocationId =
+    Map<InvocationId, Request<Object>> depRequestsByDepInvocationId =
         new LinkedHashMap<>(INITIAL_CAPACITY);
     Map<InvocationId, String> skipReasonsByReq = new LinkedHashMap<>(INITIAL_CAPACITY);
     Map<InvocationId, Set<InvocationId>> depReqsByIncomingReq =
@@ -462,10 +462,10 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
             } else {
               Set<InvocationId> depReqIds =
                   depReqsByIncomingReq.getOrDefault(invocationId, Set.of());
-              List<RequestResponse<Request<@Nullable Object>, @Nullable Object>> collect =
+              List<RequestResponse<Request<Object>, Object>> collect =
                   new ArrayList<>(depReqIds.size());
               for (InvocationId depReqId : depReqIds) {
-                Request<@Nullable Object> orDefault =
+                Request<Object> orDefault =
                     depRequestsByDepInvocationId.getOrDefault(
                         depReqId, emptyRequestForVajram(depVajramID)._build());
                 collect.add(

@@ -520,7 +520,9 @@ public class CodeGenUtility {
     if (type instanceof PrimitiveType p) {
       return typeUtils.boxedClass(p).asType();
     } else if (type.getKind() == TypeKind.VOID) {
-      return elementUtils.getTypeElement(requireNonNull(Void.class.getCanonicalName())).asType();
+      return requireNonNull(
+              elementUtils.getTypeElement(requireNonNull(Void.class.getCanonicalName())))
+          .asType();
     } else {
       return type;
     }

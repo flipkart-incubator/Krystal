@@ -55,6 +55,7 @@ public final class InputBatcherImpl implements InputBatcher {
 
   @Override
   public void batch() {
+    Consumer<List<BatchedFacets>> batchingListener = this.batchingListener;
     if (batchingListener != null) {
       List<BatchedFacets> list = new ArrayList<>();
       for (ImmutableFacetValuesContainer c : unBatchedRequests.keySet()) {

@@ -11,7 +11,6 @@ import java.util.function.BiConsumer;
 import lombok.Getter;
 import lombok.ToString;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Response of a Fanout dependency
@@ -20,8 +19,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @param <T> The response type of the dependency vajram
  */
 @ToString(onlyExplicitlyIncluded = true)
-public final class FanoutDepResponses<R extends Request<@Nullable T>, T>
-    implements DepResponse<R, T> {
+public final class FanoutDepResponses<R extends Request<T>, T> implements DepResponse<R, T> {
 
   private static final FanoutDepResponses<?, ?> EMPTY =
       new FanoutDepResponses<>(ImmutableList.of());

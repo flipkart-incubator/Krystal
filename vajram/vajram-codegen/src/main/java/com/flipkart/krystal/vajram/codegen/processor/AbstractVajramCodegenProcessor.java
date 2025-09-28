@@ -137,10 +137,11 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
       }
     }
     for (Failure failure : failures) {
+      TypeElement element = failure.element();
       util.codegenUtil()
           .note(
               "[Vajram Codegen Exception] "
-                  + failure.element().getQualifiedName()
+                  + (element == null ? "" : element.getQualifiedName())
                   + "\n"
                   + getStackTraceAsString(failure.throwable()));
     }

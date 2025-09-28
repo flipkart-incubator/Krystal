@@ -235,7 +235,9 @@ public final class KryonExecutor implements KrystalExecutor {
   @Override
   @SuppressWarnings("FutureReturnValueIgnored")
   public <T> CompletableFuture<@Nullable T> executeKryon(
-      ImmutableRequest request, KryonExecutionConfig executionConfig) {
+      ImmutableRequest<T> request, KryonExecutionConfig executionConfig) {
+    @SuppressWarnings("unchecked")
+    ImmutableRequest<Object> castRequest = (ImmutableRequest<Object>) request;
     if (closed) {
       throw new RejectedExecutionException("KryonExecutor is already closed");
     }
@@ -282,7 +284,7 @@ public final class KryonExecutor implements KrystalExecutor {
                         new KryonExecution(
                             vajramID,
                             invocationId,
-                            new RequestResponseFuture<>(request, future),
+                            new RequestResponseFuture<>(castRequest, future),
                             executionConfig));
                     unFlushedExecutions.add(invocationId);
                   }
@@ -613,7 +615,7 @@ public final class KryonExecutor implements KrystalExecutor {
         (vajramID, kryonExecutions) -> {
           CompletableFuture<BatchResponse> batchResponseFuture;
           try {
-            Map<InvocationId, Request<@Nullable Object>> requests =
+            Map<InvocationId, Request<Object>> requests =
                 new LinkedHashMap<>(kryonExecutions.size());
             for (KryonExecution kryonExecution : kryonExecutions) {
               requests.put(kryonExecution.instanceExecutionId(), kryonExecution.request());
@@ -741,15 +743,14 @@ public final class KryonExecutor implements KrystalExecutor {
   private record KryonExecution(
       VajramID vajramID,
       InvocationId instanceExecutionId,
-      RequestResponseFuture<ImmutableRequest<@Nullable Object>, @Nullable Object>
-          requestResponseFuture,
+      RequestResponseFuture<ImmutableRequest<Object>, Object> requestResponseFuture,
       KryonExecutionConfig executionConfig) {
 
     public CompletableFuture<@Nullable Object> response() {
       return requestResponseFuture().response();
     }
 
-    public Request<@Nullable Object> request() {
+    public Request<Object> request() {
       return requestResponseFuture().request();
     }
   }

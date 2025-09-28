@@ -12,7 +12,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 public final class OutputLogicExecutionInput {
   private final List<ExecutionItem> facetValueResponses;
   private final ExecutorService graphExecutor;
-  @MonotonicNonNull private CompletableFuture[] responseFutures;
+  private CompletableFuture @MonotonicNonNull [] responseFutures;
 
   public OutputLogicExecutionInput(
       List<ExecutionItem> facetValueResponses, ExecutorService graphExecutor) {
@@ -31,10 +31,12 @@ public final class OutputLogicExecutionInput {
 
   public CompletableFuture[] responseFutures() {
     if (responseFutures == null) {
-      responseFutures = new CompletableFuture[facetValueResponses.size()];
+      CompletableFuture[] responseFutures = new CompletableFuture[facetValueResponses.size()];
       for (int i = 0; i < facetValueResponses.size(); i++) {
         responseFutures[i] = facetValueResponses.get(i).response();
       }
+      this.responseFutures = responseFutures;
+      return responseFutures;
     }
     return responseFutures;
   }
