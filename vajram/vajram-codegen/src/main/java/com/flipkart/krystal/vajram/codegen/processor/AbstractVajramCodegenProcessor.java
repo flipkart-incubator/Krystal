@@ -24,8 +24,10 @@ import java.util.Set;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.TypeElement;
+import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+@Slf4j
 abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
     permits VajramModelGenProcessor, VajramWrapperGenProcessor {
 
@@ -34,6 +36,8 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
 
   public AbstractVajramCodegenProcessor(CodegenPhase codegenPhase) {
     this.codegenPhase = codegenPhase;
+    log.info(
+        "Initializing {} with codegen phase {}", this.getClass().getSimpleName(), codegenPhase);
   }
 
   @Override
@@ -132,6 +136,15 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
         util.codegenUtil().error(getStackTraceAsString(throwable), failure.element());
       }
     }
+    for (Failure failure : failures) {
+      util.codegenUtil()
+          .note(
+              "[Vajram Codegen Exception] "
+                  + failure.element().getQualifiedName()
+                  + "\n"
+                  + getStackTraceAsString(failure.throwable()));
+    }
+
     return false;
   }
 }
