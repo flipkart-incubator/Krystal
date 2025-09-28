@@ -80,7 +80,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @Slf4j
 public class CodeGenUtility {
 
-  private static final boolean DEBUG = false;
+  private static final boolean NOTE_LEVEL =
+      System.getProperty(Constants.LOG_LEVEL, "error").equalsIgnoreCase("note");
 
   @Getter private final ProcessingEnvironment processingEnv;
   private final Types typeUtils;
@@ -402,7 +403,7 @@ public class CodeGenUtility {
   }
 
   private void _note(CharSequence message, @Nullable TypeElement typeElement) {
-    if (DEBUG) {
+    if (NOTE_LEVEL) {
       processingEnv
           .getMessager()
           .printMessage(
