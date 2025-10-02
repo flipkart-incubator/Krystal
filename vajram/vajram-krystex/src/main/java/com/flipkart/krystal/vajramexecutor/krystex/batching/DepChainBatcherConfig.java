@@ -1,9 +1,12 @@
 package com.flipkart.krystal.vajramexecutor.krystex.batching;
 
 import static com.flipkart.krystal.facets.FacetType.DEPENDENCY;
+import static java.lang.Math.max;
+import static java.util.stream.Collectors.groupingBy;
 
 import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.core.VajramID;
+import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.resolution.ResolverDefinition;
 import com.flipkart.krystal.krystex.kryon.DefaultDependentChain;
@@ -12,6 +15,7 @@ import com.flipkart.krystal.krystex.kryon.DependentChainStart;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.OutputLogicDecoratorContext;
+import com.flipkart.krystal.traits.TraitDispatchPolicy;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.batching.InputBatcher;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
@@ -39,6 +43,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public record DepChainBatcherConfig(
@@ -95,17 +100,26 @@ public record DepChainBatcherConfig(
                 instanceId, inputBatcherSupplier.get(), dependentChains::contains));
   }
 
+  @Deprecated(forRemoval = true)
   public static void autoRegisterSharedBatchers(
       VajramKryonGraph graph, BatchSizeSupplier batchSizeSupplier) {
     autoRegisterSharedBatchers(graph, batchSizeSupplier, ImmutableSet.of());
   }
 
+  @Deprecated(forRemoval = true)
   public static void autoRegisterSharedBatchers(
       VajramKryonGraph graph,
       BatchSizeSupplier batchSizeSupplier,
       ImmutableSet<DependentChain> disabledDependentChains) {
     Map<VajramID, Map<Integer, Set<DependentChain>>> ioNodes =
         getIoVajrams(graph, disabledDependentChains);
+    registerBatchers(ioNodes, batchSizeSupplier, graph);
+  }
+
+  private static void registerBatchers(
+      Map<VajramID, Map<Integer, Set<DependentChain>>> ioNodes,
+      BatchSizeSupplier batchSizeSupplier,
+      VajramKryonGraph graph) {
     Map<VajramID, ImmutableList<DepChainBatcherConfig>> depChainBatcherConfigs =
         new LinkedHashMap<>();
     ioNodes.forEach(
@@ -113,7 +127,7 @@ public record DepChainBatcherConfig(
           if (isBatchingNeededForIoVajram(graph, vajramId)) {
             List<DepChainBatcherConfig> inputModulatorConfigs = new ArrayList<>(ioNodeMap.size());
             for (Entry<Integer, Set<DependentChain>> entry : ioNodeMap.entrySet()) {
-              Integer depth = entry.getKey();
+              int depth = entry.getKey();
               Set<DependentChain> depChains = entry.getValue();
               inputModulatorConfigs.add(
                   DepChainBatcherConfig.sharedBatcher(
@@ -344,5 +358,116 @@ public record DepChainBatcherConfig(
   @FunctionalInterface
   public interface BatchSizeSupplier {
     int getBatchSize(VajramID vajramId);
+  }
+
+  public static void autoRegisterSharedBatchersV2(
+      VajramKryonGraph graph, BatchSizeSupplier batchSizeSupplier) {
+    autoRegisterSharedBatchersV2(graph, batchSizeSupplier, ImmutableSet.of());
+  }
+
+  public static void autoRegisterSharedBatchersV2(
+      VajramKryonGraph graph,
+      BatchSizeSupplier batchSizeSupplier,
+      ImmutableSet<DependentChain> disabledDependentChains) {
+    List<VajramDefinition> externallyInvocableVajrams =
+        graph.vajramDefinitions().values().stream()
+            .filter(v -> v.vajramTags().getAnnotationByType(ExternallyInvocable.class).isPresent())
+            .toList();
+    Map<VajramID, Map<Integer, Set<DependentChain>>> ioNodes = new HashMap<>();
+    for (VajramDefinition vajramDefinition : externallyInvocableVajrams) {
+      collateDepChainOrdinals(
+          ioNodes,
+          graph,
+          vajramDefinition.vajramId(),
+          graph.kryonDefinitionRegistry().getDependentChainsStart(),
+          0,
+          disabledDependentChains);
+    }
+    registerBatchers(ioNodes, batchSizeSupplier, graph);
+  }
+
+  private static void collateDepChainOrdinals(
+      Map<VajramID, Map<Integer, Set<DependentChain>>> ioNodes,
+      VajramKryonGraph graph,
+      VajramID vajramID,
+      DependentChain incomingDepChain,
+      int incomingOrdinal,
+      ImmutableSet<DependentChain> disabledDependentChains) {
+    if (disabledDependentChains.contains(incomingDepChain)) {
+      return;
+    }
+    VajramDefinition vajramDefinition = graph.getVajramDefinition(vajramID);
+    List<Dependency> dependencies =
+        vajramDefinition.facetSpecs().stream()
+            .filter(f -> f instanceof Dependency)
+            .<@NonNull Dependency>map(Dependency.class::cast)
+            .toList();
+    Map<Dependency, List<ResolverDefinition>> resolversByTargetDep =
+        vajramDefinition.inputResolvers().keySet().stream()
+            .collect(groupingBy(r -> r.target().dependency()));
+    Map<Dependency, Integer> dependencyOrdinals = new HashMap<>();
+    int currentOrdinal = incomingOrdinal;
+    for (Dependency dependency : dependencies) {
+      int depOrdinal =
+          currentOrdinal + computeDepOrdinal(dependencyOrdinals, dependency, resolversByTargetDep);
+      currentOrdinal = max(depOrdinal, currentOrdinal);
+      VajramID depVajramID = ((DependencySpec) dependency).onVajramId();
+      for (VajramID depVajramId : getDispatchTargets(graph, depVajramID)) {
+        collateDepChainOrdinals(
+            ioNodes,
+            graph,
+            depVajramId,
+            incomingDepChain.extend(vajramDefinition.vajramId(), dependency),
+            depOrdinal,
+            disabledDependentChains);
+      }
+    }
+    if (isBatchingNeededForIoVajram(graph, vajramID)) {
+      ioNodes
+          .computeIfAbsent(vajramID, _vid -> new HashMap<>())
+          .computeIfAbsent(currentOrdinal, _depth -> new HashSet<>())
+          .add(incomingDepChain);
+    }
+  }
+
+  private static Collection<VajramID> getDispatchTargets(
+      VajramKryonGraph graph, VajramID depVajramID) {
+    VajramDefinition depVajramDef = graph.getVajramDefinition(depVajramID);
+    Collection<VajramID> depVajramIDs = new ArrayList<>();
+    if (depVajramDef.isTrait()) {
+      TraitDispatchPolicy traitDispatchPolicy = graph.getTraitDispatchPolicy(depVajramID);
+      if (traitDispatchPolicy == null) {
+        throw new IllegalStateException(
+            "Trait " + depVajramID + " does not have a trait dispatch policy defined");
+      }
+      for (VajramID vajramID : traitDispatchPolicy.dispatchTargets()) {
+        depVajramIDs.addAll(getDispatchTargets(graph, vajramID));
+      }
+    } else {
+      depVajramIDs = List.of(depVajramID);
+    }
+    return depVajramIDs;
+  }
+
+  private static int computeDepOrdinal(
+      Map<Dependency, Integer> dependencyOrdinals,
+      Facet facet,
+      Map<Dependency, List<ResolverDefinition>> resolversByTargetDep) {
+    if (!(facet instanceof Dependency dependency)) {
+      return -1;
+    }
+    if (dependencyOrdinals.containsKey(dependency)) {
+      return dependencyOrdinals.get(dependency);
+    }
+    List<ResolverDefinition> resolvers = resolversByTargetDep.getOrDefault(dependency, List.of());
+    int ordinal = 0;
+    for (ResolverDefinition resolver : resolvers) {
+      ImmutableSet<? extends Facet> sources = resolver.sources();
+      for (Facet source : sources) {
+        ordinal =
+            max(ordinal, computeDepOrdinal(dependencyOrdinals, source, resolversByTargetDep) + 1);
+      }
+    }
+    return ordinal;
   }
 }

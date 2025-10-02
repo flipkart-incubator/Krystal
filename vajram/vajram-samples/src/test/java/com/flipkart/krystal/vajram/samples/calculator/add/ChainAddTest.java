@@ -6,7 +6,7 @@ import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.calculator.add.Add.add;
 import static com.flipkart.krystal.vajram.samples.calculator.add.ChainAdd_Fac.chainSum_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.batching.DepChainBatcherConfig.autoRegisterSharedBatchers;
+import static com.flipkart.krystal.vajramexecutor.krystex.batching.DepChainBatcherConfig.autoRegisterSharedBatchersV2;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -81,7 +81,7 @@ class ChainAddTest {
   void chainer_success() throws Exception {
     CompletableFuture<Integer> future;
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
-    autoRegisterSharedBatchers(graph, _v -> 100, getDisabledDependentChains(graph));
+    autoRegisterSharedBatchersV2(graph, _v -> 100, getDisabledDependentChains(graph));
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
@@ -127,7 +127,7 @@ class ChainAddTest {
     long startTime = System.nanoTime();
     long timeToCreateExecutors = 0;
     long timeToEnqueueVajram = 0;
-    autoRegisterSharedBatchers(graph, _v -> 100, getDisabledDependentChains(graph));
+    autoRegisterSharedBatchersV2(graph, _v -> 100, getDisabledDependentChains(graph));
     for (int value = 0; value < loopCount; value++) {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor krystexVajramExecutor =
@@ -193,7 +193,7 @@ class ChainAddTest {
     long startTime = System.nanoTime();
     long timeToCreateExecutors = 0;
     long timeToEnqueueVajram = 0;
-    autoRegisterSharedBatchers(graph, _v -> 100, getDisabledDependentChains(graph));
+    autoRegisterSharedBatchersV2(graph, _v -> 100, getDisabledDependentChains(graph));
     for (int outer_i = 0; outer_i < outerLoopCount; outer_i++) {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor krystexVajramExecutor =
