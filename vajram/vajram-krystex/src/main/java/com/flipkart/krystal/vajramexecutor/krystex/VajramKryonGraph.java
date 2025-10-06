@@ -527,7 +527,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
     Map<Dependency, VajramID> depIdToProviderKryon = new HashMap<>();
     // Create and register sub graphs for dependencies of this vajram
     for (DependencySpec dependency : dependencies) {
-      var accessSpec = dependency.onVajramId();
+      var accessSpec = dependency.onVajramID();
       VajramDefinition dependencyVajram = vajramDefinitions.get(accessSpec);
       if (dependencyVajram == null) {
         throw new VajramDefinitionException(
