@@ -7,6 +7,7 @@ buildscript {
         classpath 'com.flipkart.krystal:vajram-java-sdk:' + project.krystal_version
     }
 }
+
 plugins {
     id 'java-gradle-plugin'
 }
