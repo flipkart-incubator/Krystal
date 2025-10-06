@@ -146,7 +146,7 @@ public class StaticCallGraphGenerator {
 
       for (FacetSpec<?, ?> facet : definition.facetSpecs()) {
         if (facet instanceof DependencySpec<?, ?, ?> dependencySpec) {
-          VajramID dependencyId = dependencySpec.onVajramId();
+          VajramID dependencyId = dependencySpec.onVajramID();
           if (vajramDefinitions.containsKey(vajramId)
               && vajramDefinitions.containsKey(dependencyId)) {
             Link link =

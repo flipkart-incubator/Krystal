@@ -208,7 +208,7 @@ public record DepChainBatcherConfig(
       if (inputDef instanceof DependencySpec<?, ?, ?> dependency) {
         List<ResolverDefinition> resolverDefinition =
             getInputResolverDefinition(rootNode, dependency);
-        VajramDefinition childNode = graph.getVajramDefinition(dependency.onVajramId());
+        VajramDefinition childNode = graph.getVajramDefinition(dependency.onVajramID());
         if (inputDefGraph.get(inputDef) != null) {
           for (Facet inputDef1 : inputDefGraph.get(inputDef)) {
             VajramID prerequisiteVajramId =
@@ -260,7 +260,7 @@ public record DepChainBatcherConfig(
     for (Facet inputDef : node.facetSpecs()) {
       if (inputDef instanceof DependencySpec<?, ?, ?> dependency) {
         incrementTheLeafIONodeOfTheVajram(
-            graph.getVajramDefinition(dependency.onVajramId()), graph, ioNodeDepth);
+            graph.getVajramDefinition(dependency.onVajramID()), graph, ioNodeDepth);
       }
     }
   }
@@ -273,7 +273,7 @@ public record DepChainBatcherConfig(
     for (Facet inputDef : node.facetSpecs()) {
       if (inputDef instanceof DependencySpec<?, ?, ?> dependency) {
         decrementTheLeafIONodeOfTheVajram(
-            graph.getVajramDefinition(dependency.onVajramId()), graph, ioNodeDepth);
+            graph.getVajramDefinition(dependency.onVajramID()), graph, ioNodeDepth);
       }
     }
   }
@@ -283,7 +283,7 @@ public record DepChainBatcherConfig(
     for (ResolverDefinition depInput : depInputs) {
       if (inputDefinition instanceof DependencySpec<?, ?, ?> dependency) {
         if (depInput.sources().contains(inputDefinition)) {
-          return dependency.onVajramId();
+          return dependency.onVajramID();
         }
       }
     }
@@ -373,75 +373,90 @@ public record DepChainBatcherConfig(
         graph.vajramDefinitions().values().stream()
             .filter(v -> v.vajramTags().getAnnotationByType(ExternallyInvocable.class).isPresent())
             .toList();
-    Map<VajramID, Map<Integer, Set<DependentChain>>> ioNodes = new HashMap<>();
+    Map<VajramID, Map<Integer, Set<DependentChain>>> ioVajramsToOrdinalChains = new HashMap<>();
+    Map<VajramID, Integer> vajramsToOutgoingOrdinals = new HashMap<>();
     for (VajramDefinition vajramDefinition : externallyInvocableVajrams) {
       collateDepChainOrdinals(
-          ioNodes,
+          ioVajramsToOrdinalChains,
+          vajramsToOutgoingOrdinals,
           graph,
           vajramDefinition.vajramId(),
           graph.kryonDefinitionRegistry().getDependentChainsStart(),
           0,
           disabledDependentChains);
     }
-    registerBatchers(ioNodes, batchSizeSupplier, graph);
+    registerBatchers(ioVajramsToOrdinalChains, batchSizeSupplier, graph);
   }
 
   private static void collateDepChainOrdinals(
-      Map<VajramID, Map<Integer, Set<DependentChain>>> ioNodes,
+      Map<VajramID, Map<Integer, Set<DependentChain>>> ioVajramsToOrdinalChains,
+      Map<VajramID, Integer> vajramsToResponseOrdinals,
       VajramKryonGraph graph,
-      VajramID vajramID,
+      VajramID vajramIDBeingInvoked,
       DependentChain incomingDepChain,
       int incomingOrdinal,
       ImmutableSet<DependentChain> disabledDependentChains) {
     if (disabledDependentChains.contains(incomingDepChain)) {
       return;
     }
-    VajramDefinition vajramDefinition = graph.getVajramDefinition(vajramID);
-    List<Dependency> dependencies =
-        vajramDefinition.facetSpecs().stream()
-            .filter(f -> f instanceof Dependency)
-            .<@NonNull Dependency>map(Dependency.class::cast)
-            .toList();
-    Map<Dependency, List<ResolverDefinition>> resolversByTargetDep =
-        vajramDefinition.inputResolvers().keySet().stream()
-            .collect(groupingBy(r -> r.target().dependency()));
+    VajramDefinition vajramBeingInvoked = graph.getVajramDefinition(vajramIDBeingInvoked);
+    List<Dependency> dependencies = getDependencies(vajramBeingInvoked);
     Map<Dependency, Integer> dependencyOrdinals = new HashMap<>();
-    int currentOrdinal = incomingOrdinal;
     for (Dependency dependency : dependencies) {
-      int depOrdinal =
-          currentOrdinal + computeDepOrdinal(dependencyOrdinals, dependency, resolversByTargetDep);
-      currentOrdinal = max(depOrdinal, currentOrdinal);
-      VajramID depVajramID = ((DependencySpec) dependency).onVajramId();
-      for (VajramID depVajramId : getDispatchTargets(graph, depVajramID)) {
+      DependentChain outgoingDepChain =
+          incomingDepChain.extend(vajramBeingInvoked.vajramId(), dependency);
+      for (VajramID depVajramID :
+          // TODO: Replace (DependencySpec) casting with accessing onVajramID
+          //  directly from Dependency
+          getDispatchTargets(((DependencySpec) dependency).onVajramID(), graph)) {
+        int depSourceOrdinal =
+            computeSourceOrdinal(
+                dependency, incomingOrdinal, dependencyOrdinals, vajramsToResponseOrdinals, graph);
         collateDepChainOrdinals(
-            ioNodes,
+            ioVajramsToOrdinalChains,
+            vajramsToResponseOrdinals,
             graph,
-            depVajramId,
-            incomingDepChain.extend(vajramDefinition.vajramId(), dependency),
-            depOrdinal,
+            depVajramID,
+            outgoingDepChain,
+            depSourceOrdinal,
             disabledDependentChains);
       }
     }
-    if (isBatchingNeededForIoVajram(graph, vajramID)) {
-      ioNodes
-          .computeIfAbsent(vajramID, _vid -> new HashMap<>())
-          .computeIfAbsent(currentOrdinal, _depth -> new HashSet<>())
+
+    if (vajramBeingInvoked.def() instanceof IOVajramDef<?>) {
+      final int depChainOrdinal =
+          incomingOrdinal
+              + computeResponseOrdinal(vajramIDBeingInvoked, vajramsToResponseOrdinals, graph);
+      ioVajramsToOrdinalChains
+          .computeIfAbsent(vajramIDBeingInvoked, _vid -> new HashMap<>())
+          .computeIfAbsent(depChainOrdinal, _depth -> new HashSet<>())
           .add(incomingDepChain);
     }
   }
 
+  private static @NonNull List<Dependency> getDependencies(VajramDefinition vajramBeingInvoked) {
+    List<Dependency> dependencies =
+        vajramBeingInvoked.facetSpecs().stream()
+            .filter(f -> f instanceof Dependency)
+            .<@NonNull Dependency>map(Dependency.class::cast)
+            .toList();
+    return dependencies;
+  }
+
   private static Collection<VajramID> getDispatchTargets(
-      VajramKryonGraph graph, VajramID depVajramID) {
+      VajramID depVajramID, VajramKryonGraph graph) {
     VajramDefinition depVajramDef = graph.getVajramDefinition(depVajramID);
     Collection<VajramID> depVajramIDs = new ArrayList<>();
     if (depVajramDef.isTrait()) {
       TraitDispatchPolicy traitDispatchPolicy = graph.getTraitDispatchPolicy(depVajramID);
       if (traitDispatchPolicy == null) {
         throw new IllegalStateException(
-            "Trait " + depVajramID + " does not have a trait dispatch policy defined");
+            "Trait "
+                + depVajramID
+                + " does not have a trait dispatch policy defined. Cannot auto-compute batcher config.");
       }
       for (VajramID vajramID : traitDispatchPolicy.dispatchTargets()) {
-        depVajramIDs.addAll(getDispatchTargets(graph, vajramID));
+        depVajramIDs.addAll(getDispatchTargets(vajramID, graph));
       }
     } else {
       depVajramIDs = List.of(depVajramID);
@@ -449,25 +464,89 @@ public record DepChainBatcherConfig(
     return depVajramIDs;
   }
 
-  private static int computeDepOrdinal(
-      Map<Dependency, Integer> dependencyOrdinals,
-      Facet facet,
-      Map<Dependency, List<ResolverDefinition>> resolversByTargetDep) {
-    if (!(facet instanceof Dependency dependency)) {
-      return -1;
+  private static int computeSourceOrdinal(
+      Dependency dependency,
+      int incomingOrdinal,
+      Map<Dependency, Integer> dependencySourceOrdinals,
+      Map<VajramID, Integer> vajramsToResponseOrdinals,
+      VajramKryonGraph graph) {
+    if (dependencySourceOrdinals.containsKey(dependency)) {
+      return dependencySourceOrdinals.get(dependency);
     }
-    if (dependencyOrdinals.containsKey(dependency)) {
-      return dependencyOrdinals.get(dependency);
-    }
-    List<ResolverDefinition> resolvers = resolversByTargetDep.getOrDefault(dependency, List.of());
-    int ordinal = 0;
+    VajramDefinition vajramBeingInvoked = graph.getVajramDefinition(dependency.ofVajramID());
+    int sourceOrdinal = incomingOrdinal;
+    List<ResolverDefinition> resolvers =
+        vajramBeingInvoked.inputResolvers().keySet().stream()
+            .filter(r -> r.target().dependency().equals(dependency))
+            .toList();
     for (ResolverDefinition resolver : resolvers) {
       ImmutableSet<? extends Facet> sources = resolver.sources();
       for (Facet source : sources) {
-        ordinal =
-            max(ordinal, computeDepOrdinal(dependencyOrdinals, source, resolversByTargetDep) + 1);
+        if (source instanceof Dependency depSource) {
+          for (VajramID sourceDispatchTarget :
+              // TODO: Replace (DependencySpec) casting with accessing onVajramID
+              //  directly from Dependency
+              getDispatchTargets(((DependencySpec) depSource).onVajramID(), graph)) {
+            sourceOrdinal =
+                max(
+                    sourceOrdinal,
+                    computeSourceOrdinal(
+                            depSource,
+                            incomingOrdinal,
+                            dependencySourceOrdinals,
+                            vajramsToResponseOrdinals,
+                            graph)
+                        + computeResponseOrdinal(
+                            sourceDispatchTarget, vajramsToResponseOrdinals, graph));
+          }
+        }
       }
     }
-    return ordinal;
+    dependencySourceOrdinals.put(dependency, sourceOrdinal);
+    return sourceOrdinal;
+  }
+
+  private static int computeResponseOrdinal(
+      VajramID vajramBeingInvokedID,
+      Map<VajramID, Integer> vajramsToResponseOrdinals,
+      VajramKryonGraph graph) {
+    return vajramsToResponseOrdinals.computeIfAbsent(
+        vajramBeingInvokedID,
+        vajramID -> {
+          VajramDefinition vajramBeingInvoked = graph.getVajramDefinition(vajramBeingInvokedID);
+          List<Dependency> dependencies = getDependencies(vajramBeingInvoked);
+          Map<Dependency, List<ResolverDefinition>> resolversByTargetDep =
+              vajramBeingInvoked.inputResolvers().keySet().stream()
+                  .collect(groupingBy(r -> r.target().dependency()));
+          int sourceOrdinal = 0;
+          for (Dependency dependency : dependencies) {
+            List<ResolverDefinition> resolvers =
+                resolversByTargetDep.getOrDefault(dependency, List.of());
+            for (ResolverDefinition resolver : resolvers) {
+              ImmutableSet<? extends Facet> sources = resolver.sources();
+              for (Facet source : sources) {
+                if (source instanceof Dependency depSource) {
+                  // TODO: Replace (DependencySpec) casting with accessing onVajramID
+                  //  directly from Dependency
+                  Collection<VajramID> dispatchTargets =
+                      getDispatchTargets(((DependencySpec) depSource).onVajramID(), graph);
+                  for (VajramID dispatchTarget : dispatchTargets) {
+                    sourceOrdinal =
+                        max(
+                            sourceOrdinal,
+                            computeResponseOrdinal(
+                                dispatchTarget, vajramsToResponseOrdinals, graph));
+                  }
+                } else {
+                  sourceOrdinal = max(sourceOrdinal, 0);
+                }
+              }
+            }
+          }
+          if (vajramBeingInvoked.def() instanceof IOVajramDef<Object>) {
+            sourceOrdinal++;
+          }
+          return sourceOrdinal;
+        });
   }
 }

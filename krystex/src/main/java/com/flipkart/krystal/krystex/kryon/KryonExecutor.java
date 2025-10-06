@@ -346,12 +346,11 @@ public final class KryonExecutor implements KrystalExecutor {
   @SuppressWarnings("unchecked")
   private Kryon<? extends KryonCommand, ? extends KryonCommandResponse> createKryonIfAbsent(
       VajramID vajramID, VajramKryonDefinition kryonDefinition) {
-    KryonRegistry<FlushableKryon> batchKryonRegistry =
-        (KryonRegistry<FlushableKryon>) kryonRegistry;
+    KryonRegistry<BatchKryon> batchKryonRegistry = (KryonRegistry<BatchKryon>) kryonRegistry;
     return batchKryonRegistry.createIfAbsent(
         vajramID,
         _n ->
-            new FlushableKryon(
+            new BatchKryon(
                 kryonDefinition,
                 this,
                 this::getOutputLogicDecorators,

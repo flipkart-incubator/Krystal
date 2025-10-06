@@ -18,7 +18,7 @@ import java.util.TreeSet;
 import java.util.function.Function;
 
 abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonCommandResponse>
-    implements Kryon<C, R> permits FlushableKryon {
+    implements Kryon<C, R> permits BatchKryon {
   /**
    * Initial capacity for maps and sets. In load tests in real-world applications, substantial CPU
    * was observed to be spent in resizing collections.
