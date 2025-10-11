@@ -26,8 +26,8 @@ public class VajramParserTest {
     parseFile("computeAveragePrice.vajram");
   }
 
-  @Test
   @Disabled("Comments are not yet supported")
+  @Test
   void errabilityDemo() throws Exception {
     parseFile("errabilityDemo.vajram");
   }

@@ -50,6 +50,7 @@ public final class DirectKryon
         requestIdGenerator);
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   @Override
   public CompletableFuture<DirectResponse> executeCommand(
       MultiRequestDirectCommand<DirectResponse> kryonCommand) {
