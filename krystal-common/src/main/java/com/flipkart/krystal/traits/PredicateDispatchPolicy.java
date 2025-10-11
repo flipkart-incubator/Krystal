@@ -19,7 +19,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * their corresponding pattern to determine which vajram to dispatch the invocation to.
  *
  * <p>Since full predicate dispatch can become extremely complex to understand and maintain, the set
- * of predicates supported is {@link InputValueMatcher limite and sealed} to prevent arbitrarily
+ * of predicates supported is {@link InputValueMatcher limited and sealed} to prevent arbitrarily
  * complex predicates.
  *
  * @implNote Use predicate dispatch only when absolutely needed, and the problem cannot be solved by
