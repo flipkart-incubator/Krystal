@@ -15,7 +15,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * href="https://en.wikipedia.org/wiki/Multiple_dispatch">multiple</a> dispatch
  *
  * <p>An object of this class contains patterns matchers which are mapped to inputs.The trait inputs
- * which are tagged as {@link UseForPredicateDispatch @UseForDispatch} are matched against their
+ * which are tagged as {@link UseForPredicateDispatch @UseForPredicateDispatch} are matched against their
  * corresponding pattern to determine which vajram to dispatch the invocation to.
  *
  * <p>Since full predicate dispatch can become extremely complex to understand and maintain, the set
