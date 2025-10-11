@@ -18,7 +18,7 @@ import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.traits.ComputeDispatchPolicyImpl;
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import java.util.Collection;
 import java.util.HashSet;
@@ -95,7 +95,7 @@ class CustomerServiceAgentComputeTest {
                       defaultsByCommType.getOrDefault(
                           commType, DefaultCustomerServiceAgent_Req.class));
             },
-            ImmutableList.copyOf(dispatchTargets),
+            ImmutableSet.copyOf(dispatchTargets),
             graph));
   }
 

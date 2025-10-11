@@ -21,25 +21,29 @@ public abstract non-sealed class StaticDispatchPolicy implements TraitDispatchPo
    *
    * @param dependency The depdency facet by which a vajram has added a dependency on the trait
    */
-  public abstract VajramID getDispatchTarget(Dependency dependency);
+  public abstract VajramID getDispatchTargetID(Dependency dependency);
+
+  public abstract Class<? extends Request<?>> getDispatchTarget(Dependency dependency);
 
   /**
    * Returns the concrete {@link VajramID} bound to a trait for the given qualifier.
    *
    * @param qualifier The qualifier by which a dispatch target is to be selected
    */
-  public abstract VajramID getDispatchTarget(@Nullable Annotation qualifier);
+  public abstract VajramID getDispatchTargetID(@Nullable Annotation qualifier);
+
+  public abstract Class<? extends Request<?>> getDispatchTarget(@Nullable Annotation qualifier);
 
   public static boolean isValidQualifier(@Nullable Annotation qualifier) {
     return qualifier == null || qualifier.annotationType().getAnnotation(Qualifier.class) != null;
   }
 
   @Override
-  public final @Nullable VajramID getDispatchTarget(
+  public final @Nullable VajramID getDispatchTargetID(
       @Nullable Dependency dependency, Request<?> request) {
     if (dependency == null) {
       return null;
     }
-    return getDispatchTarget(dependency);
+    return getDispatchTargetID(dependency);
   }
 }

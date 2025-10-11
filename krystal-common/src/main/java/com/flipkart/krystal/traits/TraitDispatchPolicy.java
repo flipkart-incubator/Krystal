@@ -3,8 +3,7 @@ package com.flipkart.krystal.traits;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.Dependency;
-import com.google.common.collect.ImmutableCollection;
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -18,9 +17,9 @@ public sealed interface TraitDispatchPolicy permits StaticDispatchPolicy, Dynami
   /**
    * Returns the set of Vajrams which conform to the trait and can be dispatched to by this policy.
    */
-  ImmutableCollection<VajramID> dispatchTargets();
+  ImmutableSet<VajramID> dispatchTargetIDs();
 
-  ImmutableList<Class<? extends Request<?>>> dispatchTargetReqs();
+  ImmutableSet<Class<? extends Request<?>>> dispatchTargetReqs();
 
   /**
    * Returns the concrete {@link VajramID} bound to the trait for the given dependency.
@@ -28,5 +27,5 @@ public sealed interface TraitDispatchPolicy permits StaticDispatchPolicy, Dynami
    * @param dependency The dependency facet by which a vajram has added a dependency on the trait
    * @param request the trait request that needs to be dispatched
    */
-  @Nullable VajramID getDispatchTarget(@Nullable Dependency dependency, Request<?> request);
+  @Nullable VajramID getDispatchTargetID(@Nullable Dependency dependency, Request<?> request);
 }
