@@ -100,7 +100,7 @@ class MultiAgentContactTest {
 
     // Execute and verify
     CompletableFuture<@Nullable List<String>> responses;
-    try (var executor = graph.createExecutor(getExecutorConfig()); ) {
+    try (var executor = graph.createExecutor(getExecutorConfig())) {
       responses = executor.execute(request);
     }
 

@@ -33,6 +33,7 @@ dependencies {
     implementation 'org.projectlombok:lombok'
 }
 
+//Had to comment this out because compilation is failing with OOM
 //checkerFramework {
 //    extraJavacArgs += ['-AresolveReflection',]
 //}

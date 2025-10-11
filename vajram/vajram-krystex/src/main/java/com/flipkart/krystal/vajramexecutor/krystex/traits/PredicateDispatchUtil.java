@@ -7,8 +7,8 @@ import static lombok.AccessLevel.PRIVATE;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.InputMirror;
 import com.flipkart.krystal.traits.DispatchCase;
-import com.flipkart.krystal.traits.PredicateDynamicDispatchPolicy;
-import com.flipkart.krystal.traits.UseForDispatch;
+import com.flipkart.krystal.traits.PredicateDispatchPolicy;
+import com.flipkart.krystal.traits.UseForPredicateDispatch;
 import com.flipkart.krystal.traits.matchers.InputValueMatcher;
 import com.flipkart.krystal.vajram.TraitRequestRoot;
 import com.flipkart.krystal.vajram.VajramRequestRoot;
@@ -36,7 +36,7 @@ public class PredicateDispatchUtil {
   public static <T, R> DispatchCaseBuilder<R> when(
       InputMirrorSpec<T, ? extends Request<R>> input, InputValueMatcher<T> inputValueMatcher) {
     checkArgument(
-        input.tags().getAnnotationByType(UseForDispatch.class).isPresent(),
+        input.tags().getAnnotationByType(UseForPredicateDispatch.class).isPresent(),
         "Only the trait Inputs annotated as @UseForDispatch can be used for dynamic dispatching");
     return new DispatchCaseBuilder<>(ImmutableMap.of(input, inputValueMatcher));
   }
@@ -48,7 +48,7 @@ public class PredicateDispatchUtil {
     private final VajramKryonGraph graph;
 
     @SafeVarargs
-    public final PredicateDynamicDispatchPolicy conditionally(
+    public final PredicateDispatchPolicy conditionally(
         PredicatesDispatchCase<? extends Request<?>>... dispatchCases) {
       return new PredicateDispatchPolicyImpl(traitReq, ImmutableList.copyOf(dispatchCases), graph);
     }
