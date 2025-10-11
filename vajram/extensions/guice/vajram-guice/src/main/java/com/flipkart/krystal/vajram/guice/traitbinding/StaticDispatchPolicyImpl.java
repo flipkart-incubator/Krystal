@@ -63,9 +63,7 @@ public class StaticDispatchPolicyImpl extends StaticDispatchPolicy {
     List<Annotation> list =
         tags.annotations().stream()
             .filter(
-                annotation -> {
-                  return annotation.annotationType().getAnnotation(Qualifier.class) != null;
-                })
+                annotation -> annotation.annotationType().getAnnotation(Qualifier.class) != null)
             .toList();
     if (list.size() > 1) {
       throw new IllegalStateException("Multiple qualifiers found for " + dependency);

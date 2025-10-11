@@ -28,5 +28,5 @@ public sealed interface TraitDispatchPolicy permits StaticDispatchPolicy, Dynami
    * @param dependency The dependency facet by which a vajram has added a dependency on the trait
    * @param request the trait request that needs to be dispatched
    */
-  @Nullable VajramID getDispatchTarget(Dependency dependency, Request<?> request);
+  @Nullable VajramID getDispatchTarget(@Nullable Dependency dependency, Request<?> request);
 }

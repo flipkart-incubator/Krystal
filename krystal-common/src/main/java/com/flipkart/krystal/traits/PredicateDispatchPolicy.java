@@ -38,7 +38,8 @@ public abstract non-sealed class PredicateDispatchPolicy implements DynamicDispa
   public abstract ImmutableList<DispatchCase> dispatchCases();
 
   @Override
-  public final @Nullable VajramID getDispatchTarget(Dependency dependency, Request<?> request) {
+  public final @Nullable VajramID getDispatchTarget(
+      @Nullable Dependency dependency, Request<?> request) {
     for (DispatchCase dispatchCase : dispatchCases()) {
       var dispatchTarget = dispatchCase.computeDispatchTarget(request);
       if (dispatchTarget.isPresent()) {

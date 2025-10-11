@@ -10,7 +10,6 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import lombok.Getter;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class ComputeDispatchPolicyImpl<T extends Request<?>> extends ComputeDispatchPolicy {
@@ -18,7 +17,7 @@ public final class ComputeDispatchPolicyImpl<T extends Request<?>> extends Compu
   @FunctionalInterface
   public interface DispatchTargetComputer<T extends Request<?>> {
 
-    @Nullable Class<? extends T> computeDispatchTarget(Dependency dependency, T request);
+    @Nullable Class<? extends T> computeDispatchTarget(@Nullable Dependency dependency, T request);
   }
 
   private final VajramKryonGraph graph;
@@ -48,10 +47,14 @@ public final class ComputeDispatchPolicyImpl<T extends Request<?>> extends Compu
 
   @SuppressWarnings("unchecked")
   @Override
-  public @Nullable VajramID getDispatchTarget(Dependency dependency, Request<?> request) {
+  public @Nullable VajramID getDispatchTarget(@Nullable Dependency dependency, Request<?> request) {
     try {
-      return graph.getVajramIdByVajramReqType(
-          dispatchTargetComputer.computeDispatchTarget(dependency, (T) request));
+      Class<? extends T> dispatchTarget =
+          dispatchTargetComputer.computeDispatchTarget(dependency, (T) request);
+      if (dispatchTarget == null) {
+        return null;
+      }
+      return graph.getVajramIdByVajramReqType(dispatchTarget);
     } catch (ClassCastException e) {
       throw new AssertionError(
           "Request type "

@@ -35,7 +35,11 @@ public abstract non-sealed class StaticDispatchPolicy implements TraitDispatchPo
   }
 
   @Override
-  public final @Nullable VajramID getDispatchTarget(Dependency dependency, Request<?> request) {
+  public final @Nullable VajramID getDispatchTarget(
+      @Nullable Dependency dependency, Request<?> request) {
+    if (dependency == null) {
+      return null;
+    }
     return getDispatchTarget(dependency);
   }
 }
