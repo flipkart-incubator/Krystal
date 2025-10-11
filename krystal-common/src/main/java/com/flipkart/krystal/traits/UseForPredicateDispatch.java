@@ -14,10 +14,10 @@ import java.lang.annotation.Target;
  * href="https://en.wikipedia.org/wiki/Dynamic_dispatch">dynamic dispatching</a> trait invocations
  * to conforming vajrams
  *
- * @see PredicateDynamicDispatchPolicy
+ * @see PredicateDispatchPolicy
  */
 @ApplicableToElements(Facet.class)
 @Documented
 @Retention(RUNTIME)
 @Target(FIELD)
-public @interface UseForDispatch {}
+public @interface UseForPredicateDispatch {}
