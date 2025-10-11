@@ -455,7 +455,7 @@ public record DepChainBatcherConfig(
                 + depVajramID
                 + " does not have a trait dispatch policy defined. Cannot auto-compute batcher config.");
       }
-      for (VajramID vajramID : traitDispatchPolicy.dispatchTargets()) {
+      for (VajramID vajramID : traitDispatchPolicy.dispatchTargetIDs()) {
         depVajramIDs.addAll(getDispatchTargets(vajramID, graph));
       }
     } else {

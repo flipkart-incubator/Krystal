@@ -310,10 +310,10 @@ public final class KryonExecutor implements KrystalExecutor {
         VajramID boundVajram;
         try {
           if (latestDependency != null) {
-            boundVajram = staticDispatchPolicy.getDispatchTarget(latestDependency);
+            boundVajram = staticDispatchPolicy.getDispatchTargetID(latestDependency);
           } else {
             boundVajram =
-                staticDispatchPolicy.getDispatchTarget(executionConfig.staticDispatchQualifier());
+                staticDispatchPolicy.getDispatchTargetID(executionConfig.staticDispatchQualifier());
           }
         } catch (Throwable throwable) {
           throw new IllegalArgumentException(
@@ -321,7 +321,7 @@ public final class KryonExecutor implements KrystalExecutor {
         }
         concreteVajramIds.add(boundVajram);
       } else if (traitDispatchPolicy instanceof DynamicDispatchPolicy dynamicDispatcher) {
-        concreteVajramIds.addAll(dynamicDispatcher.dispatchTargets());
+        concreteVajramIds.addAll(dynamicDispatcher.dispatchTargetIDs());
       }
     } else {
       concreteVajramIds.add(vajramID);
