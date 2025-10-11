@@ -166,7 +166,7 @@ public class StaticCallGraphGenerator {
       if (definition.isTrait()) {
         TraitDispatchPolicy traitDispatchPolicy = vajramKryonGraph.getTraitDispatchPolicy(vajramId);
         if (traitDispatchPolicy != null) {
-          ImmutableCollection<VajramID> conformingVajrams = traitDispatchPolicy.dispatchTargets();
+          ImmutableCollection<VajramID> conformingVajrams = traitDispatchPolicy.dispatchTargetIDs();
           for (VajramID conformant : conformingVajrams) {
             Link link =
                 Link.builder()
