@@ -339,7 +339,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
         // invocations of this trait can be routed to the correct conforming Vajram.
         TraitDispatchPolicy traitDispatchPolicy = traitDispatchPolicies.get(vajramId);
         if (traitDispatchPolicy != null) {
-          for (VajramID dispatchTarget : traitDispatchPolicy.dispatchTargets()) {
+          for (VajramID dispatchTarget : traitDispatchPolicy.dispatchTargetIDs()) {
             loadKryonSubgraph(dispatchTarget, loadingInProgress);
           }
         }

@@ -10,14 +10,14 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
 /**
- * Only trait inputs annotated as UseForDispatch can be used for <a
+ * Only trait inputs annotated with this annotation can be used for <a
  * href="https://en.wikipedia.org/wiki/Dynamic_dispatch">dynamic dispatching</a> trait invocations
  * to conforming vajrams
  *
- * @see PredicateDynamicDispatchPolicy
+ * @see PredicateDispatchPolicy
  */
 @ApplicableToElements(Facet.class)
 @Documented
 @Retention(RUNTIME)
 @Target(FIELD)
-public @interface UseForDispatch {}
+public @interface UseForPredicateDispatch {}
