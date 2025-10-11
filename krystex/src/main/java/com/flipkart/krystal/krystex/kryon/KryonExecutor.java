@@ -48,7 +48,7 @@ import com.flipkart.krystal.krystex.request.IntReqGenerator;
 import com.flipkart.krystal.krystex.request.InvocationId;
 import com.flipkart.krystal.krystex.request.RequestIdGenerator;
 import com.flipkart.krystal.krystex.request.StringReqGenerator;
-import com.flipkart.krystal.traits.PredicateDynamicDispatchPolicy;
+import com.flipkart.krystal.traits.DynamicDispatchPolicy;
 import com.flipkart.krystal.traits.StaticDispatchPolicy;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
 import com.google.common.collect.ImmutableMap;
@@ -310,17 +310,17 @@ public final class KryonExecutor implements KrystalExecutor {
         VajramID boundVajram;
         try {
           if (latestDependency != null) {
-            boundVajram = staticDispatchPolicy.get(latestDependency);
+            boundVajram = staticDispatchPolicy.getDispatchTarget(latestDependency);
           } else {
-            boundVajram = staticDispatchPolicy.get(executionConfig.staticDispatchQualifier());
+            boundVajram =
+                staticDispatchPolicy.getDispatchTarget(executionConfig.staticDispatchQualifier());
           }
         } catch (Throwable throwable) {
           throw new IllegalArgumentException(
               "Error while getting bound vajram for trait with ID: " + vajramID);
         }
         concreteVajramIds.add(boundVajram);
-
-      } else if (traitDispatchPolicy instanceof PredicateDynamicDispatchPolicy dynamicDispatcher) {
+      } else if (traitDispatchPolicy instanceof DynamicDispatchPolicy dynamicDispatcher) {
         concreteVajramIds.addAll(dynamicDispatcher.dispatchTargets());
       }
     } else {

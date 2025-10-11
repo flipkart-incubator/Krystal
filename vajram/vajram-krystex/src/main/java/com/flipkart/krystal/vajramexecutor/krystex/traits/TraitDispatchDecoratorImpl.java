@@ -17,8 +17,7 @@ import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
 import com.flipkart.krystal.krystex.kryon.BatchResponse;
 import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
 import com.flipkart.krystal.krystex.request.InvocationId;
-import com.flipkart.krystal.traits.DispatchCase;
-import com.flipkart.krystal.traits.PredicateDynamicDispatchPolicy;
+import com.flipkart.krystal.traits.DynamicDispatchPolicy;
 import com.flipkart.krystal.traits.StaticDispatchPolicy;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
@@ -31,7 +30,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import lombok.Getter;
@@ -57,6 +55,7 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
       VajramInvocation<R> invocationToDecorate) {
     return kryonCommand -> {
       VajramID traitId = kryonCommand.vajramID();
+      Dependency dependency = kryonCommand.dependentChain().latestDependency();
       VajramDefinition vajramDefinition = vajramKryonGraph.getVajramDefinition(traitId);
       if (!vajramDefinition.isTrait()) {
         return invocationToDecorate.invokeDependency(kryonCommand);
@@ -65,9 +64,8 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
       if (traitDispatchPolicy instanceof StaticDispatchPolicy staticDispatchDefinition) {
         VajramID boundVajram;
         ClientSideCommand<R> commandToDispatch;
-        Dependency dependency = kryonCommand.dependentChain().latestDependency();
         if (dependency != null) {
-          boundVajram = staticDispatchDefinition.get(dependency);
+          boundVajram = staticDispatchDefinition.getDispatchTarget(dependency);
         } else {
           throw new AssertionError(
               "This is not possible. A dependency decorator can only be invoked when there is a dependency present.");
@@ -77,8 +75,7 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
           commandToDispatch = kryonCommand;
         }
         return invocationToDecorate.invokeDependency(commandToDispatch);
-      } else if (traitDispatchPolicy instanceof PredicateDynamicDispatchPolicy dynamicPolicy) {
-        ImmutableList<DispatchCase> dispatchCases = dynamicPolicy.dispatchCases();
+      } else if (traitDispatchPolicy instanceof DynamicDispatchPolicy dynamicPolicy) {
         if (kryonCommand instanceof ForwardSend forwardSend) {
           var originalExecutableRequests = forwardSend.executableRequests();
           Map<InvocationId, String> originalSkippedInvocations = forwardSend.skippedInvocations();
@@ -90,21 +87,12 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
               originalExecutableRequests.entrySet()) {
             InvocationId invocationId = requestEntry.getKey();
             Request<@Nullable Object> originalRequest = requestEntry.getValue();
-            boolean dispatchTargetNotFound = true;
-            for (DispatchCase dispatchCase : dispatchCases) {
-              Optional<? extends Class<? extends Request<?>>> dispatchTarget =
-                  dispatchCase.computeDispatchTarget(originalRequest);
-              if (dispatchTarget.isPresent()) {
-                VajramID dispatchTargetId =
-                    vajramKryonGraph.getVajramIdByVajramReqType(dispatchTarget.get());
-                dispatchRequests
-                    .computeIfAbsent(dispatchTargetId, k -> new LinkedHashMap<>())
-                    .put(invocationId, originalRequest);
-                dispatchTargetNotFound = false;
-                break;
-              }
-            }
-            if (dispatchTargetNotFound) {
+            VajramID dispatchTarget = dynamicPolicy.getDispatchTarget(dependency, originalRequest);
+            if (dispatchTarget != null) {
+              dispatchRequests
+                  .computeIfAbsent(dispatchTarget, k -> new LinkedHashMap<>())
+                  .put(invocationId, originalRequest);
+            } else {
               orphanedRequests.add(invocationId);
             }
           }
@@ -219,8 +207,8 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
   }
 
   @SuppressWarnings("unchecked")
-  private static <R extends KryonCommandResponse> @Nullable
-      ClientSideCommand<R> transformCommandForDispatch(
+  private static <R extends KryonCommandResponse>
+      @Nullable ClientSideCommand<R> transformCommandForDispatch(
           ClientSideCommand<R> kryonCommand, VajramID boundVajram) {
     ClientSideCommand<R> commandToDispatch = null;
     if (kryonCommand instanceof ForwardSend forwardSend) {

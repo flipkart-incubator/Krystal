@@ -5,7 +5,7 @@ import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 
 import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.model.IfAbsent;
-import com.flipkart.krystal.traits.UseForDispatch;
+import com.flipkart.krystal.traits.UseForPredicateDispatch;
 import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.TraitRoot;
 import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
@@ -13,7 +13,7 @@ import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
 /**
  * Sample trait demonstrating dynamic predicate dispatch capability of krystal
  *
- * <p>Takes in a customer Communication an responds to it
+ * <p>Takes in a customer Communication and responds to it.
  */
 @Trait
 @CallGraphDelegationMode(NONE)
@@ -22,15 +22,15 @@ public interface CustomerServiceAgent extends TraitRoot<String> {
   @SuppressWarnings("initialization.field.uninitialized")
   class _Inputs {
     @IfAbsent(FAIL)
-    @UseForDispatch
+    @UseForPredicateDispatch
     AgentType agentType;
 
     @IfAbsent(FAIL)
-    @UseForDispatch
+    @UseForPredicateDispatch
     InitialCommunication initialCommunication;
 
     @IfAbsent(FAIL)
-    @UseForDispatch
+    @UseForPredicateDispatch
     String customerName;
   }
 

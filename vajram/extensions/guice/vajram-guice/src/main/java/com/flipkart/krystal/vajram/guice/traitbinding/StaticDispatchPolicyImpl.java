@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.guice.traitbinding;
 
-import static com.flipkart.krystal.traits.StaticDispatchPolicy.isValidQualifier;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
@@ -12,6 +11,7 @@ import com.flipkart.krystal.traits.StaticDispatchPolicy;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.google.common.collect.ImmutableCollection;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Key;
 import jakarta.inject.Qualifier;
@@ -27,11 +27,12 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * @see TraitBinder
  */
-public class StaticDispatchPolicyImpl implements StaticDispatchPolicy {
+public class StaticDispatchPolicyImpl extends StaticDispatchPolicy {
+
+  @Getter private final VajramID traitID;
+  @Getter private final ImmutableList<Class<? extends Request<?>>> dispatchTargetReqs;
 
   private final VajramKryonGraph vajramKryonGraph;
-  @Getter private final VajramID traitID;
-
   private final ImmutableMap<Key<? extends Request<?>>, VajramID> bindingsByKey;
 
   private final Map<VajramID, Map<QualWrapper, VajramID>> bindingsByQualifier =
@@ -49,10 +50,15 @@ public class StaticDispatchPolicyImpl implements StaticDispatchPolicy {
                     binding ->
                         vajramKryonGraph.getVajramIdByVajramReqType(
                             binding.concreteVajramRequestType())));
+    this.dispatchTargetReqs =
+        ImmutableList.copyOf(
+            traitBinder.traitBindings().stream()
+                .map(TraitBinding::concreteVajramRequestType)
+                .toList());
   }
 
   @Override
-  public VajramID get(Dependency dependency) {
+  public VajramID getDispatchTarget(Dependency dependency) {
     ElementTags tags = dependency.tags();
     List<Annotation> list =
         tags.annotations().stream()
@@ -70,15 +76,15 @@ public class StaticDispatchPolicyImpl implements StaticDispatchPolicy {
     } else {
       qualifier = list.get(0);
     }
-    return get(new QualWrapper(qualifier));
+    return getDispatchTarget(new QualWrapper(qualifier));
   }
 
   @Override
-  public VajramID get(@Nullable Annotation qualifier) {
-    return get(new QualWrapper(qualifier));
+  public VajramID getDispatchTarget(@Nullable Annotation qualifier) {
+    return getDispatchTarget(new QualWrapper(qualifier));
   }
 
-  private VajramID get(QualWrapper qualWrapper) {
+  private VajramID getDispatchTarget(QualWrapper qualWrapper) {
     return bindingsByQualifier
         .computeIfAbsent(traitID, vajramID -> new LinkedHashMap<>())
         .computeIfAbsent(
