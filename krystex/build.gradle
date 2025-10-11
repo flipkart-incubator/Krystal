@@ -11,6 +11,4 @@ dependencies {
     implementation 'io.github.resilience4j:resilience4j-all'
     implementation 'io.github.resilience4j:resilience4j-bulkhead'
     implementation 'io.github.resilience4j:resilience4j-circuitbreaker'
-
-    compileOnly 'org.jetbrains:annotations'
 }

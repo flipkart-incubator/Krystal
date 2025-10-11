@@ -12,6 +12,7 @@ import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonExecutionReport.LogicExecInfo;
+import com.flipkart.krystal.krystex.testutils.FacetValuesMapBuilder;
 import com.flipkart.krystal.krystex.testutils.ImmutableFacetValuesMap;
 import com.flipkart.krystal.krystex.testutils.SimpleFacet;
 import com.flipkart.krystal.krystex.testutils.SimpleRequestBuilder;
@@ -48,14 +49,14 @@ class DefaultKryonExecutionReportTest {
     ImmutableList<ExecutionItem> facetValuesList =
         ImmutableList.of(
             new ExecutionItem(
-                new ImmutableFacetValuesMap(
+                new FacetValuesMapBuilder(
                     new SimpleRequestBuilder<>(
                         allInputs, ImmutableMap.of(1, withValue("v1")), vajramID),
                     allInputs,
                     vajramID),
                 new CompletableFuture<>()),
             new ExecutionItem(
-                new ImmutableFacetValuesMap(
+                new FacetValuesMapBuilder(
                     new SimpleRequestBuilder<>(
                         allInputs, ImmutableMap.of(1, withValue("v2")), vajramID),
                     allInputs,
@@ -123,14 +124,14 @@ class DefaultKryonExecutionReportTest {
     ImmutableList<ExecutionItem> facetValuesList =
         ImmutableList.of(
             new ExecutionItem(
-                new ImmutableFacetValuesMap(
+                new FacetValuesMapBuilder(
                     new SimpleRequestBuilder<>(
                         Set.of(input(1)), ImmutableMap.of(1, withValue("v1")), vajramID),
                     Set.of(input(1)),
                     vajramID),
                 new CompletableFuture<>()),
             new ExecutionItem(
-                new ImmutableFacetValuesMap(
+                new FacetValuesMapBuilder(
                     new SimpleRequestBuilder<>(
                         Set.of(input(2)), ImmutableMap.of(2, withValue("v2")), vajramID),
                     Set.of(input(2)),
@@ -158,14 +159,14 @@ class DefaultKryonExecutionReportTest {
     ImmutableList<ExecutionItem> facetValuesList =
         ImmutableList.of(
             new ExecutionItem(
-                new ImmutableFacetValuesMap(
+                new FacetValuesMapBuilder(
                     new SimpleRequestBuilder<>(
                         Set.of(input(1)), ImmutableMap.of(1, withValue("v1")), vajramID),
                     Set.of(input(1)),
                     vajramID),
                 new CompletableFuture<>()),
             new ExecutionItem(
-                new ImmutableFacetValuesMap(
+                new FacetValuesMapBuilder(
                     new SimpleRequestBuilder<>(
                         Set.of(input(2)), ImmutableMap.of(2, withValue("v2")), vajramID),
                     Set.of(input(2)),

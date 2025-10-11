@@ -4,6 +4,7 @@ buildscript {
         mavenCentral()
     }
 }
+
 plugins {
     id 'java-gradle-plugin'
 }
@@ -32,6 +33,6 @@ dependencies {
     implementation 'org.projectlombok:lombok'
 }
 
-checkerFramework {
-    extraJavacArgs += ['-AresolveReflection',]
-}
+//checkerFramework {
+//    extraJavacArgs += ['-AresolveReflection',]
+//}

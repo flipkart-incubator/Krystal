@@ -2,6 +2,7 @@ package com.flipkart.krystal.krystex.kryon;
 
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.concurrent.Futures.propagateCancellation;
+import static com.flipkart.krystal.config.PropertyNames.RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME;
 import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.google.common.base.Preconditions.checkArgument;
@@ -245,7 +246,9 @@ public final class KryonExecutor implements KrystalExecutor {
     VajramID vajramID = request._vajramID();
     @SuppressWarnings({"deprecation", "TestOnlyProblems"})
     boolean openAllKryonsForExternalInvocation =
-        executorConfig._riskyOpenAllKryonsForExternalInvocation();
+        Boolean.parseBoolean(
+            System.getProperties()
+                .getProperty(RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME, "false"));
     if (!openAllKryonsForExternalInvocation) {
       if (kryonDefinitionRegistry
           .getOrThrow(vajramID)
@@ -253,7 +256,7 @@ public final class KryonExecutor implements KrystalExecutor {
           .getAnnotationByType(InvocableOutsideGraph.class)
           .isEmpty()) {
         throw new RejectedExecutionException(
-            "External invocation is not allowed for vajramId: " + vajramID);
+            "External invocation is not enabled for vajramId: " + vajramID);
       }
     }
 
@@ -463,6 +466,7 @@ public final class KryonExecutor implements KrystalExecutor {
       Kryon<KryonCommand, R> kryon = getDecoratedKryon(kryonCommand, vajramID);
       return kryon.executeCommand(kryonCommand);
     } catch (Throwable e) {
+      kryonCommand.error(e);
       return failedFuture(e);
     }
   }

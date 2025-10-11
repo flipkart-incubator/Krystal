@@ -2,10 +2,8 @@ package com.flipkart.krystal.krystex.kryon;
 
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
-import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.DIRECT;
 
-import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
@@ -22,7 +20,6 @@ import lombok.Builder;
 import lombok.NonNull;
 import lombok.Singular;
 import org.checkerframework.common.returnsreceiver.qual.This;
-import org.jetbrains.annotations.TestOnly;
 
 /**
  * This is used to configure a particular execution of the Krystal graph.
@@ -39,11 +36,7 @@ import org.jetbrains.annotations.TestOnly;
  *     this execution.
  * @param traitDispatchDecorator used to determine the conformant vajrams bound to traits
  * @param debug If true, more human-readable names are give to entities - might be memory
- *     ineffecient.
- * @param _riskyOpenAllKryonsForExternalInvocation DO NOT SET THIS TO TRUE IN PRODUCTION CODE - ELSE
- *     NEW VERSIONS OF CODE CAN BREAK BACKWARD COMPATIBILITY. TO BE USED IN TESTING CODE ONLY.
- *     {@code true} if all vajrams are allowed to be invoked from outside the krystal graph instead
- *     of only allowing vajrams tagged with @{@link InvocableOutsideGraph}(allow=true)
+ *     inefficient.
  */
 public record KryonExecutorConfig(
     String executorId,
@@ -56,9 +49,7 @@ public record KryonExecutorConfig(
     @Singular ImmutableMap<String, DependencyDecoratorConfig> dependencyDecoratorConfigs,
     @NonNull SingleThreadExecutor executorService,
     TraitDispatchDecorator traitDispatchDecorator,
-    boolean debug,
-    /* ****** Risky Flags ********/
-    @TestOnly @Deprecated boolean _riskyOpenAllKryonsForExternalInvocation) {
+    boolean debug) {
   private static final AtomicLong EXEC_COUNT = new AtomicLong();
 
   @Builder(toBuilder = true)
@@ -67,7 +58,7 @@ public record KryonExecutorConfig(
       executorId = "KrystalExecutor-" + EXEC_COUNT.getAndIncrement();
     }
     if (kryonExecStrategy == null) {
-      kryonExecStrategy = BATCH;
+      kryonExecStrategy = DIRECT;
     }
     if (graphTraversalStrategy == null) {
       graphTraversalStrategy = DEPTH;

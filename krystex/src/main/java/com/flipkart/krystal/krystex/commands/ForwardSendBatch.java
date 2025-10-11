@@ -45,4 +45,10 @@ public record ForwardSendBatch(
   public boolean shouldSkip() {
     return executableRequests.isEmpty();
   }
+
+  @Override
+  public ForwardSendBatch rerouteTo(VajramID targetVajramID) {
+    return new ForwardSendBatch(
+        targetVajramID, executableRequests(), dependentChain(), skippedInvocations());
+  }
 }

@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajram.samples.calculator.divide;
 
+import static com.flipkart.krystal.config.PropertyNames.RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME;
+import static java.lang.Boolean.FALSE;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
@@ -11,6 +13,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import java.util.concurrent.RejectedExecutionException;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,7 +43,10 @@ class DivideTest {
   }
 
   @Test
-  void divide_noExeternalExecutionPermission_fails() {
+  void divide_noExternalExecutionPermission_fails() {
+    @Nullable String previousValue =
+        System.setProperty(
+            RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME, FALSE.toString());
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
@@ -54,7 +60,10 @@ class DivideTest {
                   krystexVajramExecutor.execute(
                       Divide_ReqImmutPojo._builder().numerator(5).denominator(7)._build()))
           .isInstanceOf(RejectedExecutionException.class)
-          .hasMessage("External invocation is not allowed for vajramId: v<Divide>");
+          .hasMessage("External invocation is not enabled for vajramId: v<Divide>");
+    }
+    if (previousValue != null) {
+      System.setProperty(RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME, previousValue);
     }
   }
 }

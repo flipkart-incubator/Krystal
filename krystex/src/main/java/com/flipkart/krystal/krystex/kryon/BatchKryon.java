@@ -494,18 +494,6 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
     }
   }
 
-  private <R extends KryonCommandResponse> VajramInvocation<R> decorateVajramInvocation(
-      DependentChain dependentChain,
-      VajramID depVajramID,
-      VajramInvocation<R> invocationToDecorate) {
-    for (DependencyDecorator dependencyDecorator :
-        getSortedDependencyDecorators(depVajramID, dependentChain)) {
-      VajramInvocation<R> previousDecoratedInvocation = invocationToDecorate;
-      invocationToDecorate = dependencyDecorator.decorateDependency(previousDecoratedInvocation);
-    }
-    return invocationToDecorate;
-  }
-
   @SuppressWarnings("FutureReturnValueIgnored")
   private void logWaitingMessage(
       Dependency dependency,
