@@ -191,7 +191,6 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
                   .computeIfAbsent(
                       dispatchTarget, k -> new ArrayList<>(originalExecutableRequests.size()))
                   .add(requestEntry);
-              break;
             } else {
               dispatchRequests
                   .computeIfAbsent(traitId, k -> new ArrayList<>(originalExecutableRequests.size()))

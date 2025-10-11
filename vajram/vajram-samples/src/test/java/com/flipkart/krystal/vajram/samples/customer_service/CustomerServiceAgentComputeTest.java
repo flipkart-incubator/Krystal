@@ -245,7 +245,7 @@ class CustomerServiceAgentComputeTest {
   private KrystexVajramExecutorConfig getExecutorConfig() {
     return KrystexVajramExecutorConfig.builder()
         .kryonExecutorConfigBuilder(
-            KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+            KryonExecutorConfig.builder().executorService(executorLease.get()))
         .build();
   }
 }
