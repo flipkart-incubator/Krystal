@@ -13,9 +13,9 @@ public record RequestResponseFuture<R extends Request<T>, T>(
   }
 
   public static <R extends Request<T>, T> List<RequestResponseFuture<R, T>> forRequests(
-      List<R> request) {
+      List<R> requests) {
     List<RequestResponseFuture<R, T>> list = new ArrayList<>();
-    for (R r : request) {
+    for (R r : requests) {
       list.add(new RequestResponseFuture<>(r, new CompletableFuture<@Nullable T>()));
     }
     return list;

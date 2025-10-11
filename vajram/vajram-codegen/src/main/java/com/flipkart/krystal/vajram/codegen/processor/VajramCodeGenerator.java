@@ -803,14 +803,19 @@ _$facetName:L_futures[i] = $completableFuture:T.allOf($reqRespFuture:T.getFuture
                           : CodeBlock.builder()
                               .addNamed(
                                   """
-var _$facetName:L_future = new $completableFuture:T<$depType:T>();
-_$facetName:L_futures[i] =
-    _$facetName:L_future.whenComplete(
-        (_unused2, _throwable2) -> {
-          var _errable = $errable:T.errableFrom(_unused2, _throwable);
-          _facetValues.$facetName:L(new $requestResponse:T<>(_$facetName:L_requestBuilder, _errable));
-        });
-_$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$facetName:L_future));
+
+if (_$facetName:L_reqBuilders.isEmpty()) {
+  _$facetName:L_futures[i] = $completableFuture:T.completedFuture(null);
+} else {
+  var _$facetName:L_future = new $completableFuture:T<$depType:T>();
+  _$facetName:L_futures[i] =
+      _$facetName:L_future.whenComplete(
+          (_unused2, _throwable2) -> {
+            var _errable = $errable:T.errableFrom(_unused2, _throwable2);
+            _facetValues.$facetName:L(new $requestResponse:T<>(_$facetName:L_requestBuilder, _errable));
+          });
+  _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$facetName:L_future));
+}
 """,
                                   commonNamesMap)
                               .build()))));

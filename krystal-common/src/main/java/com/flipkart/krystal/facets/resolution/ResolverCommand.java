@@ -1,10 +1,8 @@
 package com.flipkart.krystal.facets.resolution;
 
 import com.flipkart.krystal.data.ImmutableRequest;
-import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.google.common.collect.ImmutableList;
 import java.util.List;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @SuppressWarnings("ClassReferencesSubclass")
@@ -21,7 +19,7 @@ public interface ResolverCommand {
     return new SkipDependency(reason, skipCause);
   }
 
-  static ExecuteDependency executeWithRequests(List<? extends @NonNull Builder<?>> inputs) {
+  static ExecuteDependency executeWithRequests(List<? extends ImmutableRequest.Builder<?>> inputs) {
     return new ExecuteDependency(inputs);
   }
 

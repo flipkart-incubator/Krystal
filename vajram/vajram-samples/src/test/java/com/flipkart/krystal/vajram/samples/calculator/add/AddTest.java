@@ -23,8 +23,7 @@ class AddTest {
             .kryonExecutorConfigBuilder(
                 KryonExecutorConfig.builder()
                     .executorId("adderTest")
-                    .executorService(new SingleThreadExecutor("adderTest"))
-                    ._riskyOpenAllKryonsForExternalInvocation(true))
+                    .executorService(new SingleThreadExecutor("adderTest")))
             .build();
     CompletableFuture<Integer> future;
     try (KrystexVajramExecutor executor = graph.createExecutor(config)) {

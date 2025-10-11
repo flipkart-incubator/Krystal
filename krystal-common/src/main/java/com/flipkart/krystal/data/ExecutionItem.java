@@ -10,4 +10,4 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @param response
  */
 public record ExecutionItem(
-    FacetValues facetValues, CompletableFuture<@Nullable Object> response) {}
+    FacetValuesBuilder facetValues, CompletableFuture<@Nullable Object> response) {}

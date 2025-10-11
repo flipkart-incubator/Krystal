@@ -23,4 +23,5 @@ module flipkart.krystal.common {
   requires com.google.auto.value.annotations;
   requires jakarta.inject;
   requires static lombok;
+  requires static org.jetbrains.annotations;
 }

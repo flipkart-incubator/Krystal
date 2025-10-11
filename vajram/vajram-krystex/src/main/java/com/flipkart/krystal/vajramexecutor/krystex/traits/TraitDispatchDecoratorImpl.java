@@ -1,18 +1,22 @@
 package com.flipkart.krystal.vajramexecutor.krystex.traits;
 
 import static java.util.concurrent.CompletableFuture.allOf;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.data.RequestResponseFuture;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.commands.ClientSideCommand;
+import com.flipkart.krystal.krystex.commands.DirectForwardSend;
 import com.flipkart.krystal.krystex.commands.ForwardSendBatch;
 import com.flipkart.krystal.krystex.dependencydecoration.VajramInvocation;
 import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
 import com.flipkart.krystal.krystex.kryon.BatchResponse;
+import com.flipkart.krystal.krystex.kryon.DirectResponse;
 import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
 import com.flipkart.krystal.krystex.request.InvocationId;
 import com.flipkart.krystal.traits.DispatchCase;
@@ -23,15 +27,16 @@ import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import lombok.Getter;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
 
@@ -60,7 +65,6 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
       TraitDispatchPolicy traitDispatchPolicy = traitDispatchPolicies.get(traitId);
       if (traitDispatchPolicy instanceof StaticDispatchPolicy staticDispatchDefinition) {
         VajramID boundVajram;
-        ClientSideCommand<R> commandToDispatch;
         Dependency dependency = kryonCommand.dependentChain().latestDependency();
         if (dependency != null) {
           boundVajram = staticDispatchDefinition.get(dependency);
@@ -68,10 +72,7 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
           throw new AssertionError(
               "This is not possible. A dependency decorator can only be invoked when there is a dependency present.");
         }
-        commandToDispatch = transformCommandForDispatch(kryonCommand, boundVajram);
-        if (commandToDispatch == null) {
-          commandToDispatch = kryonCommand;
-        }
+        ClientSideCommand<R> commandToDispatch = kryonCommand.rerouteTo(boundVajram);
         return invocationToDecorate.invokeDependency(commandToDispatch);
       } else if (traitDispatchPolicy instanceof PredicateDynamicDispatchPolicy dynamicPolicy) {
         ImmutableList<DispatchCase> dispatchCases = dynamicPolicy.dispatchCases();
@@ -188,6 +189,54 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
           @SuppressWarnings("unchecked")
           CompletableFuture<R> castMergedResponse = (CompletableFuture<R>) mergedResponse;
           return castMergedResponse;
+        } else if (kryonCommand instanceof DirectForwardSend forwardSend) {
+          List<? extends RequestResponseFuture<? extends Request<?>, ?>>
+              originalExecutableRequests = forwardSend.executableRequests();
+          Map<VajramID, List<RequestResponseFuture<? extends Request<?>, ?>>> dispatchRequests =
+              new LinkedHashMap<>();
+          for (RequestResponseFuture<? extends Request<?>, ?> requestEntry :
+              originalExecutableRequests) {
+            Request<?> originalRequest = requestEntry.request();
+            boolean dispatchTargetNotFound = true;
+            for (DispatchCase dispatchCase : dispatchCases) {
+              Optional<? extends Class<? extends Request<?>>> dispatchTarget =
+                  dispatchCase.computeDispatchTarget(originalRequest);
+              if (dispatchTarget.isPresent()) {
+                VajramID dispatchTargetId =
+                    vajramKryonGraph.getVajramIdByVajramReqType(dispatchTarget.get());
+                dispatchRequests
+                    .computeIfAbsent(
+                        dispatchTargetId, k -> new ArrayList<>(originalExecutableRequests.size()))
+                    .add(requestEntry);
+                dispatchTargetNotFound = false;
+                break;
+              }
+            }
+            if (dispatchTargetNotFound) {
+              dispatchRequests
+                  .computeIfAbsent(traitId, k -> new ArrayList<>(originalExecutableRequests.size()))
+                  .add(requestEntry);
+            }
+          }
+          ImmutableList<Class<? extends Request<?>>> dispatchTargets =
+              dynamicPolicy.dispatchTargetReqs();
+          for (Class<? extends Request<?>> dispatchTarget : dispatchTargets) {
+            VajramID dispatchTargetId = vajramKryonGraph.getVajramIdByVajramReqType(dispatchTarget);
+            List<RequestResponseFuture<? extends Request<?>, ?>> requestsForTarget =
+                dispatchRequests.getOrDefault(dispatchTargetId, List.of());
+            ClientSideCommand<DirectResponse> commandToDispatch;
+            commandToDispatch =
+                new DirectForwardSend(
+                    dispatchTargetId, requestsForTarget, forwardSend.dependentChain());
+
+            @SuppressWarnings("unchecked")
+            CompletableFuture<R> depResponse =
+                invocationToDecorate.invokeDependency((ClientSideCommand<R>) commandToDispatch);
+          }
+          @SuppressWarnings("unchecked")
+          CompletableFuture<R> castMergedResponse =
+              (CompletableFuture<R>) completedFuture(DirectResponse.INSTANCE);
+          return castMergedResponse;
         } else {
           throw new IllegalStateException("Unknown command type: " + kryonCommand);
         }
@@ -195,22 +244,5 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
         throw new IllegalStateException("Unknown dispatch policy: " + traitDispatchPolicy);
       }
     };
-  }
-
-  @SuppressWarnings("unchecked")
-  private static <R extends KryonCommandResponse> @Nullable
-      ClientSideCommand<R> transformCommandForDispatch(
-          ClientSideCommand<R> kryonCommand, VajramID boundVajram) {
-    ClientSideCommand<R> commandToDispatch = null;
-    if (kryonCommand instanceof ForwardSendBatch forwardSend) {
-      commandToDispatch =
-          (ClientSideCommand<R>)
-              new ForwardSendBatch(
-                  boundVajram,
-                  forwardSend.executableRequests(),
-                  forwardSend.dependentChain(),
-                  forwardSend.skippedInvocations());
-    }
-    return commandToDispatch;
   }
 }
