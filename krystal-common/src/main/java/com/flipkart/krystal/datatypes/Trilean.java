@@ -1,8 +1,6 @@
 package com.flipkart.krystal.datatypes;
 
-/**
- * @see <a href="https://en.wikipedia.org/wiki/Three-valued_logic">Trilean Logic</a>
- */
+/** Implements <a href="https://en.wikipedia.org/wiki/Three-valued_logic">Trilean Logic</a> */
 public enum Trilean {
   UNKNOWN {
     @Override
@@ -20,6 +18,11 @@ public enum Trilean {
         case FALSE -> FALSE;
       };
     }
+
+    @Override
+    public Trilean negation() {
+      return UNKNOWN;
+    }
   },
 
   TRUE {
@@ -32,6 +35,11 @@ public enum Trilean {
     public Trilean and(Trilean other) {
       return other;
     }
+
+    @Override
+    public Trilean negation() {
+      return FALSE;
+    }
   },
 
   FALSE {
@@ -43,6 +51,11 @@ public enum Trilean {
     @Override
     public Trilean and(Trilean other) {
       return FALSE;
+    }
+
+    @Override
+    public Trilean negation() {
+      return TRUE;
     }
   };
 
@@ -62,12 +75,10 @@ public enum Trilean {
     return and(toTrilean(other));
   }
 
+  public abstract Trilean negation();
+
   public static Trilean not(Trilean t) {
-    return switch (t) {
-      case UNKNOWN -> UNKNOWN;
-      case TRUE -> FALSE;
-      case FALSE -> TRUE;
-    };
+    return t.negation();
   }
 
   public static Trilean orOf(Trilean... trileans) {

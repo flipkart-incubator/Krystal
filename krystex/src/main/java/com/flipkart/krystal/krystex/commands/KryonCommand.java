@@ -9,4 +9,6 @@ public sealed interface KryonCommand<R extends KryonCommandResponse>
   VajramID vajramID();
 
   DependentChain dependentChain();
+
+  default void error(Throwable throwable) {}
 }

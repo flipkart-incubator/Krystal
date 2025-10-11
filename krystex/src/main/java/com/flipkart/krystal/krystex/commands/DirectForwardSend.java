@@ -1,5 +1,7 @@
 package com.flipkart.krystal.krystex.commands;
 
+import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
+
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponseFuture;
@@ -15,5 +17,17 @@ public record DirectForwardSend(
 
   public boolean shouldSkip() {
     return executableRequests.isEmpty();
+  }
+
+  @Override
+  public DirectForwardSend rerouteTo(VajramID targetVajramID) {
+    return new DirectForwardSend(targetVajramID, executableRequests(), dependentChain());
+  }
+
+  @Override
+  public void error(Throwable throwable) {
+    for (RequestResponseFuture<? extends Request<?>, ?> executableRequest : executableRequests()) {
+      executableRequest.response().completeExceptionally(stackTracelessWrap(throwable));
+    }
   }
 }

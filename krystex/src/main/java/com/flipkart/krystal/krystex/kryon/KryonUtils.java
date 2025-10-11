@@ -18,7 +18,7 @@ public final class KryonUtils {
   static VajramKryonDefinition validateAsVajram(KryonDefinition kryonDefinition) {
     if (!(kryonDefinition instanceof VajramKryonDefinition vajramKryonDefinition)) {
       throw new IllegalStateException(
-          "This operation is supported only for vajrams. Found: "
+          "Kryon command execution is supported only for vajrams. Found: "
               + kryonDefinition.getClass()
               + " VajramId: "
               + kryonDefinition.vajramID());

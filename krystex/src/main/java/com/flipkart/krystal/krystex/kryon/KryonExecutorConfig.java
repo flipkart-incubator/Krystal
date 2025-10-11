@@ -2,7 +2,6 @@ package com.flipkart.krystal.krystex.kryon;
 
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
-import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.DIRECT;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
@@ -67,7 +66,7 @@ public record KryonExecutorConfig(
       executorId = "KrystalExecutor-" + EXEC_COUNT.getAndIncrement();
     }
     if (kryonExecStrategy == null) {
-      kryonExecStrategy = BATCH;
+      kryonExecStrategy = DIRECT;
     }
     if (graphTraversalStrategy == null) {
       graphTraversalStrategy = DEPTH;

@@ -463,6 +463,7 @@ public final class KryonExecutor implements KrystalExecutor {
       Kryon<KryonCommand, R> kryon = getDecoratedKryon(kryonCommand, vajramID);
       return kryon.executeCommand(kryonCommand);
     } catch (Throwable e) {
+      kryonCommand.error(e);
       return failedFuture(e);
     }
   }

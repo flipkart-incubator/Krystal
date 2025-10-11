@@ -18,6 +18,7 @@ import com.flipkart.krystal.krystex.commands.MultiRequestDirectCommand;
 import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
+import com.flipkart.krystal.krystex.dependencydecoration.VajramInvocation;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.request.RequestIdGenerator;
@@ -66,11 +67,17 @@ public final class DirectKryon
                   Dependency dependency,
                   List<? extends RequestResponseFuture<? extends Request<?>, ?>>
                       requestResponseFutureList) {
-                kryonExecutor.executeCommand(
+                DependentChain extendedDependentChain = dependentChain.extend(vajramID, dependency);
+                VajramInvocation<DirectResponse> kryonResponseVajramInvocation =
+                    decorateVajramInvocation(
+                        extendedDependentChain,
+                        dependency.onVajramID(),
+                        kryonExecutor::executeCommand);
+                kryonResponseVajramInvocation.invokeDependency(
                     new DirectForwardSend(
                         dependency.onVajramID(),
                         requestResponseFutureList,
-                        dependentChain.extend(vajramID, dependency)));
+                        extendedDependentChain));
               }
 
               @Override

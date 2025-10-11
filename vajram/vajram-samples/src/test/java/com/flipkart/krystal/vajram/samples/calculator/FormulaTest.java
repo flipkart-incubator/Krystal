@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
-import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.DIRECT;
 import static com.flipkart.krystal.vajram.samples.Util.TEST_TIMEOUT;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
@@ -145,7 +144,6 @@ class FormulaTest {
             .kryonExecutorConfigBuilder(
                 KryonExecutorConfig.builder()
                     .executorId(REQUEST_ID)
-                    .kryonExecStrategy(BATCH)
                     .executorService(executorLease.get())
                     .graphTraversalStrategy(GraphTraversalStrategy.DEPTH))
             .build();
@@ -513,7 +511,6 @@ class FormulaTest {
                 KryonExecutorConfig.builder()
                     .executorId(REQUEST_ID)
                     .executorService(executorLease.get())
-                    .kryonExecStrategy(BATCH)
                     .graphTraversalStrategy(GraphTraversalStrategy.DEPTH))
             .build();
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, REQUEST_ID);
@@ -543,7 +540,6 @@ class FormulaTest {
                 KryonExecutorConfig.builder()
                     .executorId(REQUEST_ID)
                     .executorService(executorLease.get())
-                    .kryonExecStrategy(BATCH)
                     .graphTraversalStrategy(GraphTraversalStrategy.DEPTH))
             .build();
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, REQUEST_ID);
@@ -572,7 +568,6 @@ class FormulaTest {
             .kryonExecutorConfigBuilder(
                 KryonExecutorConfig.builder()
                     .executorService(executorLease.get())
-                    .kryonExecStrategy(BATCH)
                     .graphTraversalStrategy(GraphTraversalStrategy.DEPTH))
             .build();
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 0, 0, REQUEST_ID);

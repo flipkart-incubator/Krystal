@@ -8,6 +8,7 @@ import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
+import com.flipkart.krystal.krystex.dependencydecoration.VajramInvocation;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.request.RequestIdGenerator;
@@ -45,6 +46,7 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonComma
   protected final DecorationOrdering decorationOrdering;
 
   protected final RequestIdGenerator requestIdGenerator;
+  private Map<VajramID, NavigableSet<DependencyDecorator>> decoratorsByDependency = new HashMap<>();
 
   AbstractKryon(
       VajramKryonDefinition definition,
@@ -81,22 +83,26 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonComma
 
   protected NavigableSet<DependencyDecorator> getSortedDependencyDecorators(
       VajramID depVajramId, DependentChain dependentChain) {
-    TreeSet<DependencyDecorator> sortedDecorators =
-        new TreeSet<>(
-            decorationOrdering
-                .encounterOrder()
-                // Reverse the ordering so that the ones with the highest index are applied first.
-                .reversed());
-    Dependency dependency = dependentChain.latestDependency();
-    if (dependency == null) {
-      return sortedDecorators;
-    }
-    sortedDecorators.addAll(
-        depDecoratorSuppliers
-            .apply(
-                new DependencyExecutionContext(vajramID, dependency, depVajramId, dependentChain))
-            .values());
-    return sortedDecorators;
+    return decoratorsByDependency.computeIfAbsent(
+        depVajramId,
+        _k -> {
+          TreeSet<DependencyDecorator> sortedDecorators =
+              new TreeSet<>(
+                  decorationOrdering
+                      .encounterOrder()
+                      // Reverse the ordering so that the ones with the highest index are applied
+                      // first.
+                      .reversed());
+          Dependency dependency = dependentChain.latestDependency();
+          if (dependency == null) {
+            return sortedDecorators;
+          }
+          sortedDecorators.addAll(
+              depDecoratorSuppliers
+                  .apply(new DependencyExecutionContext(dependency, dependentChain))
+                  .values());
+          return sortedDecorators;
+        });
   }
 
   @Override
@@ -121,5 +127,17 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonComma
             e);
       }
     }
+  }
+
+  protected <R2 extends KryonCommandResponse> VajramInvocation<R2> decorateVajramInvocation(
+      DependentChain dependentChain,
+      VajramID depVajramID,
+      VajramInvocation<R2> invocationToDecorate) {
+    for (DependencyDecorator dependencyDecorator :
+        getSortedDependencyDecorators(depVajramID, dependentChain)) {
+      VajramInvocation<R2> previousDecoratedInvocation = invocationToDecorate;
+      invocationToDecorate = dependencyDecorator.decorateDependency(previousDecoratedInvocation);
+    }
+    return invocationToDecorate;
   }
 }
