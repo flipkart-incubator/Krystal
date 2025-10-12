@@ -71,16 +71,22 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 @Slf4j
+@ParameterizedClass
+@MethodSource("executorConfigsToTest")
 @SuppressWarnings("unchecked")
 class KryonExecutorTest {
 
   private static final Duration TIMEOUT = Duration.ofSeconds(1);
   private static SingleThreadExecutorsPool EXEC_POOL;
+
+  private final KryonExecStrategy kryonExecStrategy;
+  private final GraphTraversalStrategy graphTraversalStrategy;
 
   @BeforeAll
   static void beforeAll() {
@@ -93,12 +99,19 @@ class KryonExecutorTest {
   private LogicDefinitionRegistry logicDefinitionRegistry;
   private RequestLevelCache requestLevelCache;
 
+  public KryonExecutorTest(
+      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
+    this.kryonExecStrategy = kryonExecStrategy;
+    this.graphTraversalStrategy = graphTraversalStrategy;
+  }
+
   @BeforeEach
   void setUp() throws LeaseUnavailableException {
     this.executorLease = EXEC_POOL.lease();
     this.requestLevelCache = new RequestLevelCache();
     this.logicDefinitionRegistry = new LogicDefinitionRegistry();
     this.kryonDefinitionRegistry = new KryonDefinitionRegistry(logicDefinitionRegistry);
+    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
   }
 
   @AfterEach
@@ -108,17 +121,8 @@ class KryonExecutorTest {
   }
 
   /** Executing same kryon multiple times in a single execution */
-  @ParameterizedTest
-  @MethodSource("executorConfigsToTest")
-  void multiRequestExecution(
-      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
-    // This is redundant. This should Ideally move to a parameterized @BeforeEach method or after
-    // parametrizing this at the test class level.
-    // This is currently not supported in jupiter-junit:5.9.x.
-    // It is planned to be supported in jupiter-junit:5.10
-    // (Ref: https://github.com/junit-team/junit5/issues/878)
-    // Move this to the @BeforeEach method after 5.10 is released.
-    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
+  @Test
+  void multiRequestExecution() {
     VajramID kryonName = vajramID("kryon");
     VajramKryonDefinition kryonDefinition =
         kryonDefinitionRegistry.newVajramKryonDefinition(
@@ -146,11 +150,8 @@ class KryonExecutorTest {
     assertThat(future2).succeedsWithin(TIMEOUT).isEqualTo("computed_value");
   }
 
-  @ParameterizedTest
-  @MethodSource("executorConfigsToTest")
-  void multiRequestExecutionWithNullRequestId(
-      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
-    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
+  @Test
+  void multiRequestExecutionWithNullRequestId() {
     VajramID kryonName = vajramID("kryon");
     VajramKryonDefinition kryonDefinition =
         kryonDefinitionRegistry.newVajramKryonDefinition(
@@ -178,11 +179,8 @@ class KryonExecutorTest {
     assertThat(future1).succeedsWithin(1, SECONDS).isEqualTo("computed_value");
   }
 
-  @ParameterizedTest
-  @MethodSource("executorConfigsToTest")
-  void requestExecution_noDependencies_success(
-      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
-    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
+  @Test
+  void requestExecution_noDependencies_success() {
     VajramID kryonName = vajramID("kryon");
     VajramKryonDefinition kryonDefinition =
         kryonDefinitionRegistry.newVajramKryonDefinition(
@@ -204,11 +202,8 @@ class KryonExecutorTest {
     assertThat(future).succeedsWithin(TIMEOUT).isEqualTo("computed_value");
   }
 
-  @ParameterizedTest
-  @MethodSource("executorConfigsToTest")
-  void requestExecution_unboundInputs_success(
-      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
-    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
+  @Test
+  void requestExecution_unboundInputs_success() {
     VajramID kryonName = vajramID("requestExecution_noDependencies_success_nodeName");
     ImmutableSet<SimpleFacet> inputDefs = ImmutableSet.of(input(1), input(2), input(3));
     VajramID vajramID =
@@ -246,11 +241,8 @@ class KryonExecutorTest {
     assertThat(future).succeedsWithin(TIMEOUT).isEqualTo("computed_values: a=1;b=2;c=3");
   }
 
-  @ParameterizedTest
-  @MethodSource("executorConfigsToTest")
-  void requestExecution_singleDependency_success(
-      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
-    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
+  @Test
+  void requestExecution_singleDependency_success() {
     VajramID n1ID = vajramID("n1");
     kryonDefinitionRegistry.newVajramKryonDefinition(
         n1ID,
@@ -290,12 +282,11 @@ class KryonExecutorTest {
                         n1DependsOnN1, List.of(new RequestResponseFuture<>(n1Req, n1Result)));
                 list.add(
                     n1Result.whenComplete(
-                        (o, throwable) -> {
-                          ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
-                              ._set(
-                                  n1DependsOnN1.id(),
-                                  new RequestResponse(n1Req, errableFrom(o, throwable)));
-                        }));
+                        (o, throwable) ->
+                            ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
+                                ._set(
+                                    n1DependsOnN1.id(),
+                                    new RequestResponse(n1Req, errableFrom(o, throwable)))));
               }
               CompletableFuture.allOf(list.toArray(CompletableFuture[]::new))
                   .whenComplete(
@@ -312,11 +303,8 @@ class KryonExecutorTest {
     assertThat(future).succeedsWithin(TIMEOUT).isEqualTo("dependency_value:computed_value");
   }
 
-  @ParameterizedTest
-  @MethodSource("executorConfigsToTest")
-  void requestExecution_multiLevelDependencies_success(
-      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
-    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
+  @Test
+  void requestExecution_multiLevelDependencies_success() {
     VajramID l1Dep = vajramID("requestExecution_multiLevelDependencies_level1");
     kryonDefinitionRegistry.newVajramKryonDefinition(
         l1Dep,
@@ -325,9 +313,7 @@ class KryonExecutorTest {
         ImmutableMap.of(),
         newCreateNewRequestLogic(l1Dep, emptySet()),
         newFacetsFromRequestLogic(l1Dep, emptySet()),
-        _graphExecData -> {
-          _graphExecData.communicationFacade().executeOutputLogic();
-        },
+        _graphExecData -> _graphExecData.communicationFacade().executeOutputLogic(),
         emptyTags());
 
     VajramID l2Dep = vajramID("requestExecution_multiLevelDependencies_level2");
@@ -355,18 +341,16 @@ class KryonExecutorTest {
                     l2DependsOnL1, List.of(new RequestResponseFuture<>(l1Req, l1Result)));
             list.add(
                 l1Result.whenComplete(
-                    (result, throwable) -> {
-                      ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
-                          ._set(
-                              l2DependsOnL1.id(),
-                              new RequestResponse(l1Req, Errable.errableFrom(result, throwable)));
-                    }));
+                    (result, throwable) ->
+                        ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
+                            ._set(
+                                l2DependsOnL1.id(),
+                                new RequestResponse(
+                                    l1Req, Errable.errableFrom(result, throwable)))));
           }
           CompletableFuture.allOf(list.toArray(CompletableFuture[]::new))
               .whenComplete(
-                  (unused, throwable) -> {
-                    _graphExecData.communicationFacade().executeOutputLogic();
-                  });
+                  (unused, throwable) -> _graphExecData.communicationFacade().executeOutputLogic());
         },
         emptyTags());
 
@@ -396,10 +380,10 @@ class KryonExecutorTest {
                     l3DependsOnL2, List.of(new RequestResponseFuture<>(l2Req, l2Result)));
             list.add(
                 l2Result.whenComplete(
-                    (o, throwable) -> {
-                      ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
-                          ._set(1, new RequestResponse(l2Req, Errable.errableFrom(o, throwable)));
-                    }));
+                    (o, throwable) ->
+                        ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
+                            ._set(
+                                1, new RequestResponse(l2Req, Errable.errableFrom(o, throwable)))));
           }
           CompletableFuture.allOf(list.toArray(CompletableFuture[]::new))
               .whenComplete(
@@ -432,12 +416,11 @@ class KryonExecutorTest {
                     l4DepOnL3, List.of(new RequestResponseFuture<>(l3Req, l3Result)));
             list.add(
                 l3Result.whenComplete(
-                    (o, throwable) -> {
-                      ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
-                          ._set(
-                              l4DepOnL3.id(),
-                              new RequestResponse(l3Req, errableFrom(o, throwable)));
-                    }));
+                    (o, throwable) ->
+                        ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
+                            ._set(
+                                l4DepOnL3.id(),
+                                new RequestResponse(l3Req, errableFrom(o, throwable)))));
           }
           CompletableFuture.allOf(list.toArray(CompletableFuture[]::new))
               .whenComplete(
@@ -507,11 +490,8 @@ class KryonExecutorTest {
         () -> new SimpleRequestBuilder<>(inputDefs, vajramID));
   }
 
-  @ParameterizedTest
-  @MethodSource("executorConfigsToTest")
-  void executeKryon_dependenciesWithReturnInstantly_executeComputeExecutedExactlyOnce(
-      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
-    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
+  @Test
+  void executeKryon_dependenciesWithReturnInstantly_executeComputeExecutedExactlyOnce() {
     VajramID dep1ID =
         vajramID(
             "executeKryon_dependenciesWithReturnInstantly_executeComputeExecutedExactlyOnce_dep1");
@@ -632,11 +612,8 @@ class KryonExecutorTest {
     assertThat(numberOfExecutions.sum()).isEqualTo(1);
   }
 
-  @ParameterizedTest
-  @MethodSource("executorConfigsToTest")
-  void close_preventsNewExecutionRequests(
-      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
-    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
+  @Test
+  void close_preventsNewExecutionRequests() {
     kryonExecutor.close();
     String kryonName = "shutdown_preventsNewExecutionRequests";
     assertThrows(
@@ -647,11 +624,8 @@ class KryonExecutorTest {
                 KryonExecutionConfig.builder().executionId("req_1").build()));
   }
 
-  @ParameterizedTest
-  @MethodSource("executorConfigsToTest")
-  void shutdownNow_terminatesPendingWork(
-      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
-    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
+  @Test
+  void shutdownNow_terminatesPendingWork() {
     VajramID n1ID = vajramID("n1");
     VajramKryonDefinition n1 =
         kryonDefinitionRegistry.newVajramKryonDefinition(
