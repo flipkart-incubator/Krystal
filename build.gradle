@@ -1,5 +1,5 @@
 plugins {
-    id 'com.flipkart.java.code.standard' version '3.8'
+    id 'com.flipkart.java.code.standard' version '4.0'
     id 'org.gradlex.extra-java-module-info' version '1.11'
 }
 
