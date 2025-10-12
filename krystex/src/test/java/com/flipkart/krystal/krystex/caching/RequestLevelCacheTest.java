@@ -53,25 +53,37 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+@ParameterizedClass
+@MethodSource("executorConfigsToTest")
 class RequestLevelCacheTest {
 
   private static final Duration TIMEOUT = Duration.ofSeconds(10);
 
   private static SingleThreadExecutorsPool EXEC_POOL;
+  private final KryonExecStrategy kryonExecStrategy;
+  private final GraphTraversalStrategy graphTraversalStrategy;
+
+  @BeforeAll
+  static void beforeAll() {
+    EXEC_POOL = new SingleThreadExecutorsPool("RequestLevelCacheTest", 4);
+  }
 
   private KryonDefinitionRegistry kryonDefinitionRegistry;
   private LogicDefinitionRegistry logicDefinitionRegistry;
   private RequestLevelCache requestLevelCache;
   private KryonExecutor kryonExecutor;
+
   private Lease<SingleThreadExecutor> executorLease;
 
-  @BeforeAll
-  static void beforeAll() {
-    EXEC_POOL = new SingleThreadExecutorsPool("RequestLevelCacheTest", 4);
+  public RequestLevelCacheTest(
+      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
+    this.kryonExecStrategy = kryonExecStrategy;
+    this.graphTraversalStrategy = graphTraversalStrategy;
   }
 
   @BeforeEach
@@ -88,16 +100,8 @@ class RequestLevelCacheTest {
     executorLease.close();
   }
 
-  @ParameterizedTest
-  @MethodSource("executorConfigsToTest")
-  void multiRequestExecution_withCache_cacheHitSuccess(
-      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
-    // This is redundant. This should Ideally move to a parametrized @BeforeEach method or after
-    // parametrizing this at the test class level.
-    // This is currently not supported in jupiter-junit:5.9.x.
-    // It is planned to be supported in jupiter-junit:5.10
-    // (Ref: https://github.com/junit-team/junit5/issues/878)
-    // Move this to the @BeforeEach method after 5.10 is released.
+  @Test
+  void multiRequestExecution_withCache_cacheHitSuccess() {
     this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy, true);
     LongAdder adder = new LongAdder();
     VajramKryonDefinition kryonDefinition =
@@ -132,18 +136,10 @@ class RequestLevelCacheTest {
     assertThat(adder.sum()).isEqualTo(1);
   }
 
-  @ParameterizedTest
-  @MethodSource("executorConfigsToTest")
-  void multiRequestExecution_withoutCache_cacheHitFailForBatch(
-      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
-    // This is redundant. This should Ideally move to a parameterized @BeforeEach method or after
-    // parametrizing this at the test class level.
-    // This is currently not supported in jupiter-junit:5.9.x.
-    // It is planned to be supported in jupiter-junit:5.10
-    // (Ref: https://github.com/junit-team/junit5/issues/878)
-    // Move this to the @BeforeEach method after 5.10 is released.
+  @Test
+  void multiRequestExecution_withoutCache_cacheHitFailForBatch() {
     this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy, false);
-    LongAdder outptuLogicInvocationCount = new LongAdder();
+    LongAdder outputLogicInvocationCount = new LongAdder();
     VajramKryonDefinition kryonDefinition =
         kryonDefinitionRegistry.newVajramKryonDefinition(
             vajramID("kryon"),
@@ -152,7 +148,7 @@ class RequestLevelCacheTest {
                     vajramID("kryonLogic"),
                     emptySet(),
                     dependencyValues -> {
-                      outptuLogicInvocationCount.increment();
+                      outputLogicInvocationCount.increment();
                       return "computed_value";
                     })
                 .kryonLogicId(),
@@ -174,7 +170,7 @@ class RequestLevelCacheTest {
     kryonExecutor.close();
     assertThat(future1).succeedsWithin(TIMEOUT).isEqualTo("computed_value");
     assertThat(future2).succeedsWithin(TIMEOUT).isEqualTo("computed_value");
-    assertThat(outptuLogicInvocationCount.sum()).isEqualTo(2);
+    assertThat(outputLogicInvocationCount.sum()).isEqualTo(2);
   }
 
   private KryonExecutor getKryonExecutor(
