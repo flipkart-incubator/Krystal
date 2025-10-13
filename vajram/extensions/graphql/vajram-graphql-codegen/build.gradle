@@ -1,0 +1,12 @@
+dependencies {
+    api project(':vajram:vajram-java-sdk')
+
+    implementation project(':vajram:extensions:graphql:vajram-graphql')
+    implementation project(':vajram:vajram-codegen-common')
+
+    implementation 'com.squareup:javapoet'
+    implementation 'com.graphql-java:graphql-java:24.3'
+
+    compileOnly 'com.google.auto.service:auto-service'
+    annotationProcessor 'com.google.auto.service:auto-service'
+}

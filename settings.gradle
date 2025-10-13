@@ -39,6 +39,7 @@ include 'lattice:lattice-samples'
 include 'vajram:extensions:guice:vajram-guice'
 include 'vajram:extensions:protobuf:vajram-protobuf-codegen'
 include 'vajram:extensions:protobuf:vajram-protobuf3'
+include 'vajram:extensions:graphql:vajram-graphql'
+include 'vajram:extensions:graphql:vajram-graphql-codegen'
 
 include 'lattice:extensions:grpc:lattice-grpc-codegen'
-//include 'lattice:extensions:guice:lattice-guice'
