@@ -1,9 +1,19 @@
 dependencies {
     api project(':krystal-common')
     api project(':vajram:vajram-java-sdk')
-    api project(':vajram:vajram-krystex')
+    implementation project(':vajram:vajram-krystex')
 
-    implementation project(':vajram:extensions:graphql:vajram-graphql')
-    implementation 'com.graphql-java:graphql-java:24.3'
+    implementation 'com.graphql-java:graphql-java'
+    implementation 'com.graphql-java:graphql-java-extended-scalars'
+}
 
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = project.group
+            artifactId = project.name
+            version = project.version
+            from components.java
+        }
+    }
 }

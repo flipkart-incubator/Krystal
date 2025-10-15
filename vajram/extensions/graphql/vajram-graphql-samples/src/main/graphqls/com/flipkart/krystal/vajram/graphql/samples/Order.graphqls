@@ -1,0 +1,10 @@
+type Order @entity(name: "Order", identifierKey: "orderId"){
+    id: ID,
+    orderItemNames: [String] @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
+    dummies: Dummy @refFetcher(vajramId: "GetDummyIds", subPackage: "order")
+}
+
+type Dummy @entity(name: "Dummy", identifierKey: "id"){
+    id: ID,
+    name: String
+}

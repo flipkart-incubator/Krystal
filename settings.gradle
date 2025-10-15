@@ -41,5 +41,6 @@ include 'vajram:extensions:protobuf:vajram-protobuf-codegen'
 include 'vajram:extensions:protobuf:vajram-protobuf3'
 include 'vajram:extensions:graphql:vajram-graphql'
 include 'vajram:extensions:graphql:vajram-graphql-codegen'
+include 'vajram:extensions:graphql:vajram-graphql-samples'
 
 include 'lattice:extensions:grpc:lattice-grpc-codegen'

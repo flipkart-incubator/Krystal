@@ -40,6 +40,16 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
   @Override
   public final boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     CodeGenUtility util = new CodeGenUtility(processingEnv, getClass());
+    util.note("Annotations: " + annotations);
+    for (TypeElement annotation : annotations) {
+      util.note(
+          "Annotation Processor: "
+              + getClass()
+              + "; Annotation:"
+              + annotation
+              + "; Classes: "
+              + roundEnv.getElementsAnnotatedWith(annotation));
+    }
     String phaseString = processingEnv.getOptions().get(CODEGEN_PHASE_KEY);
     try {
       if (phaseString == null || !codegenPhase.equals(CodegenPhase.valueOf(phaseString))) {

@@ -82,7 +82,7 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
 
         constraints {
 
-            implementation 'org.yaml:snakeyaml:2.2'
+            implementation 'org.yaml:snakeyaml:2.3'
 
             implementation 'com.google.guava:guava:33.0.0-jre'
             implementation 'org.slf4j:slf4j-api:2.0.11'
@@ -116,6 +116,9 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
             implementation "org.projectlombok:lombok:$lombok_version"
             annotationProcessor "org.projectlombok:lombok:$lombok_version"
             testAnnotationProcessor "org.projectlombok:lombok:$lombok_version"
+
+            implementation 'com.graphql-java:graphql-java:24.3'
+            implementation 'com.graphql-java:graphql-java-extended-scalars:24.0'
         }
     }
 
@@ -157,7 +160,8 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
         module('org.antlr:antlr-runtime', 'org.antlr.antlr.runtime')
         module('org.hdrhistogram:HdrHistogram', 'org.hdrhistogram')
         module('org.latencyutils:LatencyUtils', 'org.latencyutils')
-        module('com.flipkart.krystal:vajram-codegen', 'com.flipkart.krystal.vajram.codegen')
+        module('com.flipkart.krystal:vajram-codegen', 'flipkart.krystal.vajram.codegen')
+        module('com.flipkart.krystal:vajram-graphql-codegen', 'flipkart.krystal.vajram.graphql.codegen')
         module('org.slf4j:slf4j-reload4j', 'org.slf4j.reload4j')
         module('ch.qos.reload4j:reload4j', 'ch.qos.reload4j')
         //These already have a module name
@@ -173,11 +177,15 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
         knownModule('org.projectlombok:lombok', 'lombok')
         knownModule('com.google.j2objc:j2objc-annotations', 'com.google.j2objc.annotations')
         knownModule('org.reflections:reflections', 'org.reflections')
+        knownModule('com.graphql-java:graphql-java', 'com.graphqljava')
+        knownModule('com.graphql-java:graphql-java-extended-scalars', 'com.graphqljava.extendedscalars')
+        knownModule('org.yaml:snakeyaml', 'org.yaml.snakeyaml')
 
         knownModule('com.flipkart.krystal:vajram-java-sdk', 'flipkart.krystal.vajram')
         knownModule('com.flipkart.krystal:krystal-common', 'flipkart.krystal.common')
         knownModule('com.flipkart.krystal:vajram-codegen-common', 'flipkart.krystal.vajram.codegen.common')
         knownModule('com.flipkart.krystal:krystal-visualization', 'flipkart.krystal.visualization')
+        knownModule('com.flipkart.krystal:vajram-graphql', 'krystal.vajram.graphql.codegen')
     }
 }
 

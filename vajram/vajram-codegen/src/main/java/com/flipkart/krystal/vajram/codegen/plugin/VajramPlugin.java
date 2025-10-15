@@ -56,6 +56,17 @@ public class VajramPlugin implements Plugin<Project> {
         checkNotNull(project.getExtensions().findByType(JavaPluginExtension.class)).getSourceSets();
     sourceSets.getByName("main").getJava().srcDir(mainModelsGenDir).srcDir(mainImplsGenDir);
     sourceSets.getByName("test").getJava().srcDir(testModelsGenDir).srcDir(testImplsGenDir);
+
+    // Add all source directories to compiler sourcepath option so that annotation processors can
+    // read files in custom source directories as well
+    project
+        .getTasks()
+        .withType(JavaCompile.class)
+        .configureEach(
+            javaCompile ->
+                javaCompile
+                    .getOptions()
+                    .setSourcepath(sourceSets.getByName("main").getJava().getSourceDirectories()));
   }
 
   private static void registerCodeGenVajramModels(Project project, File mainModelsGenDir) {

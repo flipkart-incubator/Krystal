@@ -339,18 +339,23 @@ public class CodeGenUtility {
         .toList();
   }
 
-  public void generateSourceFile(String className, String code, TypeElement vajramDefinition) {
+  public void generateSourceFile(
+      String canonicalClassName, String code, @Nullable TypeElement originatingElement) {
     try {
       JavaFileObject requestFile =
-          processingEnv.getFiler().createSourceFile(className, vajramDefinition);
-      note("Successfully Create source file %s".formatted(className));
+          processingEnv
+              .getFiler()
+              .createSourceFile(
+                  canonicalClassName,
+                  Optional.ofNullable(originatingElement).stream().toArray(Element[]::new));
+      note("Successfully Create source file %s".formatted(canonicalClassName));
       try (PrintWriter out = new PrintWriter(requestFile.openWriter())) {
         out.println(code);
       }
     } catch (Exception e) {
       error(
-          "Error creating java file for className: %s. Error: %s".formatted(className, e),
-          vajramDefinition);
+          "Error creating java file for className: %s. Error: %s".formatted(canonicalClassName, e),
+          originatingElement);
     }
   }
 
@@ -629,6 +634,8 @@ public class CodeGenUtility {
                 .collect(toImmutableBiMap(FacetIdNameMapping::id, FacetIdNameMapping::name));
       }
       vajramId = vajramID(vajramClassSimpleName);
+      note("ResponseTypMirror: " + responseTypeMirror.getKind());
+
       responseType =
           new DeclaredTypeVisitor(this, responseTypeElement, DISALLOWED_FACET_TYPES)
               .visit(responseTypeMirror);
@@ -869,9 +876,9 @@ public class CodeGenUtility {
    * Creates a class builder with the given class name. If the className is a blank string, then the
    * builder represents an anonymous class.
    *
-   * @param className fully qualified class name
+   * @param className simple class name
    * @param generatedForCanonicalName canonical name of the originating class for which the class is
-   *     being generated
+   *     being generated. If the string is blank, it is ignored.
    * @return a class builder with the given class name, with the {@link Generated} annotation
    *     applied on the class
    */
@@ -882,7 +889,9 @@ public class CodeGenUtility {
     } else {
       classBuilder = TypeSpec.classBuilder(className);
     }
-    classBuilder.addJavadoc("@see $L", generatedForCanonicalName);
+    if (!generatedForCanonicalName.isBlank()) {
+      classBuilder.addJavadoc("@see $L", generatedForCanonicalName);
+    }
     addDefaultAnnotations(classBuilder);
     return classBuilder;
   }

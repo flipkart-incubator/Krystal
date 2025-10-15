@@ -1,6 +1,10 @@
 package com.flipkart.krystal.vajram.graphql.api;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.Maps.filterKeys;
+import static java.util.Collections.unmodifiableList;
+import static java.util.Collections.unmodifiableMap;
+import static java.util.Objects.requireNonNullElse;
 
 import com.google.common.collect.ImmutableMap;
 import java.util.*;
@@ -21,19 +25,21 @@ public abstract class AbstractGraphQlModel<T extends AbstractGraphQlModel<T>> {
     this._values = _values;
   }
 
+  protected abstract T _new();
+
   public final Map<String, Object> _values() {
-    return _values;
+    return unmodifiableMap(_values);
   }
 
-  public final Map<String, Object> _asMap() {
-    Map<String, Object> map = new LinkedHashMap<>();
+  public final Map<String, Object> _valuesAsMap() {
+    final Map<String, Object> map = new LinkedHashMap<>(_values.size());
     _values.forEach(
         (s, o) -> {
           List<Object> graphQlModels = new ArrayList<>();
           if (o instanceof List list) {
             for (Object listElement : list) {
               if (listElement instanceof AbstractGraphQlModel<?> graphQlModel) {
-                graphQlModels.add(graphQlModel._asMap());
+                graphQlModels.add(graphQlModel._valuesAsMap());
               } else {
                 graphQlModels.add(listElement);
               }
@@ -41,7 +47,10 @@ public abstract class AbstractGraphQlModel<T extends AbstractGraphQlModel<T>> {
             map.put(s, graphQlModels);
           } else {
             map.put(
-                s, o instanceof AbstractGraphQlModel<?> graphQlModel ? graphQlModel._asMap() : o);
+                s,
+                o instanceof AbstractGraphQlModel<?> graphQlModel
+                    ? graphQlModel._valuesAsMap()
+                    : o);
           }
         });
     return map;
@@ -54,8 +63,8 @@ public abstract class AbstractGraphQlModel<T extends AbstractGraphQlModel<T>> {
     }
     for (Entry<String, Object> entry : _values.entrySet()) {
       String s = entry.getKey();
-      Object o = entry.getValue();
-      if (o instanceof AbstractGraphQlModel<?> graphQlModel) {
+      Object value = entry.getValue();
+      if (value instanceof AbstractGraphQlModel<?> graphQlModel) {
         Map<String, Object> errorsAsMap = graphQlModel._errorsAsMap();
         if (!errorsAsMap.isEmpty()) {
           if (map == null) {
@@ -65,7 +74,7 @@ public abstract class AbstractGraphQlModel<T extends AbstractGraphQlModel<T>> {
         }
       }
     }
-    return Optional.ofNullable(map).orElse(ImmutableMap.of());
+    return requireNonNullElse(map, ImmutableMap.of());
   }
 
   public final T _deepCopy() {
@@ -87,9 +96,11 @@ public abstract class AbstractGraphQlModel<T extends AbstractGraphQlModel<T>> {
     return t;
   }
 
-  protected abstract T _new();
-
   public final Map<String, List<Throwable>> _errors() {
-    return _errors;
+    return unmodifiableMap(_errors);
+  }
+
+  final void _putError(String fieldName, List<Throwable> errors) {
+    _errors.put(fieldName, unmodifiableList(errors));
   }
 }

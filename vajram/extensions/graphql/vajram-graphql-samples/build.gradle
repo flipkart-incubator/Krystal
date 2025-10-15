@@ -1,0 +1,24 @@
+plugins {
+    id 'com.flipkart.krystal' version "${krystal_version}"
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs += ['src/main/graphqls']
+        }
+    }
+}
+
+dependencies {
+    implementation platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
+    annotationProcessor platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
+
+    implementation 'com.flipkart.krystal:vajram-java-sdk'
+    implementation 'com.flipkart.krystal:vajram-graphql'
+    annotationProcessor 'com.flipkart.krystal:vajram-codegen'
+    annotationProcessor 'com.flipkart.krystal:vajram-graphql-codegen'
+
+    implementation 'com.graphql-java:graphql-java'
+    implementation 'com.graphql-java:graphql-java-extended-scalars'
+}
