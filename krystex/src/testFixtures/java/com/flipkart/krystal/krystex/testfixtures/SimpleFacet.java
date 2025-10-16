@@ -1,7 +1,7 @@
-package com.flipkart.krystal.krystex.testutils;
+package com.flipkart.krystal.krystex.testfixtures;
 
+import static com.flipkart.krystal.core.VajramID.vajramID;
 import static com.flipkart.krystal.facets.FacetType.INPUT;
-import static lombok.AccessLevel.PACKAGE;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
@@ -15,17 +15,10 @@ import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.facets.InputMirror;
-import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
-import lombok.EqualsAndHashCode.Include;
-import lombok.Value;
-import lombok.experimental.NonFinal;
+import java.util.Objects;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-@Value
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
-@AllArgsConstructor(access = PACKAGE)
-public @NonFinal sealed class SimpleFacet implements Facet, InputMirror permits SimpleDep {
+public sealed class SimpleFacet implements Facet, InputMirror permits SimpleDep {
 
   public static SimpleFacet input(int facetId) {
     return new SimpleFacet(facetId, "input" + count++, INPUT);
@@ -37,13 +30,29 @@ public @NonFinal sealed class SimpleFacet implements Facet, InputMirror permits 
 
   private static int count;
 
-  @Include int id;
-  String name;
+  private final int id;
+  private final String name;
 
-  FacetType facetType;
+  private final FacetType facetType;
+
+  public SimpleFacet(int id, String name, FacetType facetType) {
+    this.id = id;
+    this.name = name;
+    this.facetType = facetType;
+  }
 
   public FacetType facetType() {
     return facetType;
+  }
+
+  @Override
+  public int id() {
+    return id;
+  }
+
+  @Override
+  public String name() {
+    return name;
   }
 
   @Override
@@ -79,6 +88,19 @@ public @NonFinal sealed class SimpleFacet implements Facet, InputMirror permits 
 
   @Override
   public VajramID ofVajramID() {
-    return VajramID.vajramID("testVajram");
+    return vajramID("testVajram");
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (o == null || getClass() != o.getClass())
+      return false;
+    SimpleFacet that = (SimpleFacet) o;
+    return id == that.id && facetType == that.facetType;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(id, facetType);
   }
 }

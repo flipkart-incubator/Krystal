@@ -1,6 +1,7 @@
 plugins {
     id 'com.flipkart.java.code.standard' version '4.0'
     id 'org.gradlex.extra-java-module-info' version '1.11'
+    id 'java-test-fixtures'
 }
 
 ext {
@@ -100,6 +101,7 @@ configure(subprojects.findAll {
             implementation 'com.google.api.grpc:proto-google-common-protos:2.56.0'
             implementation 'com.google.auto.service:auto-service-annotations:1.1.1'
             implementation 'com.google.code.findbugs:jsr305:3.0.2'
+            api 'com.google.guava:guava:33.4.8-jre'
             implementation 'com.google.guava:guava:33.4.8-jre'
             implementation 'com.google.j2objc:j2objc-annotations:3.0.0'
             implementation 'com.squareup:javapoet:1.13.0'
