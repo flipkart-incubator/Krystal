@@ -1,7 +1,7 @@
 package com.flipkart.krystal.krystex.logicdecorators.observability;
 
 import static com.flipkart.krystal.data.Errable.withValue;
-import static com.flipkart.krystal.krystex.testutils.SimpleFacet.input;
+import static com.flipkart.krystal.krystex.testfixtures.SimpleFacet.input;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -12,10 +12,10 @@ import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonExecutionReport.LogicExecInfo;
-import com.flipkart.krystal.krystex.testutils.FacetValuesMapBuilder;
-import com.flipkart.krystal.krystex.testutils.ImmutableFacetValuesMap;
-import com.flipkart.krystal.krystex.testutils.SimpleFacet;
-import com.flipkart.krystal.krystex.testutils.SimpleRequestBuilder;
+import com.flipkart.krystal.krystex.testfixtures.FacetValuesMapBuilder;
+import com.flipkart.krystal.krystex.testfixtures.ImmutableFacetValuesMap;
+import com.flipkart.krystal.krystex.testfixtures.SimpleFacet;
+import com.flipkart.krystal.krystex.testfixtures.SimpleRequestBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.time.Instant;

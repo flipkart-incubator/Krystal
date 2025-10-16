@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex.testutils;
+package com.flipkart.krystal.krystex.testfixtures;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
@@ -11,15 +11,14 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Objects;
 import java.util.Set;
-import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class ImmutableFacetValuesMap implements FacetValuesMap, ImmutableFacetValues {
 
-  @Getter private final ImmutableSet<? extends Facet> _facets;
-  @Getter private final VajramID _vajramID;
+  private final ImmutableSet<? extends Facet> _facets;
+  private final VajramID _vajramID;
 
-  @Getter private final SimpleImmutRequest<Object> _request;
+  private final SimpleImmutRequest<Object> _request;
   private final ImmutableMap<Integer, FacetValue> otherFacetValues;
 
   public ImmutableFacetValuesMap(
@@ -116,5 +115,20 @@ public final class ImmutableFacetValuesMap implements FacetValuesMap, ImmutableF
   @Override
   public int hashCode() {
     return Objects.hash(this._asMap(), this._vajramID());
+  }
+
+  @Override
+  public SimpleImmutRequest<Object> _request() {
+    return _request;
+  }
+
+  @Override
+  public ImmutableSet<? extends Facet> _facets() {
+    return _facets;
+  }
+
+  @Override
+  public VajramID _vajramID() {
+    return _vajramID;
   }
 }
