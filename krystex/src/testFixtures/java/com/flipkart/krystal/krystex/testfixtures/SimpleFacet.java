@@ -93,8 +93,7 @@ public sealed class SimpleFacet implements Facet, InputMirror permits SimpleDep 
 
   @Override
   public boolean equals(Object o) {
-    if (o == null || getClass() != o.getClass())
-      return false;
+    if (o == null || getClass() != o.getClass()) return false;
     SimpleFacet that = (SimpleFacet) o;
     return id == that.id && facetType == that.facetType;
   }

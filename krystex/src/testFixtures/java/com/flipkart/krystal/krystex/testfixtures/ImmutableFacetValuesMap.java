@@ -5,8 +5,6 @@ import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.ImmutableFacetValues;
-import com.flipkart.krystal.data.ImmutableRequest;
-import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.facets.Facet;
 import com.google.common.collect.ImmutableMap;
