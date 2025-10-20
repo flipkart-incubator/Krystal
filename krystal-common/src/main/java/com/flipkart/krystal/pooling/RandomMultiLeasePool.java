@@ -13,13 +13,14 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * @param <T> The type of the object being pooled
  */
-public class RandomMultiLeasePool<T extends @NonNull Object> implements MultiLeasePool<T> {
+public class RandomMultiLeasePool<T> implements MultiLeasePool<T> {
 
   private final PartitionedPool<T> pool;
   private final Consumer<T> destroyer;
   private final Random random = new Random();
   private final MultiLeasePoolStatsImplBuilder stats = MultiLeasePoolStatsImpl.builder();
 
+  private final String poolName;
   private final Supplier<@NonNull T> creator;
   private final int softMaxObjects;
   private boolean closed;
@@ -34,10 +35,12 @@ public class RandomMultiLeasePool<T extends @NonNull Object> implements MultiLea
    *     breached a little bit.
    */
   public RandomMultiLeasePool(
+      String poolName,
       Supplier<@NonNull T> creator,
       int hardMaxLeasesPerObject,
       int softMaxObjects,
       Consumer<T> destroyer) {
+    this.poolName = poolName;
     this.creator = creator;
     this.softMaxObjects = softMaxObjects;
     this.pool = new PartitionedPool<>(hardMaxLeasesPerObject);
@@ -59,7 +62,7 @@ public class RandomMultiLeasePool<T extends @NonNull Object> implements MultiLea
     synchronized (pool) {
       int availableCount = pool.availableCount();
       if (availableCount == 0) {
-        leasable = creatNewLeasable();
+        leasable = createNewLeasable();
       } else {
         leasable = pool.getForLeasing(random.nextInt(availableCount));
       }
@@ -82,9 +85,13 @@ public class RandomMultiLeasePool<T extends @NonNull Object> implements MultiLea
    * @return a new leasable if softMaxObjects has not been breached
    * @throws LeaseUnavailableException if softMaxObjects has been breached
    */
-  private PartitionedPool.PooledObject<T> creatNewLeasable() throws LeaseUnavailableException {
+  private PartitionedPool.PooledObject<T> createNewLeasable() throws LeaseUnavailableException {
     if (pool.totalCount() >= softMaxObjects) {
-      throw new LeaseUnavailableException("No more leases available");
+      throw new LeaseUnavailableException(
+          "No more leases available in "
+              + poolName
+              + ". Reached max object limit: "
+              + softMaxObjects);
     }
     PartitionedPool.PooledObject<T> toLease = pool.leaseAndAdd(creator.get());
 
@@ -104,7 +111,7 @@ public class RandomMultiLeasePool<T extends @NonNull Object> implements MultiLea
               destroyer.accept(pooledObject.ref());
             } else {
               // Break since we know that all objects after this will have active leases and are
-              // unavailable (ParitionedPool is implemented this way)
+              // unavailable (PartitionedPool is implemented this way)
               break;
             }
           }
@@ -122,7 +129,7 @@ public class RandomMultiLeasePool<T extends @NonNull Object> implements MultiLea
     return stats.build();
   }
 
-  private static class LeaseImpl<T extends @NonNull Object> implements Lease<T> {
+  private static class LeaseImpl<T> implements Lease<T> {
     private PartitionedPool.@Nullable PooledObject<T> pooledObject;
     private final Consumer<PartitionedPool.PooledObject<T>> closeLogic;
 

@@ -1,7 +1,11 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen;
 
-import static com.flipkart.krystal.vajram.codegen.common.datatypes.StandardJavaType.*;
-import static com.flipkart.krystal.vajram.codegen.common.datatypes.StandardJavaType.BOOLEAN;
+import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.BOOLEAN;
+import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.DOUBLE;
+import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.FLOAT;
+import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.INT;
+import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.LONG;
+import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.STRING;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.types.ProtoScalarType.BOOL_P;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.types.ProtoScalarType.BYTES_P;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.types.ProtoScalarType.DOUBLE_P;
@@ -15,13 +19,12 @@ import static java.nio.file.Files.createDirectories;
 import static java.util.Objects.requireNonNull;
 import static lombok.AccessLevel.PRIVATE;
 
-import com.flipkart.krystal.lattice.core.RemotelyInvocable;
+import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
+import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
+import com.flipkart.krystal.lattice.vajram.sdk.InvocableOutsideProcess;
 import com.flipkart.krystal.model.SupportedModelProtocols;
-import com.flipkart.krystal.serial.SupportedSerdeProtocols;
-import com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenType;
-import com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility;
+import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
-import com.flipkart.krystal.vajram.codegen.common.models.VajramValidationException;
 import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
 import com.flipkart.krystal.vajram.protobuf3.codegen.types.MapFieldType;
 import com.flipkart.krystal.vajram.protobuf3.codegen.types.OptionalFieldType;
@@ -60,7 +63,7 @@ public class ProtoGenUtils {
           .put(BYTE_STRING, BYTES_P)
           .build();
 
-  static @NonNull String getSimpleClassName(String canonicalClassName) {
+  public static String getSimpleClassName(String canonicalClassName) {
     String typeName = canonicalClassName;
 
     // Extract the simple name from the fully qualified name
@@ -70,7 +73,7 @@ public class ProtoGenUtils {
     return typeName;
   }
 
-  static @NonNull Optional<String> getPackageName(String responseTypeName) {
+  public static @NonNull Optional<String> getPackageName(String responseTypeName) {
     int lastDotIndex = responseTypeName.lastIndexOf('.');
     if (lastDotIndex == -1) {
       return Optional.empty();
@@ -84,34 +87,38 @@ public class ProtoGenUtils {
    *
    * @return true if the code generator is applicable, false otherwise
    */
-  static boolean isProto3Applicable(VajramInfo vajramInfo, CodeGenUtility util) {
+  public static boolean isProto3Applicable(VajramInfo vajramInfo, VajramCodeGenUtility util) {
 
-    TypeElement vajramClass = vajramInfo.vajramClass();
-    RemotelyInvocable remotelyInvocable = vajramClass.getAnnotation(RemotelyInvocable.class);
-    if (remotelyInvocable == null) {
-      util.note(
+    TypeElement vajramClass = vajramInfo.vajramClassElem();
+    InvocableOutsideProcess invocableOutsideProcess =
+        vajramClass.getAnnotation(InvocableOutsideProcess.class);
+    if (invocableOutsideProcess == null) {
+      CharSequence message =
           "Skipping class '%s' since remote invocation is not enabled"
-              .formatted(vajramClass.getQualifiedName()));
+              .formatted(vajramClass.getQualifiedName());
+      util.codegenUtil().note(message);
       return false;
     }
 
-    SupportedSerdeProtocols supportedSerdeProtocols =
-        vajramClass.getAnnotation(SupportedSerdeProtocols.class);
+    SupportedModelProtocols supportedSerdeProtocols =
+        vajramClass.getAnnotation(SupportedModelProtocols.class);
     List<? extends TypeMirror> serializationProtocols =
         getSerializationProtocols(supportedSerdeProtocols, util);
     if (serializationProtocols.stream()
         .noneMatch(
-            serializationProtocol -> util.isSameRawType(serializationProtocol, Protobuf3.class))) {
-      util.note(
+            serializationProtocol ->
+                util.codegenUtil().isSameRawType(serializationProtocol, Protobuf3.class))) {
+      CharSequence message =
           "Skipping class '%s' since Protobuf3 is not one of the intended serialization protocols : %s "
-              .formatted(vajramClass.getQualifiedName(), serializationProtocols));
+              .formatted(vajramClass.getQualifiedName(), serializationProtocols);
+      util.codegenUtil().note(message);
       return false;
     }
 
     return true;
   }
 
-  static Path createOutputDirectory(Path sourceOutputLocation, CodeGenUtility util)
+  public static Path createOutputDirectory(Path sourceOutputLocation, CodeGenUtility util)
       throws IOException {
     try {
 
@@ -234,11 +241,8 @@ public class ProtoGenUtils {
    * Validates that the Vajram's return type conforms to protobuf RPC requirements. In protobuf, RPC
    * methods must return message types, not scalar values, repeated fields, or map fields. The
    * return type must be a single message type.
-   *
-   * @throws VajramValidationException if the return type is not valid for protobuf RPC
    */
-  static void validateReturnTypeForProtobuf(VajramInfo vajramInfo, CodeGenUtility util)
-      throws VajramValidationException {
+  public static void validateReturnTypeForProtobuf(VajramInfo vajramInfo, CodeGenUtility util) {
     CodeGenType returnType = vajramInfo.lite().responseType();
 
     Element typeElement =
@@ -256,29 +260,20 @@ public class ProtoGenUtils {
               "Vajram '%s' has return type '%s' which is not a supported model protocol. "
                   + "RPC methods must return a message type that is compatible with Protobuf3.",
               vajramInfo.vajramName(), returnType),
-          vajramInfo.vajramClass());
+          vajramInfo.vajramClassElem());
     }
   }
 
   static List<? extends TypeMirror> getSerializationProtocols(
-      @Nullable SupportedSerdeProtocols supportedSerdeProtocols, CodeGenUtility util) {
+      @Nullable SupportedModelProtocols supportedSerdeProtocols, VajramCodeGenUtility util) {
     return supportedSerdeProtocols == null
         ? List.of()
-        : util.getTypesFromAnnotationMember(supportedSerdeProtocols::value);
+        : util.codegenUtil().getTypesFromAnnotationMember(supportedSerdeProtocols::value);
   }
 
-  /**
-   * Validates the Vajram for protobuf compatibility. Throws exceptions if validations fail.
-   *
-   * @throws VajramValidationException if validation fails
-   */
-  static void validateProtobufCompatibility(VajramInfo vajramInfo, CodeGenUtility util)
-      throws VajramValidationException {
+  /** Validates the Vajram for protobuf compatibility. Throws exceptions if validations fail. */
+  static void validateProtobufCompatibility(VajramInfo vajramInfo, CodeGenUtility util) {
     // Validate that the Vajram's return type conforms to protobuf RPC requirements
     validateReturnTypeForProtobuf(vajramInfo, util);
-  }
-
-  static String capitalize(String str) {
-    return str.isEmpty() ? str : Character.toUpperCase(str.charAt(0)) + str.substring(1);
   }
 }

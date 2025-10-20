@@ -2,14 +2,14 @@ package com.flipkart.krystal.facets.resolution;
 
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.google.common.collect.ImmutableList;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @SuppressWarnings("ClassReferencesSubclass")
 @FunctionalInterface
 public interface ResolverCommand {
 
-  ImmutableList<? extends ImmutableRequest.Builder<?>> getRequests();
+  List<? extends ImmutableRequest.Builder<?>> getRequests();
 
   static SkipDependency skip(String reason) {
     return skip(reason, null);
@@ -19,8 +19,7 @@ public interface ResolverCommand {
     return new SkipDependency(reason, skipCause);
   }
 
-  static ExecuteDependency executeWithRequests(
-      ImmutableList<? extends ImmutableRequest.@NonNull Builder<?>> inputs) {
+  static ExecuteDependency executeWithRequests(List<? extends ImmutableRequest.Builder<?>> inputs) {
     return new ExecuteDependency(inputs);
   }
 
@@ -31,10 +30,10 @@ public interface ResolverCommand {
     }
   }
 
-  record ExecuteDependency(ImmutableList<? extends ImmutableRequest.Builder<?>> requests)
+  record ExecuteDependency(List<? extends ImmutableRequest.Builder<?>> requests)
       implements ResolverCommand {
     @Override
-    public ImmutableList<? extends ImmutableRequest.Builder<?>> getRequests() {
+    public List<? extends ImmutableRequest.Builder<?>> getRequests() {
       return requests;
     }
   }

@@ -14,7 +14,7 @@ import static com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiA
 import static com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiAddType.SIMPLE;
 import static com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiAddType.SPLIT;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -29,7 +29,7 @@ import java.util.Optional;
 
 /** Adds three lists of numbers in three different ways and then returns those sums */
 @SuppressWarnings("optional.parameter")
-@ExternallyInvocable
+@InvocableOutsideGraph
 @Vajram
 public abstract class AddUsingTraits extends ComputeVajramDef<ThreeSums> {
   @SuppressWarnings("initialization.field.uninitialized")

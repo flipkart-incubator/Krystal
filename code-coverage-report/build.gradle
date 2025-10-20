@@ -6,6 +6,8 @@ plugins {
 dependencies {
     jacocoAggregation project(':vajram:vajram-samples')
     jacocoAggregation project(':vajram:vajram-krystex')
+    jacocoAggregation project(':lattice:samples:grpc-proto3-lattice-sample')
+    jacocoAggregation project(':lattice:samples:rest-json-lattice-sample')
 }
 
 reporting {

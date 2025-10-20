@@ -7,7 +7,7 @@ import static com.flipkart.krystal.vajram.samples.calculator.add.SplitAdd_Fac.sp
 import static com.flipkart.krystal.vajram.samples.calculator.add.SplitAdd_Fac.splitSum2_n;
 import static com.flipkart.krystal.vajram.samples.calculator.add.SplitAdd_Fac.sum_n;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -19,7 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-@ExternallyInvocable
+@InvocableOutsideGraph
 @Vajram
 @SuppressWarnings({"optional.parameter", "initialization.field.uninitialized"})
 public abstract class SplitAdd extends ComputeVajramDef<Integer> implements MultiAdd {

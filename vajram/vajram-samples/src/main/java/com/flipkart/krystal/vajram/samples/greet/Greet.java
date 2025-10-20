@@ -3,7 +3,7 @@ package com.flipkart.krystal.vajram.samples.greet;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.samples.greet.Greet_Fac.userInfo_n;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -14,15 +14,15 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
-import java.util.Optional;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Given a userId, this Vajram composes and returns a 'Hello!' greeting addressing the user by name
  * (as declared by the user in their profile).
  */
-@ExternallyInvocable
+@InvocableOutsideGraph
 @Vajram
-@SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
+@SuppressWarnings("initialization.field.uninitialized")
 // ComputeVajram means that this Vajram does not directly perform any blocking operations.
 public abstract class Greet extends ComputeVajramDef<String> {
   static class _Inputs {
@@ -57,13 +57,15 @@ public abstract class Greet extends ComputeVajramDef<String> {
   @Output
   static String createGreetingMessage(
       String userId,
-      Optional<UserInfo> userInfo,
-      Optional<Logger> log,
+      @Nullable UserInfo userInfo,
+      @Nullable Logger log,
       AnalyticsEventSink analyticsEventSink) {
-    String greeting =
-        "Hello " + userInfo.map(UserInfo::userName).orElse("friend") + "! Hope you are doing well!";
-    log.ifPresent(l -> l.log(Level.INFO, greeting));
-    log.ifPresent(l -> l.log(Level.INFO, "Greeting user " + userId));
+    String userName = userInfo != null ? userInfo.userName() : "friend";
+    String greeting = "Hello " + userName + "! Hope you are doing well!";
+    if (log != null) {
+      log.log(Level.INFO, greeting);
+      log.log(Level.INFO, "Greeting user " + userId);
+    }
     analyticsEventSink.pushEvent("event_type", new GreetingEvent(userId, greeting));
     return greeting;
   }

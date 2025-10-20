@@ -20,6 +20,8 @@ public sealed interface Errable<T> extends FacetValue<T>, SingleFacetValue<T>
    */
   CompletableFuture<@Nullable T> toFuture();
 
+  @Nullable T value();
+
   /**
    * Returns an {@link Optional} which is has the value inside this Errable. The returned Optional
    * is present only if and only if this Errable is of the type {@link NonNil}. In all other cases,
@@ -92,24 +94,12 @@ public sealed interface Errable<T> extends FacetValue<T>, SingleFacetValue<T>
   }
 
   @SuppressWarnings("unchecked")
-  static <T> Errable<T> errableFrom(@Nullable Object value, @Nullable Throwable error) {
-    if (value instanceof Optional<?> valueOpt) {
-      if (valueOpt.isPresent()) {
-        if (error != null) {
-          throw illegalState();
-        } else {
-          return errableFrom(valueOpt.get(), null);
-        }
-      } else if (error != null) {
-        return withError(error);
-      } else {
-        return Nil.nil();
-      }
-    } else if (value != null) {
+  static <T> Errable<T> errableFrom(@Nullable T value, @Nullable Throwable error) {
+    if (value != null) {
       if (error != null) {
         throw illegalState();
       } else {
-        return (Errable<T>) withValue(value);
+        return withValue(value);
       }
     } else if (error != null) {
       return withError(error);

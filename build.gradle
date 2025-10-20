@@ -1,15 +1,19 @@
 plugins {
-    id 'com.flipkart.java.code.standard' version '3.6'
+    id 'com.flipkart.java.code.standard' version '4.0'
     id 'org.gradlex.extra-java-module-info' version '1.11'
+    id 'java-test-fixtures'
 }
 
 ext {
     clojarsusername = project.properties['clojarsusername'] ?: ""
     clojarspassword = project.properties['clojarspassword'] ?: ""
-    krystal_version = '9.6.1'
-    lattice_version = '0.0.1-SNAPSHOT'
+    krystal_version = '10.0.0.2-SNAPSHOT'
+    lattice_version = '0.0.11'
 
-    protobuf_version = '4.30.2'
+    protobuf_version = '4.31.1'
+    grpc_version = '1.73.0'
+    quarkus_version = '3.23.2'
+    lombok_version = '1.18.36'
 }
 
 subprojects {
@@ -17,7 +21,7 @@ subprojects {
     apply plugin: 'idea'
 
     group = 'com.flipkart.krystal'
-    if (project.path.startsWith(":lattice:")) {
+    if (project.path.startsWith(':lattice:')) {
         version = project.lattice_version
     } else {
         version = project.krystal_version
@@ -46,16 +50,26 @@ subprojects {
     }
 }
 
-configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-coverage-report" }) {
+configure(subprojects.findAll {
+    //Exclude non java projects
+    it.name !in (['krystal-bom', 'lattice-bom', 'code-coverage-report'] as Set)
+            // Exclude sample projects so that they are configured independently making
+            // them a better representation of how clients should use krystal
+            && !it.name.contains('sample')
+}) {
     apply plugin: 'java-library'
     apply plugin: 'org.gradlex.extra-java-module-info'
 
     apply plugin: 'com.flipkart.java.code.standard'
 
     dependencies {
-        implementation 'com.google.guava:guava'
+        api 'com.google.guava:guava'
         implementation 'org.slf4j:slf4j-api'
         implementation 'jakarta.inject:jakarta.inject-api'
+        implementation 'com.google.auto.service:auto-service-annotations'
+        annotationProcessor 'com.google.auto.service:auto-service'
+
+        implementation 'org.checkerframework:checker-qual'
 
         compileOnly 'org.projectlombok:lombok'
         annotationProcessor 'org.projectlombok:lombok'
@@ -64,7 +78,8 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
         testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
         testImplementation 'org.junit.jupiter:junit-jupiter-params'
         testImplementation 'org.assertj:assertj-core'
-        testImplementation 'org.mockito:mockito-core:5.17.0'
+        testImplementation 'org.mockito:mockito-core'
+        testImplementation 'org.checkerframework:checker-qual'
 
         compileOnly 'com.google.auto.value:auto-value-annotations'
         annotationProcessor 'com.google.auto.value:auto-value'
@@ -72,53 +87,76 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
         testCompileOnly 'org.projectlombok:lombok'
         testAnnotationProcessor 'org.projectlombok:lombok'
 
-        api platform('org.junit:junit-bom:5.10.1')
         api platform('org.mockito:mockito-bom:5.17.0')
         api platform('org.assertj:assertj-bom:3.25.2')
         api platform('io.github.resilience4j:resilience4j-bom:2.2.0')
         api platform('com.google.inject:guice-bom:7.0.0')
         api platform('org.slf4j:slf4j-bom:2.0.13')
         api platform('com.fasterxml.jackson:jackson-bom:2.18.3')
+        api platform("com.google.protobuf:protobuf-bom:${protobuf_version}")
+        api platform("io.grpc:grpc-bom:${grpc_version}")
 
         constraints {
-
-            implementation 'org.yaml:snakeyaml:2.3'
-
-            implementation 'com.google.guava:guava:33.0.0-jre'
-            implementation 'org.slf4j:slf4j-api:2.0.11'
-            implementation 'jakarta.inject:jakarta.inject-api:2.0.1'
-            implementation 'org.reflections:reflections:0.10.2'
+            implementation "org.projectlombok:lombok:$lombok_version"
+            implementation 'com.google.api.grpc:proto-google-common-protos:2.56.0'
+            implementation 'com.google.auto.service:auto-service-annotations:1.1.1'
+            implementation 'com.google.code.findbugs:jsr305:3.0.2'
+            api 'com.google.guava:guava:33.4.8-jre'
+            implementation 'com.google.guava:guava:33.4.8-jre'
+            implementation 'com.google.j2objc:j2objc-annotations:3.0.0'
             implementation 'com.squareup:javapoet:1.13.0'
             implementation 'commons-cli:commons-cli:1.6.0'
-            annotationProcessor 'com.google.guava:failureaccess:1.0.2'
-            testAnnotationProcessor 'com.google.guava:failureaccess:1.0.2'
+            implementation 'jakarta.inject:jakarta.inject-api:2.0.1'
+            implementation 'jakarta.ws.rs:jakarta.ws.rs-api:4.0.0'
+            implementation 'javax.annotation:javax.annotation-api:1.3.2'
+            implementation 'org.reflections:reflections:0.10.2'
+            implementation 'org.slf4j:slf4j-api:2.0.11'
+            implementation 'org.yaml:snakeyaml:2.3'
+            implementation 'org.jboss.resteasy:resteasy-vertx:7.0.0.Beta1'
+            implementation 'org.jboss.resteasy:resteasy-core:7.0.0.Beta1'
+            implementation 'org.javassist:javassist:3.30.2-GA'
 
-            implementation "com.google.protobuf:protobuf-java:$protobuf_version"
+            runtimeOnly 'jakarta.servlet:jakarta.servlet-api:6.1.0'
+            implementation 'jakarta.enterprise:jakarta.enterprise.cdi-api:4.1.0'
 
-            implementation 'com.google.j2objc:j2objc-annotations:3.0.0'
-            annotationProcessor 'com.google.j2objc:j2objc-annotations:3.0.0'
-            testImplementation 'com.google.j2objc:j2objc-annotations:3.0.0'
-            testAnnotationProcessor 'com.google.j2objc:j2objc-annotations:3.0.0'
 
-            implementation 'com.google.auto.service:auto-service:1.1.1'
-            annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
-
+            compileOnly "org.projectlombok:lombok:$lombok_version"
             compileOnly 'com.google.auto.value:auto-value-annotations:1.11.0'
-            annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
+            compileOnly 'org.jetbrains:annotations:26.0.2'
 
-            annotationProcessor "com.flipkart.krystal:vajram-codegen:$krystal_version"
-            testAnnotationProcessor "com.flipkart.krystal:vajram-codegen:$krystal_version"
-
-            annotationProcessor "com.flipkart.krystal:vajram-protobuf-codegen:$krystal_version"
-            testAnnotationProcessor "com.flipkart.krystal:vajram-protobuf-codegen:$krystal_version"
-
-            String lombok_version = '1.18.36'
-            implementation "org.projectlombok:lombok:$lombok_version"
             annotationProcessor "org.projectlombok:lombok:$lombok_version"
-            testAnnotationProcessor "org.projectlombok:lombok:$lombok_version"
+            annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
+            annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
+            annotationProcessor 'com.google.guava:failureaccess:1.0.2'
+            annotationProcessor 'com.google.j2objc:j2objc-annotations:3.0.0'
 
             implementation 'com.graphql-java:graphql-java:24.3'
             implementation 'com.graphql-java:graphql-java-extended-scalars:24.0'
+
+            testImplementation 'com.google.j2objc:j2objc-annotations:3.0.0'
+
+            testAnnotationProcessor "org.projectlombok:lombok:$lombok_version"
+            testAnnotationProcessor 'com.google.guava:failureaccess:1.0.2'
+            testAnnotationProcessor 'com.google.j2objc:j2objc-annotations:3.0.0'
+
+        }
+    }
+
+    configurations.configureEach {
+        exclude group: 'com.google.guava', module: 'listenablefuture'
+    }
+
+    //Exclude modules which should not be published or have custom publishing config
+    if (project.name != 'vajram-lang' && project.subprojects.isEmpty()) {
+        publishing {
+            publications {
+                maven(MavenPublication) {
+                    groupId = project.group
+                    artifactId = project.name
+                    version = project.version
+                    from components.java
+                }
+            }
         }
     }
 
@@ -144,28 +182,28 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
         module('com.google.auto.value:auto-value-annotations', 'com.google.auto.value.annotations')
         module('com.google.auto:auto-common', 'com.google.auto.common')
         module('com.google.code.findbugs:jsr305', 'com.google.code.findbugs.jsr305')
-        module('com.google.guava:listenablefuture', 'com.google.guava.listenablefuture')
 
-        module('org.antlr:antlr4', 'org.antlr.antlr4')
-        module('javax.inject:javax.inject', 'javax.inject')
-        module('com.github.kevinstern:software-and-algorithms', 'com.github.kevinstern.software.and.algorithms')
         module('aopalliance:aopalliance', 'aopalliance')
+        module('com.github.kevinstern:software-and-algorithms', 'com.github.kevinstern.software.and.algorithms')
         module('javax.cache:cache-api', 'javax.cache.api')
-        module('org.javassist:javassist', 'javassist')
-        module('gradle-api-8.13.jar', 'gradle.api')
-        module('gradle-installation-beacon-8.13.jar', 'gradle.installation.beacon')
-        module('gradle-test-kit-8.13.jar', 'gradle.test.kit')
-        module('org.antlr:ST4', 'org.antlr.antlr.ST4')
+        module('javax.inject:javax.inject', 'javax.inject')
+
+        module('gradle-api-8.14.3.jar', 'gradle.api')
+        module('gradle-installation-beacon-8.14.3.jar', 'gradle.installation.beacon')
+        module('gradle-test-kit-8.14.3.jar', 'gradle.test.kit')
+
+        module('ch.qos.reload4j:reload4j', 'ch.qos.reload4j')
+        module('com.flipkart.krystal:vajram-codegen', 'com.flipkart.krystal.vajram.codegen')
         module('org.abego.treelayout:org.abego.treelayout.core', 'org.abego.treelayout.core')
+        module('org.antlr:ST4', 'org.antlr.antlr.ST4')
         module('org.antlr:antlr-runtime', 'org.antlr.antlr.runtime')
+        module('org.antlr:antlr4', 'org.antlr.antlr4')
         module('org.hdrhistogram:HdrHistogram', 'org.hdrhistogram')
         module('org.latencyutils:LatencyUtils', 'org.latencyutils')
-        module('com.flipkart.krystal:vajram-codegen', 'flipkart.krystal.vajram.codegen')
-        module('com.flipkart.krystal:vajram-graphql-codegen', 'flipkart.krystal.vajram.graphql.codegen')
         module('org.slf4j:slf4j-reload4j', 'org.slf4j.reload4j')
-        module('ch.qos.reload4j:reload4j', 'ch.qos.reload4j')
+
         //These already have a module name
-        knownModule('com.google.guava:failureaccess', 'com.google.common.util.concurrent.internal')
+        knownModule('org.checkerframework:checker-qual', 'org.checkerframework.checker.qual')
         knownModule('org.slf4j:slf4j-api', 'org.slf4j')
         knownModule('jakarta.inject:jakarta.inject-api', 'jakarta.inject')
         knownModule('com.google.guava:guava', 'com.google.common')
@@ -173,26 +211,26 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
         knownModule('org.antlr:antlr4-runtime', 'org.antlr.antlr4.runtime')
         knownModule('com.ibm.icu:icu4j', 'com.ibm.icu.icu4j')
         knownModule('com.squareup:javapoet', 'com.squareup.javapoet')
-        knownModule('commons-cli:commons-cli', 'org.apache.commons.cli')
         knownModule('org.projectlombok:lombok', 'lombok')
         knownModule('com.google.j2objc:j2objc-annotations', 'com.google.j2objc.annotations')
         knownModule('org.reflections:reflections', 'org.reflections')
+        knownModule('org.javassist:javassist', 'org.javassist')
         knownModule('com.graphql-java:graphql-java', 'com.graphqljava')
         knownModule('com.graphql-java:graphql-java-extended-scalars', 'com.graphqljava.extendedscalars')
         knownModule('org.yaml:snakeyaml', 'org.yaml.snakeyaml')
 
         knownModule('com.flipkart.krystal:vajram-java-sdk', 'flipkart.krystal.vajram')
-        knownModule('com.flipkart.krystal:krystal-common', 'flipkart.krystal.common')
+        knownModule('com.flipkart.krystal:krystal-codegen-common', 'flipkart.krystal.codegen.common')
         knownModule('com.flipkart.krystal:vajram-codegen-common', 'flipkart.krystal.vajram.codegen.common')
-        knownModule('com.flipkart.krystal:krystal-visualization', 'flipkart.krystal.visualization')
-        knownModule('com.flipkart.krystal:vajram-graphql', 'krystal.vajram.graphql.codegen')
     }
 }
 
 gradle.taskGraph.whenReady { taskGraph ->
-    println "======================================="
-    println "Tasks"
-    println "======================================="
+    println """\
+=======================================
+Tasks
+=======================================
+"""
     taskGraph.getAllTasks().eachWithIndex { task, n ->
         println "${n + 1} $task"
         task.dependsOn.eachWithIndex { depObj, m -> println "  ${m + 1} $depObj" }

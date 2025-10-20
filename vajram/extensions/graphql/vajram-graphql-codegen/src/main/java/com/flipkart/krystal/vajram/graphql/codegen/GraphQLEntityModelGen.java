@@ -4,8 +4,8 @@ import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 
-import com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility;
-import com.flipkart.krystal.vajram.codegen.common.spi.CodeGenerator;
+import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
+import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.vajram.graphql.api.AbstractGraphQLEntity;
 import com.flipkart.krystal.vajram.graphql.api.AbstractGraphQlModel;
 import com.flipkart.krystal.vajram.graphql.api.GraphQLEntityId;
@@ -42,11 +42,10 @@ class GraphQLEntityModelGen implements CodeGenerator {
     // Write the entity type file
     ClassName entityTypeEnumClassName = writeEntityTypeFile(entityTypes, rootPackageName);
 
-    // TODO : Write the entity file, currently java poet doesnt support generation of files written
-    // in java 17 way like permit, sealed, and recursive generics like Entity<T extends Entity<T>>
-
+    //noinspection rawtypes
     for (Entry<String, TypeDefinition> entry : typeDefinitionRegistry.types().entrySet()) {
       String graphQLTypeName = entry.getKey();
+      @SuppressWarnings("rawtypes")
       TypeDefinition typeDefinition = entry.getValue();
       ClassName entityClassName =
           ClassName.get(
@@ -82,22 +81,12 @@ class GraphQLEntityModelGen implements CodeGenerator {
               fieldToClass.put(fieldName, fieldTypeName);
               boolean isListType = fieldDefinition.getType() instanceof ListType;
 
-              MethodSpec getterMethodSpec;
-              if (isListType) {
-                getterMethodSpec =
-                    MethodSpec.methodBuilder(fieldName)
-                        .addModifiers(PUBLIC)
-                        .returns(fieldTypeName)
-                        .addStatement("return ($T) _values.get(\"$L\")", fieldTypeName, fieldName)
-                        .build();
-              } else {
-                getterMethodSpec =
-                    MethodSpec.methodBuilder(fieldName)
-                        .addModifiers(PUBLIC)
-                        .returns(fieldTypeName)
-                        .addStatement("return ($T) _values.get(\"$L\")", fieldTypeName, fieldName)
-                        .build();
-              }
+              MethodSpec getterMethodSpec =
+                  MethodSpec.methodBuilder(fieldName)
+                      .addModifiers(PUBLIC)
+                      .returns(fieldTypeName)
+                      .addStatement("return ($T) _values.get(\"$L\")", fieldTypeName, fieldName)
+                      .build();
               MethodSpec setterMethodSpec;
               if (isListType) {
                 setterMethodSpec =
@@ -201,12 +190,11 @@ class GraphQLEntityModelGen implements CodeGenerator {
 
     entityTypes.forEach(
         (entity, entityTypeDefinition) -> {
-          ObjectTypeDefinition objectTypeDefinition = entityTypeDefinition;
           // Capture all the data fetchers which are mentioned in multiple field definitions
 
           Map<String, List<FieldDefinition>> fieldDefinitions = new HashMap<>();
 
-          for (FieldDefinition fieldDefinition : objectTypeDefinition.getFieldDefinitions()) {
+          for (FieldDefinition fieldDefinition : entityTypeDefinition.getFieldDefinitions()) {
             if (!fieldDefinition.getDirectives("dataFetcher").isEmpty()) {
               StringValue stringValue =
                   (StringValue)

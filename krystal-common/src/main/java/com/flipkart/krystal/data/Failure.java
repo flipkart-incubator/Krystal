@@ -26,13 +26,18 @@ public final class Failure<T> implements Errable<T> {
   }
 
   @Override
+  public @Nullable T value() {
+    return null;
+  }
+
+  @Override
   public Optional<@NonNull T> valueOptOrThrow() {
-    throw asRuntimException();
+    throw asRuntimeException();
   }
 
   @Override
   public @NonNull T valueOrThrow() {
-    throw asRuntimException();
+    throw asRuntimeException();
   }
 
   @Override
@@ -54,7 +59,7 @@ public final class Failure<T> implements Errable<T> {
     return o.isPresent() ? o : (o = Optional.of(error));
   }
 
-  private RuntimeException asRuntimException() {
+  private RuntimeException asRuntimeException() {
     return error instanceof RuntimeException e ? e : new StackTracelessException("Failure", error);
   }
 }

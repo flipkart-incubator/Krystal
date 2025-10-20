@@ -1,0 +1,10 @@
+dependencies {
+    implementation project(':krystal-codegen-common')
+    implementation project(':lattice:extensions:protobuf:lattice-protobuf')
+    implementation project(':lattice:lattice-codegen')
+    implementation project(':lattice:lattice-core')
+    implementation project(':vajram:extensions:protobuf:vajram-protobuf-codegen')
+    implementation project(':vajram:extensions:protobuf:vajram-protobuf3')
+    implementation project(':vajram:vajram-codegen-common')
+
+}

@@ -1,13 +1,12 @@
 package com.flipkart.krystal.traits.matchers;
 
-import lombok.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 final class EnumMatcher<T extends Enum<T>> implements InputValueMatcher<T> {
 
   private final Enum<T> enumValue;
 
-  public EnumMatcher(@NonNull Enum<T> enumValue) {
+  public EnumMatcher(Enum<T> enumValue) {
     this.enumValue = enumValue;
   }
 

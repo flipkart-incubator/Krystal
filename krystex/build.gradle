@@ -1,11 +1,11 @@
+plugins {
+    id 'java-test-fixtures'
+}
+
 description = 'The default execution engine to execute synchronous workflows'
 
 dependencies {
     api project(':krystal-common')
-
-    implementation 'io.github.resilience4j:resilience4j-all'
-    implementation 'io.github.resilience4j:resilience4j-circuitbreaker'
-    implementation 'io.github.resilience4j:resilience4j-bulkhead'
 
     implementation 'com.fasterxml.jackson.core:jackson-annotations'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
@@ -13,15 +13,5 @@ dependencies {
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 
-}
-
-publishing {
-    publications {
-        maven(MavenPublication) {
-            groupId = project.group
-            artifactId = project.name
-            version = project.version
-            from components.java
-        }
-    }
+    testFixturesImplementation 'org.checkerframework:checker-qual'
 }

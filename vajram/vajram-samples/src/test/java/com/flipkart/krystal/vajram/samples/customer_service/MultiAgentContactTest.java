@@ -100,7 +100,7 @@ class MultiAgentContactTest {
 
     // Execute and verify
     CompletableFuture<@Nullable List<String>> responses;
-    try (var executor = graph.createExecutor(getExecutorConfig()); ) {
+    try (var executor = graph.createExecutor(getExecutorConfig())) {
       responses = executor.execute(request);
     }
 
@@ -215,7 +215,7 @@ class MultiAgentContactTest {
   private KrystexVajramExecutorConfig getExecutorConfig() {
     return KrystexVajramExecutorConfig.builder()
         .kryonExecutorConfigBuilder(
-            KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+            KryonExecutorConfig.builder().executorService(executorLease.get()))
         .build();
   }
 }

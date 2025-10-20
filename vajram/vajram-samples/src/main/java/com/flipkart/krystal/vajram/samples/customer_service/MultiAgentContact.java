@@ -7,7 +7,7 @@ import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServi
 import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent_Req.initialCommunication_n;
 import static com.flipkart.krystal.vajram.samples.customer_service.MultiAgentContact_Fac.responses_n;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.RequestResponse;
@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.function.Function;
 
 @SuppressWarnings("initialization.field.uninitialized")
-@ExternallyInvocable
+@InvocableOutsideGraph
 @Vajram
 abstract class MultiAgentContact extends ComputeVajramDef<List<String>> {
   static class _Inputs {

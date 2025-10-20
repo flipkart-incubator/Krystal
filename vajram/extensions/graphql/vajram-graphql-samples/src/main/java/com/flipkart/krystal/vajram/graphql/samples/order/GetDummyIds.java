@@ -16,11 +16,11 @@ import java.util.List;
 public abstract class GetDummyIds extends ComputeVajramDef<DummyId> {
   static class _Inputs {
     @IfAbsent(FAIL)
-    String orderId;
+    OrderId id;
   }
 
   @Output
-  static DummyId dummyIds(String orderId) {
-    return new DummyId(orderId + "_dummy_1");
+  static DummyId dummyIds(String id) {
+    return new DummyId(id + "_dummy_1");
   }
 }

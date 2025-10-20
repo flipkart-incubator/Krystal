@@ -1,12 +1,12 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
-import static com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility.getImmutRequestInterfaceName;
-import static com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility.getImmutRequestPojoName;
-import static com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility.getRequestInterfaceName;
+import static com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility.getImmutRequestInterfaceName;
+import static com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility.getImmutRequestPojoName;
+import static com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility.getRequestInterfaceName;
 
+import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.vajram.Trait;
-import com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenType;
 import com.google.common.collect.ImmutableBiMap;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.TypeName;
@@ -21,22 +21,23 @@ public record VajramInfoLite(
     String packageName,
     ImmutableBiMap<Integer, String> facetIdNameMapping,
     TypeElement vajramOrReqClass,
-    CodeGenUtility util) {
+    String docString,
+    VajramCodeGenUtility util) {
 
   public ClassName requestInterfaceType() {
     return ClassName.get(packageName(), getRequestInterfaceName(vajramId().id()));
   }
 
-  public ClassName immutReqInterfaceType() {
+  public ClassName reqImmutInterfaceType() {
     return ClassName.get(packageName(), getImmutRequestInterfaceName(vajramId().id()));
   }
 
-  public ClassName immutReqPojoType() {
+  public ClassName reqImmutPojoType() {
     return ClassName.get(packageName(), getImmutRequestPojoName(vajramId().id()));
   }
 
   public TypeName builderInterfaceType() {
-    return immutReqInterfaceType().nestedClass("Builder");
+    return reqImmutInterfaceType().nestedClass("Builder");
   }
 
   @SneakyThrows

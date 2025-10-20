@@ -10,12 +10,12 @@ import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.rever
 import static javax.lang.model.element.Modifier.*;
 import static javax.lang.model.element.Modifier.FINAL;
 
+import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
+import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
-import com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility;
-import com.flipkart.krystal.vajram.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.vajram.facets.*;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajram.graphql.api.AbstractGraphQLEntity;
@@ -29,7 +29,6 @@ import graphql.language.*;
 import java.io.*;
 import java.util.*;
 import java.util.Map.Entry;
-import javax.annotation.Nonnull;
 import javax.tools.JavaFileObject;
 import lombok.extern.slf4j.Slf4j;
 
@@ -63,7 +62,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
     entityTypes.forEach(
         (entityName, entityTypeDefinition) -> {
           ClassName className = getAggregatorName(entityName.value());
-          Map<String, List<GraphQlFieldSpec>> refToFieldMap =
+          Map<ClassName, List<GraphQlFieldSpec>> refToFieldMap =
               getDfToListOfFieldsDeRef(entityTypeDefinition);
           Builder typeAggregator =
               util.classBuilder(className.simpleName(), "")
@@ -82,7 +81,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                   .addMethod(outputLogic(entityName, entityTypeDefinition));
           refToFieldMap.forEach(
               (vajramClass, graphQlFieldSpecs) -> {
-                String vajramId = vajramIdFromClassName(vajramClass);
+                String vajramId = vajramClass.simpleName();
                 typeAggregator.addField(
                     FieldSpec.builder(
                             ParameterizedTypeName.get(Set.class, String.class),
@@ -162,10 +161,9 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
     for (Entry<ClassName, List<GraphQlFieldSpec>> entry :
         reverseEntityTypeToFieldResolverMap.get(entityName).entrySet()) {
       ClassName vajramClass = entry.getKey();
-      String facetName = vajramClass.simpleName();
-      String vajramId = vajramIdFromClassName(vajramClass.simpleName());
+      String vajramId = vajramClass.simpleName();
       internalFacets.addField(
-          FieldSpec.builder(getResponseType(facetName, entry.getValue()), vajramId)
+          FieldSpec.builder(getResponseType(vajramClass, entry.getValue()), vajramId)
               .addAnnotation(
                   AnnotationSpec.builder(Dependency.class)
                       .addMember("onVajram", "$T.class", vajramClass)
@@ -177,7 +175,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
         entityTypeToReferenceFetcher.get(entityName).entrySet()) {
       GraphQlFieldSpec fieldSpec = map.getKey();
       ClassName refFetcherVajram = map.getValue();
-      String vajramId = vajramIdFromClassName(refFetcherVajram.canonicalName());
+      String vajramId = refFetcherVajram.simpleName();
 
       internalFacets.addField(
           FieldSpec.builder(
@@ -196,21 +194,19 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
   }
 
   private com.squareup.javapoet.TypeName getResponseType(
-      String df, List<GraphQlFieldSpec> fieldsDeRef) {
+      ClassName df, List<GraphQlFieldSpec> fieldsDeRef) {
     com.squareup.javapoet.TypeName responseType;
     if (fieldsDeRef.size() == 1) {
       responseType = fieldsDeRef.get(0).fieldType();
     } else {
-      responseType =
-          ClassName.get(
-              schemaReaderUtil.rootPackageName(), vajramIdFromClassName(df) + GRAPHQL_RESPONSE);
+      responseType = ClassName.get(df.packageName(), df.simpleName() + GRAPHQL_RESPONSE);
     }
     return responseType;
   }
 
-  private Map<String, List<GraphQlFieldSpec>> getDfToListOfFieldsDeRef(
+  private Map<ClassName, List<GraphQlFieldSpec>> getDfToListOfFieldsDeRef(
       ObjectTypeDefinition fieldDefinition) {
-    Map<String, List<GraphQlFieldSpec>> dfToListOfFieldsDeRef = new HashMap<>();
+    Map<ClassName, List<GraphQlFieldSpec>> dfToListOfFieldsDeRef = new HashMap<>();
 
     fieldDefinition
         .getFieldDefinitions()
@@ -219,14 +215,12 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
               if (field.hasDirective(DATA_FETCHER)) {
                 dfToListOfFieldsDeRef
                     .computeIfAbsent(
-                        schemaReaderUtil.getDataFetcherArgs(field).canonicalName(),
-                        k -> new ArrayList<>())
+                        schemaReaderUtil.getDataFetcherArgs(field), k -> new ArrayList<>())
                     .add(schemaReaderUtil.fieldSpecFromField(field, ""));
               } else if (field.hasDirective(REFERENCE_FETCHER)) {
                 dfToListOfFieldsDeRef
                     .computeIfAbsent(
-                        schemaReaderUtil.getRefFetcherArgs(field).canonicalName(),
-                        k -> new ArrayList<>())
+                        schemaReaderUtil.getRefFetcherArgs(field), k -> new ArrayList<>())
                     .add(schemaReaderUtil.fieldSpecFromField(field, ""));
               }
             });
@@ -259,7 +253,6 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
     return s.substring(0, 1).toUpperCase() + s.substring(1);
   }
 
-  @Nonnull
   private MethodSpec outputLogic(
       GraphQLTypeName entityName, ObjectTypeDefinition entityTypeDefinition) {
     MethodSpec.Builder builder =
@@ -278,26 +271,21 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
         ClassName.get(
             schemaReaderUtil.getPackageNameForType(entityName.value()), entityName.value()),
         "entity");
-    for (Map.Entry<String, List<GraphQlFieldSpec>> entry :
+    for (Entry<ClassName, List<GraphQlFieldSpec>> entry :
         getDfToListOfFieldsDeRef(entityTypeDefinition).entrySet()) {
-      String dataFetcherCanonicalName = entry.getKey();
-      String facetName = vajramIdFromClassName(dataFetcherCanonicalName);
+      ClassName dataFetcherClassName = entry.getKey();
+      String vajramId = dataFetcherClassName.simpleName();
       builder.addParameter(
           ParameterizedTypeName.get(
               ClassName.get(Optional.class),
-              getResponseType(dataFetcherCanonicalName, entry.getValue())),
-          facetName);
-      builder.addCode("$L", getFieldSetters(facetName, entry.getValue()));
+              getResponseType(dataFetcherClassName, entry.getValue())),
+          vajramId);
+      builder.addCode("$L", getFieldSetters(vajramId, entry.getValue()));
     }
 
     return builder.addStatement("return entity").build();
   }
 
-  private static String vajramIdFromClassName(String dataFetcherCanonicalName) {
-    return dataFetcherCanonicalName.substring(dataFetcherCanonicalName.lastIndexOf('.') + 1);
-  }
-
-  @Nonnull
   private List<MethodSpec> getInputResolvers(
       GraphQLTypeName entityType, ObjectTypeDefinition entityTypeDefinition) {
     String entityIdentifierKey =
@@ -321,10 +309,9 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
     return methodSpecList;
   }
 
-  @Nonnull
   private MethodSpec getAbstractInputResolverFieldMethod(
       ClassName vajramClass, GraphQLTypeName entityType, String entityIdentifierKey) {
-    String vajramId = vajramIdFromClassName(vajramClass.canonicalName());
+    String vajramId = vajramClass.simpleName();
     ClassName vajramReqClass = getRequestClassName(vajramClass);
     MethodSpec.Builder methodBuilder =
         MethodSpec.methodBuilder(vajramId)
@@ -351,7 +338,9 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
             .addParameter(ExecutionContext.class, "graphql_executionContext")
             .addParameter(ExecutionStrategyParameters.class, "graphql_executionStrategyParams")
             .addParameter(
-                ClassName.get(schemaReaderUtil.rootPackageName(), entityType.value()), "entity")
+                ClassName.get(
+                    schemaReaderUtil.getPackageNameForType(entityType.value()), entityType.value()),
+                "entity")
             .addCode(
 """
             if ($T.isFieldQueriedInTheNestedType($L_FIELDS, $L)) {
@@ -387,7 +376,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
 
   private MethodSpec getAbstractInputResolverForRefMethod(
       GraphQLTypeName graphQLTypeName, GraphQlFieldSpec fieldName, ClassName vajramClass) {
-    String vajramId = vajramIdFromClassName(vajramClass.canonicalName());
+    String vajramId = vajramClass.simpleName();
     ClassName vajramReqClass = getRequestClassName(vajramClass);
     MethodSpec.Builder methodBuilder =
         MethodSpec.methodBuilder(vajramId)

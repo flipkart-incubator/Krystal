@@ -13,10 +13,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.flipkart.krystal.core.OutputLogicExecutionResults;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
@@ -24,7 +23,6 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
-import com.google.common.collect.ImmutableList;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -33,6 +31,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
 
@@ -79,32 +78,33 @@ public final class MainLogicExecReporter
       /*
        Report logic start
       */
-      ImmutableList<? extends FacetValues> facets = input.facetValues();
+      List<? extends ExecutionItem> facets = input.facetValueResponses();
       kryonExecutionReport.reportMainLogicStart(vajramID, kryonLogicId, facets);
 
       /*
        Execute logic
       */
-      OutputLogicExecutionResults<Object> executionResult = logicToDecorate.execute(input);
+      logicToDecorate.execute(input);
       /*
        Report logic end
       */
-      var results = executionResult.results();
-      allOf(results.values().toArray(CompletableFuture[]::new))
+      allOf(
+              input.facetValueResponses().stream()
+                  .map(ExecutionItem::response)
+                  .toArray(CompletableFuture[]::new))
           .whenComplete(
               (unused, throwable) ->
                   kryonExecutionReport.reportMainLogicEnd(
                       vajramID,
                       kryonLogicId,
                       new LogicExecResults(
-                          results.entrySet().stream()
+                          input.facetValueResponses().stream()
                               .map(
                                   e ->
                                       new LogicExecResponse(
-                                          e.getKey(),
-                                          e.getValue().handle(Errable::errableFrom).getNow(nil())))
+                                          e.facetValues(),
+                                          e.response().handle(Errable::errableFrom).getNow(nil())))
                               .collect(toImmutableList()))));
-      return executionResult;
     };
   }
 
@@ -143,7 +143,7 @@ public final class MainLogicExecReporter
       writer.write(content);
       writer.close();
     } catch (IOException e) {
-      log.error("Error writing file: {} with path: {}" + e.getMessage(), filePath);
+      log.error("Error writing file: with path: {}", filePath, e);
     }
   }
 

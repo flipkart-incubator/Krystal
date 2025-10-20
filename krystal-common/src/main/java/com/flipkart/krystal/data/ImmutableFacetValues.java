@@ -10,4 +10,7 @@ public interface ImmutableFacetValues
 
   @Override
   ImmutableFacetValues _newCopy();
+
+  @Override
+  ImmutableRequest<?> _request();
 }

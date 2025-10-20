@@ -5,8 +5,10 @@ import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
 
 public sealed interface KryonCommand<R extends KryonCommandResponse>
-    permits ClientSideCommand, MultiRequestCommand, ServerSideCommand {
+    permits ClientSideCommand, MultiRequestCommand, MultiRequestDirectCommand, ServerSideCommand {
   VajramID vajramID();
 
   DependentChain dependentChain();
+
+  default void error(Throwable throwable) {}
 }

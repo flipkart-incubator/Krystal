@@ -1,6 +1,12 @@
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
+package java.lang;
+
+class String {
+  public String formatted(@Nullable Object... args);
+}
+
 package java.util.concurrent;
 
 class ForkJoinPool{
@@ -15,6 +21,10 @@ class ForkJoinPool{
       @Nullable Predicate<? super ForkJoinPool> saturate,
       long keepAliveTime,
       TimeUnit unit);
+}
+
+public class CompletionException {
+  CompletionException(@Nullable String message, @Nullable Throwable cause);
 }
 
 package java.util;
@@ -33,6 +43,11 @@ package javax.annotation.processing;
 
 class Messager {
   void printMessage(Diagnostic.Kind kind, CharSequence msg, @Nullable Element e);
+  void printMessage(Diagnostic.Kind kind,
+      CharSequence msg,
+      @Nullable Element e,
+      @Nullable AnnotationMirror a,
+      @Nullable AnnotationValue v);
 }
 
 package javax.lang.model.util;

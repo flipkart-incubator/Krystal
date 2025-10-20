@@ -1,0 +1,7 @@
+dependencies {
+    implementation project(':lattice:extensions:rest:lattice-rest')
+    implementation project(':lattice:extensions:rest:lattice-rest-api')
+    implementation project(':lattice:lattice-codegen')
+
+    implementation 'jakarta.ws.rs:jakarta.ws.rs-api'
+}

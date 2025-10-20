@@ -1,5 +1,7 @@
 plugins {
+    id 'java-library'
     id 'com.flipkart.krystal' version "${krystal_version}"
+    id 'com.flipkart.java.code.standard' version '4.0'
 }
 
 sourceSets {
@@ -18,7 +20,13 @@ dependencies {
     implementation 'com.flipkart.krystal:vajram-graphql'
     annotationProcessor 'com.flipkart.krystal:vajram-codegen'
     annotationProcessor 'com.flipkart.krystal:vajram-graphql-codegen'
+    implementation 'com.graphql-java:graphql-java:24.3'
+    implementation 'com.graphql-java:graphql-java-extended-scalars:24.0'
 
-    implementation 'com.graphql-java:graphql-java'
-    implementation 'com.graphql-java:graphql-java-extended-scalars'
+    annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
+
+    compileOnly "org.projectlombok:lombok:$lombok_version"
+    annotationProcessor "org.projectlombok:lombok:$lombok_version"
+
+    implementation 'org.slf4j:slf4j-api:2.0.11'
 }

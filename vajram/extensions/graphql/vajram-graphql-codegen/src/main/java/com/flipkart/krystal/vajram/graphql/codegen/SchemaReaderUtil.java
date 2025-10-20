@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajram.graphql.codegen;
 
 import static java.util.Objects.requireNonNullElse;
 
-import com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility;
+import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
@@ -40,10 +40,6 @@ public class SchemaReaderUtil {
   public static final String VAJRAM_ID_ARG = "vajramId";
   public static final String SUB_PACKAGE_ARG = "subPackage";
 
-  public static final String TYPE_AGGREGATOR_PACKAGE_NAME =
-      "com.flipkart.fkMobileApi.dal.typeAggregators.";
-  public static final String PACKAGE_NAME_ENTITY_BUILDER =
-      "com.flipkart.fkMobileApi.fkEntityBuilder";
   public static final String GRAPHQL_AGGREGATOR = "GraphQLAggregator";
   public static final String GRAPHQL_SCHEMA_EXTENSION = ".graphqls";
 
@@ -108,7 +104,8 @@ public class SchemaReaderUtil {
 
   private static String getRootPackageName(
       CodeGenUtility util, TypeDefinitionRegistry typeDefinitionRegistry) {
-    SchemaDefinition schemaExtensionDefinition = typeDefinitionRegistry.schemaDefinition().get();
+    SchemaDefinition schemaExtensionDefinition =
+        typeDefinitionRegistry.schemaDefinition().orElseThrow();
     List<Directive> rootPackages = schemaExtensionDefinition.getDirectives("rootPackage");
     if (rootPackages.size() != 1) {
       util.error(
@@ -116,8 +113,7 @@ public class SchemaReaderUtil {
               + rootPackages.size());
     }
     Directive rootPackage = rootPackages.get(0);
-    String rootPackageName = ((StringValue) rootPackage.getArgument("name").getValue()).getValue();
-    return rootPackageName;
+    return ((StringValue) rootPackage.getArgument("name").getValue()).getValue();
   }
 
   public GraphQlFieldSpec fieldSpecFromField(
@@ -150,15 +146,6 @@ public class SchemaReaderUtil {
           fieldToResolverMap.put(
               fieldSpecFromField(nestedField, ""), getDataFetcherArgs(nestedField));
         } else if (nestedField.hasDirective(REFERENCE_FETCHER)) {
-          //          try {
-          //            Class<?> clazz =
-          //                Class.forName(
-          //                    "com.flipkart.fkentity." + ((TypeName)
-          // nestedField.getType()).getName());
-          //            refFieldToEntity.put(nestedField.getName(), clazz.getDeclaredConstructor());
-          //          } catch (ClassNotFoundException | NoSuchMethodException e) {
-          //            throw new RuntimeException(e);
-          //          }
           fieldToResolverMap.put(
               fieldSpecFromField(nestedField, ""), getRefFetcherArgs(nestedField));
           ObjectTypeDefinition objectTypeDefinition =

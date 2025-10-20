@@ -10,7 +10,7 @@ import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2_Fac.diff_
 import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2_Fac.twoA_s;
 import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2_Fac.twoB_s;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -24,7 +24,7 @@ import com.flipkart.krystal.vajram.samples.calculator.subtract.Subtract_Req;
 import com.google.common.collect.ImmutableCollection;
 
 /** Computes a*2 - b*2 */
-@ExternallyInvocable
+@InvocableOutsideGraph
 @Vajram
 public abstract class A2MinusB2 extends ComputeVajramDef<Integer> {
   static class _Inputs {

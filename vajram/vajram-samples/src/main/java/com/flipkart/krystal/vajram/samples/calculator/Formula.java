@@ -11,7 +11,7 @@ import static com.flipkart.krystal.vajram.samples.calculator.Formula_Fac.q_s;
 import static com.flipkart.krystal.vajram.samples.calculator.Formula_Fac.quotient_s;
 import static com.flipkart.krystal.vajram.samples.calculator.Formula_Fac.sum_s;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.model.IfAbsent;
@@ -27,7 +27,7 @@ import com.flipkart.krystal.vajram.samples.calculator.divide.Divide_Req;
 import com.google.common.collect.ImmutableCollection;
 
 /** a/(p+q) */
-@ExternallyInvocable
+@InvocableOutsideGraph
 @Vajram
 public abstract class Formula extends ComputeVajramDef<Integer> {
   @SuppressWarnings("initialization.field.uninitialized")

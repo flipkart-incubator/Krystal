@@ -64,23 +64,20 @@ class TooManyQualifiersTest {
   }
 
   private KrystexVajramExecutor createExecutor(VajramKryonGraph vajramKryonGraph) {
+    vajramKryonGraph.registerInputInjector(
+        new VajramGuiceInputInjector(
+            createInjector(
+                binder -> {
+                  binder.bind(String.class).annotatedWith(named("toInject")).toInstance("i2a");
+                  binder
+                      .bind(String.class)
+                      .annotatedWith(TooManyQualifiers.InjectionQualifier.class)
+                      .toInstance("i2b");
+                })));
     return vajramKryonGraph.createExecutor(
         KrystexVajramExecutorConfig.builder()
             .kryonExecutorConfigBuilder(
-                KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
-            .inputInjectionProvider(
-                new VajramGuiceInputInjector(
-                    createInjector(
-                        binder -> {
-                          binder
-                              .bind(String.class)
-                              .annotatedWith(named("toInject"))
-                              .toInstance("i2a");
-                          binder
-                              .bind(String.class)
-                              .annotatedWith(TooManyQualifiers.InjectionQualifier.class)
-                              .toInstance("i2b");
-                        })))
+                KryonExecutorConfig.builder().executorService(executorLease.get()))
             .build());
   }
 }

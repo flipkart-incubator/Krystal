@@ -10,5 +10,4 @@ dependencies {
 // Task ':vajram-lang:spotlessJava' uses this output of task ':vajram-lang:generateGrammarSource'
 // without declaring an explicit or implicit dependency. This can lead to incorrect results being produced,
 // depending on what order the tasks are executed.
-tasks.named("spotlessJava").configure { dependsOn("generateGrammarSource") }
 tasks.named("sourcesJar").configure { dependsOn("generateGrammarSource") }

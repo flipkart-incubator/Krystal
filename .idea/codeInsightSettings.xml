@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="JavaProjectCodeInsightSettings">
+    <included-static-names>
+      <name>com.google.common.collect.ImmutableList.toImmutableList</name>
+      <name>com.google.common.collect.ImmutableMap.toImmutableMap</name>
+      <name>com.flipkart.krystal.core.VajramID.vajramID</name>
+    </included-static-names>
+  </component>
+</project>

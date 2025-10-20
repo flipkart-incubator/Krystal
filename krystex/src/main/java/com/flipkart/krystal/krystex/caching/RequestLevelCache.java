@@ -1,14 +1,16 @@
 package com.flipkart.krystal.krystex.caching;
 
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
+import static com.flipkart.krystal.concurrent.Futures.propagateCompletion;
 import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
 import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.except.StackTracelessException;
-import com.flipkart.krystal.krystex.commands.Flush;
-import com.flipkart.krystal.krystex.commands.ForwardReceive;
+import com.flipkart.krystal.krystex.commands.DirectForwardReceive;
+import com.flipkart.krystal.krystex.commands.ForwardReceiveBatch;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.kryon.BatchResponse;
 import com.flipkart.krystal.krystex.kryon.Kryon;
@@ -21,7 +23,9 @@ import com.flipkart.krystal.krystex.kryondecoration.KryonDecorator;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.request.InvocationId;
 import com.google.common.collect.Iterables;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
@@ -34,7 +38,7 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
 
   public static final String DECORATOR_TYPE = RequestLevelCache.class.getName();
 
-  private static final Errable<@Nullable Object> UNKNOWN_ERROR =
+  private static final Errable<Object> UNKNOWN_ERROR =
       Errable.withError(new StackTracelessException("Unknown error in request cache"));
 
   private final Map<CacheKey, CompletableFuture<@Nullable Object>> cache = new LinkedHashMap<>();
@@ -66,19 +70,16 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
     }
 
     @Override
-    public void executeCommand(Flush flushCommand) {
-      kryon.executeCommand(flushCommand);
-    }
-
-    @Override
     public VajramKryonDefinition getKryonDefinition() {
       return kryon.getKryonDefinition();
     }
 
     @Override
     public CompletableFuture<KryonCommandResponse> executeCommand(KryonCommand kryonCommand) {
-      if (kryonCommand instanceof ForwardReceive forwardBatch) {
+      if (kryonCommand instanceof ForwardReceiveBatch forwardBatch) {
         return readFromCache(kryon, forwardBatch);
+      } else if (kryonCommand instanceof DirectForwardReceive directForwardReceive) {
+        return readFromCache(kryon, directForwardReceive);
       } else {
         // Let all other commands just pass through. Request level cache is supposed to intercept
         // ForwardBatch only.
@@ -86,9 +87,27 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
       }
     }
 
+    private CompletableFuture<KryonCommandResponse> readFromCache(
+        Kryon<KryonCommand, KryonCommandResponse> kryon, DirectForwardReceive command) {
+      List<ExecutionItem> cacheMisses = new ArrayList<>();
+      for (ExecutionItem executionItem : command.executionItems()) {
+        FacetValues facetValues = executionItem.facetValues();
+        var cacheKey = new CacheKey(facetValues._build());
+        var cachedFuture = getCachedValue(cacheKey);
+        if (cachedFuture != null) {
+          propagateCompletion(cachedFuture, executionItem.response());
+        } else {
+          cache.put(cacheKey, executionItem.response());
+          cacheMisses.add(executionItem);
+        }
+      }
+      return kryon.executeCommand(
+          new DirectForwardReceive(command.vajramID(), cacheMisses, command.dependentChain()));
+    }
+
     @SuppressWarnings("FutureReturnValueIgnored")
     private CompletableFuture<KryonCommandResponse> readFromCache(
-        Kryon<KryonCommand, KryonCommandResponse> kryon, ForwardReceive forwardBatch) {
+        Kryon<KryonCommand, KryonCommandResponse> kryon, ForwardReceiveBatch forwardBatch) {
       var executableRequests = forwardBatch.executableInvocations();
       Map<InvocationId, FacetValues> cacheMisses = new LinkedHashMap<>();
       Map<InvocationId, CompletableFuture<@Nullable Object>> cacheHits = new LinkedHashMap<>();
@@ -113,7 +132,7 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
           (requestId, _f) -> skippedRequests.put(requestId, "Skipping due to cache hit!"));
       CompletableFuture<KryonCommandResponse> cacheMissesResponse =
           kryon.executeCommand(
-              new ForwardReceive(
+              new ForwardReceiveBatch(
                   forwardBatch.vajramID(),
                   cacheMisses,
                   forwardBatch.dependentChain(),
@@ -122,10 +141,10 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
       cacheMissesResponse.whenComplete(
           (kryonResponse, throwable) -> {
             if (kryonResponse instanceof BatchResponse batchResponse) {
-              Map<InvocationId, Errable<@Nullable Object>> responses = batchResponse.responses();
+              Map<InvocationId, Errable<Object>> responses = batchResponse.responses();
               responses.forEach(
                   (requestId, response) -> {
-                    CompletableFuture<@Nullable Object> future = response.toFuture();
+                    CompletableFuture<? extends @Nullable Object> future = response.toFuture();
                     CompletableFuture<@Nullable Object> destinationFuture =
                         newCacheEntries.computeIfAbsent(
                             requestId, _r -> new CompletableFuture<@Nullable Object>());
@@ -156,7 +175,7 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
       allOf(allFuturesArray)
           .whenComplete(
               (unused, throwable) -> {
-                Map<InvocationId, Errable<@Nullable Object>> responses = new LinkedHashMap<>();
+                Map<InvocationId, Errable<Object>> responses = new LinkedHashMap<>();
                 for (Entry<InvocationId, CompletableFuture<@Nullable Object>> e : allFutures) {
                   responses.put(
                       e.getKey(), e.getValue().handle(Errable::errableFrom).getNow(UNKNOWN_ERROR));

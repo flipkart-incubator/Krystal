@@ -1,0 +1,5 @@
+dependencies {
+    implementation project(':krystal-common')
+
+    implementation 'jakarta.ws.rs:jakarta.ws.rs-api'
+}

@@ -89,9 +89,9 @@ class PartitionedPool<T> implements Iterable<PooledObject<T>> {
    * @return The object at the given index
    * @throws IllegalArgumentException if the index is not available for leasing
    */
-  PooledObject<T> getForLeasing(int i) throws LeaseUnavailableException {
+  PooledObject<T> getForLeasing(int i) throws IllegalArgumentException {
     if (i >= unavailableStartIndex || i < 0) {
-      throw new LeaseUnavailableException("Index [" + i + "] is not available for leasing");
+      throw new IllegalArgumentException("Index [" + i + "] is not available for leasing");
     }
     PooledObject<T> toLease = partitionedList.get(i);
     toLease.incrementActiveLeases();
