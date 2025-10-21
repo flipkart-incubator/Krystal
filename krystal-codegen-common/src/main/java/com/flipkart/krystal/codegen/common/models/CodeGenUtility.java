@@ -320,7 +320,7 @@ public class CodeGenUtility {
               .createSourceFile(
                   canonicalClassName,
                   Optional.ofNullable(originatingElement).stream().toArray(Element[]::new));
-      note("Successfully Create source file %s".formatted(canonicalClassName));
+      note("Successfully created source file %s".formatted(canonicalClassName));
       try (PrintWriter out = new PrintWriter(requestFile.openWriter())) {
         out.println(code);
       }
@@ -352,7 +352,6 @@ public class CodeGenUtility {
   public ImmutableList<TypeMirror> getTypeParamTypes(
       TypeElement childTypeElement, TypeElement targetParentClass) {
     List<TypeMirror> currentTypes = List.of(childTypeElement.asType());
-    note("Child Type Element: %s".formatted(childTypeElement));
 
     Types typeUtils = processingEnv.getTypeUtils();
     DeclaredType targetType = null;
@@ -366,10 +365,8 @@ public class CodeGenUtility {
                 .toList();
         newSuperTypes.addAll(superTypes);
         for (DeclaredType superType : superTypes) {
-          note("SuperType: %s [%s]".formatted(superType, superType.getClass()));
           Element element = typeUtils.asElement(superType);
           if (element instanceof TypeElement typeElement) {
-            note("Element qualified name: %s".formatted(typeElement.getQualifiedName()));
             if (typeElement
                 .getQualifiedName()
                 .contentEquals(targetParentClass.getQualifiedName())) {
@@ -378,7 +375,6 @@ public class CodeGenUtility {
             }
           }
         }
-        note("CurrentElement: %s".formatted(currentType));
       }
       if (targetType == null) {
         currentTypes = newSuperTypes;

@@ -6,20 +6,23 @@ import static com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUti
 
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.core.VajramID;
+import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.vajram.Trait;
 import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ImmutableMap;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.TypeName;
 import java.util.List;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.TypeElement;
 import lombok.SneakyThrows;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public record VajramInfoLite(
     VajramID vajramId,
     CodeGenType responseType,
     String packageName,
-    ImmutableBiMap<Integer, String> facetIdNameMapping,
+    ImmutableMap<String, FacetDetail> facetDetails,
     TypeElement vajramOrReqClass,
     String docString,
     VajramCodeGenUtility util) {
@@ -52,4 +55,11 @@ public record VajramInfoLite(
   public boolean isVajram() {
     return !isTrait();
   }
+
+  public record FacetDetail(
+      int id,
+      String name,
+      CodeGenType dataType,
+      FacetType facetType,
+      @Nullable String documentation) {}
 }

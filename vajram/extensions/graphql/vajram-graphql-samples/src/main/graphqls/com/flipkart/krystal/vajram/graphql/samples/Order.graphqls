@@ -1,10 +1,11 @@
-type Order @entity(name: "Order", identifierKey: "orderId"){
+type Order @entity{
     id: ID,
     orderItemNames: [String] @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
-    dummies: Dummy @refFetcher(vajramId: "GetDummyIds", subPackage: "order")
+    dummy: Dummy @refFetcher(vajramId: "GetDummyId", subPackage: "order")
+    dummies: [Dummy] @refFetcher(vajramId: "GetDummyIds", subPackage: "order")
 }
 
-type Dummy @entity(name: "Dummy", identifierKey: "id"){
+type Dummy @entity{
     id: ID,
     name: String
 }

@@ -34,7 +34,7 @@ public final class Nil<T> implements Success<T> {
 
   @Override
   public @NonNull T valueOrThrow() {
-    throw new NoSuchElementException("Trying to access value from Nil");
+    throw new NilValueException();
   }
 
   @SuppressWarnings("unchecked")

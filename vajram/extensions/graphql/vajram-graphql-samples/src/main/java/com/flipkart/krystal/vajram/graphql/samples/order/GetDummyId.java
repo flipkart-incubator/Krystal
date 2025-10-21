@@ -3,23 +3,22 @@ package com.flipkart.krystal.vajram.graphql.samples.order;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 
 import com.flipkart.krystal.model.IfAbsent;
-import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.graphql.api.GraphQLFetcher;
-import java.util.List;
+import com.flipkart.krystal.vajram.graphql.samples.dummy.DummyId;
 
 @GraphQLFetcher
 @Vajram
-public abstract class GetOrderItemNames extends ComputeVajramDef<List<String>> {
+public abstract class GetDummyId extends ComputeVajramDef<DummyId> {
   static class _Inputs {
     @IfAbsent(FAIL)
     OrderId id;
   }
 
   @Output
-  static List<String> orderItemNames(OrderId id) {
-    return List.of(id.value() + "_1", id.value() + "_2");
+  static DummyId dummyIds(String id) {
+    return new DummyId(id + "_dummy_1");
   }
 }

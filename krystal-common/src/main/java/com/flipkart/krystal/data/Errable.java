@@ -50,8 +50,8 @@ public sealed interface Errable<T> extends FacetValue<T>, SingleFacetValue<T>
    *
    *
    * <ul>
-   *   <li>NonNil: returns the value <br>
-   *   <li>Nil: throws {@link NoSuchElementException} <br>
+   *   <li>NonNil: returns the non-null value
+   *   <li>Nil: throws {@link NilValueException}
    *   <li>Failure: throws a {@link RuntimeException} representing the throwable which caused the
    *       failure. If the throwable is a {@link RuntimeException}, it is thrown as is. Else it is
    *       wrapped in a {@link StackTracelessException} and thrown.

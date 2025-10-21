@@ -7,14 +7,8 @@ import com.flipkart.krystal.data.Errable;
 public abstract class AbstractGraphQLEntity<
         I extends GraphQLEntityId, T extends AbstractGraphQLEntity<I, T>>
     extends AbstractGraphQlModel<T> {
-  @SuppressWarnings("unchecked")
-  public final I id() {
-    return (I) _values.get("id");
-  }
 
-  public final void id(I id) {
-    handleErrable("id", Errable.withValue(id), this);
-  }
+  public static final String DEFAULT_ENTITY_ID_FIELD = "id";
 
   public abstract String __typename();
 }

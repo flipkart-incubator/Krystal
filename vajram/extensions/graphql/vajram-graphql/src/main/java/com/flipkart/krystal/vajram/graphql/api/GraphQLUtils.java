@@ -71,7 +71,7 @@ public class GraphQLUtils {
         .valueOpt()
         .ifPresent(
             value -> {
-              if (model._values().putIfAbsent(fieldName, value) != null) {
+              if (model._putValue(fieldName, value) != null) {
                 throw new IllegalArgumentException(
                     "Attempt to set '%s' after it was already set. Old value: %s, New value: %s"
                         .formatted(fieldName, model._values().get(fieldName), value));
@@ -88,7 +88,7 @@ public class GraphQLUtils {
       errable.valueOpt().ifPresent(values::add);
     }
     model._putError(fieldName, errors);
-    if (model._values().putIfAbsent(fieldName, values) != null) {
+    if (model._putValue(fieldName, values) != null) {
       throw new IllegalArgumentException(
           "Attempt to set '%s' after it was already set. Old value: %s, New value: %s"
               .formatted(fieldName, model._values().get(fieldName), values));

@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.codegen.common.models;
 
 import static com.flipkart.krystal.core.VajramID.vajramID;
 import static com.flipkart.krystal.facets.FacetType.INJECTION;
+import static com.flipkart.krystal.facets.FacetType.INPUT;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.FACETS_CLASS_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.FACETS_IMMUT_CLASS_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.IMMUT_REQUEST_POJO_SUFFIX;
@@ -9,8 +10,8 @@ import static com.flipkart.krystal.vajram.codegen.common.models.Constants.IMMUT_
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.REQUEST_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.WRPR_SUFFIX;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.collect.ImmutableBiMap.toImmutableBiMap;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElseGet;
 import static javax.lang.model.element.Modifier.ABSTRACT;
@@ -40,6 +41,7 @@ import com.flipkart.krystal.vajram.codegen.common.models.FacetJavaType.Boxed;
 import com.flipkart.krystal.vajram.codegen.common.models.FacetJavaType.FanoutResponses;
 import com.flipkart.krystal.vajram.codegen.common.models.FacetJavaType.One2OneResponse;
 import com.flipkart.krystal.vajram.codegen.common.models.FacetJavaType.OptionalType;
+import com.flipkart.krystal.vajram.codegen.common.models.VajramInfoLite.FacetDetail;
 import com.flipkart.krystal.vajram.exception.VajramDefinitionException;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FacetIdNameMapping;
@@ -63,6 +65,7 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.stream.Stream;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
@@ -83,6 +86,7 @@ import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @SuppressWarnings("ClassWithTooManyMethods")
@@ -396,23 +400,13 @@ public class VajramCodeGenUtility {
 
   public VajramInfoLite computeVajramInfoLite(TypeElement vajramOrReqClass) {
     String vajramClassSimpleName = vajramOrReqClass.getSimpleName().toString();
-    ImmutableBiMap<Integer, String> facetIdNameMappings = ImmutableBiMap.of();
+    ImmutableMap<String, FacetDetail> facetIdNameMappings = ImmutableMap.of();
     VajramID vajramId;
     CodeGenType responseType;
     String packageName = elementUtils.getPackageOf(vajramOrReqClass).getQualifiedName().toString();
-    TypeMirror from1 = vajramOrReqClass.asType();
-    if (codegenUtil().isRawAssignable(from1, Request.class)) {
-      facetIdNameMappings =
-          ElementFilter.fieldsIn(vajramOrReqClass.getEnclosedElements()).stream()
-              .filter(
-                  element ->
-                      element.asType() instanceof DeclaredType d
-                          && d.asElement() instanceof TypeElement t
-                          && t.getQualifiedName()
-                              .contentEquals(InputMirrorSpec.class.getCanonicalName()))
-              .map(element -> element.getAnnotation(FacetIdNameMapping.class))
-              .filter(Objects::nonNull)
-              .collect(toImmutableBiMap(FacetIdNameMapping::id, FacetIdNameMapping::name));
+    @Nullable TypeElement requestType;
+    if (codegenUtil().isRawAssignable(vajramOrReqClass.asType(), Request.class)) {
+      requestType = vajramOrReqClass;
       TypeMirror responseTypeMirror = getVajramResponseType(vajramOrReqClass, Request.class);
       vajramId =
           vajramID(
@@ -421,53 +415,66 @@ public class VajramCodeGenUtility {
       responseType =
           responseTypeMirror.accept(
               new DeclaredTypeVisitor(codegenUtil, vajramOrReqClass, DISALLOWED_FACET_TYPES), null);
-    } else {
-      TypeMirror from = vajramOrReqClass.asType();
-      if (codegenUtil().isRawAssignable(from, VajramDefRoot.class)) {
-        Vajram vajram = vajramOrReqClass.getAnnotation(Vajram.class);
-        Trait trait = vajramOrReqClass.getAnnotation(Trait.class);
-        if (vajram == null && trait == null) {
-          throw codegenUtil.errorAndThrow(
-              "Vajram class does not have either @VajramDef or @VajramTrait annotation. This should not happen",
-              vajramOrReqClass);
-        }
-        TypeMirror responseTypeMirror =
-            getVajramResponseType(vajramOrReqClass, VajramDefRoot.class);
-        TypeElement requestType =
-            elementUtils.getTypeElement(
-                packageName + "." + getRequestInterfaceName(vajramClassSimpleName));
-        if (requestType != null) {
-          facetIdNameMappings =
-              ElementFilter.fieldsIn(requestType.getEnclosedElements()).stream()
-                  .filter(
-                      element ->
-                          element.asType() instanceof DeclaredType d
-                              && d.asElement() instanceof TypeElement t
-                              && t.getQualifiedName()
-                                  .contentEquals(InputMirrorSpec.class.getCanonicalName()))
-                  .map(element -> element.getAnnotation(FacetIdNameMapping.class))
-                  .filter(Objects::nonNull)
-                  .collect(toImmutableBiMap(FacetIdNameMapping::id, FacetIdNameMapping::name));
-        }
-        vajramId = getVajramIdOfVajramClass(vajramOrReqClass);
-        responseType =
-            responseTypeMirror.accept(
-                new DeclaredTypeVisitor(codegenUtil, vajramOrReqClass, DISALLOWED_FACET_TYPES),
-                null);
-      } else {
-        throw new IllegalArgumentException(
-            "Unknown class hierarchy of vajram class %s. Expected %s or %s"
-                .formatted(vajramOrReqClass, VajramDef.class, ImmutableRequest.class));
+    } else if (codegenUtil().isRawAssignable(vajramOrReqClass.asType(), VajramDefRoot.class)) {
+      Vajram vajram = vajramOrReqClass.getAnnotation(Vajram.class);
+      Trait trait = vajramOrReqClass.getAnnotation(Trait.class);
+      if (vajram == null && trait == null) {
+        throw codegenUtil.errorAndThrow(
+            "Vajram class does not have either @Vajram or @Trait annotation. This should not happen",
+            vajramOrReqClass);
       }
+      TypeMirror responseTypeMirror = getVajramResponseType(vajramOrReqClass, VajramDefRoot.class);
+      requestType =
+          elementUtils.getTypeElement(
+              packageName + "." + getRequestInterfaceName(vajramClassSimpleName));
+      vajramId = getVajramIdOfVajramClass(vajramOrReqClass);
+      responseType =
+          responseTypeMirror.accept(
+              new DeclaredTypeVisitor(codegenUtil, vajramOrReqClass, DISALLOWED_FACET_TYPES), null);
+    } else {
+      throw new IllegalArgumentException(
+          "Unknown class hierarchy of vajram class %s. Expected %s or %s"
+              .formatted(vajramOrReqClass, VajramDef.class, ImmutableRequest.class));
     }
     return new VajramInfoLite(
         vajramId,
         responseType,
         packageName,
-        facetIdNameMappings,
+        facetDetailsFromRequestType(requestType),
         vajramOrReqClass,
         codegenUtil.processingEnv().getElementUtils().getDocComment(vajramOrReqClass),
         this);
+  }
+
+  private ImmutableMap<String, FacetDetail> facetDetailsFromRequestType(
+      @Nullable TypeElement requestType) {
+    if (requestType == null) {
+      return ImmutableMap.of();
+    }
+    return ElementFilter.fieldsIn(requestType.getEnclosedElements()).stream()
+        .filter(
+            element ->
+                element.asType() instanceof DeclaredType d
+                    && d.asElement() instanceof TypeElement t
+                    && t.getQualifiedName().contentEquals(InputMirrorSpec.class.getCanonicalName()))
+        .map(
+            facetSpecField -> {
+              FacetIdNameMapping facetIdNameMapping =
+                  facetSpecField.getAnnotation(FacetIdNameMapping.class);
+              return new FacetDetail(
+                  facetIdNameMapping.id(),
+                  facetIdNameMapping.name(),
+                  facetSpecField
+                      .asType()
+                      .accept(
+                          new DeclaredTypeVisitor(codegenUtil, requestType, DISALLOWED_FACET_TYPES),
+                          null)
+                      .typeParameters()
+                      .get(0),
+                  INPUT,
+                  elementUtils.getDocComment(facetSpecField));
+            })
+        .collect(toImmutableMap(FacetDetail::name, Function.identity()));
   }
 
   public VajramID getVajramIdOfVajramClass(TypeElement vajramOrReqClass) {

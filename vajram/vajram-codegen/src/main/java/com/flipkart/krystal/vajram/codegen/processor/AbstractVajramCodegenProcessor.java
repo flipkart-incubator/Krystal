@@ -17,6 +17,8 @@ import com.flipkart.krystal.vajram.codegen.common.spi.VajramCodeGeneratorProvide
 import com.google.common.collect.Iterables;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.ServiceLoader;
@@ -32,7 +34,7 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
     permits VajramModelGenProcessor, VajramWrapperGenProcessor {
 
   private final CodegenPhase codegenPhase;
-  private final List<TypeElement> vajramDefinitions = new ArrayList<>();
+  private final List<TypeElement> vajramDefinitions = new LinkedList<>();
 
   public AbstractVajramCodegenProcessor(CodegenPhase codegenPhase) {
     this.codegenPhase = codegenPhase;
@@ -68,13 +70,7 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
       return false;
     }
 
-    List<TypeElement> vajramDefinitions;
-    if (this.vajramDefinitions.isEmpty()) {
-      vajramDefinitions = util.getDefinitionClasses(roundEnv);
-      this.vajramDefinitions.addAll(vajramDefinitions);
-    } else {
-      vajramDefinitions = new ArrayList<>(this.vajramDefinitions);
-    }
+    this.vajramDefinitions.addAll(util.getDefinitionClasses(roundEnv));
     CharSequence message =
         "Vajrams and Traits received by %s: %s"
             .formatted(
@@ -93,11 +89,11 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
             ServiceLoader.load(
                 VajramCodeGeneratorProvider.class, this.getClass().getClassLoader()));
 
-    record Failure(@Nullable TypeElement element, Throwable throwable) {}
-
     List<Failure> failures = new ArrayList<>();
     List<VajramInfo> vajramInfos = new ArrayList<>();
-    for (TypeElement vajramDefinition : vajramDefinitions) {
+    Iterator<TypeElement> iterator = vajramDefinitions.iterator();
+    while (iterator.hasNext()) {
+      TypeElement vajramDefinition = iterator.next();
       try {
         VajramInfo vajramInfo = util.computeVajramInfo(vajramDefinition);
         vajramInfos.add(vajramInfo);
@@ -111,7 +107,7 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
             failures.add(new Failure(vajramDefinition, e));
           }
         }
-        this.vajramDefinitions.remove(vajramDefinition);
+        iterator.remove();
       } catch (Exception e) {
         failures.add(new Failure(vajramDefinition, e));
       }
@@ -148,4 +144,6 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
 
     return false;
   }
+
+  private record Failure(@Nullable TypeElement element, Throwable throwable) {}
 }
