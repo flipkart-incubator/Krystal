@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex.testutils;
+package com.flipkart.krystal.krystex.testfixtures;
 
 import static com.flipkart.krystal.data.Errable.nil;
 
@@ -11,10 +11,8 @@ import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
-import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-@Getter
 public final class SimpleImmutRequest<T> implements SimpleRequest<T>, ImmutableRequest<T> {
   private final Map<Integer, Errable<Object>> _data;
   private final VajramID _vajramID;
@@ -72,5 +70,13 @@ public final class SimpleImmutRequest<T> implements SimpleRequest<T>, ImmutableR
   @Override
   public int hashCode() {
     return Objects.hash(_data, _vajramID);
+  }
+
+  public Map<Integer, Errable<Object>> _data() {
+    return _data;
+  }
+
+  public VajramID _vajramID() {
+    return _vajramID;
   }
 }

@@ -1,10 +1,11 @@
-package com.flipkart.krystal.krystex.testutils;
+package com.flipkart.krystal.krystex.testfixtures;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FacetValuesBuilder;
 import com.flipkart.krystal.data.FanoutDepResponses;
+import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.except.IllegalModificationException;
 import com.flipkart.krystal.facets.Facet;
@@ -13,15 +14,14 @@ import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
-import lombok.Getter;
 
 @SuppressWarnings("unchecked")
 public final class FacetValuesMapBuilder implements FacetValuesMap, FacetValuesBuilder {
 
-  @Getter private final SimpleRequestBuilder<Object> _request;
-  @Getter private final ImmutableSet<? extends Facet> _facets;
+  private final SimpleRequestBuilder<Object> _request;
+  private final ImmutableSet<? extends Facet> _facets;
   private final Map<Integer, FacetValue> otherFacetValues;
-  @Getter private final VajramID _vajramID;
+  private final VajramID _vajramID;
 
   public FacetValuesMapBuilder(
       SimpleRequestBuilder<Object> _request, Set<? extends Facet> _facets, VajramID vajramID) {
@@ -108,5 +108,20 @@ public final class FacetValuesMapBuilder implements FacetValuesMap, FacetValuesB
     }
     otherFacetValues.put(facetId, value);
     return this;
+  }
+
+  @Override
+  public Builder<?> _request() {
+    return _request;
+  }
+
+  @Override
+  public ImmutableSet<? extends Facet> _facets() {
+    return _facets;
+  }
+
+  @Override
+  public VajramID _vajramID() {
+    return _vajramID;
   }
 }

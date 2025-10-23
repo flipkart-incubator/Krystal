@@ -1113,7 +1113,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                 outputLogic);
       }
       returnBuilder.add(
-          "\n$T.linkFutures($L($L),_executionItem.response());\n",
+          "\n$T.linkFutures($L($L), _executionItem.response(), _logicInput.graphExecutor());\n",
           Futures.class,
           outputLogic.getSimpleName(),
           outputLogicParams);

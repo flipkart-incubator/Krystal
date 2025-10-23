@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex.logicdecorators.resilience4j;
+package com.flipkart.krystal.vajram.resilience4j.bulkhead;
 
 import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
 import static com.google.common.base.Preconditions.checkArgument;

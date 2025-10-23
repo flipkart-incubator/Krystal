@@ -1,6 +1,6 @@
-package com.flipkart.krystal.krystex.logicdecorators.resilience4j;
+package com.flipkart.krystal.vajram.resilience4j.curcuitbreaker;
 
-import static com.flipkart.krystal.krystex.logicdecorators.resilience4j.Resilience4JCircuitBreaker.DECORATOR_TYPE;
+import static com.flipkart.krystal.vajram.resilience4j.curcuitbreaker.Resilience4JCircuitBreaker.DECORATOR_TYPE;
 import static java.util.Collections.synchronizedList;
 
 import com.flipkart.krystal.annos.ComputeDelegationMode;

@@ -1,0 +1,9 @@
+dependencies {
+    implementation project(':krystal-common')
+    implementation project(':krystex')
+    implementation 'io.github.resilience4j:resilience4j-all'
+    implementation 'io.github.resilience4j:resilience4j-bulkhead'
+    implementation 'io.github.resilience4j:resilience4j-circuitbreaker'
+
+    testImplementation testFixtures(project(':krystex'))
+}

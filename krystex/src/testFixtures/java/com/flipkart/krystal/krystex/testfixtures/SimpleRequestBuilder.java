@@ -1,11 +1,11 @@
-package com.flipkart.krystal.krystex.testutils;
+package com.flipkart.krystal.krystex.testfixtures;
 
 import static com.flipkart.krystal.data.Errable.nil;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
-import com.flipkart.krystal.data.ImmutableRequest.Builder;
+import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.except.IllegalModificationException;
 import com.flipkart.krystal.facets.InputMirror;
 import com.google.common.collect.ImmutableSet;
@@ -13,11 +13,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-@Getter
-public final class SimpleRequestBuilder<T> implements Builder<T> {
+public final class SimpleRequestBuilder<T> implements ImmutableRequest.Builder<T> {
 
   private final ImmutableSet<? extends InputMirror> _facets;
   private final Map<Integer, Errable<Object>> _data;
@@ -57,7 +55,7 @@ public final class SimpleRequestBuilder<T> implements Builder<T> {
   }
 
   @SuppressWarnings("unchecked")
-  public Builder _set(int facetId, FacetValue value) {
+  public SimpleRequestBuilder<T> _set(int facetId, FacetValue value) {
     if (!(value instanceof Errable<?> errable)) {
       throw new IllegalArgumentException(
           "Expected Errable but found %s".formatted(value.getClass()));
@@ -77,6 +75,10 @@ public final class SimpleRequestBuilder<T> implements Builder<T> {
   @Override
   public SimpleRequestBuilder<T> _asBuilder() {
     return this;
+  }
+
+  public VajramID _vajramID() {
+    return _vajramID;
   }
 
   @Override

@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex.testutils;
+package com.flipkart.krystal.krystex.testfixtures;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Request;
