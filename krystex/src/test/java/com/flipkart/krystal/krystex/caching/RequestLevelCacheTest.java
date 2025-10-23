@@ -1,19 +1,19 @@
 package com.flipkart.krystal.krystex.caching;
 
+import static com.flipkart.krystal.concurrent.Futures.linkFutures;
+import static com.flipkart.krystal.core.VajramID.vajramID;
 import static com.flipkart.krystal.data.Errable.computeErrableFrom;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
+import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.DIRECT;
 import static com.flipkart.krystal.tags.ElementTags.emptyTags;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Collections.emptySet;
-import static java.util.function.Function.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
-import com.flipkart.krystal.core.OutputLogicExecutionResults;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.facets.Facet;
@@ -32,17 +32,17 @@ import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
 import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
 import com.flipkart.krystal.krystex.resolution.FacetsFromRequest;
-import com.flipkart.krystal.krystex.testutils.FacetValuesMapBuilder;
-import com.flipkart.krystal.krystex.testutils.SimpleFacet;
-import com.flipkart.krystal.krystex.testutils.SimpleImmutRequest;
-import com.flipkart.krystal.krystex.testutils.SimpleRequestBuilder;
+import com.flipkart.krystal.krystex.testfixtures.FacetValuesMapBuilder;
+import com.flipkart.krystal.krystex.testfixtures.SimpleFacet;
+import com.flipkart.krystal.krystex.testfixtures.SimpleImmutRequest;
+import com.flipkart.krystal.krystex.testfixtures.SimpleRequest;
+import com.flipkart.krystal.krystex.testfixtures.SimpleRequestBuilder;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableMap;
 import java.time.Duration;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -53,25 +53,37 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+@ParameterizedClass
+@MethodSource("executorConfigsToTest")
 class RequestLevelCacheTest {
 
   private static final Duration TIMEOUT = Duration.ofSeconds(10);
 
   private static SingleThreadExecutorsPool EXEC_POOL;
+  private final KryonExecStrategy kryonExecStrategy;
+  private final GraphTraversalStrategy graphTraversalStrategy;
+
+  @BeforeAll
+  static void beforeAll() {
+    EXEC_POOL = new SingleThreadExecutorsPool("RequestLevelCacheTest", 4);
+  }
 
   private KryonDefinitionRegistry kryonDefinitionRegistry;
   private LogicDefinitionRegistry logicDefinitionRegistry;
   private RequestLevelCache requestLevelCache;
   private KryonExecutor kryonExecutor;
+
   private Lease<SingleThreadExecutor> executorLease;
 
-  @BeforeAll
-  static void beforeAll() {
-    EXEC_POOL = new SingleThreadExecutorsPool("RequestLevelCacheTest", 4);
+  public RequestLevelCacheTest(
+      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
+    this.kryonExecStrategy = kryonExecStrategy;
+    this.graphTraversalStrategy = graphTraversalStrategy;
   }
 
   @BeforeEach
@@ -88,24 +100,16 @@ class RequestLevelCacheTest {
     executorLease.close();
   }
 
-  @ParameterizedTest
-  @MethodSource("executorConfigsToTest")
-  void multiRequestExecution_withCache_cacheHitSuccess(
-      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
-    // This is redundant. This should Ideally move to a paramterized @BeforeEach method or after
-    // parametrizing this at the test class level.
-    // This is currently not supported in jupiter-junit:5.9.x.
-    // It is planned to be supported in jupiter-junit:5.10
-    // (Ref: https://github.com/junit-team/junit5/issues/878)
-    // Move this to the @BeforeEach method after 5.10 is released.
+  @Test
+  void multiRequestExecution_withCache_cacheHitSuccess() {
     this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy, true);
     LongAdder adder = new LongAdder();
     VajramKryonDefinition kryonDefinition =
         kryonDefinitionRegistry.newVajramKryonDefinition(
-            "kryon",
+            vajramID("kryon"),
             emptySet(),
             newComputeLogic(
-                    "kryon",
+                    vajramID("kryon"),
                     emptySet(),
                     dependencyValues -> {
                       adder.increment();
@@ -113,9 +117,9 @@ class RequestLevelCacheTest {
                     })
                 .kryonLogicId(),
             ImmutableMap.of(),
-            ImmutableMap.of(),
-            newCreateNewRequestLogic("kryon", emptySet()),
-            newFacetsFromRequestLogic("kryon"),
+            newCreateNewRequestLogic(vajramID("kryon"), emptySet()),
+            newFacetsFromRequestLogic(vajramID("kryon")),
+            _graphExecData -> _graphExecData.communicationFacade().executeOutputLogic(),
             ElementTags.of(List.of(InvocableOutsideGraph.Creator.create())));
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
@@ -132,34 +136,26 @@ class RequestLevelCacheTest {
     assertThat(adder.sum()).isEqualTo(1);
   }
 
-  @ParameterizedTest
-  @MethodSource("executorConfigsToTest")
-  void multiRequestExecution_withoutCache_cacheHitFailForBatch(
-      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
-    // This is redundant. This should Ideally move to a parameterized @BeforeEach method or after
-    // parametrizing this at the test class level.
-    // This is currently not supported in jupiter-junit:5.9.x.
-    // It is planned to be supported in jupiter-junit:5.10
-    // (Ref: https://github.com/junit-team/junit5/issues/878)
-    // Move this to the @BeforeEach method after 5.10 is released.
+  @Test
+  void multiRequestExecution_withoutCache_cacheHitFailForBatch() {
     this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy, false);
-    LongAdder adder = new LongAdder();
+    LongAdder outputLogicInvocationCount = new LongAdder();
     VajramKryonDefinition kryonDefinition =
         kryonDefinitionRegistry.newVajramKryonDefinition(
-            "kryon",
+            vajramID("kryon"),
             emptySet(),
             newComputeLogic(
-                    "kryonLogic",
+                    vajramID("kryonLogic"),
                     emptySet(),
                     dependencyValues -> {
-                      adder.increment();
+                      outputLogicInvocationCount.increment();
                       return "computed_value";
                     })
                 .kryonLogicId(),
             ImmutableMap.of(),
-            ImmutableMap.of(),
-            newCreateNewRequestLogic("kryon", emptySet()),
-            newFacetsFromRequestLogic("kryon"),
+            newCreateNewRequestLogic(vajramID("kryon"), emptySet()),
+            newFacetsFromRequestLogic(vajramID("kryon")),
+            _graphExecData -> _graphExecData.communicationFacade().executeOutputLogic(),
             ElementTags.of(List.of(InvocableOutsideGraph.Creator.create())));
 
     CompletableFuture<Object> future1 =
@@ -174,11 +170,7 @@ class RequestLevelCacheTest {
     kryonExecutor.close();
     assertThat(future1).succeedsWithin(TIMEOUT).isEqualTo("computed_value");
     assertThat(future2).succeedsWithin(TIMEOUT).isEqualTo("computed_value");
-    if (BATCH.equals(kryonExecStrategy)) {
-      assertThat(adder.sum()).isEqualTo(2);
-    } else {
-      assertThat(adder.sum()).isEqualTo(1);
-    }
+    assertThat(outputLogicInvocationCount.sum()).isEqualTo(2);
   }
 
   private KryonExecutor getKryonExecutor(
@@ -197,43 +189,46 @@ class RequestLevelCacheTest {
   }
 
   private <T> OutputLogicDefinition<T> newComputeLogic(
-      String kryonId, Set<Facet> inputs, Function<FacetValues, T> logic) {
+      VajramID kryonId, Set<Facet> inputs, Function<FacetValues, T> logic) {
     ComputeLogicDefinition<T> def =
         new ComputeLogicDefinition<>(
-            new KryonLogicId(new VajramID(kryonId), kryonId),
+            new KryonLogicId(kryonId, kryonId.id()),
             inputs,
             input ->
-                new OutputLogicExecutionResults<>(
-                    input.facetValues().stream()
-                        .collect(toImmutableMap(identity(), computeErrableFrom(logic)))
-                        .entrySet()
-                        .stream()
-                        .collect(toImmutableMap(Entry::getKey, e -> e.getValue().toFuture()))),
+                input
+                    .facetValueResponses()
+                    .forEach(
+                        executionItem ->
+                            linkFutures(
+                                computeErrableFrom(logic)
+                                    .apply(executionItem.facetValues())
+                                    .toFuture(),
+                                executionItem.response())),
             emptyTags());
 
     logicDefinitionRegistry.addOutputLogic(def);
     return def;
   }
 
-  private static LogicDefinition<FacetsFromRequest> newFacetsFromRequestLogic(String kryonName) {
-    VajramID vajramID = new VajramID(kryonName);
+  @SuppressWarnings("unchecked")
+  private static LogicDefinition<FacetsFromRequest> newFacetsFromRequestLogic(VajramID kryonName) {
     return new LogicDefinition<>(
-        new KryonLogicId(vajramID, kryonName + ":facetsFromRequest"),
+        new KryonLogicId(kryonName, kryonName.id() + ":facetsFromRequest"),
         request ->
             new FacetValuesMapBuilder(
-                (SimpleRequestBuilder<Object>) request._asBuilder(), Set.of(), vajramID));
+                ((SimpleRequest<Object>) request)._asBuilder(), Set.of(), kryonName));
   }
 
   @NonNull
   private static LogicDefinition<CreateNewRequest> newCreateNewRequestLogic(
-      String kryonName, Set<SimpleFacet> inputDefs) {
-    VajramID vajramID = new VajramID(kryonName);
+      VajramID vajramID, Set<SimpleFacet> inputDefs) {
     return new LogicDefinition<>(
-        new KryonLogicId(vajramID, kryonName + ":newRequest"),
-        () -> new SimpleRequestBuilder(inputDefs, vajramID));
+        new KryonLogicId(vajramID, vajramID.id() + ":newRequest"),
+        () -> new SimpleRequestBuilder<>(inputDefs, vajramID));
   }
 
   public static Stream<Arguments> executorConfigsToTest() {
-    return Stream.of(Arguments.of(BATCH, DEPTH), Arguments.of(BATCH, BREADTH));
+    return Stream.of(
+        Arguments.of(BATCH, DEPTH), Arguments.of(BATCH, BREADTH), Arguments.of(DIRECT, DEPTH));
   }
 }

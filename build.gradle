@@ -1,13 +1,14 @@
 plugins {
-    id 'com.flipkart.java.code.standard' version '3.8'
+    id 'com.flipkart.java.code.standard' version '4.0'
     id 'org.gradlex.extra-java-module-info' version '1.11'
+    id 'java-test-fixtures'
 }
 
 ext {
     clojarsusername = project.properties['clojarsusername'] ?: ""
     clojarspassword = project.properties['clojarspassword'] ?: ""
-    krystal_version = '10.0.1-SNAPSHOT'
-    lattice_version = '0.0.7'
+    krystal_version = '10.0.0.2-SNAPSHOT'
+    lattice_version = '0.0.11'
 
     protobuf_version = '4.31.1'
     grpc_version = '1.73.0'
@@ -100,6 +101,7 @@ configure(subprojects.findAll {
             implementation 'com.google.api.grpc:proto-google-common-protos:2.56.0'
             implementation 'com.google.auto.service:auto-service-annotations:1.1.1'
             implementation 'com.google.code.findbugs:jsr305:3.0.2'
+            api 'com.google.guava:guava:33.4.8-jre'
             implementation 'com.google.guava:guava:33.4.8-jre'
             implementation 'com.google.j2objc:j2objc-annotations:3.0.0'
             implementation 'com.squareup:javapoet:1.13.0'
@@ -183,9 +185,9 @@ configure(subprojects.findAll {
         module('javax.cache:cache-api', 'javax.cache.api')
         module('javax.inject:javax.inject', 'javax.inject')
 
-        module('gradle-api-8.14.2.jar', 'gradle.api')
-        module('gradle-installation-beacon-8.14.2.jar', 'gradle.installation.beacon')
-        module('gradle-test-kit-8.14.2.jar', 'gradle.test.kit')
+        module('gradle-api-8.14.3.jar', 'gradle.api')
+        module('gradle-installation-beacon-8.14.3.jar', 'gradle.installation.beacon')
+        module('gradle-test-kit-8.14.3.jar', 'gradle.test.kit')
 
         module('ch.qos.reload4j:reload4j', 'ch.qos.reload4j')
         module('com.flipkart.krystal:vajram-codegen', 'com.flipkart.krystal.vajram.codegen')

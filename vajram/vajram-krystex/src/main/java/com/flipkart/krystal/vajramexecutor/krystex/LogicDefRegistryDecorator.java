@@ -11,7 +11,6 @@ import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
-import com.flipkart.krystal.krystex.resolution.MultiResolver;
 import com.flipkart.krystal.krystex.resolution.ResolverLogic;
 import com.flipkart.krystal.tags.ElementTags;
 import java.util.Set;
@@ -24,15 +23,6 @@ public record LogicDefRegistryDecorator(LogicDefinitionRegistry delegate) {
         new LogicDefinition<>(
             new KryonLogicId(new VajramID(kryonId), kryonLogicId), inputs, emptyTags(), logic);
     delegate.addResolver(def);
-    return def;
-  }
-
-  public LogicDefinition<MultiResolver> newMultiResolver(
-      String kryonId, String kryonLogicId, Set<? extends Facet> inputs, MultiResolver logic) {
-    LogicDefinition<MultiResolver> def =
-        new LogicDefinition<>(
-            new KryonLogicId(new VajramID(kryonId), kryonLogicId), inputs, emptyTags(), logic);
-    delegate.addMultiResolver(def);
     return def;
   }
 

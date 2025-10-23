@@ -1,8 +1,8 @@
 package com.flipkart.krystal.datatypes;
 
-/**
- * @see <a href="https://en.wikipedia.org/wiki/Three-valued_logic">Trilean Logic</a>
- */
+import org.checkerframework.checker.nullness.qual.Nullable;
+
+/** Implements <a href="https://en.wikipedia.org/wiki/Three-valued_logic">Trilean Logic</a> */
 public enum Trilean {
   UNKNOWN {
     @Override
@@ -20,6 +20,16 @@ public enum Trilean {
         case FALSE -> FALSE;
       };
     }
+
+    @Override
+    public Trilean negation() {
+      return UNKNOWN;
+    }
+
+    @Override
+    public String toString() {
+      return "unknown";
+    }
   },
 
   TRUE {
@@ -31,6 +41,16 @@ public enum Trilean {
     @Override
     public Trilean and(Trilean other) {
       return other;
+    }
+
+    @Override
+    public Trilean negation() {
+      return FALSE;
+    }
+
+    @Override
+    public String toString() {
+      return "true";
     }
   },
 
@@ -44,10 +64,31 @@ public enum Trilean {
     public Trilean and(Trilean other) {
       return FALSE;
     }
+
+    @Override
+    public Trilean negation() {
+      return TRUE;
+    }
+
+    @Override
+    public String toString() {
+      return "false";
+    }
   };
 
-  public static Trilean toTrilean(boolean b) {
-    return b ? TRUE : FALSE;
+  public static Trilean toTrilean(boolean bool) {
+    if (bool) {
+      return TRUE;
+    } else {
+      return FALSE;
+    }
+  }
+
+  public static Trilean toTrilean(@Nullable Boolean b) {
+    if (b == null) {
+      return UNKNOWN;
+    }
+    return toTrilean((boolean) b);
   }
 
   public abstract Trilean or(Trilean other);
@@ -62,12 +103,10 @@ public enum Trilean {
     return and(toTrilean(other));
   }
 
+  public abstract Trilean negation();
+
   public static Trilean not(Trilean t) {
-    return switch (t) {
-      case UNKNOWN -> UNKNOWN;
-      case TRUE -> FALSE;
-      case FALSE -> TRUE;
-    };
+    return t.negation();
   }
 
   public static Trilean orOf(Trilean... trileans) {

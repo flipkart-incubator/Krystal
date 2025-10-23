@@ -5,8 +5,10 @@ import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
+import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
+import com.flipkart.krystal.krystex.dependencydecoration.VajramInvocation;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.request.RequestIdGenerator;
@@ -16,9 +18,11 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.TreeSet;
 import java.util.function.Function;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonCommandResponse>
-    implements Kryon<C, R> permits FlushableKryon {
+    implements Kryon<C, R> permits BatchKryon, DirectKryon {
   /**
    * Initial capacity for maps and sets. In load tests in real-world applications, substantial CPU
    * was observed to be spent in resizing collections.
@@ -42,6 +46,7 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonComma
   protected final DecorationOrdering decorationOrdering;
 
   protected final RequestIdGenerator requestIdGenerator;
+  private Map<VajramID, NavigableSet<DependencyDecorator>> decoratorsByDependency = new HashMap<>();
 
   AbstractKryon(
       VajramKryonDefinition definition,
@@ -78,26 +83,61 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonComma
 
   protected NavigableSet<DependencyDecorator> getSortedDependencyDecorators(
       VajramID depVajramId, DependentChain dependentChain) {
-    TreeSet<DependencyDecorator> sortedDecorators =
-        new TreeSet<>(
-            decorationOrdering
-                .encounterOrder()
-                // Reverse the ordering so that the ones with the highest index are applied first.
-                .reversed());
-    Dependency dependency = dependentChain.latestDependency();
-    if (dependency == null) {
-      return sortedDecorators;
-    }
-    sortedDecorators.addAll(
-        depDecoratorSuppliers
-            .apply(
-                new DependencyExecutionContext(vajramID, dependency, depVajramId, dependentChain))
-            .values());
-    return sortedDecorators;
+    return decoratorsByDependency.computeIfAbsent(
+        depVajramId,
+        _k -> {
+          TreeSet<DependencyDecorator> sortedDecorators =
+              new TreeSet<>(
+                  decorationOrdering
+                      .encounterOrder()
+                      // Reverse the ordering so that the ones with the highest index are applied
+                      // first.
+                      .reversed());
+          Dependency dependency = dependentChain.latestDependency();
+          if (dependency == null) {
+            return sortedDecorators;
+          }
+          sortedDecorators.addAll(
+              depDecoratorSuppliers
+                  .apply(new DependencyExecutionContext(dependency, dependentChain))
+                  .values());
+          return sortedDecorators;
+        });
   }
 
   @Override
   public VajramKryonDefinition getKryonDefinition() {
     return kryonDefinition;
+  }
+
+  protected void flushDecorators(DependentChain dependentChain) {
+    Iterable<OutputLogicDecorator> reverseSortedDecorators =
+        getSortedOutputLogicDecorators(dependentChain)::descendingIterator;
+    for (OutputLogicDecorator decorator : reverseSortedDecorators) {
+      try {
+        decorator.executeCommand(new FlushCommand(dependentChain));
+      } catch (Throwable e) {
+        log.error(
+            """
+                Error while flushing decorator: {}. \
+                This is most probably a bug since decorator methods are not supposed to throw exceptions. \
+                This can cause unpredictable behaviour in the krystal graph execution. \
+                Please fix!""",
+            decorator,
+            e);
+      }
+    }
+  }
+
+  protected <R2 extends KryonCommandResponse> VajramInvocation<R2> decorateVajramInvocation(
+      DependentChain dependentChain,
+      VajramID depVajramID,
+      VajramInvocation<R2> invocationToDecorate) {
+    for (DependencyDecorator dependencyDecorator :
+        getSortedDependencyDecorators(depVajramID, dependentChain)) {
+      VajramInvocation<R2> previousDecoratedInvocation = invocationToDecorate;
+      invocationToDecorate = dependencyDecorator.decorateDependency(previousDecoratedInvocation);
+    }
+    return invocationToDecorate;
   }
 }

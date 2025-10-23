@@ -1,1 +1,5 @@
 description = 'Common data structures and utilities used across krystal components.'
+
+dependencies {
+    compileOnly 'org.jetbrains:annotations'
+}

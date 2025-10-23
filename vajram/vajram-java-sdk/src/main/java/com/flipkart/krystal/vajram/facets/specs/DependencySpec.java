@@ -27,7 +27,7 @@ public abstract sealed class DependencySpec<T, CV extends Request, DV extends Re
     extends AbstractFacetSpec<T, CV> implements Dependency permits FanoutDepSpec, One2OneDepSpec {
 
   private final Class<DV> onVajram;
-  private final VajramID onVajramId;
+  private final VajramID onVajramID;
 
   public DependencySpec(
       int id,
@@ -36,14 +36,14 @@ public abstract sealed class DependencySpec<T, CV extends Request, DV extends Re
       DataType<T> dataType,
       Class<CV> ofVajram,
       Class<DV> onVajram,
-      VajramID onVajramId,
+      VajramID onVajramID,
       String documentation,
       boolean isBatched,
       Callable<ElementTags> tagsParser) {
     super(
         id, name, ofVajramID, dataType, DEPENDENCY, ofVajram, documentation, isBatched, tagsParser);
     this.onVajram = onVajram;
-    this.onVajramId = onVajramId;
+    this.onVajramID = onVajramID;
   }
 
   @Override

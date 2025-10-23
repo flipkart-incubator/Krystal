@@ -17,6 +17,7 @@ dependencies {
     testAnnotationProcessor "com.flipkart.krystal:vajram-codegen:${krystal_version}"
     testAnnotationProcessor 'org.checkerframework:checker-qual'
 
+    testImplementation project(':vajram:extensions:resilience4j:vajram-resilience4j')
     testImplementation 'com.fasterxml.jackson.core:jackson-annotations'
     testImplementation 'com.fasterxml.jackson.core:jackson-databind'
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
@@ -89,5 +90,9 @@ private static ArrayList<String> modulePathArgs(String moduleName) {
      '--add-reads', "$moduleName=com.fasterxml.jackson.datatype.jsr310",
 
      '--add-modules', 'lombok',
-     '--add-reads', "$moduleName=lombok",]
+     '--add-reads', "$moduleName=lombok",
+
+     '--add-modules', 'krystal.vajram.ext.resilience4j',
+     '--add-reads', "$moduleName=krystal.vajram.ext.resilience4j",
+    ]
 }

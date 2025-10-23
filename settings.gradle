@@ -39,6 +39,7 @@ include 'vajram:extensions:json:vajram-json'
 include 'vajram:extensions:json:vajram-json-codegen'
 include 'vajram:extensions:protobuf:vajram-protobuf-codegen'
 include 'vajram:extensions:protobuf:vajram-protobuf3'
+include 'vajram:extensions:resilience4j:vajram-resilience4j'
 
 
 include 'lattice:lattice-bom'

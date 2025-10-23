@@ -146,7 +146,7 @@ public class StaticCallGraphGenerator {
 
       for (FacetSpec<?, ?> facet : definition.facetSpecs()) {
         if (facet instanceof DependencySpec<?, ?, ?> dependencySpec) {
-          VajramID dependencyId = dependencySpec.onVajramId();
+          VajramID dependencyId = dependencySpec.onVajramID();
           if (vajramDefinitions.containsKey(vajramId)
               && vajramDefinitions.containsKey(dependencyId)) {
             Link link =
@@ -166,7 +166,7 @@ public class StaticCallGraphGenerator {
       if (definition.isTrait()) {
         TraitDispatchPolicy traitDispatchPolicy = vajramKryonGraph.getTraitDispatchPolicy(vajramId);
         if (traitDispatchPolicy != null) {
-          ImmutableCollection<VajramID> conformingVajrams = traitDispatchPolicy.dispatchTargets();
+          ImmutableCollection<VajramID> conformingVajrams = traitDispatchPolicy.dispatchTargetIDs();
           for (VajramID conformant : conformingVajrams) {
             Link link =
                 Link.builder()

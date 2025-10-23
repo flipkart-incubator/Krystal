@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
+import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.DIRECT;
 import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
@@ -43,6 +44,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
 class ChainAddTest {
@@ -116,7 +118,7 @@ class ChainAddTest {
   }
 
   @Disabled("Long running benchmark")
-  @Test
+  @RepeatedTest(5)
   void vajram_benchmark() throws Exception {
     int loopCount = 50_000;
     long javaNativeTimeNs = javaMethodBenchmark(this::chainAdd, loopCount);
@@ -179,7 +181,7 @@ class ChainAddTest {
   }
 
   @Disabled("Long running benchmark")
-  @Test
+  @RepeatedTest(5)
   void vajram_benchmark_2() throws Exception {
     int outerLoopCount = 100;
     int innerLoopCount = 500;
@@ -253,7 +255,8 @@ class ChainAddTest {
         .kryonExecutorConfigBuilder(
             KryonExecutorConfig.builder()
                 .executorId("chainAdderTest")
-                .executorService(executorLease.get()));
+                .executorService(executorLease.get())
+                .kryonExecStrategy(DIRECT));
   }
 
   private CompletableFuture<Integer> executeVajram(

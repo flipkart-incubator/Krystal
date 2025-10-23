@@ -124,8 +124,8 @@ class FkJavaCodeStandard implements Plugin<Project> {
     }
 
     private static void junitPlatform(Project project) {
-        project.dependencies.add('testImplementation', project.getDependencies().platform('org.junit:junit-bom:5.13.0'))
-        project.dependencies.add('testRuntimeOnly', 'org.junit.platform:junit-platform-launcher:1.13.0')
+        project.dependencies.add('testImplementation', project.getDependencies().platform('org.junit:junit-bom:6.0.0'))
+        project.dependencies.add('testRuntimeOnly', 'org.junit.platform:junit-platform-launcher:6.0.0')
         project.test {
             useJUnitPlatform()
         }

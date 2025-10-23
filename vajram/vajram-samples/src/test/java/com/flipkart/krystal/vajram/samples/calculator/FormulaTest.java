@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
+import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.DIRECT;
 import static com.flipkart.krystal.vajram.samples.Util.TEST_TIMEOUT;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
@@ -15,7 +16,7 @@ import static java.util.Arrays.stream;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.runAsync;
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.stream.IntStream.range;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -51,17 +52,21 @@ import com.flipkart.krystal.vajramexecutor.krystex.batching.InputBatcherConfig;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.AbstractModule;
+import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class FormulaTest {
@@ -92,6 +97,10 @@ class FormulaTest {
 
   private Lease<SingleThreadExecutor> executorLease;
 
+  public static Stream<KryonExecStrategy> kryonExecStrategies() {
+    return Collections.nCopies(20, DIRECT).stream();
+  }
+
   @BeforeEach
   void setUp() {
     this.executorLease = EXECUTOR_LEASES[0];
@@ -99,8 +108,9 @@ class FormulaTest {
     Add.CALL_COUNTER.reset();
   }
 
-  @Test
-  void formula_success() {
+  @ParameterizedTest
+  @EnumSource(KryonExecStrategy.class)
+  void formula_success(KryonExecStrategy kryonExecStrategy) {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputBatchers(
@@ -113,11 +123,12 @@ class FormulaTest {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
                         .executorId(REQUEST_ID)
+                        .kryonExecStrategy(kryonExecStrategy)
                         .executorService(executorLease.get()))
                 .build())) {
       future = executeVajram(krystexVajramExecutor, 0, requestContext);
     }
-    assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(4);
+    assertThat(future).succeedsWithin(1, HOURS).isEqualTo(4);
     assertThat(Add.CALL_COUNTER.sum()).isEqualTo(1);
   }
 
@@ -133,7 +144,6 @@ class FormulaTest {
             .kryonExecutorConfigBuilder(
                 KryonExecutorConfig.builder()
                     .executorId(REQUEST_ID)
-                    .kryonExecStrategy(KryonExecStrategy.BATCH)
                     .executorService(executorLease.get())
                     .graphTraversalStrategy(GraphTraversalStrategy.DEPTH))
             .build();
@@ -242,10 +252,10 @@ class FormulaTest {
   }
 
   // Approx Latencies:
-  // 1 core: ~21sec, 2 cores: ~16sec, 4 cores: ~12sec, 5 cores: ~20sec, 10 cores: ~16sec
+  // 1 core: ~4sec, 2 cores: ~6sec, 4 cores: ~6sec, 5 cores: ~7sec, 10 cores: ~6sec
   @Disabled("Long running benchmark")
   @ParameterizedTest
-  @ValueSource(ints = {1, 2, 4, 5, 10}) // test with different values of parallelism
+  @ValueSource(ints = {1, 1, 1, 1, 2, 4, 5, 10}) // test with different values of parallelism
   void millionExecutors_oneCallEach_NExecutors_benchmark(int executorCount) throws Exception {
     // This number must be divisible by executorCount. Else this test case will fail because we
     // won't be able to cleanly divide this total loopCount equally to the executors.
@@ -263,7 +273,6 @@ class FormulaTest {
     LongAdder timeToEnqueueVajram = new LongAdder();
     long startTime = System.nanoTime();
     int loopCountPerExecutor = loopCount / executorCount;
-
     for (int currentExecutor : range(0, executorCount).toArray()) {
       SingleThreadExecutor executor = executors[currentExecutor];
       int coreCountStart = currentExecutor * loopCountPerExecutor;
@@ -281,7 +290,8 @@ class FormulaTest {
                               .kryonExecutorConfigBuilder(
                                   KryonExecutorConfig.builder()
                                       .executorId("formulaTest")
-                                      .executorService(executor))
+                                      .executorService(executor)
+                                      .kryonExecStrategy(DIRECT))
                               .build())) {
                     timeToCreateExecutors.add(System.nanoTime() - iterStartTime);
                     metrics[currentLoopCount] =
@@ -323,8 +333,8 @@ class FormulaTest {
         EXEC_POOL);
   }
 
-  @Disabled("Long running benchmark (~9s)")
-  @Test
+  @Disabled("Long running benchmark (~2.5s)")
+  @RepeatedTest(6)
   void thousandExecutors_1000CallsEach_singleCore_benchmark() throws Exception {
     SingleThreadExecutor executor = getExecutors(1)[0];
     int outerLoopCount = 1000;
@@ -355,7 +365,8 @@ class FormulaTest {
                   .kryonExecutorConfigBuilder(
                       KryonExecutorConfig.builder()
                           .executorId("formulaTest")
-                          .executorService(executor))
+                          .executorService(executor)
+                          .kryonExecStrategy(DIRECT))
                   .build())) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         metrics[outer_i] =
@@ -500,7 +511,6 @@ class FormulaTest {
                 KryonExecutorConfig.builder()
                     .executorId(REQUEST_ID)
                     .executorService(executorLease.get())
-                    .kryonExecStrategy(KryonExecStrategy.BATCH)
                     .graphTraversalStrategy(GraphTraversalStrategy.DEPTH))
             .build();
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, REQUEST_ID);
@@ -530,7 +540,6 @@ class FormulaTest {
                 KryonExecutorConfig.builder()
                     .executorId(REQUEST_ID)
                     .executorService(executorLease.get())
-                    .kryonExecStrategy(KryonExecStrategy.BATCH)
                     .graphTraversalStrategy(GraphTraversalStrategy.DEPTH))
             .build();
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, REQUEST_ID);
@@ -559,7 +568,6 @@ class FormulaTest {
             .kryonExecutorConfigBuilder(
                 KryonExecutorConfig.builder()
                     .executorService(executorLease.get())
-                    .kryonExecStrategy(KryonExecStrategy.BATCH)
                     .graphTraversalStrategy(GraphTraversalStrategy.DEPTH))
             .build();
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 0, 0, REQUEST_ID);

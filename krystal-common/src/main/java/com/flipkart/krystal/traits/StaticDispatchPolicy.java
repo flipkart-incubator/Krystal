@@ -1,6 +1,7 @@
 package com.flipkart.krystal.traits;
 
 import com.flipkart.krystal.core.VajramID;
+import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.Dependency;
 import jakarta.inject.Qualifier;
 import java.lang.annotation.Annotation;
@@ -13,23 +14,36 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * allows krystal to support static dispatch via Guice-like depdendency injection for vajram
  * dependency invocations.
  */
-public non-sealed interface StaticDispatchPolicy extends TraitDispatchPolicy {
+public abstract non-sealed class StaticDispatchPolicy implements TraitDispatchPolicy {
 
   /**
    * Returns the concrete {@link VajramID} bound to the a trait for the given dependency.
    *
    * @param dependency The depdency facet by which a vajram has added a dependency on the trait
    */
-  VajramID get(Dependency dependency);
+  public abstract VajramID getDispatchTargetID(Dependency dependency);
+
+  public abstract Class<? extends Request<?>> getDispatchTarget(Dependency dependency);
 
   /**
    * Returns the concrete {@link VajramID} bound to a trait for the given qualifier.
    *
    * @param qualifier The qualifier by which a dispatch target is to be selected
    */
-  VajramID get(@Nullable Annotation qualifier);
+  public abstract VajramID getDispatchTargetID(@Nullable Annotation qualifier);
 
-  static boolean isValidQualifier(@Nullable Annotation qualifier) {
+  public abstract Class<? extends Request<?>> getDispatchTarget(@Nullable Annotation qualifier);
+
+  public static boolean isValidQualifier(@Nullable Annotation qualifier) {
     return qualifier == null || qualifier.annotationType().getAnnotation(Qualifier.class) != null;
+  }
+
+  @Override
+  public final @Nullable VajramID getDispatchTargetID(
+      @Nullable Dependency dependency, Request<?> request) {
+    if (dependency == null) {
+      return null;
+    }
+    return getDispatchTargetID(dependency);
   }
 }

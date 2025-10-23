@@ -1,8 +1,8 @@
 package com.flipkart.krystal.vajram.guice.traitbinding;
 
-import static com.flipkart.krystal.traits.StaticDispatchPolicy.isValidQualifier;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Request;
@@ -11,8 +11,8 @@ import com.flipkart.krystal.tags.ElementTags;
 import com.flipkart.krystal.traits.StaticDispatchPolicy;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
-import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Key;
 import jakarta.inject.Qualifier;
 import java.lang.annotation.Annotation;
@@ -23,18 +23,20 @@ import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * Implements a guice-like retrieving conrete vajrams bound to traits.
+ * Implements a guice-like retrieving concrete vajrams bound to traits.
  *
  * @see TraitBinder
  */
-public class StaticDispatchPolicyImpl implements StaticDispatchPolicy {
+public class StaticDispatchPolicyImpl extends StaticDispatchPolicy {
+
+  @Getter private final VajramID traitID;
+  @Getter private final ImmutableSet<Class<? extends Request<?>>> dispatchTargetReqs;
+  @Getter private final ImmutableSet<VajramID> dispatchTargetIDs;
 
   private final VajramKryonGraph vajramKryonGraph;
-  @Getter private final VajramID traitID;
+  private final ImmutableMap<Key<? extends Request<?>>, Class<? extends Request<?>>> bindingsByKey;
 
-  private final ImmutableMap<Key<? extends Request<?>>, VajramID> bindingsByKey;
-
-  private final Map<VajramID, Map<QualWrapper, VajramID>> bindingsByQualifier =
+  private final Map<VajramID, Map<QualWrapper, Class<? extends Request<?>>>> bindingsByQualifier =
       new LinkedHashMap<>();
 
   public StaticDispatchPolicyImpl(
@@ -43,23 +45,24 @@ public class StaticDispatchPolicyImpl implements StaticDispatchPolicy {
     this.traitID = traitID;
     this.bindingsByKey =
         traitBinder.traitBindings().stream()
-            .collect(
-                toImmutableMap(
-                    TraitBinding::key,
-                    binding ->
-                        vajramKryonGraph.getVajramIdByVajramReqType(
-                            binding.concreteVajramRequestType())));
+            .collect(toImmutableMap(TraitBinding::key, TraitBinding::concreteVajramRequestType));
+    this.dispatchTargetReqs =
+        traitBinder.traitBindings().stream()
+            .map(TraitBinding::concreteVajramRequestType)
+            .collect(toImmutableSet());
+    this.dispatchTargetIDs =
+        dispatchTargetReqs.stream()
+            .map(vajramKryonGraph::getVajramIdByVajramReqType)
+            .collect(toImmutableSet());
   }
 
   @Override
-  public VajramID get(Dependency dependency) {
+  public Class<? extends Request<?>> getDispatchTarget(Dependency dependency) {
     ElementTags tags = dependency.tags();
     List<Annotation> list =
         tags.annotations().stream()
             .filter(
-                annotation -> {
-                  return annotation.annotationType().getAnnotation(Qualifier.class) != null;
-                })
+                annotation -> annotation.annotationType().getAnnotation(Qualifier.class) != null)
             .toList();
     if (list.size() > 1) {
       throw new IllegalStateException("Multiple qualifiers found for " + dependency);
@@ -70,15 +73,25 @@ public class StaticDispatchPolicyImpl implements StaticDispatchPolicy {
     } else {
       qualifier = list.get(0);
     }
-    return get(new QualWrapper(qualifier));
+    return getDispatchTarget(new QualWrapper(qualifier));
   }
 
   @Override
-  public VajramID get(@Nullable Annotation qualifier) {
-    return get(new QualWrapper(qualifier));
+  public VajramID getDispatchTargetID(Dependency dependency) {
+    return vajramKryonGraph.getVajramIdByVajramReqType(getDispatchTarget(dependency));
   }
 
-  private VajramID get(QualWrapper qualWrapper) {
+  @Override
+  public Class<? extends Request<?>> getDispatchTarget(@Nullable Annotation qualifier) {
+    return getDispatchTarget(new QualWrapper(qualifier));
+  }
+
+  @Override
+  public VajramID getDispatchTargetID(@Nullable Annotation qualifier) {
+    return vajramKryonGraph.getVajramIdByVajramReqType(getDispatchTarget(qualifier));
+  }
+
+  private Class<? extends Request<?>> getDispatchTarget(QualWrapper qualWrapper) {
     return bindingsByQualifier
         .computeIfAbsent(traitID, vajramID -> new LinkedHashMap<>())
         .computeIfAbsent(
@@ -93,24 +106,19 @@ public class StaticDispatchPolicyImpl implements StaticDispatchPolicy {
               } else {
                 key = Key.get(traitReq, qualifier);
               }
-              VajramID vajramId = bindingsByKey.get(key);
-              if (vajramId == null && key.hasAttributes()) {
-                vajramId = bindingsByKey.get(key.withoutAttributes());
+              Class<? extends Request<?>> dispatchTarget = bindingsByKey.get(key);
+              if (dispatchTarget == null && key.hasAttributes()) {
+                dispatchTarget = bindingsByKey.get(key.withoutAttributes());
               }
-              if (vajramId == null) {
+              if (dispatchTarget == null) {
                 throw new IllegalStateException(
                     "No binding found for "
                         + key
                         + " corresponding to dependency "
                         + qualifierWrapper);
               }
-              return vajramId;
+              return dispatchTarget;
             });
-  }
-
-  @Override
-  public ImmutableCollection<VajramID> dispatchTargets() {
-    return bindingsByKey.values();
   }
 
   private record QualWrapper(@Nullable Annotation qualifier) {

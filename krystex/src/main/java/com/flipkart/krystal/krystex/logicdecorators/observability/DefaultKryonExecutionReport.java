@@ -7,6 +7,7 @@ import static java.util.stream.Collectors.toMap;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.Failure;
@@ -15,7 +16,6 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.InputMirror;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
-import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -28,6 +28,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import lombok.Getter;
 import lombok.ToString;
@@ -70,13 +71,13 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
 
   @Override
   public void reportMainLogicStart(
-      VajramID vajramID, KryonLogicId kryonLogicId, ImmutableList<? extends FacetValues> inputs) {
+      VajramID vajramID, KryonLogicId kryonLogicId, List<? extends ExecutionItem> inputs) {
 
     KryonExecution kryonExecution =
         new KryonExecution(
             vajramID,
             inputs.stream()
-                .map(facets -> extractAndConvertFacets(facets))
+                .map(executionItem -> extractAndConvertFacets(executionItem.facetValues()))
                 .collect(toImmutableList()));
     if (mainLogicExecInfos.containsKey(kryonExecution)) {
       log.error("Cannot start the same kryon execution multiple times: {}", kryonExecution);
@@ -96,7 +97,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
             vajramID,
             logicExecResults.responses().stream()
                 .map(LogicExecResponse::facetValues)
-                .map(facets -> extractAndConvertFacets(facets))
+                .map(this::extractAndConvertFacets)
                 .collect(toImmutableList()));
     LogicExecInfo logicExecInfo = mainLogicExecInfos.get(kryonExecution);
     if (logicExecInfo == null) {
@@ -123,17 +124,17 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
 
   private ImmutableMap<InputMirror, String> extractAndConvertFacets(Request<?> request) {
     Map<InputMirror, String> inputMap = new LinkedHashMap<>();
-    request._facets().stream()
+    request
+        ._facets()
         .forEach(
-            (inputDef) -> {
-              inputMap.put(inputDef, convertValue(inputDef.getFromRequest(request)));
-            });
+            (inputDef) -> inputMap.put(inputDef, convertValue(inputDef.getFromRequest(request))));
     return ImmutableMap.copyOf(inputMap);
   }
 
   private ImmutableMap<Facet, String> extractAndConvertFacets(FacetValues facetValues) {
     Map<Facet, String> inputMap = new LinkedHashMap<>();
-    facetValues._facets().stream()
+    facetValues
+        ._facets()
         .forEach(
             facetDef -> {
               FacetValue value = facetDef.getFacetValue(facetValues);
@@ -152,15 +153,14 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
       FacetValues facetValues, ImmutableSet<? extends Facet> facetDefs) {
     {
       Map<Facet, Object> inputMap = new LinkedHashMap<>();
-      facetDefs.stream()
-          .forEach(
-              facetDef -> {
-                FacetValue value = facetDef.getFacetValue(facetValues);
-                if (!(value instanceof FanoutDepResponses depResponses)) {
-                  return;
-                }
-                inputMap.put(facetDef, convertResult(depResponses));
-              });
+      facetDefs.forEach(
+          facetDef -> {
+            FacetValue value = facetDef.getFacetValue(facetValues);
+            if (!(value instanceof FanoutDepResponses depResponses)) {
+              return;
+            }
+            inputMap.put(facetDef, convertResult(depResponses));
+          });
       return ImmutableMap.copyOf(inputMap);
     }
   }
@@ -232,21 +232,23 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
     LogicExecInfo(
         DefaultKryonExecutionReport kryonExecutionReport,
         VajramID vajramID,
-        ImmutableCollection<? extends FacetValues> inputList,
+        List<? extends ExecutionItem> inputList,
         long startTimeMs) {
       this.startTimeMs = startTimeMs;
       ImmutableList<ImmutableMap<Facet, Object>> dependencyResults;
       this.kryonId = vajramID.id();
       this.inputsList =
           inputList.stream()
-              .map(facets -> kryonExecutionReport.extractAndConvertFacets(facets))
+              .map(
+                  executionItem ->
+                      kryonExecutionReport.extractAndConvertFacets(executionItem.facetValues()))
               .collect(toImmutableList());
       dependencyResults =
           inputList.stream()
               .map(
-                  facets ->
+                  executionItem ->
                       kryonExecutionReport.extractAndConvertDependencyResults(
-                          facets, facets._facets()))
+                          executionItem.facetValues(), executionItem.facetValues()._facets()))
               .filter(map -> !map.isEmpty())
               .collect(toImmutableList());
       this.dependencyResults = dependencyResults.isEmpty() ? null : dependencyResults;

@@ -71,7 +71,7 @@ final class Vajrams {
         : ImmutableMap.of();
   }
 
-  private static Optional<FacetSpec> inferFacetId(
+  private static Optional<FacetSpec> inferFacet(
       Parameter parameter, ImmutableMap<String, FacetSpec> facetsByName) {
     FacetSpec facetSpec = facetsByName.get(parameter.getName());
     if (facetSpec == null) {
@@ -165,7 +165,7 @@ final class Vajrams {
     facetSpecs.stream().filter(FacetSpec::isBatched).forEach(facetIds::add);
 
     for (Parameter param : outputLogicParams) {
-      Vajrams.inferFacetId(param, facetsByName).ifPresent(facetIds::add);
+      Vajrams.inferFacet(param, facetsByName).ifPresent(facetIds::add);
     }
     return facetIds.build();
   }

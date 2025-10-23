@@ -9,9 +9,9 @@ import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -30,7 +30,7 @@ public abstract class FriendsService extends IOVajramDef<Set<String>> {
 
   @Output.Batched
   static CompletableFuture<ImmutableMap<FriendsService_BatchItem, Set<String>>> call(
-      ImmutableCollection<FriendsService_BatchItem> _batchItems) {
+      Collection<FriendsService_BatchItem> _batchItems) {
     CALL_COUNTER.increment();
     Map<FriendsService_BatchItem, Set<String>> result = new LinkedHashMap<>();
     for (FriendsService_BatchItem inputsBatch : _batchItems) {

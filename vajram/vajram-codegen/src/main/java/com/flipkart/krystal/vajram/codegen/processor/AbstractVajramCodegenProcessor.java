@@ -2,10 +2,12 @@ package com.flipkart.krystal.vajram.codegen.processor;
 
 import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
 import static com.flipkart.krystal.vajram.codegen.processor.Constants.DEFAULT_VAJRAM_CODEGEN_PROVIDER;
+import static com.google.common.base.Throwables.getStackTraceAsString;
 import static java.lang.System.lineSeparator;
 import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.codegen.common.models.CodegenPhase;
+import com.flipkart.krystal.vajram.codegen.common.models.ShortCircuitException;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.common.spi.AllVajramCodeGenContext;
@@ -22,7 +24,10 @@ import java.util.Set;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.TypeElement;
+import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
+@Slf4j
 abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
     permits VajramModelGenProcessor, VajramWrapperGenProcessor {
 
@@ -31,6 +36,8 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
 
   public AbstractVajramCodegenProcessor(CodegenPhase codegenPhase) {
     this.codegenPhase = codegenPhase;
+    log.info(
+        "Initializing {} with codegen phase {}", this.getClass().getSimpleName(), codegenPhase);
   }
 
   @Override
@@ -86,6 +93,9 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
             ServiceLoader.load(
                 VajramCodeGeneratorProvider.class, this.getClass().getClassLoader()));
 
+    record Failure(@Nullable TypeElement element, Throwable throwable) {}
+
+    List<Failure> failures = new ArrayList<>();
     List<VajramInfo> vajramInfos = new ArrayList<>();
     for (TypeElement vajramDefinition : vajramDefinitions) {
       try {
@@ -98,24 +108,44 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
           try {
             customCodeGeneratorProvider.create(creationContext).generate();
           } catch (Exception e) {
-            util.codegenUtil().note(e.toString());
+            failures.add(new Failure(vajramDefinition, e));
           }
         }
         this.vajramDefinitions.remove(vajramDefinition);
       } catch (Exception e) {
-        util.codegenUtil().note("****************************************************");
-        util.codegenUtil().note("Skipping processing of " + vajramDefinition + " due to " + e);
-        util.codegenUtil().note("****************************************************");
+        failures.add(new Failure(vajramDefinition, e));
       }
     }
 
     Iterable<AllVajramsCodeGeneratorProvider> allVajramCodeGeneratorProviders =
         ServiceLoader.load(AllVajramsCodeGeneratorProvider.class, this.getClass().getClassLoader());
     for (AllVajramsCodeGeneratorProvider allVajramCodeGen : allVajramCodeGeneratorProviders) {
-      allVajramCodeGen
-          .create(new AllVajramCodeGenContext(vajramInfos, util, codegenPhase))
-          .generate();
+      try {
+        allVajramCodeGen
+            .create(new AllVajramCodeGenContext(vajramInfos, util, codegenPhase))
+            .generate();
+      } catch (Exception e) {
+        failures.add(new Failure(null, e));
+      }
     }
+    for (Failure failure : failures) {
+      Throwable throwable = failure.throwable();
+      if (throwable instanceof ShortCircuitException) {
+        util.codegenUtil().note(getStackTraceAsString(throwable), failure.element());
+      } else {
+        util.codegenUtil().error(getStackTraceAsString(throwable), failure.element());
+      }
+    }
+    for (Failure failure : failures) {
+      TypeElement element = failure.element();
+      util.codegenUtil()
+          .note(
+              "[Vajram Codegen Exception] "
+                  + (element == null ? "" : element.getQualifiedName())
+                  + "\n"
+                  + getStackTraceAsString(failure.throwable()));
+    }
+
     return false;
   }
 }
