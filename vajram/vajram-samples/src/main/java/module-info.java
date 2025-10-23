@@ -7,4 +7,10 @@ module flipkart.krystal.vajram.vajram_samples {
   requires jdk.compiler;
   requires com.google.auto.value.annotations;
   requires static lombok;
+
+  // SQL extension requirements
+  requires flipkart.krystal.vajram.ext.sql;
+  requires r2dbc.spi;
+  //requires r2dbc.pool;
+  requires reactor.core;
 }

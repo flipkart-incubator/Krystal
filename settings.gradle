@@ -64,6 +64,6 @@ include 'lattice:extensions:rest:lattice-rest-quarkus-codegen'
 include 'lattice:samples:grpc-proto3-lattice-sample'
 include 'lattice:samples:rest-json-lattice-sample'
 
-include 'vajram:extensions:mysql:vajram-mysql-codegen'
-include 'vajram:extensions:mysql:vajram-mysql'
+include 'vajram:extensions:sql:vajram-sql-codegen'
+include 'vajram:extensions:sql:vajram-sql'
 
