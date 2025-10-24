@@ -1,6 +1,5 @@
-package com.flipkart.krystal.vajram.samples.sql;
+package com.flipkart.krystal.vajram.samples.sql.traits;
 
-import static com.google.inject.Guice.createInjector;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
@@ -12,23 +11,16 @@ import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.guice.inputinjection.VajramGuiceInputInjector;
 import com.flipkart.krystal.vajram.guice.traitbinding.StaticDispatchPolicyImpl;
 import com.flipkart.krystal.vajram.guice.traitbinding.TraitBinder;
+import com.flipkart.krystal.vajram.samples.sql.SqlGuiceModule;
+import com.flipkart.krystal.vajram.samples.sql.User;
 import com.flipkart.krystal.vajram.sql.r2dbc.SQLRead;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramKryonGraphBuilder;
-import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.Provides;
-import com.google.inject.Singleton;
-import io.asyncer.r2dbc.mysql.MySqlConnectionConfiguration;
-import io.asyncer.r2dbc.mysql.MySqlConnectionFactory;
-import io.r2dbc.pool.ConnectionPool;
-import io.r2dbc.pool.ConnectionPoolConfiguration;
-import io.r2dbc.spi.ConnectionFactory;
 import java.time.Duration;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
@@ -49,9 +41,9 @@ import org.junit.jupiter.api.Test;
  *   <li>Executing generated vajrams with Krystex
  * </ul>
  */
-class GetAllUsersSqlTest {
+class GetUserByIdTraitTest {
 
-  private static final Logger logger = Logger.getLogger(GetAllUsersSqlTest.class.getName());
+  private static final Logger logger = Logger.getLogger(GetUserByIdTraitTest.class.getName());
   private static final int MAX_THREADS = Runtime.getRuntime().availableProcessors();
 
   @SuppressWarnings("unchecked")
@@ -82,26 +74,25 @@ class GetAllUsersSqlTest {
   @BeforeEach
   void setUp() {
     this.executorLease = EXECUTOR_LEASES[0];
-    this.injector = Guice.createInjector(new GuiceModule());
+    this.injector = Guice.createInjector(new SqlGuiceModule());
 
     TraitBinder traitBinder = new TraitBinder();
-    traitBinder.bindTrait(GetAllUsersTrait_Req.class)
-        .to(GetAllUsersTrait_sql_Req.class);
+    traitBinder.bindTrait(GetUserByIdTrait_Req.class).to(GetUserByIdTrait_sql_Req.class);
     // Load vajrams from the generated package and SQLRead package
-    VajramKryonGraphBuilder graphBuilder = VajramKryonGraph.builder()
-        .loadFromPackage(GetAllUsersTrait.class.getPackageName())
-        .loadFromPackage(SQLRead.class.getPackageName());
+    VajramKryonGraphBuilder graphBuilder =
+        VajramKryonGraph.builder()
+            .loadFromPackage(GetUserByIdTrait.class.getPackageName())
+            .loadFromPackage(SQLRead.class.getPackageName());
     this.graph = graphBuilder.build();
     graph.registerInputInjector(new VajramGuiceInputInjector(injector));
     graph.registerTraitDispatchPolicies(
         new StaticDispatchPolicyImpl(
-            graph, graph.getVajramIdByVajramDefType(GetAllUsersTrait.class), traitBinder));
-
+            graph, graph.getVajramIdByVajramDefType(GetUserByIdTrait.class), traitBinder));
   }
 
   @Test
-  //  @Disabled("Requires MySQL server - enable manually when database is available")
-  void getAllUsersSqlTrait_realDatabase_success() {
+  @Disabled("Requires MySQL server - enable manually when database is available")
+  void getUserByIdSqlTrait_realDatabase_success() {
     // Configure connection to MySQL database
     logger.info("Initializing GetUserSqlTrait test with real database");
     // Create the VajramKryonGraph
@@ -109,61 +100,27 @@ class GetAllUsersSqlTest {
         KrystexVajramExecutorConfig.builder()
             .kryonExecutorConfigBuilder(
                 KryonExecutorConfig.builder()
-                    .executorId("getUsersTest")
+                    .executorId("getUserByIdTest")
                     .executorService(executorLease.get()))
             .build();
 
     // Execute the vajram
-    CompletableFuture<List<User>> future;
+    CompletableFuture<User> future;
     try (KrystexVajramExecutor vajramExecutor = graph.createExecutor(config)) {
       future =
           vajramExecutor.execute(
-              GetAllUsersTrait_sql_ReqImmutPojo._builder()
-                  .parameters(Collections.emptyList())
-                  ._build(),
-              KryonExecutionConfig.builder().executionId("test-execution-real-db").build());
+              GetUserByIdTrait_sql_ReqImmutPojo._builder().parameters(List.of(1))._build(),
+              KryonExecutionConfig.builder().executionId("test-real-db").build());
     }
 
     // Assert results
     assertThat(future).succeedsWithin(TEST_TIMEOUT);
-    List<User> results = future.join();
+    User user = future.join();
 
     // Verify we got some results
-    assertThat(results).isNotEmpty();
-
-
-    logger.info("Fetched {} users from database:"+ results.size());
-    results.forEach(user -> logger.info("User: {}"+ user));
-
-    // Verify structure
-    results.forEach(
-        user -> {
-          assertThat(user.getId()).isNotNull();
-          assertThat(user.getName()).isNotNull();
-          assertThat(user.getEmailId()).isNotNull();
-        });
-  }
-
-  private static class GuiceModule extends AbstractModule {
-    @Provides
-    @Singleton
-    //@Named("connectionFactory")
-    public ConnectionPool provideConnectionPool() {
-      MySqlConnectionConfiguration configuration =
-          MySqlConnectionConfiguration.builder()
-              .host("localhost")
-              .port(3306)
-              .username("root")
-              .database("users_p")
-              .build();
-
-      ConnectionFactory connectionFactory = MySqlConnectionFactory.from(configuration);
-      return new ConnectionPool(
-          ConnectionPoolConfiguration.builder(connectionFactory)
-              .maxIdleTime(Duration.ofMinutes(30))
-              .initialSize(5)
-              .maxSize(20)
-              .build());
-    }
+    assertThat(user).isNotNull();
+    assertThat(user.getId()).isEqualTo(2);
+    assertThat(user.getName()).isNotBlank();
+    assertThat(user.getEmailId()).isNotBlank();
   }
 }

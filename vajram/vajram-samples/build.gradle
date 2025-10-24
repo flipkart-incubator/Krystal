@@ -51,8 +51,7 @@ dependencies {
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
     
     // R2DBC for SQL samples
-    implementation 'io.asyncer:r2dbc-mysql:1.4.1'
-    //testImplementation 'io.r2dbc:r2dbc-spi:1.0.0.RELEASE'
+    testImplementation 'io.asyncer:r2dbc-mysql:1.4.1'
     testImplementation 'io.r2dbc:r2dbc-pool:1.0.2.RELEASE'
     /** END: Test dependencies **/
 }
@@ -97,27 +96,12 @@ extraJavaModuleInfo {
     knownModule('com.google.j2objc:j2objc-annotations', 'com.google.j2objc.annotations')
     knownModule('org.reflections:reflections', 'org.reflections')
     knownModule('org.javassist:javassist', 'org.javassist')
-    
-//    // R2DBC modules for SQL samples
-//    knownModule('io.asyncer:r2dbc-mysql', 'r2dbc.mysql')
-//    knownModule('io.r2dbc:r2dbc-spi', 'r2dbc.spi')
-//    knownModule('io.r2dbc:r2dbc-pool', 'r2dbc.pool')
-//    knownModule('io.projectreactor:reactor-core', 'reactor.core')
 
     // R2DBC dependencies for MySQL extension
-    module('io.asyncer:r2dbc-mysql', 'r2dbc.mysql')
-    knownModule('io.r2dbc:r2dbc-pool', 'r2dbc.pool')
-    knownModule('io.r2dbc:r2dbc-spi', 'r2dbc.spi')
-    knownModule('io.projectreactor:reactor-core', 'reactor.core')
-    knownModule('io.projectreactor.netty:reactor-netty-core', 'reactor.netty.core')
-    knownModule('io.projectreactor.netty:reactor-netty-http', 'reactor.netty.http')
-    knownModule('io.netty:netty-common', 'io.netty.common')
-    knownModule('io.netty:netty-buffer', 'io.netty.buffer')
-    knownModule('io.netty:netty-transport', 'io.netty.transport')
-    knownModule('io.netty:netty-codec', 'io.netty.codec')
-    knownModule('io.netty:netty-handler', 'io.netty.handler')
-    knownModule('io.netty:netty-resolver', 'io.netty.resolver')
-    knownModule('org.reactivestreams:reactive-streams', 'org.reactivestreams')
+      module('io.asyncer:r2dbc-mysql', 'r2dbc.mysql')
+      knownModule('io.r2dbc:r2dbc-spi', 'r2dbc.spi')
+      knownModule('io.projectreactor:reactor-core', 'reactor.core')
+      knownModule('io.projectreactor.netty:reactor-netty-core', 'reactor.netty.core')
 
 }
 /** END: JPMS compatibility configurations **/

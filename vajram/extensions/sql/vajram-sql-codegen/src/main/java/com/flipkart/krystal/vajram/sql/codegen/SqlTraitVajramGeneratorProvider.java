@@ -6,10 +6,10 @@ import com.flipkart.krystal.vajram.codegen.common.spi.VajramCodeGeneratorProvide
 import com.google.auto.service.AutoService;
 
 @AutoService(VajramCodeGeneratorProvider.class)
-public class SqlTraitCodeGeneratorProvider implements VajramCodeGeneratorProvider {
+public class SqlTraitVajramGeneratorProvider implements VajramCodeGeneratorProvider {
 
   @Override
   public CodeGenerator create(VajramCodeGenContext codeGenContext) {
-    return new SqlTraitCodeGenerator(codeGenContext);
+    return new DefaultSqlTraitVajramGenerator(codeGenContext);
   }
 }

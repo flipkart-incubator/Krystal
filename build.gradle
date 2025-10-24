@@ -219,18 +219,9 @@ configure(subprojects.findAll {
 
         // R2DBC dependencies for MySQL extension
         module('io.asyncer:r2dbc-mysql', 'r2dbc.mysql')
-        knownModule('io.r2dbc:r2dbc-pool', 'r2dbc.pool')
         knownModule('io.r2dbc:r2dbc-spi', 'r2dbc.spi')
         knownModule('io.projectreactor:reactor-core', 'reactor.core')
         knownModule('io.projectreactor.netty:reactor-netty-core', 'reactor.netty.core')
-        knownModule('io.projectreactor.netty:reactor-netty-http', 'reactor.netty.http')
-        knownModule('io.netty:netty-common', 'io.netty.common')
-        knownModule('io.netty:netty-buffer', 'io.netty.buffer')
-        knownModule('io.netty:netty-transport', 'io.netty.transport')
-        knownModule('io.netty:netty-codec', 'io.netty.codec')
-        knownModule('io.netty:netty-handler', 'io.netty.handler')
-        knownModule('io.netty:netty-resolver', 'io.netty.resolver')
-        knownModule('org.reactivestreams:reactive-streams', 'org.reactivestreams')
     }
 }
 

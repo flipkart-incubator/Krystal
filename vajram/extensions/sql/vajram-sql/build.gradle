@@ -3,48 +3,34 @@ plugins {
     id 'com.flipkart.krystal' version "${krystal_version}"
 }
 
-description = 'Enables support for mysql in Krystal'
+description = 'Enables support for sql in Krystal'
 
 dependencies {
-//    implementation project(':krystal-common')
-    implementation project(':vajram:vajram-java-sdk')
     implementation 'jakarta.inject:jakarta.inject-api'
-    implementation 'io.asyncer:r2dbc-mysql:1.4.1'
     implementation 'io.r2dbc:r2dbc-pool:1.0.2.RELEASE'
+
     /** START: Krystal dependencies **/
+    implementation project(':vajram:vajram-java-sdk')
     implementation platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
     annotationProcessor platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
-    testAnnotationProcessor platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
-
-    compileOnly "org.projectlombok:lombok:$lombok_version"
-    compileOnly 'com.google.auto.value:auto-value-annotations:1.11.0'
-    compileOnly 'com.google.auto.value:auto-value-annotations:1.11.0'
-    annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
     annotationProcessor 'com.flipkart.krystal:vajram-codegen'
-
-    implementation 'com.google.guava:guava:33.4.8-jre'
 
     /** END: Krystal dependencies **/
 
     /** START: Test dependencies **/
+    testImplementation 'io.asyncer:r2dbc-mysql:1.4.1'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
     testImplementation 'org.junit.jupiter:junit-jupiter-params'
 
     testImplementation platform('org.assertj:assertj-bom:3.25.2')
     testImplementation 'org.assertj:assertj-core'
-    testImplementation 'com.flipkart.krystal:vajram-krystex'
-    testImplementation 'com.flipkart.krystal:vajram-guice'
-    testImplementation 'com.flipkart.krystal:krystex'
 
-    testImplementation platform('org.mockito:mockito-bom:5.17.0')
-    testImplementation 'org.mockito:mockito-core'
+    testImplementation 'com.flipkart.krystal:vajram-guice'
+    testAnnotationProcessor platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
     /** END: Test dependencies **/
 }
 
-checkerFramework {
-    excludeTests = true
-}
 tasks.withType(Test) {
     testLogging {
         showStandardStreams = true

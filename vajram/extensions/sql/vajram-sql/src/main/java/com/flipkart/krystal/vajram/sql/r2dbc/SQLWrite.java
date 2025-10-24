@@ -6,22 +6,22 @@ import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
+import com.flipkart.krystal.vajram.sql.SQLResult;
 import io.r2dbc.pool.ConnectionPool;
 import io.r2dbc.spi.Connection;
-import io.r2dbc.spi.ConnectionFactory;
 import io.r2dbc.spi.Result;
 import io.r2dbc.spi.Statement;
 import jakarta.inject.Inject;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @InvocableOutsideGraph
 @SuppressWarnings("initialization.field.uninitialized")
 @Vajram
-public abstract class SQLWrite extends IOVajramDef<Long> {
+public abstract class SQLWrite extends IOVajramDef<SQLResult> {
 
   static class _Inputs {
     @IfAbsent(IfAbsentThen.FAIL)
@@ -29,9 +29,6 @@ public abstract class SQLWrite extends IOVajramDef<Long> {
 
     @IfAbsent(IfAbsentThen.FAIL)
     List<Object> parameters;
-
-    @Nullable
-    List<String> generatedColumns;
   }
 
   static class _InternalFacets {
@@ -41,20 +38,12 @@ public abstract class SQLWrite extends IOVajramDef<Long> {
   }
 
   @Output
-  static CompletableFuture<? extends Result> write(
-      String query, ConnectionPool connectionPool, List<Object> parameters, @Nullable List<String> generatedColumns) {
+  static CompletableFuture<SQLResult> write(
+      String query, ConnectionPool connectionPool, List<Object> parameters) {
     return Mono.usingWhen(
             connectionPool.create(),
             connection -> {
               Statement statement = connection.createStatement(query);
-
-              if (generatedColumns != null && !generatedColumns.isEmpty()) {
-                statement.returnGeneratedValues(
-                    generatedColumns.toArray(new String[0]));
-              } else {
-                // Return all generated values (database-dependent)
-                statement.returnGeneratedValues();
-              }
 
               // Bind parameters
               if (parameters != null && !parameters.isEmpty()) {
@@ -62,8 +51,11 @@ public abstract class SQLWrite extends IOVajramDef<Long> {
                   statement.bind(i, parameters.get(i));
                 }
               }
-
-              return Mono.from(statement.execute());
+              return Flux.from(statement.execute())
+                  .flatMap(Result::getRowsUpdated)
+                  .reduce(Long::sum)
+                  .defaultIfEmpty(0L)
+                  .map(rowsUpdated -> new SQLResult(Collections.emptyList(), rowsUpdated));
             },
             Connection::close)
         .toFuture();

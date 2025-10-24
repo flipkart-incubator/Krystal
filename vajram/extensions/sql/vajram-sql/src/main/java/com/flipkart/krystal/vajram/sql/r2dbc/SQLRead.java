@@ -6,27 +6,31 @@ import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
+import com.flipkart.krystal.vajram.sql.SQLResult;
 import io.r2dbc.pool.ConnectionPool;
 import io.r2dbc.spi.Connection;
-import io.r2dbc.spi.ConnectionFactory;
-import io.r2dbc.spi.Result;
 import io.r2dbc.spi.Statement;
 import jakarta.inject.Inject;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-@InvocableOutsideGraph
 @SuppressWarnings("initialization.field.uninitialized")
+@InvocableOutsideGraph
 @Vajram
-public abstract class SQLRead extends IOVajramDef<Result> {
+public abstract class SQLRead extends IOVajramDef<SQLResult> {
 
   static class _Inputs {
     @IfAbsent(IfAbsentThen.FAIL)
     String selectQuery;
 
-    @Nullable List<Object> parameters;
+    List<Object> parameters;
+
+    @IfAbsent(IfAbsentThen.FAIL)
+    Class resultType;
   }
 
   static class _InternalFacets {
@@ -34,12 +38,21 @@ public abstract class SQLRead extends IOVajramDef<Result> {
     @Inject
     @IfAbsent(IfAbsentThen.FAIL)
     ConnectionPool connectionPool;
+
+    // Question: Should the RowMapper come from InternalFacets or Inputs?
+    @Inject
+    @IfAbsent(IfAbsentThen.FAIL)
+    DefaultRowMapper rowMapper;
   }
 
   @Output
-  static CompletableFuture<? extends Result> read(
-      String selectQuery, ConnectionPool connectionPool, @Nullable List<Object> parameters) {
-    //Validate that the statement starts with select
+  static CompletableFuture<SQLResult> read(
+      String selectQuery,
+      ConnectionPool connectionPool,
+      @Nullable List<Object> parameters,
+      @Nullable Class resultType,
+      DefaultRowMapper rowMapper) {
+    // Validate that the statement starts with select
     if (!selectQuery.trim().toLowerCase().startsWith("select")) {
       throw new IllegalArgumentException("Read query must start with 'select'");
     }
@@ -53,9 +66,41 @@ public abstract class SQLRead extends IOVajramDef<Result> {
                   statement.bind(i, parameters.get(i));
                 }
               }
-              return Mono.from(statement.execute());
+              // Execute and map based on resultType
+              return mapResult(statement, resultType, rowMapper);
             },
             Connection::close)
         .toFuture();
+  }
+
+  private static Mono<SQLResult> mapResult(
+      Statement statement, Class resultType, DefaultRowMapper rowMapper) {
+    return Mono.from(statement.execute())
+        .flatMap(
+            result -> {
+              if (resultType != null) {
+                // Use RowMapper to map to the specified type
+                Mono<? extends List<?>> res = rowMapper.map(result, resultType);
+                return res.map(list -> new SQLResult(list, 0));
+              } else {
+                // Default behavior: return Map<String, Object>
+                return Flux.from(
+                        result.map(
+                            (row, rowMetadata) -> {
+                              Map<String, Object> rowData = new java.util.HashMap<>();
+                              rowMetadata
+                                  .getColumnMetadatas()
+                                  .forEach(
+                                      columnMetadata -> {
+                                        String columnName = columnMetadata.getName();
+                                        Object value = row.get(columnName);
+                                        rowData.put(columnName, value);
+                                      });
+                              return rowData;
+                            }))
+                    .collectList()
+                    .map(list -> new SQLResult(list, 0));
+              }
+            });
   }
 }
