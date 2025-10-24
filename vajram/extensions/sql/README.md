@@ -36,15 +36,6 @@ dependencies {
 Create a Guice module to provide the `ConnectionPool`:
 
 ```java
-import com.google.inject.AbstractModule;
-import com.google.inject.Provides;
-import com.google.inject.Singleton;
-import io.asyncer.r2dbc.mysql.MySqlConnectionConfiguration;
-import io.asyncer.r2dbc.mysql.MySqlConnectionFactory;
-import io.r2dbc.pool.ConnectionPool;
-import io.r2dbc.pool.ConnectionPoolConfiguration;
-import io.r2dbc.spi.ConnectionFactory;
-
 public class DatabaseModule extends AbstractModule {
     
     @Provides
@@ -87,33 +78,20 @@ public record User(Integer id, String name, String emailId) {}
 **Option 2: Using a Class**
 
 ```java
+@Getter
+@Setter
 public class User {
     private Integer id;
     private String name;
     private String emailId;
     
     public User() {}
-    
-    // Getters and setters
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
-    
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    
-    public String getEmailId() { return emailId; }
-    public void setEmailId(String emailId) { this.emailId = emailId; }
 }
 ```
 
 ### 4. Create a SQL Trait
 
 ```java
-import com.flipkart.krystal.vajram.Trait;
-import com.flipkart.krystal.vajram.TraitRoot;
-import com.flipkart.krystal.vajram.sql.annotations.SqlQuery;
-import java.util.List;
-
 @Trait
 @SqlQuery("SELECT id, name, email_id FROM user_profile WHERE id = ?")
 public interface GetUserByIdTrait extends TraitRoot<User> {
