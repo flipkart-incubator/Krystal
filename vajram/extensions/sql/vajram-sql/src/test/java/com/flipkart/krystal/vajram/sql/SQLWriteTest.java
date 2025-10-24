@@ -120,7 +120,7 @@ class SQLWriteTest {
   }
 
   @Test
-  // @Disabled("Requires MySQL server - enable manually when database is available")
+  @Disabled("Requires MySQL server - enable manually when database is available")
   void writeToMySQL_insert_success1() {
     logger.info("Testing INSERT operation");
 

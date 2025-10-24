@@ -11,6 +11,8 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.guice.inputinjection.VajramGuiceInputInjector;
+import com.flipkart.krystal.vajram.sql.Utils.UserProfile;
+import com.flipkart.krystal.vajram.sql.Utils.UserRecord;
 import com.flipkart.krystal.vajram.sql.r2dbc.SQLRead_ReqImmutPojo;
 import com.flipkart.krystal.vajram.sql.r2dbc.SQLWrite;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
@@ -36,37 +38,13 @@ class SQLReadTest {
   private static final Logger logger = LoggerFactory.getLogger(SQLReadTest.class);
   public static final int MAX_THREADS = Runtime.getRuntime().availableProcessors();
 
-  // Sample domain class for mapping
-  public static class UserProfile {
-    private Integer id;
-    private String name;
-    private String emailId;
-
-    public UserProfile() {}
-
-    public Integer getId() {
-      return id;
-    }
-
-    public String getName() {
-      return name;
-    }
-
-    public String getEmailId() {
-      return emailId;
-    }
-
-    @Override
-    public String toString() {
-      return "UserProfile{id=" + id + ", name='" + name + "', emailId='" + emailId + "'}";
-    }
-  }
-
   @SuppressWarnings("unchecked")
   private static final Lease<SingleThreadExecutor>[] EXECUTOR_LEASES = new Lease[MAX_THREADS];
 
   private static SingleThreadExecutorsPool EXEC_POOL;
   private Injector injector;
+  private VajramKryonGraph graph;
+  private Lease<SingleThreadExecutor> executorLease;
 
   @BeforeAll
   static void beforeAll() throws LeaseUnavailableException {
@@ -81,29 +59,23 @@ class SQLReadTest {
     stream(EXECUTOR_LEASES).forEach(Lease::close);
   }
 
-  private VajramKryonGraphBuilder graph;
-  private static final String REQUEST_ID = "mySQLWriteTest";
-  private final TestRequestLevelCache requestLevelCache = spy(new TestRequestLevelCache());
-  private static final Duration TEST_TIMEOUT = Duration.ofSeconds(10);
-
-  private Lease<SingleThreadExecutor> executorLease;
 
   @BeforeEach
   void setUp() {
     this.executorLease = EXECUTOR_LEASES[0];
     VajramKryonGraphBuilder builder = VajramKryonGraph.builder();
-    this.graph = builder.loadFromPackage(SQLWrite.class.getPackageName());
+    builder.loadFromPackage(SQLWrite.class.getPackageName());
     this.injector = Guice.createInjector(new Utils.GuiceModule());
+    // Create the VajramKryonGraph
+    this.graph = builder.build();
+    graph.registerInputInjector(new VajramGuiceInputInjector(injector));
+
   }
 
   @Test
   @Disabled("Requires MySQL server - enable manually when database is available")
   void readfromMySQL_withMapResult() {
     logger.info("Testing SELECT operation with Map result");
-
-    // Create the VajramKryonGraph
-    VajramKryonGraph graph = this.graph.build();
-    graph.registerInputInjector(new VajramGuiceInputInjector(injector));
     KrystexVajramExecutorConfig config =
         KrystexVajramExecutorConfig.builder()
             .kryonExecutorConfigBuilder(
@@ -111,7 +83,6 @@ class SQLReadTest {
                     .executorId("readFromMySQLTest")
                     .executorService(executorLease.get()))
             .build();
-
     // SELECT query with parameters
     String query = "select * from user_profile";
     List<Object> parameters = Collections.emptyList();
@@ -144,13 +115,10 @@ class SQLReadTest {
   }
 
   @Test
-  // @Disabled("Requires MySQL server - enable manually when database is available")
+  @Disabled("Requires MySQL server - enable manually when database is available")
   void readfromMySQL_withCustomType() {
     logger.info("Testing SELECT operation with custom type mapping");
 
-    // Create the VajramKryonGraph
-    VajramKryonGraph graph = this.graph.build();
-    graph.registerInputInjector(new VajramGuiceInputInjector(injector));
     KrystexVajramExecutorConfig config =
         KrystexVajramExecutorConfig.builder()
             .kryonExecutorConfigBuilder(
@@ -177,14 +145,52 @@ class SQLReadTest {
     }
 
     // Assert results
-    System.out.println("Waiting for result...");
     SQLResult result = future.join();
-    System.out.println("Received result.");
-    System.out.println("Queried rows: " + result.rows().size());
+
 
     // Cast to UserProfile type and print first row
     if (!result.rows().isEmpty()) {
       List<UserProfile> firstUser = (List<UserProfile>) result.rows();
+      System.out.println("First user: " + firstUser.get(0));
+    }
+  }
+
+  @Test
+  @Disabled("Requires MySQL server - enable manually when database is available")
+  void readfromMySQL_withRecordType() {
+
+    KrystexVajramExecutorConfig config =
+        KrystexVajramExecutorConfig.builder()
+            .kryonExecutorConfigBuilder(
+                KryonExecutorConfig.builder()
+                    .executorId("readFromMySQLTest")
+                    .executorService(executorLease.get()))
+            .build();
+
+    // SELECT query
+    String query = "select * from user_profile";
+    List<Object> parameters = Collections.emptyList();
+
+    // Execute the vajram with resultType (returns List<UserProfile>)
+    CompletableFuture<SQLResult> future;
+    try (KrystexVajramExecutor vajramExecutor = graph.createExecutor(config)) {
+      future =
+          vajramExecutor.execute(
+              SQLRead_ReqImmutPojo._builder()
+                  .selectQuery(query)
+                  .parameters(parameters)
+                  .resultType(UserRecord.class) // Specify custom type
+                  ._build(),
+              KryonExecutionConfig.builder().executionId("test-execution-typed-read").build());
+    }
+
+    // Assert results
+    SQLResult result = future.join();
+
+
+    // Cast to UserProfile type and print first row
+    if (!result.rows().isEmpty()) {
+      List<UserRecord> firstUser = (List<UserRecord>) result.rows();
       System.out.println("First user: " + firstUser.get(0));
     }
   }

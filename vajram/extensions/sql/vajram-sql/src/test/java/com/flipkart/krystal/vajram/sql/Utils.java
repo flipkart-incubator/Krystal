@@ -10,6 +10,8 @@ import io.asyncer.r2dbc.mysql.MySqlConnectionFactory;
 import io.r2dbc.pool.ConnectionPool;
 import io.r2dbc.pool.ConnectionPoolConfiguration;
 import io.r2dbc.spi.ConnectionFactory;
+import lombok.Getter;
+import lombok.Setter;
 
 public class Utils {
 
@@ -43,4 +45,21 @@ public class Utils {
       return new DefaultRowMapper();
     }
   }
+
+  @Getter
+  @Setter
+  static class UserProfile {
+    private Integer id;
+    private String name;
+    private String emailId;
+
+    public UserProfile() {}
+
+    @Override
+    public String toString() {
+      return "UserProfile{id=" + id + ", name='" + name + "', emailId='" + emailId + "'}";
+    }
+  }
+
+  public record UserRecord(Integer id, String name, String emailId) {}
 }
