@@ -19,7 +19,7 @@ public abstract class GetDummyIds extends ComputeVajramDef<List<DummyId>> {
   }
 
   @Output
-  static List<DummyId> dummyIds(String id) {
-    return List.of(new DummyId(id + "_dummy_1"));
+  static List<DummyId> dummyIds(OrderId id) {
+    return List.of(new DummyId(id.value() + "_dummy_1"));
   }
 }

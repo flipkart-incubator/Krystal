@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id 'application'
     id 'com.flipkart.krystal' version "${krystal_version}"
-    id 'com.flipkart.java.code.standard' version '4.0'
+    id 'com.flipkart.java.code.standard' version '4.1'
     id 'com.google.protobuf' version '0.9.5'
 }
 
@@ -78,11 +78,10 @@ protobuf {
     generateProtoTasks {
         all()*.plugins { grpc {} }
     }
+
 }
 
-tasks.named('extractIncludeProto').configure { mustRunAfter('codeGenVajramModels') }
 tasks.named('extractProto').configure { mustRunAfter('codeGenVajramModels') }
-tasks.named('generateProto').configure { mustRunAfter('codeGenVajramModels') }
 
 extraJavaModuleInfo {
     failOnMissingModuleInfo = false

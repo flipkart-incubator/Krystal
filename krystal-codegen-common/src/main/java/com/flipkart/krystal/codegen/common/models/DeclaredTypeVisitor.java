@@ -46,7 +46,7 @@ public class DeclaredTypeVisitor extends AbstractTypeVisitor14<CodeGenType, Void
   public CodeGenType visitDeclared(DeclaredType t, Void inputDef) {
     String disallowedMessage = util.getDisallowedMessage(t, disallowedTypes);
     if (disallowedMessage != null) {
-      util.error(disallowedMessage, element);
+      throw util.errorAndThrow(disallowedMessage, element);
     }
     Element elementOfType = t.asElement();
     if (elementOfType instanceof QualifiedNameable qualifiedNameable) {
@@ -117,7 +117,7 @@ public class DeclaredTypeVisitor extends AbstractTypeVisitor14<CodeGenType, Void
               + element
               + " has encountered a type of ERROR kind: "
               + type
-              + ". Shortcuircuiting code gen. This codegen may be retried in the next round and will most possibly succeed.");
+              + ". Short-circuiting code gen. This codegen may be retried in the next round and will most possibly succeed.");
     } else {
       return uoe(type + " not supported by DeclaredTypeVisitor");
     }

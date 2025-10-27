@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.graphql.api;
 
+import static com.flipkart.krystal.core.VajramID.vajramID;
 import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.core.VajramID;
@@ -22,17 +23,16 @@ public class QueryAnalyseUtil {
   public static final String VAJRAM_ID = "vajramId";
   public static final String REF_FETCHER = "refFetcher";
   public static final String ENTITY_FETCHER = "entityFetcher";
-  public static final String GRAPH = "graph";
   // New constant for tracking metadata fields
   public static final String METADATA_FIELDS = "metadataFields";
 
-  public static ImmutableSet<DependentChain> getNodeExecutionConfigBasedOnQuery(
+  static ImmutableSet<DependentChain> getNodeExecutionConfigBasedOnQuery(
       ExecutionContext executionContext,
       Map<String, Map<String, List<String>>> reverseEntityTypeToFieldResolverMap,
       Map<String, Map<String, String>> entityToRefToTypeMap,
-      Map<String, Map<String, String>> entityTypeToReferenceFetcher) {
+      Map<String, Map<String, String>> entityTypeToReferenceFetcher,
+      VajramKryonGraph vajramKryonGraph) {
 
-    VajramKryonGraph vajramKryonGraph = executionContext.getGraphQLContext().get(GRAPH);
     GraphQLSchema graphQLSchema = executionContext.getGraphQLSchema();
     ExecutableNormalizedOperation executableNormalizedOperation =
         executionContext.getNormalizedQueryTree().get();
@@ -65,15 +65,13 @@ public class QueryAnalyseUtil {
       if (graphQLAppliedDirective != null) {
 
         vajramsToExecute.add(
-            VajramID.vajramID(
-                graphQLAppliedDirective.getArgument(VAJRAM_ID).getValue().toString()));
+            vajramID(graphQLAppliedDirective.getArgument(VAJRAM_ID).getValue().toString()));
       }
       GraphQLAppliedDirective graphQLAppliedDirectiveRef =
           graphQLSchema.getFieldDefinition(entry).getAppliedDirective(REF_FETCHER);
       if (graphQLAppliedDirectiveRef != null) {
         vajramsToExecute.add(
-            VajramID.vajramID(
-                graphQLAppliedDirectiveRef.getArgument(ENTITY_FETCHER).getValue().toString()));
+            vajramID(graphQLAppliedDirectiveRef.getArgument(ENTITY_FETCHER).getValue().toString()));
       }
     }
 
@@ -115,8 +113,7 @@ public class QueryAnalyseUtil {
       Map<String, Map<String, String>> entityToRefToTypeMap,
       Map<String, Map<String, String>> entityTypeToReferenceFetcher) {
 
-    var facetsByName =
-        vajramNodeGraph.getVajramDefinition(VajramID.vajramID(FIRST_NODE)).facetsByName();
+    var facetsByName = vajramNodeGraph.getVajramDefinition(vajramID(FIRST_NODE)).facetsByName();
     for (Map.Entry<String, Map<String, List<String>>> entityToFieldEntry :
         reverseEntityTypeToFieldResolverMap.entrySet()) {
       if (queriedEntity.equalsIgnoreCase(entityToFieldEntry.getKey())) {
@@ -155,7 +152,7 @@ public class QueryAnalyseUtil {
       Map<String, Map<String, List<String>>> reverseEntityTypeToFieldResolverMap,
       Map<String, Map<String, String>> entityTypeToReferenceFetcher) {
     for (String vajram : reverseEntityTypeToFieldResolverMap.get(entity).keySet()) {
-      if (!vajramsToExecute.contains(VajramID.vajramID(vajram))) {
+      if (!vajramsToExecute.contains(vajramID(vajram))) {
         Dependency mostRecentDependency = null;
         Dependency[] depChain = new Dependency[dependencyList.size()];
         if (dependencyList.size() > 1) {

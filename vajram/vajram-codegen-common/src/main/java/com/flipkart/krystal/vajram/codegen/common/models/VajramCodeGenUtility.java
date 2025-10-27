@@ -117,13 +117,12 @@ public class VajramCodeGenUtility {
   @Getter private final DataTypeRegistry dataTypeRegistry;
   @Getter private final CodeGenUtility codegenUtil;
 
-  public VajramCodeGenUtility(
-      ProcessingEnvironment processingEnv, Class<?> generator, @Nullable String phaseString) {
-    this.processingEnv = processingEnv;
+  public VajramCodeGenUtility(CodeGenUtility codegenUtil) {
+    this.codegenUtil = codegenUtil;
+    this.processingEnv = codegenUtil.processingEnv();
     this.typeUtils = processingEnv.getTypeUtils();
     this.elementUtils = processingEnv.getElementUtils();
     this.dataTypeRegistry = new DataTypeRegistry();
-    this.codegenUtil = new CodeGenUtility(processingEnv, generator, phaseString);
   }
 
   public FacetJavaType getFacetReturnType(FacetGenModel facet, CodeGenParams codeGenParams) {
@@ -286,7 +285,7 @@ public class VajramCodeGenUtility {
     FacetType facetType = null;
     boolean isInput = "_Inputs".contentEquals(facetField.getEnclosingElement().getSimpleName());
     if (isInput) {
-      facetType = FacetType.INPUT;
+      facetType = INPUT;
     }
     if (facetField.getAnnotation(Inject.class) != null) {
       if (isInput) {
@@ -400,7 +399,6 @@ public class VajramCodeGenUtility {
 
   public VajramInfoLite computeVajramInfoLite(TypeElement vajramOrReqClass) {
     String vajramClassSimpleName = vajramOrReqClass.getSimpleName().toString();
-    ImmutableMap<String, FacetDetail> facetIdNameMappings = ImmutableMap.of();
     VajramID vajramId;
     CodeGenType responseType;
     String packageName = elementUtils.getPackageOf(vajramOrReqClass).getQualifiedName().toString();
@@ -467,7 +465,7 @@ public class VajramCodeGenUtility {
                   facetSpecField
                       .asType()
                       .accept(
-                          new DeclaredTypeVisitor(codegenUtil, requestType, DISALLOWED_FACET_TYPES),
+                          new DeclaredTypeVisitor(codegenUtil, requestType, ImmutableMap.of()),
                           null)
                       .typeParameters()
                       .get(0),

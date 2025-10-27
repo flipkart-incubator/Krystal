@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.graphql.api;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.Maps.filterKeys;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Collections.unmodifiableMap;

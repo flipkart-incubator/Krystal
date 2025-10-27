@@ -3,7 +3,7 @@ package com.flipkart.krystal.lattice.ext.guice;
 import com.flipkart.krystal.lattice.core.di.Bindings;
 import com.flipkart.krystal.lattice.core.di.DependencyInjectionBinder;
 import com.flipkart.krystal.lattice.core.execution.ThreadingStrategy;
-import com.flipkart.krystal.vajram.guice.inputinjection.VajramGuiceInputInjector;
+import com.flipkart.krystal.vajram.guice.injection.VajramGuiceInputInjector;
 import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.AbstractModule;

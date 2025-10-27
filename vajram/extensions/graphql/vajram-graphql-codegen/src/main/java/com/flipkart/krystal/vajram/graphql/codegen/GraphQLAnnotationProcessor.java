@@ -1,9 +1,13 @@
 package com.flipkart.krystal.vajram.graphql.codegen;
 
+import static com.flipkart.krystal.codegen.common.models.CodegenPhase.MODELS;
 import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 
+import com.flipkart.krystal.codegen.common.models.AbstractKrystalAnnoProcessor;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
+import com.flipkart.krystal.codegen.common.models.CodegenPhase;
+import com.flipkart.krystal.codegen.common.models.RunOnlyWhenCodegenPhaseIs;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.graphql.api.GraphQLFetcher;
 import com.google.auto.service.AutoService;
@@ -24,18 +28,14 @@ import javax.lang.model.element.TypeElement;
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 @AutoService(Processor.class)
 @SupportedOptions(CODEGEN_PHASE_KEY)
-public class GraphQLAnnotationProcessor extends AbstractProcessor {
+@RunOnlyWhenCodegenPhaseIs(MODELS)
+public class GraphQLAnnotationProcessor extends AbstractKrystalAnnoProcessor {
 
   boolean generated;
 
   @Override
-  public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-    VajramCodeGenUtility vajramGenUtil =
-        new VajramCodeGenUtility(
-            processingEnv,
-            GraphQLTypeAggregatorGen.class,
-            processingEnv.getOptions().get(CODEGEN_PHASE_KEY));
-    CodeGenUtility util = vajramGenUtil.codegenUtil();
+  protected boolean processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+    CodeGenUtility util = codeGenUtil();
     util.note("Annotations: " + annotations);
     for (TypeElement annotation : annotations) {
       util.note(
@@ -48,7 +48,7 @@ public class GraphQLAnnotationProcessor extends AbstractProcessor {
     }
     if (!generated) {
       try {
-        new GraphQLTypeAggregatorGen(vajramGenUtil).generate();
+        new GraphQLTypeAggregatorGen(codeGenUtil()).generate();
       } catch (Exception e) {
         util.error("[GraphQL Codegen Exception] " + getStackTraceAsString(e));
       }

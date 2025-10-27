@@ -1,4 +1,4 @@
-module krystal.vajram.extensions.graphql.samples {
+module krystal.vajram.ext.graphql.samples {
   requires flipkart.krystal.vajram;
   requires krystal.vajram.extensions.graphql;
   requires com.graphqljava;

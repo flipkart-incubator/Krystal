@@ -69,14 +69,14 @@ public class VajramPlugin implements Plugin<Project> {
 
     // Add all source directories to compiler sourcepath option so that annotation processors can
     // read files in custom source directories as well
-    project
-        .getTasks()
-        .withType(JavaCompile.class)
-        .configureEach(
-            javaCompile ->
-                javaCompile
-                    .getOptions()
-                    .setSourcepath(sourceSets.getByName("main").getJava().getSourceDirectories()));
+//    project
+//        .getTasks()
+//        .withType(JavaCompile.class)
+//        .configureEach(
+//            javaCompile ->
+//                javaCompile
+//                    .getOptions()
+//                    .setSourcepath(sourceSets.getByName("main").getJava().getSourceDirectories()));
   }
 
   private static void registerCodeGenVajramModels(Project project, File mainModelsGenDir) {

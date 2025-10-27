@@ -1,9 +1,9 @@
 package com.flipkart.krystal.vajram.graphql.api;
 
-import static com.flipkart.krystal.vajram.graphql.api.GraphQLUtils.handleErrable;
 
-import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.model.ModelClusterRoot;
 
+@ModelClusterRoot
 public abstract class AbstractGraphQLEntity<
         I extends GraphQLEntityId, T extends AbstractGraphQLEntity<I, T>>
     extends AbstractGraphQlModel<T> {

@@ -1890,7 +1890,7 @@ try {
           }
         }
         methodCodeBuilder.beginControlFlow(
-            "for($T $L: $L.inputs())", actualReturnType, RESOLVER_RESULT, RESOLVER_RESULTS);
+            "for($T $L: $L.values())", actualReturnType, RESOLVER_RESULT, RESOLVER_RESULTS);
         if (util.codegenUtil().isRawAssignable(actualReturnType, ImmutableRequest.Builder.class)) {
           /*
            * TODO: Add validation that this vajramDef request is of the same type as the

@@ -1,15 +1,14 @@
 plugins {
     id 'java-library'
     id 'com.flipkart.krystal' version "${krystal_version}"
-    id 'com.flipkart.java.code.standard' version '4.0'
+    id 'com.flipkart.java.code.standard' version '4.1'
+
+    //Needed only if you want your project to be modularized using JPMS
+    id 'org.gradlex.extra-java-module-info' version '1.11'
 }
 
-sourceSets {
-    main {
-        java {
-            srcDirs += ['src/main/graphqls']
-        }
-    }
+tasks.withType(JavaCompile).configureEach {
+    it.source(files('src/main/graphqls'))
 }
 
 dependencies {
@@ -30,3 +29,38 @@ dependencies {
 
     implementation 'org.slf4j:slf4j-api:2.0.11'
 }
+
+//Needed only if you want your project to be modularized using JPMS
+/** START: JPMS compatibility configurations **/
+configurations.configureEach {
+    exclude group: 'com.google.guava', module: 'listenablefuture'
+}
+extraJavaModuleInfo {
+    module('com.google.auto.value:auto-value-annotations', 'com.google.auto.value.annotations')
+    module('com.flipkart.krystal:vajram-codegen', 'com.flipkart.krystal.vajram.codegen')
+    module('com.google.code.findbugs:jsr305', 'com.google.code.findbugs.jsr305')
+    module('com.github.kevinstern:software-and-algorithms', 'com.github.kevinstern.software.and.algorithms')
+    module('javax.inject:javax.inject', 'javax.inject')
+    module('com.google.auto:auto-common', 'com.google.auto.common')
+    module('com.google.auto.value:auto-value', 'com.google.auto.value')
+    module('aopalliance:aopalliance', 'aopalliance')
+    module('javax.cache:cache-api', 'javax.cache.api')
+    module('org.hdrhistogram:HdrHistogram', 'org.hdrhistogram')
+    module('org.latencyutils:LatencyUtils', 'org.latencyutils')
+
+    knownModule('org.slf4j:slf4j-api', 'org.slf4j')
+    knownModule('jakarta.inject:jakarta.inject-api', 'jakarta.inject')
+    knownModule('com.google.auto.service:auto-service-annotations', 'com.google.auto.service')
+    knownModule('org.checkerframework:checker-qual', 'org.checkerframework.checker.qual')
+    knownModule('com.flipkart.krystal:krystal-codegen-common', 'flipkart.krystal.codegen.common')
+    knownModule('com.flipkart.krystal:vajram-codegen-common', 'flipkart.krystal.vajram.codegen.common')
+    knownModule('com.flipkart.krystal:vajram-java-sdk', 'flipkart.krystal.vajram')
+    knownModule('com.google.guava:guava', 'com.google.common')
+    knownModule('com.squareup:javapoet', 'com.squareup.javapoet')
+    knownModule('org.projectlombok:lombok', 'lombok')
+    knownModule('com.google.j2objc:j2objc-annotations', 'com.google.j2objc.annotations')
+    knownModule('org.reflections:reflections', 'org.reflections')
+    knownModule('org.javassist:javassist', 'org.javassist')
+
+}
+/** END: JPMS compatibility configurations **/

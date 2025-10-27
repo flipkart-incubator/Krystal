@@ -3,9 +3,14 @@ type Order @entity{
     orderItemNames: [String] @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
     dummy: Dummy @refFetcher(vajramId: "GetDummyId", subPackage: "order")
     dummies: [Dummy] @refFetcher(vajramId: "GetDummyIds", subPackage: "order")
+    hello: Hello
 }
 
 type Dummy @entity{
     id: ID,
     name: String
+}
+
+type Hello {
+    toName: String
 }

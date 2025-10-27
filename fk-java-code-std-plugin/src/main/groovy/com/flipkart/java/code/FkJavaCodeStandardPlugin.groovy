@@ -7,7 +7,7 @@ import org.gradle.api.Project
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.testing.jacoco.plugins.JacocoPluginExtension
 
-class FkJavaCodeStandard implements Plugin<Project> {
+class FkJavaCodeStandardPlugin implements Plugin<Project> {
 
     public static final String UNSAFE_COMPILE_OPTION = "unsafeCompile"
 
@@ -125,7 +125,8 @@ class FkJavaCodeStandard implements Plugin<Project> {
 
     private static void junitPlatform(Project project) {
         project.dependencies.add('testImplementation', project.getDependencies().platform('org.junit:junit-bom:6.0.0'))
-        project.dependencies.add('testRuntimeOnly', 'org.junit.platform:junit-platform-launcher:6.0.0')
+        project.dependencies.add('testRuntimeOnly', 'org.junit.platform:junit-platform-launcher')
+        project.dependencies.add('testImplementation', 'org.junit.jupiter:junit-jupiter')
         project.test {
             useJUnitPlatform()
         }

@@ -90,16 +90,18 @@ public class CodeGenUtility {
   private final Types typeUtils;
   private final Elements elementUtils;
   private final Class<?> generator;
-  private final @Nullable String phaseString;
+  @Getter private final @Nullable CodegenPhase codegenPhase;
   @Getter private final DataTypeRegistry dataTypeRegistry;
 
   public CodeGenUtility(
-      ProcessingEnvironment processingEnv, Class<?> generator, @Nullable String phaseString) {
+      ProcessingEnvironment processingEnv,
+      Class<?> generator,
+      @Nullable CodegenPhase codegenPhase) {
     this.processingEnv = processingEnv;
     this.typeUtils = processingEnv.getTypeUtils();
     this.elementUtils = processingEnv.getElementUtils();
     this.generator = generator;
-    this.phaseString = phaseString;
+    this.codegenPhase = codegenPhase;
     this.dataTypeRegistry = new DataTypeRegistry();
   }
 
@@ -405,7 +407,7 @@ public class CodeGenUtility {
           .getMessager()
           .printMessage(
               Kind.NOTE,
-              "[%s] [%s] %s".formatted(getCallerInfo(), String.valueOf(phaseString), message),
+              "[%s] [%s] %s".formatted(getCallerInfo(), String.valueOf(codegenPhase), message),
               typeElement);
     }
   }
@@ -421,7 +423,8 @@ public class CodeGenUtility {
 
   private void _error(String message, @Nullable Element... elements) {
     String enrichedMessage =
-        "[%s] [%s] %s".formatted(getCallerInfo(), String.valueOf(phaseString), message);
+        "[%s] [%s:%s] %s"
+            .formatted(getCallerInfo(), this.generator, String.valueOf(codegenPhase), message);
     if (elements.length == 0) {
       processingEnv.getMessager().printMessage(Kind.ERROR, enrichedMessage);
     } else {

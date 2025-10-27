@@ -1,11 +1,15 @@
 package com.flipkart.krystal.vajram.graphql.api;
 
+import static com.flipkart.krystal.vajram.graphql.api.QueryAnalyseUtil.getNodeExecutionConfigBasedOnQuery;
 import static graphql.execution.ExecutionStrategyParameters.newParameters;
 
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
+import com.flipkart.krystal.vajram.graphql.api.ExecutionLifecycleListener.ExecutionStartEvent;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.google.common.collect.ImmutableSet;
 import graphql.ExecutionResult;
@@ -36,26 +40,29 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-// TODO: remove this once it's moved to graphQlJava, did it due to [array] -> [array] field support
-// in schema
-// resolution support
+// TODO: remove this once it's moved to graphQlJava, did it due to
+//  [array] -> [array] field support in schema resolution support
 public class VajramExecutionStrategy extends ExecutionStrategy {
 
-  public static final String VAJRAM_EXECUTOR = "vajram_executor";
+  public static final String VAJRAM_KRYON_GRAPH = "vajram_kryon_graph";
+  public static final String VAJRAM_EXECUTOR_CONFIG = "vajram_executor_config";
   public static final String TASK_ID = "taskId";
   public static final String TYPENAME_FIELD = "__typename";
   private final FieldCollector fieldCollector = new FieldCollector();
   private final InitVajramRequestCreator initVajramRequestCreator;
-  Map<String, Map<String, List<String>>> reverseEntityTypeToFieldResolverMap;
-  Map<String, Map<String, String>> entityToRefToTypeMap;
-  Map<String, Map<String, String>> entityTypeToReferenceFetcher;
+  private final ExecutionLifecycleListener executionLifecycleListener;
+  private final Map<String, Map<String, List<String>>> reverseEntityTypeToFieldResolverMap;
+  private final Map<String, Map<String, String>> entityToRefToTypeMap;
+  private final Map<String, Map<String, String>> entityTypeToReferenceFetcher;
 
   public VajramExecutionStrategy(
       InitVajramRequestCreator initVajramRequestCreator,
+      ExecutionLifecycleListener executionLifecycleListener,
       Map<String, Map<String, List<String>>> reverseEntityTypeToFieldResolverMap,
       Map<String, Map<String, String>> entityToRefToTypeMap,
       Map<String, Map<String, String>> entityTypeToReferenceFetcher) {
     this.initVajramRequestCreator = initVajramRequestCreator;
+    this.executionLifecycleListener = executionLifecycleListener;
     this.reverseEntityTypeToFieldResolverMap = reverseEntityTypeToFieldResolverMap;
     this.entityToRefToTypeMap = entityToRefToTypeMap;
     this.entityTypeToReferenceFetcher = entityTypeToReferenceFetcher;
@@ -66,37 +73,46 @@ public class VajramExecutionStrategy extends ExecutionStrategy {
       ExecutionContext executionContext, ExecutionStrategyParameters parameters)
       throws NonNullableFieldWasNullException {
     GraphQLContext graphQLContext = executionContext.getGraphQLContext();
+    KrystexVajramExecutorConfigBuilder vajramExecutorConfigBuilder =
+        graphQLContext.getOrDefault(VAJRAM_EXECUTOR_CONFIG, KrystexVajramExecutorConfig.builder());
+    VajramKryonGraph vajramKryonGraph = graphQLContext.get(VAJRAM_KRYON_GRAPH);
 
-    KrystexVajramExecutor vajramExecutor = graphQLContext.get(VAJRAM_EXECUTOR);
-
-    // TODO: After QueryAnalyseUtil is updated, use that to compute the dependantChainList
-    /**
-     * ImmutableSet<DependentChain> dependantChainList =
-     * QueryAnalyseUtil.getNodeExecutionConfigBasedOnQuery( executionContext,
-     * reverseEntityTypeToFieldResolverMap, entityToRefToTypeMap, entityTypeToReferenceFetcher);
-     */
-    ImmutableSet<DependentChain> dependantChainList = ImmutableSet.of();
+    ImmutableSet<DependentChain> dependantChainList =
+        getNodeExecutionConfigBasedOnQuery(
+            executionContext,
+            reverseEntityTypeToFieldResolverMap,
+            entityToRefToTypeMap,
+            entityTypeToReferenceFetcher,
+            vajramKryonGraph);
 
     ImmutableRequest<?> immutableRequest =
         initVajramRequestCreator.create(executionContext, this, getParams(parameters));
-    return vajramExecutor
-        .execute(
-            immutableRequest,
-            KryonExecutionConfig.builder()
-                .disabledDependentChains(dependantChainList)
-                .executionId(graphQLContext.get(TASK_ID))
-                .build())
-        .handle(
-            (o, throwable) -> {
-              if (throwable != null) {
-                return ExecutionResult.newExecutionResult()
-                    .addError(GraphqlErrorException.newErrorException().cause(throwable).build())
-                    .build();
-              } else {
-                Object resultData = processTypenameFields(executionContext, o);
-                return ExecutionResult.newExecutionResult().data(resultData).build();
-              }
-            });
+    try (KrystexVajramExecutor vajramExecutor =
+        KrystexVajramExecutor.builder()
+            .vajramKryonGraph(vajramKryonGraph)
+            .executorConfig(vajramExecutorConfigBuilder.build())
+            .build()) {
+      executionLifecycleListener.onExecutionStart(
+          new ExecutionStartEvent(vajramExecutor, executionContext));
+      return vajramExecutor
+          .execute(
+              immutableRequest,
+              KryonExecutionConfig.builder()
+                  .disabledDependentChains(dependantChainList)
+                  .executionId(graphQLContext.get(TASK_ID))
+                  .build())
+          .handle(
+              (o, throwable) -> {
+                if (throwable != null) {
+                  return ExecutionResult.newExecutionResult()
+                      .addError(GraphqlErrorException.newErrorException().cause(throwable).build())
+                      .build();
+                } else {
+                  Object resultData = processTypenameFields(executionContext, o);
+                  return ExecutionResult.newExecutionResult().data(resultData).build();
+                }
+              });
+    }
   }
 
   /**

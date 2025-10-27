@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.guice.inputinjection;
+package com.flipkart.krystal.vajram.guice.injection;
 
 import static com.flipkart.krystal.data.Errable.errableFrom;
 import static com.flipkart.krystal.data.Errable.nil;

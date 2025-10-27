@@ -8,11 +8,13 @@ import static java.util.Objects.requireNonNullElse;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
+import static lombok.AccessLevel.PACKAGE;
 
-import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.vajram.graphql.codegen.GraphQlFieldSpec.FieldType;
 import com.flipkart.krystal.vajram.graphql.codegen.GraphQlFieldSpec.ListFieldType;
 import com.flipkart.krystal.vajram.graphql.codegen.GraphQlFieldSpec.SingleFieldType;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
 import graphql.language.Argument;
@@ -28,22 +30,24 @@ import graphql.language.SchemaDefinition;
 import graphql.language.StringValue;
 import graphql.language.Type;
 import graphql.language.TypeDefinition;
+import graphql.language.TypeName;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import javax.tools.FileObject;
-import javax.tools.StandardLocation;
+import java.util.Set;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+@Slf4j
 public class SchemaReaderUtil {
 
   public static final String DATA_FETCHER = "dataFetcher";
@@ -54,74 +58,67 @@ public class SchemaReaderUtil {
   public static final String GRAPHQL_AGGREGATOR = "GraphQLAggregator";
   public static final String GRAPHQL_SCHEMA_EXTENSION = ".graphqls";
 
-  static final Map<GraphQLTypeName, Map<GraphQlFieldSpec, ClassName>>
+  @Getter(PACKAGE)
+  private final Map<GraphQLTypeName, Map<GraphQlFieldSpec, ClassName>>
       entityTypeToFieldToTypeAggregator = new HashMap<>();
-  static final Map<GraphQLTypeName, Map<GraphQlFieldSpec, Fetcher>> entityTypeToFieldToFetcher =
+
+  @Getter(PACKAGE)
+  private final Map<GraphQLTypeName, Map<GraphQlFieldSpec, Fetcher>> entityTypeToFieldToFetcher =
       new HashMap<>();
-  static final Map<GraphQLTypeName, Map<Fetcher, List<GraphQlFieldSpec>>>
+
+  @Getter(PACKAGE)
+  private final Map<GraphQLTypeName, Map<Fetcher, List<GraphQlFieldSpec>>>
       entityTypeToFetcherToFields = new HashMap<>();
 
   @Getter private final String rootPackageName;
   @Getter private final TypeDefinitionRegistry typeDefinitionRegistry;
+  @Getter private final ImmutableMap<GraphQLTypeName, @NonNull ObjectTypeDefinition> graphQLTypes;
+  @Getter private final Map<GraphQLTypeName, @NonNull ObjectTypeDefinition> entityTypes;
 
-  public SchemaReaderUtil(CodeGenUtility util) {
-    this.typeDefinitionRegistry = getTypeDefinitionRegistry(util);
-    this.rootPackageName = getRootPackageName(util, typeDefinitionRegistry);
+  public SchemaReaderUtil(File schemaFile) {
+    this.typeDefinitionRegistry = getTypeDefinitionRegistry(schemaFile);
+    this.rootPackageName = getRootPackageName(typeDefinitionRegistry);
+    this.graphQLTypes = computeGraphQLTypes(typeDefinitionRegistry);
+    this.entityTypes = Maps.filterValues(graphQLTypes, SchemaReaderUtil::isEntity);
     setFieldVajramsForEachEntity(typeDefinitionRegistry);
   }
 
-  private static TypeDefinitionRegistry getTypeDefinitionRegistry(CodeGenUtility util) {
+  private static TypeDefinitionRegistry getTypeDefinitionRegistry(File schemaFile) {
     SchemaParser schemaParser = new SchemaParser();
     TypeDefinitionRegistry typeDefinitionRegistry = new TypeDefinitionRegistry();
     List<File> files = new ArrayList<>();
-    FileObject schemaFileObject;
-    try {
-      schemaFileObject =
-          util.processingEnv()
-              .getFiler()
-              .getResource(StandardLocation.SOURCE_PATH, "", "Schema.graphqls");
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    try {
-      typeDefinitionRegistry.merge(
-          schemaParser.parse(schemaFileObject.getCharContent(false).toString()));
 
-      String rootPackageName = getRootPackageName(util, typeDefinitionRegistry);
-      String typesPath = rootPackageName.replace('.', File.separatorChar);
+    typeDefinitionRegistry.merge(schemaParser.parse(schemaFile));
 
-      File graphqlsDir =
-          new File(schemaFileObject.toUri()).getParentFile().toPath().resolve(typesPath).toFile();
+    String rootPackageName = getRootPackageName(typeDefinitionRegistry);
+    String typesPath = rootPackageName.replace('.', File.separatorChar);
 
-      String[] graphqlSchemaFileNames =
-          graphqlsDir.list((dir, name) -> name.endsWith(GRAPHQL_SCHEMA_EXTENSION));
-      if (graphqlSchemaFileNames == null) {
-        util.error("No files found in 'graphql_schemas' directory");
-      } else {
-        for (String graphqlSchemaFileName : graphqlSchemaFileNames) {
-          File graphqlSchemaFile = new File(graphqlsDir, graphqlSchemaFileName);
-          util.note("Found graphql schema file: " + graphqlSchemaFile);
-          if (!graphqlSchemaFile.exists()) {
-            break;
-          }
-          files.add(graphqlSchemaFile);
+    File graphqlsDir = schemaFile.getParentFile().toPath().resolve(typesPath).toFile();
+
+    String[] graphqlSchemaFileNames =
+        graphqlsDir.list((dir, name) -> name.endsWith(GRAPHQL_SCHEMA_EXTENSION));
+    if (graphqlSchemaFileNames == null) {
+      throw new IllegalStateException("No files found in 'graphql_schemas' directory");
+    } else {
+      for (String graphqlSchemaFileName : graphqlSchemaFileNames) {
+        File graphqlSchemaFile = new File(graphqlsDir, graphqlSchemaFileName);
+        log.info("Found graphql schema file {} ", graphqlSchemaFile);
+        if (!graphqlSchemaFile.exists()) {
+          break;
         }
+        files.add(graphqlSchemaFile);
       }
-
-    } catch (IOException e) {
-      throw new RuntimeException(e);
     }
     files.forEach(file -> typeDefinitionRegistry.merge(schemaParser.parse(file)));
     return typeDefinitionRegistry;
   }
 
-  private static String getRootPackageName(
-      CodeGenUtility util, TypeDefinitionRegistry typeDefinitionRegistry) {
+  private static String getRootPackageName(TypeDefinitionRegistry typeDefinitionRegistry) {
     SchemaDefinition schemaExtensionDefinition =
         typeDefinitionRegistry.schemaDefinition().orElseThrow();
     List<Directive> rootPackages = schemaExtensionDefinition.getDirectives("rootPackage");
     if (rootPackages.size() != 1) {
-      util.error(
+      throw new IllegalStateException(
           "Expected exactly 1 @rootPackage directive on schema definition. Found :"
               + rootPackages.size());
     }
@@ -150,11 +147,7 @@ public class SchemaReaderUtil {
 
   private void setFieldVajramsForEachEntity(TypeDefinitionRegistry typeRegistry) {
 
-    Map<GraphQLTypeName, ObjectTypeDefinition> entityTypesToDefinition =
-        getEntityTypes(typeRegistry);
-
-    for (Map.Entry<GraphQLTypeName, ObjectTypeDefinition> entry :
-        entityTypesToDefinition.entrySet()) {
+    for (Entry<GraphQLTypeName, ObjectTypeDefinition> entry : entityTypes.entrySet()) {
       GraphQLTypeName entityType = entry.getKey();
 
       ObjectTypeDefinition fieldDefinition = entry.getValue();
@@ -283,16 +276,20 @@ public class SchemaReaderUtil {
             .orElseThrow());
   }
 
-  Map<GraphQLTypeName, ObjectTypeDefinition> getEntityTypes(TypeDefinitionRegistry typeRegistry) {
+  private static ImmutableMap<GraphQLTypeName, ObjectTypeDefinition> computeGraphQLTypes(
+      TypeDefinitionRegistry typeRegistry) {
     Map<GraphQLTypeName, ObjectTypeDefinition> entityTypesToDefinition = new HashMap<>();
     for (TypeDefinition<?> typeDefinition : typeRegistry.types().values()) {
-      List<Directive> directives = typeDefinition.getDirectives("entity");
-      if (!directives.isEmpty()) {
-        GraphQLTypeName entityType = GraphQLTypeName.of(typeDefinition.getName());
-        entityTypesToDefinition.put(entityType, (ObjectTypeDefinition) typeDefinition);
+      if (typeDefinition instanceof ObjectTypeDefinition objectTypeDefinition) {
+        entityTypesToDefinition.put(
+            GraphQLTypeName.of(typeDefinition.getName()), objectTypeDefinition);
       }
     }
-    return entityTypesToDefinition;
+    return ImmutableMap.copyOf(entityTypesToDefinition);
+  }
+
+  static boolean isEntity(TypeDefinition<?> typeDefinition) {
+    return !typeDefinition.getDirectives("entity").isEmpty();
   }
 
   FieldType getFieldType(FieldDefinition field, @Nullable GraphQLTypeName graphqlTypeName) {
@@ -304,12 +301,10 @@ public class SchemaReaderUtil {
     if (type instanceof ListType listType) {
       isListType = true;
       //noinspection unchecked
-      typeName =
-          new GraphQLTypeName(
-              ((NamedNode<graphql.language.TypeName>) listType.getType()).getName());
+      typeName = new GraphQLTypeName(((NamedNode<TypeName>) listType.getType()).getName());
     } else {
       //noinspection unchecked
-      typeName = new GraphQLTypeName(((NamedNode<graphql.language.TypeName>) type).getName());
+      typeName = new GraphQLTypeName(((NamedNode<TypeName>) type).getName());
     }
     for (Directive directive : field.getDirectives()) {
       if (directive.getName().equals("packageRef")) {

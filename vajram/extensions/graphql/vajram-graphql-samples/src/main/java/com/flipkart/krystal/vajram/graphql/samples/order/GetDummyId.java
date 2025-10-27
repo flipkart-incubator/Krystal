@@ -18,7 +18,7 @@ public abstract class GetDummyId extends ComputeVajramDef<DummyId> {
   }
 
   @Output
-  static DummyId dummyIds(String id) {
-    return new DummyId(id + "_dummy_1");
+  static DummyId dummyIds(OrderId id) {
+    return new DummyId(id.value() + "_dummy_1");
   }
 }
