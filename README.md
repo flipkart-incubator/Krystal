@@ -155,3 +155,4 @@ Example : Need to update version from 1.6 to 1.7
     - Build and `publishToMavenLocal` and `publish` in krystal root directory
 
 # Test commit
+# Test commit 2
