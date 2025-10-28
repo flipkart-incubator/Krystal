@@ -1,0 +1,28 @@
+"""
+
+"""
+directive @entity on OBJECT
+
+"""
+Specifies the vajram which is responsible for fetching one or more fields of an graphQL type
+"""
+directive @dataFetcher(vajramId : String!, subPackage: String) on  FIELD_DEFINITION | OBJECT
+
+"""
+Specifies the vajram which is responsible for fetching one or more entity ids of an graphQL entity.
+This is useful when there is a graphql field of an entity type depicting a one to one or one 2 many relationship between two graphQL entities.
+Fpr example, if an entity of type Book has a field "author" of entity type Author, an @idFetcher vajram would return the AuthorId of the "author" field.
+"""
+directive @idFetcher(vajramId : String!, subPackage: String) on FIELD_DEFINITION
+
+"""
+Specifies the specific java type of corresponding to a generic GraphQL type like "Object"
+"""
+directive @javaType(packageName : String!, className: String!) on FIELD_DEFINITION
+
+"""
+Specifies the root package under which all data fetchers and id fetchers vajrams are located.
+If a vajram is located in a subpackage inside the root package,
+the sub package suffix can be specified separately in the @dataFetcher and @idFetcher directives.
+"""
+directive @rootPackage(name: String!) on SCHEMA

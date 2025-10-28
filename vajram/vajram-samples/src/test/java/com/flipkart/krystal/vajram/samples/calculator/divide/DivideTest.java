@@ -16,6 +16,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.RejectedExecutionException;
+import org.assertj.core.util.Throwables;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -90,7 +91,11 @@ class DivideTest {
               Divide_ReqImmutPojo._builder().numerator(5).denominator(7)._build());
     }
     CompletableFuture<Thread> resultThreadFuture = new CompletableFuture<>();
-    result.thenRun(() -> resultThreadFuture.complete(currentThread()));
+    result.thenRun(
+        () -> {
+          System.out.println(Throwables.getStackTrace(new RuntimeException()));
+          resultThreadFuture.complete(currentThread());
+        });
     assertThat(resultThreadFuture.join()).isEqualTo(eventLoopThread);
   }
 }

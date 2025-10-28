@@ -41,7 +41,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.Set;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -255,23 +254,28 @@ public class SchemaReaderUtil {
     }
   }
 
-  public ClassName getDataFetcherClassName(DirectivesContainer<?> directivesContainer) {
+  private @NonNull String getPackageNameFromDirective(
+      DirectivesContainer<?> directivesContainer, @Nullable String directiveName) {
+    if (directiveName == null) {
+      return rootPackageName;
+    }
     String subPackagePart =
-        getDirectiveArgumentString(directivesContainer, DATA_FETCHER, SUB_PACKAGE_ARG)
+        getDirectiveArgumentString(directivesContainer, directiveName, SUB_PACKAGE_ARG)
             .map(s -> "." + s)
             .orElse("");
+    return rootPackageName + subPackagePart;
+  }
+
+  public ClassName getDataFetcherClassName(DirectivesContainer<?> directivesContainer) {
+    String packageName = getPackageNameFromDirective(directivesContainer, DATA_FETCHER);
     return ClassName.get(
-        rootPackageName + subPackagePart,
+        packageName,
         getDirectiveArgumentString(directivesContainer, DATA_FETCHER, VAJRAM_ID_ARG).orElseThrow());
   }
 
   public ClassName getIdFetcherClassName(DirectivesContainer<?> directivesContainer) {
-    String subPackagePart =
-        getDirectiveArgumentString(directivesContainer, REFERENCE_FETCHER, SUB_PACKAGE_ARG)
-            .map(s -> "." + s)
-            .orElse("");
     return ClassName.get(
-        rootPackageName + subPackagePart,
+        getPackageNameFromDirective(directivesContainer, REFERENCE_FETCHER),
         getDirectiveArgumentString(directivesContainer, REFERENCE_FETCHER, VAJRAM_ID_ARG)
             .orElseThrow());
   }

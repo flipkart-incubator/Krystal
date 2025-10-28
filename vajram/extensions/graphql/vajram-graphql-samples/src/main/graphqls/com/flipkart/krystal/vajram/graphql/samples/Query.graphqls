@@ -1,4 +1,4 @@
-type Query @main(name: "Query"){
+type Query {
     """will return order using orderId, using OrderGraphQLAggregator"""
     order(orderId: ID): Order
 }

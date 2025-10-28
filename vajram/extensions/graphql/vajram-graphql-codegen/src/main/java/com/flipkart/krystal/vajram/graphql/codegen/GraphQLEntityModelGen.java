@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.graphql.codegen;
 
 import static com.flipkart.krystal.vajram.graphql.api.AbstractGraphQLEntity.DEFAULT_ENTITY_ID_FIELD;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQLTypeAggregatorGen.GRAPHQL_RESPONSE;
+import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.DATA_FETCHER;
 import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.getDirectiveArgumentString;
 import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.isEntity;
 import static javax.lang.model.element.Modifier.FINAL;
@@ -200,24 +201,15 @@ class GraphQLEntityModelGen implements CodeGenerator {
         (entity, entityTypeDefinition) -> {
           // Capture all the data fetchers which are mentioned in multiple field definitions
 
-          Map<String, List<FieldDefinition>> fieldDefinitions = new HashMap<>();
+          Map<ClassName, List<FieldDefinition>> fieldDefinitions = new HashMap<>();
 
           for (FieldDefinition fieldDefinition : entityTypeDefinition.getFieldDefinitions()) {
-            if (!fieldDefinition.getDirectives("dataFetcher").isEmpty()) {
-              StringValue stringValue =
-                  (StringValue)
-                      fieldDefinition
-                          .getDirectives("dataFetcher")
-                          .get(0)
-                          .getArgument("vajramId")
-                          .getValue();
-              String key = stringValue.getValue();
-
-              if (!fieldDefinitions.containsKey(key)) {
-                fieldDefinitions.put(key, new ArrayList<>());
-              }
-
-              fieldDefinitions.get(key).add(fieldDefinition);
+            if (!fieldDefinition.getDirectives(DATA_FETCHER).isEmpty()) {
+              fieldDefinitions
+                  .computeIfAbsent(
+                      schemaReaderUtil.getDataFetcherClassName(fieldDefinition),
+                      _k -> new ArrayList<>())
+                  .add(fieldDefinition);
             }
           }
           // for dataFetchers which have the size greater than one, create the wrapper class which
@@ -225,7 +217,9 @@ class GraphQLEntityModelGen implements CodeGenerator {
           fieldDefinitions.forEach(
               (dataFetcherName, fieldDefinitionList) -> {
                 ClassName className =
-                    ClassName.get(rootPackageName, dataFetcherName + GRAPHQL_RESPONSE);
+                    ClassName.get(
+                        dataFetcherName.packageName(),
+                        dataFetcherName.simpleName() + GRAPHQL_RESPONSE);
                 if (fieldDefinitionList.size() > 1) {
                   TypeSpec.Builder builder = TypeSpec.classBuilder(className);
 

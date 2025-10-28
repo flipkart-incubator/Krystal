@@ -1,13 +1,3 @@
-# Directives for specifying data fetching and reference behavior
-directive @dataFetcher(vajramId : String, subPackage: String) on  FIELD_DEFINITION | OBJECT
-directive @refFetcher(vajramId : String, subPackage: String) on FIELD_DEFINITION
-directive @typeAggregator(typeAggregator : String) on OBJECT
-directive @packageRef(name : String, class: String) on FIELD_DEFINITION
-directive @entity(name : String, identifierKey : String) on OBJECT
-directive @main(name : String) on OBJECT
-directive @specifiedBy(url: String!) on SCALAR
-directive @rootPackage(name: String) on SCHEMA
-
 schema @rootPackage(name: "com.flipkart.krystal.vajram.graphql.samples") {
     query: Query
 }
