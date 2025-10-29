@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.IOException;
 import javax.tools.FileObject;
 import javax.tools.StandardLocation;
-import lombok.experimental.UtilityClass;
 
 public final class GraphQlCodeGenUtil {
 

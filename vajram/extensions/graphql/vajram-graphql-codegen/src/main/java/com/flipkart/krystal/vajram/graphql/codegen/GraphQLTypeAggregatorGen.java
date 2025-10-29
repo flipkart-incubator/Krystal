@@ -16,12 +16,12 @@ import static javax.lang.model.element.Modifier.FINAL;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
-import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.facets.*;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajram.graphql.api.GraphQLUtils;
@@ -278,13 +278,33 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                 entry("entityType", graphQlFieldSpec.fieldType().declaredType()),
                 entry("arrayList", ArrayList.class)));
       } else {
-        codeBlockBuilder.addStatement("$L.ifPresent(entity::$L)", facetName, facetName);
+        codeBlockBuilder.addNamed(
+            """
+            if ($facetName:L.errorOpt().isPresent()) {
+              entity._errors().put($fieldName:S, $list:T.of($facetName:L.errorOpt().get()));
+            } else if ($facetName:L.valueOpt().isPresent()) {
+              entity.$facetName:L($facetName:L.valueOpt().get());
+            }
+            """,
+            Map.ofEntries(
+                entry("facetName", facetName),
+                entry("fieldName", graphQlFieldSpec.fieldName()),
+                entry("list", List.class)));
       }
     } else {
-      codeBlockBuilder.add("if($L.isPresent()) {", facetName);
+      codeBlockBuilder.addNamed(
+          """
+          if ($facetName:L.errorOpt().isPresent()) {
+            entity._errors().put($facetNameStr:S, $list:T.of($facetName:L.errorOpt().get()));
+          } else if ($facetName:L.valueOpt().isPresent()) {
+          """,
+          Map.ofEntries(
+              entry("facetName", facetName),
+              entry("facetNameStr", facetName),
+              entry("list", List.class)));
       for (GraphQlFieldSpec graphQlFieldSpec : graphQlFieldSpecs) {
         codeBlockBuilder.addStatement(
-            "entity.$L($L.get().$L())",
+            "  entity.$L($L.valueOpt().get().$L())",
             graphQlFieldSpec.fieldName(),
             facetName,
             graphQlFieldSpec.fieldName());
@@ -297,10 +317,6 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
   private MethodSpec outputLogic(GraphQLTypeName entityName) {
     MethodSpec.Builder builder =
         MethodSpec.methodBuilder("output")
-            .addAnnotation(
-                AnnotationSpec.builder(SuppressWarnings.class)
-                    .addMember("value", "$S", "OptionalUsedAsFieldOrParameterType")
-                    .build())
             .addAnnotation(Output.class)
             .addModifiers(STATIC)
             .returns(
@@ -321,7 +337,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
               ClassName dataFetcherClassName = fetcher.className();
               builder.addParameter(
                   ParameterizedTypeName.get(
-                      ClassName.get(Optional.class),
+                      ClassName.get(Errable.class),
                       getFetcherResponseType(dataFetcherClassName, fields)),
                   getFacetName(fetcher, fields));
               builder.addCode("$L", getFieldSetters(fetcher, fields));
@@ -341,7 +357,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                           getRequestClassName(aggregatorClassName),
                           fieldType.declaredType())
                       : ParameterizedTypeName.get(
-                          ClassName.get(Optional.class), fieldType.declaredType()),
+                          ClassName.get(Errable.class), fieldType.declaredType()),
                   graphQlFieldSpec.fieldName());
               builder.addCode("$L", getFieldSetters(fetcher, List.of(graphQlFieldSpec)));
             });
@@ -404,7 +420,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
             .addParameter(ExecutionStrategyParameters.class, "graphql_executionStrategyParams")
             .addParameter(entityClassName, "entity")
             .addCode(
-"""
+                """
             if ($T.isFieldQueriedInTheNestedType($L_FIELDS, $L)) {
               return $T.executeWith($T._builder()
                   .$L(($T)entity.id()));
@@ -481,12 +497,12 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
             .addParameter(VajramExecutionStrategy.class, "graphql_executionStrategy")
             .addParameter(ExecutionStrategyParameters.class, "graphql_executionStrategyParams")
             .addParameter(
-                ParameterizedTypeName.get(ClassName.get(Optional.class), fetcherResponseType),
+                ParameterizedTypeName.get(ClassName.get(Errable.class), fetcherResponseType),
                 fetcherFacetName)
             .addNamedCode(
-"""
+                """
     if ($graphqlUtils:T.isFieldQueriedInTheNestedType($fieldName:S, graphql_executionStrategyParams)
-        && $fetcherFacetName:L.isPresent()) {
+        && $fetcherFacetName:L.valueOpt().isPresent()) {
       try {
         $forLoopStart:L
         $entityType:T _entity = new $entityType:T($fetcherFacetItem:L);
@@ -513,7 +529,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                     entry("fieldName", fieldName),
                     entry("fetcherFacetName", fetcherFacetName),
                     entry(
-                        "fetcherFacetItem", canFanout ? "_entityId" : fetcherFacetName + ".get()"),
+                        "fetcherFacetItem", canFanout ? "_entityId" : fetcherFacetName + ".valueOpt().get()"),
                     entry("entityType", fieldSpec.fieldType().declaredType()),
                     entry("reqPojoType", depReqImmutPojoType),
                     entry("throwable", Throwable.class),
@@ -521,9 +537,9 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                         "forLoopStart",
                         canFanout
                             ? CodeBlock.of(
-"""
+                                """
         $T<$T> _reqs = new $T<>();
-        for (var _entityId : $L.get()) {
+        for (var _entityId : $L.valueOpt().get()) {
 """,
                                 List.class,
                                 depReqImmutType.nestedClass("Builder"),
@@ -534,11 +550,10 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                         "forLoopEnd",
                         canFanout
                             ? CodeBlock.of(
-"""
+                                """
         _reqs.add(_req);
         }
-""",
-                                fetcherFacetName)
+""", fetcherFacetName)
                             : CodeBlock.of("")),
                     entry(
                         "execute",

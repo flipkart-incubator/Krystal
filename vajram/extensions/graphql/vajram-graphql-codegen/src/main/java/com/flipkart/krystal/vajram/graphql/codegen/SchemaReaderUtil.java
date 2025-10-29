@@ -3,7 +3,6 @@ package com.flipkart.krystal.vajram.graphql.codegen;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphqlFetcherType.ID_FETCHER;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphqlFetcherType.MULTI_FIELD_DATA_FETCHER;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphqlFetcherType.SINGLE_FIELD_DATA_FETCHER;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNullElse;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
@@ -33,7 +32,6 @@ import graphql.language.TypeDefinition;
 import graphql.language.TypeName;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -330,16 +328,12 @@ public class SchemaReaderUtil {
           case "Int" -> ClassName.get(Integer.class);
           case "Boolean" -> ClassName.get(Boolean.class);
           case "Float" -> ClassName.get(Float.class);
-          case "ID" ->
-              graphqlTypeName != null
-                  ? entityIdClassName(
-                      ClassName.get(
-                          getPackageNameForType(graphqlTypeName), graphqlTypeName.value()))
-                  : ClassName.get(Object.class);
-          default ->
-              ClassName.get(
-                  requireNonNullElse(packageName, getPackageNameForType(typeName)),
-                  typeName.value());
+          case "ID" -> graphqlTypeName != null
+              ? entityIdClassName(
+                  ClassName.get(getPackageNameForType(graphqlTypeName), graphqlTypeName.value()))
+              : ClassName.get(Object.class);
+          default -> ClassName.get(
+              requireNonNullElse(packageName, getPackageNameForType(typeName)), typeName.value());
         };
 
     if (isListType) {

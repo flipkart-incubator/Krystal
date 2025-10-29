@@ -6,13 +6,9 @@ import static com.google.common.base.Throwables.getStackTraceAsString;
 
 import com.flipkart.krystal.codegen.common.models.AbstractKrystalAnnoProcessor;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
-import com.flipkart.krystal.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.codegen.common.models.RunOnlyWhenCodegenPhaseIs;
-import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
-import com.flipkart.krystal.vajram.graphql.api.GraphQLFetcher;
 import com.google.auto.service.AutoService;
 import java.util.Set;
-import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;

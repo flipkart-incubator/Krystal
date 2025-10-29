@@ -2,7 +2,6 @@ package com.flipkart.krystal.data;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import lombok.EqualsAndHashCode;

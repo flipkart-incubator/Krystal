@@ -1,6 +1,5 @@
 package com.flipkart.krystal.krystex.kryon;
 
-import com.flipkart.krystal.krystex.KrystalExecutorUtil;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;

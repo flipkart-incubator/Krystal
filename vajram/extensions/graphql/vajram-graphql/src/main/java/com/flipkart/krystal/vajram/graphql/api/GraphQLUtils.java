@@ -1,24 +1,16 @@
 package com.flipkart.krystal.vajram.graphql.api;
 
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.FacetValues;
 import com.google.common.collect.ImmutableList;
 import graphql.execution.ExecutionStrategyParameters;
-import graphql.language.Directive;
 import graphql.language.Field;
-import graphql.language.ObjectTypeDefinition;
 import graphql.language.Selection;
 import graphql.language.SelectionSet;
-import graphql.language.TypeDefinition;
 import graphql.scalars.ExtendedScalars;
 import graphql.schema.idl.RuntimeWiring;
-import graphql.schema.idl.TypeDefinitionRegistry;
-import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import lombok.experimental.UtilityClass;
 
