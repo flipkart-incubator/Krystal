@@ -4,6 +4,7 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -22,5 +23,11 @@ public record NonNil<T>(@NonNull T value) implements Success<T> {
   @Override
   public @NonNull T valueOrThrow() {
     return value;
+  }
+
+  @Override
+  public void handle(
+      Consumer<? super Throwable> ifFailure, Runnable ifNil, Consumer<? super T> ifNonNil) {
+    ifNonNil.accept(value);
   }
 }

@@ -6,6 +6,7 @@ import com.flipkart.krystal.except.ThrowingCallable;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -63,6 +64,12 @@ public sealed interface Errable<T> extends FacetValue<T>, SingleFacetValue<T>
   default Errable<T> asErrable() {
     return this;
   }
+
+  default void handle(Consumer<? super Throwable> ifFailure, Consumer<? super T> ifNonNil) {
+    handle(ifFailure, () -> {}, ifNonNil);
+  }
+
+  void handle(Consumer<? super Throwable> ifFailure, Runnable ifNil, Consumer<? super T> ifNonNil);
 
   /* ***********************************************************************************************/
   /* ************************************** Static utilities ***************************************/

@@ -1,24 +1,11 @@
 package com.flipkart.krystal.vajram.graphql.api;
 
-import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.FacetValues;
-import com.google.common.collect.ImmutableList;
 import graphql.execution.ExecutionStrategyParameters;
-import graphql.language.Directive;
 import graphql.language.Field;
-import graphql.language.ObjectTypeDefinition;
 import graphql.language.Selection;
 import graphql.language.SelectionSet;
-import graphql.language.TypeDefinition;
 import graphql.scalars.ExtendedScalars;
 import graphql.schema.idl.RuntimeWiring;
-import graphql.schema.idl.TypeDefinitionRegistry;
-import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import lombok.experimental.UtilityClass;
 
@@ -62,36 +49,5 @@ public class GraphQLUtils {
       }
     }
     return false;
-  }
-
-  public static void handleErrable(
-      String fieldName, Errable<?> errable, AbstractGraphQlModel<?> model) {
-    errable.errorOpt().ifPresent(error -> model._putError(fieldName, ImmutableList.of(error)));
-    errable
-        .valueOpt()
-        .ifPresent(
-            value -> {
-              if (model._putValue(fieldName, value) != null) {
-                throw new IllegalArgumentException(
-                    "Attempt to set '%s' after it was already set. Old value: %s, New value: %s"
-                        .formatted(fieldName, model._values().get(fieldName), value));
-              }
-            });
-  }
-
-  public static <T> void handleErrable(
-      String fieldName, Collection<Errable<T>> errables, AbstractGraphQlModel<?> model) {
-    List<Object> values = new ArrayList<>();
-    List<Throwable> errors = new ArrayList<>();
-    for (Errable<T> errable : errables) {
-      errable.errorOpt().ifPresent(errors::add);
-      errable.valueOpt().ifPresent(values::add);
-    }
-    model._putError(fieldName, errors);
-    if (model._putValue(fieldName, values) != null) {
-      throw new IllegalArgumentException(
-          "Attempt to set '%s' after it was already set. Old value: %s, New value: %s"
-              .formatted(fieldName, model._values().get(fieldName), values));
-    }
   }
 }

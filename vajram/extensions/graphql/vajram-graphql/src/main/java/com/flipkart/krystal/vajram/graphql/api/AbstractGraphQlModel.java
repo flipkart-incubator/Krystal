@@ -99,7 +99,11 @@ public abstract class AbstractGraphQlModel<T extends AbstractGraphQlModel<T>> {
     return unmodifiableMap(_errors);
   }
 
-  final void _putError(String fieldName, List<Throwable> errors) {
+  public final void _putError(String fieldName, Throwable error) {
+    _errors.computeIfAbsent(fieldName, _k -> new ArrayList<>()).add(error);
+  }
+
+  public final void _putErrors(String fieldName, List<Throwable> errors) {
     _errors.put(fieldName, unmodifiableList(errors));
   }
 
