@@ -153,6 +153,3 @@ Example : Need to update version from 1.6 to 1.7
       vajramDef-codegen's buildscript block
       to `classpath 'com.flipkart.krystal:vajram:'+ project.krystal_version`
     - Build and `publishToMavenLocal` and `publish` in krystal root directory
-
-# Test commit
-# Test commit 2
