@@ -5,6 +5,7 @@ import static java.util.concurrent.CompletableFuture.failedFuture;
 import com.flipkart.krystal.except.StackTracelessException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import lombok.EqualsAndHashCode;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -38,6 +39,12 @@ public final class Failure<T> implements Errable<T> {
   @Override
   public @NonNull T valueOrThrow() {
     throw asRuntimeException();
+  }
+
+  @Override
+  public void handle(
+      Consumer<? super Throwable> ifFailure, Runnable ifNil, Consumer<? super T> ifNonNil) {
+    ifFailure.accept(error);
   }
 
   @Override

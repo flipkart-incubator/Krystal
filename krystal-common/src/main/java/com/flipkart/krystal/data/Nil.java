@@ -2,9 +2,9 @@ package com.flipkart.krystal.data;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -35,6 +35,12 @@ public final class Nil<T> implements Success<T> {
   @Override
   public @NonNull T valueOrThrow() {
     throw new NilValueException();
+  }
+
+  @Override
+  public void handle(
+      Consumer<? super Throwable> ifFailure, Runnable ifNil, Consumer<? super T> ifNonNil) {
+    ifNil.run();
   }
 
   @SuppressWarnings("unchecked")
