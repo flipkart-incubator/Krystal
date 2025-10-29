@@ -48,7 +48,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public class SchemaReaderUtil {
 
   public static final String DATA_FETCHER = "dataFetcher";
-  public static final String REFERENCE_FETCHER = "refFetcher";
+  public static final String REFERENCE_FETCHER = "idFetcher";
   public static final String VAJRAM_ID_ARG = "vajramId";
   public static final String SUB_PACKAGE_ARG = "subPackage";
 
@@ -163,18 +163,35 @@ public class SchemaReaderUtil {
           fieldToFetcherMap.put(
               fieldSpecFromField(nestedField, ""),
               new Fetcher(getIdFetcherClassName(nestedField), ID_FETCHER));
-          ObjectTypeDefinition objectTypeDefinition =
-              (ObjectTypeDefinition) typeRegistry.getType(nestedField.getType()).orElseThrow();
-          if (objectTypeDefinition.hasDirective("entity")) {
-            GraphQLTypeName graphQlTypeName = new GraphQLTypeName(objectTypeDefinition.getName());
-            String packageName = getPackageNameForType(graphQlTypeName);
-            String typeAggregatorSimpleName =
-                getDirectiveArgumentString(objectTypeDefinition, "entity", "name")
-                        .orElse(graphQlTypeName.value())
-                    + GRAPHQL_AGGREGATOR;
-            fieldToTypeAggregator.put(
-                fieldSpecFromField(nestedField, ""),
-                ClassName.get(packageName, typeAggregatorSimpleName));
+          // Unwrap ListType and NonNullType to get the actual entity type
+          Type<?> fieldType = nestedField.getType();
+          Type<?> baseType = fieldType;
+
+          // Unwrap ListType
+          if (fieldType instanceof ListType listType) {
+            baseType = listType.getType();
+          }
+
+          // Unwrap NonNullType
+          if (baseType instanceof graphql.language.NonNullType nonNullType) {
+            baseType = nonNullType.getType();
+          }
+
+          try {
+            ObjectTypeDefinition objectTypeDefinition =
+                (ObjectTypeDefinition) typeRegistry.getType(baseType).orElseThrow();
+            if (objectTypeDefinition.hasDirective("entity")) {
+              GraphQLTypeName graphQlTypeName = new GraphQLTypeName(objectTypeDefinition.getName());
+              String packageName = getPackageNameForType(graphQlTypeName);
+              String typeAggregatorSimpleName =
+                  getDirectiveArgumentString(objectTypeDefinition, "entity", "name")
+                          .orElse(graphQlTypeName.value())
+                      + GRAPHQL_AGGREGATOR;
+              ClassName aggregatorClass = ClassName.get(packageName, typeAggregatorSimpleName);
+              fieldToTypeAggregator.put(fieldSpecFromField(nestedField, ""), aggregatorClass);
+            }
+          } catch (Exception e) {
+            // Silently ignore - type might not be an entity
           }
 
         } else {

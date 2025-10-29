@@ -529,7 +529,8 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                     entry("fieldName", fieldName),
                     entry("fetcherFacetName", fetcherFacetName),
                     entry(
-                        "fetcherFacetItem", canFanout ? "_entityId" : fetcherFacetName + ".valueOpt().get()"),
+                        "fetcherFacetItem",
+                        canFanout ? "_entityId" : fetcherFacetName + ".valueOpt().get()"),
                     entry("entityType", fieldSpec.fieldType().declaredType()),
                     entry("reqPojoType", depReqImmutPojoType),
                     entry("throwable", Throwable.class),
