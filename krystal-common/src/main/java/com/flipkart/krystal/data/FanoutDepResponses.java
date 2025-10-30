@@ -6,6 +6,7 @@ import static java.util.Collections.unmodifiableList;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
 import lombok.Getter;
@@ -42,6 +43,19 @@ public final class FanoutDepResponses<R extends Request<T>, T> implements DepRes
       responsesAsMap = asMap();
     }
     return responsesAsMap.getOrDefault(request._build(), nil());
+  }
+
+  public Errable<List<T>> responses() {
+    var responses = new ArrayList<T>(requestResponsePairs().size());
+    for (RequestResponse<R, T> _rrp : requestResponsePairs()) {
+      Errable<T> response = _rrp.response();
+      if (response instanceof Failure<T> f) {
+        //noinspection unchecked
+        return (Errable<List<T>>) f;
+      }
+      responses.add(response.valueOrThrow());
+    }
+    return Errable.withValue(responses);
   }
 
   public void forEach(BiConsumer<R, Errable<T>> action) {
