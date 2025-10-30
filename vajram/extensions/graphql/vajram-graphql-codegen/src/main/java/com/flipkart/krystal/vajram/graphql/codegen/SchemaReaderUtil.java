@@ -22,7 +22,6 @@ import graphql.language.DirectivesContainer;
 import graphql.language.EnumTypeDefinition;
 import graphql.language.FieldDefinition;
 import graphql.language.ListType;
-import graphql.language.NamedNode;
 import graphql.language.ObjectTypeDefinition;
 import graphql.language.ScalarTypeDefinition;
 import graphql.language.SchemaDefinition;
@@ -318,7 +317,7 @@ public class SchemaReaderUtil {
     boolean isListType = false;
     ClassName fieldTypeClassName;
     String packageName = null;
-    
+
     // Unwrap NonNullType and ListType recursively to get to TypeName
     Type<?> baseType = type;
     while (baseType instanceof graphql.language.NonNullType nonNullType) {
@@ -332,7 +331,8 @@ public class SchemaReaderUtil {
       }
     }
     if (!(baseType instanceof TypeName typeNameNode)) {
-      throw new IllegalArgumentException("Unable to extract TypeName from field: " + field.getName());
+      throw new IllegalArgumentException(
+          "Unable to extract TypeName from field: " + field.getName());
     }
     typeName = new GraphQLTypeName(typeNameNode.getName());
     for (Directive directive : field.getDirectives()) {
@@ -355,12 +355,16 @@ public class SchemaReaderUtil {
           case "Int" -> ClassName.get(Integer.class);
           case "Boolean" -> ClassName.get(Boolean.class);
           case "Float" -> ClassName.get(Float.class);
-          case "ID" -> graphqlTypeName != null
-              ? entityIdClassName(
-                  ClassName.get(getPackageNameForType(graphqlTypeName), graphqlTypeName.value()))
-              : ClassName.get(Object.class);
-          default -> ClassName.get(
-              requireNonNullElse(packageName, getPackageNameForType(typeName)), typeName.value());
+          case "ID" ->
+              graphqlTypeName != null
+                  ? entityIdClassName(
+                      ClassName.get(
+                          getPackageNameForType(graphqlTypeName), graphqlTypeName.value()))
+                  : ClassName.get(Object.class);
+          default ->
+              ClassName.get(
+                  requireNonNullElse(packageName, getPackageNameForType(typeName)),
+                  typeName.value());
         };
 
     if (isListType) {
