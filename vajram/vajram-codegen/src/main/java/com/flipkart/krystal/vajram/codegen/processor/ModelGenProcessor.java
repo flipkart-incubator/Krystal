@@ -51,7 +51,7 @@ public final class ModelGenProcessor extends AbstractKrystalAnnoProcessor {
     Iterable<ModelsCodeGeneratorProvider> codeGeneratorProviders =
         Iterables.concat(
             List.of(DEFAULT_MODELS_CODEGEN_PROVIDER),
-            // Load custom vajram code generator providers
+            // Load custom model code generator providers
             ServiceLoader.load(
                 ModelsCodeGeneratorProvider.class, this.getClass().getClassLoader()));
 

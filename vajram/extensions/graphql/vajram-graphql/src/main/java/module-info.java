@@ -1,5 +1,6 @@
 module krystal.vajram.extensions.graphql {
   exports com.flipkart.krystal.vajram.graphql.api;
+  exports com.flipkart.krystal.vajram.graphql.api.model;
 
   requires flipkart.krystal.common;
   requires com.google.common;
