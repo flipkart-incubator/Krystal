@@ -3,7 +3,6 @@ package com.flipkart.krystal.data;
 import com.flipkart.krystal.data.FacetValue.SingleFacetValue;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.except.ThrowingCallable;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;

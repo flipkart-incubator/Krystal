@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.graphql.api;
 
-
 import com.flipkart.krystal.model.ModelClusterRoot;
 
 @ModelClusterRoot

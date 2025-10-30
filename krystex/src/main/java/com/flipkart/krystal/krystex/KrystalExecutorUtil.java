@@ -2,7 +2,6 @@ package com.flipkart.krystal.krystex;
 
 import static com.flipkart.krystal.krystex.internal.KryonExecutorExecService.THREAD_LOCAL;
 
-import com.flipkart.krystal.krystex.kryon.KryonExecutor;
 import lombok.experimental.UtilityClass;
 import org.checkerframework.checker.nullness.qual.Nullable;
 

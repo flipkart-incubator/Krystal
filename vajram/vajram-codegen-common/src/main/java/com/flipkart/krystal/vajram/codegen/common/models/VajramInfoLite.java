@@ -8,7 +8,6 @@ import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.vajram.Trait;
-import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.TypeName;

@@ -3,7 +3,6 @@ package com.flipkart.krystal.vajram.graphql.codegen;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphqlFetcherType.ID_FETCHER;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphqlFetcherType.MULTI_FIELD_DATA_FETCHER;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphqlFetcherType.SINGLE_FIELD_DATA_FETCHER;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNullElse;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
@@ -23,7 +22,6 @@ import graphql.language.DirectivesContainer;
 import graphql.language.EnumTypeDefinition;
 import graphql.language.FieldDefinition;
 import graphql.language.ListType;
-import graphql.language.NamedNode;
 import graphql.language.ObjectTypeDefinition;
 import graphql.language.ScalarTypeDefinition;
 import graphql.language.SchemaDefinition;
@@ -33,7 +31,6 @@ import graphql.language.TypeDefinition;
 import graphql.language.TypeName;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -50,7 +47,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public class SchemaReaderUtil {
 
   public static final String DATA_FETCHER = "dataFetcher";
-  public static final String REFERENCE_FETCHER = "refFetcher";
+  public static final String REFERENCE_FETCHER = "idFetcher";
   public static final String VAJRAM_ID_ARG = "vajramId";
   public static final String SUB_PACKAGE_ARG = "subPackage";
 
@@ -165,18 +162,36 @@ public class SchemaReaderUtil {
           fieldToFetcherMap.put(
               fieldSpecFromField(nestedField, ""),
               new Fetcher(getIdFetcherClassName(nestedField), ID_FETCHER));
-          ObjectTypeDefinition objectTypeDefinition =
-              (ObjectTypeDefinition) typeRegistry.getType(nestedField.getType()).orElseThrow();
-          if (objectTypeDefinition.hasDirective("entity")) {
-            GraphQLTypeName graphQlTypeName = new GraphQLTypeName(objectTypeDefinition.getName());
-            String packageName = getPackageNameForType(graphQlTypeName);
-            String typeAggregatorSimpleName =
-                getDirectiveArgumentString(objectTypeDefinition, "entity", "name")
-                        .orElse(graphQlTypeName.value())
-                    + GRAPHQL_AGGREGATOR;
-            fieldToTypeAggregator.put(
-                fieldSpecFromField(nestedField, ""),
-                ClassName.get(packageName, typeAggregatorSimpleName));
+          // Unwrap ListType and NonNullType recursively to get the actual entity type
+          Type<?> baseType = nestedField.getType();
+          while (baseType instanceof graphql.language.NonNullType nonNullType) {
+            baseType = nonNullType.getType();
+          }
+          while (baseType instanceof ListType listType) {
+            baseType = listType.getType();
+            while (baseType instanceof graphql.language.NonNullType nonNullType) {
+              baseType = nonNullType.getType();
+            }
+          }
+          if (!(baseType instanceof TypeName typeName)) {
+            continue;
+          }
+
+          try {
+            ObjectTypeDefinition objectTypeDefinition =
+                (ObjectTypeDefinition) typeRegistry.getType(typeName).orElseThrow();
+            if (objectTypeDefinition.hasDirective("entity")) {
+              GraphQLTypeName graphQlTypeName = new GraphQLTypeName(objectTypeDefinition.getName());
+              String packageName = getPackageNameForType(graphQlTypeName);
+              String typeAggregatorSimpleName =
+                  getDirectiveArgumentString(objectTypeDefinition, "entity", "name")
+                          .orElse(graphQlTypeName.value())
+                      + GRAPHQL_AGGREGATOR;
+              ClassName aggregatorClass = ClassName.get(packageName, typeAggregatorSimpleName);
+              fieldToTypeAggregator.put(fieldSpecFromField(nestedField, ""), aggregatorClass);
+            }
+          } catch (Exception e) {
+            // Silently ignore - type might not be an entity
           }
 
         } else {
@@ -302,14 +317,24 @@ public class SchemaReaderUtil {
     boolean isListType = false;
     ClassName fieldTypeClassName;
     String packageName = null;
-    if (type instanceof ListType listType) {
-      isListType = true;
-      //noinspection unchecked
-      typeName = new GraphQLTypeName(((NamedNode<TypeName>) listType.getType()).getName());
-    } else {
-      //noinspection unchecked
-      typeName = new GraphQLTypeName(((NamedNode<TypeName>) type).getName());
+
+    // Unwrap NonNullType and ListType recursively to get to TypeName
+    Type<?> baseType = type;
+    while (baseType instanceof graphql.language.NonNullType nonNullType) {
+      baseType = nonNullType.getType();
     }
+    if (baseType instanceof ListType listType) {
+      isListType = true;
+      baseType = listType.getType();
+      while (baseType instanceof graphql.language.NonNullType nonNullType) {
+        baseType = nonNullType.getType();
+      }
+    }
+    if (!(baseType instanceof TypeName typeNameNode)) {
+      throw new IllegalArgumentException(
+          "Unable to extract TypeName from field: " + field.getName());
+    }
+    typeName = new GraphQLTypeName(typeNameNode.getName());
     for (Directive directive : field.getDirectives()) {
       if (directive.getName().equals("packageRef")) {
         for (Argument argument : directive.getArguments()) {
