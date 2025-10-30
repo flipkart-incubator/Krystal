@@ -257,59 +257,57 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
   }
 
   private CodeBlock getFieldSetters(Fetcher fetcher, List<GraphQlFieldSpec> graphQlFieldSpecs) {
-
     CodeBlock.Builder codeBlockBuilder = CodeBlock.builder();
     String facetName = getFacetName(fetcher, graphQlFieldSpecs);
+
     if (graphQlFieldSpecs.size() == 1) {
       GraphQlFieldSpec graphQlFieldSpec = graphQlFieldSpecs.get(0);
-      graphQlFieldSpec.fieldType().declaredType();
       boolean canFanout = graphQlFieldSpec.fieldDefinition().getType() instanceof ListType;
+
       if (TYPE_AGGREGATOR.equals(fetcher.type()) && canFanout) {
+        // Fanout case: dummies.responses().handle(...)
         codeBlockBuilder.addNamed(
             """
-                  var _$facetName:L_responses = new $arrayList:T<$entityType:T>($facetName:L.requestResponsePairs().size());
-                  $facetName:L
-                      .requestResponsePairs()
-                      .forEach(_rrp -> _$facetName:L_responses.add(_rrp.response().valueOrThrow()));
-                  entity.$facetName:L(_$facetName:L_responses);
-              """,
-            Map.ofEntries(
-                entry("facetName", getFacetName(fetcher, graphQlFieldSpecs)),
-                entry("entityType", graphQlFieldSpec.fieldType().declaredType()),
-                entry("arrayList", ArrayList.class)));
-      } else {
-        codeBlockBuilder.addNamed(
-            """
-            if ($facetName:L.errorOpt().isPresent()) {
-              entity._errors().put($fieldName:S, $list:T.of($facetName:L.errorOpt().get()));
-            } else if ($facetName:L.valueOpt().isPresent()) {
-              entity.$facetName:L($facetName:L.valueOpt().get());
-            }
+            $facetName:L
+                .responses()
+                .handle(_error -> entity._putError($fieldName:S, _error), _nonNil -> entity.$fieldName:L(_nonNil));
             """,
             Map.ofEntries(
-                entry("facetName", facetName),
-                entry("fieldName", graphQlFieldSpec.fieldName()),
-                entry("list", List.class)));
+                entry("facetName", facetName), entry("fieldName", graphQlFieldSpec.fieldName())));
+      } else if (TYPE_AGGREGATOR.equals(fetcher.type())) {
+        // Single type aggregator: dummy.handle(...)
+        codeBlockBuilder.addNamed(
+            """
+            $facetName:L.handle(
+                _error -> entity._putError($fieldName:S, _error),
+                _nonNil -> entity.$fieldName:L(_nonNil));
+            """,
+            Map.ofEntries(
+                entry("facetName", facetName), entry("fieldName", graphQlFieldSpec.fieldName())));
+      } else {
+        // Data fetcher single field
+        codeBlockBuilder.addNamed(
+            """
+            $facetName:L.handle(
+                _error -> entity._putError($fieldName:S, _error),
+                _nonNil -> entity.$fieldName:L(_nonNil));
+            """,
+            Map.ofEntries(
+                entry("facetName", facetName), entry("fieldName", graphQlFieldSpec.fieldName())));
       }
     } else {
-      codeBlockBuilder.addNamed(
-          """
-          if ($facetName:L.errorOpt().isPresent()) {
-            entity._errors().put($facetNameStr:S, $list:T.of($facetName:L.errorOpt().get()));
-          } else if ($facetName:L.valueOpt().isPresent()) {
-          """,
-          Map.ofEntries(
-              entry("facetName", facetName),
-              entry("facetNameStr", facetName),
-              entry("list", List.class)));
+      // Multiple fields from same fetcher: GetOrderItemNames returns {orderItemNames, name}
       for (GraphQlFieldSpec graphQlFieldSpec : graphQlFieldSpecs) {
-        codeBlockBuilder.addStatement(
-            "  entity.$L($L.valueOpt().get().$L())",
-            graphQlFieldSpec.fieldName(),
-            facetName,
-            graphQlFieldSpec.fieldName());
+        codeBlockBuilder.add("\n");
+        codeBlockBuilder.addNamed(
+            """
+            $facetName:L.handle(
+                _error -> entity._putError($fieldName:S, _error),
+                _nonNil -> entity.$fieldName:L(_nonNil.$fieldName:L()));
+            """,
+            Map.ofEntries(
+                entry("facetName", facetName), entry("fieldName", graphQlFieldSpec.fieldName())));
       }
-      codeBlockBuilder.add("}");
     }
     return codeBlockBuilder.build();
   }
@@ -420,7 +418,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
             .addParameter(ExecutionStrategyParameters.class, "graphql_executionStrategyParams")
             .addParameter(entityClassName, "entity")
             .addCode(
-                """
+"""
             if ($T.isFieldQueriedInTheNestedType($L_FIELDS, $L)) {
               return $T.executeWith($T._builder()
                   .$L(($T)entity.id()));
@@ -500,7 +498,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                 ParameterizedTypeName.get(ClassName.get(Errable.class), fetcherResponseType),
                 fetcherFacetName)
             .addNamedCode(
-                """
+"""
     if ($graphqlUtils:T.isFieldQueriedInTheNestedType($fieldName:S, graphql_executionStrategyParams)
         && $fetcherFacetName:L.valueOpt().isPresent()) {
       try {
@@ -538,7 +536,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                         "forLoopStart",
                         canFanout
                             ? CodeBlock.of(
-                                """
+"""
         $T<$T> _reqs = new $T<>();
         for (var _entityId : $L.valueOpt().get()) {
 """,
@@ -551,10 +549,11 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                         "forLoopEnd",
                         canFanout
                             ? CodeBlock.of(
-                                """
+"""
         _reqs.add(_req);
         }
-""", fetcherFacetName)
+""",
+                                fetcherFacetName)
                             : CodeBlock.of("")),
                     entry(
                         "execute",
