@@ -169,8 +169,16 @@ public class SchemaReaderUtil {
           // Track ALL GraphQL object types for __typename handling (both entity and non-entity)
           Type<?> fieldType = nestedField.getType();
           Type<?> actualFieldType = fieldType;
-          if (fieldType instanceof ListType listType) {
+          // Unwrap NonNullType first
+          while (actualFieldType instanceof graphql.language.NonNullType nonNullType) {
+            actualFieldType = nonNullType.getType();
+          }
+          if (actualFieldType instanceof ListType listType) {
             actualFieldType = listType.getType();
+            // Unwrap inner NonNullType
+            while (actualFieldType instanceof graphql.language.NonNullType nonNullType) {
+              actualFieldType = nonNullType.getType();
+            }
           }
           TypeDefinition<?> fieldTypeDefinition =
               typeRegistry.getType(actualFieldType).orElse(null);
@@ -219,8 +227,16 @@ public class SchemaReaderUtil {
           Type<?> fieldType = nestedField.getType();
 
           Type<?> actualFieldType = fieldType;
-          if (fieldType instanceof ListType listType) {
+          // Unwrap NonNullType first
+          while (actualFieldType instanceof graphql.language.NonNullType nonNullType) {
+            actualFieldType = nonNullType.getType();
+          }
+          if (actualFieldType instanceof ListType listType) {
             actualFieldType = listType.getType();
+            // Unwrap inner NonNullType
+            while (actualFieldType instanceof graphql.language.NonNullType nonNullType) {
+              actualFieldType = nonNullType.getType();
+            }
           }
 
           TypeDefinition<?> fieldTypeDefinition =
