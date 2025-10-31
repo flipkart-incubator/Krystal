@@ -86,7 +86,8 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                   .addAnnotation(AnnotationSpec.builder(Slf4j.class).build())
                   .addTypes(createFacetDefinitions(entityName))
                   .addMethods(getInputResolvers(entityName, entityTypeDefinition))
-                  .addMethod(outputLogic(entityName));
+                  .addMethod(outputLogic(entityName))
+                  .addMethod(handleTypenameFieldsLogic(entityName));
           refToFieldMap.forEach(
               (vajramClass, graphQlFieldSpecs) -> {
                 String vajramId = vajramClass.simpleName();
@@ -365,23 +366,42 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
               builder.addCode("$L", getFieldSetters(fetcher, List.of(graphQlFieldSpec)));
             });
 
+    builder.addStatement("handleTypenameFields(entity, graphql_executionStrategyParams)");
+
+    return builder.addStatement("return entity").build();
+  }
+
+  private MethodSpec handleTypenameFieldsLogic(GraphQLTypeName entityName) {
+    MethodSpec.Builder builder =
+        MethodSpec.methodBuilder("handleTypenameFields")
+            .addModifiers(PRIVATE, STATIC)
+            .returns(void.class)
+            .addParameter(
+                ClassName.get(
+                    schemaReaderUtil.getPackageNameForType(entityName), entityName.value()),
+                "entity")
+            .addParameter(ExecutionStrategyParameters.class, "graphql_executionStrategyParams");
+
+    // Add all __typename handling code
     schemaReaderUtil
         .entityTypeToAllGraphQLObjectFields()
         .getOrDefault(entityName, List.of())
-        .forEach(graphQLObjectField -> {
-          builder.addCode(generateGraphQLObjectTypenameHandling(graphQLObjectField));
-        });
+        .forEach(
+            graphQLObjectField -> {
+              builder.addCode(generateGraphQLObjectTypenameHandling(graphQLObjectField));
+            });
 
-    builder.addCode("""
-        
+    builder.addCode(
+        """
+
         if ($T.isFieldQueriedInTheNestedType($S, graphql_executionStrategyParams)) {
           entity.__typename(null);
         }
-        """, 
-        GraphQLUtils.class, 
+        """,
+        GraphQLUtils.class,
         TYPENAME_FIELD);
 
-    return builder.addStatement("return entity").build();
+    return builder.build();
   }
 
   private List<MethodSpec> getInputResolvers(
@@ -595,108 +615,136 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
 
   private CodeBlock generateGraphQLObjectTypenameHandling(GraphQlFieldSpec fieldSpec) {
     CodeBlock.Builder codeBuilder = CodeBlock.builder();
-    
+
     // Check if this is a list type
     boolean isListType = fieldSpec.fieldDefinition().getType() instanceof ListType;
-    
+
     if (isListType) {
       // Handle list of objects
-      codeBuilder.add("""
-          
+      codeBuilder.add(
+          """
+
           if (entity.$L() != null) {
             entity.$L().stream()
               .filter(java.util.Objects::nonNull)
               .filter(listItem -> $T.isFieldQueriedInTheNestedType("$L.__typename", graphql_executionStrategyParams))
               .forEach(listItem -> listItem.__typename(null));
           }
-          """, 
+          """,
           fieldSpec.fieldName(),
           fieldSpec.fieldName(),
           GraphQLUtils.class,
           fieldSpec.fieldName());
 
-      CodeBlock nestedHandling = generateUnifiedNestedObjectTypenameHandling("listItem", "", fieldSpec.fieldName(), fieldSpec.fieldType().declaredType());
+      CodeBlock nestedHandling =
+          generateUnifiedNestedObjectTypenameHandling(
+              "listItem", "", fieldSpec.fieldName(), fieldSpec.fieldType().declaredType());
       if (!nestedHandling.isEmpty()) {
-        codeBuilder.add("""
-            
+        // Indent the nested handling code
+        CodeBlock.Builder indentedNestedHandling = CodeBlock.builder();
+        indentedNestedHandling.indent();
+        indentedNestedHandling.indent();
+        indentedNestedHandling.add(nestedHandling);
+        indentedNestedHandling.unindent();
+        indentedNestedHandling.unindent();
+
+        codeBuilder.add(
+            """
+
             if (entity.$L() != null) {
               entity.$L().stream()
                 .filter(java.util.Objects::nonNull)
                 .forEach(listItem -> {
-            $L    });
+            $L
+                });
             }
             """,
             fieldSpec.fieldName(),
             fieldSpec.fieldName(),
-            nestedHandling);
+            indentedNestedHandling.build());
       }
     } else {
       // Handle single object
-      codeBuilder.add("""
-          
+      codeBuilder.add(
+          """
+
           if (entity.$L() != null) {
             if ($T.isFieldQueriedInTheNestedType("$L.__typename", graphql_executionStrategyParams)) {
               entity.$L().__typename(null);
             }
-          """, 
+          """,
           fieldSpec.fieldName(),
           GraphQLUtils.class,
           fieldSpec.fieldName(),
           fieldSpec.fieldName());
-      
+
       // Add recursive handling for nested objects within this GraphQL object
-      codeBuilder.add(generateUnifiedNestedObjectTypenameHandling("entity", fieldSpec.fieldName(), fieldSpec.fieldName(), fieldSpec.fieldType().declaredType()));
+      CodeBlock nestedCode =
+          generateUnifiedNestedObjectTypenameHandling(
+              "entity",
+              fieldSpec.fieldName(),
+              fieldSpec.fieldName(),
+              fieldSpec.fieldType().declaredType());
+      if (!nestedCode.isEmpty()) {
+        codeBuilder.indent();
+        codeBuilder.add(nestedCode);
+        codeBuilder.unindent();
+      }
       codeBuilder.add("}\n");
     }
-    
+
     return codeBuilder.build();
   }
 
   /**
-   * Generates code to handle __typename for nested objects within a given object field.
-   * This method recursively traverses the object structure based on the GraphQL schema.
-   * 
+   * Generates code to handle __typename for nested objects within a given object field. This method
+   * recursively traverses the object structure based on the GraphQL schema.
+   *
    * @param objectReference The object reference (e.g., "entity", "nestedEntity")
    * @param methodPath The method call path (e.g., "orderItem", "orderItem().productInfo")
    * @param graphqlFieldPath The GraphQL field path (e.g., "orderItem", "orderItem.productInfo")
    * @param objectType The TypeName of the GraphQL object type
    */
-  private CodeBlock generateUnifiedNestedObjectTypenameHandling(String objectReference, String methodPath, String graphqlFieldPath, TypeName objectType) {
+  private CodeBlock generateUnifiedNestedObjectTypenameHandling(
+      String objectReference, String methodPath, String graphqlFieldPath, TypeName objectType) {
     CodeBlock.Builder codeBuilder = CodeBlock.builder();
-    
+
     // Find the GraphQL type definition for this object
     GraphQLTypeName graphQLTypeName = findGraphQLTypeNameForClassName(objectType);
     if (graphQLTypeName == null) {
       return codeBuilder.build(); // Not a GraphQL object type
     }
-    
+
     ObjectTypeDefinition objectTypeDef = schemaReaderUtil.graphQLTypes().get(graphQLTypeName);
     if (objectTypeDef == null) {
       return codeBuilder.build();
     }
-    
+
     // Generate handling for each nested object field
     for (FieldDefinition field : objectTypeDef.getFieldDefinitions()) {
       Type<?> fieldType = field.getType();
-      
+
       // Handle ListType by unwrapping it
       Type<?> actualFieldType = fieldType;
       if (fieldType instanceof ListType listType) {
         actualFieldType = listType.getType();
       }
-      
-      TypeDefinition<?> fieldTypeDefinition = schemaReaderUtil.typeDefinitionRegistry().getType(actualFieldType).orElse(null);
-      
-      if (fieldTypeDefinition instanceof ObjectTypeDefinition && 
-          !fieldTypeDefinition.hasDirective(DATA_FETCHER)) {
+
+      TypeDefinition<?> fieldTypeDefinition =
+          schemaReaderUtil.typeDefinitionRegistry().getType(actualFieldType).orElse(null);
+
+      if (fieldTypeDefinition instanceof ObjectTypeDefinition
+          && !fieldTypeDefinition.hasDirective(DATA_FETCHER)) {
         // This is a nested GraphQL object field (generic approach)
         String nestedFieldName = field.getName();
         String nestedGraphqlFieldPath = graphqlFieldPath + "." + nestedFieldName;
-        
+
         if (fieldType instanceof ListType) {
           // Handle list of GraphQL objects - call __typename on each list item
-          String fullMethodPath = methodPath.isEmpty() ? nestedFieldName : methodPath + "()." + nestedFieldName;
-          codeBuilder.add("""
+          String fullMethodPath =
+              methodPath.isEmpty() ? nestedFieldName : methodPath + "()." + nestedFieldName;
+          codeBuilder.add(
+              """
               if ($L.$L() != null) {
                 $L.$L().stream()
                   .filter(java.util.Objects::nonNull)
@@ -704,58 +752,90 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                   .forEach(listItem -> listItem.__typename(null));
               }
               """,
-              objectReference, fullMethodPath,
-              objectReference, fullMethodPath,
+              objectReference,
+              fullMethodPath,
+              objectReference,
+              fullMethodPath,
               GraphQLUtils.class,
               nestedGraphqlFieldPath);
-          
+
           // Handle nested objects within each list item
-          ClassName nestedObjectClassName = ClassName.get(
-              schemaReaderUtil.getPackageNameForType(new GraphQLTypeName(fieldTypeDefinition.getName())),
-              fieldTypeDefinition.getName());
-          
+          ClassName nestedObjectClassName =
+              ClassName.get(
+                  schemaReaderUtil.getPackageNameForType(
+                      new GraphQLTypeName(fieldTypeDefinition.getName())),
+                  fieldTypeDefinition.getName());
+
           // Generate nested object handling for each list item
-          CodeBlock nestedHandling = generateUnifiedNestedObjectTypenameHandling("listItem", "", nestedGraphqlFieldPath, nestedObjectClassName);
+          CodeBlock nestedHandling =
+              generateUnifiedNestedObjectTypenameHandling(
+                  "listItem", "", nestedGraphqlFieldPath, nestedObjectClassName);
           if (!nestedHandling.isEmpty()) {
-            codeBuilder.add("""
-                
+            // Indent the nested handling code
+            CodeBlock.Builder indentedNestedHandling = CodeBlock.builder();
+            indentedNestedHandling.indent();
+            indentedNestedHandling.indent();
+            indentedNestedHandling.add(nestedHandling);
+            indentedNestedHandling.unindent();
+            indentedNestedHandling.unindent();
+
+            codeBuilder.add(
+                """
+
                 if ($L.$L() != null) {
                   $L.$L().stream()
                     .filter(java.util.Objects::nonNull)
                     .forEach(listItem -> {
-                $L    });
+                $L
+                    });
                 }
                 """,
-                objectReference, fullMethodPath,
-                objectReference, fullMethodPath,
-                nestedHandling);
+                objectReference,
+                fullMethodPath,
+                objectReference,
+                fullMethodPath,
+                indentedNestedHandling.build());
           }
         } else {
           // Handle single nested object
-          String fullMethodPath = methodPath.isEmpty() ? nestedFieldName : methodPath + "()." + nestedFieldName;
-          codeBuilder.add("""
+          String fullMethodPath =
+              methodPath.isEmpty() ? nestedFieldName : methodPath + "()." + nestedFieldName;
+          codeBuilder.add(
+              """
               if ($L.$L() != null) {
                 if ($T.isFieldQueriedInTheNestedType("$L.__typename", graphql_executionStrategyParams)) {
                   $L.$L().__typename(null);
                 }
               """,
-              objectReference, fullMethodPath,
+              objectReference,
+              fullMethodPath,
               GraphQLUtils.class,
               nestedGraphqlFieldPath,
-              objectReference, fullMethodPath);
-          
+              objectReference,
+              fullMethodPath);
+
           // Recursively handle deeper nesting
-          ClassName nestedObjectClassName = ClassName.get(
-              schemaReaderUtil.getPackageNameForType(new GraphQLTypeName(fieldTypeDefinition.getName())),
-              fieldTypeDefinition.getName());
-          String newMethodPath = methodPath.isEmpty() ? nestedFieldName : methodPath + "()." + nestedFieldName;
-          codeBuilder.add(generateUnifiedNestedObjectTypenameHandling(objectReference, newMethodPath, nestedGraphqlFieldPath, nestedObjectClassName));
-          
+          ClassName nestedObjectClassName =
+              ClassName.get(
+                  schemaReaderUtil.getPackageNameForType(
+                      new GraphQLTypeName(fieldTypeDefinition.getName())),
+                  fieldTypeDefinition.getName());
+          String newMethodPath =
+              methodPath.isEmpty() ? nestedFieldName : methodPath + "()." + nestedFieldName;
+          CodeBlock deeperNestedCode =
+              generateUnifiedNestedObjectTypenameHandling(
+                  objectReference, newMethodPath, nestedGraphqlFieldPath, nestedObjectClassName);
+          if (!deeperNestedCode.isEmpty()) {
+            codeBuilder.indent();
+            codeBuilder.add(deeperNestedCode);
+            codeBuilder.unindent();
+          }
+
           codeBuilder.add("}\n");
         }
       }
     }
-    
+
     return codeBuilder.build();
   }
 
@@ -763,21 +843,20 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
     if (!(typeName instanceof ClassName)) {
       return null;
     }
-    
+
     ClassName className = (ClassName) typeName;
-    
+
     GraphQLTypeName candidateTypeName = new GraphQLTypeName(className.simpleName());
-    
+
     if (schemaReaderUtil.graphQLTypes().containsKey(candidateTypeName)) {
-      ClassName expectedClassName = ClassName.get(
-          schemaReaderUtil.getPackageNameForType(candidateTypeName), 
-          candidateTypeName.value());
+      ClassName expectedClassName =
+          ClassName.get(
+              schemaReaderUtil.getPackageNameForType(candidateTypeName), candidateTypeName.value());
       if (expectedClassName.equals(className)) {
         return candidateTypeName;
       }
     }
-    
+
     return null;
   }
-
 }
