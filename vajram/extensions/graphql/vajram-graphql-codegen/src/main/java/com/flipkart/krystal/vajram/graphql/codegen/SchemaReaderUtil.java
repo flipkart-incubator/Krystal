@@ -167,19 +167,7 @@ public class SchemaReaderUtil {
               new Fetcher(getDataFetcherClassName(nestedField), SINGLE_FIELD_DATA_FETCHER));
 
           // Track ALL GraphQL object types for __typename handling (both entity and non-entity)
-          Type<?> fieldType = nestedField.getType();
-          Type<?> actualFieldType = fieldType;
-          // Unwrap NonNullType first
-          while (actualFieldType instanceof graphql.language.NonNullType nonNullType) {
-            actualFieldType = nonNullType.getType();
-          }
-          if (actualFieldType instanceof ListType listType) {
-            actualFieldType = listType.getType();
-            // Unwrap inner NonNullType
-            while (actualFieldType instanceof graphql.language.NonNullType nonNullType) {
-              actualFieldType = nonNullType.getType();
-            }
-          }
+          Type<?> actualFieldType = unwrapType(nestedField.getType());
           TypeDefinition<?> fieldTypeDefinition =
               typeRegistry.getType(actualFieldType).orElse(null);
           if (fieldTypeDefinition instanceof ObjectTypeDefinition) {
@@ -223,22 +211,7 @@ public class SchemaReaderUtil {
           }
 
         } else {
-          // Handle fields without directives - track ALL GraphQL object types
-          Type<?> fieldType = nestedField.getType();
-
-          Type<?> actualFieldType = fieldType;
-          // Unwrap NonNullType first
-          while (actualFieldType instanceof graphql.language.NonNullType nonNullType) {
-            actualFieldType = nonNullType.getType();
-          }
-          if (actualFieldType instanceof ListType listType) {
-            actualFieldType = listType.getType();
-            // Unwrap inner NonNullType
-            while (actualFieldType instanceof graphql.language.NonNullType nonNullType) {
-              actualFieldType = nonNullType.getType();
-            }
-          }
-
+          Type<?> actualFieldType = unwrapType(nestedField.getType());
           TypeDefinition<?> fieldTypeDefinition =
               typeRegistry.getType(actualFieldType).orElse(null);
 
@@ -445,5 +418,29 @@ public class SchemaReaderUtil {
 
   String getPackageNameForType(GraphQLTypeName graphQLTypeName) {
     return rootPackageName + "." + graphQLTypeName.value().toLowerCase();
+  }
+
+  /**
+   * Unwraps NonNullType and ListType wrappers from a GraphQL type to get to the base type. Handles
+   * nested NonNullType wrappers
+   *
+   * @param type The GraphQL type to unwrap
+   * @return The unwrapped base type
+   */
+  static Type<?> unwrapType(Type<?> type) {
+    Type<?> actualType = type;
+    // Unwrap NonNullType first
+    while (actualType instanceof graphql.language.NonNullType nonNullType) {
+      actualType = nonNullType.getType();
+    }
+    // Unwrap ListType
+    if (actualType instanceof ListType listType) {
+      actualType = listType.getType();
+      // Unwrap inner NonNullType
+      while (actualType instanceof graphql.language.NonNullType nonNullType) {
+        actualType = nonNullType.getType();
+      }
+    }
+    return actualType;
   }
 }
