@@ -17,12 +17,12 @@ import static javax.lang.model.element.Modifier.FINAL;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
-import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.facets.*;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajram.graphql.api.GraphQLUtils;
@@ -259,14 +259,24 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
   }
 
   private CodeBlock getFieldSetters(Fetcher fetcher, List<GraphQlFieldSpec> graphQlFieldSpecs) {
-
     CodeBlock.Builder codeBlockBuilder = CodeBlock.builder();
     String facetName = getFacetName(fetcher, graphQlFieldSpecs);
+
     if (graphQlFieldSpecs.size() == 1) {
       GraphQlFieldSpec graphQlFieldSpec = graphQlFieldSpecs.get(0);
-      graphQlFieldSpec.fieldType().declaredType();
       boolean canFanout = graphQlFieldSpec.fieldDefinition().getType() instanceof ListType;
+
       if (TYPE_AGGREGATOR.equals(fetcher.type()) && canFanout) {
+        // Fanout case: dummies.responses().handle(...)
+        codeBlockBuilder.addNamed(
+            """
+            $facetName:L
+                .responses()
+                .handle(_error -> entity._putError($fieldName:S, _error), _nonNil -> entity.$fieldName:L(_nonNil));
+            """,
+            Map.ofEntries(
+                entry("facetName", facetName), entry("fieldName", graphQlFieldSpec.fieldName())));
+
         // Handle list of nested objects with __typename support
         codeBlockBuilder.addNamed(
             """
@@ -291,6 +301,16 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                 entry("fieldName", graphQlFieldSpec.fieldName()),
                 entry("nestedObjectHandling", generateUnifiedNestedObjectTypenameHandling("nestedEntity", "", graphQlFieldSpec.fieldName(), graphQlFieldSpec.fieldType().declaredType()))));
       } else if (TYPE_AGGREGATOR.equals(fetcher.type())) {
+        // Single type aggregator: dummy.handle(...)
+        codeBlockBuilder.addNamed(
+            """
+            $facetName:L.handle(
+                _error -> entity._putError($fieldName:S, _error),
+                _nonNil -> entity.$fieldName:L(_nonNil));
+            """,
+            Map.ofEntries(
+                entry("facetName", facetName), entry("fieldName", graphQlFieldSpec.fieldName())));
+
         // Handle single nested object with __typename support
         codeBlockBuilder.addNamed(
             """
@@ -308,20 +328,29 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                 entry("fieldName", graphQlFieldSpec.fieldName()),
                 entry("nestedObjectHandling", generateUnifiedNestedObjectTypenameHandling("nestedEntity", "", graphQlFieldSpec.fieldName(), graphQlFieldSpec.fieldType().declaredType()))));
       } else {
-        // Handle simple field assignment - __typename will be handled uniformly at the end
-        codeBlockBuilder.addStatement("$L.ifPresent(entity::$L)", facetName, facetName);
+        // Data fetcher single field
+        codeBlockBuilder.addNamed(
+            """
+            $facetName:L.handle(
+                _error -> entity._putError($fieldName:S, _error),
+                _nonNil -> entity.$fieldName:L(_nonNil));
+            """,
+            Map.ofEntries(
+                entry("facetName", facetName), entry("fieldName", graphQlFieldSpec.fieldName())));
       }
     } else {
-      // Handle multi-field data fetcher objects - simple field assignment
-      codeBlockBuilder.add("if($L.isPresent()) {", facetName);
+      // Multiple fields from same fetcher: GetOrderItemNames returns {orderItemNames, name}
       for (GraphQlFieldSpec graphQlFieldSpec : graphQlFieldSpecs) {
-        codeBlockBuilder.addStatement(
-            "      entity.$L($L.get().$L())",
-            graphQlFieldSpec.fieldName(),
-            facetName,
-            graphQlFieldSpec.fieldName());
+        codeBlockBuilder.add("\n");
+        codeBlockBuilder.addNamed(
+            """
+            $facetName:L.handle(
+                _error -> entity._putError($fieldName:S, _error),
+                _nonNil -> entity.$fieldName:L(_nonNil.$fieldName:L()));
+            """,
+            Map.ofEntries(
+                entry("facetName", facetName), entry("fieldName", graphQlFieldSpec.fieldName())));
       }
-      codeBlockBuilder.add("}");
     }
     return codeBlockBuilder.build();
   }
@@ -329,10 +358,6 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
   private MethodSpec outputLogic(GraphQLTypeName entityName) {
     MethodSpec.Builder builder =
         MethodSpec.methodBuilder("output")
-            .addAnnotation(
-                AnnotationSpec.builder(SuppressWarnings.class)
-                    .addMember("value", "$S", "OptionalUsedAsFieldOrParameterType")
-                    .build())
             .addAnnotation(Output.class)
             .addModifiers(STATIC)
             .returns(
@@ -356,7 +381,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
               ClassName dataFetcherClassName = fetcher.className();
               builder.addParameter(
                   ParameterizedTypeName.get(
-                      ClassName.get(Optional.class),
+                      ClassName.get(Errable.class),
                       getFetcherResponseType(dataFetcherClassName, fields)),
                   getFacetName(fetcher, fields));
               builder.addCode("$L", getFieldSetters(fetcher, fields));
@@ -376,7 +401,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                           getRequestClassName(aggregatorClassName),
                           fieldType.declaredType())
                       : ParameterizedTypeName.get(
-                          ClassName.get(Optional.class), fieldType.declaredType()),
+                          ClassName.get(Errable.class), fieldType.declaredType()),
                   graphQlFieldSpec.fieldName());
               builder.addCode("$L", getFieldSetters(fetcher, List.of(graphQlFieldSpec)));
             });
@@ -532,12 +557,12 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
             .addParameter(VajramExecutionStrategy.class, "graphql_executionStrategy")
             .addParameter(ExecutionStrategyParameters.class, "graphql_executionStrategyParams")
             .addParameter(
-                ParameterizedTypeName.get(ClassName.get(Optional.class), fetcherResponseType),
+                ParameterizedTypeName.get(ClassName.get(Errable.class), fetcherResponseType),
                 fetcherFacetName)
             .addNamedCode(
 """
     if ($graphqlUtils:T.isFieldQueriedInTheNestedType($fieldName:S, graphql_executionStrategyParams)
-        && $fetcherFacetName:L.isPresent()) {
+        && $fetcherFacetName:L.valueOpt().isPresent()) {
       try {
         $forLoopStart:L
         $entityType:T _entity = new $entityType:T($fetcherFacetItem:L);
@@ -564,7 +589,8 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                     entry("fieldName", fieldName),
                     entry("fetcherFacetName", fetcherFacetName),
                     entry(
-                        "fetcherFacetItem", canFanout ? "_entityId" : fetcherFacetName + ".get()"),
+                        "fetcherFacetItem",
+                        canFanout ? "_entityId" : fetcherFacetName + ".valueOpt().get()"),
                     entry("entityType", fieldSpec.fieldType().declaredType()),
                     entry("reqPojoType", depReqImmutPojoType),
                     entry("throwable", Throwable.class),
@@ -574,7 +600,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                             ? CodeBlock.of(
 """
         $T<$T> _reqs = new $T<>();
-        for (var _entityId : $L.get()) {
+        for (var _entityId : $L.valueOpt().get()) {
 """,
                                 List.class,
                                 depReqImmutType.nestedClass("Builder"),

@@ -23,7 +23,6 @@ import graphql.language.DirectivesContainer;
 import graphql.language.EnumTypeDefinition;
 import graphql.language.FieldDefinition;
 import graphql.language.ListType;
-import graphql.language.NamedNode;
 import graphql.language.ObjectTypeDefinition;
 import graphql.language.ScalarTypeDefinition;
 import graphql.language.SchemaDefinition;
@@ -33,7 +32,6 @@ import graphql.language.TypeDefinition;
 import graphql.language.TypeName;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -182,18 +180,36 @@ public class SchemaReaderUtil {
           fieldToFetcherMap.put(
               fieldSpecFromField(nestedField, ""),
               new Fetcher(getIdFetcherClassName(nestedField), ID_FETCHER));
-          ObjectTypeDefinition objectTypeDefinition =
-              (ObjectTypeDefinition) typeRegistry.getType(nestedField.getType()).orElseThrow();
-          if (objectTypeDefinition.hasDirective("entity")) {
-            GraphQLTypeName graphQlTypeName = new GraphQLTypeName(objectTypeDefinition.getName());
-            String packageName = getPackageNameForType(graphQlTypeName);
-            String typeAggregatorSimpleName =
-                getDirectiveArgumentString(objectTypeDefinition, "entity", "name")
-                        .orElse(graphQlTypeName.value())
-                    + GRAPHQL_AGGREGATOR;
-            fieldToTypeAggregator.put(
-                fieldSpecFromField(nestedField, ""),
-                ClassName.get(packageName, typeAggregatorSimpleName));
+          // Unwrap ListType and NonNullType recursively to get the actual entity type
+          Type<?> baseType = nestedField.getType();
+          while (baseType instanceof graphql.language.NonNullType nonNullType) {
+            baseType = nonNullType.getType();
+          }
+          while (baseType instanceof ListType listType) {
+            baseType = listType.getType();
+            while (baseType instanceof graphql.language.NonNullType nonNullType) {
+              baseType = nonNullType.getType();
+            }
+          }
+          if (!(baseType instanceof TypeName typeName)) {
+            continue;
+          }
+
+          try {
+            ObjectTypeDefinition objectTypeDefinition =
+                (ObjectTypeDefinition) typeRegistry.getType(typeName).orElseThrow();
+            if (objectTypeDefinition.hasDirective("entity")) {
+              GraphQLTypeName graphQlTypeName = new GraphQLTypeName(objectTypeDefinition.getName());
+              String packageName = getPackageNameForType(graphQlTypeName);
+              String typeAggregatorSimpleName =
+                  getDirectiveArgumentString(objectTypeDefinition, "entity", "name")
+                      .orElse(graphQlTypeName.value())
+                  + GRAPHQL_AGGREGATOR;
+              ClassName aggregatorClass = ClassName.get(packageName, typeAggregatorSimpleName);
+              fieldToTypeAggregator.put(fieldSpecFromField(nestedField, ""), aggregatorClass);
+            }
+          } catch (Exception e) {
+            // Silently ignore - type might not be an entity
           }
 
         } else {
@@ -337,14 +353,24 @@ public class SchemaReaderUtil {
     boolean isListType = false;
     ClassName fieldTypeClassName;
     String packageName = null;
-    if (type instanceof ListType listType) {
-      isListType = true;
-      //noinspection unchecked
-      typeName = new GraphQLTypeName(((NamedNode<TypeName>) listType.getType()).getName());
-    } else {
-      //noinspection unchecked
-      typeName = new GraphQLTypeName(((NamedNode<TypeName>) type).getName());
+
+    // Unwrap NonNullType and ListType recursively to get to TypeName
+    Type<?> baseType = type;
+    while (baseType instanceof graphql.language.NonNullType nonNullType) {
+      baseType = nonNullType.getType();
     }
+    if (baseType instanceof ListType listType) {
+      isListType = true;
+      baseType = listType.getType();
+      while (baseType instanceof graphql.language.NonNullType nonNullType) {
+        baseType = nonNullType.getType();
+      }
+    }
+    if (!(baseType instanceof TypeName typeNameNode)) {
+      throw new IllegalArgumentException(
+          "Unable to extract TypeName from field: " + field.getName());
+    }
+    typeName = new GraphQLTypeName(typeNameNode.getName());
     for (Directive directive : field.getDirectives()) {
       if (directive.getName().equals("packageRef")) {
         for (Argument argument : directive.getArguments()) {
@@ -368,8 +394,8 @@ public class SchemaReaderUtil {
           case "ID" ->
               graphqlTypeName != null
                   ? entityIdClassName(
-                      ClassName.get(
-                          getPackageNameForType(graphqlTypeName), graphqlTypeName.value()))
+                  ClassName.get(
+                      getPackageNameForType(graphqlTypeName), graphqlTypeName.value()))
                   : ClassName.get(Object.class);
           default ->
               ClassName.get(
