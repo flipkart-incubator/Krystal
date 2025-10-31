@@ -207,6 +207,7 @@ public class SchemaReaderUtil {
                   + GRAPHQL_AGGREGATOR;
               ClassName aggregatorClass = ClassName.get(packageName, typeAggregatorSimpleName);
               fieldToTypeAggregator.put(fieldSpecFromField(nestedField, ""), aggregatorClass);
+              allGraphQLObjectFields.add(fieldSpecFromField(nestedField, ""));
             }
           } catch (Exception e) {
             // Silently ignore - type might not be an entity

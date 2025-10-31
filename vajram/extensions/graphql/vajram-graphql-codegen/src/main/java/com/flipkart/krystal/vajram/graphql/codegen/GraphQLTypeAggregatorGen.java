@@ -276,30 +276,6 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
             """,
             Map.ofEntries(
                 entry("facetName", facetName), entry("fieldName", graphQlFieldSpec.fieldName())));
-
-        // Handle list of nested objects with __typename support
-        codeBlockBuilder.addNamed(
-            """
-                  var _$facetName:L_responses = new $arrayList:T<$entityType:T>($facetName:L.requestResponsePairs().size());
-                  $facetName:L
-                      .requestResponsePairs()
-                      .forEach(_rrp -> {
-                        $entityType:T nestedEntity = _rrp.response().valueOrThrow();
-                        if ($graphqlUtils:T.isFieldQueriedInTheNestedType("$fieldName:L.__typename", graphql_executionStrategyParams)) {
-                          nestedEntity.__typename(null);
-                        }
-                        $nestedObjectHandling:L
-                        _$facetName:L_responses.add(nestedEntity);
-                      });
-                  entity.$facetName:L(_$facetName:L_responses);
-              """,
-            Map.ofEntries(
-                entry("facetName", getFacetName(fetcher, graphQlFieldSpecs)),
-                entry("entityType", graphQlFieldSpec.fieldType().declaredType()),
-                entry("arrayList", ArrayList.class),
-                entry("graphqlUtils", GraphQLUtils.class),
-                entry("fieldName", graphQlFieldSpec.fieldName()),
-                entry("nestedObjectHandling", generateUnifiedNestedObjectTypenameHandling("nestedEntity", "", graphQlFieldSpec.fieldName(), graphQlFieldSpec.fieldType().declaredType()))));
       } else if (TYPE_AGGREGATOR.equals(fetcher.type())) {
         // Single type aggregator: dummy.handle(...)
         codeBlockBuilder.addNamed(
@@ -310,23 +286,6 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
             """,
             Map.ofEntries(
                 entry("facetName", facetName), entry("fieldName", graphQlFieldSpec.fieldName())));
-
-        // Handle single nested object with __typename support
-        codeBlockBuilder.addNamed(
-            """
-                  $facetName:L.ifPresent(nestedEntity -> {
-                    if ($graphqlUtils:T.isFieldQueriedInTheNestedType("$fieldName:L.__typename", graphql_executionStrategyParams)) {
-                      nestedEntity.__typename(null);
-                    }
-                    $nestedObjectHandling:L
-                    entity.$facetName:L(nestedEntity);
-                  });
-              """,
-            Map.ofEntries(
-                entry("facetName", facetName),
-                entry("graphqlUtils", GraphQLUtils.class),
-                entry("fieldName", graphQlFieldSpec.fieldName()),
-                entry("nestedObjectHandling", generateUnifiedNestedObjectTypenameHandling("nestedEntity", "", graphQlFieldSpec.fieldName(), graphQlFieldSpec.fieldType().declaredType()))));
       } else {
         // Data fetcher single field
         codeBlockBuilder.addNamed(
