@@ -5,6 +5,7 @@ import static com.flipkart.krystal.vajram.codegen.common.models.Constants.IMMUT_
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.REQUEST_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants._INTERNAL_FACETS_CLASS;
 import static com.flipkart.krystal.vajram.graphql.api.AbstractGraphQLEntity.DEFAULT_ENTITY_ID_FIELD;
+import static com.flipkart.krystal.vajram.graphql.api.VajramExecutionStrategy.TYPENAME_FIELD;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphqlFetcherType.TYPE_AGGREGATOR;
 import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.DATA_FETCHER;
 import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.GRAPHQL_AGGREGATOR;
@@ -16,12 +17,12 @@ import static javax.lang.model.element.Modifier.FINAL;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
-import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
+import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.facets.*;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajram.graphql.api.GraphQLUtils;
@@ -35,6 +36,7 @@ import graphql.execution.ExecutionStrategyParameters;
 import graphql.language.*;
 import java.io.*;
 import java.util.*;
+import java.util.List;
 import java.util.Map.Entry;
 import javax.tools.JavaFileObject;
 import lombok.extern.slf4j.Slf4j;
@@ -257,57 +259,69 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
   }
 
   private CodeBlock getFieldSetters(Fetcher fetcher, List<GraphQlFieldSpec> graphQlFieldSpecs) {
+
     CodeBlock.Builder codeBlockBuilder = CodeBlock.builder();
     String facetName = getFacetName(fetcher, graphQlFieldSpecs);
-
     if (graphQlFieldSpecs.size() == 1) {
       GraphQlFieldSpec graphQlFieldSpec = graphQlFieldSpecs.get(0);
+      graphQlFieldSpec.fieldType().declaredType();
       boolean canFanout = graphQlFieldSpec.fieldDefinition().getType() instanceof ListType;
-
       if (TYPE_AGGREGATOR.equals(fetcher.type()) && canFanout) {
-        // Fanout case: dummies.responses().handle(...)
+        // Handle list of nested objects with __typename support
         codeBlockBuilder.addNamed(
             """
-            $facetName:L
-                .responses()
-                .handle(_error -> entity._putError($fieldName:S, _error), _nonNil -> entity.$fieldName:L(_nonNil));
-            """,
+                  var _$facetName:L_responses = new $arrayList:T<$entityType:T>($facetName:L.requestResponsePairs().size());
+                  $facetName:L
+                      .requestResponsePairs()
+                      .forEach(_rrp -> {
+                        $entityType:T nestedEntity = _rrp.response().valueOrThrow();
+                        if ($graphqlUtils:T.isFieldQueriedInTheNestedType("$fieldName:L.__typename", graphql_executionStrategyParams)) {
+                          nestedEntity.__typename(null);
+                        }
+                        $nestedObjectHandling:L
+                        _$facetName:L_responses.add(nestedEntity);
+                      });
+                  entity.$facetName:L(_$facetName:L_responses);
+              """,
             Map.ofEntries(
-                entry("facetName", facetName), entry("fieldName", graphQlFieldSpec.fieldName())));
+                entry("facetName", getFacetName(fetcher, graphQlFieldSpecs)),
+                entry("entityType", graphQlFieldSpec.fieldType().declaredType()),
+                entry("arrayList", ArrayList.class),
+                entry("graphqlUtils", GraphQLUtils.class),
+                entry("fieldName", graphQlFieldSpec.fieldName()),
+                entry("nestedObjectHandling", generateUnifiedNestedObjectTypenameHandling("nestedEntity", "", graphQlFieldSpec.fieldName(), graphQlFieldSpec.fieldType().declaredType()))));
       } else if (TYPE_AGGREGATOR.equals(fetcher.type())) {
-        // Single type aggregator: dummy.handle(...)
+        // Handle single nested object with __typename support
         codeBlockBuilder.addNamed(
             """
-            $facetName:L.handle(
-                _error -> entity._putError($fieldName:S, _error),
-                _nonNil -> entity.$fieldName:L(_nonNil));
-            """,
+                  $facetName:L.ifPresent(nestedEntity -> {
+                    if ($graphqlUtils:T.isFieldQueriedInTheNestedType("$fieldName:L.__typename", graphql_executionStrategyParams)) {
+                      nestedEntity.__typename(null);
+                    }
+                    $nestedObjectHandling:L
+                    entity.$facetName:L(nestedEntity);
+                  });
+              """,
             Map.ofEntries(
-                entry("facetName", facetName), entry("fieldName", graphQlFieldSpec.fieldName())));
+                entry("facetName", facetName),
+                entry("graphqlUtils", GraphQLUtils.class),
+                entry("fieldName", graphQlFieldSpec.fieldName()),
+                entry("nestedObjectHandling", generateUnifiedNestedObjectTypenameHandling("nestedEntity", "", graphQlFieldSpec.fieldName(), graphQlFieldSpec.fieldType().declaredType()))));
       } else {
-        // Data fetcher single field
-        codeBlockBuilder.addNamed(
-            """
-            $facetName:L.handle(
-                _error -> entity._putError($fieldName:S, _error),
-                _nonNil -> entity.$fieldName:L(_nonNil));
-            """,
-            Map.ofEntries(
-                entry("facetName", facetName), entry("fieldName", graphQlFieldSpec.fieldName())));
+        // Handle simple field assignment - __typename will be handled uniformly at the end
+        codeBlockBuilder.addStatement("$L.ifPresent(entity::$L)", facetName, facetName);
       }
     } else {
-      // Multiple fields from same fetcher: GetOrderItemNames returns {orderItemNames, name}
+      // Handle multi-field data fetcher objects - simple field assignment
+      codeBlockBuilder.add("if($L.isPresent()) {", facetName);
       for (GraphQlFieldSpec graphQlFieldSpec : graphQlFieldSpecs) {
-        codeBlockBuilder.add("\n");
-        codeBlockBuilder.addNamed(
-            """
-            $facetName:L.handle(
-                _error -> entity._putError($fieldName:S, _error),
-                _nonNil -> entity.$fieldName:L(_nonNil.$fieldName:L()));
-            """,
-            Map.ofEntries(
-                entry("facetName", facetName), entry("fieldName", graphQlFieldSpec.fieldName())));
+        codeBlockBuilder.addStatement(
+            "      entity.$L($L.get().$L())",
+            graphQlFieldSpec.fieldName(),
+            facetName,
+            graphQlFieldSpec.fieldName());
       }
+      codeBlockBuilder.add("}");
     }
     return codeBlockBuilder.build();
   }
@@ -315,6 +329,10 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
   private MethodSpec outputLogic(GraphQLTypeName entityName) {
     MethodSpec.Builder builder =
         MethodSpec.methodBuilder("output")
+            .addAnnotation(
+                AnnotationSpec.builder(SuppressWarnings.class)
+                    .addMember("value", "$S", "OptionalUsedAsFieldOrParameterType")
+                    .build())
             .addAnnotation(Output.class)
             .addModifiers(STATIC)
             .returns(
@@ -323,6 +341,9 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
     builder.addParameter(
         ClassName.get(schemaReaderUtil.getPackageNameForType(entityName), entityName.value()),
         "entity");
+    builder.addParameter(ExecutionContext.class, "graphql_executionContext");
+    builder.addParameter(VajramExecutionStrategy.class, "graphql_executionStrategy");
+    builder.addParameter(ExecutionStrategyParameters.class, "graphql_executionStrategyParams");
     schemaReaderUtil
         .entityTypeToFetcherToFields()
         .getOrDefault(entityName, Map.of())
@@ -335,7 +356,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
               ClassName dataFetcherClassName = fetcher.className();
               builder.addParameter(
                   ParameterizedTypeName.get(
-                      ClassName.get(Errable.class),
+                      ClassName.get(Optional.class),
                       getFetcherResponseType(dataFetcherClassName, fields)),
                   getFacetName(fetcher, fields));
               builder.addCode("$L", getFieldSetters(fetcher, fields));
@@ -355,10 +376,26 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                           getRequestClassName(aggregatorClassName),
                           fieldType.declaredType())
                       : ParameterizedTypeName.get(
-                          ClassName.get(Errable.class), fieldType.declaredType()),
+                          ClassName.get(Optional.class), fieldType.declaredType()),
                   graphQlFieldSpec.fieldName());
               builder.addCode("$L", getFieldSetters(fetcher, List.of(graphQlFieldSpec)));
             });
+
+    schemaReaderUtil
+        .entityTypeToAllGraphQLObjectFields()
+        .getOrDefault(entityName, List.of())
+        .forEach(graphQLObjectField -> {
+          builder.addCode(generateGraphQLObjectTypenameHandling(graphQLObjectField));
+        });
+
+    builder.addCode("""
+        
+        if ($T.isFieldQueriedInTheNestedType($S, graphql_executionStrategyParams)) {
+          entity.__typename(null);
+        }
+        """, 
+        GraphQLUtils.class, 
+        TYPENAME_FIELD);
 
     return builder.addStatement("return entity").build();
   }
@@ -495,12 +532,12 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
             .addParameter(VajramExecutionStrategy.class, "graphql_executionStrategy")
             .addParameter(ExecutionStrategyParameters.class, "graphql_executionStrategyParams")
             .addParameter(
-                ParameterizedTypeName.get(ClassName.get(Errable.class), fetcherResponseType),
+                ParameterizedTypeName.get(ClassName.get(Optional.class), fetcherResponseType),
                 fetcherFacetName)
             .addNamedCode(
 """
     if ($graphqlUtils:T.isFieldQueriedInTheNestedType($fieldName:S, graphql_executionStrategyParams)
-        && $fetcherFacetName:L.valueOpt().isPresent()) {
+        && $fetcherFacetName:L.isPresent()) {
       try {
         $forLoopStart:L
         $entityType:T _entity = new $entityType:T($fetcherFacetItem:L);
@@ -527,8 +564,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                     entry("fieldName", fieldName),
                     entry("fetcherFacetName", fetcherFacetName),
                     entry(
-                        "fetcherFacetItem",
-                        canFanout ? "_entityId" : fetcherFacetName + ".valueOpt().get()"),
+                        "fetcherFacetItem", canFanout ? "_entityId" : fetcherFacetName + ".get()"),
                     entry("entityType", fieldSpec.fieldType().declaredType()),
                     entry("reqPojoType", depReqImmutPojoType),
                     entry("throwable", Throwable.class),
@@ -538,7 +574,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                             ? CodeBlock.of(
 """
         $T<$T> _reqs = new $T<>();
-        for (var _entityId : $L.valueOpt().get()) {
+        for (var _entityId : $L.get()) {
 """,
                                 List.class,
                                 depReqImmutType.nestedClass("Builder"),
@@ -571,4 +607,192 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
 
     return methodBuilder.build();
   }
+
+  private CodeBlock generateGraphQLObjectTypenameHandling(GraphQlFieldSpec fieldSpec) {
+    CodeBlock.Builder codeBuilder = CodeBlock.builder();
+    
+    // Check if this is a list type
+    boolean isListType = fieldSpec.fieldDefinition().getType() instanceof ListType;
+    
+    if (isListType) {
+      // Handle list of objects
+      codeBuilder.add("""
+          
+          if (entity.$L() != null) {
+            entity.$L().stream()
+              .filter(java.util.Objects::nonNull)
+              .filter(listItem -> $T.isFieldQueriedInTheNestedType("$L.__typename", graphql_executionStrategyParams))
+              .forEach(listItem -> listItem.__typename(null));
+          }
+          """, 
+          fieldSpec.fieldName(),
+          fieldSpec.fieldName(),
+          GraphQLUtils.class,
+          fieldSpec.fieldName());
+
+      CodeBlock nestedHandling = generateUnifiedNestedObjectTypenameHandling("listItem", "", fieldSpec.fieldName(), fieldSpec.fieldType().declaredType());
+      if (!nestedHandling.isEmpty()) {
+        codeBuilder.add("""
+            
+            if (entity.$L() != null) {
+              entity.$L().stream()
+                .filter(java.util.Objects::nonNull)
+                .forEach(listItem -> {
+            $L    });
+            }
+            """,
+            fieldSpec.fieldName(),
+            fieldSpec.fieldName(),
+            nestedHandling);
+      }
+    } else {
+      // Handle single object
+      codeBuilder.add("""
+          
+          if (entity.$L() != null) {
+            if ($T.isFieldQueriedInTheNestedType("$L.__typename", graphql_executionStrategyParams)) {
+              entity.$L().__typename(null);
+            }
+          """, 
+          fieldSpec.fieldName(),
+          GraphQLUtils.class,
+          fieldSpec.fieldName(),
+          fieldSpec.fieldName());
+      
+      // Add recursive handling for nested objects within this GraphQL object
+      codeBuilder.add(generateUnifiedNestedObjectTypenameHandling("entity", fieldSpec.fieldName(), fieldSpec.fieldName(), fieldSpec.fieldType().declaredType()));
+      codeBuilder.add("}\n");
+    }
+    
+    return codeBuilder.build();
+  }
+
+  /**
+   * Generates code to handle __typename for nested objects within a given object field.
+   * This method recursively traverses the object structure based on the GraphQL schema.
+   * 
+   * @param objectReference The object reference (e.g., "entity", "nestedEntity")
+   * @param methodPath The method call path (e.g., "orderItem", "orderItem().productInfo")
+   * @param graphqlFieldPath The GraphQL field path (e.g., "orderItem", "orderItem.productInfo")
+   * @param objectType The TypeName of the GraphQL object type
+   */
+  private CodeBlock generateUnifiedNestedObjectTypenameHandling(String objectReference, String methodPath, String graphqlFieldPath, TypeName objectType) {
+    CodeBlock.Builder codeBuilder = CodeBlock.builder();
+    
+    // Find the GraphQL type definition for this object
+    GraphQLTypeName graphQLTypeName = findGraphQLTypeNameForClassName(objectType);
+    if (graphQLTypeName == null) {
+      return codeBuilder.build(); // Not a GraphQL object type
+    }
+    
+    ObjectTypeDefinition objectTypeDef = schemaReaderUtil.graphQLTypes().get(graphQLTypeName);
+    if (objectTypeDef == null) {
+      return codeBuilder.build();
+    }
+    
+    // Generate handling for each nested object field
+    for (FieldDefinition field : objectTypeDef.getFieldDefinitions()) {
+      Type<?> fieldType = field.getType();
+      
+      // Handle ListType by unwrapping it
+      Type<?> actualFieldType = fieldType;
+      if (fieldType instanceof ListType listType) {
+        actualFieldType = listType.getType();
+      }
+      
+      TypeDefinition<?> fieldTypeDefinition = schemaReaderUtil.typeDefinitionRegistry().getType(actualFieldType).orElse(null);
+      
+      if (fieldTypeDefinition instanceof ObjectTypeDefinition && 
+          !fieldTypeDefinition.hasDirective(DATA_FETCHER)) {
+        // This is a nested GraphQL object field (generic approach)
+        String nestedFieldName = field.getName();
+        String nestedGraphqlFieldPath = graphqlFieldPath + "." + nestedFieldName;
+        
+        if (fieldType instanceof ListType) {
+          // Handle list of GraphQL objects - call __typename on each list item
+          String fullMethodPath = methodPath.isEmpty() ? nestedFieldName : methodPath + "()." + nestedFieldName;
+          codeBuilder.add("""
+              if ($L.$L() != null) {
+                $L.$L().stream()
+                  .filter(java.util.Objects::nonNull)
+                  .filter(listItem -> $T.isFieldQueriedInTheNestedType("$L.__typename", graphql_executionStrategyParams))
+                  .forEach(listItem -> listItem.__typename(null));
+              }
+              """,
+              objectReference, fullMethodPath,
+              objectReference, fullMethodPath,
+              GraphQLUtils.class,
+              nestedGraphqlFieldPath);
+          
+          // Handle nested objects within each list item
+          ClassName nestedObjectClassName = ClassName.get(
+              schemaReaderUtil.getPackageNameForType(new GraphQLTypeName(fieldTypeDefinition.getName())),
+              fieldTypeDefinition.getName());
+          
+          // Generate nested object handling for each list item
+          CodeBlock nestedHandling = generateUnifiedNestedObjectTypenameHandling("listItem", "", nestedGraphqlFieldPath, nestedObjectClassName);
+          if (!nestedHandling.isEmpty()) {
+            codeBuilder.add("""
+                
+                if ($L.$L() != null) {
+                  $L.$L().stream()
+                    .filter(java.util.Objects::nonNull)
+                    .forEach(listItem -> {
+                $L    });
+                }
+                """,
+                objectReference, fullMethodPath,
+                objectReference, fullMethodPath,
+                nestedHandling);
+          }
+        } else {
+          // Handle single nested object
+          String fullMethodPath = methodPath.isEmpty() ? nestedFieldName : methodPath + "()." + nestedFieldName;
+          codeBuilder.add("""
+              if ($L.$L() != null) {
+                if ($T.isFieldQueriedInTheNestedType("$L.__typename", graphql_executionStrategyParams)) {
+                  $L.$L().__typename(null);
+                }
+              """,
+              objectReference, fullMethodPath,
+              GraphQLUtils.class,
+              nestedGraphqlFieldPath,
+              objectReference, fullMethodPath);
+          
+          // Recursively handle deeper nesting
+          ClassName nestedObjectClassName = ClassName.get(
+              schemaReaderUtil.getPackageNameForType(new GraphQLTypeName(fieldTypeDefinition.getName())),
+              fieldTypeDefinition.getName());
+          String newMethodPath = methodPath.isEmpty() ? nestedFieldName : methodPath + "()." + nestedFieldName;
+          codeBuilder.add(generateUnifiedNestedObjectTypenameHandling(objectReference, newMethodPath, nestedGraphqlFieldPath, nestedObjectClassName));
+          
+          codeBuilder.add("}\n");
+        }
+      }
+    }
+    
+    return codeBuilder.build();
+  }
+
+  private GraphQLTypeName findGraphQLTypeNameForClassName(TypeName typeName) {
+    if (!(typeName instanceof ClassName)) {
+      return null;
+    }
+    
+    ClassName className = (ClassName) typeName;
+    
+    GraphQLTypeName candidateTypeName = new GraphQLTypeName(className.simpleName());
+    
+    if (schemaReaderUtil.graphQLTypes().containsKey(candidateTypeName)) {
+      ClassName expectedClassName = ClassName.get(
+          schemaReaderUtil.getPackageNameForType(candidateTypeName), 
+          candidateTypeName.value());
+      if (expectedClassName.equals(className)) {
+        return candidateTypeName;
+      }
+    }
+    
+    return null;
+  }
+
 }
