@@ -638,7 +638,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
           itemVarName);
 
       CodeBlock nestedHandling =
-          generateUnifiedNestedObjectTypenameHandling(
+          generateNestedObjectTypenameHandling(
               itemVarName, "", fieldSpec.fieldName(), fieldSpec.fieldType().declaredType());
 
       if (!nestedHandling.isEmpty()) {
@@ -682,7 +682,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
           fieldSpec.fieldName());
 
       CodeBlock nestedCode =
-          generateUnifiedNestedObjectTypenameHandling(
+          generateNestedObjectTypenameHandling(
               "entity",
               fieldSpec.fieldName(),
               fieldSpec.fieldName(),
@@ -716,7 +716,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
    * @param graphqlFieldPath The GraphQL field path (e.g., "orderItem", "orderItem.productInfo")
    * @param objectType The TypeName of the GraphQL object type
    */
-  private CodeBlock generateUnifiedNestedObjectTypenameHandling(
+  private CodeBlock generateNestedObjectTypenameHandling(
       String objectReference, String methodPath, String graphqlFieldPath, TypeName objectType) {
     CodeBlock.Builder codeBuilder = CodeBlock.builder();
 
@@ -793,7 +793,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
 
           // Generate nested object handling for each list item
           CodeBlock nestedHandling =
-              generateUnifiedNestedObjectTypenameHandling(
+              generateNestedObjectTypenameHandling(
                   itemVarName, "", nestedGraphqlFieldPath, nestedObjectClassName);
 
           if (!nestedHandling.isEmpty()) {
@@ -850,7 +850,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
           String newMethodPath =
               methodPath.isEmpty() ? nestedFieldName : methodPath + "()." + nestedFieldName;
           CodeBlock deeperNestedCode =
-              generateUnifiedNestedObjectTypenameHandling(
+              generateNestedObjectTypenameHandling(
                   objectReference, newMethodPath, nestedGraphqlFieldPath, nestedObjectClassName);
           if (!deeperNestedCode.isEmpty()) {
             codeBuilder.indent();
