@@ -14,15 +14,15 @@ import java.util.List;
 
 @GraphQLFetcher
 @Vajram
-public abstract class GetOrderItemNames extends ComputeVajramDef<GetOrderItemNamesGraphQLResponse> {
+public abstract class GetOrderItemNames extends ComputeVajramDef<GetOrderItemNames_GQlFields> {
   static class _Inputs {
     @IfAbsent(FAIL)
     OrderId id;
   }
 
   @Output
-  static GetOrderItemNamesGraphQLResponse orderItemNames(OrderId id) {
-    return GetOrderItemNamesGraphQLResponse.builder()
+  static GetOrderItemNames_GQlFields orderItemNames(OrderId id) {
+    return GetOrderItemNames_GQlFields.builder()
         .orderItemNames(List.of(id.value() + "_1", id.value() + "_2"))
         .name("testOrderName")
         .build();
