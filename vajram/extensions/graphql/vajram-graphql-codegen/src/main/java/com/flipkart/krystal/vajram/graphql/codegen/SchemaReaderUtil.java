@@ -120,7 +120,7 @@ public class SchemaReaderUtil {
     return ((StringValue) rootPackage.getArgument("name").getValue()).getValue();
   }
 
-  ClassName entityClassName(GraphQLTypeName graphQLTypeName) {
+  ClassName typeClassName(GraphQLTypeName graphQLTypeName) {
     return ClassName.get(getPackageNameForType(graphQLTypeName), graphQLTypeName.value());
   }
 

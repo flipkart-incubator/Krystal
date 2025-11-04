@@ -11,7 +11,33 @@ type Dummy @entity{
     id: ID
     name: String!
     age: Int
+    order: Order
 }
+#{
+#    order(orderId: "o1") {
+#        dummy {
+#            order {
+#                dummy {
+#                    order {
+#                        id
+#                    }
+#                }
+#            }
+#        }
+#    }
+#
+#}
+
+
+
+
+
+
+
+
+
+
+
 
 type Hello {
     toName: String

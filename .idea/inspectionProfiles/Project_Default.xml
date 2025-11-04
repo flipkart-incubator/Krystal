@@ -216,7 +216,7 @@
     <inspection_tool class="LocalVariableNamingConvention" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="m_ignoreForLoopParameters" value="true" />
       <option name="m_ignoreCatchParameters" value="true" />
-      <option name="m_regex" value="[a-z][A-Za-z\d]*" />
+      <option name="m_regex" value="_?[a-z][A-Za-z\d]*" />
       <option name="m_minLength" value="1" />
       <option name="m_maxLength" value="40" />
     </inspection_tool>
@@ -478,6 +478,7 @@
           <option value="JavaReflectionMemberAccess" />
           <option value="cast.unsafe" />
           <option value="assignment" />
+          <option value="InstantiationOfUtilityClass" />
         </list>
       </option>
     </inspection_tool>

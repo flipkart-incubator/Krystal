@@ -11,6 +11,7 @@ import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGeneratorProvider;
 import com.flipkart.krystal.model.ModelRoot;
 import com.google.auto.service.AutoService;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import java.util.List;
 import java.util.Objects;
@@ -62,7 +63,7 @@ public final class ModelGenProcessor extends AbstractKrystalAnnoProcessor {
         try {
           customCodeGeneratorProvider.create(creationContext).generate();
         } catch (Exception e) {
-          util.error(e.toString(), creationContext.modelRootType());
+          util.error(Throwables.getStackTraceAsString(e), creationContext.modelRootType());
         }
       }
     }

@@ -62,13 +62,11 @@ public final class GraphQlCodeGenUtil {
   private TypeName getTypeNameForField(WrappedType fieldType, GraphQlFieldSpec fieldSpec) {
     GraphQlTypeDecorator innerGraphQlTypeDecorator = fieldType.innerType();
     return switch (fieldType.wrapperType()) {
-      case NONNULL ->
-          innerGraphQlTypeDecorator instanceof PlainType plainType
-              ? getTypeNameForField(plainType, fieldSpec)
-              : toTypeNameForField(innerGraphQlTypeDecorator, fieldSpec);
-      case LIST ->
-          ParameterizedTypeName.get(
-              ClassName.get(List.class), toTypeNameForField(innerGraphQlTypeDecorator, fieldSpec));
+      case NONNULL -> innerGraphQlTypeDecorator instanceof PlainType plainType
+          ? getTypeNameForField(plainType, fieldSpec)
+          : toTypeNameForField(innerGraphQlTypeDecorator, fieldSpec);
+      case LIST -> ParameterizedTypeName.get(
+          ClassName.get(List.class), toTypeNameForField(innerGraphQlTypeDecorator, fieldSpec));
     };
   }
 
@@ -102,10 +100,9 @@ public final class GraphQlCodeGenUtil {
                     schemaReaderUtil.getPackageNameForType(enclosingType), enclosingType.value()))
             : ClassName.get(Object.class);
       }
-      default ->
-          ClassName.get(
-              requireNonNullElse(packageName, schemaReaderUtil.getPackageNameForType(typeName)),
-              typeName.value());
+      default -> ClassName.get(
+          requireNonNullElse(packageName, schemaReaderUtil.getPackageNameForType(typeName)),
+          typeName.value());
     };
   }
 }

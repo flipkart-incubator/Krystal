@@ -2,7 +2,7 @@ package com.flipkart.krystal.lattice.ext.grpc.codegen;
 
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.lowerCaseFirstChar;
 import static com.flipkart.krystal.codegen.common.models.CodegenPhase.FINAL;
-import static com.flipkart.krystal.vajram.codegen.common.models.Constants.IMMUT_SUFFIX;
+import static com.flipkart.krystal.codegen.common.models.Constants.IMMUT_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.Protobuf3.PROTOBUF_3;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_MSG_SUFFIX;
 import static java.util.Map.entry;

@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.graphql.codegen;
 
+import static com.flipkart.krystal.codegen.common.models.Constants.IMMUT_SUFFIX;
 import static com.flipkart.krystal.model.PlainJavaObject.POJO;
-import static com.flipkart.krystal.vajram.codegen.common.models.Constants.IMMUT_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.REQUEST_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants._INTERNAL_FACETS_CLASS;
 import static com.flipkart.krystal.vajram.graphql.api.AbstractGraphQLEntity.DEFAULT_ENTITY_ID_FIELD;
@@ -26,6 +26,7 @@ import com.flipkart.krystal.vajram.facets.*;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajram.graphql.api.GraphQLUtils;
 import com.flipkart.krystal.vajram.graphql.api.VajramExecutionStrategy;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponseJson;
 import com.squareup.javapoet.*;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec.Builder;
@@ -145,9 +146,8 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
     Builder inputs = TypeSpec.classBuilder("_Inputs").addModifiers(STATIC);
     inputs.addField(
         FieldSpec.builder(
-                ClassName.get(
-                    schemaReaderUtil.getPackageNameForType(entityName), entityName.value()),
-                "entity")
+                schemaReaderUtil.entityIdClassName(schemaReaderUtil.typeClassName(entityName)),
+                "entityId")
             .addAnnotation(IF_ABSENT_FAIL)
             .build());
     inputs.addField(
@@ -253,7 +253,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
           && typeDefinition.get().getDirectivesByName().containsKey("entity")) {
         GraphQLTypeName refEntityName = new GraphQLTypeName(typeDefinition.get().getName());
         ClassName entityIdClassName =
-            schemaReaderUtil.entityIdClassName(schemaReaderUtil.entityClassName(refEntityName));
+            schemaReaderUtil.entityIdClassName(schemaReaderUtil.typeClassName(refEntityName));
         GraphQlTypeDecorator innerType = fieldSpec.fieldType();
         boolean isInnerNonNull = false;
         if (innerType.isNonNull()) {
@@ -316,56 +316,41 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
     CodeBlock.Builder codeBlockBuilder = CodeBlock.builder();
     String facetName = getFacetName(fetcher, graphQlFieldSpecs);
 
-    if (graphQlFieldSpecs.size() == 1) {
-      GraphQlFieldSpec graphQlFieldSpec = graphQlFieldSpecs.get(0);
+    // Multiple fields from same fetcher: GetOrderItemNames returns {orderItemNames, name}
+    for (GraphQlFieldSpec graphQlFieldSpec : graphQlFieldSpecs) {
       boolean canFanout = isGraphQlList(graphQlFieldSpec);
 
       if (TYPE_AGGREGATOR.equals(fetcher.type()) && canFanout) {
         // Fanout case: dummies.responses().handle(...)
         codeBlockBuilder.addNamed(
             """
-            $facetName:L
-                .responses()
-                .handle(_error -> entity._putError($fieldName:S, _error), _nonNil -> entity.$fieldName:L(_nonNil));
-
+            entity.$fieldName:L($errable:T.withValue($facetName:L.responses()));
             """,
             Map.ofEntries(
-                entry("facetName", facetName), entry("fieldName", graphQlFieldSpec.fieldName())));
-      } else if (TYPE_AGGREGATOR.equals(fetcher.type())) {
-        // Single type aggregator: dummy.handle(...)
-        codeBlockBuilder.addNamed(
-            """
-            $facetName:L.handle(
-                _error -> entity._putError($fieldName:S, _error),
-                _nonNil -> entity.$fieldName:L(_nonNil));
-
-            """,
-            Map.ofEntries(
-                entry("facetName", facetName), entry("fieldName", graphQlFieldSpec.fieldName())));
+                entry("facetName", facetName),
+                entry("fieldName", graphQlFieldSpec.fieldName()),
+                entry("errable", Errable.class)));
       } else {
-        // Data fetcher single field
+        // This covers:
+        // - One-to-one type aggregator:
+        // - Data fetcher returning single field
+        // - Data fetcher returning multiple fields:
+        //     Ex: GetOrderItemNames returns {orderItemNames, name}
         codeBlockBuilder.addNamed(
             """
             $facetName:L.handle(
-                _error -> entity._putError($fieldName:S, _error),
-                _nonNil -> entity.$fieldName:L(_nonNil));
+                _failure -> entity.$fieldName:L(_failure.cast()),
+                _nonNil -> entity.$fieldName:L(_nonNil.value()$fieldExtractor:L));
 
             """,
             Map.ofEntries(
-                entry("facetName", facetName), entry("fieldName", graphQlFieldSpec.fieldName())));
-      }
-    } else {
-      // Multiple fields from same fetcher: GetOrderItemNames returns {orderItemNames, name}
-      for (GraphQlFieldSpec graphQlFieldSpec : graphQlFieldSpecs) {
-        codeBlockBuilder.addNamed(
-            """
-            $facetName:L.handle(
-                _error -> entity._putError($fieldName:S, _error),
-                _nonNil -> entity.$fieldName:L(_nonNil.$fieldName:L()));
-
-            """,
-            Map.ofEntries(
-                entry("facetName", facetName), entry("fieldName", graphQlFieldSpec.fieldName())));
+                entry("facetName", facetName),
+                entry("fieldName", graphQlFieldSpec.fieldName()),
+                entry(
+                    "fieldExtractor",
+                    graphQlFieldSpecs.size() > 1
+                        ? CodeBlock.of(".$L()", graphQlFieldSpec.fieldName())
+                        : CodeBlock.of(""))));
       }
     }
     return codeBlockBuilder.build();
@@ -380,8 +365,18 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                 ClassName.get(
                     schemaReaderUtil.getPackageNameForType(entityName), entityName.value()));
     builder.addParameter(
-        ClassName.get(schemaReaderUtil.getPackageNameForType(entityName), entityName.value()),
-        "entity");
+        schemaReaderUtil.entityIdClassName(schemaReaderUtil.typeClassName(entityName)), "entityId");
+    ClassName immutGQlRespJsonClassName =
+        ClassName.get(
+            schemaReaderUtil.getPackageNameForType(entityName),
+            entityName.value()
+                + "_"
+                + IMMUT_SUFFIX
+                + GraphQlResponseJson.INSTANCE.modelClassesSuffix());
+    builder.addStatement(
+        "$T.Builder entity = $T._builder().id(entityId)",
+        immutGQlRespJsonClassName,
+        immutGQlRespJsonClassName);
     schemaReaderUtil
         .entityTypeToFetcherToFields()
         .getOrDefault(entityName, Map.of())
@@ -417,8 +412,18 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                   fieldSpec.fieldName());
               builder.addCode("$L", getFieldSetters(fetcher, List.of(fieldSpec)));
             });
-
-    return builder.addStatement("return entity").build();
+    builder.addParameter(ExecutionContext.class, "graphql_executionContext");
+    builder.addParameter(VajramExecutionStrategy.class, "graphql_executionStrategy");
+    builder.addParameter(ExecutionStrategyParameters.class, "graphql_executionStrategyParams");
+    return builder
+        .addStatement(
+            """
+        return entity
+            .graphql_executionStrategy(graphql_executionStrategy)
+            .graphql_executionContext(graphql_executionContext)
+            .graphql_executionStrategyParams(graphql_executionStrategyParams)
+            ._build()""")
+        .build();
   }
 
   private List<MethodSpec> getInputResolvers(
@@ -454,8 +459,8 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
     String vajramId = fetcher.className().simpleName();
     ClassName vajramReqClass = getRequestClassName(fetcher.className());
 
-    ClassName entityClassName =
-        ClassName.get(schemaReaderUtil.getPackageNameForType(entityType), entityType.value());
+    ClassName entityClassName = schemaReaderUtil.typeClassName(entityType);
+    ClassName entityIdClassName = schemaReaderUtil.entityIdClassName(entityClassName);
     String facetName = getFacetName(fetcher, fields);
     MethodSpec.Builder methodBuilder =
         MethodSpec.methodBuilder(facetName)
@@ -474,12 +479,13 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                     ClassName.get(One2OneCommand.class), getRequestClassName(fetcher.className())))
             .addParameter(ExecutionContext.class, "graphql_executionContext")
             .addParameter(ExecutionStrategyParameters.class, "graphql_executionStrategyParams")
-            .addParameter(entityClassName, "entity")
+            .addParameter(entityIdClassName, "entityId")
             .addCode(
-"""
+                """
             if ($T.isFieldQueriedInTheNestedType($L_FIELDS, $L)) {
-              return $T.executeWith($T._builder()
-                  .$L(($T)entity.id()));
+              return $T.executeWith(
+                    $T._builder()
+                      .$L(entityId));
             } else {
               return $T.skipExecution($S);
             }
@@ -492,7 +498,6 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                     fetcher.className().packageName(),
                     fetcher.className().simpleName() + "_ReqImmutPojo"),
                 entityIdField,
-                schemaReaderUtil.entityIdClassName(entityClassName),
                 One2OneCommand.class,
                 vajramId);
 
@@ -541,7 +546,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                         fieldName)
                     .addMember(
                         "depInputs",
-                        "{$T.graphql_executionContext_n, $T.graphql_executionStrategy_n, $T.graphql_executionStrategyParams_n, $T.entity_n}",
+                        "{$T.graphql_executionContext_n, $T.graphql_executionStrategy_n, $T.graphql_executionStrategyParams_n, $T.entityId_n}",
                         vajramReqClass,
                         vajramReqClass,
                         vajramReqClass,
@@ -559,14 +564,13 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                 ParameterizedTypeName.get(ClassName.get(Errable.class), fetcherResponseType),
                 fetcherFacetName)
             .addNamedCode(
-"""
+                """
     if ($graphqlUtils:T.isFieldQueriedInTheNestedType($fieldName:S, graphql_executionStrategyParams)
         && $fetcherFacetName:L.valueOpt().isPresent()) {
       try {
         $forLoopStart:L
-        $entityType:T _entity = new $entityType:T($fetcherFacetItem:L);
         var _req = $reqPojoType:T._builder()
-            .entity(_entity)
+            .entityId(_entityId)
             .graphql_executionContext(graphql_executionContext)
             .graphql_executionStrategy(graphql_executionStrategy)
             .graphql_executionStrategyParams(
@@ -588,9 +592,6 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                     entry("fieldName", fieldName),
                     entry("fetcherFacetName", fetcherFacetName),
                     entry(
-                        "fetcherFacetItem",
-                        canFanout ? "_entityId" : fetcherFacetName + ".valueOpt().get()"),
-                    entry(
                         "entityType",
                         graphQlCodeGenUtil.toTypeNameForField(
                             getDeclaredActualFieldType(fieldSpec), fieldSpec)),
@@ -600,7 +601,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                         "forLoopStart",
                         canFanout
                             ? CodeBlock.of(
-"""
+                                """
         $T<$T> _reqs = new $T<>();
         for (var _entityId : $L.valueOpt().get()) {
 """,
@@ -608,16 +609,16 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                                 depReqImmutType.nestedClass("Builder"),
                                 ArrayList.class,
                                 fetcherFacetName)
-                            : CodeBlock.of("")),
+                            : CodeBlock.of(
+                                "var _entityId = $L.valueOpt().get();", fetcherFacetName)),
                     entry(
                         "forLoopEnd",
                         canFanout
                             ? CodeBlock.of(
-"""
+                                """
         _reqs.add(_req);
         }
-""",
-                                fetcherFacetName)
+""", fetcherFacetName)
                             : CodeBlock.of("")),
                     entry(
                         "execute",

@@ -5,6 +5,6 @@ import com.flipkart.krystal.model.ModelClusterRoot;
 @ModelClusterRoot(
     immutableRoot = GraphQlEntityModel_Immut.class,
     builderRoot = GraphQlEntityModel_Immut.Builder.class)
-public interface GraphQlEntityModel<I extends GraphqlEntityId> extends GraphQlTypeModel {
+public interface GraphQlEntityModel<I extends GraphQlEntityId> extends GraphQlTypeModel {
   I id();
 }

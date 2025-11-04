@@ -8,7 +8,7 @@ public final class GraphQlResponseJson implements SerdeProtocol {
 
   @Override
   public String modelClassesSuffix() {
-    return "GraphQl";
+    return "GQlRespJson";
   }
 
   @Override

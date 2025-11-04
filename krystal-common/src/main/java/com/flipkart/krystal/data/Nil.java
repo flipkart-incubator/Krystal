@@ -38,8 +38,7 @@ public final class Nil<T> implements Success<T> {
   }
 
   @Override
-  public void handle(
-      Consumer<? super Throwable> ifFailure, Runnable ifNil, Consumer<? super T> ifNonNil) {
+  public void handle(Consumer<Failure<T>> ifFailure, Runnable ifNil, Consumer<NonNil<T>> ifNonNil) {
     ifNil.run();
   }
 

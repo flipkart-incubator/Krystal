@@ -119,7 +119,7 @@ public class DeclaredTypeVisitor extends AbstractTypeVisitor14<CodeGenType, Void
               + type
               + ". Short-circuiting code gen. This codegen may be retried in the next round and will most possibly succeed.");
     } else {
-      return uoe(type + " not supported by DeclaredTypeVisitor");
+      return uoe(type + " of element " + element + " not supported by DeclaredTypeVisitor");
     }
   }
 

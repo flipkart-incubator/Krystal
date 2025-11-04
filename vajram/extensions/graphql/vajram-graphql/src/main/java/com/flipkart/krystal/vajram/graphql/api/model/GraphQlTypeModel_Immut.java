@@ -3,13 +3,13 @@ package com.flipkart.krystal.vajram.graphql.api.model;
 import com.flipkart.krystal.model.ImmutableModel;
 
 public interface GraphQlTypeModel_Immut extends GraphQlTypeModel, ImmutableModel {
-  interface Builder extends GraphQlTypeModel, ImmutableModel.Builder {
-    /**
-     * Sets or unsets the __typename of a graphql type. The exact value of the __typename that is
-     * set is an implementation detail and is not controlled by the caller
-     *
-     * @param set true if __typename should be set, false if it should be unset (set to null)
-     */
-    void __typename(boolean set);
+  interface Builder extends ImmutableModel.Builder {
+
+    //    Builder graphql_executionContext(ExecutionContext graphql_executionContext);
+    //
+    //    Builder graphql_executionStrategy(VajramExecutionStrategy graphql_executionStrategy);
+    //
+    //    Builder graphql_executionStrategyParams(
+    //        ExecutionStrategyParameters graphql_executionStrategyParams);
   }
 }
