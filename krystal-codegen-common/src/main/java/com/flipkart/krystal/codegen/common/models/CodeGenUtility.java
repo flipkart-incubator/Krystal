@@ -18,7 +18,9 @@ import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.IfAbsent.Creator;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
+import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
+import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.serial.SerdeProtocol;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -31,6 +33,7 @@ import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
+import com.squareup.javapoet.TypeSpec.Builder;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -58,6 +61,7 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.MirroredTypeException;
@@ -123,7 +127,7 @@ public class CodeGenUtility {
   public void addImmutableModelObjectMethods(
       ClassName immutInterfaceName,
       Set<? extends CharSequence> modelFieldNames,
-      TypeSpec.Builder classBuilder) {
+      Builder classBuilder) {
     addCommonObjectMethods(classBuilder);
 
     classBuilder.addMethod(
@@ -167,7 +171,7 @@ public class CodeGenUtility {
             .build());
   }
 
-  public static void addCommonObjectMethods(TypeSpec.Builder classBuilder) {
+  public static void addCommonObjectMethods(Builder classBuilder) {
     classBuilder.addAnnotation(
         AnnotationSpec.builder(ToString.class).addMember("doNotUseGetters", "true").build());
   }
@@ -541,8 +545,8 @@ public class CodeGenUtility {
    * @return a class builder with the given class name, with the {@link Generated} annotation
    *     applied on the class
    */
-  public TypeSpec.Builder classBuilder(String simpleName, String generatedForCanonicalName) {
-    TypeSpec.Builder classBuilder;
+  public Builder classBuilder(String simpleName, String generatedForCanonicalName) {
+    Builder classBuilder;
     if (simpleName.isBlank()) {
       classBuilder = TypeSpec.anonymousClassBuilder("");
     } else {
@@ -555,7 +559,7 @@ public class CodeGenUtility {
     return classBuilder;
   }
 
-  private void addDefaultAnnotations(TypeSpec.Builder classBuilder) {
+  private void addDefaultAnnotations(Builder classBuilder) {
     classBuilder.addAnnotation(
         AnnotationSpec.builder(SuppressWarnings.class)
             .addMember(
@@ -568,7 +572,7 @@ public class CodeGenUtility {
     addGeneratedAnnotations(classBuilder);
   }
 
-  public void addGeneratedAnnotations(TypeSpec.Builder classBuilder) {
+  public void addGeneratedAnnotations(Builder classBuilder) {
     classBuilder
         .addAnnotation(
             AnnotationSpec.builder(Generated.class)
@@ -591,15 +595,17 @@ public class CodeGenUtility {
    * @return a class builder with the given class name, with the {@link Generated} annotation
    *     applied on the class
    */
-  public TypeSpec.Builder interfaceBuilder(String interfaceName, String generatedForCanonicalName) {
-    TypeSpec.Builder interfaceBuilder;
+  public Builder interfaceBuilder(String interfaceName, String generatedForCanonicalName) {
+    Builder interfaceBuilder;
     if (interfaceName.isBlank()) {
       throw new RuntimeException("interface name cannot be blank");
     } else {
       interfaceBuilder = TypeSpec.interfaceBuilder(interfaceName);
     }
     addDefaultAnnotations(interfaceBuilder);
-    interfaceBuilder.addJavadoc("@see $L", generatedForCanonicalName);
+    if (!generatedForCanonicalName.isBlank()) {
+      interfaceBuilder.addJavadoc("@see $L", generatedForCanonicalName);
+    }
     return interfaceBuilder;
   }
 
@@ -798,21 +804,37 @@ public class CodeGenUtility {
    * @return The appropriate parameter type
    */
   public TypeName getParameterType(ExecutableElement method, boolean isBuilder) {
-    TypeMirror specifiedType = method.getReturnType();
+    final TypeMirror specifiedType = method.getReturnType();
     TypeMirror inferredType = specifiedType;
     if (isOptional(specifiedType)) {
       // For Optional<T>, use T as the parameter type
       inferredType = getOptionalInnerType(specifiedType);
     }
-    TypeName typeName = TypeName.get(inferredType);
-    if (isBuilder && typeName.isPrimitive()) {
-      typeName = typeName.box();
+    if (isBuilder && inferredType instanceof PrimitiveType primitiveType) {
+      inferredType = typeUtils.boxedClass(primitiveType).asType();
     }
+    TypeName typeName = inferredType.accept(new TypeNameVisitor(), null);
     // Add @Nullable annotation for Optional types or methods with @Nullable annotation
-    if (isOptional(specifiedType) || isAnyNullable(specifiedType, method)) {
+    if (isOptional(specifiedType)) {
       // Add @Nullable as a type annotation
       typeName = typeName.annotated(AnnotationSpec.builder(ClassName.get(Nullable.class)).build());
     }
     return typeName;
+  }
+
+  /** Returns true if the model root type supports the given model protocol. */
+  public boolean typeExplicitlySupportsProtocol(
+      TypeElement modelRootType, Class<? extends ModelProtocol> modelProtocol) {
+    SupportedModelProtocols supportedModelProtocols =
+        modelRootType.getAnnotation(SupportedModelProtocols.class);
+    if (supportedModelProtocols == null) {
+      return false;
+    }
+    // Check if Json is mentioned in the annotation value
+    return getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
+        .map(typeMirror -> processingEnv().getTypeUtils().asElement(typeMirror))
+        .filter(elem -> elem instanceof QualifiedNameable)
+        .map(element -> requireNonNull((QualifiedNameable) element).getQualifiedName().toString())
+        .anyMatch(modelProtocol.getCanonicalName()::equals);
   }
 }

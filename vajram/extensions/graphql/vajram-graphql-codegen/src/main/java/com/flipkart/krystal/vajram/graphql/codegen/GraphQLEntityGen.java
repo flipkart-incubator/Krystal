@@ -1,21 +1,27 @@
 package com.flipkart.krystal.vajram.graphql.codegen;
 
+import static com.flipkart.krystal.codegen.common.models.Constants.IMMUT_SUFFIX;
 import static com.flipkart.krystal.vajram.graphql.api.AbstractGraphQLEntity.DEFAULT_ENTITY_ID_FIELD;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQLTypeAggregatorGen.GRAPHQL_RESPONSE;
 import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.DATA_FETCHER;
-import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.getDirectiveArgumentString;
 import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.isEntity;
+import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
-import com.flipkart.krystal.vajram.graphql.api.AbstractGraphQLEntity;
-import com.flipkart.krystal.vajram.graphql.api.AbstractGraphQlModel;
-import com.flipkart.krystal.vajram.graphql.api.GraphQLEntityId;
-import com.flipkart.krystal.vajram.graphql.codegen.GraphQlFieldSpec.FieldType;
+import com.flipkart.krystal.model.Model;
+import com.flipkart.krystal.model.ModelRoot;
+import com.flipkart.krystal.model.ModelRoot.ModelType;
+import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlEntityId;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlEntityModel;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponseJson;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlTypeModel;
 import com.squareup.javapoet.*;
+import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec.Builder;
 import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
@@ -24,21 +30,20 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import javax.lang.model.element.Modifier;
 
-class GraphQLEntityModelGen implements CodeGenerator {
+class GraphQLEntityGen implements CodeGenerator {
 
   private static final String TYPENAME_FIELD = "__typename";
   private final CodeGenUtility util;
 
-  public GraphQLEntityModelGen(CodeGenUtility util) {
+  public GraphQLEntityGen(CodeGenUtility util) {
     this.util = util;
   }
 
   @Override
   public void generate() {
-    SchemaReaderUtil schemaReaderUtil =
-        new SchemaReaderUtil(new GraphQlCodeGenUtil(util).getSchemaFile());
+    GraphQlCodeGenUtil graphQlCodeGenUtil = new GraphQlCodeGenUtil(util);
+    SchemaReaderUtil schemaReaderUtil = graphQlCodeGenUtil.schemaReaderUtil();
     TypeDefinitionRegistry typeDefinitionRegistry = schemaReaderUtil.typeDefinitionRegistry();
     String rootPackageName = schemaReaderUtil.rootPackageName();
 
@@ -55,8 +60,7 @@ class GraphQLEntityModelGen implements CodeGenerator {
       @SuppressWarnings("rawtypes")
       TypeDefinition typeDefinition = entry.getValue();
       boolean isEntity = isEntity(typeDefinition);
-      ClassName entityClassName = schemaReaderUtil.entityClassName(graphQLTypeName);
-      ClassName entityIdClassName = schemaReaderUtil.entityIdClassName(entityClassName);
+      ClassName entityClassName = schemaReaderUtil.typeClassName(graphQLTypeName);
 
       TypeSpec typeSpec;
       if (typeDefinition instanceof EnumTypeDefinition) {
@@ -72,37 +76,37 @@ class GraphQLEntityModelGen implements CodeGenerator {
         typeSpec = enumTypeSpecBuilder.build();
       } else if (typeDefinition instanceof ObjectTypeDefinition) {
         List<MethodSpec> methodSpecs = new ArrayList<>();
-        String entityIdField =
-            getDirectiveArgumentString(typeDefinition, "entity", "identifierKey")
-                .orElse(DEFAULT_ENTITY_ID_FIELD);
+        GraphQLTypeName enclosingType = GraphQLTypeName.of(typeDefinition);
 
         boolean idMissing = true;
+        if (isEntity) {
+          methodSpecs.add(
+              MethodSpec.overriding(
+                      util.getMethod(
+                          () -> GraphQlEntityModel.class.getMethod(DEFAULT_ENTITY_ID_FIELD)))
+                  .addModifiers(PUBLIC, ABSTRACT)
+                  .returns(schemaReaderUtil.entityIdClassName(entityClassName))
+                  .build());
+        }
         if (typeDefinition.getChildren() != null) {
           for (int i = 0; i < typeDefinition.getChildren().size(); i++) {
             if (typeDefinition.getChildren().get(i) instanceof FieldDefinition fieldDefinition) {
               String fieldName = fieldDefinition.getName();
-              boolean isEntityIdField = entityIdField.equals(fieldName);
+              boolean isEntityIdField = DEFAULT_ENTITY_ID_FIELD.equals(fieldName);
               if (isEntity && isEntityIdField) {
                 idMissing = false;
+                continue;
               }
-              FieldType fieldType = schemaReaderUtil.getFieldType(fieldDefinition, graphQLTypeName);
-              fieldToClass.put(fieldName, fieldType.genericType());
+              GraphQlFieldSpec fieldSpec =
+                  schemaReaderUtil.fieldSpecFromField(fieldDefinition, "", enclosingType);
+              TypeName typeNameForField = graphQlCodeGenUtil.toTypeNameForField(fieldSpec);
+              fieldToClass.put(fieldName, typeNameForField);
 
               methodSpecs.add(
                   MethodSpec.methodBuilder(fieldName)
-                      .addModifiers(PUBLIC)
-                      .returns(fieldType.genericType())
-                      .addStatement(
-                          "return ($T) _values.get(\"$L\")", fieldType.genericType(), fieldName)
+                      .addModifiers(PUBLIC, ABSTRACT)
+                      .returns(typeNameForField)
                       .build());
-              if (!isEntityIdField) {
-                methodSpecs.add(
-                    MethodSpec.methodBuilder(fieldName)
-                        .addModifiers(PUBLIC)
-                        .addParameter(fieldType.genericType(), "value")
-                        .addStatement("_values.put(\"$L\", value)", fieldName)
-                        .build());
-              }
             }
           }
           if (isEntity && idMissing) {
@@ -114,51 +118,33 @@ class GraphQLEntityModelGen implements CodeGenerator {
           }
         }
 
-        TypeSpec.Builder entityClassBuilder = util.classBuilder(entityClassName.simpleName(), "");
-
-        MethodSpec.Builder constructor = MethodSpec.constructorBuilder().addModifiers(PUBLIC);
-        if (isEntity) {
-          constructor
-              .addParameter(entityIdClassName, entityIdField)
-              .addStatement("_values.put($S, $L)", entityIdField, entityIdField);
-        }
-        methodSpecs.add(constructor.build());
+        ClassName immutableClassName =
+            ClassName.get(
+                entityClassName.packageName(), entityClassName.simpleName() + "_" + IMMUT_SUFFIX);
         methodSpecs.add(
-            MethodSpec.methodBuilder("_new")
-                .addModifiers(PUBLIC)
-                .addAnnotation(Override.class)
-                .returns(entityClassName)
-                .addStatement(
-                    "return new $T($L)",
-                    entityClassName,
-                    isEntity ? CodeBlock.of("$L()", entityIdField) : CodeBlock.of(""))
-                .build());
-        methodSpecs.add(
-            MethodSpec.methodBuilder(TYPENAME_FIELD)
-                .returns(String.class)
-                .addModifiers(PUBLIC)
-                .addStatement("return ($T) _values.get($S)", String.class, TYPENAME_FIELD)
-                .build());
-        methodSpecs.add(
-            MethodSpec.methodBuilder(TYPENAME_FIELD)
-                .returns(void.class)
-                .addModifiers(PUBLIC)
-                .addParameter(Void.class, "_unused")
-                .addStatement("_values.put($S, $S)", TYPENAME_FIELD, entityClassName.simpleName())
+            MethodSpec.overriding(util.getMethod(() -> Model.class.getMethod("_asBuilder")))
+                .returns(immutableClassName.nestedClass("Builder"))
+                .addModifiers(PUBLIC, ABSTRACT)
                 .build());
 
         typeSpec =
-            entityClassBuilder
-                .addModifiers(PUBLIC, Modifier.FINAL)
+            util.interfaceBuilder(entityClassName.simpleName(), "")
+                .addAnnotation(
+                    AnnotationSpec.builder(ModelRoot.class)
+                        .addMember("type", "$T.$L", ModelType.class, ModelType.RESPONSE.name())
+                        .build())
+                .addAnnotation(
+                    AnnotationSpec.builder(SupportedModelProtocols.class)
+                        .addMember("value", "$T.class", GraphQlResponseJson.class)
+                        .build())
+                .addModifiers(PUBLIC)
                 .addMethods(methodSpecs)
-                .superclass(
+                .addSuperinterface(
                     isEntity
                         ? ParameterizedTypeName.get(
-                            ClassName.get(AbstractGraphQLEntity.class),
-                            entityIdClassName,
-                            entityClassName)
-                        : ParameterizedTypeName.get(
-                            ClassName.get(AbstractGraphQlModel.class), entityClassName))
+                            ClassName.get(GraphQlEntityModel.class),
+                            schemaReaderUtil.entityIdClassName(entityClassName))
+                        : ClassName.get(GraphQlTypeModel.class))
                 .build();
       } else {
         util.note("Skipping unknown entity type: " + typeDefinition);
@@ -169,6 +155,7 @@ class GraphQLEntityModelGen implements CodeGenerator {
           JavaFile.builder(entityClassName.packageName(), typeSpec).build().toString(),
           null);
       if (isEntity) {
+        var entityIdClassName = schemaReaderUtil.entityIdClassName(entityClassName);
         util.generateSourceFile(
             entityIdClassName.canonicalName(),
             JavaFile.builder(
@@ -176,7 +163,7 @@ class GraphQLEntityModelGen implements CodeGenerator {
                     util.classBuilder(
                             entityIdClassName.simpleName(), entityClassName.canonicalName())
                         .addModifiers(PUBLIC)
-                        .addSuperinterface(GraphQLEntityId.class)
+                        .addSuperinterface(GraphQlEntityId.class)
                         .addField(String.class, "value", PRIVATE, FINAL)
                         .addMethod(
                             MethodSpec.methodBuilder("value")
@@ -232,7 +219,7 @@ class GraphQLEntityModelGen implements CodeGenerator {
                             .build());
                   }
                   builder
-                      .addModifiers(PUBLIC, Modifier.FINAL)
+                      .addModifiers(PUBLIC, FINAL)
                       .addAnnotation(
                           AnnotationSpec.builder(ClassName.get("lombok.experimental", "Accessors"))
                               .addMember("fluent", "true")

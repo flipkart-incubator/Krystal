@@ -1,16 +1,43 @@
 type Order @entity{
-    id: ID,
-    orderItemNames: [String] @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
+    id: ID
+    orderItemNames: [String]! @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
     name: String @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
     dummy: Dummy @idFetcher(vajramId: "GetDummyId", subPackage: "order")
-    dummies: [Dummy] @idFetcher(vajramId: "GetDummyIds", subPackage: "order")
+    dummies: [Dummy!]! @idFetcher(vajramId: "GetDummyIds", subPackage: "order")
     hello: Hello
 }
 
 type Dummy @entity{
-    id: ID,
-    name: String
+    id: ID
+    name: String!
+    age: Int
+    order: Order
 }
+#{
+#    order(orderId: "o1") {
+#        dummy {
+#            order {
+#                dummy {
+#                    order {
+#                        id
+#                    }
+#                }
+#            }
+#        }
+#    }
+#
+#}
+
+
+
+
+
+
+
+
+
+
+
 
 type Hello {
     toName: String

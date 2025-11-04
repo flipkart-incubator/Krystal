@@ -80,18 +80,18 @@ class AddTest {
                     .executorId("subtract")
                     .executorService(executorService))
             .build();
+    CompletableFuture<Thread> resultThreadFuture = new CompletableFuture<>();
     try (KrystexVajramExecutor krystexVajramExecutor = graph.createExecutor(config)) {
       result =
           krystexVajramExecutor.execute(
               Add_ReqImmutPojo._builder().numberOne(5)._build(),
               KryonExecutionConfig.builder().build());
+      result.thenRun(
+          () -> {
+            System.out.println(Throwables.getStackTrace(new RuntimeException()));
+            resultThreadFuture.complete(currentThread());
+          });
     }
-    CompletableFuture<Thread> resultThreadFuture = new CompletableFuture<>();
-    result.thenRun(
-        () -> {
-          System.out.println(Throwables.getStackTrace(new RuntimeException()));
-          resultThreadFuture.complete(currentThread());
-        });
     AssertionsForClassTypes.assertThat(resultThreadFuture.join()).isEqualTo(eventLoopThread);
   }
 }

@@ -26,8 +26,7 @@ public record NonNil<T>(@NonNull T value) implements Success<T> {
   }
 
   @Override
-  public void handle(
-      Consumer<? super Throwable> ifFailure, Runnable ifNil, Consumer<? super T> ifNonNil) {
-    ifNonNil.accept(value);
+  public void handle(Consumer<Failure<T>> ifFailure, Runnable ifNil, Consumer<NonNil<T>> ifNonNil) {
+    ifNonNil.accept(this);
   }
 }

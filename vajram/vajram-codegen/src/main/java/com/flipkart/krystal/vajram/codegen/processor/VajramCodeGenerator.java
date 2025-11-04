@@ -1722,7 +1722,10 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
             // is not matching the type of the facet
             util.codegenUtil()
                 .error(
-                    "A resolver must consume a mandatory dependency directly using its type (%s). Found '%s' instead"
+                    """
+                        A resolver must consume a mandatory dependency directly using its type.
+                        Expected: %s
+                        Found: %s"""
                         .formatted(unboxedDepType, parameterType),
                     parameter);
           }

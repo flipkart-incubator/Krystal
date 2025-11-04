@@ -64,18 +64,18 @@ public sealed interface Errable<T> extends FacetValue<T>, SingleFacetValue<T>
     return this;
   }
 
-  default void handle(Consumer<? super Throwable> ifFailure, Consumer<? super T> ifNonNil) {
+  default void handle(Consumer<Failure<T>> ifFailure, Consumer<NonNil<T>> ifNonNil) {
     handle(ifFailure, () -> {}, ifNonNil);
   }
 
-  void handle(Consumer<? super Throwable> ifFailure, Runnable ifNil, Consumer<? super T> ifNonNil);
+  void handle(Consumer<Failure<T>> ifFailure, Runnable ifNil, Consumer<NonNil<T>> ifNonNil);
 
   /* ***********************************************************************************************/
   /* ************************************** Static utilities ***************************************/
   /* ***********************************************************************************************/
 
   static <T> Errable<T> nil() {
-    return Success.nil();
+    return Nil.nil();
   }
 
   static <T> Errable<T> withValue(@Nullable T t) {
