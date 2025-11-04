@@ -62,6 +62,19 @@ public interface GraphQLFieldError extends GraphQLError {
     return new DefaultGraphQLFieldError(fieldPath, message, null);
   }
 
+  /**
+   * Creates a new GraphQLFieldError from a throwable with a custom field path. Preserves the
+   * original exception for proper error code and extensions population.
+   *
+   * @param fieldPath The path to the field where the error occurred (e.g., ["order", "items", 0,
+   *     "price"])
+   * @param error The throwable that caused the error
+   * @return A new GraphQLFieldError instance with full exception details
+   */
+  static GraphQLFieldError fromPathWithThrowable(List<Object> fieldPath, Throwable error) {
+    return new DefaultGraphQLFieldError(fieldPath, error.getMessage(), error);
+  }
+
   /** Default implementation of GraphQLFieldError */
   class DefaultGraphQLFieldError implements GraphQLFieldError {
     private final List<Object> fieldPath;

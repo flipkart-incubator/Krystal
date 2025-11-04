@@ -24,8 +24,6 @@ import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.*;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
-import com.flipkart.krystal.vajram.graphql.api.GraphQLErrorUtils;
-import com.flipkart.krystal.vajram.graphql.api.GraphQLFieldError;
 import com.flipkart.krystal.vajram.graphql.api.GraphQLUtils;
 import com.flipkart.krystal.vajram.graphql.api.VajramExecutionStrategy;
 import com.flipkart.krystal.vajram.graphql.codegen.GraphQlFieldSpec.FieldType;

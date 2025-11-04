@@ -199,18 +199,6 @@ public abstract class AbstractGraphQlModel<T extends AbstractGraphQlModel<T>> {
    */
   private void _collectErrorsRecursively(
       List<Map<String, Object>> errorList, List<Object> pathPrefix) {
-    // DEBUG: Print what we're looking at
-    System.out.println(
-        "[_collectErrorsRecursively] class="
-            + this.getClass().getSimpleName()
-            + ", pathPrefix="
-            + pathPrefix
-            + ", _errors.size="
-            + _errors.size()
-            + ", _values.size="
-            + _values.size());
-    System.out.println("[_collectErrorsRecursively] _values.keySet=" + _values.keySet());
-
     // Collect errors from this entity
     _errors.forEach(
         (fieldName, errors) -> {
@@ -218,12 +206,11 @@ public abstract class AbstractGraphQlModel<T extends AbstractGraphQlModel<T>> {
             // Build full path: pathPrefix + fieldName
             List<Object> fullPath = new ArrayList<>(pathPrefix);
             fullPath.add(fieldName);
-            System.out.println("[_collectErrorsRecursively] Adding error with path: " + fullPath);
 
             GraphQLFieldError gqlError =
                 error instanceof GraphQLFieldError ge
                     ? ge
-                    : GraphQLFieldError.fromPath(fullPath, error.getMessage());
+                    : GraphQLFieldError.fromPathWithThrowable(fullPath, error);
 
             Map<String, Object> errorMap = new LinkedHashMap<>();
             errorMap.put("message", gqlError.getMessage());
@@ -236,42 +223,21 @@ public abstract class AbstractGraphQlModel<T extends AbstractGraphQlModel<T>> {
         });
 
     // Recursively collect errors from nested entities
-    System.out.println(
-        "[_collectErrorsRecursively] Checking " + _values.size() + " values for nested entities");
     for (Entry<String, Object> entry : _values.entrySet()) {
       String fieldName = entry.getKey();
       Object value = entry.getValue();
-      System.out.println(
-          "[_collectErrorsRecursively] Checking field '"
-              + fieldName
-              + "', value class: "
-              + (value != null ? value.getClass().getSimpleName() : "null"));
 
       if (value instanceof AbstractGraphQlModel<?> nestedEntity) {
         // Single nested entity: add field name to path
-        System.out.println(
-            "[_collectErrorsRecursively] Found nested entity at field '" + fieldName + "'");
         List<Object> nestedPath = new ArrayList<>(pathPrefix);
         nestedPath.add(fieldName);
         nestedEntity._collectErrorsRecursively(errorList, nestedPath);
 
       } else if (value instanceof List<?> list) {
-        System.out.println(
-            "[_collectErrorsRecursively] Found list at field '"
-                + fieldName
-                + "', size="
-                + list.size());
         // Array of entities: add field name and index to path
         for (int i = 0; i < list.size(); i++) {
           Object item = list.get(i);
-          System.out.println(
-              "[_collectErrorsRecursively]   Item "
-                  + i
-                  + " class: "
-                  + (item != null ? item.getClass().getSimpleName() : "null"));
           if (item instanceof AbstractGraphQlModel<?> nestedEntity) {
-            System.out.println(
-                "[_collectErrorsRecursively]   Item " + i + " is AbstractGraphQlModel, recursing");
             List<Object> nestedPath = new ArrayList<>(pathPrefix);
             nestedPath.add(fieldName);
             nestedPath.add(i);
@@ -280,12 +246,6 @@ public abstract class AbstractGraphQlModel<T extends AbstractGraphQlModel<T>> {
         }
       }
     }
-    System.out.println(
-        "[_collectErrorsRecursively] Finished for "
-            + this.getClass().getSimpleName()
-            + ", collected "
-            + errorList.size()
-            + " total errors so far");
   }
 
   final Object _putValue(String fieldName, Object value) {
