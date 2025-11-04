@@ -24,6 +24,8 @@ import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.*;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
+import com.flipkart.krystal.vajram.graphql.api.GraphQLErrorUtils;
+import com.flipkart.krystal.vajram.graphql.api.GraphQLFieldError;
 import com.flipkart.krystal.vajram.graphql.api.GraphQLUtils;
 import com.flipkart.krystal.vajram.graphql.api.VajramExecutionStrategy;
 import com.flipkart.krystal.vajram.graphql.codegen.GraphQlFieldSpec.FieldType;
@@ -268,6 +270,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
         // Fanout case: dummies.responses().handle(...)
         codeBlockBuilder.addNamed(
             """
+            // Handle field: $fieldName:L - Errors are automatically converted to GraphQLFieldError by the entity
             $facetName:L
                 .responses()
                 .handle(_error -> entity._putError($fieldName:S, _error), _nonNil -> entity.$fieldName:L(_nonNil));
@@ -278,6 +281,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
         // Single type aggregator: dummy.handle(...)
         codeBlockBuilder.addNamed(
             """
+            // Handle field: $fieldName:L - Errors are automatically converted to GraphQLFieldError by the entity
             $facetName:L.handle(
                 _error -> entity._putError($fieldName:S, _error),
                 _nonNil -> entity.$fieldName:L(_nonNil));
@@ -288,6 +292,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
         // Data fetcher single field
         codeBlockBuilder.addNamed(
             """
+            // Handle field: $fieldName:L - Errors are automatically converted to GraphQLFieldError by the entity
             $facetName:L.handle(
                 _error -> entity._putError($fieldName:S, _error),
                 _nonNil -> entity.$fieldName:L(_nonNil));
@@ -297,10 +302,12 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
       }
     } else {
       // Multiple fields from same fetcher: GetOrderItemNames returns {orderItemNames, name}
+      codeBlockBuilder.add("// Handle multiple fields from same fetcher\n");
       for (GraphQlFieldSpec graphQlFieldSpec : graphQlFieldSpecs) {
         codeBlockBuilder.add("\n");
         codeBlockBuilder.addNamed(
             """
+            // Field: $fieldName:L - Errors are automatically converted to GraphQLFieldError by the entity
             $facetName:L.handle(
                 _error -> entity._putError($fieldName:S, _error),
                 _nonNil -> entity.$fieldName:L(_nonNil.$fieldName:L()));

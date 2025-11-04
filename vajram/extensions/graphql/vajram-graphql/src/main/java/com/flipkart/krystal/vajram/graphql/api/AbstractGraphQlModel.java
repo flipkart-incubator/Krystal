@@ -58,7 +58,8 @@ public abstract class AbstractGraphQlModel<T extends AbstractGraphQlModel<T>> {
   public final Map<String, Object> _errorsAsMap() {
     Map<String, Object> map = null;
     if (!_errors.isEmpty()) {
-      map = new LinkedHashMap<>(_errors);
+      // Use GraphQL-compliant error format
+      map = new LinkedHashMap<>(_graphqlErrorsAsMap());
     }
     for (Entry<String, Object> entry : _values.entrySet()) {
       String s = entry.getKey();
@@ -105,6 +106,186 @@ public abstract class AbstractGraphQlModel<T extends AbstractGraphQlModel<T>> {
 
   public final void _putErrors(String fieldName, List<Throwable> errors) {
     _errors.put(fieldName, unmodifiableList(errors));
+  }
+
+  /**
+   * Returns all errors as GraphQLFieldError objects. Converts Throwable errors to GraphQLFieldError
+   * on the fly.
+   */
+  public final Map<String, List<GraphQLFieldError>> _graphqlErrors() {
+    Map<String, List<GraphQLFieldError>> graphqlErrors = new LinkedHashMap<>();
+    _errors.forEach(
+        (fieldName, errors) -> {
+          List<GraphQLFieldError> fieldErrors =
+              errors.stream()
+                  .map(
+                      error ->
+                          error instanceof GraphQLFieldError gqlError
+                              ? gqlError
+                              : GraphQLFieldError.fromThrowable(fieldName, error))
+                  .toList();
+          graphqlErrors.put(fieldName, fieldErrors);
+        });
+    return unmodifiableMap(graphqlErrors);
+  }
+
+  /**
+   * Returns errors as a GraphQL-compliant map structure for inclusion in responses. The format
+   * follows the GraphQL spec with message, path, and extensions.
+   */
+  public final Map<String, Object> _graphqlErrorsAsMap() {
+    Map<String, List<Map<String, Object>>> errorsByField = new LinkedHashMap<>();
+    _errors.forEach(
+        (fieldName, errors) -> {
+          List<Map<String, Object>> fieldErrors =
+              errors.stream()
+                  .map(
+                      error -> {
+                        GraphQLFieldError gqlError =
+                            error instanceof GraphQLFieldError ge
+                                ? ge
+                                : GraphQLFieldError.fromThrowable(fieldName, error);
+                        Map<String, Object> errorMap = new LinkedHashMap<>();
+                        errorMap.put("message", gqlError.getMessage());
+                        errorMap.put("path", gqlError.getFieldPath());
+                        if (gqlError.getExtensions() != null
+                            && !gqlError.getExtensions().isEmpty()) {
+                          errorMap.put("extensions", gqlError.getExtensions());
+                        }
+                        return errorMap;
+                      })
+                  .toList();
+          errorsByField.put(fieldName, fieldErrors);
+        });
+    return unmodifiableMap(errorsByField);
+  }
+
+  /**
+   * Returns errors as a flat list conforming to the GraphQL specification. According to the spec
+   * (https://spec.graphql.org/October2021/#sec-Errors), errors should be returned as a list at the
+   * top level of the response.
+   *
+   * <p>Each error contains:
+   *
+   * <ul>
+   *   <li>message (required): A description of the error
+   *   <li>path (optional): Path to the field that caused the error
+   *   <li>extensions (optional): Additional error information
+   * </ul>
+   *
+   * <p>This method recursively collects errors from nested entities and builds proper paths
+   * including field names and array indices, per GraphQL spec:
+   *
+   * <ul>
+   *   <li>Simple field: ["fieldName"]
+   *   <li>Nested field: ["parent", "child", "field"]
+   *   <li>Array item: ["parent", 0, "field"]
+   * </ul>
+   *
+   * @return A flat list of GraphQL-compliant error maps
+   */
+  public final List<Map<String, Object>> _graphqlErrorsAsList() {
+    List<Map<String, Object>> errorList = new ArrayList<>();
+    _collectErrorsRecursively(errorList, new ArrayList<>());
+    return unmodifiableList(errorList);
+  }
+
+  /**
+   * Recursively collects errors from this entity and all nested entities. Builds proper
+   * GraphQL-compliant paths with field names and array indices.
+   *
+   * @param errorList The list to add errors to
+   * @param pathPrefix The current path prefix (e.g., ["order", "items", 0])
+   */
+  private void _collectErrorsRecursively(
+      List<Map<String, Object>> errorList, List<Object> pathPrefix) {
+    // DEBUG: Print what we're looking at
+    System.out.println(
+        "[_collectErrorsRecursively] class="
+            + this.getClass().getSimpleName()
+            + ", pathPrefix="
+            + pathPrefix
+            + ", _errors.size="
+            + _errors.size()
+            + ", _values.size="
+            + _values.size());
+    System.out.println("[_collectErrorsRecursively] _values.keySet=" + _values.keySet());
+
+    // Collect errors from this entity
+    _errors.forEach(
+        (fieldName, errors) -> {
+          for (Throwable error : errors) {
+            // Build full path: pathPrefix + fieldName
+            List<Object> fullPath = new ArrayList<>(pathPrefix);
+            fullPath.add(fieldName);
+            System.out.println("[_collectErrorsRecursively] Adding error with path: " + fullPath);
+
+            GraphQLFieldError gqlError =
+                error instanceof GraphQLFieldError ge
+                    ? ge
+                    : GraphQLFieldError.fromPath(fullPath, error.getMessage());
+
+            Map<String, Object> errorMap = new LinkedHashMap<>();
+            errorMap.put("message", gqlError.getMessage());
+            errorMap.put("path", fullPath);
+            if (gqlError.getExtensions() != null && !gqlError.getExtensions().isEmpty()) {
+              errorMap.put("extensions", gqlError.getExtensions());
+            }
+            errorList.add(errorMap);
+          }
+        });
+
+    // Recursively collect errors from nested entities
+    System.out.println(
+        "[_collectErrorsRecursively] Checking " + _values.size() + " values for nested entities");
+    for (Entry<String, Object> entry : _values.entrySet()) {
+      String fieldName = entry.getKey();
+      Object value = entry.getValue();
+      System.out.println(
+          "[_collectErrorsRecursively] Checking field '"
+              + fieldName
+              + "', value class: "
+              + (value != null ? value.getClass().getSimpleName() : "null"));
+
+      if (value instanceof AbstractGraphQlModel<?> nestedEntity) {
+        // Single nested entity: add field name to path
+        System.out.println(
+            "[_collectErrorsRecursively] Found nested entity at field '" + fieldName + "'");
+        List<Object> nestedPath = new ArrayList<>(pathPrefix);
+        nestedPath.add(fieldName);
+        nestedEntity._collectErrorsRecursively(errorList, nestedPath);
+
+      } else if (value instanceof List<?> list) {
+        System.out.println(
+            "[_collectErrorsRecursively] Found list at field '"
+                + fieldName
+                + "', size="
+                + list.size());
+        // Array of entities: add field name and index to path
+        for (int i = 0; i < list.size(); i++) {
+          Object item = list.get(i);
+          System.out.println(
+              "[_collectErrorsRecursively]   Item "
+                  + i
+                  + " class: "
+                  + (item != null ? item.getClass().getSimpleName() : "null"));
+          if (item instanceof AbstractGraphQlModel<?> nestedEntity) {
+            System.out.println(
+                "[_collectErrorsRecursively]   Item " + i + " is AbstractGraphQlModel, recursing");
+            List<Object> nestedPath = new ArrayList<>(pathPrefix);
+            nestedPath.add(fieldName);
+            nestedPath.add(i);
+            nestedEntity._collectErrorsRecursively(errorList, nestedPath);
+          }
+        }
+      }
+    }
+    System.out.println(
+        "[_collectErrorsRecursively] Finished for "
+            + this.getClass().getSimpleName()
+            + ", collected "
+            + errorList.size()
+            + " total errors so far");
   }
 
   final Object _putValue(String fieldName, Object value) {
