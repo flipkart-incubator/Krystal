@@ -1,4 +1,4 @@
-# How to write a vajramDef
+# How to write a Vajram
 ## How to read this document
 * This is a normative document intended to guide developers when coding vajrams.
 * There is a companion video with live coding examples which walks through the document.
