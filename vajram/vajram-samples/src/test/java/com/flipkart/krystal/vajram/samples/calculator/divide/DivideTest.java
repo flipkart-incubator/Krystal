@@ -3,8 +3,8 @@ package com.flipkart.krystal.vajram.samples.calculator.divide;
 import static com.flipkart.krystal.config.PropertyNames.RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME;
 import static java.lang.Boolean.FALSE;
 import static java.lang.Thread.currentThread;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
