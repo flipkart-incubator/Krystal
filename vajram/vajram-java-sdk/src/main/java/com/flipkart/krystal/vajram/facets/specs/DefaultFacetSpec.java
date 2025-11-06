@@ -11,7 +11,6 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.tags.ElementTags;
-import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -51,12 +50,9 @@ public abstract sealed class DefaultFacetSpec<T, CV extends Request>
 
   @Override
   @SuppressWarnings("unchecked")
-  public final void setFacetValue(FacetValuesBuilder facets, FacetValue value) {
+  public final void setFacetValue(FacetValuesBuilder facets, FacetValue<?> value) {
     if (value instanceof Errable<?> errable) {
-      Optional<?> o = errable.valueOpt();
-      if (o.isPresent()) {
-        setValue(facets, (T) o.get());
-      }
+      errable.valueOpt().ifPresent(object -> setValue(facets, (T) object));
     } else {
       throw new RuntimeException(
           "Expecting facet value type 'Errable' for default facet spec, but found: "

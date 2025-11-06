@@ -1,6 +1,6 @@
 type Order @entity{
     id: ID
-    orderItemNames: [String]! @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
+    orderItemNames(name: String): [String]! @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
     name: String @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
     dummy: Dummy @idFetcher(vajramId: "GetDummyId", subPackage: "order")
     dummies: [Dummy!]! @idFetcher(vajramId: "GetDummyIds", subPackage: "order")
@@ -13,6 +13,11 @@ type Dummy @entity{
     age: Int
     order: Order
 }
+
+type Hello @composedType(inEntity: "Order"){
+    toName: String
+}
+
 #{
 #    order(orderId: "o1") {
 #        dummy {
@@ -27,18 +32,3 @@ type Dummy @entity{
 #    }
 #
 #}
-
-
-
-
-
-
-
-
-
-
-
-
-type Hello {
-    toName: String
-}

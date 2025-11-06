@@ -26,3 +26,10 @@ If a vajram is located in a subpackage inside the root package,
 the sub package suffix can be specified separately in the @dataFetcher and @idFetcher directives.
 """
 directive @rootPackage(name: String!) on SCHEMA
+
+"""
+Specifies that a given non-entity type can be composed inside an entity of type entityType.
+This means that any @dataFetchers or @idFetchers on the fields of the type must accept
+the entity Id of the specified entity and compute the values of the fields based on the entity Id.
+"""
+directive @composedType(inEntity: String) on OBJECT

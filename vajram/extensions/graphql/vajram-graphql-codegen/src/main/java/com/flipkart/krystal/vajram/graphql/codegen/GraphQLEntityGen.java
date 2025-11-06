@@ -2,9 +2,8 @@ package com.flipkart.krystal.vajram.graphql.codegen;
 
 import static com.flipkart.krystal.codegen.common.models.Constants.IMMUT_SUFFIX;
 import static com.flipkart.krystal.vajram.graphql.api.AbstractGraphQLEntity.DEFAULT_ENTITY_ID_FIELD;
+import static com.flipkart.krystal.vajram.graphql.codegen.Constants.Directives.DATA_FETCHER;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQLTypeAggregatorGen.GRAPHQL_RESPONSE;
-import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.DATA_FETCHER;
-import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.isEntity;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
@@ -20,6 +19,7 @@ import com.flipkart.krystal.vajram.graphql.api.model.GraphQlEntityId;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlEntityModel;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponseJson;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlTypeModel;
+import com.flipkart.krystal.vajram.graphql.codegen.Constants.Directives;
 import com.squareup.javapoet.*;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec.Builder;
@@ -59,7 +59,7 @@ class GraphQLEntityGen implements CodeGenerator {
       GraphQLTypeName graphQLTypeName = new GraphQLTypeName(entry.getKey());
       @SuppressWarnings("rawtypes")
       TypeDefinition typeDefinition = entry.getValue();
-      boolean isEntity = isEntity(typeDefinition);
+      boolean isEntity = ((TypeDefinition<?>) typeDefinition).hasDirective(Directives.ENTITY);
       ClassName entityClassName = schemaReaderUtil.typeClassName(graphQLTypeName);
 
       TypeSpec typeSpec;
@@ -132,6 +132,7 @@ class GraphQLEntityGen implements CodeGenerator {
                 .addAnnotation(
                     AnnotationSpec.builder(ModelRoot.class)
                         .addMember("type", "$T.$L", ModelType.class, ModelType.RESPONSE.name())
+                        .addMember("builderExtendsModelRoot", "true")
                         .build())
                 .addAnnotation(
                     AnnotationSpec.builder(SupportedModelProtocols.class)
