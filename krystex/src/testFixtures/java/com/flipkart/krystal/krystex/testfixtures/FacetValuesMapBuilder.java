@@ -2,6 +2,7 @@ package com.flipkart.krystal.krystex.testfixtures;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.ErrableFacetValue;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FacetValuesBuilder;
 import com.flipkart.krystal.data.FanoutDepResponses;
@@ -41,22 +42,22 @@ public final class FacetValuesMapBuilder implements FacetValuesMap, FacetValuesB
 
   public FacetValue _get(int facetId) {
     if (_request._hasValue(facetId)) {
-      Errable<Object> v = _request._get(facetId);
+      ErrableFacetValue<Object> v = _request._get(facetId);
       if (v != null) {
         return v;
       } else {
         throw new AssertionError("This should not be possible sinve _hasValue is true");
       }
     }
-    return otherFacetValues.getOrDefault(facetId, Errable.nil());
+    return otherFacetValues.getOrDefault(facetId, ErrableFacetValue.nil());
   }
 
   @Override
   public Errable<?> _getOne2OneResponse(int facetId) {
     if (_request._hasValue(facetId)) {
-      return _request._get(facetId);
+      return _request._get(facetId).asErrable();
     } else {
-      FacetValue datum = otherFacetValues.getOrDefault(facetId, Errable.nil());
+      FacetValue datum = otherFacetValues.getOrDefault(facetId, ErrableFacetValue.nil());
       if (datum instanceof One2OneDepResponse<?, ?> one2OneDepResponse) {
         return one2OneDepResponse.response();
       } else {
@@ -70,7 +71,7 @@ public final class FacetValuesMapBuilder implements FacetValuesMap, FacetValuesB
   @Override
   @SuppressWarnings("unchecked")
   public FanoutDepResponses _getDepResponses(int facetId) {
-    FacetValue datum = otherFacetValues.getOrDefault(facetId, Errable.nil());
+    FacetValue datum = otherFacetValues.getOrDefault(facetId, ErrableFacetValue.nil());
     if (datum instanceof FanoutDepResponses fanoutDepResponses) {
       return fanoutDepResponses;
     } else {

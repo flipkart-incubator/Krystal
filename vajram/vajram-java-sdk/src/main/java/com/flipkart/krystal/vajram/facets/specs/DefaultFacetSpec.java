@@ -3,7 +3,7 @@ package com.flipkart.krystal.vajram.facets.specs;
 import static com.flipkart.krystal.data.Errable.errableFrom;
 
 import com.flipkart.krystal.core.VajramID;
-import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.ErrableFacetValue;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FacetValuesBuilder;
@@ -40,8 +40,8 @@ public abstract sealed class DefaultFacetSpec<T, CV extends Request>
   }
 
   @Override
-  public Errable<T> getFacetValue(FacetValues facetValues) {
-    return errableFrom(() -> getValue(facetValues));
+  public ErrableFacetValue<T> getFacetValue(FacetValues facetValues) {
+    return new ErrableFacetValue<>(errableFrom(() -> getValue(facetValues)));
   }
 
   public @Nullable T getValue(FacetValues facetValues) {
@@ -51,8 +51,8 @@ public abstract sealed class DefaultFacetSpec<T, CV extends Request>
   @Override
   @SuppressWarnings("unchecked")
   public final void setFacetValue(FacetValuesBuilder facets, FacetValue<?> value) {
-    if (value instanceof Errable<?> errable) {
-      errable.valueOpt().ifPresent(object -> setValue(facets, (T) object));
+    if (value instanceof ErrableFacetValue<?> errableFacetValue) {
+      errableFacetValue.asErrable().valueOpt().ifPresent(object -> setValue(facets, (T) object));
     } else {
       throw new RuntimeException(
           "Expecting facet value type 'Errable' for default facet spec, but found: "

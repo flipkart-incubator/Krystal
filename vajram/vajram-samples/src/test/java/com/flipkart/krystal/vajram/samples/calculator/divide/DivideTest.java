@@ -78,6 +78,7 @@ class DivideTest {
     executorService.execute(() -> eventLoopThreadFuture.complete(currentThread()));
     Thread eventLoopThread = eventLoopThreadFuture.join();
     CompletableFuture<@Nullable Integer> result;
+    CompletableFuture<Thread> resultThreadFuture = new CompletableFuture<>();
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
@@ -89,13 +90,12 @@ class DivideTest {
       result =
           krystexVajramExecutor.execute(
               Divide_ReqImmutPojo._builder().numerator(5).denominator(7)._build());
+      result.thenRun(
+          () -> {
+            System.out.println(Throwables.getStackTrace(new RuntimeException()));
+            resultThreadFuture.complete(currentThread());
+          });
     }
-    CompletableFuture<Thread> resultThreadFuture = new CompletableFuture<>();
-    result.thenRun(
-        () -> {
-          System.out.println(Throwables.getStackTrace(new RuntimeException()));
-          resultThreadFuture.complete(currentThread());
-        });
     assertThat(resultThreadFuture.join()).isEqualTo(eventLoopThread);
   }
 }

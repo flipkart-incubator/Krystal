@@ -1,6 +1,5 @@
 package com.flipkart.krystal.data;
 
-import com.flipkart.krystal.data.FacetValue.SingleFacetValue;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.except.ThrowingCallable;
 import java.util.Optional;
@@ -11,7 +10,7 @@ import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public sealed interface Errable<T> extends SingleFacetValue<T> permits Success, Failure {
+public sealed interface Errable<T> permits Success, Failure {
 
   /**
    * Returns a {@link CompletableFuture} which is completed exceptionally with the error if this is
@@ -58,11 +57,6 @@ public sealed interface Errable<T> extends SingleFacetValue<T> permits Success, 
    * </ul>
    */
   T valueOrThrow();
-
-  @Override
-  default Errable<T> asErrable() {
-    return this;
-  }
 
   default void handle(Consumer<Failure<T>> ifFailure, Consumer<NonNil<T>> ifNonNil) {
     handle(ifFailure, () -> {}, ifNonNil);
