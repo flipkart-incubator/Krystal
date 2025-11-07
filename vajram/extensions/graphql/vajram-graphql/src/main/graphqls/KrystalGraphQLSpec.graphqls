@@ -1,18 +1,26 @@
 """
 
 """
+#TODO: Add support for defining an entity without having an id field (i.e id is implicit, not explicit)
+#TODO: Support custom id field names with argument "entityIdField"
 directive @entity on OBJECT
 
 """
-Specifies the vajram which is responsible for fetching one or more fields of an graphQL type
+Specifies the vajram which is responsible for fetching one or more fields of an graphQL type.
+Data fetchers can be used only for Scalar types and simple types.
+Using them on fields of type entity or composedType throws an error.
 """
-directive @dataFetcher(vajramId : String!, subPackage: String) on  FIELD_DEFINITION | OBJECT
+#TODO: Validation: Throw error if used with entity or composedType
+directive @dataFetcher(vajramId : String!, subPackage: String) on  FIELD_DEFINITION
 
 """
 Specifies the vajram which is responsible for fetching one or more entity ids of an graphQL entity.
 This is useful when there is a graphql field of an entity type depicting a one to one or one 2 many relationship between two graphQL entities.
 Fpr example, if an entity of type Book has a field "author" of entity type Author, an @idFetcher vajram would return the AuthorId of the "author" field.
+Can be used only on '@entity's. Using on any other field type throws error
 """
+#TODO: Validation: Throw error if used on non @entity field types
+#TODO: TEst case: Should support fanout and one2one
 directive @idFetcher(vajramId : String!, subPackage: String) on FIELD_DEFINITION
 
 
@@ -22,6 +30,9 @@ The argument should be of type ID.
 If the number of arguments is not equal to 1 or if the type is not ID or if the argument name does not match the ID field name of the entity, an error is thrown.
 Only valid on fields of root operation types where the field type is an @entity.
 """
+#TODO Validation: inderIdFromArgs can only be present in @entity fields inside root operation types
+#TODO Validation: number of args should exactly be equal to 1
+#TODO Validation: the single arg name should match the entity id field inside the @entity type
 directive @inferIdFromArgs on FIELD_DEFINITION
 
 """
@@ -29,10 +40,13 @@ Specifies that the id of the parent entity should be used to aggregate the given
 Using this directive on a field is only valid if the field type is an Object type
 with the directive @composedType whose "inEntity" argument matches the composing entity type
 """
+#TODO: Validation: throw error if used in non-@composedType
+#TODO: Validation: throw error if used with lists (fanout should not be supported)
 directive @inferIdFromParent on FIELD_DEFINITION
 """
 Specifies the specific java type of corresponding to a generic GraphQL type like "Object"
 """
+#TODO: Remove this if possible
 directive @customType(packageName : String!, className: String!) on FIELD_DEFINITION
 
 """
@@ -46,5 +60,8 @@ directive @rootPackage(name: String!) on SCHEMA
 Specifies that a given non-entity type can be composed inside an entity of type entityType.
 This means that any @dataFetchers or @idFetchers on the fields of the type must accept
 the entity Id of the specified entity and compute the values of the fields based on the entity Id.
+Note: an instance of a composed type has a one to one correspondence with a given order id.
 """
+#TODO: Validation: Can be used only on @entity fields and @composedType fields.
+#TODO: Validation: When used in @composedTypes, the "inEntity" must match the outer "inEntity"
 directive @composedType(inEntity: String) on OBJECT
