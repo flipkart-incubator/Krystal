@@ -1,10 +1,14 @@
 type Order @entity{
     id: ID
-    orderItemNames(name: String): [String]! @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
+    orderItemNames: [String]! @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
     name: String @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
-    dummy: Dummy @idFetcher(vajramId: "GetDummyId", subPackage: "order")
-    dummies: [Dummy!]! @idFetcher(vajramId: "GetDummyIds", subPackage: "order")
-    hello: Hello
+    dummy(name: String): Dummy @idFetcher(vajramId: "GetDummyIdForOrder", subPackage: "order")
+    dummies(filter: Boolean, preferredType: String, count: Int): [Dummy!]! @idFetcher(vajramId: "GetDummyIds", subPackage: "order")
+    hello: Hello @inferIdFromParent
+
+    #TODO: Add check that fields with @inferIdFromParent must be @composedTypes
+    #TODO: Add check that fields with @composedTypes cannot be fanout types
+    #hellos: [Hello] @inferIdFromParent
 }
 
 type Dummy @entity{
@@ -16,6 +20,10 @@ type Dummy @entity{
 
 type Hello @composedType(inEntity: "Order"){
     toName: String
+}
+
+type Name {
+    value: String
 }
 
 #{

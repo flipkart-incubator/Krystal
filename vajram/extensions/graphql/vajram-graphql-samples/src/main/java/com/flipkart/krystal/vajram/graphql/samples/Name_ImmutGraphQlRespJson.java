@@ -1,8 +1,8 @@
-package com.flipkart.krystal.vajram.graphql.samples.dummy;
+package com.flipkart.krystal.vajram.graphql.samples;
 
-import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.vajram.graphql.api.VajramExecutionStrategy;
-import com.flipkart.krystal.vajram.graphql.samples.order.Order;
+import com.flipkart.krystal.vajram.graphql.samples.name.Name_Immut;
+import com.flipkart.krystal.vajram.graphql.samples.name.Name_Immut.Builder;
 import graphql.GraphQLError;
 import graphql.execution.ExecutionContext;
 import graphql.execution.ExecutionStrategyParameters;
@@ -10,39 +10,20 @@ import java.util.List;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public class Dummy_ImmutGQlRespJson implements Dummy_Immut {
-
-  public static Dummy_ImmutGQlRespJson.Builder _builder() {
-    return new Builder();
-  }
+public final class Name_ImmutGraphQlRespJson implements Name_Immut {
 
   @Override
-  public Dummy_Immut _newCopy() {
+  public Name_Immut _newCopy() {
     return null;
   }
 
   @Override
-  public Builder _asBuilder() {
-    return null;
-  }
-
-  @Override
-  public DummyId id() {
-    return null;
-  }
-
-  @Override
-  public String name() {
+  public @Nullable String value() {
     return "";
   }
 
   @Override
-  public @Nullable Integer age() {
-    return 0;
-  }
-
-  @Override
-  public @Nullable Order order() {
+  public Builder _asBuilder() {
     return null;
   }
 
@@ -81,72 +62,47 @@ public class Dummy_ImmutGQlRespJson implements Dummy_Immut {
     return Map.of();
   }
 
-  public static final class Builder implements Dummy_Immut.Builder {
+  public static Builder _builder() {
+    return new Builder();
+  }
+
+  public static final class Builder implements Name_Immut.Builder {
 
     @Override
-    public Builder id(DummyId id) {
+    public Name_Immut.Builder graphql_executionContext(ExecutionContext graphql_executionContext) {
       return null;
     }
 
     @Override
-    public Builder name(String name) {
+    public Name_Immut.Builder graphql_executionStrategy(
+        VajramExecutionStrategy graphql_executionStrategy) {
       return null;
     }
 
     @Override
-    public Builder age(@Nullable Integer age) {
+    public Name_Immut.Builder graphql_executionStrategyParams(
+        ExecutionStrategyParameters graphql_executionStrategyParams) {
       return null;
     }
 
     @Override
-    public Builder order(@Nullable Order order) {
-      return null;
-    }
-
-    public Builder order(Errable<Order> order) {
+    public Name_Immut.Builder value(@Nullable String value) {
       return null;
     }
 
     @Override
-    public Dummy_Immut _build() {
+    public Name_Immut _build() {
       return null;
     }
 
     @Override
-    public Builder _newCopy() {
+    public Name_Immut.Builder _newCopy() {
       return null;
     }
 
     @Override
-    public DummyId id() {
-      return null;
-    }
-
-    @Override
-    public String name() {
+    public @Nullable String value() {
       return "";
-    }
-
-    @Override
-    public @Nullable Integer age() {
-      return 0;
-    }
-
-    @Override
-    public @Nullable Order order() {
-      return null;
-    }
-
-    public Builder graphql_executionContext(ExecutionContext graphqlExecutionContext) {
-      return null;
-    }
-
-    public Builder graphql_executionStrategy(VajramExecutionStrategy graphqlExecutionStrategy) {
-      return null;
-    }
-
-    public Builder graphql_executionStrategyParams(ExecutionStrategyParameters dummies) {
-      return null;
     }
 
     @Override

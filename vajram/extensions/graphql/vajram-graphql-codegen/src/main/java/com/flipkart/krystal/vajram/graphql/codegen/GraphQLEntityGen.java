@@ -33,7 +33,6 @@ import java.util.Map.Entry;
 
 class GraphQLEntityGen implements CodeGenerator {
 
-  private static final String TYPENAME_FIELD = "__typename";
   private final CodeGenUtility util;
 
   public GraphQLEntityGen(CodeGenUtility util) {
@@ -47,9 +46,6 @@ class GraphQLEntityGen implements CodeGenerator {
     TypeDefinitionRegistry typeDefinitionRegistry = schemaReaderUtil.typeDefinitionRegistry();
     String rootPackageName = schemaReaderUtil.rootPackageName();
 
-    Map<String, com.squareup.javapoet.TypeName> fieldToClass = new HashMap<>();
-    Map<GraphQLTypeName, ObjectTypeDefinition> entityTypes = schemaReaderUtil.entityTypes();
-
     // Write the entity type file
     ClassName entityTypeEnumClassName =
         writeEntityTypeFile(typeDefinitionRegistry.types(), rootPackageName);
@@ -59,7 +55,7 @@ class GraphQLEntityGen implements CodeGenerator {
       GraphQLTypeName graphQLTypeName = new GraphQLTypeName(entry.getKey());
       @SuppressWarnings("rawtypes")
       TypeDefinition typeDefinition = entry.getValue();
-      boolean isEntity = ((TypeDefinition<?>) typeDefinition).hasDirective(Directives.ENTITY);
+      boolean isEntity = typeDefinition.hasDirective(Directives.ENTITY);
       ClassName entityClassName = schemaReaderUtil.typeClassName(graphQLTypeName);
 
       TypeSpec typeSpec;
@@ -100,7 +96,6 @@ class GraphQLEntityGen implements CodeGenerator {
               GraphQlFieldSpec fieldSpec =
                   schemaReaderUtil.fieldSpecFromField(fieldDefinition, "", enclosingType);
               TypeName typeNameForField = graphQlCodeGenUtil.toTypeNameForField(fieldSpec);
-              fieldToClass.put(fieldName, typeNameForField);
 
               methodSpecs.add(
                   MethodSpec.methodBuilder(fieldName)
@@ -185,59 +180,67 @@ class GraphQLEntityGen implements CodeGenerator {
       }
     }
 
-    entityTypes.forEach(
-        (entity, entityTypeDefinition) -> {
-          // Capture all the data fetchers which are mentioned in multiple field definitions
+    schemaReaderUtil
+        .aggregatableTypes()
+        .forEach(
+            (graphQLTypeName, entityTypeDefinition) -> {
+              // Capture all the data fetchers which are mentioned in multiple field definitions
 
-          Map<ClassName, List<FieldDefinition>> fieldDefinitions = new HashMap<>();
+              Map<ClassName, List<FieldDefinition>> fieldDefinitions = new HashMap<>();
 
-          for (FieldDefinition fieldDefinition : entityTypeDefinition.getFieldDefinitions()) {
-            if (!fieldDefinition.getDirectives(DATA_FETCHER).isEmpty()) {
-              fieldDefinitions
-                  .computeIfAbsent(
-                      schemaReaderUtil.getDataFetcherClassName(fieldDefinition),
-                      _k -> new ArrayList<>())
-                  .add(fieldDefinition);
-            }
-          }
-          // for dataFetchers which have the size greater than one, create the wrapper class which
-          // contains object of those field types
-          fieldDefinitions.forEach(
-              (dataFetcherName, fieldDefinitionList) -> {
-                ClassName className =
-                    ClassName.get(
-                        dataFetcherName.packageName(),
-                        dataFetcherName.simpleName() + GRAPHQL_RESPONSE);
-                if (fieldDefinitionList.size() > 1) {
-                  TypeSpec.Builder builder = TypeSpec.classBuilder(className);
-
-                  for (FieldDefinition fieldDefinitionDf : fieldDefinitionList) {
-                    builder.addField(
-                        FieldSpec.builder(
-                                fieldToClass.get(fieldDefinitionDf.getName()),
-                                fieldDefinitionDf.getName(),
-                                PUBLIC)
-                            .build());
-                  }
-                  builder
-                      .addModifiers(PUBLIC, FINAL)
-                      .addAnnotation(
-                          AnnotationSpec.builder(ClassName.get("lombok.experimental", "Accessors"))
-                              .addMember("fluent", "true")
-                              .build())
-                      .addAnnotation(
-                          AnnotationSpec.builder(ClassName.get("lombok", "Getter")).build())
-                      .addAnnotation(
-                          AnnotationSpec.builder(ClassName.get("lombok", "Builder")).build())
-                      .addAnnotation(
-                          AnnotationSpec.builder(ClassName.get("lombok", "Setter")).build());
-                  util.generateSourceFile(
-                      className.canonicalName(),
-                      JavaFile.builder(className.packageName(), builder.build()).build().toString(),
-                      null);
+              for (FieldDefinition fieldDefinition : entityTypeDefinition.getFieldDefinitions()) {
+                if (!fieldDefinition.getDirectives(DATA_FETCHER).isEmpty()) {
+                  fieldDefinitions
+                      .computeIfAbsent(
+                          schemaReaderUtil.getDataFetcherClassName(fieldDefinition),
+                          _k -> new ArrayList<>())
+                      .add(fieldDefinition);
                 }
-              });
-        });
+              }
+              // for dataFetchers which have the size greater than one, create the wrapper class
+              // which
+              // contains object of those field types
+              fieldDefinitions.forEach(
+                  (dataFetcherName, fieldDefinitionList) -> {
+                    ClassName className =
+                        ClassName.get(
+                            dataFetcherName.packageName(),
+                            dataFetcherName.simpleName() + GRAPHQL_RESPONSE);
+                    if (fieldDefinitionList.size() > 1) {
+                      TypeSpec.Builder builder = TypeSpec.classBuilder(className);
+
+                      for (FieldDefinition fieldDefinitionDf : fieldDefinitionList) {
+                        builder.addField(
+                            FieldSpec.builder(
+                                    graphQlCodeGenUtil.toTypeNameForField(
+                                        schemaReaderUtil.fieldSpecFromField(
+                                            fieldDefinitionDf, "", graphQLTypeName)),
+                                    fieldDefinitionDf.getName(),
+                                    PUBLIC)
+                                .build());
+                      }
+                      builder
+                          .addModifiers(PUBLIC, FINAL)
+                          .addAnnotation(
+                              AnnotationSpec.builder(
+                                      ClassName.get("lombok.experimental", "Accessors"))
+                                  .addMember("fluent", "true")
+                                  .build())
+                          .addAnnotation(
+                              AnnotationSpec.builder(ClassName.get("lombok", "Getter")).build())
+                          .addAnnotation(
+                              AnnotationSpec.builder(ClassName.get("lombok", "Builder")).build())
+                          .addAnnotation(
+                              AnnotationSpec.builder(ClassName.get("lombok", "Setter")).build());
+                      util.generateSourceFile(
+                          className.canonicalName(),
+                          JavaFile.builder(className.packageName(), builder.build())
+                              .build()
+                              .toString(),
+                          null);
+                    }
+                  });
+            });
   }
 
   private ClassName writeEntityTypeFile(

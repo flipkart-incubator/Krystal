@@ -19,6 +19,8 @@ public class Constants {
     public static final String COMPOSED_TYPE = "composedType";
     public static final String DATA_FETCHER = "dataFetcher";
     public static final String ID_FETCHER = "idFetcher";
+    public static final String INHERIT_ID_FROM_ARGS = "inferIdFromArgs";
+    public static final String INHERIT_ID_FROM_PARENT = "inferIdFromParent";
   }
 
   @UtilityClass

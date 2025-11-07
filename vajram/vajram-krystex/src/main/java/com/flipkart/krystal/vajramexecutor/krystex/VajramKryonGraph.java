@@ -15,7 +15,6 @@ import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.ErrableFacetValue;
 import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FacetValue.SingleFacetValue;

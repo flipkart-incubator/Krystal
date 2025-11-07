@@ -15,6 +15,21 @@ Fpr example, if an entity of type Book has a field "author" of entity type Autho
 """
 directive @idFetcher(vajramId : String!, subPackage: String) on FIELD_DEFINITION
 
+
+"""
+This means the id to be used for type aggregation should be taken from the single argument passed to the field.
+The argument should be of type ID.
+If the number of arguments is not equal to 1 or if the type is not ID or if the argument name does not match the ID field name of the entity, an error is thrown.
+Only valid on fields of root operation types where the field type is an @entity.
+"""
+directive @inferIdFromArgs on FIELD_DEFINITION
+
+"""
+Specifies that the id of the parent entity should be used to aggregate the given field.
+Using this directive on a field is only valid if the field type is an Object type
+with the directive @composedType whose "inEntity" argument matches the composing entity type
+"""
+directive @inferIdFromParent on FIELD_DEFINITION
 """
 Specifies the specific java type of corresponding to a generic GraphQL type like "Object"
 """
