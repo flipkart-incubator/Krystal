@@ -16,6 +16,10 @@ public abstract class GetDummyIds extends ComputeVajramDef<List<DummyId>> {
   static class _Inputs {
     @IfAbsent(FAIL)
     OrderId id;
+
+    boolean filter;
+    String preferredType;
+    int count;
   }
 
   @Output

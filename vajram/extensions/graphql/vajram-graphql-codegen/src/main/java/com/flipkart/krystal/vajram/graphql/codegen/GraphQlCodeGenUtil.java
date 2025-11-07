@@ -59,7 +59,7 @@ public final class GraphQlCodeGenUtil {
     throw new IllegalArgumentException("Unknown fieldType: " + graphQlTypeDecorator);
   }
 
-  private TypeName getTypeNameForField(WrappedType fieldType, GraphQlFieldSpec fieldSpec) {
+  TypeName getTypeNameForField(WrappedType fieldType, GraphQlFieldSpec fieldSpec) {
     GraphQlTypeDecorator innerGraphQlTypeDecorator = fieldType.innerType();
     return switch (fieldType.wrapperType()) {
       case NONNULL -> innerGraphQlTypeDecorator instanceof PlainType plainType
@@ -70,7 +70,7 @@ public final class GraphQlCodeGenUtil {
     };
   }
 
-  private TypeName getTypeNameForField(PlainType fieldType, GraphQlFieldSpec fieldSpec) {
+  ClassName getTypeNameForField(PlainType fieldType, GraphQlFieldSpec fieldSpec) {
     GraphQLTypeName typeName = new GraphQLTypeName(fieldType.graphQlType().getName());
     String packageName = null;
     for (Directive directive : fieldSpec.fieldDefinition().getDirectives()) {

@@ -7,6 +7,7 @@ import static java.util.stream.Collectors.toMap;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.ErrableFacetValue;
 import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FacetValues;
@@ -138,10 +139,10 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
         .forEach(
             facetDef -> {
               FacetValue value = facetDef.getFacetValue(facetValues);
-              if (!(value instanceof Errable<?>)) {
+              if (!(value instanceof ErrableFacetValue<?> errableFacetValue)) {
                 return;
               }
-              String collect = convertErrable((Errable<?>) value);
+              String collect = convertErrable(errableFacetValue.asErrable());
               if (collect != null) {
                 inputMap.put(facetDef, collect);
               }

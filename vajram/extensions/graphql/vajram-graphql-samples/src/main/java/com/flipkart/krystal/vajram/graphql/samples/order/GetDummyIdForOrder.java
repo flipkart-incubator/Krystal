@@ -11,10 +11,12 @@ import com.flipkart.krystal.vajram.graphql.samples.dummy.DummyId;
 
 @GraphQLFetcher
 @Vajram
-public abstract class GetDummyId extends ComputeVajramDef<DummyId> {
+public abstract class GetDummyIdForOrder extends ComputeVajramDef<DummyId> {
   static class _Inputs {
     @IfAbsent(FAIL)
     OrderId id;
+
+    String name;
   }
 
   @Output
