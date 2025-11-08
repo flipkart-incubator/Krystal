@@ -8,6 +8,8 @@ import com.flipkart.krystal.vajram.graphql.samples.dummy.Dummy;
 import com.flipkart.krystal.vajram.graphql.samples.dummy.Dummy_Immut;
 import com.flipkart.krystal.vajram.graphql.samples.hello.Hello;
 import com.flipkart.krystal.vajram.graphql.samples.hello.Hello_Immut;
+import com.flipkart.krystal.vajram.graphql.samples.name.Name;
+import com.flipkart.krystal.vajram.graphql.samples.order.Order_Immut.Builder;
 import graphql.GraphQLError;
 import graphql.execution.ExecutionContext;
 import graphql.execution.ExecutionStrategyParameters;
@@ -108,7 +110,7 @@ public final class Order_ImmutGQlRespJson
   }
 
   @Override
-  public @Nullable String name() {
+  public @Nullable String nameString() {
     return "";
   }
 
@@ -124,6 +126,26 @@ public final class Order_ImmutGQlRespJson
 
   @Override
   public @Nullable Hello hello() {
+    return null;
+  }
+
+  @Override
+  public List<Hello> recommendedHellos() {
+    return List.of();
+  }
+
+  @Override
+  public List<@Nullable Order> recommendedOrders() {
+    return List.of();
+  }
+
+  @Override
+  public @Nullable Hello hello2() {
+    return null;
+  }
+
+  @Override
+  public @Nullable Name name() {
     return null;
   }
 
@@ -226,14 +248,17 @@ public final class Order_ImmutGQlRespJson
       return this;
     }
 
-    public Builder orderItemNames(Errable<List<Errable<String>>> orderItemNames) {
-      this.orderItemNames = orderItemNames;
-      return this;
+    @Override
+    public Builder nameString(@Nullable String nameString) {
+      return null;
     }
 
-    @Override
-    public Builder name(@Nullable String name) {
-      this.name = Errable.withValue(name);
+    public Builder nameString(Errable<String> nameString) {
+      return null;
+    }
+
+    public Builder orderItemNames(Errable<List<Errable<String>>> orderItemNames) {
+      this.orderItemNames = orderItemNames;
       return this;
     }
 
@@ -265,6 +290,26 @@ public final class Order_ImmutGQlRespJson
     @Override
     public Builder hello(@Nullable Hello hello) {
       return this;
+    }
+
+    @Override
+    public Order_Immut.Builder recommendedHellos(List<Hello> recommendedHellos) {
+      return null;
+    }
+
+    @Override
+    public Order_Immut.Builder recommendedOrders(List<@Nullable Order> recommendedOrders) {
+      return null;
+    }
+
+    @Override
+    public Order_Immut.Builder hello2(@Nullable Hello hello2) {
+      return null;
+    }
+
+    @Override
+    public Order_Immut.Builder name(@Nullable Name name) {
+      return null;
     }
 
     public Builder hello(Errable<Hello> hello) {
@@ -311,7 +356,7 @@ public final class Order_ImmutGQlRespJson
     }
 
     @Override
-    public @Nullable String name() {
+    public @Nullable String nameString() {
       return "";
     }
 
@@ -327,6 +372,26 @@ public final class Order_ImmutGQlRespJson
 
     @Override
     public @Nullable Hello hello() {
+      return null;
+    }
+
+    @Override
+    public List<Hello> recommendedHellos() {
+      return List.of();
+    }
+
+    @Override
+    public List<@Nullable Order> recommendedOrders() {
+      return List.of();
+    }
+
+    @Override
+    public @Nullable Hello hello2() {
+      return null;
+    }
+
+    @Override
+    public @Nullable Name name() {
       return null;
     }
 
