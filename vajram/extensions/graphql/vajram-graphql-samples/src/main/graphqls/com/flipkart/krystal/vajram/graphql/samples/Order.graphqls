@@ -2,7 +2,7 @@
 type Order @entity{
     id: ID
     orderItemNames: [String]! @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
-    name: String @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
+    nameString: String @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
     dummy(name: String): Dummy @idFetcher(vajramId: "GetDummyIdForOrder", subPackage: "order")
     dummies(filter: Boolean, preferredType: String, count: Int): [Dummy!]! @idFetcher(vajramId: "GetDummyIds", subPackage: "order")
     hello: Hello @inferIdFromParent
@@ -20,7 +20,7 @@ type Dummy @entity{
     id: ID
     name: String!
     age: Int
-    order: Order @idFetcher(vajramId: "")
+    order: Order
     f1: String
 }
 
@@ -30,12 +30,6 @@ type Dummy @entity{
 #TODO Testcase: ?? Can @composedEntities be allowed as lists or only single (canFanout or not?)
 type Hello @composedType(inEntity: "Order"){
     toName: String
-    abc: ABC
-}
-
-
-type ABC @composedType(inEntity: "Order"){
-
 }
 
 type Name {

@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.graphql.samples.dummy;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.vajram.graphql.api.VajramExecutionStrategy;
+import com.flipkart.krystal.vajram.graphql.samples.dummy.Dummy_Immut.Builder;
 import com.flipkart.krystal.vajram.graphql.samples.order.Order;
 import graphql.GraphQLError;
 import graphql.execution.ExecutionContext;
@@ -44,6 +45,11 @@ public class Dummy_ImmutGQlRespJson implements Dummy_Immut {
   @Override
   public @Nullable Order order() {
     return null;
+  }
+
+  @Override
+  public @Nullable String f1() {
+    return "";
   }
 
   @Override
@@ -103,6 +109,11 @@ public class Dummy_ImmutGQlRespJson implements Dummy_Immut {
       return null;
     }
 
+    @Override
+    public Dummy_Immut.Builder f1(@Nullable String f1) {
+      return null;
+    }
+
     public Builder order(Errable<Order> order) {
       return null;
     }
@@ -135,6 +146,11 @@ public class Dummy_ImmutGQlRespJson implements Dummy_Immut {
     @Override
     public @Nullable Order order() {
       return null;
+    }
+
+    @Override
+    public @Nullable String f1() {
+      return "";
     }
 
     public Builder graphql_executionContext(ExecutionContext graphqlExecutionContext) {

@@ -29,6 +29,7 @@ public class Hello_ImmutGQlRespJson implements Hello_Immut {
     return "";
   }
 
+
   @Override
   public @Nullable String __typename() {
     return "";
@@ -71,6 +72,7 @@ public class Hello_ImmutGQlRespJson implements Hello_Immut {
       return null;
     }
 
+
     @Override
     public Hello_Immut _build() {
       return null;
@@ -97,6 +99,7 @@ public class Hello_ImmutGQlRespJson implements Hello_Immut {
     public @Nullable String toName() {
       return "";
     }
+
 
     @Override
     public @Nullable String __typename() {

@@ -21,7 +21,7 @@ public abstract class GetOrderItemNames extends ComputeVajramDef<GetOrderItemNam
   static GetOrderItemNames_GQlFields orderItemNames(OrderId id) {
     return GetOrderItemNames_GQlFields.builder()
         .orderItemNames(List.of(id.value() + "_1", id.value() + "_2"))
-        .name("testOrderName")
+        .nameString("testOrderName")
         .build();
   }
 }
