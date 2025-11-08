@@ -4,7 +4,7 @@ import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VA
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.lang.Boolean.TRUE;
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.concurrent.CompletableFuture.supplyAsync;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.NonNil;
@@ -66,14 +66,16 @@ public abstract class Add extends IOVajramDef<Integer> {
     if (TRUE.equals(fail)) {
       throw new RuntimeException("Adder failed because fail flag was set");
     }
-    return completedFuture(
-        new BatchAddResult(
-            _batchItems.stream()
-                .collect(
-                    toImmutableMap(
-                        addBatchItem ->
-                            ImmutableList.of(addBatchItem.numberOne(), addBatchItem.numberTwo()),
-                        batch -> add(batch.numberOne(), batch.numberTwo())))));
+    return supplyAsync(
+        () ->
+            new BatchAddResult(
+                _batchItems.stream()
+                    .collect(
+                        toImmutableMap(
+                            addBatchItem ->
+                                ImmutableList.of(
+                                    addBatchItem.numberOne(), addBatchItem.numberTwo()),
+                            batch -> add(batch.numberOne(), batch.numberTwo())))));
   }
 
   @Output.Unbatch
