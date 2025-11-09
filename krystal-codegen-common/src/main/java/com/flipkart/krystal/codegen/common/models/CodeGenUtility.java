@@ -835,6 +835,6 @@ public class CodeGenUtility {
         .map(typeMirror -> processingEnv().getTypeUtils().asElement(typeMirror))
         .filter(elem -> elem instanceof QualifiedNameable)
         .map(element -> requireNonNull((QualifiedNameable) element).getQualifiedName().toString())
-        .anyMatch(modelProtocol.getCanonicalName()::equals);
+        .anyMatch(s -> Objects.equals(s, modelProtocol.getCanonicalName()));
   }
 }

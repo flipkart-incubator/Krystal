@@ -18,6 +18,11 @@ import java.util.List;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+@SuppressWarnings({
+  "initialization.field.uninitialized",
+  "initialization.fields.uninitialized",
+  "return"
+})
 public final class Order_ImmutGQlRespJson
     implements Order_Immut, GraphQlEntityModel_Immut<OrderId> {
   private final ExecutionContext graphql_executionContext;
@@ -207,16 +212,19 @@ public final class Order_ImmutGQlRespJson
     private Errable<? extends List<? extends Errable<? extends Dummy>>> dummies;
     private Errable<Hello> hello;
 
+    @Override
     public Builder graphql_executionContext(ExecutionContext graphql_executionContext) {
       this.graphql_executionContext = graphql_executionContext;
       return this;
     }
 
+    @Override
     public Builder graphql_executionStrategy(VajramExecutionStrategy graphql_executionStrategy) {
       this.graphql_executionStrategy = graphql_executionStrategy;
       return this;
     }
 
+    @Override
     public Builder graphql_executionStrategyParams(
         ExecutionStrategyParameters graphql_executionStrategyParams) {
       this.graphql_executionStrategyParams = graphql_executionStrategyParams;

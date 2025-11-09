@@ -1,6 +1,6 @@
 package com.flipkart.krystal.krystex.internal;
 
-import com.flipkart.krystal.krystex.kryon.KryonExecutor;
+import com.flipkart.krystal.krystex.KrystalExecutor;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -10,19 +10,18 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public final class KryonExecutorExecService implements ExecutorService {
+@SuppressWarnings({"override.return", "override.param"})
+public final class KrystalExecutorExecService implements ExecutorService {
 
-  public static ThreadLocal<KryonExecutor> THREAD_LOCAL = new ThreadLocal<>();
+  public static ThreadLocal<@Nullable KrystalExecutor> THREAD_LOCAL = new ThreadLocal<>();
 
-  private final Supplier<KryonExecutor> kryonExecutorSupplier;
   private final ExecutorService delegate;
+  private final KrystalExecutor kryonExecutor;
 
-  public KryonExecutorExecService(
-      Supplier<KryonExecutor> kryonExecutorSupplier, ExecutorService delegate) {
-    this.kryonExecutorSupplier = kryonExecutorSupplier;
+  public KrystalExecutorExecService(KrystalExecutor kryonExecutor, ExecutorService delegate) {
+    this.kryonExecutor = kryonExecutor;
     this.delegate = delegate;
   }
 
@@ -106,8 +105,8 @@ public final class KryonExecutorExecService implements ExecutorService {
 
   private <T> Callable<T> wrap(Callable<T> task) {
     return () -> {
-      @Nullable KryonExecutor oldValue = THREAD_LOCAL.get();
-      THREAD_LOCAL.set(kryonExecutorSupplier.get());
+      @Nullable KrystalExecutor oldValue = THREAD_LOCAL.get();
+      THREAD_LOCAL.set(kryonExecutor);
       try {
         return task.call();
       } finally {
@@ -118,8 +117,8 @@ public final class KryonExecutorExecService implements ExecutorService {
 
   private Runnable wrap(Runnable task) {
     return () -> {
-      @Nullable KryonExecutor oldValue = THREAD_LOCAL.get();
-      THREAD_LOCAL.set(kryonExecutorSupplier.get());
+      @Nullable KrystalExecutor oldValue = THREAD_LOCAL.get();
+      THREAD_LOCAL.set(kryonExecutor);
       try {
         task.run();
       } finally {

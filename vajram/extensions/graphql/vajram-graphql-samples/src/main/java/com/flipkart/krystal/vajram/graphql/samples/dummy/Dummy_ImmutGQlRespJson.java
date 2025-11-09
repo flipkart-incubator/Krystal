@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+@SuppressWarnings("return")
 public class Dummy_ImmutGQlRespJson implements Dummy_Immut {
 
   public static Dummy_ImmutGQlRespJson.Builder _builder() {
@@ -153,14 +154,17 @@ public class Dummy_ImmutGQlRespJson implements Dummy_Immut {
       return "";
     }
 
+    @Override
     public Builder graphql_executionContext(ExecutionContext graphqlExecutionContext) {
       return null;
     }
 
+    @Override
     public Builder graphql_executionStrategy(VajramExecutionStrategy graphqlExecutionStrategy) {
       return null;
     }
 
+    @Override
     public Builder graphql_executionStrategyParams(ExecutionStrategyParameters dummies) {
       return null;
     }

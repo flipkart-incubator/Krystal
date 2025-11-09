@@ -46,8 +46,7 @@ public final class DirectKryon
         kryonExecutor,
         sortedOutputLogicDecoratorsSupplier,
         depDecoratorSuppliers,
-        decorationOrdering,
-        requestIdGenerator);
+        decorationOrdering);
   }
 
   @SuppressWarnings("FutureReturnValueIgnored")

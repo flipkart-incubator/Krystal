@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+@SuppressWarnings("return")
 public class Hello_ImmutGQlRespJson implements Hello_Immut {
 
   public static Hello_ImmutGQlRespJson.Builder _builder() {
@@ -28,7 +29,6 @@ public class Hello_ImmutGQlRespJson implements Hello_Immut {
   public String toName() {
     return "";
   }
-
 
   @Override
   public @Nullable String __typename() {
@@ -68,10 +68,9 @@ public class Hello_ImmutGQlRespJson implements Hello_Immut {
   public static final class Builder implements Hello_Immut.Builder {
 
     @Override
-    public Builder toName(String name) {
+    public Builder toName(@Nullable String toName) {
       return null;
     }
-
 
     @Override
     public Hello_Immut _build() {
@@ -99,7 +98,6 @@ public class Hello_ImmutGQlRespJson implements Hello_Immut {
     public @Nullable String toName() {
       return "";
     }
-
 
     @Override
     public @Nullable String __typename() {

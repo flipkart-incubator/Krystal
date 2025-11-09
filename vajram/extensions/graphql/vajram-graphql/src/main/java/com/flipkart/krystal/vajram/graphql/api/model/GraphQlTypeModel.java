@@ -36,7 +36,7 @@ public interface GraphQlTypeModel extends Model, SerializableGQlResponseJsonMode
 
   @Override
   default byte[] _serialize() throws Exception {
-    Map<String, Object> map = new HashMap<>(3);
+    Map<String, @Nullable Object> map = new HashMap<>(3);
     map.put("data", _data());
     map.put("errors", _errors());
     map.put("extensions", _extensions());

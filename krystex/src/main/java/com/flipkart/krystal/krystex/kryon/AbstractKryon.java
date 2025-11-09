@@ -11,7 +11,6 @@ import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionCont
 import com.flipkart.krystal.krystex.dependencydecoration.VajramInvocation;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
-import com.flipkart.krystal.krystex.request.RequestIdGenerator;
 import com.google.common.collect.ImmutableMap;
 import java.util.HashMap;
 import java.util.Map;
@@ -45,8 +44,8 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonComma
 
   protected final DecorationOrdering decorationOrdering;
 
-  protected final RequestIdGenerator requestIdGenerator;
-  private Map<VajramID, NavigableSet<DependencyDecorator>> decoratorsByDependency = new HashMap<>();
+  private final Map<VajramID, NavigableSet<DependencyDecorator>> decoratorsByDependency =
+      new HashMap<>();
 
   AbstractKryon(
       VajramKryonDefinition definition,
@@ -55,15 +54,13 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonComma
           sortedOutputLogicDecoratorsSupplier,
       Function<DependencyExecutionContext, ImmutableMap<String, DependencyDecorator>>
           depDecoratorSuppliers,
-      DecorationOrdering decorationOrdering,
-      RequestIdGenerator requestIdGenerator) {
+      DecorationOrdering decorationOrdering) {
     this.kryonDefinition = definition;
     this.vajramID = definition.vajramID();
     this.kryonExecutor = kryonExecutor;
     this.sortedOutputLogicDecoratorsSupplier = sortedOutputLogicDecoratorsSupplier;
     this.depDecoratorSuppliers = depDecoratorSuppliers;
     this.decorationOrdering = decorationOrdering;
-    this.requestIdGenerator = requestIdGenerator;
   }
 
   protected NavigableSet<OutputLogicDecorator> getSortedOutputLogicDecorators(

@@ -1,5 +1,7 @@
 package com.flipkart.krystal.krystex;
 
+import static com.flipkart.krystal.krystex.internal.KrystalExecutorExecService.THREAD_LOCAL;
+
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import java.util.concurrent.CompletableFuture;
@@ -20,4 +22,8 @@ public interface KrystalExecutor extends AutoCloseable {
 
   /** Abandons all pending execution requests. Any inflight requests will be terminated abruptly. */
   void shutdownNow();
+
+  static @Nullable KrystalExecutor getExecutorForCurrentThread() {
+    return THREAD_LOCAL.get();
+  }
 }

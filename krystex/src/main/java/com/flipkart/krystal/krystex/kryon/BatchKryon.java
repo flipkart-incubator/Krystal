@@ -117,6 +117,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
 
   private final Map<DependentChain, Set<Facet>> outputLogicPendingFacets =
       new HashMap<>(INITIAL_CAPACITY);
+  private final RequestIdGenerator requestIdGenerator;
 
   BatchKryon(
       VajramKryonDefinition kryonDefinition,
@@ -132,8 +133,8 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
         kryonExecutor,
         sortedOutputLogicDecoratorSupplier,
         depDecoratorSuppliers,
-        decorationOrdering,
-        requestIdGenerator);
+        decorationOrdering);
+    this.requestIdGenerator = requestIdGenerator;
   }
 
   @Override

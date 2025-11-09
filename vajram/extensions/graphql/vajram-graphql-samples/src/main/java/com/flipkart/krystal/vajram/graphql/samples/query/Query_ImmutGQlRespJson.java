@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+@SuppressWarnings("return")
 public final class Query_ImmutGQlRespJson implements Query_Immut {
 
   @Override

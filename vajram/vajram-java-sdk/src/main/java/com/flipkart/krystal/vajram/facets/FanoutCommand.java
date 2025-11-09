@@ -1,9 +1,9 @@
 package com.flipkart.krystal.vajram.facets;
 
+import static java.util.Collections.emptyList;
 import static java.util.Collections.unmodifiableCollection;
 
 import java.util.Collection;
-import java.util.Collections;
 import lombok.Value;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -35,6 +35,6 @@ public class FanoutCommand<T> implements DependencyCommand<T> {
   }
 
   public static <T> FanoutCommand<T> skipFanout(String reason, @Nullable Throwable skipCause) {
-    return new FanoutCommand<>(Collections.<@Nullable T>emptyList(), true, reason, skipCause);
+    return new FanoutCommand<>(emptyList(), true, reason, skipCause);
   }
 }
