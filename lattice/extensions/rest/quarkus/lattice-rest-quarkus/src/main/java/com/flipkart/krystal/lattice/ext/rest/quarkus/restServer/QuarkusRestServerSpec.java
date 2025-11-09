@@ -1,7 +1,8 @@
-package flipkart.krystal.lattice.ext.rest.quarkus.restServer;
+package com.flipkart.krystal.lattice.ext.rest.quarkus.restServer;
 
-import static flipkart.krystal.lattice.ext.rest.quarkus.app.QuarkusApplicationDopant.quarkusApplication;
-import static flipkart.krystal.lattice.ext.rest.quarkus.restServer.QuarkusRestServerDopant.REST_SERVER_DOPANT_TYPE;
+import static com.flipkart.krystal.lattice.ext.quarkus.app.QuarkusApplicationDopant.quarkusApplication;
+import static com.flipkart.krystal.lattice.rest.RestServiceDopant.restService;
+import static com.flipkart.krystal.lattice.ext.rest.quarkus.restServer.QuarkusRestServerDopant.REST_SERVER_DOPANT_TYPE;
 
 import com.flipkart.krystal.lattice.core.doping.Dopant;
 import com.flipkart.krystal.lattice.core.doping.DopantSpec;
@@ -25,7 +26,7 @@ record QuarkusRestServerSpec()
 
     @Override
     public List<DopantSpecBuilder<?, ?, ?>> getAdditionalDopants() {
-      return List.of(quarkusApplication());
+      return List.of(quarkusApplication(), restService());
     }
 
     @Override
