@@ -30,7 +30,7 @@ public final class GuiceBinderGen implements DepInjectBinderGen {
     }
     return CodeBlock.builder()
         .addNamed(
-            """
+"""
 return new $guiceModuleBinder:T(
     $customBinderCreator:L
     new $abstractModule:T());

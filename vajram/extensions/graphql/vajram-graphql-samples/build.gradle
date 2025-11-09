@@ -1,7 +1,7 @@
 plugins {
     id 'java-library'
     id 'com.flipkart.krystal' version "${krystal_version}"
-    id 'com.flipkart.java.code.standard' version '4.1'
+    id 'com.flipkart.java.code.standard' version "${java_code_std_version}"
 
     //Needed only if you want your project to be modularized using JPMS
     id 'org.gradlex.extra-java-module-info' version '1.11'

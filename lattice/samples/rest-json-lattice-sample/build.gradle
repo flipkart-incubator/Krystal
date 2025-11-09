@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id 'application'
     id 'com.flipkart.krystal' version "${krystal_version}"
-    id 'com.flipkart.java.code.standard' version '4.1'
+    id 'com.flipkart.java.code.standard' version "${java_code_std_version}"
     id 'io.quarkus' version "${quarkus_version}"
 }
 

@@ -368,20 +368,22 @@ public final class KryonExecutor implements KrystalExecutor {
         vajramID,
         _n ->
             switch (executorConfig.kryonExecStrategy()) {
-              case BATCH -> new BatchKryon(
-                  kryonDefinition,
-                  this,
-                  this::getOutputLogicDecorators,
-                  this::getDependencyDecorators,
-                  executorConfig.decorationOrdering(),
-                  preferredReqGenerator);
-              case DIRECT -> new DirectKryon(
-                  kryonDefinition,
-                  this,
-                  this::getOutputLogicDecorators,
-                  this::getDependencyDecorators,
-                  executorConfig.decorationOrdering(),
-                  preferredReqGenerator);
+              case BATCH ->
+                  new BatchKryon(
+                      kryonDefinition,
+                      this,
+                      this::getOutputLogicDecorators,
+                      this::getDependencyDecorators,
+                      executorConfig.decorationOrdering(),
+                      preferredReqGenerator);
+              case DIRECT ->
+                  new DirectKryon(
+                      kryonDefinition,
+                      this,
+                      this::getOutputLogicDecorators,
+                      this::getDependencyDecorators,
+                      executorConfig.decorationOrdering(),
+                      preferredReqGenerator);
             });
   }
 

@@ -742,12 +742,12 @@ public final class JavaModelsGenerator implements CodeGenerator {
         IfAbsentThen ifAbsentThen = util.getIfAbsent(method).value();
         switch (ifAbsentThen) {
           case FAIL ->
-          // FAIL strategy - throw exception when value is null
-          buildMethodBuilder.addStatement(
-              "throw new $T($S, $S)",
-              MandatoryFieldMissingException.class,
-              immutableModelName.simpleName(),
-              fieldName);
+              // FAIL strategy - throw exception when value is null
+              buildMethodBuilder.addStatement(
+                  "throw new $T($S, $S)",
+                  MandatoryFieldMissingException.class,
+                  immutableModelName.simpleName(),
+                  fieldName);
           case ASSUME_DEFAULT_VALUE -> {
             try {
               buildMethodBuilder.addStatement(
