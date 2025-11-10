@@ -40,7 +40,8 @@ include 'vajram:extensions:json:vajram-json-codegen'
 include 'vajram:extensions:protobuf:vajram-protobuf-codegen'
 include 'vajram:extensions:protobuf:vajram-protobuf3'
 include 'vajram:extensions:resilience4j:vajram-resilience4j'
-
+include 'vajram:extensions:sql:vajram-sql-codegen'
+include 'vajram:extensions:sql:vajram-sql'
 
 include 'lattice:lattice-bom'
 include 'lattice:lattice-codegen'
@@ -65,6 +66,4 @@ include 'lattice:extensions:rest:lattice-rest-quarkus-codegen'
 include 'lattice:samples:grpc-proto3-lattice-sample'
 include 'lattice:samples:rest-json-lattice-sample'
 
-include 'vajram:extensions:sql:vajram-sql-codegen'
-include 'vajram:extensions:sql:vajram-sql'
 
