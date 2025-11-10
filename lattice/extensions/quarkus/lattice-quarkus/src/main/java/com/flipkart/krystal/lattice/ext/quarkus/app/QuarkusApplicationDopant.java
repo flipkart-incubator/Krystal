@@ -1,7 +1,7 @@
-package flipkart.krystal.lattice.ext.rest.quarkus.app;
+package com.flipkart.krystal.lattice.ext.quarkus.app;
 
 import com.flipkart.krystal.lattice.core.doping.SimpleDopant;
-import flipkart.krystal.lattice.ext.rest.quarkus.app.QuarkusApplicationSpec.QuarkusApplicationSpecBuilder;
+import com.flipkart.krystal.lattice.ext.quarkus.app.QuarkusApplicationSpec.QuarkusApplicationSpecBuilder;
 import io.quarkus.runtime.Quarkus;
 import io.vertx.core.Vertx;
 import jakarta.enterprise.inject.spi.CDI;

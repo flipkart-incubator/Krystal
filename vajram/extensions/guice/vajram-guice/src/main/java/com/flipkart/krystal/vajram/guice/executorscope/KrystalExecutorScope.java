@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.guice.executorscope;
 
-import static com.flipkart.krystal.krystex.KrystalExecutorUtil.getExecutorForCurrentThread;
+import static com.flipkart.krystal.krystex.KrystalExecutor.getExecutorForCurrentThread;
 import static com.google.common.base.Preconditions.checkState;
 
 import com.flipkart.krystal.krystex.KrystalExecutor;

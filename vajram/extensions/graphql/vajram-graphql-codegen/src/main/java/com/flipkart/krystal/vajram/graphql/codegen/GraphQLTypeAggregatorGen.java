@@ -558,7 +558,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
             .addParameter(ExecutionContext.class, "graphql_executionContext")
             .addParameter(ExecutionStrategyParameters.class, "graphql_executionStrategyParams")
             .addCode(
-                """
+"""
             if ($T.isFieldQueriedInTheNestedType($L_FIELDS, $L)) {
               return $T.executeWith(
                   $T._builder()
@@ -660,14 +660,16 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
     }
     @Nullable CodeBlock entityIdAccessCode =
         switch (fetcherType) {
-          case ID_FETCHER -> canFanout
-              ? CodeBlock.of("$L.valueOpt().get()", entityIdFacetName)
-              : CodeBlock.of("_nonNil.value()");
-          case INHERIT_ID_FROM_ARGS -> CodeBlock.of(
-              "($T)$L.getExecutionStepInfo().getArgument($S)",
-              schemaReaderUtil.entityIdClassName(schemaReaderUtil.typeClassName(fieldTypeName)),
-              Facets.EXECUTION_STRATEGY_PARAMS,
-              entityIdFieldName);
+          case ID_FETCHER ->
+              canFanout
+                  ? CodeBlock.of("$L.valueOpt().get()", entityIdFacetName)
+                  : CodeBlock.of("_nonNil.value()");
+          case INHERIT_ID_FROM_ARGS ->
+              CodeBlock.of(
+                  "($T)$L.getExecutionStepInfo().getArgument($S)",
+                  schemaReaderUtil.entityIdClassName(schemaReaderUtil.typeClassName(fieldTypeName)),
+                  Facets.EXECUTION_STRATEGY_PARAMS,
+                  entityIdFieldName);
           case INHERIT_ID_FROM_PARENT -> CodeBlock.of(Facets.ENTITY_ID);
           default -> null;
         };
@@ -699,7 +701,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                 entityIdAccessCode != null
                     ? canFanout
                         ? CodeBlock.of(
-                            """
+"""
         $T<$T> _reqs = new $T<>();
         for (var _entityId : $L) {
 """,
@@ -757,7 +759,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
             .addParameter(VajramExecutionStrategy.class, "graphql_executionStrategy")
             .addParameter(ExecutionStrategyParameters.class, "graphql_executionStrategyParams")
             .addNamedCode(
-                """
+"""
     if (!$graphqlUtils:T.isFieldQueriedInTheNestedType($fieldName:S, graphql_executionStrategyParams)){
       return $skip:L($skipNotQueried:S);
     }
@@ -765,10 +767,12 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                 args)
             .addNamedCode(
                 fetcherType == INHERIT_ID_FROM_PARENT || fetcherType == INHERIT_ID_FROM_ARGS
-                    ? """
+                    ?
+"""
       $requestBuildingLogic:L
 """
-                    : """
+                    :
+"""
     return $fetcherFacetName:L.map(
           _failure -> $skip:L("'$fetcherFacetName:L' failed with error.", _failure.error()),
           () -> $skip:L("'$fetcherFacetName:L' returned null"),
@@ -781,7 +785,7 @@ public class GraphQLTypeAggregatorGen implements CodeGenerator {
                         "requestBuildingLogic",
                         CodeBlock.builder()
                             .addNamed(
-                                """
+"""
 
             $forLoopStart:L
             var _req = $reqPojoType:T._builder()

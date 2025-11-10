@@ -106,8 +106,4 @@ public abstract class AbstractGraphQlModel<T extends AbstractGraphQlModel<T>> {
   public final void _putErrors(String fieldName, List<Throwable> errors) {
     _errors.put(fieldName, unmodifiableList(errors));
   }
-
-  final Object _putValue(String fieldName, Object value) {
-    return _values.put(fieldName, value);
-  }
 }

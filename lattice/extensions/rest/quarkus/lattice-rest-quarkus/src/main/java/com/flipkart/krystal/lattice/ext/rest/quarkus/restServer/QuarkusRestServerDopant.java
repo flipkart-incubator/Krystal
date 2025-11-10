@@ -1,4 +1,4 @@
-package flipkart.krystal.lattice.ext.rest.quarkus.restServer;
+package com.flipkart.krystal.lattice.ext.rest.quarkus.restServer;
 
 import static com.flipkart.krystal.lattice.core.headers.StandardHeaderNames.REQUEST_ID;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
@@ -13,13 +13,13 @@ import com.flipkart.krystal.lattice.core.di.Bindings.BindingsBuilder;
 import com.flipkart.krystal.lattice.core.doping.Dopant;
 import com.flipkart.krystal.lattice.core.headers.Header;
 import com.flipkart.krystal.lattice.core.headers.SingleValueHeader;
+import com.flipkart.krystal.lattice.ext.quarkus.app.QuarkusApplicationDopant;
+import com.flipkart.krystal.lattice.ext.rest.quarkus.restServer.QuarkusRestServerSpec.QuarkusRestServerSpecBuilder;
 import com.flipkart.krystal.lattice.rest.RestService;
 import com.flipkart.krystal.lattice.rest.RestServiceDopant;
 import com.flipkart.krystal.lattice.rest.api.status.HttpResponseStatusException;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.tags.Names;
-import flipkart.krystal.lattice.ext.rest.quarkus.app.QuarkusApplicationDopant;
-import flipkart.krystal.lattice.ext.rest.quarkus.restServer.QuarkusRestServerSpec.QuarkusRestServerSpecBuilder;
 import io.quarkus.vertx.utils.NoBoundChecksBuffer;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -92,7 +92,7 @@ public final class QuarkusRestServerDopant implements Dopant<RestService, Quarku
     return new VertxRequestHandler(vertx, deployment, restService.pathPrefix());
   }
 
-  protected <RespT> void executeHttpRequest(
+  private <RespT> void executeHttpRequest(
       RoutingContext routingContext, CompletionStage<ImmutableRequest<RespT>> requestFuture) {
 
     HttpServerResponse httpResponse = routingContext.response();

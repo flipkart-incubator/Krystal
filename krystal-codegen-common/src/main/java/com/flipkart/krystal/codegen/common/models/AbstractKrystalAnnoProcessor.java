@@ -1,7 +1,7 @@
 package com.flipkart.krystal.codegen.common.models;
 
 import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
-import static lombok.AccessLevel.PROTECTED;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -10,8 +10,8 @@ import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.TypeElement;
 import javax.tools.Diagnostic.Kind;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
@@ -19,11 +19,17 @@ public abstract class AbstractKrystalAnnoProcessor extends AbstractProcessor {
 
   private final @Nullable CodegenPhase expectedPhase;
 
-  @Getter(PROTECTED)
-  private CodeGenUtility codeGenUtil;
+  private @MonotonicNonNull CodeGenUtility codeGenUtil;
 
-  @Getter(PROTECTED)
-  private @Nullable CodegenPhase codegenPhase;
+  private @MonotonicNonNull CodegenPhase codegenPhase;
+
+  protected CodeGenUtility codeGenUtil() {
+    return requireNonNull(codeGenUtil, "Codegen util is accessible only in the processing phase");
+  }
+
+  public CodegenPhase codegenPhase() {
+    return requireNonNull(codegenPhase, "Codegen phase is accessible only in the processing phase");
+  }
 
   public AbstractKrystalAnnoProcessor() {
     RunOnlyWhenCodegenPhaseIs runOnlyWhenCodegenPhaseIs =
@@ -43,9 +49,10 @@ public abstract class AbstractKrystalAnnoProcessor extends AbstractProcessor {
     if (expectedPhase == null || Objects.equals(expectedPhase, codegenPhase)) {
       return processImpl(annotations, roundEnv);
     }
-    codeGenUtil.note(
-        "Skipping %s since codegen phase is '%s'. This class only supports '%s'"
-            .formatted(getClass().getSimpleName(), codegenPhase, expectedPhase));
+    requireNonNull(codeGenUtil)
+        .note(
+            "Skipping %s since codegen phase is '%s'. This class only supports '%s'"
+                .formatted(getClass().getSimpleName(), codegenPhase, expectedPhase));
     return false;
   }
 

@@ -1,7 +1,7 @@
 dependencies {
     implementation project(':krystal-codegen-common')
     implementation project(':lattice:extensions:rest:lattice-rest-codegen')
-    implementation project(':lattice:extensions:rest:lattice-rest-quarkus')
+    implementation project(':lattice:extensions:rest:quarkus:lattice-rest-quarkus')
     implementation project(':lattice:lattice-codegen')
     implementation project(':vajram:extensions:json:vajram-json')
 

@@ -1,7 +1,7 @@
 plugins {
     id 'java-library'
     id 'com.flipkart.krystal' version "${krystal_version}"
-    id 'com.flipkart.java.code.standard' version '4.1'
+    id 'com.flipkart.java.code.standard' version "${java_code_std_version}"
 
     //Needed only if you want your project to be modularized using JPMS
     id 'org.gradlex.extra-java-module-info' version '1.11'
@@ -13,12 +13,12 @@ tasks.withType(JavaCompile).configureEach {
 
 dependencies {
     implementation platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
-    annotationProcessor platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
+    krystalModelsGenProcessor platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
 
     implementation 'com.flipkart.krystal:vajram-java-sdk'
     implementation 'com.flipkart.krystal:vajram-graphql'
-    annotationProcessor 'com.flipkart.krystal:vajram-codegen'
-    annotationProcessor 'com.flipkart.krystal:vajram-graphql-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-graphql-codegen'
     implementation 'com.graphql-java:graphql-java:24.3'
     implementation 'com.graphql-java:graphql-java-extended-scalars:24.0'
 

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+@SuppressWarnings("return")
 public final class Name_ImmutGraphQlRespJson implements Name_Immut {
 
   @Override

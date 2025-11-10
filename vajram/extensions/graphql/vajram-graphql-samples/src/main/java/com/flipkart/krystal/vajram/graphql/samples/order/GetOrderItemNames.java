@@ -12,6 +12,7 @@ import java.util.List;
 @GraphQLFetcher
 @Vajram
 public abstract class GetOrderItemNames extends ComputeVajramDef<GetOrderItemNames_GQlFields> {
+  @SuppressWarnings("initialization.field.uninitialized")
   static class _Inputs {
     @IfAbsent(FAIL)
     OrderId id;

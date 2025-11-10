@@ -15,9 +15,9 @@ Single Bill-Of-Materials artefact with all krystal artefacts versions defined.
    plugin. Developers add this artefact as an annotation processor dependency in their gradle build
    file, and add the `com.flipkart.krystal` plugin to their gradle project.
     1. The annotation processors generate the vajramDef models and impls during compilation phase.
-    2. The krystal plugin adds `codegenVajramModels` gradle task and adds it as a dependency to
+    2. The krystal plugin adds `krystalModelsGen` gradle task and adds it as a dependency to
        the `compileJava` task so that models are code generated on every compile. It also configures
-       the `codegenVajramModels` task to run the annotation processor which generates the models and
+       the `krystalModelsGen` task to run the annotation processor which generates the models and
        the `compileJava` task to generate the vajramDef impl files using the models generated in the
        previous step. The plugin artefact's coordinates
        are `com.flipkart.krystal:com.flipkart.krystal.gradle.plugin`, but developers generally don't

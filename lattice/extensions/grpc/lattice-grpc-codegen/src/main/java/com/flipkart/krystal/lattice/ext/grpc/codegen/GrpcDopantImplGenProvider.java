@@ -150,7 +150,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
           rpcMethodsCode.add(
               CodeBlock.builder()
                   .addNamed(
-                      """
+"""
           @$override:T
           public void $rpcName:L(
               $protoReqMsgType:T request,
@@ -174,7 +174,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
                               "responseMapper",
                               isModel
                                   ? CodeBlock.of(
-                                      """
+"""
                     response == null
                         ? null
                         : (($T<$T>) response)
@@ -188,7 +188,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
 
         servicesCode.add(
             CodeBlock.of(
-                """
+"""
         new $T(){
           $L
         }
@@ -205,7 +205,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
                           GrpcServerDopant.class.getDeclaredMethod("serviceDefinitions").getName(),
                           0))
               .addCode(
-                  """
+"""
     return $T.of(
         $L
     );
