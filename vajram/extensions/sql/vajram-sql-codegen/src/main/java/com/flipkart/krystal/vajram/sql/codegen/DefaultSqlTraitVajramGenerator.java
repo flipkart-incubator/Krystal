@@ -46,7 +46,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 final class DefaultSqlTraitVajramGenerator extends AbstractSqlCodeGenerator {
 
   // Constants
-  private static final String IMPL_SUFFIX = "_sql";
+  private static final String IMPL_SUFFIX = "_Sql";
   private static final String FACETS_SUFFIX = "_Fac";
 
   DefaultSqlTraitVajramGenerator(VajramCodeGenContext codeGenContext) {
@@ -210,12 +210,13 @@ final class DefaultSqlTraitVajramGenerator extends AbstractSqlCodeGenerator {
 
     if (isQuery) {
       codeBuilder.add(
-          "return resolve(\n"
-              + "    dep(\n"
-              + "        queryResult_s,\n"
-              + "        depInput($T.selectQuery_s).usingValueAsResolver(() -> $S),\n"
-              + "        depInput($T.parameters_s).usingAsIs(parameters_s).asResolver(),\n"
-              + "        depInput($T.resultType_s).usingValueAsResolver(() -> $T.class)))",
+          """
+          return resolve(
+              dep(
+                  queryResult_s,
+                  depInput($T.selectQuery_s).usingValueAsResolver(() -> $S),
+                  depInput($T.parameters_s).usingAsIs(parameters_s).asResolver(),
+                  depInput($T.resultType_s).usingValueAsResolver(() -> $T.class)))""",
           ClassName.get(SQLRead_Req.class),
           sqlStatement,
           ClassName.get(SQLRead_Req.class),
@@ -224,11 +225,12 @@ final class DefaultSqlTraitVajramGenerator extends AbstractSqlCodeGenerator {
     } else {
       // For updates, use SQLWrite
       codeBuilder.add(
-          "return resolve(\n"
-              + "    dep(\n"
-              + "        queryResult_s,\n"
-              + "        depInput($T.query_s).usingValueAsResolver(() -> $S),\n"
-              + "        depInput($T.parameters_s).usingAsIs(parameters_s).asResolver()))",
+          """
+          return resolve(
+              dep(
+                  queryResult_s,
+                  depInput($T.query_s).usingValueAsResolver(() -> $S),
+                  depInput($T.parameters_s).usingAsIs(parameters_s).asResolver()))""",
           ClassName.get(SQLWrite_Req.class),
           sqlStatement,
           ClassName.get(SQLWrite_Req.class));

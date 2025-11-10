@@ -26,6 +26,7 @@ import java.util.logging.Logger;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 public class CreateUserTraitTest {
@@ -77,7 +78,7 @@ public class CreateUserTraitTest {
   }
 
   @Test
-  // @Disabled("Requires MySQL server - enable manually when database is available")
+  @Disabled("Requires MySQL server - enable manually when database is available")
   void createUserSqlTrait_realDatabase_success() {
     // Configure connection to MySQL database
     logger.info("Initializing createUserSqlTrait test with real database");

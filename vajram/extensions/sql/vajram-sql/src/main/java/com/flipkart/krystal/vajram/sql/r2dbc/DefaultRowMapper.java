@@ -17,7 +17,7 @@ import java.util.function.BiFunction;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-public class DefaultRowMapper implements RowMapper {
+public final class DefaultRowMapper implements RowMapper {
 
   public <T> Mono<List<T>> map(Result result, Class<T> type) {
     BiFunction<Row, RowMetadata, T> mappingFunction = createMappingFunction(type);
