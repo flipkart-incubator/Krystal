@@ -258,8 +258,9 @@ public class GraphQlTypeModelGen implements CodeGenerator {
         TypeMirror elementType = getListElementType(returnType);
         if (elementType != null) {
           TypeName elementTypeName;
-          boolean isEntityList = isCustomModelType(elementType, util) && !isEntityIdType(elementType, util);
-          
+          boolean isEntityList =
+              isCustomModelType(elementType, util) && !isEntityIdType(elementType, util);
+
           if (isEntityList) {
             // For custom model types (entities), use raw type (not _Immut) with wildcard
             elementTypeName = TypeName.get(elementType);
@@ -273,7 +274,8 @@ public class GraphQlTypeModelGen implements CodeGenerator {
                     ClassName.get(List.class), WildcardTypeName.subtypeOf(innerErrable));
           } else {
             // For standard types (String, etc.), use List<Errable<String>> directly (no wildcards)
-            TypeName innerErrable = ParameterizedTypeName.get(ClassName.get(Errable.class), TypeName.get(elementType));
+            TypeName innerErrable =
+                ParameterizedTypeName.get(ClassName.get(Errable.class), TypeName.get(elementType));
             paramInnerType = ParameterizedTypeName.get(ClassName.get(List.class), innerErrable);
           }
         } else {
@@ -287,12 +289,16 @@ public class GraphQlTypeModelGen implements CodeGenerator {
       TypeName paramType;
       if (isListType(returnType)) {
         TypeMirror elementType = getListElementType(returnType);
-        boolean isEntityList = elementType != null && isCustomModelType(elementType, util) && !isEntityIdType(elementType, util);
-        
+        boolean isEntityList =
+            elementType != null
+                && isCustomModelType(elementType, util)
+                && !isEntityIdType(elementType, util);
+
         if (isEntityList) {
           // Entity lists: use wildcard wrapper
-          paramType = ParameterizedTypeName.get(
-              ClassName.get(Errable.class), WildcardTypeName.subtypeOf(paramInnerType));
+          paramType =
+              ParameterizedTypeName.get(
+                  ClassName.get(Errable.class), WildcardTypeName.subtypeOf(paramInnerType));
         } else {
           // Standard type lists: NO wildcard wrapper
           paramType = ParameterizedTypeName.get(ClassName.get(Errable.class), paramInnerType);
@@ -300,11 +306,12 @@ public class GraphQlTypeModelGen implements CodeGenerator {
       } else {
         // Single fields: check if custom model type or standard type
         boolean isCustomType = isCustomModelType(returnType, util);
-        
+
         if (isCustomType) {
           // Custom types (entities, entity IDs): use wildcard wrapper
-          paramType = ParameterizedTypeName.get(
-              ClassName.get(Errable.class), WildcardTypeName.subtypeOf(paramInnerType));
+          paramType =
+              ParameterizedTypeName.get(
+                  ClassName.get(Errable.class), WildcardTypeName.subtypeOf(paramInnerType));
         } else {
           // Standard types (String, primitives, etc.): NO wildcard wrapper
           paramType = ParameterizedTypeName.get(ClassName.get(Errable.class), paramInnerType);
@@ -349,7 +356,7 @@ public class GraphQlTypeModelGen implements CodeGenerator {
         // Handle single Entity with nested conversion
         addEntityFieldInitialization(constructor, fieldName, returnType, util);
       }
-      // Note: Other fields (non-GraphQL entities) are not initialized - 
+      // Note: Other fields (non-GraphQL entities) are not initialized -
       // they remain as uninitialized Errable fields and will be set by the builder or aggregator
       // This includes List<String> which has nested Errable but doesn't need complex initialization
     }
@@ -717,20 +724,27 @@ public class GraphQlTypeModelGen implements CodeGenerator {
   }
 
   private void addBuilderSetters(
-      TypeSpec.Builder builderClass, ExecutableElement method, ClassName gqlRespJsonClassName, CodeGenUtility util) {
+      TypeSpec.Builder builderClass,
+      ExecutableElement method,
+      ClassName gqlRespJsonClassName,
+      CodeGenUtility util) {
 
     String fieldName = method.getSimpleName().toString();
     TypeMirror returnType = method.getReturnType();
     TypeName fieldType = TypeName.get(returnType);
 
     // Determine if this is a custom entity type (not entity ID)
-    boolean isCustomEntity = isCustomModelType(returnType, util) && !isEntityIdType(returnType, util);
+    boolean isCustomEntity =
+        isCustomModelType(returnType, util) && !isEntityIdType(returnType, util);
     boolean isListType = isListType(returnType);
     boolean isListOfEntities = false;
-    
+
     if (isListType) {
       TypeMirror elementType = getListElementType(returnType);
-      isListOfEntities = elementType != null && isCustomModelType(elementType, util) && !isEntityIdType(elementType, util);
+      isListOfEntities =
+          elementType != null
+              && isCustomModelType(elementType, util)
+              && !isEntityIdType(elementType, util);
     }
 
     // Determine the correct Errable field type for the second overload
@@ -739,9 +753,8 @@ public class GraphQlTypeModelGen implements CodeGenerator {
       // For lists, use nested Errable structure
       TypeMirror elementType = getListElementType(returnType);
       if (elementType != null) {
-        TypeName innerErrableType = ParameterizedTypeName.get(
-            ClassName.get(Errable.class), 
-            TypeName.get(elementType));
+        TypeName innerErrableType =
+            ParameterizedTypeName.get(ClassName.get(Errable.class), TypeName.get(elementType));
         TypeName listType = ParameterizedTypeName.get(ClassName.get(List.class), innerErrableType);
         errableFieldType = ParameterizedTypeName.get(ClassName.get(Errable.class), listType);
       } else {
@@ -752,20 +765,21 @@ public class GraphQlTypeModelGen implements CodeGenerator {
     }
 
     // Direct value setter (from interface)
-    MethodSpec.Builder directSetter = MethodSpec.methodBuilder(fieldName)
-        .addAnnotation(Override.class)
-        .addModifiers(PUBLIC)
-        .returns(gqlRespJsonClassName.nestedClass("Builder"));
+    MethodSpec.Builder directSetter =
+        MethodSpec.methodBuilder(fieldName)
+            .addAnnotation(Override.class)
+            .addModifiers(PUBLIC)
+            .returns(gqlRespJsonClassName.nestedClass("Builder"));
 
     // For entity setters (single or list), make them stubs
     if (isCustomEntity || isListOfEntities) {
       if (isListType) {
         // List of entities: return null (stub)
-        directSetter.addParameter(fieldType, fieldName)
-            .addStatement("return null");
+        directSetter.addParameter(fieldType, fieldName).addStatement("return null");
       } else {
         // Single entity: just return this (stub)
-        directSetter.addParameter(
+        directSetter
+            .addParameter(
                 ParameterSpec.builder(fieldType, fieldName).addAnnotation(Nullable.class).build())
             .addStatement("return this");
       }
@@ -773,29 +787,38 @@ public class GraphQlTypeModelGen implements CodeGenerator {
       // List of standard types (e.g., String): implement complex wrapping logic
       directSetter.addParameter(
           ParameterSpec.builder(fieldType, fieldName).addAnnotation(Nullable.class).build());
-      
+
       // Generate the complex wrapping logic
       directSetter.beginControlFlow("if ($L == null)", fieldName);
       directSetter.addStatement("this.$L = $T.nil()", fieldName, Errable.class);
       directSetter.addStatement("return this");
       directSetter.endControlFlow();
-      
-      directSetter.addStatement("$T<$T<$T>> _result = new $T<>($L.size())",
-          List.class, Errable.class, getListElementType(returnType), ArrayList.class, fieldName);
-      
+
+      directSetter.addStatement(
+          "$T<$T<$T>> _result = new $T<>($L.size())",
+          List.class,
+          Errable.class,
+          getListElementType(returnType),
+          ArrayList.class,
+          fieldName);
+
       // Get element type name for loop variable
       TypeMirror elementType = getListElementType(returnType);
-      String singularName = fieldName.endsWith("s") ? fieldName.substring(0, fieldName.length() - 1) : fieldName + "Item";
-      
+      String singularName =
+          fieldName.endsWith("s")
+              ? fieldName.substring(0, fieldName.length() - 1)
+              : fieldName + "Item";
+
       directSetter.beginControlFlow("for ($T $L : $L)", elementType, singularName, fieldName);
       directSetter.addStatement("_result.add($T.withValue($L))", Errable.class, singularName);
       directSetter.endControlFlow();
-      
+
       directSetter.addStatement("this.$L = $T.withValue(_result)", fieldName, Errable.class);
       directSetter.addStatement("return this");
     } else {
       // Standard scalar: simple wrap
-      directSetter.addParameter(
+      directSetter
+          .addParameter(
               ParameterSpec.builder(fieldType, fieldName).addAnnotation(Nullable.class).build())
           .addStatement("this.$L = $T.withValue($L)", fieldName, Errable.class, fieldName)
           .addStatement("return this");
@@ -864,32 +887,37 @@ public class GraphQlTypeModelGen implements CodeGenerator {
             .addModifiers(PUBLIC)
             .returns(immutClassName.nestedClass("Builder"));
 
-    // Build the chain of setter calls using hardcoded formatting to avoid JavaPoet indentation issues
+    // Build the chain of setter calls using hardcoded formatting to avoid JavaPoet indentation
+    // issues
     StringBuilder newCopyCodeStr = new StringBuilder();
-    newCopyCodeStr.append("return ").append(gqlRespJsonClassName.simpleName()).append("._builder()\n");
+    newCopyCodeStr
+        .append("return ")
+        .append(gqlRespJsonClassName.simpleName())
+        .append("._builder()\n");
     newCopyCodeStr.append("    .graphql_executionContext(graphql_executionContext)\n");
     newCopyCodeStr.append("    .graphql_executionStrategy(graphql_executionStrategy)\n");
-    newCopyCodeStr.append("    .graphql_executionStrategyParams(graphql_executionStrategyParams)\n");
-    
+    newCopyCodeStr.append(
+        "    .graphql_executionStrategyParams(graphql_executionStrategyParams)\n");
+
     // Add model field setters
     for (ExecutableElement method : modelMethods) {
       String fieldName = method.getSimpleName().toString();
-      
+
       // Skip GraphQL execution context methods - already added above
       if (fieldName.equals("graphql_executionContext")
           || fieldName.equals("graphql_executionStrategy")
           || fieldName.equals("graphql_executionStrategyParams")) {
         continue;
       }
-      
+
       newCopyCodeStr.append("    .").append(fieldName).append("(").append(fieldName).append(")\n");
     }
-    
+
     // Remove the last newline
     if (newCopyCodeStr.charAt(newCopyCodeStr.length() - 1) == '\n') {
       newCopyCodeStr.setLength(newCopyCodeStr.length() - 1);
     }
-    
+
     // Use addStatement to automatically add semicolon
     newCopyMethod.addStatement("$L", newCopyCodeStr.toString());
     builderClass.addMethod(newCopyMethod.build());
@@ -993,37 +1021,35 @@ public class GraphQlTypeModelGen implements CodeGenerator {
   }
 
   /**
-   * Checks if the given type is an entity ID type (should NOT get _Immut suffix).
-   * Entity IDs typically end with "Id" and are value types, not full entities.
+   * Checks if the given type is an entity ID type (should NOT get _Immut suffix). Entity IDs
+   * typically end with "Id" and are value types, not full entities.
    */
   private boolean isEntityIdType(TypeMirror type, CodeGenUtility util) {
     if (type == null || type.getKind() != TypeKind.DECLARED) {
       return false;
     }
-    
+
     Element element = util.processingEnv().getTypeUtils().asElement(type);
     if (!(element instanceof TypeElement)) {
       return false;
     }
-    
+
     String simpleName = ((TypeElement) element).getSimpleName().toString();
     // Entity ID types typically end with "Id"
     return simpleName.endsWith("Id");
   }
 
-  /**
-   * Checks if the given type is String.
-   */
+  /** Checks if the given type is String. */
   private boolean isStringType(TypeMirror type, CodeGenUtility util) {
     if (type == null || type.getKind() != TypeKind.DECLARED) {
       return false;
     }
-    
+
     Element element = util.processingEnv().getTypeUtils().asElement(type);
     if (!(element instanceof TypeElement)) {
       return false;
     }
-    
+
     String qualifiedName = ((TypeElement) element).getQualifiedName().toString();
     return qualifiedName.equals("java.lang.String");
   }
@@ -1089,11 +1115,12 @@ public class GraphQlTypeModelGen implements CodeGenerator {
   }
 
   private boolean isApplicable() {
-    // Only run in MODELS phase (same as JsonModelsGen) to avoid conflict with ModelGenProcessor in FINAL phase
+    // Only run in MODELS phase (same as JsonModelsGen) to avoid conflict with ModelGenProcessor in
+    // FINAL phase
     if (!CodegenPhase.MODELS.equals(codeGenContext.codegenPhase())) {
       return false;
     }
-    
+
     CodeGenUtility util = codeGenContext.util();
     SupportedModelProtocols supportedModelProtocols =
         codeGenContext.modelRootType().getAnnotation(SupportedModelProtocols.class);
