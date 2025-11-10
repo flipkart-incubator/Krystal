@@ -14,7 +14,7 @@ dependencies {
     /** START: Lattice dependencies **/
 
     implementation platform("com.flipkart.krystal:lattice-bom:${lattice_version}")
-    annotationProcessor platform("com.flipkart.krystal:lattice-bom:${lattice_version}")
+    krystalModelsGenProcessor platform("com.flipkart.krystal:lattice-bom:${lattice_version}")
 
     implementation 'com.flipkart.krystal:lattice-grpc'
     implementation 'com.flipkart.krystal:lattice-guice-servlet'
@@ -23,13 +23,13 @@ dependencies {
     implementation 'com.flipkart.krystal:vajram-json'
     implementation 'com.flipkart.krystal:vajram-protobuf3'
 
-    annotationProcessor 'com.flipkart.krystal:lattice-codegen'
-    annotationProcessor 'com.flipkart.krystal:lattice-grpc-codegen'
-    annotationProcessor 'com.flipkart.krystal:lattice-guice-codegen'
-    annotationProcessor 'com.flipkart.krystal:lattice-protobuf-codegen'
-    annotationProcessor 'com.flipkart.krystal:vajram-codegen'
-    annotationProcessor 'com.flipkart.krystal:vajram-json-codegen'
-    annotationProcessor 'com.flipkart.krystal:vajram-protobuf-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:lattice-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:lattice-grpc-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:lattice-guice-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:lattice-protobuf-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-json-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-protobuf-codegen'
 
     testImplementation project(':vajram:extensions:guice:vajram-guice')
     testImplementation project(':vajram:vajram-krystex')
@@ -81,7 +81,7 @@ protobuf {
 
 }
 
-tasks.named('extractProto').configure { mustRunAfter('codeGenVajramModels') }
+tasks.named('extractProto').configure { mustRunAfter('krystalModelsGen') }
 
 extraJavaModuleInfo {
     failOnMissingModuleInfo = false

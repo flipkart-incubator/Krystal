@@ -49,7 +49,7 @@ On the other hand let us say you have a piece of business logic which does not m
       1. Inputs which need batching should be marked via the [@Batch](src/main/java/com/flipkart/krystal/vajramDef/batching/Batch.java) annotation
       2. Batching is not part of the contract with clients so this can be added/changed as needed without breaking clients.
 5. After adding all inputs to the vajramDef class, build the project to trigger model generation.
-   1. This can be done by performing `./gradlew build` or `./gradlew codeGenVajramModels`.
+   1. This can be done by performing `./gradlew build` or `./gradlew krystalModelsGen`.
    2. At this point the vajramDef code generator plugin with run annotation processors on all classes with the `@VajramDef` annotation to generate data classes.
 6. Declare dependencies
 7. Declare input resolvers

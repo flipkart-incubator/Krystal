@@ -1,8 +1,8 @@
 package com.flipkart.krystal.lattice.ext.rest.quarkus.restServer;
 
 import static com.flipkart.krystal.lattice.ext.quarkus.app.QuarkusApplicationDopant.quarkusApplication;
-import static com.flipkart.krystal.lattice.rest.RestServiceDopant.restService;
 import static com.flipkart.krystal.lattice.ext.rest.quarkus.restServer.QuarkusRestServerDopant.REST_SERVER_DOPANT_TYPE;
+import static com.flipkart.krystal.lattice.rest.RestServiceDopant.restService;
 
 import com.flipkart.krystal.lattice.core.doping.Dopant;
 import com.flipkart.krystal.lattice.core.doping.DopantSpec;

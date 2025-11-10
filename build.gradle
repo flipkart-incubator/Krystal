@@ -7,8 +7,8 @@ plugins {
 ext {
     clojarsusername = project.properties['clojarsusername'] ?: ""
     clojarspassword = project.properties['clojarspassword'] ?: ""
-    krystal_version = '10.0.0.2-SNAPSHOT'
-    lattice_version = '0.0.11'
+    krystal_version = '10.0.0.3-SNAPSHOT'
+    lattice_version = '0.0.12'
 
     java_code_std_version = '5.0'
 
@@ -227,14 +227,14 @@ configure(subprojects.findAll {
     }
 }
 
-gradle.taskGraph.whenReady { taskGraph ->
-    println """\
-=======================================
-Tasks
-=======================================
-"""
-    taskGraph.getAllTasks().eachWithIndex { task, n ->
-        println "${n + 1} $task"
-        task.dependsOn.eachWithIndex { depObj, m -> println "  ${m + 1} $depObj" }
-    }
-}
+//gradle.taskGraph.whenReady { taskGraph ->
+//    println """\
+//=======================================
+//Tasks
+//=======================================
+//"""
+//    taskGraph.getAllTasks().eachWithIndex { task, n ->
+//        println "${n + 1} $task"
+//        task.dependsOn.eachWithIndex { depObj, m -> println "  ${m + 1} $depObj" }
+//    }
+//}

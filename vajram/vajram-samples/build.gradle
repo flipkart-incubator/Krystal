@@ -11,13 +11,13 @@ plugins {
 dependencies {
     /** START: Krystal dependencies **/
     implementation platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
-    annotationProcessor platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
+    krystalModelsGenProcessor platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
     testAnnotationProcessor platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
 
     implementation 'com.flipkart.krystal:vajram-java-sdk'
     implementation 'com.flipkart.krystal:krystal-visualization'
 
-    annotationProcessor 'com.flipkart.krystal:vajram-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-codegen'
     /** END: Krystal dependencies **/
 
     implementation 'com.google.guava:guava:33.4.8-jre'

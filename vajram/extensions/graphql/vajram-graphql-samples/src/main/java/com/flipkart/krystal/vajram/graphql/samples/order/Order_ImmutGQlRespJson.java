@@ -9,7 +9,6 @@ import com.flipkart.krystal.vajram.graphql.samples.dummy.Dummy_Immut;
 import com.flipkart.krystal.vajram.graphql.samples.hello.Hello;
 import com.flipkart.krystal.vajram.graphql.samples.hello.Hello_Immut;
 import com.flipkart.krystal.vajram.graphql.samples.name.Name;
-import com.flipkart.krystal.vajram.graphql.samples.order.Order_Immut.Builder;
 import graphql.GraphQLError;
 import graphql.execution.ExecutionContext;
 import graphql.execution.ExecutionStrategyParameters;
