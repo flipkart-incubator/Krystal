@@ -8,12 +8,13 @@ import static com.flipkart.krystal.model.ModelRoot.ModelType.REQUEST;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
+import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.vajram.json.Json;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-@SupportedModelProtocols(Json.class)
+@SupportedModelProtocols({Json.class, PlainJavaObject.class})
 @ModelRoot(type = REQUEST)
 public interface JsonRequest extends Model {
 

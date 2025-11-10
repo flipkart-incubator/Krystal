@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.graphql.codegen;
 
-import com.squareup.javapoet.ClassName;
+public interface Fetcher {
 
-public record Fetcher(ClassName className, GraphqlFetcherType type) {}
+  GraphQlFetcherType type();
+}

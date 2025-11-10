@@ -1,3 +1,4 @@
+#TODO: validation: rootPackage is mandatory
 schema @rootPackage(name: "com.flipkart.krystal.vajram.graphql.samples") {
     query: Query
 }

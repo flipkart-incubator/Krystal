@@ -5,6 +5,7 @@ import static com.flipkart.krystal.facets.FacetType.INPUT;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.ErrableFacetValue;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FacetValuesBuilder;
@@ -78,7 +79,9 @@ public sealed class SimpleFacet implements Facet, InputMirror permits SimpleDep 
   @SuppressWarnings("unchecked")
   @Override
   public void setToRequest(Builder request, @Nullable Object value) {
-    ((SimpleRequestBuilder<Object>) request)._asMap().put(id(), Errable.withValue(value));
+    ((SimpleRequestBuilder<Object>) request)
+        ._asMap()
+        .put(id(), new ErrableFacetValue<>(Errable.withValue(value)));
   }
 
   @Override

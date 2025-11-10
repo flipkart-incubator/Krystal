@@ -1,17 +1,52 @@
+#TODO Testcases: A, A!, [A], [A]!, [A!], [A!]! -> 4 types of As (Scalars, entities, composedTypes, types)
 type Order @entity{
-    id: ID,
-    orderItemNames: [String] @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
-    name: String @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
-    dummy: Dummy @idFetcher(vajramId: "GetDummyId", subPackage: "order")
-    dummies: [Dummy] @idFetcher(vajramId: "GetDummyIds", subPackage: "order")
-    hello: Hello
+    id: ID
+    orderItemNames: [String]! @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
+    nameString: String @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
+    dummy(name: String): Dummy @idFetcher(vajramId: "GetDummyIdForOrder", subPackage: "order")
+    dummies(filter: Boolean, preferredType: String, count: Int): [Dummy!]! @idFetcher(vajramId: "GetDummyIds", subPackage: "order")
+    hello: Hello @inferIdFromParent
+    recommendedHellos: [Hello!] @idFetcher(vajramId: "")
+    recommendedOrders: [Order]
+    hello2: Hello
+    name: Name
+
+    #TODO: Add check that fields with @inferIdFromParent must be @composedTypes
+    #TODO: Add check that fields with @composedTypes cannot be fanout types
+    #hellos: [Hello] @inferIdFromParent
 }
 
 type Dummy @entity{
-    id: ID,
-    name: String
+    id: ID
+    name: String!
+    age: Int
+    order: Order
+    f1: String
 }
 
-type Hello {
+#TODO Testcase: Can be used inside Order entity only - using inside any other entity throws error
+#TODO Testcase: Will be aggregated if @inferIdFromParent is present on field- in which case the composing entity's id is used for aggregation (Fanout should not be possible)
+#TODO Testcase: Using idFetcher on composedTypes is an error
+#TODO Testcase: ?? Can @composedEntities be allowed as lists or only single (canFanout or not?)
+type Hello @composedType(inEntity: "Order"){
     toName: String
 }
+
+type Name {
+    value: String
+}
+
+#{
+#    order(orderId: "o1") {
+#        dummy {
+#            order {
+#                dummy {
+#                    order {
+#                        id
+#                    }
+#                }
+#            }
+#        }
+#    }
+#
+#}

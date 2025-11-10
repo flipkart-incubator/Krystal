@@ -1,39 +1,25 @@
 package com.flipkart.krystal.vajram.graphql.codegen;
 
-import com.squareup.javapoet.TypeName;
 import graphql.language.FieldDefinition;
 import lombok.Builder;
+import lombok.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
-@Builder
 public record GraphQlFieldSpec(
-    String fieldName, FieldType fieldType, FieldDefinition fieldDefinition) {
+    String fieldName,
+    GraphQlTypeDecorator fieldType,
+    FieldDefinition fieldDefinition,
+    @Nullable GraphQLTypeName enclosingType) {
 
-  interface FieldType {
-    TypeName genericType();
-
-    TypeName declaredType();
-
-    boolean isList();
-  }
-
-  record ListFieldType(TypeName genericType, TypeName declaredType) implements FieldType {
-
-    @Override
-    public boolean isList() {
-      return true;
-    }
-  }
-
-  record SingleFieldType(TypeName declaredType) implements FieldType {
-
-    @Override
-    public TypeName genericType() {
-      return declaredType;
-    }
-
-    @Override
-    public boolean isList() {
-      return false;
-    }
+  @Builder
+  public GraphQlFieldSpec(
+      @NonNull String fieldName,
+      @NonNull FieldDefinition fieldDefinition,
+      @NonNull GraphQLTypeName enclosingType) {
+    this(
+        fieldName,
+        GraphQlTypeDecorator.of(fieldDefinition.getType()),
+        fieldDefinition,
+        enclosingType);
   }
 }

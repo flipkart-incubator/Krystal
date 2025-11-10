@@ -6,6 +6,8 @@ import com.flipkart.krystal.except.StackTracelessException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import lombok.EqualsAndHashCode;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -42,9 +44,14 @@ public final class Failure<T> implements Errable<T> {
   }
 
   @Override
-  public void handle(
-      Consumer<? super Throwable> ifFailure, Runnable ifNil, Consumer<? super T> ifNonNil) {
-    ifFailure.accept(error);
+  public void handle(Consumer<Failure<T>> ifFailure, Runnable ifNil, Consumer<NonNil<T>> ifNonNil) {
+    ifFailure.accept(this);
+  }
+
+  @Override
+  public <U> U map(
+      Function<Failure<T>, U> ifFailure, Supplier<U> ifNil, Function<NonNil<T>, U> ifNonNil) {
+    return ifFailure.apply(this);
   }
 
   @Override
@@ -68,5 +75,10 @@ public final class Failure<T> implements Errable<T> {
 
   private RuntimeException asRuntimeException() {
     return error instanceof RuntimeException e ? e : new StackTracelessException("Failure", error);
+  }
+
+  @SuppressWarnings("unchecked")
+  public <U> Failure<U> cast() {
+    return (Failure<U>) this;
   }
 }

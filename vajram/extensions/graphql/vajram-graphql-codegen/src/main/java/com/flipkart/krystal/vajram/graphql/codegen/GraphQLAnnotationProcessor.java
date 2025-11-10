@@ -49,7 +49,7 @@ public class GraphQLAnnotationProcessor extends AbstractKrystalAnnoProcessor {
         util.error("[GraphQL Codegen Exception] " + getStackTraceAsString(e));
       }
       try {
-        new GraphQLEntityModelGen(util).generate();
+        new GraphQLEntityGen(util).generate();
       } catch (Exception e) {
         util.error("[GraphQL Codegen Exception] " + getStackTraceAsString(e));
       }
