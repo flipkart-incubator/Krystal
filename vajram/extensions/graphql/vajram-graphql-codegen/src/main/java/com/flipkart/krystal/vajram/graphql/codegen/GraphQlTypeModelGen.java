@@ -352,13 +352,19 @@ public class GraphQlTypeModelGen implements CodeGenerator {
       if (isListType(returnType) && containsGraphQlModel(getListElementType(returnType), util)) {
         // Handle List<Entity> with complex nested conversion
         addListFieldInitialization(constructor, fieldName, returnType, util);
-      } else if (containsGraphQlModel(returnType, util)) {
-        // Handle single Entity with nested conversion
+      } else if (containsGraphQlModel(returnType, util) && !isEntityIdType(returnType, util)) {
+        // Handle single Entity with nested conversion (but not entity IDs)
         addEntityFieldInitialization(constructor, fieldName, returnType, util);
+        } else if (isCustomModelType(returnType, util)) {
+          // Handle entity IDs and other custom types with wildcards - use Errable.withValue
+          constructor.addCode("$L.handle(\n", fieldName);
+          constructor.addCode("    _failure -> this.$L = _failure.cast(),\n", fieldName);
+          constructor.addCode("    () -> this.$L = $T.nil(),\n", fieldName, Errable.class);
+          constructor.addCode("    _nonNil -> this.$L = $T.withValue(_nonNil.value()));\n", fieldName, Errable.class);
+      } else {
+        // Standard types (String, primitives, List<String>) - direct assignment works
+        constructor.addStatement("this.$L = $L", fieldName, fieldName);
       }
-      // Note: Other fields (non-GraphQL entities) are not initialized -
-      // they remain as uninitialized Errable fields and will be set by the builder or aggregator
-      // This includes List<String> which has nested Errable but doesn't need complex initialization
     }
 
     classBuilder.addMethod(constructor.build());
@@ -439,8 +445,34 @@ public class GraphQlTypeModelGen implements CodeGenerator {
       TypeMirror entityType,
       CodeGenUtility util) {
 
-    // Single entity fields also remain uninitialized - will be set by builder/aggregator
-    // Note: No initialization needed here, fields remain as Errable parameters
+    // Single entity fields need .handle() conversion to convert from Errable<? extends Entity> to Errable<Entity_Immut>
+    // Get the raw type name without annotations by extracting the TypeElement
+    Element element = util.processingEnv().getTypeUtils().asElement(entityType);
+    if (!(element instanceof TypeElement)) {
+      throw new IllegalStateException("Cannot get TypeElement for entity type: " + entityType);
+    }
+    String entityTypeStr = ((TypeElement) element).getQualifiedName().toString();
+    ClassName immutInterfaceName = ClassName.bestGuess(entityTypeStr + "_Immut");
+
+    // Build the .handle() initialization with hardcoded indentation
+    constructor.addCode("$L.handle(\n", fieldName);
+    constructor.addCode("    _failure -> this.$L = _failure.cast(),\n", fieldName);
+    constructor.addCode("    () -> this.$L = $T.nil(),\n", fieldName, Errable.class);
+    constructor.addCode("    _nonNil ->\n");
+    constructor.addCode("        this.$L = $T.withValue(\n", fieldName, Errable.class);
+    constructor.addCode("            _nonNil\n");
+    constructor.addCode("                .value()\n");
+    constructor.addCode("                ._asBuilder()\n");
+    constructor.addCode("                .graphql_executionContext(graphql_executionContext)\n");
+    constructor.addCode("                .graphql_executionStrategy(graphql_executionStrategy)\n");
+    constructor.addCode("                .graphql_executionStrategyParams(\n");
+    constructor.addCode("                    graphql_executionStrategy.newParametersForFieldExecution(\n");
+    constructor.addCode("                        graphql_executionContext,\n");
+    constructor.addCode("                        graphql_executionStrategyParams,\n");
+    constructor.addCode("                        graphql_executionStrategyParams\n");
+    constructor.addCode("                            .getFields()\n");
+    constructor.addCode("                            .getSubField($S)))\n", fieldName);
+    constructor.addCode("                ._build()));\n");
   }
 
   private void addInterfaceMethodOverrides(
@@ -504,18 +536,32 @@ public class GraphQlTypeModelGen implements CodeGenerator {
               .addModifiers(PUBLIC)
               .returns(returnType);
 
-      // Return stub values (not actual Errable extraction)
-      if (isListType(method.getReturnType())) {
-        getter.addStatement("return $T.of()", List.class);
+        // Extract actual values from Errable fields
+        if (isListType(method.getReturnType())) {
+          // For lists with nested Errable, unwrap both levels
+          // Field is Errable<List<Errable<T_Immut>>>, getter returns List<T>
+          TypeMirror elementType = getListElementType(method.getReturnType());
+          TypeName elementTypeName = TypeName.get(elementType);
+          String defaultValue = isStringType(elementType, util) ? "null" : "null";
+          
+          getter.addCode("return $L != null ? $L.valueOpt()\n", methodName, methodName);
+          getter.addCode("    .map(list -> list.stream()\n");
+          getter.addCode("        .map(e -> ($T) e.valueOpt().orElse($L))\n", elementTypeName, defaultValue);
+          getter.addCode("        .collect($T.toList()))\n", java.util.stream.Collectors.class);
+          getter.addCode("    .orElse($T.of())\n", List.class);
+          getter.addCode("    : $T.of();\n", List.class);
       } else if (method.getReturnType().getKind().isPrimitive()) {
-        // Return primitive default
-        getter.addStatement("return $L", getPrimitiveDefault(method.getReturnType()));
+        // For primitives, return default if no value
+        getter.addStatement("return $L != null ? $L.valueOpt().orElse($L) : $L", 
+            methodName, methodName, getPrimitiveDefault(method.getReturnType()), getPrimitiveDefault(method.getReturnType()));
       } else if (isStringType(method.getReturnType(), util)) {
-        // String returns empty string
-        getter.addStatement("return $S", "");
+        // For String, return empty string if no value
+        getter.addStatement("return $L != null ? $L.valueOpt().orElse($S) : $S", 
+            methodName, methodName, "", "");
       } else {
-        // Reference types return null
-        getter.addStatement("return null");
+        // For reference types, return null if no value
+        getter.addStatement("return $L != null ? $L.valueOpt().orElse(null) : null", 
+            methodName, methodName);
       }
 
       classBuilder.addMethod(getter.build());
