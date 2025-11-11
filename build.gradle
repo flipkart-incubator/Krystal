@@ -1,5 +1,5 @@
 plugins {
-    id 'com.flipkart.java.code.standard' version '4.0'
+    id 'com.flipkart.java.code.standard' version '5.0'
     id 'org.gradlex.extra-java-module-info' version '1.11'
     id 'java-test-fixtures'
 }
@@ -7,8 +7,10 @@ plugins {
 ext {
     clojarsusername = project.properties['clojarsusername'] ?: ""
     clojarspassword = project.properties['clojarspassword'] ?: ""
-    krystal_version = '10.0.0.2-SNAPSHOT'
-    lattice_version = '0.0.11'
+    krystal_version = '10.0.0.3-SNAPSHOT'
+    lattice_version = '0.0.12'
+
+    java_code_std_version = '5.0'
 
     protobuf_version = '4.31.1'
     grpc_version = '1.73.0'
@@ -111,7 +113,7 @@ configure(subprojects.findAll {
             implementation 'javax.annotation:javax.annotation-api:1.3.2'
             implementation 'org.reflections:reflections:0.10.2'
             implementation 'org.slf4j:slf4j-api:2.0.11'
-            implementation 'org.yaml:snakeyaml:2.2'
+            implementation 'org.yaml:snakeyaml:2.3'
             implementation 'org.jboss.resteasy:resteasy-vertx:7.0.0.Beta1'
             implementation 'org.jboss.resteasy:resteasy-core:7.0.0.Beta1'
             implementation 'org.javassist:javassist:3.30.2-GA'
@@ -129,6 +131,9 @@ configure(subprojects.findAll {
             annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
             annotationProcessor 'com.google.guava:failureaccess:1.0.2'
             annotationProcessor 'com.google.j2objc:j2objc-annotations:3.0.0'
+
+            implementation 'com.graphql-java:graphql-java:24.3'
+            implementation 'com.graphql-java:graphql-java-extended-scalars:24.0'
 
             testImplementation 'com.google.j2objc:j2objc-annotations:3.0.0'
 
@@ -212,6 +217,9 @@ configure(subprojects.findAll {
         knownModule('com.google.j2objc:j2objc-annotations', 'com.google.j2objc.annotations')
         knownModule('org.reflections:reflections', 'org.reflections')
         knownModule('org.javassist:javassist', 'org.javassist')
+        knownModule('com.graphql-java:graphql-java', 'com.graphqljava')
+        knownModule('com.graphql-java:graphql-java-extended-scalars', 'com.graphqljava.extendedscalars')
+        knownModule('org.yaml:snakeyaml', 'org.yaml.snakeyaml')
 
         knownModule('com.flipkart.krystal:vajram-java-sdk', 'flipkart.krystal.vajram')
         knownModule('com.flipkart.krystal:krystal-codegen-common', 'flipkart.krystal.codegen.common')
@@ -219,14 +227,14 @@ configure(subprojects.findAll {
     }
 }
 
-gradle.taskGraph.whenReady { taskGraph ->
-    println """\
-=======================================
-Tasks
-=======================================
-"""
-    taskGraph.getAllTasks().eachWithIndex { task, n ->
-        println "${n + 1} $task"
-        task.dependsOn.eachWithIndex { depObj, m -> println "  ${m + 1} $depObj" }
-    }
-}
+//gradle.taskGraph.whenReady { taskGraph ->
+//    println """\
+//=======================================
+//Tasks
+//=======================================
+//"""
+//    taskGraph.getAllTasks().eachWithIndex { task, n ->
+//        println "${n + 1} $task"
+//        task.dependsOn.eachWithIndex { depObj, m -> println "  ${m + 1} $depObj" }
+//    }
+//}

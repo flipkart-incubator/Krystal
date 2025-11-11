@@ -11,6 +11,7 @@ import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.models.J
 import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.models.JsonResponse_Immut;
 import com.flipkart.krystal.lattice.vajram.sdk.InvocableOutsideProcess;
 import com.flipkart.krystal.model.IfAbsent;
+import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -27,7 +28,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
 @InvocableOutsideGraph
 @InvocableOutsideProcess
-@SupportedModelProtocols(Json.class)
+@SupportedModelProtocols({Json.class, PlainJavaObject.class})
 @Vajram
 public abstract class RestLatticeSample extends ComputeVajramDef<JsonResponse> {
   static class _Inputs {

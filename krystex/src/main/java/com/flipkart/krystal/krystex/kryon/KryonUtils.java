@@ -8,7 +8,7 @@ public final class KryonUtils {
 
   static CompletableFuture<?> enqueueOrExecuteCommand(
       Supplier<KryonCommand<?>> commandGenerator, KryonExecutor kryonExecutor) {
-    if (kryonExecutor.commandQueue().isCurrentThreadTheSingleThread()) {
+    if (kryonExecutor.singleThreadExecutor().isCurrentThreadTheSingleThread()) {
       return kryonExecutor.executeCommand(commandGenerator.get());
     } else {
       return kryonExecutor.enqueueKryonCommand(commandGenerator);

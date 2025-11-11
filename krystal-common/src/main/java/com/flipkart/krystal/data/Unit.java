@@ -14,6 +14,7 @@ package com.flipkart.krystal.data;
  * language</a>.
  */
 public final class Unit {
+  @SuppressWarnings("InstantiationOfUtilityClass")
   private static final Unit UNIT = new Unit();
 
   public static Unit instance() {

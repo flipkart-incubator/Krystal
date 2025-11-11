@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajram.codegen.processor;
 import static com.flipkart.krystal.codegen.common.models.CodegenPhase.FINAL;
 import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
 
+import com.flipkart.krystal.codegen.common.models.RunOnlyWhenCodegenPhaseIs;
 import com.google.auto.service.AutoService;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.SupportedAnnotationTypes;
@@ -17,9 +18,5 @@ import javax.lang.model.SourceVersion;
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 @AutoService(Processor.class)
 @SupportedOptions(CODEGEN_PHASE_KEY)
-public final class VajramWrapperGenProcessor extends AbstractVajramCodegenProcessor {
-
-  public VajramWrapperGenProcessor() {
-    super(FINAL);
-  }
-}
+@RunOnlyWhenCodegenPhaseIs(FINAL)
+public final class VajramWrapperGenProcessor extends AbstractVajramCodegenProcessor {}

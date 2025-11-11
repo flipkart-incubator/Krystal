@@ -1,0 +1,10 @@
+dependencies {
+    api project(':vajram:vajram-java-sdk')
+
+    implementation project(':vajram:extensions:graphql:vajram-graphql')
+    implementation project(':krystal-codegen-common')
+    implementation project(':vajram:vajram-codegen-common')
+
+    implementation 'com.squareup:javapoet'
+    implementation 'com.graphql-java:graphql-java'
+}

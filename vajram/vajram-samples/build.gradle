@@ -2,7 +2,7 @@ plugins {
     id 'java-library'
 
     id 'com.flipkart.krystal' version "${krystal_version}"
-    id 'com.flipkart.java.code.standard' version '4.0'
+    id 'com.flipkart.java.code.standard' version "${java_code_std_version}"
 
     //Needed only if you want your project to be modularized using JPMS
     id 'org.gradlex.extra-java-module-info' version '1.11'
@@ -11,20 +11,19 @@ plugins {
 dependencies {
     /** START: Krystal dependencies **/
     implementation platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
-    annotationProcessor platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
+    krystalModelsGenProcessor platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
     testAnnotationProcessor platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
 
     implementation 'com.flipkart.krystal:vajram-java-sdk'
     implementation 'com.flipkart.krystal:krystal-visualization'
 
-    annotationProcessor 'com.flipkart.krystal:vajram-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-codegen'
     /** END: Krystal dependencies **/
 
     implementation 'com.google.guava:guava:33.4.8-jre'
     implementation 'jakarta.inject:jakarta.inject-api'
 
     compileOnly "org.projectlombok:lombok:$lombok_version"
-    compileOnly 'com.google.auto.value:auto-value-annotations:1.11.0'
     compileOnly 'com.google.auto.value:auto-value-annotations:1.11.0'
     annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
 

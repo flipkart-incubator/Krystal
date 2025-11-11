@@ -122,7 +122,7 @@ final class JsonModelsGen implements CodeGenerator {
         MethodSpec.overriding(util.getMethod(SerializableModel.class, "_serialize", 0))
             .addException(JsonProcessingException.class)
             .addCode(
-                """
+"""
 if (_serializedPayload == null) {
   this._serializedPayload = _WRITER.writeValueAsBytes(this);
 }
@@ -151,7 +151,7 @@ return _serializedPayload;
             .addModifiers(PRIVATE)
             .returns(immutablePojoName)
             .addCode(
-                """
+"""
         if (_pojo == null && _serializedPayload != null) {
           try{
             _pojo = _READER.readValue(_serializedPayload, $T.class)._pojo();

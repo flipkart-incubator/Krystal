@@ -38,6 +38,7 @@ import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecoratorConfig;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
 import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
+import com.flipkart.krystal.krystex.internal.KrystalExecutorExecService;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorationInput;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorator;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
@@ -68,10 +69,12 @@ import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Default implementation of Krystal executor which */
@@ -91,8 +94,10 @@ public final class KryonExecutor implements KrystalExecutor {
   private final KryonDefinitionRegistry kryonDefinitionRegistry;
   private final KryonExecutorConfig executorConfig;
 
+  private @MonotonicNonNull ExecutorService commandQueue;
+
   @Getter(PACKAGE)
-  private final SingleThreadExecutor commandQueue;
+  private final SingleThreadExecutor singleThreadExecutor;
 
   private final String executorId;
 
@@ -144,7 +149,7 @@ public final class KryonExecutor implements KrystalExecutor {
       KryonDefinitionRegistry kryonDefinitionRegistry, KryonExecutorConfig executorConfig) {
     this.kryonDefinitionRegistry = kryonDefinitionRegistry;
     this.executorConfig = executorConfig;
-    this.commandQueue = executorConfig.executorService();
+    this.singleThreadExecutor = executorConfig.executorService();
     this.executorId = executorConfig.executorId();
     this.outputLogicDecoratorConfigs = executorConfig.outputLogicDecoratorConfigs();
     this.dependencyDecoratorConfigs = makeDependencyDecorConfigs(executorConfig);
@@ -363,20 +368,22 @@ public final class KryonExecutor implements KrystalExecutor {
         vajramID,
         _n ->
             switch (executorConfig.kryonExecStrategy()) {
-              case BATCH -> new BatchKryon(
-                  kryonDefinition,
-                  this,
-                  this::getOutputLogicDecorators,
-                  this::getDependencyDecorators,
-                  executorConfig.decorationOrdering(),
-                  preferredReqGenerator);
-              case DIRECT -> new DirectKryon(
-                  kryonDefinition,
-                  this,
-                  this::getOutputLogicDecorators,
-                  this::getDependencyDecorators,
-                  executorConfig.decorationOrdering(),
-                  preferredReqGenerator);
+              case BATCH ->
+                  new BatchKryon(
+                      kryonDefinition,
+                      this,
+                      this::getOutputLogicDecorators,
+                      this::getDependencyDecorators,
+                      executorConfig.decorationOrdering(),
+                      preferredReqGenerator);
+              case DIRECT ->
+                  new DirectKryon(
+                      kryonDefinition,
+                      this,
+                      this::getOutputLogicDecorators,
+                      this::getDependencyDecorators,
+                      executorConfig.decorationOrdering(),
+                      preferredReqGenerator);
             });
   }
 
@@ -722,6 +729,13 @@ public final class KryonExecutor implements KrystalExecutor {
     this.shutdownRequested = true;
   }
 
+  ExecutorService commandQueue() {
+    if (commandQueue == null) {
+      this.commandQueue = new KrystalExecutorExecService(this, executorConfig.executorService());
+    }
+    return commandQueue;
+  }
+
   private void _close0() {
     this.closed = true;
   }
@@ -741,7 +755,7 @@ public final class KryonExecutor implements KrystalExecutor {
           kryonMetrics.commandQueued();
           return command.get();
         },
-        commandQueue);
+        commandQueue());
   }
 
   private record KryonExecution(

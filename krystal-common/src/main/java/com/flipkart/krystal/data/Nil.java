@@ -2,9 +2,11 @@ package com.flipkart.krystal.data;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -34,7 +36,18 @@ public final class Nil<T> implements Success<T> {
 
   @Override
   public @NonNull T valueOrThrow() {
-    throw new NoSuchElementException("Trying to access value from Nil");
+    throw new NilValueException();
+  }
+
+  @Override
+  public void handle(Consumer<Failure<T>> ifFailure, Runnable ifNil, Consumer<NonNil<T>> ifNonNil) {
+    ifNil.run();
+  }
+
+  @Override
+  public <U> U map(
+      Function<Failure<T>, U> ifFailure, Supplier<U> ifNil, Function<NonNil<T>, U> ifNonNil) {
+    return ifNil.get();
   }
 
   @SuppressWarnings("unchecked")

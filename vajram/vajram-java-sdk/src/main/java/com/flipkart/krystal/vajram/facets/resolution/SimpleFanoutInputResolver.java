@@ -47,13 +47,15 @@ public final class SimpleFanoutInputResolver<S, T, CV extends Request<?>, DV ext
           if (depCommand.shouldSkip()) {
             return skip(depCommand.doc(), depCommand.skipCause());
           } else {
-            if (depCommand.inputs().size() == 1) {
-              getResolverSpec().targetInput().setToRequest(_depRequest, depCommand.inputs().get(0));
+            if (depCommand.values().size() == 1) {
+              getResolverSpec()
+                  .targetInput()
+                  .setToRequest(_depRequest, depCommand.values().iterator().next());
               return executeWithRequests(
                   ImmutableList.of((ImmutableRequest.Builder<?>) _depRequest));
             } else {
               return executeWithRequests(
-                  depCommand.inputs().stream()
+                  depCommand.values().stream()
                       .<ImmutableRequest.@NonNull Builder<?>>map(
                           o -> {
                             var next = _depRequest._newCopy();

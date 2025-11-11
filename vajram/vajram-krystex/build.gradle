@@ -14,7 +14,7 @@ dependencies {
     testAnnotationProcessor project(':krystal-common')
     testAnnotationProcessor project(':krystal-codegen-common')
     testAnnotationProcessor project(':krystal-codegen-common')
-    testAnnotationProcessor "com.flipkart.krystal:vajram-codegen:${krystal_version}"
+    testKrystalModelsGenProcessor "com.flipkart.krystal:vajram-codegen:${krystal_version}"
     testAnnotationProcessor 'org.checkerframework:checker-qual'
 
     testImplementation project(':vajram:extensions:resilience4j:vajram-resilience4j')
@@ -28,7 +28,7 @@ dependencies {
 
 afterEvaluate {
     //The main sourceSet doesn't have any vajrams - so remove this dependency
-    compileJava.dependsOn -= "codeGenVajramModels"
+    compileJava.dependsOn -= "testKrystalModelsGen"
 }
 
 /*
@@ -37,15 +37,15 @@ afterEvaluate {
  * from the module-info.java spec to the test modules. To overcome this, we have to manually add --add-exports and
  * --add-reads arguments to the jvm so that test classes compile.
  *
- * This issue happens only when the compileTestJava task is modified to add a dependency on testCodeGenVajramModels.
+ * This issue happens only when the compileTestJava task is modified to add a dependency on testKrystalModelsGen.
  * This is needed only when there are vajrams written in the 'test' directory of the project - which is the case in vajram-krystex.
  * This issue doesn't arise in traditional modules where vajrams are written in 'main' directory.
  *
- * To circumvent this, the krystal gradle plugin does not make `compileTestJava` dependent on `testCodeGenVajramModels`.
- * If any project has vajrams in the test directory, then that project will have to explicitly make `compileTestJava` dependent on `testCodeGenVajramModels`
+ * To circumvent this, the krystal gradle plugin does not make `compileTestJava` dependent on `testKrystalModelsGen`.
+ * If any project has vajrams in the test directory, then that project will have to explicitly make `compileTestJava` dependent on `testKrystalModelsGen`
  * and add custom jvm arguments as done below, so that compilation of test code succeeds.
  */
-tasks.named('testCodeGenVajramModels', JavaCompile).configure {
+tasks.named('testKrystalModelsGen', JavaCompile).configure {
     doFirst {
         def moduleName = 'flipkart.krystal.vajramexecutor.krystex'
         options.compilerArgs += modulePathArgs(moduleName)
@@ -53,7 +53,7 @@ tasks.named('testCodeGenVajramModels', JavaCompile).configure {
 }
 
 compileTestJava {
-    dependsOn 'testCodeGenVajramModels'
+    dependsOn 'testKrystalModelsGen'
     doFirst {
         def moduleName = 'flipkart.krystal.vajramexecutor.krystex'
         options.compilerArgs += modulePathArgs(moduleName)

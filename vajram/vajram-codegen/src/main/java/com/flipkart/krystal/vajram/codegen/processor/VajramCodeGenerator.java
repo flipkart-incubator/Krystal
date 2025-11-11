@@ -531,7 +531,7 @@ public class VajramCodeGenerator implements CodeGenerator {
       for (DependencyModel dependency : currentVajramInfo.dependencies()) {
         cases.add(
             CodeBlock.of(
-                """
+"""
                 case $S -> {
                   if (_resolver instanceof $T _fanoutResolver) {
 $L
@@ -546,7 +546,7 @@ $L
                 dependency.canFanout()
                     ? CodeBlock.of("_$L_fanoutInputResolver = _fanoutResolver;", dependency.name())
                     : CodeBlock.of(
-                        """
+"""
                     throw new $T(
                         \"""
                         $S vajram's dependency '$L' is not marked as canFanout=true,
@@ -561,7 +561,7 @@ $L
                 dependency.name(),
                 simpleInputResolversMethodPresent
                     ? CodeBlock.of(
-                        """
+"""
                   if(_resolver instanceof $T _simpleResolver){
                     _$L_depFacets.addAll(_simpleResolver.getResolverSpec().sources());
                   }
@@ -744,7 +744,7 @@ $L
                       dependency.canFanout()
                           ? CodeBlock.builder()
                               .addNamed(
-                                  """
+"""
                       if(_$facetName:L_fanoutInputResolver != null){
                           _$facetName:L_reqBuilders = ($list:T<$reqImmutType:T.Builder>) _$facetName:L_fanoutInputResolver
                               .resolve(_$facetName:L_reqBuilderSupplier.get(), _facetValues)
@@ -764,7 +764,7 @@ $L
                       dependency.canFanout()
                           ? CodeBlock.builder()
                               .addNamed(
-                                  """
+"""
 $list:T<$reqRespFuture:T<$reqBuilder:T, $respType:T>> _$facetName:L_reqRespFutures =
     $reqRespFuture:T.forRequests(_$facetName:L_reqBuilders);
 _$facetName:L_reqs.addAll(_$facetName:L_reqRespFutures);
@@ -802,7 +802,7 @@ _$facetName:L_futures[i] = $completableFuture:T.allOf($reqRespFuture:T.getFuture
                               .build()
                           : CodeBlock.builder()
                               .addNamed(
-                                  """
+"""
 
 if (_$facetName:L_reqBuilders.isEmpty()) {
   _$facetName:L_futures[i] = $completableFuture:T.completedFuture(null);
@@ -844,7 +844,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
       executionCode.add(executeOutputLogic);
     } else {
       executionCode.add(
-          """
+"""
     $L
         .whenComplete(
             (_unused, _throwable) -> {
@@ -852,14 +852,15 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
             });
 """,
           switch (computedOutputLogicSources.size()) {
-            case 1 -> CodeBlock.of(
-                "_$L_ready", computedOutputLogicSources.iterator().next().name());
-            default -> CodeBlock.of(
-                "$T.allOf($L)",
-                CompletableFuture.class,
-                computedOutputLogicSources.stream()
-                    .map(f -> CodeBlock.of("_$L_ready", f.name()))
-                    .collect(CodeBlock.joining(", ")));
+            case 1 ->
+                CodeBlock.of("_$L_ready", computedOutputLogicSources.iterator().next().name());
+            default ->
+                CodeBlock.of(
+                    "$T.allOf($L)",
+                    CompletableFuture.class,
+                    computedOutputLogicSources.stream()
+                        .map(f -> CodeBlock.of("_$L_ready", f.name()))
+                        .collect(CodeBlock.joining(", ")));
           },
           executeOutputLogic);
     }
@@ -1722,7 +1723,10 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
             // is not matching the type of the facet
             util.codegenUtil()
                 .error(
-                    "A resolver must consume a mandatory dependency directly using its type (%s). Found '%s' instead"
+                    """
+                        A resolver must consume a mandatory dependency directly using its type.
+                        Expected: %s
+                        Found: %s"""
                         .formatted(unboxedDepType, parameterType),
                     parameter);
           }
@@ -1814,9 +1818,11 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
      */
     String resolverResultVar = fanoutResolver ? RESOLVER_RESULTS : RESOLVER_RESULT;
     methodCodeBuilder.add(
-        """
+"""
 try {
-  var $L = $L(""", resolverResultVar, resolverMethod.getSimpleName());
+  var $L = $L(""",
+        resolverResultVar,
+        resolverMethod.getSimpleName());
     ImmutableList<FacetGenModel> resolverSources = getResolverSources(resolverMethod).asList();
     for (int i = 0; i < resolverSources.size(); i++) {
       methodCodeBuilder.add("$L", resolverSources.get(i).name());
@@ -1890,7 +1896,7 @@ try {
           }
         }
         methodCodeBuilder.beginControlFlow(
-            "for($T $L: $L.inputs())", actualReturnType, RESOLVER_RESULT, RESOLVER_RESULTS);
+            "for($T $L: $L.values())", actualReturnType, RESOLVER_RESULT, RESOLVER_RESULTS);
         if (util.codegenUtil().isRawAssignable(actualReturnType, ImmutableRequest.Builder.class)) {
           /*
            * TODO: Add validation that this vajramDef request is of the same type as the
@@ -2759,9 +2765,11 @@ try {
           initializerCodeBlock.add("$T.$L,", FacetType.class, facet.facetType().name());
         }
       }
-      initializerCodeBlock.add("""
+      initializerCodeBlock.add(
+          """
                 $T.class,
-              """, vajramReqClass);
+              """,
+          vajramReqClass);
       if (facet instanceof DependencyModel vajramDepDef) {
         ClassName depReqInterfaceClass =
             ClassName.get(

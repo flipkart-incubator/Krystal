@@ -4,16 +4,14 @@ import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static java.util.Objects.requireNonNull;
 
-import com.flipkart.krystal.codegen.common.models.CodegenPhase;
+import com.flipkart.krystal.codegen.common.models.AbstractKrystalAnnoProcessor;
 import com.flipkart.krystal.lattice.codegen.spi.LatticeCodeGeneratorProvider;
 import com.flipkart.krystal.lattice.core.LatticeApp;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.google.auto.service.AutoService;
-import java.util.Arrays;
 import java.util.List;
 import java.util.ServiceLoader;
 import java.util.Set;
-import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
@@ -27,34 +25,12 @@ import javax.lang.model.element.TypeElement;
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 @AutoService(Processor.class)
 @SupportedOptions(CODEGEN_PHASE_KEY)
-public class LatticeAnnotationProcessor extends AbstractProcessor {
+public class LatticeAnnotationProcessor extends AbstractKrystalAnnoProcessor {
 
   @Override
-  public final boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-    String phaseString = processingEnv.getOptions().get(CODEGEN_PHASE_KEY);
-    VajramCodeGenUtility util =
-        new VajramCodeGenUtility(processingEnv, this.getClass(), phaseString);
-    CodegenPhase codegenPhase;
-    try {
-      if (phaseString == null) {
-        util.codegenUtil().note("Skipping %s since codegen phase is null");
-        return false;
-      } else {
-        codegenPhase = CodegenPhase.valueOf(phaseString);
-      }
-    } catch (IllegalArgumentException e) {
-      util.codegenUtil()
-          .error(
-              ("%s could not parse phase string '%s'. "
-                      + "Exactly one of %s must be passed as value to the java compiler "
-                      + "via the annotation processor argument '-A%s='")
-                  .formatted(
-                      getClass().getSimpleName(),
-                      String.valueOf(phaseString),
-                      Arrays.toString(CodegenPhase.values()),
-                      CODEGEN_PHASE_KEY));
-      return false;
-    }
+  protected final boolean processImpl(
+      Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+    VajramCodeGenUtility util = new VajramCodeGenUtility(codeGenUtil());
     List<TypeElement> latticeApps =
         roundEnv.getElementsAnnotatedWith(LatticeApp.class).stream()
             .filter(element -> element.getKind() == ElementKind.CLASS)
@@ -71,7 +47,7 @@ public class LatticeAnnotationProcessor extends AbstractProcessor {
           new LatticeCodegenContext(
               latticeAppTypeElement,
               requireNonNull(latticeAppTypeElement.getAnnotation(LatticeApp.class)),
-              codegenPhase,
+              codegenPhase(),
               util,
               roundEnv);
       for (LatticeCodeGeneratorProvider customCodeGeneratorProvider :

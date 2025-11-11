@@ -1,0 +1,9 @@
+dependencies {
+    api project(':krystal-common')
+    api project(':vajram:vajram-java-sdk')
+    implementation project(':vajram:vajram-krystex')
+    implementation project(':vajram:extensions:json:vajram-json')
+
+    api 'com.graphql-java:graphql-java'
+    api 'com.graphql-java:graphql-java-extended-scalars'
+}

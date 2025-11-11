@@ -32,7 +32,6 @@ include 'vajram:vajram-codegen-common'
 include 'vajram:vajram-java-sdk'
 include 'vajram:vajram-krystex'
 include 'vajram:vajram-lang'
-include 'vajram:vajram-samples'
 
 include 'vajram:extensions:guice:vajram-guice'
 include 'vajram:extensions:json:vajram-json'
@@ -41,28 +40,45 @@ include 'vajram:extensions:protobuf:vajram-protobuf-codegen'
 include 'vajram:extensions:protobuf:vajram-protobuf3'
 include 'vajram:extensions:resilience4j:vajram-resilience4j'
 
+include 'vajram:extensions:graphql:vajram-graphql'
+include 'vajram:extensions:graphql:vajram-graphql-codegen'
 
+/********* LATTICE CORE : START************/
 include 'lattice:lattice-bom'
 include 'lattice:lattice-codegen'
 include 'lattice:lattice-core'
 include 'lattice:lattice-vajram-sdk'
+/********* LATTICE CORE : END ************/
 
-include 'lattice:extensions:grpc:lattice-grpc'
-include 'lattice:extensions:grpc:lattice-grpc-codegen'
+/********* LATTICE EXTENSIONS : START ************/
 include 'lattice:extensions:guice:lattice-guice'
 include 'lattice:extensions:guice:lattice-guice-codegen'
 include 'lattice:extensions:guice:lattice-guice-servlet'
+
+include 'lattice:extensions:grpc:lattice-grpc'
+include 'lattice:extensions:grpc:lattice-grpc-codegen'
+
 include 'lattice:extensions:json:lattice-json-codegen'
+
 include 'lattice:extensions:protobuf:lattice-protobuf'
 include 'lattice:extensions:protobuf:lattice-protobuf-codegen'
+
 include 'lattice:extensions:rest:lattice-rest'
 include 'lattice:extensions:rest:lattice-rest-api'
 include 'lattice:extensions:rest:lattice-rest-codegen'
-include 'lattice:extensions:rest:lattice-rest-dropwizard-codegen'
-include 'lattice:extensions:rest:lattice-rest-quarkus'
-include 'lattice:extensions:rest:lattice-rest-quarkus-codegen'
 
+include 'lattice:extensions:quarkus:lattice-quarkus'
+
+include 'lattice:extensions:rest:dropwizard:lattice-rest-dropwizard'
+include 'lattice:extensions:rest:dropwizard:lattice-rest-dropwizard-codegen'
+
+include 'lattice:extensions:rest:quarkus:lattice-rest-quarkus'
+include 'lattice:extensions:rest:quarkus:lattice-rest-quarkus-codegen'
+/********* LATTICE EXTENSIONS : END ************/
+
+include 'vajram:vajram-samples'
 include 'lattice:samples:grpc-proto3-lattice-sample'
 include 'lattice:samples:rest-json-lattice-sample'
+include 'vajram:extensions:graphql:vajram-graphql-samples'
 
 

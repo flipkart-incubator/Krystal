@@ -1,7 +1,8 @@
 module flipkart.krystal.krystex {
   exports com.flipkart.krystal.krystex to
       flipkart.krystal.vajramexecutor.krystex,
-      krystal.vajram.ext.resilience4j;
+      krystal.vajram.ext.resilience4j,
+      flipkart.krystal.vajram.guice;
   exports com.flipkart.krystal.krystex.logicdecoration to
       flipkart.krystal.vajramexecutor.krystex,
       krystal.vajram.ext.resilience4j;

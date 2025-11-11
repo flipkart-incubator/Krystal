@@ -18,7 +18,9 @@ import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.IfAbsent.Creator;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
+import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
+import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.serial.SerdeProtocol;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -31,6 +33,7 @@ import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
+import com.squareup.javapoet.TypeSpec.Builder;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -58,6 +61,7 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.MirroredTypeException;
@@ -90,16 +94,18 @@ public class CodeGenUtility {
   private final Types typeUtils;
   private final Elements elementUtils;
   private final Class<?> generator;
-  private final @Nullable String phaseString;
+  @Getter private final @Nullable CodegenPhase codegenPhase;
   @Getter private final DataTypeRegistry dataTypeRegistry;
 
   public CodeGenUtility(
-      ProcessingEnvironment processingEnv, Class<?> generator, @Nullable String phaseString) {
+      ProcessingEnvironment processingEnv,
+      Class<?> generator,
+      @Nullable CodegenPhase codegenPhase) {
     this.processingEnv = processingEnv;
     this.typeUtils = processingEnv.getTypeUtils();
     this.elementUtils = processingEnv.getElementUtils();
     this.generator = generator;
-    this.phaseString = phaseString;
+    this.codegenPhase = codegenPhase;
     this.dataTypeRegistry = new DataTypeRegistry();
   }
 
@@ -121,7 +127,7 @@ public class CodeGenUtility {
   public void addImmutableModelObjectMethods(
       ClassName immutInterfaceName,
       Set<? extends CharSequence> modelFieldNames,
-      TypeSpec.Builder classBuilder) {
+      Builder classBuilder) {
     addCommonObjectMethods(classBuilder);
 
     classBuilder.addMethod(
@@ -165,7 +171,7 @@ public class CodeGenUtility {
             .build());
   }
 
-  public static void addCommonObjectMethods(TypeSpec.Builder classBuilder) {
+  public static void addCommonObjectMethods(Builder classBuilder) {
     classBuilder.addAnnotation(
         AnnotationSpec.builder(ToString.class).addMember("doNotUseGetters", "true").build());
   }
@@ -312,11 +318,15 @@ public class CodeGenUtility {
   }
 
   public void generateSourceFile(
-      String canonicalClassName, String code, TypeElement originatingElement) {
+      String canonicalClassName, String code, @Nullable TypeElement originatingElement) {
     try {
       JavaFileObject requestFile =
-          processingEnv.getFiler().createSourceFile(canonicalClassName, originatingElement);
-      note("Successfully Create source file %s".formatted(canonicalClassName));
+          processingEnv
+              .getFiler()
+              .createSourceFile(
+                  canonicalClassName,
+                  Optional.ofNullable(originatingElement).stream().toArray(Element[]::new));
+      note("Successfully created source file %s".formatted(canonicalClassName));
       try (PrintWriter out = new PrintWriter(requestFile.openWriter())) {
         out.println(code);
       }
@@ -348,7 +358,6 @@ public class CodeGenUtility {
   public ImmutableList<TypeMirror> getTypeParamTypes(
       TypeElement childTypeElement, TypeElement targetParentClass) {
     List<TypeMirror> currentTypes = List.of(childTypeElement.asType());
-    note("Child Type Element: %s".formatted(childTypeElement));
 
     Types typeUtils = processingEnv.getTypeUtils();
     DeclaredType targetType = null;
@@ -362,10 +371,8 @@ public class CodeGenUtility {
                 .toList();
         newSuperTypes.addAll(superTypes);
         for (DeclaredType superType : superTypes) {
-          note("SuperType: %s [%s]".formatted(superType, superType.getClass()));
           Element element = typeUtils.asElement(superType);
           if (element instanceof TypeElement typeElement) {
-            note("Element qualified name: %s".formatted(typeElement.getQualifiedName()));
             if (typeElement
                 .getQualifiedName()
                 .contentEquals(targetParentClass.getQualifiedName())) {
@@ -374,7 +381,6 @@ public class CodeGenUtility {
             }
           }
         }
-        note("CurrentElement: %s".formatted(currentType));
       }
       if (targetType == null) {
         currentTypes = newSuperTypes;
@@ -405,7 +411,7 @@ public class CodeGenUtility {
           .getMessager()
           .printMessage(
               Kind.NOTE,
-              "[%s] [%s] %s".formatted(getCallerInfo(), String.valueOf(phaseString), message),
+              "[%s] [%s] %s".formatted(getCallerInfo(), String.valueOf(codegenPhase), message),
               typeElement);
     }
   }
@@ -421,7 +427,8 @@ public class CodeGenUtility {
 
   private void _error(String message, @Nullable Element... elements) {
     String enrichedMessage =
-        "[%s] [%s] %s".formatted(getCallerInfo(), String.valueOf(phaseString), message);
+        "[%s] [%s:%s] %s"
+            .formatted(getCallerInfo(), this.generator, String.valueOf(codegenPhase), message);
     if (elements.length == 0) {
       processingEnv.getMessager().printMessage(Kind.ERROR, enrichedMessage);
     } else {
@@ -534,23 +541,25 @@ public class CodeGenUtility {
    *
    * @param simpleName simple name of class
    * @param generatedForCanonicalName canonical name of the originating class for which the class is
-   *     being generated
+   *     being generated. Pass empty string if there is not such class.
    * @return a class builder with the given class name, with the {@link Generated} annotation
    *     applied on the class
    */
-  public TypeSpec.Builder classBuilder(String simpleName, String generatedForCanonicalName) {
-    TypeSpec.Builder classBuilder;
+  public Builder classBuilder(String simpleName, String generatedForCanonicalName) {
+    Builder classBuilder;
     if (simpleName.isBlank()) {
       classBuilder = TypeSpec.anonymousClassBuilder("");
     } else {
       classBuilder = TypeSpec.classBuilder(simpleName);
     }
-    classBuilder.addJavadoc("@see $L", generatedForCanonicalName);
+    if (!generatedForCanonicalName.isBlank()) {
+      classBuilder.addJavadoc("@see $L", generatedForCanonicalName);
+    }
     addDefaultAnnotations(classBuilder);
     return classBuilder;
   }
 
-  private void addDefaultAnnotations(TypeSpec.Builder classBuilder) {
+  private void addDefaultAnnotations(Builder classBuilder) {
     classBuilder.addAnnotation(
         AnnotationSpec.builder(SuppressWarnings.class)
             .addMember(
@@ -563,7 +572,7 @@ public class CodeGenUtility {
     addGeneratedAnnotations(classBuilder);
   }
 
-  public void addGeneratedAnnotations(TypeSpec.Builder classBuilder) {
+  public void addGeneratedAnnotations(Builder classBuilder) {
     classBuilder
         .addAnnotation(
             AnnotationSpec.builder(Generated.class)
@@ -586,15 +595,17 @@ public class CodeGenUtility {
    * @return a class builder with the given class name, with the {@link Generated} annotation
    *     applied on the class
    */
-  public TypeSpec.Builder interfaceBuilder(String interfaceName, String generatedForCanonicalName) {
-    TypeSpec.Builder interfaceBuilder;
+  public Builder interfaceBuilder(String interfaceName, String generatedForCanonicalName) {
+    Builder interfaceBuilder;
     if (interfaceName.isBlank()) {
       throw new RuntimeException("interface name cannot be blank");
     } else {
       interfaceBuilder = TypeSpec.interfaceBuilder(interfaceName);
     }
     addDefaultAnnotations(interfaceBuilder);
-    interfaceBuilder.addJavadoc("@see $L", generatedForCanonicalName);
+    if (!generatedForCanonicalName.isBlank()) {
+      interfaceBuilder.addJavadoc("@see $L", generatedForCanonicalName);
+    }
     return interfaceBuilder;
   }
 
@@ -793,21 +804,37 @@ public class CodeGenUtility {
    * @return The appropriate parameter type
    */
   public TypeName getParameterType(ExecutableElement method, boolean isBuilder) {
-    TypeMirror specifiedType = method.getReturnType();
+    final TypeMirror specifiedType = method.getReturnType();
     TypeMirror inferredType = specifiedType;
     if (isOptional(specifiedType)) {
       // For Optional<T>, use T as the parameter type
       inferredType = getOptionalInnerType(specifiedType);
     }
-    TypeName typeName = TypeName.get(inferredType);
-    if (isBuilder && typeName.isPrimitive()) {
-      typeName = typeName.box();
+    if (isBuilder && inferredType instanceof PrimitiveType primitiveType) {
+      inferredType = typeUtils.boxedClass(primitiveType).asType();
     }
+    TypeName typeName = inferredType.accept(new TypeNameVisitor(), null);
     // Add @Nullable annotation for Optional types or methods with @Nullable annotation
-    if (isOptional(specifiedType) || isAnyNullable(specifiedType, method)) {
+    if (isOptional(specifiedType)) {
       // Add @Nullable as a type annotation
       typeName = typeName.annotated(AnnotationSpec.builder(ClassName.get(Nullable.class)).build());
     }
     return typeName;
+  }
+
+  /** Returns true if the model root type supports the given model protocol. */
+  public boolean typeExplicitlySupportsProtocol(
+      TypeElement modelRootType, Class<? extends ModelProtocol> modelProtocol) {
+    SupportedModelProtocols supportedModelProtocols =
+        modelRootType.getAnnotation(SupportedModelProtocols.class);
+    if (supportedModelProtocols == null) {
+      return false;
+    }
+    // Check if Json is mentioned in the annotation value
+    return getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
+        .map(typeMirror -> processingEnv().getTypeUtils().asElement(typeMirror))
+        .filter(elem -> elem instanceof QualifiedNameable)
+        .map(element -> requireNonNull((QualifiedNameable) element).getQualifiedName().toString())
+        .anyMatch(s -> Objects.equals(s, modelProtocol.getCanonicalName()));
   }
 }

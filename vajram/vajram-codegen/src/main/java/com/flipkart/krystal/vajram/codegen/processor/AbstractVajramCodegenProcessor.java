@@ -1,13 +1,12 @@
 package com.flipkart.krystal.vajram.codegen.processor;
 
-import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
 import static com.flipkart.krystal.vajram.codegen.processor.Constants.DEFAULT_VAJRAM_CODEGEN_PROVIDER;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static java.lang.System.lineSeparator;
 import static java.util.stream.Collectors.joining;
 
-import com.flipkart.krystal.codegen.common.models.CodegenPhase;
-import com.flipkart.krystal.vajram.codegen.common.models.ShortCircuitException;
+import com.flipkart.krystal.codegen.common.models.AbstractKrystalAnnoProcessor;
+import com.flipkart.krystal.codegen.common.models.CodeGenShortCircuitException;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.common.spi.AllVajramCodeGenContext;
@@ -16,65 +15,30 @@ import com.flipkart.krystal.vajram.codegen.common.spi.VajramCodeGenContext;
 import com.flipkart.krystal.vajram.codegen.common.spi.VajramCodeGeneratorProvider;
 import com.google.common.collect.Iterables;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.ServiceLoader;
 import java.util.Set;
-import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.TypeElement;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
-abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
+abstract sealed class AbstractVajramCodegenProcessor extends AbstractKrystalAnnoProcessor
     permits VajramModelGenProcessor, VajramWrapperGenProcessor {
 
-  private final CodegenPhase codegenPhase;
-  private final List<TypeElement> vajramDefinitions = new ArrayList<>();
+  private final List<TypeElement> vajramDefinitions = new LinkedList<>();
 
-  public AbstractVajramCodegenProcessor(CodegenPhase codegenPhase) {
-    this.codegenPhase = codegenPhase;
-    log.info(
-        "Initializing {} with codegen phase {}", this.getClass().getSimpleName(), codegenPhase);
-  }
+  public AbstractVajramCodegenProcessor() {}
 
   @Override
-  public final boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-    String phaseString = processingEnv.getOptions().get(CODEGEN_PHASE_KEY);
-    VajramCodeGenUtility util =
-        new VajramCodeGenUtility(processingEnv, this.getClass(), phaseString);
-    try {
-      if (phaseString == null || !codegenPhase.equals(CodegenPhase.valueOf(phaseString))) {
-        util.codegenUtil()
-            .note(
-                "Skipping %s since codegen phase is '%s'. This class only supports '%s'"
-                    .formatted(
-                        getClass().getSimpleName(), String.valueOf(phaseString), codegenPhase));
-        return false;
-      }
-    } catch (IllegalArgumentException e) {
-      util.codegenUtil()
-          .error(
-              ("%s could not parse phase string '%s'. "
-                      + "Exactly one of %s must be passed as value to the java compiler "
-                      + "via the annotation processor argument '-A%s='")
-                  .formatted(
-                      getClass().getSimpleName(),
-                      String.valueOf(phaseString),
-                      Arrays.toString(CodegenPhase.values()),
-                      CODEGEN_PHASE_KEY));
-      return false;
-    }
-
-    List<TypeElement> vajramDefinitions;
-    if (this.vajramDefinitions.isEmpty()) {
-      vajramDefinitions = util.getDefinitionClasses(roundEnv);
-      this.vajramDefinitions.addAll(vajramDefinitions);
-    } else {
-      vajramDefinitions = new ArrayList<>(this.vajramDefinitions);
-    }
+  public final boolean processImpl(
+      Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+    VajramCodeGenUtility util = new VajramCodeGenUtility(codeGenUtil());
+    this.vajramDefinitions.addAll(util.getDefinitionClasses(roundEnv));
     CharSequence message =
         "Vajrams and Traits received by %s: %s"
             .formatted(
@@ -93,16 +57,16 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
             ServiceLoader.load(
                 VajramCodeGeneratorProvider.class, this.getClass().getClassLoader()));
 
-    record Failure(@Nullable TypeElement element, Throwable throwable) {}
-
     List<Failure> failures = new ArrayList<>();
     List<VajramInfo> vajramInfos = new ArrayList<>();
-    for (TypeElement vajramDefinition : vajramDefinitions) {
+    Iterator<TypeElement> iterator = vajramDefinitions.iterator();
+    while (iterator.hasNext()) {
+      TypeElement vajramDefinition = iterator.next();
       try {
         VajramInfo vajramInfo = util.computeVajramInfo(vajramDefinition);
         vajramInfos.add(vajramInfo);
         VajramCodeGenContext creationContext =
-            new VajramCodeGenContext(vajramInfo, util, codegenPhase);
+            new VajramCodeGenContext(vajramInfo, util, codegenPhase());
         for (VajramCodeGeneratorProvider customCodeGeneratorProvider :
             vajramCodeGeneratorProviders) {
           try {
@@ -111,7 +75,7 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
             failures.add(new Failure(vajramDefinition, e));
           }
         }
-        this.vajramDefinitions.remove(vajramDefinition);
+        iterator.remove();
       } catch (Exception e) {
         failures.add(new Failure(vajramDefinition, e));
       }
@@ -122,7 +86,7 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
     for (AllVajramsCodeGeneratorProvider allVajramCodeGen : allVajramCodeGeneratorProviders) {
       try {
         allVajramCodeGen
-            .create(new AllVajramCodeGenContext(vajramInfos, util, codegenPhase))
+            .create(new AllVajramCodeGenContext(vajramInfos, util, codegenPhase()))
             .generate();
       } catch (Exception e) {
         failures.add(new Failure(null, e));
@@ -130,22 +94,18 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
     }
     for (Failure failure : failures) {
       Throwable throwable = failure.throwable();
-      if (throwable instanceof ShortCircuitException) {
-        util.codegenUtil().note(getStackTraceAsString(throwable), failure.element());
+      if (throwable instanceof CodeGenShortCircuitException) {
+        util.codegenUtil()
+            .note("[Vajram Codegen Exception]" + throwable.getMessage(), failure.element());
       } else {
-        util.codegenUtil().error(getStackTraceAsString(throwable), failure.element());
+        util.codegenUtil()
+            .error(
+                "[Vajram Codegen Exception] " + getStackTraceAsString(throwable),
+                failure.element());
       }
     }
-    for (Failure failure : failures) {
-      TypeElement element = failure.element();
-      util.codegenUtil()
-          .note(
-              "[Vajram Codegen Exception] "
-                  + (element == null ? "" : element.getQualifiedName())
-                  + "\n"
-                  + getStackTraceAsString(failure.throwable()));
-    }
-
     return false;
   }
+
+  private record Failure(@Nullable TypeElement element, Throwable throwable) {}
 }

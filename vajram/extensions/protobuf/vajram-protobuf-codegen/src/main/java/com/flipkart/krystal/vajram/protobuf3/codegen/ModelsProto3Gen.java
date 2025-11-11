@@ -6,7 +6,6 @@ import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProt
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeRepeated;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_MSG_SUFFIX;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
-import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -21,7 +20,6 @@ import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.model.MandatoryFieldMissingException;
 import com.flipkart.krystal.model.ModelRoot;
-import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
 import com.flipkart.krystal.vajram.protobuf3.SerializableProtoModel;
@@ -37,9 +35,9 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import lombok.extern.slf4j.Slf4j;
@@ -108,18 +106,7 @@ public class ModelsProto3Gen implements CodeGenerator {
    * @return true if Json is supported, false otherwise
    */
   private boolean isProto3SerdeSupported() {
-    TypeElement modelRootType = codeGenContext.modelRootType();
-    SupportedModelProtocols supportedModelProtocols =
-        modelRootType.getAnnotation(SupportedModelProtocols.class);
-    if (supportedModelProtocols == null) {
-      return false;
-    }
-    // Check if Json is mentioned in the annotation value
-    return util.getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
-        .map(typeMirror -> util.processingEnv().getTypeUtils().asElement(typeMirror))
-        .filter(elem -> elem instanceof QualifiedNameable)
-        .map(element -> requireNonNull((QualifiedNameable) element).getQualifiedName().toString())
-        .anyMatch(Protobuf3.class.getCanonicalName()::equals);
+    return util.typeExplicitlySupportsProtocol(codeGenContext.modelRootType(), Protobuf3.class);
   }
 
   private void validate() {
@@ -213,7 +200,7 @@ public class ModelsProto3Gen implements CodeGenerator {
     classBuilder.addMethod(
         MethodSpec.overriding(util.getMethod(SerializableModel.class, "_serialize", 0))
             .addCode(
-                """
+"""
 if (_serializedPayload == null){
   this._serializedPayload = _proto.toByteArray();
 }
@@ -391,7 +378,8 @@ return _serializedPayload;
       } else {
         getterBuilder
             .addCode(protoPresenceCheck)
-            .addCode("""
+            .addCode(
+                """
                 return null;
               }
               """);
@@ -401,7 +389,9 @@ return _serializedPayload;
     // Get the value from the proto message
     if (isOptionalReturnType) {
       getterBuilder.addStatement(
-          "return Optional.of(_proto().get$L())", CodeGenUtility.capitalizeFirstChar(methodName));
+          "return $T.of(_proto().get$L())",
+          Optional.class,
+          CodeGenUtility.capitalizeFirstChar(methodName));
     } else {
       getterBuilder.addStatement(
           "return _proto().get$L()", CodeGenUtility.capitalizeFirstChar(methodName));

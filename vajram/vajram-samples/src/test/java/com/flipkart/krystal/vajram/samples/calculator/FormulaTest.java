@@ -39,7 +39,7 @@ import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.batching.InputBatcher;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.exception.MandatoryFacetsMissingException;
-import com.flipkart.krystal.vajram.guice.inputinjection.VajramGuiceInputInjector;
+import com.flipkart.krystal.vajram.guice.injection.VajramGuiceInputInjector;
 import com.flipkart.krystal.vajram.samples.Util;
 import com.flipkart.krystal.vajram.samples.calculator.add.Add;
 import com.flipkart.krystal.vajram.samples.calculator.add.Add_FacImmutPojo;

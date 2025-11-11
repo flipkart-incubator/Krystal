@@ -1,17 +1,16 @@
 package com.flipkart.krystal.data;
 
-import com.flipkart.krystal.data.FacetValue.SingleFacetValue;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.except.ThrowingCallable;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public sealed interface Errable<T> extends FacetValue<T>, SingleFacetValue<T>
-    permits Success, Failure {
+public sealed interface Errable<T> permits Success, Failure {
 
   /**
    * Returns a {@link CompletableFuture} which is completed exceptionally with the error if this is
@@ -50,8 +49,8 @@ public sealed interface Errable<T> extends FacetValue<T>, SingleFacetValue<T>
    *
    *
    * <ul>
-   *   <li>NonNil: returns the value <br>
-   *   <li>Nil: throws {@link NoSuchElementException} <br>
+   *   <li>NonNil: returns the non-null value
+   *   <li>Nil: throws {@link NilValueException}
    *   <li>Failure: throws a {@link RuntimeException} representing the throwable which caused the
    *       failure. If the throwable is a {@link RuntimeException}, it is thrown as is. Else it is
    *       wrapped in a {@link StackTracelessException} and thrown.
@@ -59,17 +58,20 @@ public sealed interface Errable<T> extends FacetValue<T>, SingleFacetValue<T>
    */
   T valueOrThrow();
 
-  @Override
-  default Errable<T> asErrable() {
-    return this;
+  default void handle(Consumer<Failure<T>> ifFailure, Consumer<NonNil<T>> ifNonNil) {
+    handle(ifFailure, () -> {}, ifNonNil);
   }
+
+  void handle(Consumer<Failure<T>> ifFailure, Runnable ifNil, Consumer<NonNil<T>> ifNonNil);
+
+  <U> U map(Function<Failure<T>, U> ifFailure, Supplier<U> ifNil, Function<NonNil<T>, U> ifNonNil);
 
   /* ***********************************************************************************************/
   /* ************************************** Static utilities ***************************************/
   /* ***********************************************************************************************/
 
   static <T> Errable<T> nil() {
-    return Success.nil();
+    return Nil.nil();
   }
 
   static <T> Errable<T> withValue(@Nullable T t) {

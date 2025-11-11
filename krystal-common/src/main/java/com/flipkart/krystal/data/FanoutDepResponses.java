@@ -1,12 +1,14 @@
 package com.flipkart.krystal.data;
 
 import static com.flipkart.krystal.data.Errable.nil;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Collections.unmodifiableList;
+import static java.util.Collections.unmodifiableMap;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiConsumer;
 import lombok.Getter;
 import lombok.ToString;
@@ -31,17 +33,11 @@ public final class FanoutDepResponses<R extends Request<T>, T> implements DepRes
 
   @ToString.Include @Getter private final List<RequestResponse<R, T>> requestResponsePairs;
 
-  private @MonotonicNonNull ImmutableMap<ImmutableRequest<T>, Errable<T>> responsesAsMap;
+  private @MonotonicNonNull Map<ImmutableRequest<T>, Errable<T>> responsesAsMap;
+  private @MonotonicNonNull List<Errable<T>> responsesAsList;
 
   public FanoutDepResponses(List<RequestResponse<R, T>> requestResponsePairs) {
     this.requestResponsePairs = unmodifiableList(requestResponsePairs);
-  }
-
-  public Errable<T> getForRequest(Request<T> request) {
-    if (responsesAsMap == null) {
-      responsesAsMap = asMap();
-    }
-    return responsesAsMap.getOrDefault(request._build(), nil());
   }
 
   public void forEach(BiConsumer<R, Errable<T>> action) {
@@ -49,8 +45,25 @@ public final class FanoutDepResponses<R extends Request<T>, T> implements DepRes
         requestResponse -> action.accept(requestResponse.request(), requestResponse.response()));
   }
 
-  private ImmutableMap<ImmutableRequest<T>, Errable<T>> asMap() {
-    return requestResponsePairs().stream()
-        .collect(toImmutableMap(t -> t.request()._build(), RequestResponse::response));
+  public Errable<T> getForRequest(Request<T> request) {
+    if (responsesAsMap == null) {
+      Map<ImmutableRequest<T>, Errable<T>> map = new HashMap<>();
+      for (RequestResponse<R, T> t : requestResponsePairs()) {
+        map.put(t.request()._build(), t.response());
+      }
+      this.responsesAsMap = unmodifiableMap(map);
+    }
+    return responsesAsMap.getOrDefault(request._build(), nil());
+  }
+
+  public List<Errable<T>> responses() {
+    if (responsesAsList == null) {
+      List<Errable<T>> result = new ArrayList<>(requestResponsePairs().size());
+      for (var requestResponsePair : requestResponsePairs()) {
+        result.add(requestResponsePair.response());
+      }
+      this.responsesAsList = unmodifiableList(result);
+    }
+    return responsesAsList;
   }
 }

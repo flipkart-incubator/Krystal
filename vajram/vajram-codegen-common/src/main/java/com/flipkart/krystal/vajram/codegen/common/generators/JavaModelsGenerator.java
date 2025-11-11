@@ -1,8 +1,8 @@
 package com.flipkart.krystal.vajram.codegen.common.generators;
 
 import static com.flipkart.krystal.codegen.common.models.CodegenPhase.MODELS;
+import static com.flipkart.krystal.codegen.common.models.Constants.IMMUT_SUFFIX;
 import static com.flipkart.krystal.model.PlainJavaObject.POJO;
-import static com.flipkart.krystal.vajram.codegen.common.models.Constants.IMMUT_SUFFIX;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
@@ -27,6 +27,7 @@ import com.flipkart.krystal.model.MandatoryFieldMissingException;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelClusterRoot;
 import com.flipkart.krystal.model.ModelRoot;
+import com.flipkart.krystal.model.ModelRoot.ModelType;
 import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.vajram.Trait;
@@ -168,10 +169,13 @@ public final class JavaModelsGenerator implements CodeGenerator {
     // Write the immutable interface to a file
     util.writeJavaFile(packageName, immutableInterface, modelRootType);
 
-    // Generate the POJO class if PlainJavaObject is supported
-    TypeSpec immutablePojo =
-        generateImmutablePojo(modelRootType, modelMethods, immutModelName, immutablePojoName);
-    util.writeJavaFile(packageName, immutablePojo, modelRootType);
+    if (codeGenContext.modelRootType().getAnnotation(SupportedModelProtocols.class) == null
+        || util.typeExplicitlySupportsProtocol(modelRootType, PlainJavaObject.class)) {
+      // Generate the POJO class if PlainJavaObject is supported
+      TypeSpec immutablePojo =
+          generateImmutablePojo(modelRootType, modelMethods, immutModelName, immutablePojoName);
+      util.writeJavaFile(packageName, immutablePojo, modelRootType);
+    }
   }
 
   private boolean isApplicable() {
@@ -267,8 +271,8 @@ public final class JavaModelsGenerator implements CodeGenerator {
         parentModelRootOpt
             .flatMap(
                 parentModelRoot ->
-                    parentModelRootAnno.isPresent()
-                        ? Optional.of(
+                    parentModelRootAnno.map(
+                        annotationMirror ->
                             ClassName.get(
                                 util.processingEnv()
                                     .getElementUtils()
@@ -277,9 +281,8 @@ public final class JavaModelsGenerator implements CodeGenerator {
                                     .toString(),
                                 parentModelRoot.getSimpleName()
                                     + util.getAnnotationElement(
-                                        parentModelRootAnno.get(), "suffixSeparator", String.class)
-                                    + IMMUT_SUFFIX))
-                        : Optional.empty())
+                                        annotationMirror, "suffixSeparator", String.class)
+                                    + IMMUT_SUFFIX)))
             .or(
                 () ->
                     modelClusterRootAnno
@@ -292,8 +295,8 @@ public final class JavaModelsGenerator implements CodeGenerator {
         parentModelRootOpt
             .flatMap(
                 parentModelRoot ->
-                    parentModelRootAnno.isPresent()
-                        ? Optional.of(
+                    parentModelRootAnno.map(
+                        annotationMirror ->
                             ClassName.get(
                                 util.processingEnv()
                                     .getElementUtils()
@@ -302,10 +305,9 @@ public final class JavaModelsGenerator implements CodeGenerator {
                                     .toString(),
                                 parentModelRoot.getSimpleName()
                                     + util.getAnnotationElement(
-                                        parentModelRootAnno.get(), "suffixSeparator", String.class)
+                                        annotationMirror, "suffixSeparator", String.class)
                                     + IMMUT_SUFFIX,
-                                "Builder"))
-                        : Optional.empty())
+                                "Builder")))
             .or(
                 () ->
                     modelClusterRootAnno
@@ -740,12 +742,12 @@ public final class JavaModelsGenerator implements CodeGenerator {
         IfAbsentThen ifAbsentThen = util.getIfAbsent(method).value();
         switch (ifAbsentThen) {
           case FAIL ->
-          // FAIL strategy - throw exception when value is null
-          buildMethodBuilder.addStatement(
-              "throw new $T($S, $S)",
-              MandatoryFieldMissingException.class,
-              immutableModelName.simpleName(),
-              fieldName);
+              // FAIL strategy - throw exception when value is null
+              buildMethodBuilder.addStatement(
+                  "throw new $T($S, $S)",
+                  MandatoryFieldMissingException.class,
+                  immutableModelName.simpleName(),
+                  fieldName);
           case ASSUME_DEFAULT_VALUE -> {
             try {
               buildMethodBuilder.addStatement(
@@ -756,7 +758,6 @@ public final class JavaModelsGenerator implements CodeGenerator {
                   method);
             }
           }
-          default -> throw new AssertionError("Unexpected IfAbsentThen = " + ifAbsentThen);
         }
         buildMethodBuilder.endControlFlow();
       }
@@ -813,7 +814,9 @@ public final class JavaModelsGenerator implements CodeGenerator {
    */
   private void validateOptionalField(ExecutableElement method) {
     IfAbsentThen ifAbsentThen = util.getIfAbsent(method).value();
-    if (!ifAbsentThen.isMandatoryOnServer()) {
+    ModelRoot modelRoot =
+        requireNonNull(codeGenContext.modelRootType().getAnnotation(ModelRoot.class));
+    if (modelRoot.type() == ModelType.REQUEST && !ifAbsentThen.isMandatoryOnServer()) {
       if (!typeSupportsAbsentValues(method)) {
         util.error(
             "Field '%s' with @IfAbsent(%s) must be an Optional or annotated with %s: "

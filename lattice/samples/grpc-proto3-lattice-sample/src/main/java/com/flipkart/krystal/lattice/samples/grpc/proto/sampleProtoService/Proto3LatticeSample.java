@@ -8,6 +8,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.lattice.vajram.sdk.InvocableOutsideProcess;
 import com.flipkart.krystal.model.IfAbsent;
+import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.serial.ReservedSerialIds;
 import com.flipkart.krystal.serial.SerialId;
@@ -27,7 +28,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @SuppressWarnings("initialization.field.uninitialized")
 @InvocableOutsideGraph
 @InvocableOutsideProcess
-@SupportedModelProtocols(Protobuf3.class)
+@SupportedModelProtocols({Protobuf3.class, PlainJavaObject.class})
 @ReservedSerialIds(8)
 @Vajram
 public abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3LatticeSampleResponse> {

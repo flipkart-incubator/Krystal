@@ -13,6 +13,8 @@ import javax.lang.model.type.IntersectionType;
 import javax.lang.model.type.NoType;
 import javax.lang.model.type.NullType;
 import javax.lang.model.type.PrimitiveType;
+import javax.lang.model.type.TypeKind;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.UnionType;
 import javax.lang.model.type.WildcardType;
@@ -44,7 +46,7 @@ public class DeclaredTypeVisitor extends AbstractTypeVisitor14<CodeGenType, Void
   public CodeGenType visitDeclared(DeclaredType t, Void inputDef) {
     String disallowedMessage = util.getDisallowedMessage(t, disallowedTypes);
     if (disallowedMessage != null) {
-      util.error(disallowedMessage, element);
+      throw util.errorAndThrow(disallowedMessage, element);
     }
     Element elementOfType = t.asElement();
     if (elementOfType instanceof QualifiedNameable qualifiedNameable) {
@@ -70,49 +72,58 @@ public class DeclaredTypeVisitor extends AbstractTypeVisitor14<CodeGenType, Void
 
   @Override
   public CodeGenType visitTypeVariable(TypeVariable t, Void unused) {
-    throw uoe();
+    throw uoe(t);
   }
 
   @Override
   public CodeGenType visitNull(NullType t, Void unused) {
-    throw uoe();
+    throw uoe(t);
   }
 
   @Override
   public CodeGenType visitIntersection(IntersectionType t, Void unused) {
-    throw uoe();
+    throw uoe(t);
   }
 
   @Override
   public CodeGenType visitError(ErrorType t, Void unused) {
-    throw uoe();
+    throw uoe(t);
   }
 
   @Override
   public CodeGenType visitWildcard(WildcardType t, Void unused) {
-    throw uoe();
+    throw uoe(t);
   }
 
   @Override
   public CodeGenType visitExecutable(ExecutableType t, Void unused) {
-    throw uoe();
+    throw uoe(t);
   }
 
   @Override
   public CodeGenType visitNoType(NoType t, Void unused) {
-    throw uoe();
+    throw uoe(t);
   }
 
   @Override
   public CodeGenType visitUnion(UnionType t, Void unused) {
-    throw uoe();
+    throw uoe(t);
+  }
+
+  private RuntimeException uoe(TypeMirror type) {
+    if (TypeKind.ERROR.equals(type.getKind())) {
+      return new CodeGenShortCircuitException(
+          "Element : "
+              + element
+              + " has encountered a type of ERROR kind: "
+              + type
+              + ". Short-circuiting code gen. This codegen may be retried in the next round and will most possibly succeed.");
+    } else {
+      return uoe(type + " of element " + element + " not supported by DeclaredTypeVisitor");
+    }
   }
 
   private CodeValidationException uoe(String message) {
-    return util.errorAndThrow(message, element);
-  }
-
-  private CodeValidationException uoe() {
-    return util.errorAndThrow("Unsupported operation", element);
+    return new CodeValidationException(message);
   }
 }

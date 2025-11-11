@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
+import static com.flipkart.krystal.codegen.common.models.Constants.IMMUT_SUFFIX;
 import static com.flipkart.krystal.model.PlainJavaObject.POJO;
 
 public final class Constants {
@@ -26,7 +27,6 @@ public final class Constants {
   public static final String _INPUTS_CLASS = "_Inputs";
   public static final String _INTERNAL_FACETS_CLASS = "_InternalFacets";
 
-  public static final String IMMUT_SUFFIX = "Immut";
   public static final String REQUEST_SUFFIX = "_Req";
   public static final String IMMUT_REQUEST_SUFFIX = REQUEST_SUFFIX + IMMUT_SUFFIX;
   public static final String IMMUT_REQUEST_POJO_SUFFIX =
