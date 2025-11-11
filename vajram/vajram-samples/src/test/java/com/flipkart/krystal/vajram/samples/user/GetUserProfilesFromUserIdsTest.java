@@ -16,6 +16,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,6 +50,12 @@ class GetUserProfilesFromUserIdsTest {
   @AfterEach
   void tearDown() {
     executorLease.close();
+    graph.close();
+  }
+
+  @AfterAll
+  static void afterAll() {
+    EXEC_POOL.close();
   }
 
   @Test
