@@ -4,10 +4,4 @@ import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.Value;
 
-@Value
-@AllArgsConstructor
-@NoArgsConstructor(force = true)
-public class User {
-  String userProfileId;
-  String userId;
-}
+public record User(String userProfileId, String userId) {}

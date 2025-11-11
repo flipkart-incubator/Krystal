@@ -4,9 +4,4 @@ import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.Value;
 
-@Value
-@AllArgsConstructor
-@NoArgsConstructor(force = true)
-public class UserProfile {
-  String profileData;
-}
+public record UserProfile(String profileData) {}
