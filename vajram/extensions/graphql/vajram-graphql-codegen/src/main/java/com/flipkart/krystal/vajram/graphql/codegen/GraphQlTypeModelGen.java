@@ -137,8 +137,8 @@ public class GraphQlTypeModelGen implements CodeGenerator {
     // Add __typename method
     addTypenameMethod(classBuilder, modelRootType);
 
-    // Add GraphQL response methods (_data, _errors, _extensions)
-    addGraphQLResponseMethods(classBuilder);
+    // Add GraphQL response methods (_data, _collectErrors, _extensions)
+    addGraphQLResponseMethods(classBuilder, modelMethods, util);
 
     // Add static builder method
     classBuilder.addMethod(
@@ -195,8 +195,10 @@ public class GraphQlTypeModelGen implements CodeGenerator {
             // For custom model types (but NOT entity IDs), use _Immut suffix
             TypeElement elementTypeElement =
                 (TypeElement) util.processingEnv().getTypeUtils().asElement(elementType);
-            String elementTypeStr = elementTypeElement.getQualifiedName().toString();
-            elementTypeName = ClassName.bestGuess(elementTypeStr + "_Immut");
+            String packageName = util.processingEnv().getElementUtils()
+                .getPackageOf(elementTypeElement).getQualifiedName().toString();
+            String simpleName = elementTypeElement.getSimpleName().toString() + "_Immut";
+            elementTypeName = ClassName.get(packageName, simpleName);
           } else {
             // For standard types, entity IDs, primitives, etc., use as-is
             elementTypeName = TypeName.get(elementType);
@@ -213,8 +215,10 @@ public class GraphQlTypeModelGen implements CodeGenerator {
         // For single custom model types (but NOT entity IDs), use _Immut suffix
         TypeElement typeElement =
             (TypeElement) util.processingEnv().getTypeUtils().asElement(returnType);
-        String typeStr = typeElement.getQualifiedName().toString();
-        fieldType = ClassName.bestGuess(typeStr + "_Immut");
+        String packageName = util.processingEnv().getElementUtils()
+            .getPackageOf(typeElement).getQualifiedName().toString();
+        String simpleName = typeElement.getSimpleName().toString() + "_Immut";
+        fieldType = ClassName.get(packageName, simpleName);
       } else {
         fieldType = TypeName.get(returnType);
       }
@@ -222,7 +226,10 @@ public class GraphQlTypeModelGen implements CodeGenerator {
       TypeName errableFieldType =
           ParameterizedTypeName.get(ClassName.get(Errable.class), fieldType);
 
-      classBuilder.addField(FieldSpec.builder(errableFieldType, methodName, PRIVATE).build());
+      classBuilder.addField(
+          FieldSpec.builder(errableFieldType, methodName, PRIVATE)
+              .addAnnotation(ClassName.get("org.checkerframework.checker.nullness.qual", "NonNull"))
+              .build());
     }
   }
 
@@ -362,8 +369,8 @@ public class GraphQlTypeModelGen implements CodeGenerator {
           constructor.addCode("    () -> this.$L = $T.nil(),\n", fieldName, Errable.class);
           constructor.addCode("    _nonNil -> this.$L = $T.withValue(_nonNil.value()));\n", fieldName, Errable.class);
       } else {
-        // Standard types (String, primitives, List<String>) - direct assignment works
-        constructor.addStatement("this.$L = $L", fieldName, fieldName);
+        // Standard types (String, primitives, List<String>) - ensure non-null initialization
+        constructor.addStatement("this.$L = $L != null ? $L : $T.nil()", fieldName, fieldName, fieldName, Errable.class);
       }
     }
 
@@ -381,8 +388,12 @@ public class GraphQlTypeModelGen implements CodeGenerator {
 
     // Get the entity type name and its _Immut interface
     TypeName elementTypeName = TypeName.get(elementType);
-    String elementTypeStr = elementType.toString();
-    ClassName immutInterfaceName = ClassName.bestGuess(elementTypeStr + "_Immut");
+    TypeElement elementTypeElement = 
+        (TypeElement) util.processingEnv().getTypeUtils().asElement(elementType);
+    String packageName = util.processingEnv().getElementUtils()
+        .getPackageOf(elementTypeElement).getQualifiedName().toString();
+    String simpleName = elementTypeElement.getSimpleName().toString() + "_Immut";
+    ClassName immutInterfaceName = ClassName.get(packageName, simpleName);
 
     // Build the complex .handle() initialization
     // Level 0: Start with fieldName.handle(
@@ -451,8 +462,11 @@ public class GraphQlTypeModelGen implements CodeGenerator {
     if (!(element instanceof TypeElement)) {
       throw new IllegalStateException("Cannot get TypeElement for entity type: " + entityType);
     }
-    String entityTypeStr = ((TypeElement) element).getQualifiedName().toString();
-    ClassName immutInterfaceName = ClassName.bestGuess(entityTypeStr + "_Immut");
+    TypeElement entityTypeElement = (TypeElement) element;
+    String packageName = util.processingEnv().getElementUtils()
+        .getPackageOf(entityTypeElement).getQualifiedName().toString();
+    String simpleName = entityTypeElement.getSimpleName().toString() + "_Immut";
+    ClassName immutInterfaceName = ClassName.get(packageName, simpleName);
 
     // Build the .handle() initialization with hardcoded indentation
     constructor.addCode("$L.handle(\n", fieldName);
@@ -536,32 +550,58 @@ public class GraphQlTypeModelGen implements CodeGenerator {
               .addModifiers(PUBLIC)
               .returns(returnType);
 
-        // Extract actual values from Errable fields
+        // Extract actual values from Errable fields (fields are always non-null and final)
         if (isListType(method.getReturnType())) {
-          // For lists with nested Errable, unwrap both levels
+          // For lists with nested Errable, unwrap both levels using for loop
           // Field is Errable<List<Errable<T_Immut>>>, getter returns List<T>
           TypeMirror elementType = getListElementType(method.getReturnType());
           TypeName elementTypeName = TypeName.get(elementType);
-          String defaultValue = isStringType(elementType, util) ? "null" : "null";
           
-          getter.addCode("return $L != null ? $L.valueOpt()\n", methodName, methodName);
-          getter.addCode("    .map(list -> list.stream()\n");
-          getter.addCode("        .map(e -> ($T) e.valueOpt().orElse($L))\n", elementTypeName, defaultValue);
-          getter.addCode("        .collect($T.toList()))\n", java.util.stream.Collectors.class);
-          getter.addCode("    .orElse($T.of())\n", List.class);
-          getter.addCode("    : $T.of();\n", List.class);
+          // Determine the actual type stored in the field (with _Immut for custom models)
+          TypeName fieldElementTypeName;
+          if (isCustomModelType(elementType, util) && !isEntityIdType(elementType, util)) {
+            // For custom model types (but NOT entity IDs), field uses _Immut suffix
+            TypeElement elementTypeElement =
+                (TypeElement) util.processingEnv().getTypeUtils().asElement(elementType);
+            String packageName = util.processingEnv().getElementUtils()
+                .getPackageOf(elementTypeElement).getQualifiedName().toString();
+            String simpleName = elementTypeElement.getSimpleName().toString() + "_Immut";
+            fieldElementTypeName = ClassName.get(packageName, simpleName);
+          } else {
+            // For standard types, entity IDs, use as-is
+            fieldElementTypeName = elementTypeName;
+          }
+          
+          getter.addStatement("$T<$T> listOpt = $L.valueOpt().orElse(null)", 
+              List.class, ParameterizedTypeName.get(ClassName.get(Errable.class), 
+              fieldElementTypeName), methodName);
+          getter.beginControlFlow("if (listOpt != null)");
+          getter.addStatement("$T<$T> result = new $T<>(listOpt.size())", 
+              List.class, elementTypeName, ArrayList.class);
+          getter.beginControlFlow("for ($T e : listOpt)", 
+              ParameterizedTypeName.get(ClassName.get(Errable.class), fieldElementTypeName));
+          // Only cast for custom model types (from _Immut to interface), not for standard types
+          if (isCustomModelType(elementType, util) && !isEntityIdType(elementType, util)) {
+            getter.addStatement("result.add(($T) e.valueOpt().orElse(null))", elementTypeName);
+          } else {
+            getter.addStatement("result.add(e.valueOpt().orElse(null))");
+          }
+          getter.endControlFlow();
+          getter.addStatement("return result");
+          getter.endControlFlow();
+          getter.addStatement("return $T.of()", List.class);
       } else if (method.getReturnType().getKind().isPrimitive()) {
         // For primitives, return default if no value
-        getter.addStatement("return $L != null ? $L.valueOpt().orElse($L) : $L", 
-            methodName, methodName, getPrimitiveDefault(method.getReturnType()), getPrimitiveDefault(method.getReturnType()));
+        getter.addStatement("return $L.valueOpt().orElse($L)", 
+            methodName, getPrimitiveDefault(method.getReturnType()));
       } else if (isStringType(method.getReturnType(), util)) {
         // For String, return empty string if no value
-        getter.addStatement("return $L != null ? $L.valueOpt().orElse($S) : $S", 
-            methodName, methodName, "", "");
+        getter.addStatement("return $L.valueOpt().orElse($S)", 
+            methodName, "");
       } else {
         // For reference types, return null if no value
-        getter.addStatement("return $L != null ? $L.valueOpt().orElse(null) : null", 
-            methodName, methodName);
+        getter.addStatement("return $L.valueOpt().orElse(null)", 
+            methodName);
       }
 
       classBuilder.addMethod(getter.build());
@@ -611,7 +651,11 @@ public class GraphQlTypeModelGen implements CodeGenerator {
             .build());
   }
 
-  private void addGraphQLResponseMethods(TypeSpec.Builder classBuilder) {
+  private void addGraphQLResponseMethods(
+      TypeSpec.Builder classBuilder,
+      List<ExecutableElement> modelMethods,
+      CodeGenUtility util) {
+    
     // Add _data() method
     classBuilder.addMethod(
         MethodSpec.methodBuilder("_data")
@@ -627,18 +671,8 @@ public class GraphQlTypeModelGen implements CodeGenerator {
             .addStatement("throw new $T()", UnsupportedOperationException.class)
             .build());
 
-    // Add _errors() method
-    classBuilder.addMethod(
-        MethodSpec.methodBuilder("_errors")
-            .addAnnotation(Override.class)
-            .addAnnotation(Nullable.class)
-            .addModifiers(PUBLIC)
-            .returns(
-                ParameterizedTypeName.get(
-                    ClassName.get(List.class), ClassName.get("graphql", "GraphQLError")))
-            .addComment("TBD")
-            .addStatement("throw new $T()", UnsupportedOperationException.class)
-            .build());
+    // Add _collectErrors() method using ErrorCollector pattern
+    addCollectErrorsMethod(classBuilder, modelMethods, util);
 
     // Add _extensions() method
     classBuilder.addMethod(
@@ -654,6 +688,148 @@ public class GraphQlTypeModelGen implements CodeGenerator {
             .addComment("TBD")
             .addStatement("throw new $T()", UnsupportedOperationException.class)
             .build());
+  }
+
+  private void addCollectErrorsMethod(
+      TypeSpec.Builder classBuilder,
+      List<ExecutableElement> modelMethods,
+      CodeGenUtility util) {
+    
+    MethodSpec.Builder collectErrorsMethod = MethodSpec.methodBuilder("_collectErrors")
+        .addAnnotation(Override.class)
+        .addModifiers(PUBLIC)
+        .returns(void.class)
+        .addParameter(
+            ClassName.get("com.flipkart.krystal.vajram.graphql.api", "ErrorCollector"),
+            "errorCollector")
+        .addParameter(
+            ParameterizedTypeName.get(List.class, Object.class),
+            "path")
+        .addComment("Collects errors from all Errable fields using the visitor pattern");
+
+    // Collect errors from each field
+    for (ExecutableElement method : modelMethods) {
+      String fieldName = method.getSimpleName().toString();
+      
+      // Skip GraphQL context methods and __typename
+      if (fieldName.equals("graphql_executionContext")
+          || fieldName.equals("graphql_executionStrategy")
+          || fieldName.equals("graphql_executionStrategyParams")
+          || fieldName.equals("__typename")) {
+        continue;
+      }
+
+      TypeMirror returnType = method.getReturnType();
+      
+      if (isListType(returnType)) {
+        TypeMirror elementType = getListElementType(returnType);
+        boolean listOfGraphQlModels = elementType != null && containsGraphQlModel(elementType, util);
+        
+        // Get the proper TypeName for the element type
+        TypeName elementTypeName;
+        if (listOfGraphQlModels) {
+          // For GraphQL models, use the _Immut interface type
+          Element element = util.processingEnv().getTypeUtils().asElement(elementType);
+          if (element instanceof TypeElement) {
+            TypeElement elementTypeElement = (TypeElement) element;
+            String packageName = util.processingEnv().getElementUtils()
+                .getPackageOf(elementTypeElement).getQualifiedName().toString();
+            String simpleName = elementTypeElement.getSimpleName().toString() + "_Immut";
+            elementTypeName = ClassName.get(packageName, simpleName);
+          } else {
+            elementTypeName = TypeName.get(elementType);
+          }
+        } else {
+          // For standard types, use the actual type
+          elementTypeName = TypeName.get(elementType);
+        }
+        
+        collectErrorsMethod.addCode("// Collect errors from $L list\n", fieldName);
+        collectErrorsMethod.addCode("{\n");
+        collectErrorsMethod.addCode("  $T<$T> newPath = new $T<>(path);\n",
+            List.class, Object.class, java.util.ArrayList.class);
+        collectErrorsMethod.addCode("  newPath.add($S);\n", fieldName);
+        
+        if (listOfGraphQlModels) {
+          // For lists of GraphQL models, handle both list-level and element-level errors
+          collectErrorsMethod.addCode("  $L.handle(\n", fieldName);
+          collectErrorsMethod.addCode("      _failure ->\n");
+          collectErrorsMethod.addCode("          errorCollector.addError(\n");
+          collectErrorsMethod.addCode("              new $T(newPath, _failure.error())),\n", 
+              ClassName.get("com.flipkart.krystal.vajram.graphql.api", "DefaultGraphQLErrorInfo"));
+          collectErrorsMethod.addCode("      _nonNils -> {\n");
+          collectErrorsMethod.addCode("        $T<$T<$T>> _values = _nonNils.value();\n",
+              List.class, Errable.class, elementTypeName);
+          collectErrorsMethod.addCode("        for (int i = 0; i < _values.size(); i++) {\n");
+          collectErrorsMethod.addCode("          $T<$T> _innerErrable = _values.get(i);\n", 
+              Errable.class, elementTypeName);
+          collectErrorsMethod.addCode("          $T<$T> innerPath = new $T<>(newPath);\n",
+              List.class, Object.class, java.util.ArrayList.class);
+          collectErrorsMethod.addCode("          innerPath.add(i);\n");
+          collectErrorsMethod.addCode("          _innerErrable.handle(\n");
+          collectErrorsMethod.addCode("              _failure ->\n");
+          collectErrorsMethod.addCode("                  errorCollector.addError(\n");
+          collectErrorsMethod.addCode("                      new $T(innerPath, _failure.error())),\n",
+              ClassName.get("com.flipkart.krystal.vajram.graphql.api", "DefaultGraphQLErrorInfo"));
+          collectErrorsMethod.addCode("              _nonNil -> _nonNil.value()._collectErrors(errorCollector, innerPath));\n");
+          collectErrorsMethod.addCode("        }\n");
+          collectErrorsMethod.addCode("      });\n");
+        } else {
+          // For lists of primitives/standard types
+          collectErrorsMethod.addCode("  $L.handle(\n", fieldName);
+          collectErrorsMethod.addCode("      _failure ->\n");
+          collectErrorsMethod.addCode("          errorCollector.addError(\n");
+          collectErrorsMethod.addCode("              new $T(newPath, _failure.error())),\n",
+              ClassName.get("com.flipkart.krystal.vajram.graphql.api", "DefaultGraphQLErrorInfo"));
+          collectErrorsMethod.addCode("      _nonNils -> {\n");
+          collectErrorsMethod.addCode("        $T<$T<$T>> _values = _nonNils.value();\n",
+              List.class, Errable.class, elementTypeName);
+          collectErrorsMethod.addCode("        for (int i = 0; i < _values.size(); i++) {\n");
+          collectErrorsMethod.addCode("          int index = i;\n");
+          collectErrorsMethod.addCode("          _values.get(i).errorOpt().ifPresent(err -> {\n");
+          collectErrorsMethod.addCode("            $T<$T> innerPath = new $T<>(newPath);\n",
+              List.class, Object.class, java.util.ArrayList.class);
+          collectErrorsMethod.addCode("            innerPath.add(index);\n");
+          collectErrorsMethod.addCode("            errorCollector.addError(\n");
+          collectErrorsMethod.addCode("                new $T(innerPath, err));\n",
+              ClassName.get("com.flipkart.krystal.vajram.graphql.api", "DefaultGraphQLErrorInfo"));
+          collectErrorsMethod.addCode("          });\n");
+          collectErrorsMethod.addCode("        }\n");
+          collectErrorsMethod.addCode("      });\n");
+        }
+        
+        collectErrorsMethod.addCode("}\n\n");
+        
+      } else if (containsGraphQlModel(returnType, util)) {
+        // For single GraphQL entity, recursively collect errors
+        collectErrorsMethod.addCode("// Collect errors from $L entity\n", fieldName);
+        collectErrorsMethod.addCode("{\n");
+        collectErrorsMethod.addCode("  $T<$T> newPath = new $T<>(path);\n",
+            List.class, Object.class, java.util.ArrayList.class);
+        collectErrorsMethod.addCode("  newPath.add($S);\n", fieldName);
+        collectErrorsMethod.addCode("  $L.handle(\n", fieldName);
+        collectErrorsMethod.addCode("      _failure ->\n");
+        collectErrorsMethod.addCode("          errorCollector.addError(\n");
+        collectErrorsMethod.addCode("              new $T(newPath, _failure.error())),\n",
+            ClassName.get("com.flipkart.krystal.vajram.graphql.api", "DefaultGraphQLErrorInfo"));
+        collectErrorsMethod.addCode("      _nonNil -> _nonNil.value()._collectErrors(errorCollector, newPath));\n");
+        collectErrorsMethod.addCode("}\n\n");
+        
+      } else {
+        // For simple fields (primitives, String, etc.)
+        collectErrorsMethod.addCode("// Collect error from $L field\n", fieldName);
+        collectErrorsMethod.addCode("$L.errorOpt().ifPresent(err -> {\n", fieldName);
+        collectErrorsMethod.addCode("  $T<$T> newPath = new $T<>(path);\n",
+            List.class, Object.class, java.util.ArrayList.class);
+        collectErrorsMethod.addCode("  newPath.add($S);\n", fieldName);
+        collectErrorsMethod.addCode("  errorCollector.addError(\n");
+        collectErrorsMethod.addCode("      new $T(newPath, err));\n",
+            ClassName.get("com.flipkart.krystal.vajram.graphql.api", "DefaultGraphQLErrorInfo"));
+        collectErrorsMethod.addCode("});\n\n");
+      }
+    }
+
+    classBuilder.addMethod(collectErrorsMethod.build());
   }
 
   private void addBuilderClass(
@@ -817,20 +993,16 @@ public class GraphQlTypeModelGen implements CodeGenerator {
             .addModifiers(PUBLIC)
             .returns(gqlRespJsonClassName.nestedClass("Builder"));
 
-    // For entity setters (single or list), make them stubs
-    if (isCustomEntity || isListOfEntities) {
-      if (isListType) {
-        // List of entities: return null (stub)
-        directSetter.addParameter(fieldType, fieldName).addStatement("return null");
-      } else {
-        // Single entity: just return this (stub)
-        directSetter
-            .addParameter(
-                ParameterSpec.builder(fieldType, fieldName).addAnnotation(Nullable.class).build())
-            .addStatement("return this");
-      }
+    // For single entity setters, wrap in Errable.withValue()
+    if (isCustomEntity && !isListType) {
+      // Single entity: wrap in Errable.withValue()
+      directSetter
+          .addParameter(
+              ParameterSpec.builder(fieldType, fieldName).addAnnotation(Nullable.class).build())
+          .addStatement("this.$L = $T.withValue($L)", fieldName, Errable.class, fieldName)
+          .addStatement("return this");
     } else if (isListType) {
-      // List of standard types (e.g., String): implement complex wrapping logic
+      // For ALL lists (entities OR standard types), use complex wrapping logic
       directSetter.addParameter(
           ParameterSpec.builder(fieldType, fieldName).addAnnotation(Nullable.class).build());
 
@@ -931,7 +1103,7 @@ public class GraphQlTypeModelGen implements CodeGenerator {
         MethodSpec.methodBuilder("_newCopy")
             .addAnnotation(Override.class)
             .addModifiers(PUBLIC)
-            .returns(immutClassName.nestedClass("Builder"));
+            .returns(gqlRespJsonClassName.nestedClass("Builder"));
 
     // Build the chain of setter calls using hardcoded formatting to avoid JavaPoet indentation
     // issues
@@ -993,17 +1165,18 @@ public class GraphQlTypeModelGen implements CodeGenerator {
   // Helper methods
 
   private boolean isGraphQlEntity(TypeElement modelRootType, CodeGenUtility util) {
-    return modelRootType.getInterfaces().stream()
-        .anyMatch(
-            iface -> {
-              TypeElement ifaceElement =
-                  (TypeElement) util.processingEnv().getTypeUtils().asElement(iface);
-              return ifaceElement != null
-                  && ifaceElement
-                      .getQualifiedName()
-                      .toString()
-                      .equals(GraphQlEntityModel.class.getCanonicalName());
-            });
+    for (TypeMirror iface : modelRootType.getInterfaces()) {
+      TypeElement ifaceElement =
+          (TypeElement) util.processingEnv().getTypeUtils().asElement(iface);
+      if (ifaceElement != null
+          && ifaceElement
+              .getQualifiedName()
+              .toString()
+              .equals(GraphQlEntityModel.class.getCanonicalName())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private TypeName getEntityIdType(TypeElement modelRootType, CodeGenUtility util) {
@@ -1116,13 +1289,15 @@ public class GraphQlTypeModelGen implements CodeGenerator {
     SupportedModelProtocols supportedModelProtocols =
         typeElement.getAnnotation(SupportedModelProtocols.class);
     if (supportedModelProtocols != null) {
-      if (util.getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
-          .map(typeMirror -> util.processingEnv().getTypeUtils().asElement(typeMirror))
-          .filter(elem -> elem instanceof QualifiedNameable)
-          .map(QualifiedNameable.class::cast)
-          .map(element -> requireNonNull(element).getQualifiedName().toString())
-          .anyMatch(GraphQlResponseJson.class.getCanonicalName()::equals)) {
-        return true;
+      for (TypeMirror typeMirror : util.getTypesFromAnnotationMember(supportedModelProtocols::value)) {
+        Element elem = util.processingEnv().getTypeUtils().asElement(typeMirror);
+        if (elem instanceof QualifiedNameable) {
+          QualifiedNameable qualifiedNameable = (QualifiedNameable) elem;
+          String qualifiedName = requireNonNull(qualifiedNameable).getQualifiedName().toString();
+          if (qualifiedName.equals(GraphQlResponseJson.class.getCanonicalName())) {
+            return true;
+          }
+        }
       }
     }
 
@@ -1171,12 +1346,18 @@ public class GraphQlTypeModelGen implements CodeGenerator {
     SupportedModelProtocols supportedModelProtocols =
         codeGenContext.modelRootType().getAnnotation(SupportedModelProtocols.class);
     // Check if GraphQlResponseJson is mentioned in the annotation value
-    return supportedModelProtocols != null
-        && util.getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
-            .map(typeMirror -> util.processingEnv().getTypeUtils().asElement(typeMirror))
-            .filter(elem -> elem instanceof QualifiedNameable)
-            .map(QualifiedNameable.class::cast)
-            .map(element -> requireNonNull(element).getQualifiedName().toString())
-            .anyMatch(GraphQlResponseJson.class.getCanonicalName()::equals);
+    if (supportedModelProtocols != null) {
+      for (TypeMirror typeMirror : util.getTypesFromAnnotationMember(supportedModelProtocols::value)) {
+        Element elem = util.processingEnv().getTypeUtils().asElement(typeMirror);
+        if (elem instanceof QualifiedNameable) {
+          QualifiedNameable qualifiedNameable = (QualifiedNameable) elem;
+          String qualifiedName = requireNonNull(qualifiedNameable).getQualifiedName().toString();
+          if (qualifiedName.equals(GraphQlResponseJson.class.getCanonicalName())) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
   }
 }

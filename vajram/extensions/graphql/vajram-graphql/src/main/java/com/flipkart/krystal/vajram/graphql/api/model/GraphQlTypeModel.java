@@ -2,11 +2,14 @@ package com.flipkart.krystal.vajram.graphql.api.model;
 
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelClusterRoot;
+import com.flipkart.krystal.vajram.graphql.api.DefaultErrorCollector;
+import com.flipkart.krystal.vajram.graphql.api.ErrorCollector;
 import com.flipkart.krystal.vajram.graphql.api.VajramExecutionStrategy;
 import com.flipkart.krystal.vajram.json.Json;
 import graphql.GraphQLError;
 import graphql.execution.ExecutionContext;
 import graphql.execution.ExecutionStrategyParameters;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +33,13 @@ public interface GraphQlTypeModel extends Model, SerializableGQlResponseJsonMode
 
   @Nullable Map<String, Object> _data();
 
-  @Nullable List<GraphQLError> _errors();
+  /**
+   * Collects errors from this model and all nested models using the visitor pattern.
+   *
+   * @param errorCollector The collector to accumulate errors
+   * @param path The current path in the GraphQL response tree
+   */
+  void _collectErrors(ErrorCollector errorCollector, List<Object> path);
 
   @Nullable Map<String, Object> _extensions();
 
@@ -38,7 +47,15 @@ public interface GraphQlTypeModel extends Model, SerializableGQlResponseJsonMode
   default byte[] _serialize() throws Exception {
     Map<String, Object> map = new HashMap<>(3);
     map.put("data", _data());
-    map.put("errors", _errors());
+    
+    // Collect errors using the ErrorCollector pattern
+    ErrorCollector errorCollector = new DefaultErrorCollector();
+    _collectErrors(errorCollector, new ArrayList<>());
+    List<GraphQLError> errors = errorCollector.getErrors();
+    if (!errors.isEmpty()) {
+      map.put("errors", errors);
+    }
+    
     map.put("extensions", _extensions());
     return Json.OBJECT_WRITER.writeValueAsBytes(map);
   }
