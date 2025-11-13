@@ -414,9 +414,9 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                                   .toList())),
                   sources,
                   (depRequests, facets) -> {
-                    validateMandatory(vajramId, facets, sourceFacets);
                     ResolverCommand resolverCommand;
                     try {
+                      validateMandatory(vajramId, facets, sourceFacets);
                       if (inputResolver instanceof One2OneInputResolver singleInputResolver) {
                         resolverCommand = singleInputResolver.resolve(depRequests, facets);
                       } else if (inputResolver instanceof FanoutInputResolver fanoutInputResolver) {
