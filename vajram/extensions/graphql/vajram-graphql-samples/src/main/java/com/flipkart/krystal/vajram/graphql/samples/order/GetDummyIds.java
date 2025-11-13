@@ -13,9 +13,14 @@ import java.util.List;
 @GraphQLFetcher
 @Vajram
 public abstract class GetDummyIds extends ComputeVajramDef<List<DummyId>> {
+  @SuppressWarnings("initialization.field.uninitialized")
   static class _Inputs {
     @IfAbsent(FAIL)
     OrderId id;
+
+    boolean filter;
+    String preferredType;
+    int count;
   }
 
   @Output

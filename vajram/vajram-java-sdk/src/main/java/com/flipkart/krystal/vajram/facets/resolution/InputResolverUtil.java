@@ -6,7 +6,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Optional.ofNullable;
 import static java.util.function.Function.identity;
 
-import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.ErrableFacetValue;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.Request;
@@ -29,7 +29,7 @@ public final class InputResolverUtil {
       List<? extends SkipPredicate> skipPredicates,
       FacetValues facetValues) {
     final FacetValue<?> sourceFacetValue =
-        sourceFacet != null ? sourceFacet.getFacetValue(facetValues) : Errable.nil();
+        sourceFacet != null ? sourceFacet.getFacetValue(facetValues) : ErrableFacetValue.nil();
 
     if (sourceFacetValue != null) {
       @SuppressWarnings("unchecked")

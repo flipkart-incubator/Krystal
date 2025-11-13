@@ -1,0 +1,16 @@
+dependencies {
+    api platform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
+
+    api 'io.vertx:vertx-web'
+    api 'org.jboss.resteasy:resteasy-vertx'
+    api project(':lattice:extensions:quarkus:lattice-quarkus')
+    api project(':lattice:extensions:rest:lattice-rest')
+    api project(':lattice:extensions:rest:lattice-rest-api')
+
+    implementation 'jakarta.ws.rs:jakarta.ws.rs-api'
+    implementation project(':vajram:extensions:json:vajram-json')
+}
+
+extraJavaModuleInfo {
+    failOnMissingModuleInfo = false
+}

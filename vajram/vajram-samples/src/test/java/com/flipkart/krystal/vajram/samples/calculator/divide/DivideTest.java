@@ -3,8 +3,8 @@ package com.flipkart.krystal.vajram.samples.calculator.divide;
 import static com.flipkart.krystal.config.PropertyNames.RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME;
 import static java.lang.Boolean.FALSE;
 import static java.lang.Thread.currentThread;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
@@ -78,6 +78,7 @@ class DivideTest {
     executorService.execute(() -> eventLoopThreadFuture.complete(currentThread()));
     Thread eventLoopThread = eventLoopThreadFuture.join();
     CompletableFuture<@Nullable Integer> result;
+    CompletableFuture<Thread> resultThreadFuture = new CompletableFuture<>();
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
@@ -89,13 +90,12 @@ class DivideTest {
       result =
           krystexVajramExecutor.execute(
               Divide_ReqImmutPojo._builder().numerator(5).denominator(7)._build());
+      result.thenRun(
+          () -> {
+            System.out.println(Throwables.getStackTrace(new RuntimeException()));
+            resultThreadFuture.complete(currentThread());
+          });
     }
-    CompletableFuture<Thread> resultThreadFuture = new CompletableFuture<>();
-    result.thenRun(
-        () -> {
-          System.out.println(Throwables.getStackTrace(new RuntimeException()));
-          resultThreadFuture.complete(currentThread());
-        });
     assertThat(resultThreadFuture.join()).isEqualTo(eventLoopThread);
   }
 }

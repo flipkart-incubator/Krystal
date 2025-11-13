@@ -4,8 +4,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 
 @SuppressWarnings("ExtendsObject") // For Checker Framework
 public interface Lease<T> extends AutoCloseable {
-  @NonNull
-  T get();
+  @NonNull T get();
 
   @Override
   void close();

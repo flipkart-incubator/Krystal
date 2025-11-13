@@ -17,9 +17,9 @@ import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.FacetValue;
+import com.flipkart.krystal.data.FacetValue.SingleFacetValue;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FanoutDepResponses;
-import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.BasicFacetInfo;
 import com.flipkart.krystal.facets.Dependency;
@@ -461,10 +461,8 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
       Facet mandatoryFacet = facet;
       FacetValue facetValue = mandatoryFacet.getFacetValue(facetValues);
       Errable<?> value;
-      if (facetValue instanceof Errable<?> errable) {
-        value = errable;
-      } else if (facetValue instanceof One2OneDepResponse<?, ?> depResponse) {
-        value = depResponse.response();
+      if (facetValue instanceof SingleFacetValue<?> errableFacetValue) {
+        value = errableFacetValue.asErrable();
       } else if (facetValue instanceof FanoutDepResponses<?, ?> fanoutDepResponses) {
         var requestResponsePairs = fanoutDepResponses.requestResponsePairs();
         if (requestResponsePairs.stream()

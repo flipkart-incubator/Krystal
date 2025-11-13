@@ -1,33 +1,33 @@
 package com.flipkart.krystal.krystex.testfixtures;
 
-import static com.flipkart.krystal.data.Errable.nil;
-
 import com.flipkart.krystal.core.VajramID;
-import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.ErrableFacetValue;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.facets.InputMirror;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class SimpleImmutRequest<T> implements SimpleRequest<T>, ImmutableRequest<T> {
-  private final Map<Integer, Errable<Object>> _data;
+  private final Map<Integer, ErrableFacetValue<Object>> _data;
   private final VajramID _vajramID;
 
   public static <T> SimpleImmutRequest<T> empty(VajramID vajramID) {
     return new SimpleImmutRequest<>(ImmutableMap.of(), vajramID);
   }
 
-  SimpleImmutRequest(Map<Integer, Errable<Object>> data, VajramID vajramID) {
+  SimpleImmutRequest(Map<Integer, ErrableFacetValue<Object>> data, VajramID vajramID) {
     this._data = ImmutableMap.copyOf(data);
     this._vajramID = vajramID;
   }
 
-  public Errable<Object> _get(int facetId) {
-    return _data.getOrDefault(facetId, nil());
+  public ErrableFacetValue<Object> _get(int facetId) {
+    return _data.getOrDefault(facetId, ErrableFacetValue.nil());
   }
 
   @Override
@@ -41,7 +41,7 @@ public final class SimpleImmutRequest<T> implements SimpleRequest<T>, ImmutableR
   }
 
   @Override
-  public Map<Integer, Errable<Object>> _asMap() {
+  public Map<Integer, ErrableFacetValue<Object>> _asMap() {
     return _data;
   }
 
@@ -56,7 +56,12 @@ public final class SimpleImmutRequest<T> implements SimpleRequest<T>, ImmutableR
 
   @Override
   public SimpleRequestBuilder<T> _asBuilder() {
-    return new SimpleRequestBuilder<>(_facets(), new LinkedHashMap<>(_data), _vajramID);
+    return new SimpleRequestBuilder<>(
+        _facets(),
+        new LinkedHashMap<>(
+            _data.entrySet().stream()
+                .collect(Collectors.toMap(Entry::getKey, e -> e.getValue().asErrable()))),
+        _vajramID);
   }
 
   @Override
@@ -72,7 +77,7 @@ public final class SimpleImmutRequest<T> implements SimpleRequest<T>, ImmutableR
     return Objects.hash(_data, _vajramID);
   }
 
-  public Map<Integer, Errable<Object>> _data() {
+  public Map<Integer, ErrableFacetValue<Object>> _data() {
     return _data;
   }
 

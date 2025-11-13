@@ -200,7 +200,7 @@ public class ModelsProto3Gen implements CodeGenerator {
     classBuilder.addMethod(
         MethodSpec.overriding(util.getMethod(SerializableModel.class, "_serialize", 0))
             .addCode(
-                """
+"""
 if (_serializedPayload == null){
   this._serializedPayload = _proto.toByteArray();
 }
@@ -378,7 +378,8 @@ return _serializedPayload;
       } else {
         getterBuilder
             .addCode(protoPresenceCheck)
-            .addCode("""
+            .addCode(
+                """
                 return null;
               }
               """);

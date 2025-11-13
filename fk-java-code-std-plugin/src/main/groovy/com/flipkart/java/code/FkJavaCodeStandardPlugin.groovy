@@ -9,7 +9,7 @@ import org.gradle.testing.jacoco.plugins.JacocoPluginExtension
 
 class FkJavaCodeStandardPlugin implements Plugin<Project> {
 
-    public static final String UNSAFE_COMPILE_OPTION = "unsafeCompile"
+    private static final String UNSAFE_COMPILE_OPTION = "unsafeCompile"
 
     @Override
     void apply(Project project) {
@@ -36,20 +36,27 @@ class FkJavaCodeStandardPlugin implements Plugin<Project> {
     }
 
     private static checkerFramework(Project project) {
+        def checker_version = '3.52.0'
         project.pluginManager.apply('org.checkerframework')
         CheckerFrameworkExtension checkerFramework = project.extensions.findByType(CheckerFrameworkExtension)
 
+        if (project.findProperty(UNSAFE_COMPILE_OPTION) == "true") {
+            checkerFramework.skipCheckerFramework = true
+        }
+
         checkerFramework.checkers = ["org.checkerframework.checker.nullness.NullnessChecker",
                                      "org.checkerframework.checker.calledmethods.CalledMethodsChecker",
-                                     "org.checkerframework.checker.optional.OptionalChecker",
-//                                   "org.checkerframework.checker.resourceleak.ResourceLeakChecker",
-        ]
-        checkerFramework.extraJavacArgs.add("-Astubs=${project.rootDir}/config/checker/stubs")
+                                     "org.checkerframework.checker.optional.OptionalChecker",]
+
+        def stubsDir = "${project.rootDir}/config/checker/stubs"
+        if (project.file(stubsDir).exists()) {
+            checkerFramework.extraJavacArgs.add("-Astubs=${stubsDir}")
+        }
         checkerFramework.extraJavacArgs.add("-AskipFiles=/build/generated/")
-        def checker_version = '3.48.4'
         project.dependencies.add('checkerFramework', "org.checkerframework:checker:${checker_version}")
 
-        project.dependencies.add('compileOnly', "org.checkerframework:checker-qual:${checker_version}")
+        project.dependencies.add('implementation', "org.checkerframework:checker-qual:${checker_version}")
+        project.dependencies.add('testImplementation', "org.checkerframework:checker-qual:${checker_version}")
         project.dependencies.add('annotationProcessor', "org.checkerframework:checker-qual:${checker_version}")
         project.dependencies.constraints.add('implementation', "org.checkerframework:checker-qual:${checker_version}")
         project.dependencies.constraints.add('testImplementation', "org.checkerframework:checker-qual:${checker_version}")
@@ -64,9 +71,6 @@ class FkJavaCodeStandardPlugin implements Plugin<Project> {
         project.dependencies.add('annotationProcessor', 'org.pcollections:pcollections:4.0.2')
         project.dependencies.add('annotationProcessor', 'com.github.kevinstern:software-and-algorithms:1.0')
 
-        if (project.findProperty(UNSAFE_COMPILE_OPTION) == "true") {
-            checkerFramework.skipCheckerFramework = true
-        }
         project.configurations.configureEach {
             it.resolutionStrategy {
                 force "org.checkerframework:checker-qual:${checker_version}"
@@ -118,13 +122,11 @@ class FkJavaCodeStandardPlugin implements Plugin<Project> {
             project.tasks
                     .withType(JavaCompile)
                     .configureEach { JavaCompile task -> task.options.errorprone.enabled = false }
-        } else {
-            project.tasks.compileJava.configure { JavaCompile task -> task.options.errorprone.disable("StringConcatToTextBlock") }
         }
     }
 
     private static void junitPlatform(Project project) {
-        project.dependencies.add('testImplementation', project.getDependencies().platform('org.junit:junit-bom:6.0.0'))
+        project.dependencies.add('testImplementation', project.getDependencies().platform('org.junit:junit-bom:6.0.1'))
         project.dependencies.add('testRuntimeOnly', 'org.junit.platform:junit-platform-launcher')
         project.dependencies.add('testImplementation', 'org.junit.jupiter:junit-jupiter')
         project.test {

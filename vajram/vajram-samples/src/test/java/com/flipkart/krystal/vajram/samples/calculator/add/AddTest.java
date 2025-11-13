@@ -14,7 +14,6 @@ import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import java.util.concurrent.CompletableFuture;
-import org.assertj.core.api.AssertionsForClassTypes;
 import org.assertj.core.util.Throwables;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.AfterEach;
@@ -92,6 +91,6 @@ class AddTest {
             resultThreadFuture.complete(currentThread());
           });
     }
-    AssertionsForClassTypes.assertThat(resultThreadFuture.join()).isEqualTo(eventLoopThread);
+    assertThat(resultThreadFuture.join()).isEqualTo(eventLoopThread);
   }
 }

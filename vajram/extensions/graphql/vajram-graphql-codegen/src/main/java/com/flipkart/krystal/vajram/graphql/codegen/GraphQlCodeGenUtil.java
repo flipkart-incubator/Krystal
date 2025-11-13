@@ -59,18 +59,20 @@ public final class GraphQlCodeGenUtil {
     throw new IllegalArgumentException("Unknown fieldType: " + graphQlTypeDecorator);
   }
 
-  private TypeName getTypeNameForField(WrappedType fieldType, GraphQlFieldSpec fieldSpec) {
+  TypeName getTypeNameForField(WrappedType fieldType, GraphQlFieldSpec fieldSpec) {
     GraphQlTypeDecorator innerGraphQlTypeDecorator = fieldType.innerType();
     return switch (fieldType.wrapperType()) {
-      case NONNULL -> innerGraphQlTypeDecorator instanceof PlainType plainType
-          ? getTypeNameForField(plainType, fieldSpec)
-          : toTypeNameForField(innerGraphQlTypeDecorator, fieldSpec);
-      case LIST -> ParameterizedTypeName.get(
-          ClassName.get(List.class), toTypeNameForField(innerGraphQlTypeDecorator, fieldSpec));
+      case NONNULL ->
+          innerGraphQlTypeDecorator instanceof PlainType plainType
+              ? getTypeNameForField(plainType, fieldSpec)
+              : toTypeNameForField(innerGraphQlTypeDecorator, fieldSpec);
+      case LIST ->
+          ParameterizedTypeName.get(
+              ClassName.get(List.class), toTypeNameForField(innerGraphQlTypeDecorator, fieldSpec));
     };
   }
 
-  private TypeName getTypeNameForField(PlainType fieldType, GraphQlFieldSpec fieldSpec) {
+  ClassName getTypeNameForField(PlainType fieldType, GraphQlFieldSpec fieldSpec) {
     GraphQLTypeName typeName = new GraphQLTypeName(fieldType.graphQlType().getName());
     String packageName = null;
     for (Directive directive : fieldSpec.fieldDefinition().getDirectives()) {
@@ -100,9 +102,10 @@ public final class GraphQlCodeGenUtil {
                     schemaReaderUtil.getPackageNameForType(enclosingType), enclosingType.value()))
             : ClassName.get(Object.class);
       }
-      default -> ClassName.get(
-          requireNonNullElse(packageName, schemaReaderUtil.getPackageNameForType(typeName)),
-          typeName.value());
+      default ->
+          ClassName.get(
+              requireNonNullElse(packageName, schemaReaderUtil.getPackageNameForType(typeName)),
+              typeName.value());
     };
   }
 }

@@ -5,6 +5,7 @@ import static com.flipkart.krystal.facets.FacetType.INJECTION;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.ErrableFacetValue;
 import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FacetValuesBuilder;
@@ -58,7 +59,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandRespons
     VajramDefinition vajramDefinition =
         vajramKryonGraph.getVajramDefinition(vajramID(kryonCommand.vajramID().id()));
     if (vajramDefinition.metadata().isInputInjectionNeeded()
-        && vajramDefinition.def() instanceof VajramDef<?> vajramDef) {
+        && vajramDefinition.def() instanceof VajramDef<?>) {
       if (kryonCommand instanceof ForwardReceiveBatch forwardBatch) {
         return injectFacets(forwardBatch, vajramDefinition);
       } else if (kryonCommand instanceof DirectForwardReceive forwardReceive) {
@@ -124,24 +125,24 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandRespons
       Set<FacetSpec<?, ?>> injectableFacets,
       FacetValuesBuilder facetsBuilder) {
     for (FacetSpec facetSpec : injectableFacets) {
-      if (!(facetSpec instanceof DefaultFacetSpec defaultFacetSpec)) {
+      if (!(facetSpec instanceof DefaultFacetSpec<?, ?> defaultFacetSpec)) {
         continue;
       }
-      Errable<?> facetValue = defaultFacetSpec.getFacetValue(facetsBuilder);
+      Errable<?> facetValue = defaultFacetSpec.getFacetValue(facetsBuilder).asErrable();
       if (facetValue.valueOpt().isPresent()) {
         continue;
       }
       // Input was not resolved by calling vajram.
       Errable<Object> injectedValue = getInjectedValue(vajramDefinition.vajramId(), facetSpec);
       if (injectedValue instanceof Failure<Object> f) {
-        defaultFacetSpec.setFacetValue(facetsBuilder, f);
+        defaultFacetSpec.setFacetValue(facetsBuilder, new ErrableFacetValue<>(f));
         log.error(
             "Could not inject input {} of vajram {}",
             facetSpec,
             kryon.getKryonDefinition().vajramID().id(),
             f.error());
       }
-      defaultFacetSpec.setFacetValue(facetsBuilder, injectedValue);
+      defaultFacetSpec.setFacetValue(facetsBuilder, new ErrableFacetValue<>(injectedValue));
     }
     return facetsBuilder;
   }

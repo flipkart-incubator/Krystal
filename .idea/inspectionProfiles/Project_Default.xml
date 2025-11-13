@@ -479,6 +479,9 @@
           <option value="cast.unsafe" />
           <option value="assignment" />
           <option value="InstantiationOfUtilityClass" />
+          <option value="return" />
+          <option value="override.return" />
+          <option value="override.param" />
         </list>
       </option>
     </inspection_tool>

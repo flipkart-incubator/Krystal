@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id 'application'
     id 'com.flipkart.krystal' version "${krystal_version}"
-    id 'com.flipkart.java.code.standard' version '4.1'
+    id 'com.flipkart.java.code.standard' version "${java_code_std_version}"
     id 'io.quarkus' version "${quarkus_version}"
 }
 
@@ -15,7 +15,7 @@ dependencies {
 
     implementation platform("com.flipkart.krystal:lattice-bom:${lattice_version}")
     implementation platform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
-    annotationProcessor platform("com.flipkart.krystal:lattice-bom:${lattice_version}")
+    krystalModelsGenProcessor platform("com.flipkart.krystal:lattice-bom:${lattice_version}")
 
     implementation 'com.flipkart.krystal:lattice-rest-quarkus'
     implementation 'com.flipkart.krystal:lattice-guice-servlet'
@@ -23,14 +23,14 @@ dependencies {
     implementation 'com.flipkart.krystal:vajram-json'
     implementation 'com.flipkart.krystal:vajram-java-sdk'
 
-    annotationProcessor 'com.flipkart.krystal:lattice-codegen'
-    annotationProcessor 'com.flipkart.krystal:lattice-guice-codegen'
-    annotationProcessor 'com.flipkart.krystal:lattice-json-codegen'
-    annotationProcessor 'com.flipkart.krystal:lattice-rest-quarkus-codegen'
-    annotationProcessor 'com.flipkart.krystal:lattice-rest-codegen'
-    annotationProcessor 'com.flipkart.krystal:vajram-codegen'
-    annotationProcessor 'com.flipkart.krystal:vajram-json'
-    annotationProcessor 'com.flipkart.krystal:vajram-json-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:lattice-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:lattice-guice-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:lattice-json-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:lattice-rest-quarkus-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:lattice-rest-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-json'
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-json-codegen'
 
     testImplementation 'com.flipkart.krystal:vajram-guice'
     testImplementation 'com.flipkart.krystal:vajram-krystex'
