@@ -8,7 +8,7 @@ ext {
     clojarsusername = project.properties['clojarsusername'] ?: ""
     clojarspassword = project.properties['clojarspassword'] ?: ""
     krystal_version = '10.0.0.3-SNAPSHOT'
-    lattice_version = '0.0.12'
+    lattice_version = '0.0.13'
 
     java_code_std_version = '5.0'
 
