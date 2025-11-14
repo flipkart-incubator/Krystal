@@ -4,7 +4,6 @@ import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
 import static com.flipkart.krystal.vajram.samples.user.GetUserProfilesFromUserIds_Fac.userProfiles_n;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
@@ -17,7 +16,6 @@ import com.flipkart.krystal.vajram.samples.user.response_pojos.UserWithProfile;
 import java.util.ArrayList;
 import java.util.List;
 
-@ExternallyInvocable
 @Vajram
 public abstract class GetUserProfilesFromUserIds extends ComputeVajramDef<List<UserWithProfile>> {
 
