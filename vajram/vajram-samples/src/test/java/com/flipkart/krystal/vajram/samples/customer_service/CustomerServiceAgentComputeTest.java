@@ -11,6 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
@@ -18,6 +19,8 @@ import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.traits.ComputeDispatchPolicyImpl;
+import com.flipkart.krystal.vajramexecutor.krystex.traits.DispatchTargetComputing;
+import com.flipkart.krystal.vajramexecutor.krystex.traits.DispatchTargetComputing.DispatchTargetReqTypeComputer;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import java.util.Collection;
@@ -82,19 +85,20 @@ class CustomerServiceAgentComputeTest {
     graph.registerTraitDispatchPolicies(
         new ComputeDispatchPolicyImpl<>(
             CustomerServiceAgent_Req.class,
-            (dependency, request) -> {
-              InitialCommunication initialCommunication = request.initialCommunication();
-              var commType =
-                  initialCommunication == null
-                      ? CustomerServiceAgent_Req.class
-                      : initialCommunication.getClass();
-              return byAgent
-                  .getOrDefault(request.agentType(), Map.of())
-                  .getOrDefault(
-                      commType,
-                      defaultsByCommType.getOrDefault(
-                          commType, DefaultCustomerServiceAgent_Req.class));
-            },
+            (DispatchTargetReqTypeComputer<CustomerServiceAgent_Req>)
+                (dependency, request) -> {
+                  InitialCommunication initialCommunication = request.initialCommunication();
+                  var commType =
+                      initialCommunication == null
+                          ? CustomerServiceAgent_Req.class
+                          : initialCommunication.getClass();
+                  return byAgent
+                      .getOrDefault(request.agentType(), Map.of())
+                      .getOrDefault(
+                          commType,
+                          defaultsByCommType.getOrDefault(
+                              commType, DefaultCustomerServiceAgent_Req.class));
+                },
             ImmutableSet.copyOf(dispatchTargets),
             graph));
   }
