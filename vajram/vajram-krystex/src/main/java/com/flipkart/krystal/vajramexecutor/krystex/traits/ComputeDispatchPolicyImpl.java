@@ -7,17 +7,14 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.traits.ComputeDispatchPolicy;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.traits.DispatchTargetComputing.DispatchTargetComputer;
+import com.flipkart.krystal.vajramexecutor.krystex.traits.DispatchTargetComputing.DispatchTargetIdComputer;
 import com.google.common.collect.ImmutableSet;
+import java.util.Optional;
 import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class ComputeDispatchPolicyImpl<T extends Request<?>> extends ComputeDispatchPolicy {
-
-  @FunctionalInterface
-  public interface DispatchTargetComputer<T extends Request<?>> {
-
-    @Nullable Class<? extends T> computeDispatchTarget(@Nullable Dependency dependency, T request);
-  }
 
   private final VajramKryonGraph graph;
   private final Class<T> traitReqType;
@@ -48,22 +45,39 @@ public final class ComputeDispatchPolicyImpl<T extends Request<?>> extends Compu
   @Override
   public @Nullable VajramID getDispatchTargetID(
       @Nullable Dependency dependency, Request<?> request) {
-    try {
-      Class<? extends T> dispatchTarget =
-          dispatchTargetComputer.computeDispatchTarget(dependency, (T) request);
-      if (dispatchTarget == null) {
-        return null;
-      }
-      return graph.getVajramIdByVajramReqType(dispatchTarget);
-    } catch (ClassCastException e) {
-      throw new AssertionError(
-          "Request type "
-              + request.getClass()
-              + " which is not a sub type of trait request type: "
-              + traitReqType
-              + ". This should not be possible. There seems to be a bug in the platform",
-          e);
+    @Nullable Object dispatchTarget =
+        dispatchTargetComputer.computeDispatchTarget(dependency, (T) request);
+    if (dispatchTarget == null) {
+      return null;
     }
+    VajramID vajramID;
+    Class<? extends Request<?>> dispatchTargetReqClass;
+    if (dispatchTarget instanceof VajramID) {
+      vajramID = (VajramID) dispatchTarget;
+      dispatchTargetReqClass = graph.getVajramReqByVajramId(vajramID).orElse(null);
+    } else if (dispatchTarget instanceof Class<?>) {
+      dispatchTargetReqClass = (Class<? extends Request<?>>) dispatchTarget;
+      vajramID = graph.getVajramIdByVajramReqType(dispatchTargetReqClass);
+    } else {
+      throw new AssertionError(
+          "Dispatch target will be either a VajramID or a Class<? extends Request<?>>. This is a bug in platform code");
+    }
+
+    if (dispatchTargetReqClass == null) {
+      throw new IllegalArgumentException(
+          "Could not find request type for vajram Id: "
+              + vajramID
+              + ". Please check if the vajram has been loaded into the vajram graph");
+    }
+    if (!traitReqType.isAssignableFrom(dispatchTargetReqClass)) {
+      throw new IllegalArgumentException(
+          "Dispatch target id: "
+              + vajramID
+              + " does not implement the trait "
+              + traitID
+              + ". Please check your dispatch policy logic.");
+    }
+    return vajramID;
   }
 
   public ImmutableSet<Class<? extends Request<?>>> dispatchTargetReqs() {
