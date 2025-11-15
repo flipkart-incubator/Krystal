@@ -88,6 +88,7 @@ class FkJavaCodeStandardPlugin implements Plugin<Project> {
                     googleJavaFormat()
                 }
 
+        project.tasks.named('spotlessJava').configure { mustRunAfter('compileJava') }
         project.tasks.named('spotlessJava').configure { mustRunAfter('compileTestJava') }
 
         project.afterEvaluate(p -> {
