@@ -28,7 +28,7 @@ dependencies {
 
 afterEvaluate {
     //The main sourceSet doesn't have any vajrams - so remove this dependency
-    compileJava.dependsOn -= "testKrystalModelsGen"
+    compileJava.dependsOn -= "krystalModelsGen"
 }
 
 /*

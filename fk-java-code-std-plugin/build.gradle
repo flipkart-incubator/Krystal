@@ -17,7 +17,7 @@ ext {
 }
 
 group 'com.flipkart.java.code.standard'
-version '5.1'
+version '5.2'
 
 gradlePlugin {
     plugins {
