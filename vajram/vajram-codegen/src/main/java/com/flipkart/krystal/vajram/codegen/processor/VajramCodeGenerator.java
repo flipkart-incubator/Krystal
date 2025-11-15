@@ -1545,18 +1545,20 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
     ClassName requestBuilderType =
         ClassName.get(depRequestPackage, getImmutRequestInterfaceName(depVajramName.id()))
             .nestedClass("Builder");
-    CodeBlock.Builder codeBuilder;
+    CodeBlock.Builder codeBuilder =
+        CodeBlock.builder()
+            .add(
+"""
+  try {
+""");
     if (fanoutResolver) {
-      codeBuilder =
-          CodeBlock.builder()
-              .addStatement("var $2L = (($1T)_depRequest)", requestBuilderType, RESOLVER_REQUEST);
+      codeBuilder.addStatement(
+          "var $2L = (($1T)_depRequest)", requestBuilderType, RESOLVER_REQUEST);
     } else {
-      codeBuilder =
-          CodeBlock.builder()
-              .addStatement(
-                  "var $2L = (($1T)_depRequests)",
-                  ParameterizedTypeName.get(ClassName.get(List.class), requestBuilderType),
-                  RESOLVER_REQUESTS);
+      codeBuilder.addStatement(
+          "var $2L = (($1T)_depRequests)",
+          ParameterizedTypeName.get(ClassName.get(List.class), requestBuilderType),
+          RESOLVER_REQUESTS);
     }
     codeBuilder.addStatement(
         "var $L = (($T)_rawFacetValues)",
@@ -1584,7 +1586,15 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
             .collect(LinkedHashSet<String>::new, LinkedHashSet::add, LinkedHashSet::addAll),
         fanoutResolver,
         requestBuilderType);
-    return codeBuilder;
+    return codeBuilder.add(
+        """
+        } catch (Exception e) {
+          return $T.skip(
+              "Got exception while executing the resolver of the dependency '$L'", e);
+        }
+        """,
+        ResolverCommand.class,
+        dependencyModel.name());
   }
 
   private CodeBlock facetLocalVariable(
@@ -1818,8 +1828,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
      */
     String resolverResultVar = fanoutResolver ? RESOLVER_RESULTS : RESOLVER_RESULT;
     methodCodeBuilder.add(
-"""
-try {
+        """
   var $L = $L(""",
         resolverResultVar,
         resolverMethod.getSimpleName());
@@ -1975,15 +1984,6 @@ try {
       // close the else block of "if($L.shouldSkip())"
       methodCodeBuilder.endControlFlow();
     }
-    methodCodeBuilder.add(
-        """
-        } catch (Exception e) {
-          return $T.skip(
-              "Got exception while executing the resolver of the dependency '$L'", e);
-        }
-        """,
-        ResolverCommand.class,
-        dependencyModel.name());
   }
 
   private void modelsClassMembers(
