@@ -16,6 +16,7 @@ import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElseGet;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 
+import com.flipkart.krystal.annos.ComputeDelegationMode;
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.codegen.common.datatypes.DataTypeRegistry;
 import com.flipkart.krystal.codegen.common.models.CodeGenShortCircuitException;
@@ -30,6 +31,8 @@ import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.model.IfAbsent;
+import com.flipkart.krystal.vajram.ComputeVajramDef;
+import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -179,6 +182,11 @@ public class VajramCodeGenUtility {
 
   public VajramInfo computeVajramInfo(TypeElement vajramClass) {
     VajramInfoLite vajramInfoLite = computeVajramInfoLite(vajramClass);
+    String parentClassName =
+        ((TypeElement)
+                codegenUtil.processingEnv().getTypeUtils().asElement(vajramClass.getSuperclass()))
+            .getQualifiedName()
+            .toString();
     VajramInfoLite conformsToTraitInfo = getConformToTraitInfoFromVajram(vajramClass);
     Optional<Element> inputsClass =
         vajramClass.getEnclosedElements().stream()
@@ -205,6 +213,15 @@ public class VajramCodeGenUtility {
             .filter(variableElement -> variableElement.getAnnotation(Dependency.class) != null)
             .toList();
     AtomicInteger nextFacetId = new AtomicInteger(1);
+    ComputeDelegationMode delegationMode;
+    if (parentClassName.equals(IOVajramDef.class.getCanonicalName())) {
+      delegationMode = ComputeDelegationMode.SYNC;
+    } else if (parentClassName.equals(ComputeVajramDef.class.getCanonicalName())) {
+      delegationMode = ComputeDelegationMode.NONE;
+    } else {
+      throw codegenUtil.errorAndThrow(
+          "Unknown vajram parent class " + parentClassName, vajramClass);
+    }
     VajramInfo vajramInfo =
         new VajramInfo(
             vajramInfoLite,
@@ -229,7 +246,8 @@ public class VajramCodeGenUtility {
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .collect(toImmutableList()),
-            conformsToTraitInfo);
+            conformsToTraitInfo,
+            delegationMode);
     codegenUtil().note("VajramInfo: %s".formatted(vajramInfo));
     validateVajramInfo(vajramInfo);
     return vajramInfo;

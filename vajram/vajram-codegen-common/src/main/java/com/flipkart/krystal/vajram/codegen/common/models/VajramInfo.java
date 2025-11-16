@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.codegen.common.models;
 
 import static com.flipkart.krystal.facets.FacetType.INPUT;
 
+import com.flipkart.krystal.annos.ComputeDelegationMode;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.google.common.collect.ImmutableList;
@@ -17,7 +18,8 @@ public record VajramInfo(
     VajramInfoLite lite,
     ImmutableList<DefaultFacetModel> givenFacets,
     ImmutableList<DependencyModel> dependencies,
-    @Nullable VajramInfoLite conformsToTraitInfo) {
+    @Nullable VajramInfoLite conformsToTraitInfo,
+    ComputeDelegationMode vajramDelegationMode) {
 
   public VajramInfo {
     if (lite.isTrait()) {
