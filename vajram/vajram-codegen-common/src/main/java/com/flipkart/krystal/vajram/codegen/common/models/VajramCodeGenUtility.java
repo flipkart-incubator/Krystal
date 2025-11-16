@@ -60,6 +60,7 @@ import com.squareup.javapoet.TypeName;
 import jakarta.inject.Inject;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -182,12 +183,16 @@ public class VajramCodeGenUtility {
 
   public VajramInfo computeVajramInfo(TypeElement vajramClass) {
     VajramInfoLite vajramInfoLite = computeVajramInfoLite(vajramClass);
-    String parentClassName =
-        ((TypeElement)
-                codegenUtil.processingEnv().getTypeUtils().asElement(vajramClass.getSuperclass()))
-            .getQualifiedName()
-            .toString();
     VajramInfoLite conformsToTraitInfo = getConformToTraitInfoFromVajram(vajramClass);
+    String parentClassName = null;
+    if (vajramInfoLite.isVajram()) {
+      // All vajrams must have a parent class
+      parentClassName =
+          ((TypeElement)
+                  codegenUtil.processingEnv().getTypeUtils().asElement(vajramClass.getSuperclass()))
+              .getQualifiedName()
+              .toString();
+    }
     Optional<Element> inputsClass =
         vajramClass.getEnclosedElements().stream()
             .filter(element -> element.getKind() == ElementKind.CLASS)
@@ -213,11 +218,14 @@ public class VajramCodeGenUtility {
             .filter(variableElement -> variableElement.getAnnotation(Dependency.class) != null)
             .toList();
     AtomicInteger nextFacetId = new AtomicInteger(1);
-    ComputeDelegationMode delegationMode;
-    if (parentClassName.equals(IOVajramDef.class.getCanonicalName())) {
-      delegationMode = ComputeDelegationMode.SYNC;
-    } else if (parentClassName.equals(ComputeVajramDef.class.getCanonicalName())) {
-      delegationMode = ComputeDelegationMode.NONE;
+    ComputeDelegationMode outputLogicDelegationMode;
+    if (vajramInfoLite.isTrait()) {
+      // Traits don't have output logic, so there is not outputLogicDelegationMode
+      outputLogicDelegationMode = null;
+    } else if (IOVajramDef.class.getCanonicalName().equals(parentClassName)) {
+      outputLogicDelegationMode = ComputeDelegationMode.SYNC;
+    } else if (ComputeVajramDef.class.getCanonicalName().equals(parentClassName)) {
+      outputLogicDelegationMode = ComputeDelegationMode.NONE;
     } else {
       throw codegenUtil.errorAndThrow(
           "Unknown vajram parent class " + parentClassName, vajramClass);
@@ -247,7 +255,7 @@ public class VajramCodeGenUtility {
                 .map(Optional::get)
                 .collect(toImmutableList()),
             conformsToTraitInfo,
-            delegationMode);
+            outputLogicDelegationMode);
     codegenUtil().note("VajramInfo: %s".formatted(vajramInfo));
     validateVajramInfo(vajramInfo);
     return vajramInfo;
@@ -412,7 +420,21 @@ public class VajramCodeGenUtility {
     return null;
   }
 
+  public VajramInfoLite computeVajramInfoLite(TypeMirror vajramType) {
+    if (vajramType instanceof DeclaredType declaredType
+        && declaredType.asElement() instanceof TypeElement typeElement) {
+      return computeVajramInfoLite(typeElement, declaredType.getTypeArguments());
+    } else {
+      throw new AssertionError();
+    }
+  }
+
   public VajramInfoLite computeVajramInfoLite(TypeElement vajramOrReqClass) {
+    return computeVajramInfoLite(vajramOrReqClass, List.of());
+  }
+
+  public VajramInfoLite computeVajramInfoLite(
+      TypeElement vajramOrReqClass, List<? extends TypeMirror> typeArguments) {
     String vajramClassSimpleName = vajramOrReqClass.getSimpleName().toString();
     VajramID vajramId;
     CodeGenType responseType;
@@ -455,6 +477,7 @@ public class VajramCodeGenUtility {
         packageName,
         facetDetailsFromRequestType(requestType),
         vajramOrReqClass,
+        Collections.unmodifiableList(typeArguments),
         codegenUtil.processingEnv().getElementUtils().getDocComment(vajramOrReqClass),
         this);
   }
@@ -495,7 +518,7 @@ public class VajramCodeGenUtility {
   }
 
   private @Nullable VajramInfoLite getConformToTraitInfoFromVajram(TypeElement vajramClass) {
-    Optional<TypeElement> conformsToTrait = getConformsToTraitType(vajramClass);
+    Optional<TypeMirror> conformsToTrait = getConformsToTraitType(vajramClass);
     VajramInfoLite conformsToTraitInfo = null;
     if (conformsToTrait.isPresent()) {
       conformsToTraitInfo = computeVajramInfoLite(conformsToTrait.get());
@@ -503,12 +526,12 @@ public class VajramCodeGenUtility {
     return conformsToTraitInfo;
   }
 
-  private Optional<TypeElement> getConformsToTraitType(TypeElement vajramOrReqClass) {
+  private Optional<TypeMirror> getConformsToTraitType(TypeElement vajramOrReqClass) {
     for (TypeMirror superInterface : vajramOrReqClass.getInterfaces()) {
       Element element = typeUtils.asElement(superInterface);
-      if (element instanceof TypeElement typeElement
+      if (element instanceof TypeElement
           && checkNotNull(element).getAnnotation(Trait.class) != null) {
-        return Optional.of(typeElement);
+        return Optional.of(superInterface);
       }
     }
     return Optional.empty();

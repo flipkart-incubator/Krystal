@@ -55,6 +55,7 @@ import com.flipkart.krystal.annos.TraitDependency;
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.codegen.common.models.TypeAndName;
+import com.flipkart.krystal.codegen.common.models.TypeNameVisitor;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.concurrent.Futures;
 import com.flipkart.krystal.core.GraphExecutionData;
@@ -151,6 +152,7 @@ import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
+import com.squareup.javapoet.TypeVariableName;
 import com.squareup.javapoet.WildcardTypeName;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -280,8 +282,15 @@ public class VajramCodeGenerator implements CodeGenerator {
   }
 
   private void vajramRequest() {
-    ClassName requestInterfaceType = currentVajramInfo.lite().requestInterfaceType();
+    ClassName requestInterfaceType = currentVajramInfo.lite().requestInterfaceClassName();
     ClassName immutReqInterfaceType = currentVajramInfo.lite().reqImmutInterfaceType();
+    TypeMirror responseType =
+        currentVajramInfo.lite().responseType().javaModelType(util.processingEnv());
+    TypeName responseTypeName = new TypeNameVisitor(true).visit(responseType);
+    List<TypeVariableName> typeVariableNames = new ArrayList<>();
+    if (responseTypeName instanceof TypeVariableName typeVariableName) {
+      typeVariableNames = List.of(typeVariableName);
+    }
     List<DefaultFacetModel> inputs =
         currentVajramInfo.givenFacets().stream()
             .filter(facetDef -> facetDef.facetType().equals(INPUT))
@@ -291,6 +300,7 @@ public class VajramCodeGenerator implements CodeGenerator {
         util.codegenUtil()
             .interfaceBuilder(
                 requestInterfaceType.simpleName(),
+                typeVariableNames,
                 currentVajramInfo.vajramClassElem().getQualifiedName().toString())
             .addModifiers(PUBLIC)
             .addAnnotation(
@@ -351,6 +361,7 @@ public class VajramCodeGenerator implements CodeGenerator {
                                 inputs,
                                 requestInterfaceType,
                                 immutReqInterfaceType,
+                                typeVariableNames,
                                 CodeGenParams.builder().isRequest(true).build()))
                         .build())
                 .build()
@@ -418,7 +429,7 @@ public class VajramCodeGenerator implements CodeGenerator {
               .addStatement(
                   "return new $T(($T)$L)",
                   immutFacetsType.nestedClass("Builder"),
-                  currentVajramInfo.conformsToTraitOrSelf().requestInterfaceType(),
+                  currentVajramInfo.conformsToTraitOrSelf().requestInterfaceClassName(),
                   "request")
               .build());
       vajramWrapperClass.addMethod(executeGraph());
@@ -620,8 +631,8 @@ $L
               entry("list", List.class),
               entry("facetName", dependency.name()),
               entry("facetSpec", dependency.name() + FACET_SPEC_SUFFIX),
-              entry("req", dependency.depVajramInfo().requestInterfaceType()),
-              entry("depReqIface", dependency.depVajramInfo().requestInterfaceType()),
+              entry("req", dependency.depVajramInfo().requestInterfaceClassName()),
+              entry("depReqIface", dependency.depVajramInfo().requestInterfaceClassName()),
               entry("reqImmutType", dependency.depVajramInfo().reqImmutInterfaceType()),
               entry("facImmutPojo", currentVajramInfo.facetsImmutPojoType()),
               entry(
@@ -2031,7 +2042,8 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
         MethodSpec.Builder requestConstructor = constructorBuilder();
         requestConstructor.addParameter(
             ParameterSpec.builder(
-                    currentVajramInfo.conformsToTraitOrSelf().requestInterfaceType(), "_request")
+                    currentVajramInfo.conformsToTraitOrSelf().requestInterfaceClassName(),
+                    "_request")
                 .addAnnotation(NonNull.class)
                 .build());
         for (FacetGenModel facet : eligibleFacets) {
@@ -2157,7 +2169,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
           constructorBuilder()
               .addParameter(
                   ParameterSpec.builder(
-                          currentVajramInfo.conformsToTraitOrSelf().requestInterfaceType(),
+                          currentVajramInfo.conformsToTraitOrSelf().requestInterfaceClassName(),
                           "_request")
                       .build())
               .addStatement("this._request = _request._asBuilder()")
@@ -2268,7 +2280,8 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
   private ImmutableList<MethodSpec> facetContainerMethods(
       List<? extends FacetGenModel> eligibleFacets,
       ClassName enclosingClassName,
-      ClassName immutableClassName,
+      ClassName immutableClassRawName,
+      List<TypeVariableName> typeVariableNames,
       CodeGenParams codeGenParams) {
 
     // TODO : add validations for subsetRequest
@@ -2287,13 +2300,18 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                     : eligibleFacets.stream().map(FacetGenModel::name))
             .collect(Collectors.joining(", "));
     {
+      TypeName immutableClassName =
+          typeVariableNames.isEmpty()
+              ? immutableClassRawName
+              : ParameterizedTypeName.get(
+                  immutableClassRawName, typeVariableNames.toArray(TypeName[]::new));
       MethodSpec.Builder methodBuilder = methodBuilder("_build").returns(immutableClassName);
       if (codeGenParams.withImpl()) {
         methodBuilder.addStatement(
             codeGenParams.isBuilder()
                 ? "return new %s(%s)"
                     .formatted(
-                        immutableClassName.simpleName(),
+                        immutableClassRawName.simpleName(),
                         constructorParamString.formatted(
                             codeGenParams.wrapsRequest()
                                 ? "_request._build()"
@@ -2306,8 +2324,15 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
     }
 
     {
-      MethodSpec.Builder methodBuilder =
-          methodBuilder("_asBuilder").returns(immutableClassName.nestedClass("Builder"));
+      ClassName asBuilderRawType = immutableClassRawName.nestedClass("Builder");
+      TypeName asBuilderType;
+      if (typeVariableNames.isEmpty()) {
+        asBuilderType = asBuilderRawType;
+      } else {
+        asBuilderType =
+            ParameterizedTypeName.get(asBuilderRawType, typeVariableNames.toArray(TypeName[]::new));
+      }
+      MethodSpec.Builder methodBuilder = methodBuilder("_asBuilder").returns(asBuilderType);
       if (codeGenParams.withImpl()) {
         methodBuilder.addStatement(
             codeGenParams.isBuilder()
@@ -2325,12 +2350,19 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
     }
 
     {
-      MethodSpec.Builder methodBuilder =
-          methodBuilder("_newCopy")
-              .returns(
-                  codeGenParams.isBuilder()
-                      ? enclosingClassName.nestedClass("Builder")
-                      : enclosingClassName);
+      ClassName copyRawType =
+          codeGenParams.isBuilder()
+              ? enclosingClassName.nestedClass("Builder")
+              : enclosingClassName;
+      TypeName copyType;
+      if (typeVariableNames.isEmpty()) {
+        copyType = copyRawType;
+      } else {
+        copyType =
+            ParameterizedTypeName.get(copyRawType, typeVariableNames.toArray(TypeName[]::new));
+      }
+
+      MethodSpec.Builder methodBuilder = methodBuilder("_newCopy").returns(copyType);
       if (codeGenParams.withImpl()) {
         methodBuilder.addStatement(
             codeGenParams.isBuilder()
@@ -2465,6 +2497,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                           allFacets,
                           immutableFacetsType,
                           immutableFacetsType,
+                          List.of(),
                           CodeGenParams.builder().wrapsRequest(true).withImpl(true).build()))
                   .addMethod(
                       methodBuilder("_builder")
@@ -2480,6 +2513,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                                   allFacets,
                                   immutableFacetsType,
                                   immutableFacetsType,
+                                  List.of(),
                                   CodeGenParams.builder()
                                       .wrapsRequest(true)
                                       .isBuilder(true)
@@ -2805,7 +2839,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
             FacetUtils.class,
             getRequestInterfaceType(),
             facet.name() + FACET_SPEC_SUFFIX,
-            conformsToTraitInfoOrSelf.requestInterfaceType(),
+            conformsToTraitInfoOrSelf.requestInterfaceClassName(),
             facet.name(),
             conformsToTraitInfoOrSelf.reqImmutInterfaceType().nestedClass("Builder"),
             facet.name());

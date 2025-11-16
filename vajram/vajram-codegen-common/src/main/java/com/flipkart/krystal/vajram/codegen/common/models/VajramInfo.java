@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajram.codegen.common.models;
 import static com.flipkart.krystal.facets.FacetType.INPUT;
 
 import com.flipkart.krystal.annos.ComputeDelegationMode;
+import com.flipkart.krystal.codegen.common.models.TypeNameVisitor;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.google.common.collect.ImmutableList;
@@ -19,7 +20,7 @@ public record VajramInfo(
     ImmutableList<DefaultFacetModel> givenFacets,
     ImmutableList<DependencyModel> dependencies,
     @Nullable VajramInfoLite conformsToTraitInfo,
-    ComputeDelegationMode vajramDelegationMode) {
+    @Nullable ComputeDelegationMode vajramDelegationMode) {
 
   public VajramInfo {
     if (lite.isTrait()) {
@@ -53,10 +54,11 @@ public record VajramInfo(
   public Iterable<TypeName> requestInterfaceSuperTypes() {
     return List.of(
         conformsToTraitInfo != null
-            ? conformsToTraitInfo.requestInterfaceType()
+            ? conformsToTraitInfo.requestInterfaceTypeName()
             : ParameterizedTypeName.get(
                 ClassName.get(Request.class),
-                util().codegenUtil().toTypeName(lite.responseType()).box()));
+                new TypeNameVisitor(true)
+                    .visit(lite.responseType().javaModelType(util().processingEnv()))));
   }
 
   private VajramCodeGenUtility util() {
@@ -65,7 +67,7 @@ public record VajramInfo(
 
   public Iterable<TypeName> immutReqInterfaceSuperTypes() {
     return List.of(
-        lite.requestInterfaceType(),
+        lite.requestInterfaceClassName(),
         conformsToTraitInfo != null
             ? conformsToTraitInfo.reqImmutInterfaceType()
             : ParameterizedTypeName.get(
@@ -75,7 +77,7 @@ public record VajramInfo(
 
   public Iterable<TypeName> reqBuilderInterfaceSuperTypes() {
     return List.of(
-        lite.requestInterfaceType(),
+        lite.requestInterfaceClassName(),
         conformsToTraitInfo != null
             ? conformsToTraitInfo.reqImmutInterfaceType().nestedClass("Builder")
             : ParameterizedTypeName.get(

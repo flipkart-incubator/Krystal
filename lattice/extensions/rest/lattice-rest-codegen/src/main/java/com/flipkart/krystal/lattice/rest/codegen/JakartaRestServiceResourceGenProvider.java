@@ -455,7 +455,7 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
                             util.processingEnv()
                                 .getElementUtils()
                                 .getTypeElement(
-                                    vajramInfo.lite().requestInterfaceType().canonicalName())),
+                                    vajramInfo.lite().requestInterfaceClassName().canonicalName())),
                         serdeProtocol)));
           }
           resourceMethods.add(serdeSpecificMethodBuilder);

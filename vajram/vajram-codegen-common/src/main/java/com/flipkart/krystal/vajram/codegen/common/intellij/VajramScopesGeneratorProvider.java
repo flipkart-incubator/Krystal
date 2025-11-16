@@ -8,7 +8,6 @@ import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.common.spi.AllVajramCodeGenContext;
 import com.flipkart.krystal.vajram.codegen.common.spi.AllVajramsCodeGeneratorProvider;
-import com.google.auto.service.AutoService;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -21,7 +20,6 @@ import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-@AutoService(AllVajramsCodeGeneratorProvider.class)
 public class VajramScopesGeneratorProvider implements AllVajramsCodeGeneratorProvider {
 
   private final Map<Path, Path> pathsToModuleCache = new HashMap<>();
@@ -46,7 +44,7 @@ public class VajramScopesGeneratorProvider implements AllVajramsCodeGeneratorPro
                 .getResource(
                     StandardLocation.SOURCE_PATH,
                     processingEnv.getElementUtils().getPackageOf(typeElement).getQualifiedName(),
-                    typeElement.getSimpleName());
+                    typeElement.getSimpleName() + ".java");
         Path vajramFilePath = Path.of(vajramFile.toUri());
         Path vajramModule = findContainingModule(vajramFilePath);
         if (vajramModule != null) {
@@ -55,7 +53,7 @@ public class VajramScopesGeneratorProvider implements AllVajramsCodeGeneratorPro
       } catch (IOException e) {
         util.codegenUtil()
             .error(
-                "Could not read vajram file to generate 'Vajram' scope xml for intellij ide platform"
+                "Could not read vajram file to generate 'Vajram' scope xml for intellij ide platform. "
                     + getStackTraceAsString(e),
                 typeElement);
       }

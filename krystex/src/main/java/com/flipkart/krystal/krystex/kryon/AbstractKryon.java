@@ -20,7 +20,7 @@ import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonCommandResponse>
+abstract sealed class AbstractKryon<C extends KryonCommand<?>, R extends KryonCommandResponse>
     implements Kryon<C, R> permits BatchKryon, DirectKryon {
   /**
    * Initial capacity for maps and sets. In load tests in real-world applications, substantial CPU

@@ -34,14 +34,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
-class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandResponse> {
+class InjectingDecoratedKryon implements Kryon<KryonCommand<?>, KryonCommandResponse> {
 
-  private final Kryon<KryonCommand, KryonCommandResponse> kryon;
+  private final Kryon<KryonCommand<?>, KryonCommandResponse> kryon;
   private final VajramKryonGraph vajramKryonGraph;
   private final @Nullable VajramInjectionProvider injectionProvider;
 
   InjectingDecoratedKryon(
-      Kryon<KryonCommand, KryonCommandResponse> kryon,
+      Kryon<KryonCommand<?>, KryonCommandResponse> kryon,
       VajramKryonGraph vajramKryonGraph,
       @Nullable VajramInjectionProvider injectionProvider) {
     this.kryon = kryon;
@@ -55,7 +55,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandRespons
   }
 
   @Override
-  public CompletableFuture<KryonCommandResponse> executeCommand(KryonCommand kryonCommand) {
+  public CompletableFuture<KryonCommandResponse> executeCommand(KryonCommand<?> kryonCommand) {
     VajramDefinition vajramDefinition =
         vajramKryonGraph.getVajramDefinition(vajramID(kryonCommand.vajramID().id()));
     if (vajramDefinition.metadata().isInputInjectionNeeded()
@@ -124,7 +124,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandRespons
       VajramDefinition vajramDefinition,
       Set<FacetSpec<?, ?>> injectableFacets,
       FacetValuesBuilder facetsBuilder) {
-    for (FacetSpec facetSpec : injectableFacets) {
+    for (var facetSpec : injectableFacets) {
       if (!(facetSpec instanceof DefaultFacetSpec<?, ?> defaultFacetSpec)) {
         continue;
       }
@@ -148,7 +148,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandRespons
   }
 
   @SuppressWarnings("unchecked")
-  private Errable<Object> getInjectedValue(VajramID vajramId, FacetSpec facetDef) {
+  private Errable<Object> getInjectedValue(VajramID vajramId, FacetSpec<?, ?> facetDef) {
     VajramInjectionProvider inputInjector = this.injectionProvider;
     if (inputInjector == null) {
       var exception = new StackTracelessException("Dependency injector is null");

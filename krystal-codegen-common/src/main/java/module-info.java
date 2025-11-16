@@ -1,4 +1,8 @@
+import com.flipkart.krystal.codegen.common.datatypes.DataTypeFactory;
+
 module flipkart.krystal.codegen.common {
+  uses DataTypeFactory;
+
   exports com.flipkart.krystal.codegen.common.spi;
   exports com.flipkart.krystal.codegen.common.models;
   exports com.flipkart.krystal.codegen.common.datatypes;
