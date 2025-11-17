@@ -1,4 +1,8 @@
+import com.flipkart.krystal.lattice.codegen.spi.LatticeCodeGeneratorProvider;
+
 module flipkart.krystal.lattice.codegen {
+  uses LatticeCodeGeneratorProvider;
+
   exports com.flipkart.krystal.lattice.codegen;
   exports com.flipkart.krystal.lattice.codegen.spi;
 

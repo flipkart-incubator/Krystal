@@ -366,4 +366,12 @@ public class VajramExecutionStrategy extends ExecutionStrategy {
         VajramExecutionStrategy graphQLExecutionStrategy,
         ExecutionStrategyParameters graphQLExecutionStrategyParameters);
   }
+
+  @FunctionalInterface
+  public interface GraphQlOpExecutor {
+    CompletableFuture<?> execute(
+        ExecutionContext graphQLExecutionContext,
+        VajramExecutionStrategy graphQLExecutionStrategy,
+        ExecutionStrategyParameters graphQLExecutionStrategyParameters);
+  }
 }

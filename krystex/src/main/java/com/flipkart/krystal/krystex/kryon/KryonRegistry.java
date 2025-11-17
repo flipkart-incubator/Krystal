@@ -7,7 +7,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
-final class KryonRegistry<T extends Kryon<? extends KryonCommand, ? extends KryonCommandResponse>> {
+final class KryonRegistry<
+    T extends Kryon<? extends KryonCommand<?>, ? extends KryonCommandResponse>> {
 
   private final Map<VajramID, T> kryons = new LinkedHashMap<>();
 

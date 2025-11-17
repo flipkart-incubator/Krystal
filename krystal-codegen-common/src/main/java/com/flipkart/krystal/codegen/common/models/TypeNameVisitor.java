@@ -5,11 +5,14 @@ import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
+import com.squareup.javapoet.TypeVariableName;
 import com.squareup.javapoet.WildcardTypeName;
 import java.util.ArrayList;
 import java.util.List;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ErrorType;
@@ -32,6 +35,16 @@ import javax.lang.model.util.AbstractTypeVisitor14;
  * href="https://github.com/square/javapoet/issues/685">issue</a>)
  */
 public class TypeNameVisitor extends AbstractTypeVisitor14<TypeName, Void> {
+
+  private final boolean boxTypes;
+
+  public TypeNameVisitor() {
+    this(false);
+  }
+
+  public TypeNameVisitor(boolean boxTypes) {
+    this.boxTypes = boxTypes;
+  }
 
   @Override
   public TypeName visitDeclared(DeclaredType t, Void inputDef) {
@@ -70,7 +83,12 @@ public class TypeNameVisitor extends AbstractTypeVisitor14<TypeName, Void> {
 
   @Override
   public TypeName visitTypeVariable(TypeVariable t, Void unused) {
-    return addTypeAnnotations(t, TypeName.get(t));
+    Element element = t.asElement();
+    if (element instanceof TypeParameterElement typeParameterElement) {
+      return addTypeAnnotations(t, TypeVariableName.get(typeParameterElement));
+    } else {
+      return addTypeAnnotations(t, TypeName.get(t));
+    }
   }
 
   @Override
@@ -126,6 +144,13 @@ public class TypeNameVisitor extends AbstractTypeVisitor14<TypeName, Void> {
   }
 
   private TypeName addTypeAnnotations(TypeMirror from, TypeName to) {
-    return to.annotated(from.getAnnotationMirrors().stream().map(AnnotationSpec::get).toList());
+    List<AnnotationSpec> annotations =
+        from.getAnnotationMirrors().stream().map(AnnotationSpec::get).toList();
+    to = boxTypes ? to.box() : to;
+    if (annotations.isEmpty()) {
+      return to;
+    } else {
+      return to.annotated(annotations);
+    }
   }
 }

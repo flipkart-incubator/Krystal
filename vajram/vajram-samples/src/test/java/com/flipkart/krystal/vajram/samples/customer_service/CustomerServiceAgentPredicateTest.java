@@ -92,7 +92,7 @@ class CustomerServiceAgentPredicateTest {
 
     // Execute and verify
     CompletableFuture<@Nullable String> result;
-    try (var executor = graph.createExecutor(getExecutorConfig()); ) {
+    try (var executor = graph.createExecutor(getExecutorConfig())) {
       result = executor.execute(request);
     }
 
@@ -111,7 +111,7 @@ class CustomerServiceAgentPredicateTest {
             ._build();
 
     CompletableFuture<@Nullable String> result;
-    try (var executor = graph.createExecutor(getExecutorConfig()); ) {
+    try (var executor = graph.createExecutor(getExecutorConfig())) {
       result = executor.execute(request);
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("L1 Agent");
@@ -129,7 +129,7 @@ class CustomerServiceAgentPredicateTest {
             ._build();
 
     CompletableFuture<@Nullable String> result;
-    try (var executor = graph.createExecutor(getExecutorConfig()); ) {
+    try (var executor = graph.createExecutor(getExecutorConfig())) {
       result = executor.execute(request);
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("L2 Agent");
@@ -147,7 +147,7 @@ class CustomerServiceAgentPredicateTest {
             ._build();
 
     CompletableFuture<@Nullable String> result;
-    try (var executor = graph.createExecutor(getExecutorConfig()); ) {
+    try (var executor = graph.createExecutor(getExecutorConfig())) {
       result = executor.execute(request);
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("L3 Agent");
@@ -169,7 +169,7 @@ class CustomerServiceAgentPredicateTest {
             ._build();
 
     CompletableFuture<@Nullable String> result;
-    try (var executor = graph.createExecutor(getExecutorConfig()); ) {
+    try (var executor = graph.createExecutor(getExecutorConfig())) {
       result = executor.execute(request);
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("I am an email Agent");
@@ -188,7 +188,7 @@ class CustomerServiceAgentPredicateTest {
             ._build();
 
     CompletableFuture<@Nullable String> result;
-    try (var executor = graph.createExecutor(getExecutorConfig()); ) {
+    try (var executor = graph.createExecutor(getExecutorConfig())) {
       result = executor.execute(request);
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("I am a call Agent");
@@ -207,7 +207,7 @@ class CustomerServiceAgentPredicateTest {
             ._build();
 
     CompletableFuture<@Nullable String> result;
-    try (var executor = graph.createExecutor(getExecutorConfig()); ) {
+    try (var executor = graph.createExecutor(getExecutorConfig())) {
       result = executor.execute(request);
     }
     assertThat(result)

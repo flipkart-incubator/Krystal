@@ -111,7 +111,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
               util.computeVajramInfoLite(
                   (TypeElement)
                       requireNonNull(util.processingEnv().getTypeUtils().asElement(vajram)));
-          ClassName requestType = vajramInfoLite.requestInterfaceType();
+          ClassName requestType = vajramInfoLite.requestInterfaceClassName();
           ClassName reqProtoModelType =
               ClassName.get(
                   vajramInfoLite.packageName(),

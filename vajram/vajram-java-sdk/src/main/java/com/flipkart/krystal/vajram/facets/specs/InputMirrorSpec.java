@@ -20,13 +20,13 @@ public final class InputMirrorSpec<T, CV extends Request> implements InputMirror
 
   @Getter private final VajramID ofVajramID;
   @Getter private final DataType<T> type;
-  @Getter private final Class<CV> ofVajram;
+  @Getter private final Class<? extends CV> ofVajram;
   @Getter private final int id;
   @Getter private final String name;
   @Getter private final String documentation;
   private @MonotonicNonNull ElementTags tags;
-  private final Function<Request, @Nullable T> getFromRequest;
-  private final BiConsumer<ImmutableRequest.Builder, @Nullable T> setToRequest;
+  private final Function<Request<?>, @Nullable T> getFromRequest;
+  private final BiConsumer<ImmutableRequest.Builder<?>, @Nullable T> setToRequest;
   private final Callable<ElementTags> tagsParser;
 
   public InputMirrorSpec(
@@ -34,11 +34,11 @@ public final class InputMirrorSpec<T, CV extends Request> implements InputMirror
       String name,
       VajramID ofVajramID,
       DataType<T> type,
-      Class<CV> ofVajram,
+      Class<? extends CV> ofVajram,
       String documentation,
       Callable<ElementTags> tagsParser,
-      Function<Request, @Nullable T> getFromRequest,
-      BiConsumer<ImmutableRequest.Builder, @Nullable T> setToRequest) {
+      Function<Request<?>, @Nullable T> getFromRequest,
+      BiConsumer<ImmutableRequest.Builder<?>, @Nullable T> setToRequest) {
     this.id = id;
     this.name = name;
     this.ofVajramID = ofVajramID;
@@ -51,13 +51,13 @@ public final class InputMirrorSpec<T, CV extends Request> implements InputMirror
   }
 
   @Override
-  public @Nullable T getFromRequest(Request request) {
+  public @Nullable T getFromRequest(Request<?> request) {
     return getFromRequest.apply(request);
   }
 
   @Override
   @SuppressWarnings("unchecked")
-  public void setToRequest(ImmutableRequest.Builder request, @Nullable Object value) {
+  public void setToRequest(ImmutableRequest.Builder<?> request, @Nullable Object value) {
     setToRequest.accept(request, (T) value);
   }
 

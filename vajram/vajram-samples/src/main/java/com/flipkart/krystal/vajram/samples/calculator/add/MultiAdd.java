@@ -5,7 +5,7 @@ import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.Trait;
-import com.flipkart.krystal.vajram.TraitRoot;
+import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
 import com.google.auto.value.AutoAnnotation;
 import jakarta.inject.Qualifier;
@@ -19,7 +19,7 @@ import lombok.experimental.UtilityClass;
 /** Adds all the {@code numbers} and returns the result */
 @Trait
 @CallGraphDelegationMode(SYNC)
-public interface MultiAdd extends TraitRoot<Integer> {
+public interface MultiAdd extends TraitDef<Integer> {
   @SuppressWarnings("initialization.field.uninitialized")
   class _Inputs {
     @IfAbsent(FAIL)

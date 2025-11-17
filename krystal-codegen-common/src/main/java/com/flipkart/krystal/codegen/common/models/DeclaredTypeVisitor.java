@@ -2,6 +2,7 @@ package com.flipkart.krystal.codegen.common.models;
 
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.codegen.common.datatypes.DataTypeRegistry;
+import com.flipkart.krystal.codegen.common.datatypes.VariableCodeGenType;
 import com.google.common.collect.ImmutableMap;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.QualifiedNameable;
@@ -72,7 +73,7 @@ public class DeclaredTypeVisitor extends AbstractTypeVisitor14<CodeGenType, Void
 
   @Override
   public CodeGenType visitTypeVariable(TypeVariable t, Void unused) {
-    throw uoe(t);
+    return new VariableCodeGenType(t, this.visit(t.getUpperBound()));
   }
 
   @Override

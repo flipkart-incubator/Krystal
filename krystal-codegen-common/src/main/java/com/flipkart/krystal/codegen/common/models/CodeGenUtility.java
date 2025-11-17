@@ -6,7 +6,6 @@ import static com.squareup.javapoet.CodeBlock.joining;
 import static java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.joining;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -34,6 +33,7 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeSpec.Builder;
+import com.squareup.javapoet.TypeVariableName;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -393,8 +393,7 @@ public class CodeGenUtility {
   }
 
   private static List<? extends TypeMirror> getTypeMirrors(DeclaredType targetType) {
-    List<? extends TypeMirror> typeParameters = targetType.getTypeArguments();
-    return typeParameters;
+    return targetType.getTypeArguments();
   }
 
   public void note(CharSequence message) {
@@ -535,30 +534,6 @@ public class CodeGenUtility {
     }
   }
 
-  /**
-   * Creates a class builder with the given class name. If the simpleName is a blank string, then
-   * the builder represents an anonymous class.
-   *
-   * @param simpleName simple name of class
-   * @param generatedForCanonicalName canonical name of the originating class for which the class is
-   *     being generated. Pass empty string if there is not such class.
-   * @return a class builder with the given class name, with the {@link Generated} annotation
-   *     applied on the class
-   */
-  public Builder classBuilder(String simpleName, String generatedForCanonicalName) {
-    Builder classBuilder;
-    if (simpleName.isBlank()) {
-      classBuilder = TypeSpec.anonymousClassBuilder("");
-    } else {
-      classBuilder = TypeSpec.classBuilder(simpleName);
-    }
-    if (!generatedForCanonicalName.isBlank()) {
-      classBuilder.addJavadoc("@see $L", generatedForCanonicalName);
-    }
-    addDefaultAnnotations(classBuilder);
-    return classBuilder;
-  }
-
   private void addDefaultAnnotations(Builder classBuilder) {
     classBuilder.addAnnotation(
         AnnotationSpec.builder(SuppressWarnings.class)
@@ -585,23 +560,65 @@ public class CodeGenUtility {
                 .build());
   }
 
+  public TypeSpec.Builder classBuilder(String simpleName, String generatedForCanonicalName) {
+    return classBuilder(simpleName, List.of(), generatedForCanonicalName);
+  }
+
+  /**
+   * Creates a class builder with the given class name. If the simpleName is a blank string, then
+   * the builder represents an anonymous class.
+   *
+   * @param simpleName simple name of class
+   * @param typeVariableNames Type variables of the interface, if any
+   * @param generatedForCanonicalName canonical name of the originating class for which the class is
+   *     being generated. Pass empty string if there is not such class.
+   * @return a class builder with the given class name, with the {@link Generated} annotation
+   *     applied on the class
+   */
+  public TypeSpec.Builder classBuilder(
+      String simpleName,
+      List<TypeVariableName> typeVariableNames,
+      String generatedForCanonicalName) {
+    TypeSpec.Builder classBuilder;
+    if (simpleName.isBlank()) {
+      classBuilder = TypeSpec.anonymousClassBuilder("");
+    } else {
+      classBuilder = TypeSpec.classBuilder(simpleName);
+    }
+    if (!generatedForCanonicalName.isBlank()) {
+      classBuilder.addJavadoc("@see $L", generatedForCanonicalName);
+    }
+    classBuilder.addTypeVariables(typeVariableNames);
+    addDefaultAnnotations(classBuilder);
+    return classBuilder;
+  }
+
+  public TypeSpec.Builder interfaceBuilder(String interfaceName, String generatedForCanonicalName) {
+    return interfaceBuilder(interfaceName, List.of(), generatedForCanonicalName);
+  }
+
   /**
    * Creates a class builder with the given class name. If the interfaceName is a blank string, then
    * the builder represents an anonymous class.
    *
    * @param interfaceName fully qualified class name
+   * @param typeVariableNames Type variables of the interface, if any
    * @param generatedForCanonicalName canonical name of the originating class for which the
    *     interface is being generated
    * @return a class builder with the given class name, with the {@link Generated} annotation
    *     applied on the class
    */
-  public Builder interfaceBuilder(String interfaceName, String generatedForCanonicalName) {
-    Builder interfaceBuilder;
+  public TypeSpec.Builder interfaceBuilder(
+      String interfaceName,
+      List<TypeVariableName> typeVariableNames,
+      String generatedForCanonicalName) {
+    TypeSpec.Builder interfaceBuilder;
     if (interfaceName.isBlank()) {
       throw new RuntimeException("interface name cannot be blank");
     } else {
       interfaceBuilder = TypeSpec.interfaceBuilder(interfaceName);
     }
+    interfaceBuilder.addTypeVariables(typeVariableNames);
     addDefaultAnnotations(interfaceBuilder);
     if (!generatedForCanonicalName.isBlank()) {
       interfaceBuilder.addJavadoc("@see $L", generatedForCanonicalName);
@@ -744,7 +761,6 @@ public class CodeGenUtility {
     return requireNonNull(sourcePath.getParent());
   }
 
-  @SuppressWarnings("unchecked")
   public <T> T getAnnotationElement(
       AnnotationMirror parentModelRootAnno, String annoElement, Class<T> type) {
     return type.cast(
@@ -800,7 +816,7 @@ public class CodeGenUtility {
    * Determines the parameter type for a method return type, handling Optional types.
    *
    * @param method The method
-   * @param isBuilder
+   * @param isBuilder is this a builder?
    * @return The appropriate parameter type
    */
   public TypeName getParameterType(ExecutableElement method, boolean isBuilder) {
