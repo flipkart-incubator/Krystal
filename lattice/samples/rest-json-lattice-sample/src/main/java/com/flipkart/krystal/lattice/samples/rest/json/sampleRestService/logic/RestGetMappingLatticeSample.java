@@ -20,7 +20,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A sample vajram to demonstrate integration between rest and vajrams. This vajram can be invoked
- * via a Http Rest call by remote clients.
+ * via an Http Rest call by remote clients.
  */
 @SuppressWarnings("initialization.field.uninitialized")
 @InvocableOutsideGraph

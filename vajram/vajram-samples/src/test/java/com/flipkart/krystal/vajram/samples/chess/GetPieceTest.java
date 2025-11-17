@@ -48,6 +48,7 @@ class GetPieceTest {
                 when(type_s, equalsEnum(KNIGHT)).to(GetKnight_Req.class),
                 when(type_s, equalsEnum(ROOK)).to(GetRook_Req.class)));
   }
+
   @AfterEach
   void tearDown() {
     executorLease.close();

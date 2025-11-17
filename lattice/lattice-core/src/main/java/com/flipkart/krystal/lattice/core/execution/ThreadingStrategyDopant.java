@@ -13,6 +13,8 @@ import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.Closeable;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.concurrent.ExecutorService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -50,7 +52,30 @@ public final class ThreadingStrategyDopant implements DopantWithConfig<ThreadStr
     return ThreadingStrategySpec.builder();
   }
 
-  public Closeable openRequestScope(Bindings seedMap) {
-    return binder.openRequestScope(seedMap, threadingStrategy);
+  public RequestScope openRequestScope(Bindings seedMap) {
+    return new RequestScope(binder.openRequestScope(seedMap, threadingStrategy));
+  }
+
+  public static class RequestScope implements AutoCloseable {
+
+    private final Closeable delegate;
+    private boolean closed;
+
+    public RequestScope(Closeable delegate) {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public void close() {
+      if (closed) {
+        return;
+      }
+      try {
+        delegate.close();
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
+      this.closed = true;
+    }
   }
 }
