@@ -13,5 +13,4 @@ module flipkart.krystal.vajram.codegen.common {
   requires static lombok;
   requires com.google.errorprone.annotations;
   requires flipkart.krystal.codegen.common;
-  requires com.google.auto.service;
 }

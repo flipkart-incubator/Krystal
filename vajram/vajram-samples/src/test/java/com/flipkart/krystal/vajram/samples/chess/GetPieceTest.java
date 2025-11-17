@@ -8,7 +8,6 @@ import static com.flipkart.krystal.vajram.samples.chess.PieceType.ROOK;
 import static com.flipkart.krystal.vajramexecutor.krystex.traits.PredicateDispatchUtil.dispatchTrait;
 import static com.flipkart.krystal.vajramexecutor.krystex.traits.PredicateDispatchUtil.when;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
@@ -18,6 +17,7 @@ import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import java.util.concurrent.CompletableFuture;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,6 +47,10 @@ class GetPieceTest {
             .conditionally(
                 when(type_s, equalsEnum(KNIGHT)).to(GetKnight_Req.class),
                 when(type_s, equalsEnum(ROOK)).to(GetRook_Req.class)));
+  }
+  @AfterEach
+  void tearDown() {
+    executorLease.close();
   }
 
   @Test
