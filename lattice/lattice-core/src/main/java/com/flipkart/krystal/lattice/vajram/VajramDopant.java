@@ -82,45 +82,36 @@ public final class VajramDopant implements SimpleDopant {
     CompletableFuture<RespT> future =
         CompletableFuture.supplyAsync(
                 () -> {
-                  List<AutoCloseable> initCloseables = new ArrayList<>();
+                  List<AutoCloseable> requestScopedCloseables = new ArrayList<>();
+                  var requestScope = threadingStrategyDopant.openRequestScope(requestScopeSeeds);
+                  requestScopedCloseables.add(requestScope);
+                  requestScopedCloseables.add(lease);
                   for (RequestInitializer requestInitializer :
                       executionContext.requestScopeInitializers()) {
-                    initCloseables.add(requestInitializer.init());
+                    requestScopedCloseables.add(requestInitializer.init());
                   }
                   try (KrystexVajramExecutor executor =
                       createExecutor(executorConfigBuilder.executorService(singleThreadExecutor))) {
-                    var requestScope = threadingStrategyDopant.openRequestScope(requestScopeSeeds);
-                    CompletableFuture<@Nullable RespT> result;
-                    try {
-                      result = executor.execute(vajramRequest);
-                    } catch (Exception e) {
-                      requestScope.close();
-                      return CompletableFuture.<@Nullable RespT>failedFuture(e);
-                    }
+                    CompletableFuture<@Nullable RespT> result = executor.execute(vajramRequest);
                     return result.whenComplete(
-                        (response, throwable) -> {
-                          try {
-                            requestScope.close();
-                          } catch (Throwable e) {
-                            log.error("Unable to close request scope", e);
-                          }
-                          try {
-                            lease.close();
-                          } catch (Throwable e) {
-                            log.error("Unable to close executor Service lease", e);
-                          }
-                          for (AutoCloseable closeable : initCloseables) {
-                            try {
-                              closeable.close();
-                            } catch (Throwable e) {
-                              log.error("Unable to execute initializer closeable", e);
-                            }
-                          }
-                        });
+                        (response, throwable) -> closeAll(requestScopedCloseables));
+                  } catch (Exception e) {
+                    closeAll(requestScopedCloseables);
+                    return CompletableFuture.<@Nullable RespT>failedFuture(e);
                   }
                 },
                 singleThreadExecutor)
             .thenCompose(f -> f);
     return future;
+  }
+
+  private static void closeAll(List<AutoCloseable> closeables) {
+    for (AutoCloseable closeable : closeables) {
+      try {
+        closeable.close();
+      } catch (Throwable e) {
+        log.error("Unable to execute initializer closeable", e);
+      }
+    }
   }
 }
