@@ -2,7 +2,7 @@ package com.flipkart.krystal.lattice.ext.rest.quarkus.codegen;
 
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.codegen.spi.DefaultSerdeProtocolProvider;
-import com.flipkart.krystal.lattice.rest.RestService;
+import com.flipkart.krystal.lattice.ext.rest.RestService;
 import com.flipkart.krystal.vajram.json.Json;
 import com.google.auto.service.AutoService;
 import javax.lang.model.element.TypeElement;

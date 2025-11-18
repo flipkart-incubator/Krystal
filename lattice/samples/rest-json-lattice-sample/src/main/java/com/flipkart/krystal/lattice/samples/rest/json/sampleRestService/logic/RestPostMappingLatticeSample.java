@@ -4,10 +4,10 @@ import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
-import com.flipkart.krystal.lattice.rest.api.Body;
-import com.flipkart.krystal.lattice.rest.api.Path;
-import com.flipkart.krystal.lattice.rest.api.PathParam;
-import com.flipkart.krystal.lattice.rest.api.methods.POST;
+import com.flipkart.krystal.lattice.ext.rest.api.Body;
+import com.flipkart.krystal.lattice.ext.rest.api.Path;
+import com.flipkart.krystal.lattice.ext.rest.api.PathParam;
+import com.flipkart.krystal.lattice.ext.rest.api.methods.POST;
 import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.models.JsonRequest;
 import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.models.JsonResponse;
 import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.models.JsonResponse_Immut;
