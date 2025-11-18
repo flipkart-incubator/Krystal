@@ -1,6 +1,4 @@
 type Query {
     """will return order using id, using OrderGraphQLAggregator"""
     order(id: ID): Order @inferIdFromArgs
-
-    name(allCaps: Boolean) : Name @dataFetcher(vajramId: "GetName")
 }
