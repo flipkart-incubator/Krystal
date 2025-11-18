@@ -3,10 +3,8 @@ package com.flipkart.krystal.lattice.vajram;
 import static com.flipkart.krystal.lattice.vajram.VajramDopant.DOPANT_TYPE;
 
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
-import com.flipkart.krystal.lattice.core.doping.DopantConfig.NoAnnotation;
-import com.flipkart.krystal.lattice.core.doping.DopantConfig.NoConfiguration;
-import com.flipkart.krystal.lattice.core.doping.DopantSpec;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
+import com.flipkart.krystal.lattice.core.doping.SimpleDopantSpec;
 import com.flipkart.krystal.lattice.core.doping.SimpleDopantSpecBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramKryonGraphBuilder;
@@ -18,7 +16,7 @@ import java.util.function.Consumer;
 record VajramDopantSpec(
     VajramKryonGraph vajramGraph,
     ImmutableList<KryonExecutorConfigurator> kryonExecutorConfigurators)
-    implements DopantSpec<NoAnnotation, NoConfiguration, VajramDopant> {
+    implements SimpleDopantSpec<VajramDopant> {
 
   @Override
   public Class<VajramDopant> dopantClass() {

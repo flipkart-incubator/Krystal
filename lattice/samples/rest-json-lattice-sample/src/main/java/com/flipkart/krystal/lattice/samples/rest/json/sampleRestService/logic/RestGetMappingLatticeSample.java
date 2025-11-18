@@ -3,12 +3,12 @@ package com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.logic;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
-import com.flipkart.krystal.lattice.rest.api.Path;
-import com.flipkart.krystal.lattice.rest.api.PathParam;
-import com.flipkart.krystal.lattice.rest.api.QueryParam;
-import com.flipkart.krystal.lattice.rest.api.methods.GET;
+import com.flipkart.krystal.lattice.ext.rest.api.Path;
+import com.flipkart.krystal.lattice.ext.rest.api.PathParam;
+import com.flipkart.krystal.lattice.ext.rest.api.QueryParam;
+import com.flipkart.krystal.lattice.ext.rest.api.methods.GET;
 import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.models.JsonResponse;
-import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.models.JsonResponse_Immut;
+import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.models.JsonResponse_ImmutJson;
 import com.flipkart.krystal.lattice.vajram.sdk.InvocableOutsideProcess;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
@@ -40,9 +40,9 @@ public abstract class RestGetMappingLatticeSample extends ComputeVajramDef<JsonR
   }
 
   static class _InternalFacets {
-    @Inject
-    @IfAbsent(FAIL)
-    JsonResponse_Immut.Builder reponseBuilder;
+    //    @Inject
+    //    @IfAbsent(FAIL)
+    //    JsonResponse_Immut.Builder reponseBuilder;
 
     @Inject
     @IfAbsent(FAIL)
@@ -51,12 +51,10 @@ public abstract class RestGetMappingLatticeSample extends ComputeVajramDef<JsonR
 
   @Output
   static JsonResponse output(
-      String fullPath,
-      @Nullable String name,
-      @Nullable String age,
-      UriInfo uriInfo,
-      JsonResponse_Immut.Builder reponseBuilder) {
-    return reponseBuilder
+      String fullPath, @Nullable String name, @Nullable String age, UriInfo uriInfo
+      //      , JsonResponse_Immut.Builder reponseBuilder
+      ) {
+    return JsonResponse_ImmutJson._builder()
         .path(fullPath)
         .qp_name(name)
         .qp_age(age)

@@ -3,10 +3,10 @@ package com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.logic;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
-import com.flipkart.krystal.lattice.rest.api.Path;
-import com.flipkart.krystal.lattice.rest.api.PathParam;
-import com.flipkart.krystal.lattice.rest.api.QueryParam;
-import com.flipkart.krystal.lattice.rest.api.methods.HEAD;
+import com.flipkart.krystal.lattice.ext.rest.api.Path;
+import com.flipkart.krystal.lattice.ext.rest.api.PathParam;
+import com.flipkart.krystal.lattice.ext.rest.api.QueryParam;
+import com.flipkart.krystal.lattice.ext.rest.api.methods.HEAD;
 import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.models.JsonResponse;
 import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.models.JsonResponse_Immut;
 import com.flipkart.krystal.lattice.vajram.sdk.InvocableOutsideProcess;
