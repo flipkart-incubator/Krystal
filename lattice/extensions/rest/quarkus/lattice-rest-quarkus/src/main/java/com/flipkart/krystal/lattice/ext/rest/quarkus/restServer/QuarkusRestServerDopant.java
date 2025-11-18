@@ -75,14 +75,13 @@ public final class QuarkusRestServerDopant implements SimpleDopant {
     }
   }
 
-  private void startServer(
-      RestServerConfig restServerConfig, Vertx vertx, List<?> applicationRestResources) {
+  private void startServer(RestServerConfig restServerConfig, Vertx vertx, List<?> restResources) {
     HttpServerOptions httpServerOptions = new HttpServerOptions();
 
     httpServerOptions.setPort(restServerConfig.port());
     vertx
         .createHttpServer(httpServerOptions)
-        .requestHandler(jaxRsRequestHandler(vertx, applicationRestResources))
+        .requestHandler(jaxRsRequestHandler(vertx, restResources))
         .listen(
             result -> {
               if (result.succeeded()) {

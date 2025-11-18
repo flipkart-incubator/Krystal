@@ -67,7 +67,7 @@ public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerC
 
   @Override
   public void start() throws IOException {
-    log.error("****** GrpcServerDopant : Starting GrpcServer {} ****** ", annotation.serverName());
+    log.info("****** GrpcServerDopant : Starting GrpcServer {} ****** ", annotation.serverName());
     ExecutorService executor = Executors.newFixedThreadPool(8);
     ServerBuilder<?> serverBuilder =
         Grpc.newServerBuilderForPort(config.port(), InsecureServerCredentials.create())

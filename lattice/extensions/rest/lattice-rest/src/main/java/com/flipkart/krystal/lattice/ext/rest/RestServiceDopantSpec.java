@@ -1,6 +1,7 @@
 package com.flipkart.krystal.lattice.ext.rest;
 
 import static com.flipkart.krystal.lattice.ext.rest.RestServiceDopant.REST_SERVICE_DOPANT_TYPE;
+import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.lattice.core.doping.DopantSpec;
 import com.flipkart.krystal.lattice.core.doping.DopantSpecBuilder;
@@ -34,8 +35,10 @@ record RestServiceDopantSpec(boolean serveStaticKrystalCallGraph, RestServiceDop
 
     @Override
     public RestServiceDopantSpec _buildSpec(
-        @Nullable RestService annotation, @Nullable RestServiceDopantConfig config) {
-      return new RestServiceDopantSpec(serveStaticKrystalCallGraph, config);
+        @Nullable RestService annotation, RestServiceDopantConfig config) {
+      return new RestServiceDopantSpec(
+          serveStaticKrystalCallGraph,
+          requireNonNull(config, "RestServiceDopantConfig cannot be null"));
     }
 
     @Override
