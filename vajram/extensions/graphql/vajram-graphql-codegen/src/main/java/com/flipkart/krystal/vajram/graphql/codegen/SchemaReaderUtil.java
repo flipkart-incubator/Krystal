@@ -104,10 +104,6 @@ public class SchemaReaderUtil {
                     op -> op));
     this.operationTypes = Maps.filterKeys(graphQLTypes, operationTypesByType::containsKey);
 
-    System.err.println(graphQLTypes);
-    System.err.println(operationTypesByType);
-    System.err.println(operationTypes);
-
     OperationTypeDefinition queryOpDef = operationTypesByOpName.get("query");
     if (queryOpDef != null) {
       GraphQLTypeName queryTypeName = GraphQLTypeName.of(queryOpDef.getTypeName().getName());
