@@ -47,7 +47,7 @@ public interface GraphQlTypeModel extends Model, SerializableGQlResponseJsonMode
   default byte[] _serialize() throws Exception {
     Map<String, @Nullable Object> map = new HashMap<>(3);
     map.put("data", _data());
-    
+
     // Collect errors using the ErrorCollector pattern
     ErrorCollector errorCollector = new DefaultErrorCollector();
     _collectErrors(errorCollector, new ArrayList<>());
@@ -55,7 +55,7 @@ public interface GraphQlTypeModel extends Model, SerializableGQlResponseJsonMode
     if (!errors.isEmpty()) {
       map.put("errors", errors);
     }
-    
+
     map.put("extensions", _extensions());
     return Json.OBJECT_WRITER.writeValueAsBytes(map);
   }

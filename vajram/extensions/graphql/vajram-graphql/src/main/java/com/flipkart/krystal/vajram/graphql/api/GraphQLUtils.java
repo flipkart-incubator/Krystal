@@ -18,12 +18,13 @@ public class GraphQLUtils {
     builder.scalar(ExtendedScalars.Object);
     return builder.build();
   }
+
   /**
    * Converts a GraphQLErrorInfo to a GraphQLError.
    *
-   * <p>This method provides the abstraction layer between our internal error representation
-   * and the GraphQL-specific error format. It creates a generic GraphQLError implementation
-   * that delegates to the error map from GraphQLErrorInfo.
+   * <p>This method provides the abstraction layer between our internal error representation and the
+   * GraphQL-specific error format. It creates a generic GraphQLError implementation that delegates
+   * to the error map from GraphQLErrorInfo.
    *
    * @param errorInfo The error info to convert
    * @return A GraphQLError instance
@@ -35,8 +36,8 @@ public class GraphQLUtils {
   /**
    * Generic GraphQLError implementation backed by a map.
    *
-   * <p>This implementation delegates all method calls to the underlying error map,
-   * making it flexible and easy to extend without modifying conversion logic.
+   * <p>This implementation delegates all method calls to the underlying error map, making it
+   * flexible and easy to extend without modifying conversion logic.
    */
   private static class GraphQLErrorFromMap implements GraphQLError {
     private final java.util.Map<String, Object> errorMap;
@@ -80,8 +81,8 @@ public class GraphQLUtils {
     @SuppressWarnings("unchecked")
     public java.util.Map<String, Object> getExtensions() {
       Object extensions = errorMap.get("extensions");
-      return extensions instanceof java.util.Map 
-          ? (java.util.Map<String, Object>) extensions 
+      return extensions instanceof java.util.Map
+          ? (java.util.Map<String, Object>) extensions
           : null;
     }
 

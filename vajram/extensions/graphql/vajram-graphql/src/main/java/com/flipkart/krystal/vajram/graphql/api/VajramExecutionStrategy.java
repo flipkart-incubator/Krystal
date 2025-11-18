@@ -111,23 +111,23 @@ public class VajramExecutionStrategy extends ExecutionStrategy {
                       .build();
                 } else {
                   Object resultData = processTypenameFields(executionContext, o);
-                  
+
                   // Collect errors from the result if it's a GraphQL type model
                   var resultBuilder = ExecutionResult.newExecutionResult().data(resultData);
-                  
+
                   if (resultData instanceof GraphQlTypeModel_Immut model) {
 
                     // Use ErrorCollector to gather all errors
                     ErrorCollector errorCollector = new DefaultErrorCollector();
                     model._collectErrors(errorCollector, new java.util.ArrayList<>());
-                    
+
                     // Add collected errors to the execution result
                     List<GraphQLError> errors = errorCollector.getErrors();
                     if (!errors.isEmpty()) {
                       resultBuilder.addErrors(errors);
                     }
                   }
-                  
+
                   return resultBuilder.build();
                 }
               });
