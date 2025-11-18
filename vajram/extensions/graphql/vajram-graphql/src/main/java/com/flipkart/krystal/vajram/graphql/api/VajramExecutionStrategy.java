@@ -7,6 +7,7 @@ import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.vajram.graphql.api.ExecutionLifecycleListener.ExecutionStartEvent;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlTypeModel_Immut;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
@@ -14,6 +15,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.google.common.collect.ImmutableSet;
 import graphql.ExecutionResult;
 import graphql.GraphQLContext;
+import graphql.GraphQLError;
 import graphql.GraphqlErrorException;
 import graphql.execution.ExecutionContext;
 import graphql.execution.ExecutionStepInfo;
@@ -109,7 +111,24 @@ public class VajramExecutionStrategy extends ExecutionStrategy {
                       .build();
                 } else {
                   Object resultData = processTypenameFields(executionContext, o);
-                  return ExecutionResult.newExecutionResult().data(resultData).build();
+
+                  // Collect errors from the result if it's a GraphQL type model
+                  var resultBuilder = ExecutionResult.newExecutionResult().data(resultData);
+
+                  if (resultData instanceof GraphQlTypeModel_Immut model) {
+
+                    // Use ErrorCollector to gather all errors
+                    ErrorCollector errorCollector = new DefaultErrorCollector();
+                    model._collectErrors(errorCollector, new java.util.ArrayList<>());
+
+                    // Add collected errors to the execution result
+                    List<GraphQLError> errors = errorCollector.getErrors();
+                    if (!errors.isEmpty()) {
+                      resultBuilder.addErrors(errors);
+                    }
+                  }
+
+                  return resultBuilder.build();
                 }
               });
     }
