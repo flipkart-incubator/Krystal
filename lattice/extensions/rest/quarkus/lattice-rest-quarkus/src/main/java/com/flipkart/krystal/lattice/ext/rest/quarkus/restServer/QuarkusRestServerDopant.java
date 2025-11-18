@@ -88,7 +88,7 @@ public final class QuarkusRestServerDopant implements Dopant<RestService, Quarku
 
     closeables.add(deployment::stop);
     VertxRegistry registry = deployment.getRegistry();
-    restServiceDopant.getResources().forEach(registry::addSingletonResource);
+    restServiceDopant.getRestResources().forEach(registry::addSingletonResource);
     return new VertxRequestHandler(vertx, deployment, restService.pathPrefix());
   }
 
@@ -142,7 +142,6 @@ public final class QuarkusRestServerDopant implements Dopant<RestService, Quarku
                 } else {
                   routingContext.fail(INTERNAL_SERVER_ERROR.code());
                 }
-                return;
               }
             });
   }

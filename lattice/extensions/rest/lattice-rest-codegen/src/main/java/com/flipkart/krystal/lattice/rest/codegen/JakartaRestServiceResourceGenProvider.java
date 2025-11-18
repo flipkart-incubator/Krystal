@@ -195,7 +195,7 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
             MethodSpec.overriding(
                     util.getMethod(
                         RestServiceDopant.class,
-                        RestServiceDopant.class.getMethod("getResources").getName(),
+                        RestServiceDopant.class.getDeclaredMethod("getCustomResources").getName(),
                         0))
                 .addStatement(
                     "return $T.of($L)",

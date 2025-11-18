@@ -60,7 +60,7 @@ public class StaticCallGraphHtml {
    * @param jsonGraphData the JSON string representing the graph data.
    * @return Final HTML content as a String with all resources inlined.
    */
-  public static String generateStaticCallGraphHtml(String jsonGraphData) {
+  static String generateStaticCallGraphHtml(String jsonGraphData) {
     try {
       String template = loadTemplate();
 

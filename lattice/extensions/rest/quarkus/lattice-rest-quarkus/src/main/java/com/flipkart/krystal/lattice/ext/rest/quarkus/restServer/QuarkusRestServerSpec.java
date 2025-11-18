@@ -21,6 +21,7 @@ record QuarkusRestServerSpec()
     return QuarkusRestServerDopant.class;
   }
 
+  @SuppressWarnings("ClassEscapesDefinedScope")
   public static class QuarkusRestServerSpecBuilder
       implements DopantSpecBuilder<RestService, QuarkusRestServerConfig, QuarkusRestServerSpec> {
 

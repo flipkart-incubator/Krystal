@@ -14,8 +14,9 @@ import com.flipkart.krystal.lattice.core.doping.DopantType;
 import com.flipkart.krystal.lattice.core.doping.DopantWithAnnotation;
 import com.flipkart.krystal.lattice.core.headers.Header;
 import com.flipkart.krystal.lattice.core.headers.SingleValueHeader;
-import com.flipkart.krystal.lattice.rest.RestServiceSpec.RestServiceSpecBuilder;
+import com.flipkart.krystal.lattice.rest.RestServiceDopantSpec.RestServiceDopantSpecBuilder;
 import com.flipkart.krystal.lattice.rest.api.status.HttpResponseStatusException;
+import com.flipkart.krystal.lattice.rest.visualization.StaticKrystalGraphResource;
 import com.flipkart.krystal.lattice.vajram.VajramDopant;
 import com.flipkart.krystal.lattice.vajram.VajramRequestExecutionContext;
 import com.flipkart.krystal.lattice.vajram.VajramRequestExecutionContext.VajramRequestExecutionContextBuilder;
@@ -27,6 +28,7 @@ import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.Response.ResponseBuilder;
 import jakarta.ws.rs.core.UriInfo;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -41,9 +43,11 @@ public abstract class RestServiceDopant implements DopantWithAnnotation<RestServ
 
   static final String REST_SERVICE_DOPANT_TYPE = "krystal.lattice.restService";
   private final VajramDopant vajramDopant;
+  private final RestServiceDopantSpec dopantSpec;
 
   @Inject
   protected RestServiceDopant(RestServiceDopantInitData initData) {
+    this.dopantSpec = initData.restServiceDopantSpec;
     this.vajramDopant = initData.vajramDopant();
   }
 
@@ -149,15 +153,24 @@ public abstract class RestServiceDopant implements DopantWithAnnotation<RestServ
     return seeds.build();
   }
 
-  public List<? extends @NonNull Object> getResources() {
+  public List<? extends @NonNull Object> getRestResources() {
+    List<Object> resources = new ArrayList<>(getCustomResources());
+    if (dopantSpec.serveStaticKrystalCallGraph()) {
+      resources.add(new StaticKrystalGraphResource(vajramDopant));
+    }
+    return resources;
+  }
+
+  protected List<? extends @NonNull Object> getCustomResources() {
     return List.of();
   }
 
-  public static RestServiceSpecBuilder restService() {
-    return RestServiceSpec.builder();
+  public static RestServiceDopantSpecBuilder restService() {
+    return RestServiceDopantSpec.builder();
   }
 
-  protected record RestServiceDopantInitData(VajramDopant vajramDopant) {
+  protected record RestServiceDopantInitData(
+      RestServiceDopantSpec restServiceDopantSpec, VajramDopant vajramDopant) {
 
     @Inject
     protected RestServiceDopantInitData {}
