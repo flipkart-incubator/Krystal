@@ -7,8 +7,8 @@ plugins {
 ext {
     clojarsusername = project.properties['clojarsusername'] ?: ""
     clojarspassword = project.properties['clojarspassword'] ?: ""
-    krystal_version = '10.0.0.3-SNAPSHOT'
-    lattice_version = '0.0.16-SNAPSHOT'
+    krystal_version = '10.0.0.4-SNAPSHOT'
+    lattice_version = '0.0.17-SNAPSHOT'
 
     java_code_std_version = '5.2'
 

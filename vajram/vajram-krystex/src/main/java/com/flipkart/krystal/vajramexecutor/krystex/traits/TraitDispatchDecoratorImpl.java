@@ -13,7 +13,7 @@ import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.commands.ClientSideCommand;
 import com.flipkart.krystal.krystex.commands.DirectForwardSend;
 import com.flipkart.krystal.krystex.commands.ForwardSendBatch;
-import com.flipkart.krystal.krystex.dependencydecoration.VajramInvocation;
+import com.flipkart.krystal.krystex.dependencydecoration.DependencyInvocation;
 import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
 import com.flipkart.krystal.krystex.kryon.BatchResponse;
 import com.flipkart.krystal.krystex.kryon.DirectResponse;
@@ -51,8 +51,8 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
 
   @Override
   @SuppressWarnings("FutureReturnValueIgnored")
-  public <R extends KryonCommandResponse> VajramInvocation<R> decorateDependency(
-      VajramInvocation<R> invocationToDecorate) {
+  public <R extends KryonCommandResponse> DependencyInvocation<R> decorateDependency(
+      DependencyInvocation<R> invocationToDecorate) {
     return kryonCommand -> {
       if (!vajramKryonGraph.getVajramDefinition(kryonCommand.vajramID()).isTrait()) {
         return invocationToDecorate.invokeDependency(kryonCommand);

@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import lombok.AllArgsConstructor;
@@ -51,6 +52,13 @@ public class PredicateDispatchUtil {
     public final PredicateDispatchPolicy conditionally(
         PredicatesDispatchCase<? extends Request<?>>... dispatchCases) {
       return new PredicateDispatchPolicyImpl(traitReq, ImmutableList.copyOf(dispatchCases), graph);
+    }
+
+    public final PredicateDispatchPolicy alwaysTo(Class<? extends R> dispatchTarget) {
+      return new PredicateDispatchPolicyImpl(
+          traitReq,
+          ImmutableList.of(new PredicatesDispatchCase<>(ImmutableMap.of(), dispatchTarget)),
+          graph);
     }
 
     public final PredicateDispatchPolicyImpl computingTargetWith(
@@ -94,8 +102,8 @@ public class PredicateDispatchUtil {
   @AllArgsConstructor(access = PRIVATE)
   public static class PredicatesDispatchCase<T extends Request<?>> implements DispatchCase {
 
-    ImmutableMap<InputMirror, InputValueMatcher<?>> inputPredicates;
-    Class<? extends T> dispatchTarget;
+    private final ImmutableMap<InputMirror, InputValueMatcher<?>> inputPredicates;
+    private final Class<? extends T> dispatchTarget;
 
     public ImmutableSet<InputMirror> dispatchEnabledInputs() {
       return inputPredicates.keySet();

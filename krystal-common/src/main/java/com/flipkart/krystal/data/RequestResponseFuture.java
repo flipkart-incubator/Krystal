@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** Represents the request and a response placeholder for a dependency invocation. */
+/** Represents the request and a response placeholder for a vajram invocation. */
 public record RequestResponseFuture<R extends Request<T>, T>(
     R request, CompletableFuture<@Nullable T> response) {
   public static <R extends Request<T>, T> RequestResponseFuture<R, T> forRequest(R request) {
