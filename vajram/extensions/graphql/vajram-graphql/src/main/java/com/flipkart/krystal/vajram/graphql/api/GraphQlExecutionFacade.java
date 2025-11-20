@@ -5,6 +5,7 @@ import static com.flipkart.krystal.vajram.graphql.api.VajramExecutionStrategy.VA
 
 import com.flipkart.krystal.core.VajramInvocation;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
+import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig.KryonExecutionConfigBuilder;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOpTypeModel;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlQueryAggregate_ReqImmutPojo;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
@@ -30,9 +31,8 @@ public class GraphQlExecutionFacade {
 
   public CompletableFuture<ExecutionResult> executeGraphQlRequest(
       KrystexVajramExecutor krystexVajramExecutor,
-      KryonExecutionConfig kryonExecutionConfig,
-      GraphQLQuery query,
-      String taskId) {
+      KryonExecutionConfigBuilder kryonExecutionConfig,
+      GraphQLQuery query) {
     Map<Object, Object> graphQLContext = new HashMap<>();
 
     graphQLContext.put(
@@ -43,18 +43,19 @@ public class GraphQlExecutionFacade {
               throw new UnsupportedOperationException(
                   query.operation() + " not supported by framework");
         });
+// TODO: kryonExecutionConfig.disabledDependentChains();
     graphQLContext.put(
         VAJRAM_INVOCATION_CTX_KEY,
         (VajramInvocation<GraphQlOpTypeModel>)
             requestResponseFuture ->
-                krystexVajramExecutor.execute(requestResponseFuture, kryonExecutionConfig));
+                krystexVajramExecutor.execute(requestResponseFuture, kryonExecutionConfig.build()));
 
     ExecutionInput executionInput =
         ExecutionInput.newExecutionInput()
             .graphQLContext(graphQLContext)
             .query(query.query())
             .variables(query.variables())
-            .executionId(ExecutionId.from(taskId))
+            .executionId(ExecutionId.from(kryonExecutionConfig.executionId()))
             .build();
     return graphQL.executeAsync(executionInput);
   }
