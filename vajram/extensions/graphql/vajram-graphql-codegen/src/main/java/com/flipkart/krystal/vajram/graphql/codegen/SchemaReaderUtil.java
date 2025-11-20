@@ -92,11 +92,15 @@ public class SchemaReaderUtil {
         new HashMap<>(entityTypes);
     aggregatableTypes.putAll(composedTypes);
 
+    Optional<SchemaDefinition> schemaDefinition = typeDefinitionRegistry.schemaDefinition();
+    if (schemaDefinition.isEmpty()) {
+      throw new IllegalStateException("Schema definition is mandatory. Could not find Schema definition.");
+    }
     Map<String, OperationTypeDefinition> operationTypesByOpName =
-        typeDefinitionRegistry.schemaDefinition().get().getOperationTypeDefinitions().stream()
+        schemaDefinition.get().getOperationTypeDefinitions().stream()
             .collect(Collectors.toMap(OperationTypeDefinition::getName, op -> op));
     Map<GraphQLTypeName, OperationTypeDefinition> operationTypesByType =
-        typeDefinitionRegistry.schemaDefinition().get().getOperationTypeDefinitions().stream()
+        schemaDefinition.get().getOperationTypeDefinitions().stream()
             .collect(
                 Collectors.toMap(
                     operationTypeDefinition ->

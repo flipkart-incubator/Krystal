@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 class GraphQLEntityGen implements CodeGenerator {
@@ -47,8 +48,12 @@ class GraphQLEntityGen implements CodeGenerator {
     SchemaReaderUtil schemaReaderUtil = graphQlCodeGenUtil.schemaReaderUtil();
     TypeDefinitionRegistry typeDefinitionRegistry = schemaReaderUtil.typeDefinitionRegistry();
     String rootPackageName = schemaReaderUtil.rootPackageName();
+    Optional<SchemaDefinition> schemaDefinition = typeDefinitionRegistry.schemaDefinition();
+    if (schemaDefinition.isEmpty()) {
+      return;
+    }
     Map<String, OperationTypeDefinition> opDefsByName =
-        typeDefinitionRegistry.schemaDefinition().get().getOperationTypeDefinitions().stream()
+        schemaDefinition.get().getOperationTypeDefinitions().stream()
             .collect(
                 Collectors.toMap(
                     operationTypeDefinition -> operationTypeDefinition.getTypeName().getName(),
