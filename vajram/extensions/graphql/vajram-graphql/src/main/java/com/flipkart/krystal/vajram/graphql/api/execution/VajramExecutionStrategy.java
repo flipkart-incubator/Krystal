@@ -1,17 +1,17 @@
-package com.flipkart.krystal.vajram.graphql.api;
+package com.flipkart.krystal.vajram.graphql.api.execution;
 
-import static graphql.ErrorType.DataFetchingException;
+import static com.flipkart.krystal.data.Errable.errableFrom;
+import static com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject._asExecutionResult;
 import static graphql.execution.ExecutionStrategyParameters.newParameters;
 import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.core.VajramInvocation;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponseFuture;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOpTypeModel;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlQueryAggregate_Req;
 import graphql.ExecutionResult;
 import graphql.GraphQLContext;
-import graphql.GraphQLError;
 import graphql.execution.ExecutionContext;
 import graphql.execution.ExecutionStepInfo;
 import graphql.execution.ExecutionStrategy;
@@ -29,6 +29,7 @@ import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLType;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -52,16 +53,16 @@ public class VajramExecutionStrategy extends ExecutionStrategy {
     Object operationRequest =
         requireNonNull(
             graphQLContext.get(GRAPHQL_OPERATION_REQUEST_CTX_KEY),
-            () -> GRAPHQL_OPERATION_REQUEST_CTX_KEY + " cannot be null");
-    VajramInvocation<GraphQlOpTypeModel> vajramInvocation =
+            GRAPHQL_OPERATION_REQUEST_CTX_KEY + " cannot be null");
+    VajramInvocation<GraphQlOperationObject> vajramInvocation =
         requireNonNull(
             graphQLContext.get(VAJRAM_INVOCATION_CTX_KEY), "VajramInvocation cannot be null");
 
-    Request<GraphQlOpTypeModel> request;
+    Request<GraphQlOperationObject> request;
     if (operationRequest instanceof GraphQlQueryAggregate_Req<?> queryAggregateReq) {
       //noinspection unchecked
       request =
-          (Request<GraphQlOpTypeModel>)
+          (Request<GraphQlOperationObject>)
               queryAggregateReq
                   ._asBuilder()
                   .graphql_executionContext(executionContext)
@@ -71,43 +72,14 @@ public class VajramExecutionStrategy extends ExecutionStrategy {
       throw new IllegalArgumentException(
           "Operation request is not of type GraphQlQueryAggregate_Req");
     }
-    RequestResponseFuture<Request<GraphQlOpTypeModel>, GraphQlOpTypeModel> requestResponseFuture =
-        new RequestResponseFuture<>(request, new CompletableFuture<>());
+    RequestResponseFuture<Request<GraphQlOperationObject>, GraphQlOperationObject>
+        requestResponseFuture = new RequestResponseFuture<>(request, new CompletableFuture<>());
     vajramInvocation.executeVajram(requestResponseFuture);
     return requestResponseFuture
         .response()
-        .thenApply(
-            graphQlTypeModel -> {
-              if (graphQlTypeModel == null) {
-                return ExecutionResult.newExecutionResult()
-                    .addError(
-                        GraphQLError.newError()
-                            .message("Operation execution returned null")
-                            .errorType(DataFetchingException)
-                            .build())
-                    .build();
-              }
-              return ExecutionResult.newExecutionResult()
-                  .data(graphQlTypeModel)
-                  .errors(graphQlTypeModel._errors())
-                  .extensions(graphQlTypeModel._extensions())
-                  .build();
-            })
         .handle(
-            (executionResult, throwable) -> {
-              if (throwable != null) {
-                return ExecutionResult.newExecutionResult()
-                    .addError(
-                        throwable instanceof GraphQLError graphQLError
-                            ? graphQLError
-                            : GraphQLError.newError()
-                                .message(throwable.getMessage())
-                                .errorType(DataFetchingException)
-                                .build())
-                    .build();
-              }
-              return executionResult;
-            });
+            (graphQlOpTypeModel, throwable) ->
+                _asExecutionResult(errableFrom(graphQlOpTypeModel, throwable)));
   }
 
   public ExecutionStrategyParameters newParametersForFieldExecution(

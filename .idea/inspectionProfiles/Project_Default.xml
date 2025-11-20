@@ -483,6 +483,8 @@
           <option value="return" />
           <option value="override.return" />
           <option value="override.param" />
+          <option value="SameParameterValue" />
+          <option value="BooleanMethodIsAlwaysInverted" />
         </list>
       </option>
     </inspection_tool>

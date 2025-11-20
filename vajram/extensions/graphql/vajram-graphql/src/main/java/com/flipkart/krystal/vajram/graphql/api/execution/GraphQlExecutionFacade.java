@@ -1,12 +1,12 @@
-package com.flipkart.krystal.vajram.graphql.api;
+package com.flipkart.krystal.vajram.graphql.api.execution;
 
-import static com.flipkart.krystal.vajram.graphql.api.VajramExecutionStrategy.GRAPHQL_OPERATION_REQUEST_CTX_KEY;
-import static com.flipkart.krystal.vajram.graphql.api.VajramExecutionStrategy.VAJRAM_INVOCATION_CTX_KEY;
+import static com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy.GRAPHQL_OPERATION_REQUEST_CTX_KEY;
+import static com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy.VAJRAM_INVOCATION_CTX_KEY;
 
 import com.flipkart.krystal.core.VajramInvocation;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig.KryonExecutionConfigBuilder;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOpTypeModel;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlQueryAggregate_ReqImmutPojo;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import graphql.ExecutionInput;
@@ -29,9 +29,9 @@ public class GraphQlExecutionFacade {
     this.graphQL = graphQL;
   }
 
-  public CompletableFuture<ExecutionResult> executeGraphQlRequest(
+  public CompletableFuture<ExecutionResult> executeGraphQl(
       KrystexVajramExecutor krystexVajramExecutor,
-      KryonExecutionConfigBuilder kryonExecutionConfig,
+      KryonExecutionConfigBuilder kryonExecutionConfigBuilder,
       GraphQLQuery query) {
     Map<Object, Object> graphQLContext = new HashMap<>();
 
@@ -43,12 +43,13 @@ public class GraphQlExecutionFacade {
               throw new UnsupportedOperationException(
                   query.operation() + " not supported by framework");
         });
-// TODO: kryonExecutionConfig.disabledDependentChains();
+    // TODO: kryonExecutionConfig.disabledDependentChains();
+    KryonExecutionConfig kryonExecutionConfig = kryonExecutionConfigBuilder.build();
     graphQLContext.put(
         VAJRAM_INVOCATION_CTX_KEY,
-        (VajramInvocation<GraphQlOpTypeModel>)
+        (VajramInvocation<GraphQlOperationObject>)
             requestResponseFuture ->
-                krystexVajramExecutor.execute(requestResponseFuture, kryonExecutionConfig.build()));
+                krystexVajramExecutor.execute(requestResponseFuture, kryonExecutionConfig));
 
     ExecutionInput executionInput =
         ExecutionInput.newExecutionInput()

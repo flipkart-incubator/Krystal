@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.graphql.api;
+package com.flipkart.krystal.vajram.graphql.api.execution;
 
 import graphql.language.OperationDefinition.Operation;
 import java.util.Map;

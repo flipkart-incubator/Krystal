@@ -2,6 +2,15 @@ plugins {
     id 'com.flipkart.krystal' version "${krystal_version}"
 }
 
+sourceSets {
+    main {
+        resources {
+            // Add the custom directory to the resource source path
+            srcDirs 'src/main/graphqls'
+        }
+    }
+}
+
 dependencies {
     api project(':krystal-common')
     api project(':vajram:vajram-java-sdk')
@@ -11,4 +20,5 @@ dependencies {
 
     api 'com.graphql-java:graphql-java'
     api 'com.graphql-java:graphql-java-extended-scalars'
+    implementation 'org.reflections:reflections'
 }

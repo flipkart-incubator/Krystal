@@ -1,4 +1,5 @@
 type Query {
     """will return order using id, using OrderGraphQLAggregator"""
     order(id: ID): Order @inferIdFromArgs
+    dummy(id: ID): Dummy @inferIdFromArgs
 }

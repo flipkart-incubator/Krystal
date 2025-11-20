@@ -1,5 +1,6 @@
-package com.flipkart.krystal.vajram.graphql.api;
+package com.flipkart.krystal.vajram.graphql.api.errors;
 
+import com.flipkart.krystal.vajram.graphql.api.execution.GraphQLUtils;
 import graphql.GraphQLError;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,7 +13,7 @@ import java.util.stream.Collectors;
  * {@link GraphQLError} instances when {@link #getErrors()} is called. This provides a clean
  * abstraction layer between error collection and the GraphQL-specific error format.
  */
-public class DefaultErrorCollector implements ErrorCollector {
+final class DefaultErrorCollector implements ErrorCollector {
 
   private final List<GraphQLErrorInfo> errorInfos = new ArrayList<>();
 

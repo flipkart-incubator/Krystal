@@ -1,7 +1,9 @@
 module krystal.vajram.extensions.graphql {
-  exports com.flipkart.krystal.vajram.graphql.api;
   exports com.flipkart.krystal.vajram.graphql.api.model;
   exports com.flipkart.krystal.vajram.graphql.api.traits;
+  exports com.flipkart.krystal.vajram.graphql.api.errors;
+  exports com.flipkart.krystal.vajram.graphql.api.schema;
+  exports com.flipkart.krystal.vajram.graphql.api.execution;
 
   requires flipkart.krystal.common;
   requires com.google.common;
@@ -16,4 +18,5 @@ module krystal.vajram.extensions.graphql {
   requires static lombok;
   requires java.compiler;
   requires jakarta.inject;
+  requires org.reflections;
 }

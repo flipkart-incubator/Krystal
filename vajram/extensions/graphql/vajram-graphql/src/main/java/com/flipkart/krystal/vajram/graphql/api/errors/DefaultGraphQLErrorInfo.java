@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.graphql.api;
+package com.flipkart.krystal.vajram.graphql.api.errors;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -11,7 +11,7 @@ import java.util.Map;
  * <p>This implementation stores error information and converts it to a map format that follows the
  * GraphQL error specification.
  */
-public class DefaultGraphQLErrorInfo implements GraphQLErrorInfo {
+public final class DefaultGraphQLErrorInfo implements GraphQLErrorInfo {
 
   private final List<String> messages = new ArrayList<>();
   private final List<Object> path;

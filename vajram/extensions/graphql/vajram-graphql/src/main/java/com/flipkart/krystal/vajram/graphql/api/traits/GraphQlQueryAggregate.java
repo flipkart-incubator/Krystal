@@ -7,15 +7,14 @@ import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
-import com.flipkart.krystal.vajram.graphql.api.VajramExecutionStrategy;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOpTypeModel;
-import graphql.ExecutionInput;
+import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject;
 import graphql.execution.ExecutionContext;
 import graphql.execution.ExecutionStrategyParameters;
 
 @CallGraphDelegationMode(SYNC)
 @Trait
-public interface GraphQlQueryAggregate<T extends GraphQlOpTypeModel> extends TraitDef<T> {
+public interface GraphQlQueryAggregate<T extends GraphQlOperationObject> extends TraitDef<T> {
   class _Inputs {
     @IfAbsent(FAIL)
     ExecutionContext graphql_executionContext;

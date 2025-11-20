@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.graphql.codegen;
 
-import static com.flipkart.krystal.vajram.graphql.api.AbstractGraphQLEntity.DEFAULT_ENTITY_ID_FIELD;
+import static com.flipkart.krystal.vajram.graphql.api.execution.QueryAnalyseUtil.DEFAULT_ENTITY_ID_FIELD;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.MULTI_FIELD_DATA_FETCHER;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.SINGLE_FIELD_DATA_FETCHER;
 import static java.util.stream.Collectors.groupingBy;
@@ -92,11 +92,15 @@ public class SchemaReaderUtil {
         new HashMap<>(entityTypes);
     aggregatableTypes.putAll(composedTypes);
 
+    Optional<SchemaDefinition> schemaDefinition = typeDefinitionRegistry.schemaDefinition();
+    if (schemaDefinition.isEmpty()) {
+      throw new IllegalStateException("Schema definition is mandatory. Could not find Schema definition.");
+    }
     Map<String, OperationTypeDefinition> operationTypesByOpName =
-        typeDefinitionRegistry.schemaDefinition().get().getOperationTypeDefinitions().stream()
+        schemaDefinition.get().getOperationTypeDefinitions().stream()
             .collect(Collectors.toMap(OperationTypeDefinition::getName, op -> op));
     Map<GraphQLTypeName, OperationTypeDefinition> operationTypesByType =
-        typeDefinitionRegistry.schemaDefinition().get().getOperationTypeDefinitions().stream()
+        schemaDefinition.get().getOperationTypeDefinitions().stream()
             .collect(
                 Collectors.toMap(
                     operationTypeDefinition ->

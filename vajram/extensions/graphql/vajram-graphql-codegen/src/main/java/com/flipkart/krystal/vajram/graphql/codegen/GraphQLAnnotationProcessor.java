@@ -18,7 +18,8 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
 
 @SupportedAnnotationTypes({
-  "com.flipkart.krystal.vajram.graphql.api.GraphQLFetcher",
+  "com.flipkart.krystal.vajram.Vajram",
+  "com.flipkart.krystal.vajram.Trait",
   "com.flipkart.krystal.annos.Generated"
 })
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
@@ -44,7 +45,7 @@ public class GraphQLAnnotationProcessor extends AbstractKrystalAnnoProcessor {
     }
     if (!generated) {
       try {
-        new GraphQLTypeAggregatorGen(codeGenUtil()).generate();
+        new GraphQLObjectAggregateGen(codeGenUtil()).generate();
       } catch (Exception e) {
         util.error("[GraphQL Codegen Exception] " + getStackTraceAsString(e));
       }

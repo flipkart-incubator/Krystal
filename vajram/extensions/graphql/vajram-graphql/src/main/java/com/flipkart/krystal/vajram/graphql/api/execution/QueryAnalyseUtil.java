@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.graphql.api;
+package com.flipkart.krystal.vajram.graphql.api.execution;
 
 import static com.flipkart.krystal.core.VajramID.vajramID;
 import static java.util.Objects.requireNonNull;
@@ -18,6 +18,7 @@ import java.util.*;
 
 public class QueryAnalyseUtil {
 
+  public static final String DEFAULT_ENTITY_ID_FIELD = "id";
   private static final String FIRST_NODE = "QueryGraphQLAggregator";
   public static final String DATA_FETCHER = "dataFetcher";
   public static final String VAJRAM_ID = "vajramId";
