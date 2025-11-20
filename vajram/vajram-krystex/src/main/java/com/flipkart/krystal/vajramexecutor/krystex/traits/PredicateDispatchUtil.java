@@ -53,6 +53,13 @@ public class PredicateDispatchUtil {
       return new PredicateDispatchPolicyImpl(traitReq, ImmutableList.copyOf(dispatchCases), graph);
     }
 
+    public final PredicateDispatchPolicy alwaysTo(Class<? extends R> dispatchTarget) {
+      return new PredicateDispatchPolicyImpl(
+          traitReq,
+          ImmutableList.of(new PredicatesDispatchCase<>(ImmutableMap.of(), dispatchTarget)),
+          graph);
+    }
+
     public final PredicateDispatchPolicyImpl computingTargetWith(
         Function<? super R, Optional<? extends Class<? extends R>>> dispatchTargetSelector,
         ImmutableSet<? extends Class<? extends R>> dispatchTargets) {
@@ -94,8 +101,8 @@ public class PredicateDispatchUtil {
   @AllArgsConstructor(access = PRIVATE)
   public static class PredicatesDispatchCase<T extends Request<?>> implements DispatchCase {
 
-    ImmutableMap<InputMirror, InputValueMatcher<?>> inputPredicates;
-    Class<? extends T> dispatchTarget;
+    private final ImmutableMap<InputMirror, InputValueMatcher<?>> inputPredicates;
+    private final Class<? extends T> dispatchTarget;
 
     public ImmutableSet<InputMirror> dispatchEnabledInputs() {
       return inputPredicates.keySet();

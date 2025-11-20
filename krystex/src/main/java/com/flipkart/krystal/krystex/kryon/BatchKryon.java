@@ -39,7 +39,7 @@ import com.flipkart.krystal.krystex.commands.MultiRequestCommand;
 import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
-import com.flipkart.krystal.krystex.dependencydecoration.VajramInvocation;
+import com.flipkart.krystal.krystex.dependencydecoration.DependencyInvocation;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.request.InvocationId;
@@ -431,12 +431,12 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
     }
     DependentChain extendedDependentChain = dependentChain.extend(vajramID, dependency);
 
-    VajramInvocation<BatchResponse> kryonResponseVajramInvocation =
+    DependencyInvocation<BatchResponse> kryonResponseDependencyInvocation =
         decorateVajramInvocation(
             extendedDependentChain, depVajramID, kryonExecutor::executeCommand);
 
     CompletableFuture<BatchResponse> depResponse =
-        kryonResponseVajramInvocation.invokeDependency(
+        kryonResponseDependencyInvocation.invokeDependency(
             new ForwardSendBatch(
                 depVajramID,
                 depRequestsByDepInvocationId,

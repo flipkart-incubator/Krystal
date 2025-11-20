@@ -11,7 +11,7 @@ public class IntReqGenerator implements RequestIdGenerator {
   }
 
   @Override
-  public InvocationId newRequest(Object seed) {
+  public InvocationId newRequest(Supplier<Object> seed) {
     return new InvocationId(nextCounter++);
   }
 }

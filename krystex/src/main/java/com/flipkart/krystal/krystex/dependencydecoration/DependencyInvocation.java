@@ -5,6 +5,6 @@ import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
 import java.util.concurrent.CompletableFuture;
 
 @FunctionalInterface
-public interface VajramInvocation<R extends KryonCommandResponse> {
+public interface DependencyInvocation<R extends KryonCommandResponse> {
   CompletableFuture<R> invokeDependency(ClientSideCommand<R> kryonCommand);
 }

@@ -9,6 +9,7 @@ import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
 import com.flipkart.krystal.vajram.graphql.api.VajramExecutionStrategy;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOpTypeModel;
+import graphql.ExecutionInput;
 import graphql.execution.ExecutionContext;
 import graphql.execution.ExecutionStrategyParameters;
 

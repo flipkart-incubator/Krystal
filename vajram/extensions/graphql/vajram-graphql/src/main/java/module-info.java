@@ -15,4 +15,5 @@ module krystal.vajram.extensions.graphql {
   requires com.fasterxml.jackson.databind;
   requires static lombok;
   requires java.compiler;
+  requires jakarta.inject;
 }

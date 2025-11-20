@@ -5,5 +5,5 @@ import java.util.function.Supplier;
 public interface RequestIdGenerator {
   InvocationId newSubRequest(InvocationId parent, Supplier<String> suffix);
 
-  InvocationId newRequest(Object seed);
+  InvocationId newRequest(Supplier<Object> seed);
 }
