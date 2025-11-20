@@ -1,9 +1,9 @@
 package com.flipkart.krystal.vajram.graphql.codegen;
 
 import static com.flipkart.krystal.codegen.common.models.Constants.IMMUT_SUFFIX;
-import static com.flipkart.krystal.vajram.graphql.api.AbstractGraphQLEntity.DEFAULT_ENTITY_ID_FIELD;
+import static com.flipkart.krystal.vajram.graphql.api.execution.QueryAnalyseUtil.DEFAULT_ENTITY_ID_FIELD;
 import static com.flipkart.krystal.vajram.graphql.codegen.Constants.Directives.DATA_FETCHER;
-import static com.flipkart.krystal.vajram.graphql.codegen.GraphQLTypeAggregatorGen.GRAPHQL_RESPONSE;
+import static com.flipkart.krystal.vajram.graphql.codegen.GraphQLObjectAggregateGen.GRAPHQL_RESPONSE;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
@@ -15,10 +15,11 @@ import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.ModelRoot.ModelType;
 import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlEntity;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlEntityId;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlEntityModel;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlObject;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponseJson;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlTypeModel;
 import com.flipkart.krystal.vajram.graphql.codegen.Constants.Directives;
 import com.squareup.javapoet.*;
 import com.squareup.javapoet.TypeName;
@@ -30,6 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 class GraphQLEntityGen implements CodeGenerator {
 
@@ -45,10 +47,15 @@ class GraphQLEntityGen implements CodeGenerator {
     SchemaReaderUtil schemaReaderUtil = graphQlCodeGenUtil.schemaReaderUtil();
     TypeDefinitionRegistry typeDefinitionRegistry = schemaReaderUtil.typeDefinitionRegistry();
     String rootPackageName = schemaReaderUtil.rootPackageName();
+    Map<String, OperationTypeDefinition> opDefsByName =
+        typeDefinitionRegistry.schemaDefinition().get().getOperationTypeDefinitions().stream()
+            .collect(
+                Collectors.toMap(
+                    operationTypeDefinition -> operationTypeDefinition.getTypeName().getName(),
+                    od -> od));
 
     // Write the entity type file
-    ClassName entityTypeEnumClassName =
-        writeEntityTypeFile(typeDefinitionRegistry.types(), rootPackageName);
+    writeEntityTypeFile(typeDefinitionRegistry.types(), rootPackageName);
 
     //noinspection rawtypes
     for (Entry<String, TypeDefinition> entry : typeDefinitionRegistry.types().entrySet()) {
@@ -56,6 +63,8 @@ class GraphQLEntityGen implements CodeGenerator {
       @SuppressWarnings("rawtypes")
       TypeDefinition typeDefinition = entry.getValue();
       boolean isEntity = typeDefinition.hasDirective(Directives.ENTITY);
+      OperationTypeDefinition opDef = opDefsByName.get(typeDefinition.getName());
+      boolean isOpType = opDef != null;
       ClassName entityClassName = schemaReaderUtil.typeClassName(graphQLTypeName);
 
       TypeSpec typeSpec;
@@ -78,8 +87,7 @@ class GraphQLEntityGen implements CodeGenerator {
         if (isEntity) {
           methodSpecs.add(
               MethodSpec.overriding(
-                      util.getMethod(
-                          () -> GraphQlEntityModel.class.getMethod(DEFAULT_ENTITY_ID_FIELD)))
+                      util.getMethod(() -> GraphQlEntity.class.getMethod(DEFAULT_ENTITY_ID_FIELD)))
                   .addModifiers(PUBLIC, ABSTRACT)
                   .returns(schemaReaderUtil.entityIdClassName(entityClassName))
                   .build());
@@ -138,9 +146,11 @@ class GraphQLEntityGen implements CodeGenerator {
                 .addSuperinterface(
                     isEntity
                         ? ParameterizedTypeName.get(
-                            ClassName.get(GraphQlEntityModel.class),
+                            ClassName.get(GraphQlEntity.class),
                             schemaReaderUtil.entityIdClassName(entityClassName))
-                        : ClassName.get(GraphQlTypeModel.class))
+                        : isOpType
+                            ? ClassName.get(GraphQlOperationObject.class)
+                            : ClassName.get(GraphQlObject.class))
                 .build();
       } else {
         util.note("Skipping unknown entity type: " + typeDefinition);
@@ -243,7 +253,7 @@ class GraphQLEntityGen implements CodeGenerator {
             });
   }
 
-  private ClassName writeEntityTypeFile(
+  private void writeEntityTypeFile(
       Map<String, TypeDefinition> entityTypes, String rootPackageName) {
     ClassName entityTypeClassName = ClassName.get(rootPackageName, "GraphQLEntityType");
     TypeSpec.Builder entityTypeBuilder = TypeSpec.enumBuilder(entityTypeClassName);
@@ -257,6 +267,5 @@ class GraphQLEntityGen implements CodeGenerator {
 
     util.generateSourceFile(
         entityTypeClassName.canonicalName(), javaFileEntityType.toString(), null);
-    return entityTypeClassName;
   }
 }

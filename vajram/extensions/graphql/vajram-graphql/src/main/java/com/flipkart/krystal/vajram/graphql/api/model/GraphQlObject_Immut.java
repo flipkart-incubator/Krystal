@@ -1,11 +1,11 @@
 package com.flipkart.krystal.vajram.graphql.api.model;
 
 import com.flipkart.krystal.model.ImmutableModel;
-import com.flipkart.krystal.vajram.graphql.api.VajramExecutionStrategy;
+import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy;
 import graphql.execution.ExecutionContext;
 import graphql.execution.ExecutionStrategyParameters;
 
-public interface GraphQlTypeModel_Immut extends GraphQlTypeModel, ImmutableModel {
+public interface GraphQlObject_Immut extends GraphQlObject, ImmutableModel {
   interface Builder extends ImmutableModel.Builder {
 
     Builder graphql_executionContext(ExecutionContext graphql_executionContext);

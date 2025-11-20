@@ -1,5 +1,6 @@
-package com.flipkart.krystal.vajram.graphql.api;
+package com.flipkart.krystal.vajram.graphql.api.errors;
 
+import com.flipkart.krystal.vajram.graphql.api.execution.GraphQLUtils;
 import graphql.GraphQLError;
 import java.util.List;
 
@@ -19,6 +20,10 @@ import java.util.List;
  * }</pre>
  */
 public interface ErrorCollector {
+
+  static ErrorCollector defaultCollector() {
+    return new DefaultErrorCollector();
+  }
 
   /**
    * Adds a GraphQL error info to the collection.

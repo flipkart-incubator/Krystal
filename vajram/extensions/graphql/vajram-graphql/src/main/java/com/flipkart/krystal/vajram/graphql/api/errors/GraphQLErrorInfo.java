@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.graphql.api;
+package com.flipkart.krystal.vajram.graphql.api.errors;
 
 import java.util.Map;
 

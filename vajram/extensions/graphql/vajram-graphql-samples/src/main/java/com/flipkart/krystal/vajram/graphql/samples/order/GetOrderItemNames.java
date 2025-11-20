@@ -6,10 +6,8 @@ import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.graphql.api.GraphQLFetcher;
 import java.util.List;
 
-@GraphQLFetcher
 @Vajram
 public abstract class GetOrderItemNames extends ComputeVajramDef<GetOrderItemNames_GQlFields> {
   @SuppressWarnings("initialization.field.uninitialized")

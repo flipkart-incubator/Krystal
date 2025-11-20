@@ -23,11 +23,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class GraphQlCodeGenUtil {
 
-  private final CodeGenUtility util;
   @Getter private final SchemaReaderUtil schemaReaderUtil;
 
   public GraphQlCodeGenUtil(CodeGenUtility util) {
-    this.util = util;
     this.schemaReaderUtil = new SchemaReaderUtil(getSchemaFile(util));
   }
 

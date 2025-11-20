@@ -7,4 +7,6 @@ module krystal.vajram.ext.graphql.samples {
   requires org.slf4j;
   requires org.checkerframework.checker.qual;
   requires com.google.common;
+  requires com.fasterxml.jackson.databind;
+  requires flipkart.krystal.vajram.ext.json;
 }

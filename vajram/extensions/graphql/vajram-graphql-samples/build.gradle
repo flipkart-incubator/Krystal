@@ -10,6 +10,14 @@ plugins {
 tasks.withType(JavaCompile).configureEach {
     it.source(files('src/main/graphqls'))
 }
+sourceSets {
+    main {
+        resources {
+            // Add the custom directory to the resource source path
+            srcDirs 'src/main/graphqls'
+        }
+    }
+}
 
 dependencies {
     implementation platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
@@ -28,6 +36,36 @@ dependencies {
     annotationProcessor "org.projectlombok:lombok:$lombok_version"
 
     implementation 'org.slf4j:slf4j-api:2.0.11'
+
+    implementation project(':vajram:extensions:json:vajram-json')
+    implementation 'com.fasterxml.jackson.core:jackson-annotations'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+
+
+    testImplementation 'com.flipkart.krystal:vajram-krystex'
+    testImplementation platform('org.assertj:assertj-bom:3.25.2')
+    testImplementation 'org.assertj:assertj-core'
+}
+
+// 2. Define the Custom Copy Task
+tasks.register('extractGraphqls', Copy) {
+    def graphqlsDependency = configurations.compileClasspath.find {
+        it.name.contains('vajram-graphql')
+    }
+    // Use zipTree to treat the JAR file as a directory tree
+    from zipTree(graphqlsDependency)
+
+    // Filter to only copy the required files (e.g., all .graphqls files)
+    include '**/*.graphqls'
+
+    // Destination: Copy them into your main resources output folder.
+    // This makes them available on the classpath.
+    into sourceSets.main.output.resourcesDir
+}
+
+// 3. Ensure the copy task runs before resource processing
+processResources.configure {
+    dependsOn('extractGraphqls')
 }
 
 //Needed only if you want your project to be modularized using JPMS
