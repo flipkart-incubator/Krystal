@@ -5,7 +5,6 @@ import static com.flipkart.krystal.codegen.common.models.Constants.IMMUT_SUFFIX;
 import static com.flipkart.krystal.model.PlainJavaObject.POJO;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.REQUEST_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants._INTERNAL_FACETS_CLASS;
-import static com.flipkart.krystal.vajram.graphql.api.execution.QueryAnalyseUtil.DEFAULT_ENTITY_ID_FIELD;
 import static com.flipkart.krystal.vajram.graphql.codegen.Constants.Directives.DATA_FETCHER;
 import static com.flipkart.krystal.vajram.graphql.codegen.Constants.Directives.ID_FETCHER;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.INHERIT_ID_FROM_ARGS;
@@ -398,10 +397,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
     TypeDefinition objectTypeDefinition =
         schemaReaderUtil.typeDefinitionRegistry().getType(objectTypeName.value()).orElseThrow();
     boolean isEntity = objectTypeDefinition.hasDirective(Directives.ENTITY);
-    String entityIdFieldName =
-        isEntity
-            ? schemaReaderUtil.getEntityIdFieldName(objectTypeDefinition)
-            : DEFAULT_ENTITY_ID_FIELD;
+    String entityIdFieldName = schemaReaderUtil.getEntityIdFieldName(objectTypeDefinition);
     ClassName immutGQlRespJsonClassName = getImmutGQlRespJsonClassName(objectTypeName);
     MethodSpec.Builder builder =
         MethodSpec.methodBuilder("output")

@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.graphql.codegen;
 
 import static com.flipkart.krystal.codegen.common.models.Constants.IMMUT_SUFFIX;
-import static com.flipkart.krystal.vajram.graphql.api.execution.QueryAnalyseUtil.DEFAULT_ENTITY_ID_FIELD;
 import static com.flipkart.krystal.vajram.graphql.codegen.Constants.Directives.DATA_FETCHER;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQLObjectAggregateGen.GRAPHQL_RESPONSE;
 import static javax.lang.model.element.Modifier.ABSTRACT;
@@ -15,7 +14,6 @@ import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.ModelRoot.ModelType;
 import com.flipkart.krystal.model.SupportedModelProtocols;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlEntity;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlEntityId;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlObject;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject;
@@ -89,10 +87,7 @@ class GraphQLEntityGen implements CodeGenerator {
         GraphQLTypeName enclosingType = GraphQLTypeName.of(typeDefinition);
 
         boolean idMissing = true;
-        String entityIdFieldName =
-            isEntity
-                ? schemaReaderUtil.getEntityIdFieldName(typeDefinition)
-                : DEFAULT_ENTITY_ID_FIELD;
+        String entityIdFieldName = schemaReaderUtil.getEntityIdFieldName(typeDefinition);
 
         if (typeDefinition.getChildren() != null) {
           for (int i = 0; i < typeDefinition.getChildren().size(); i++) {
@@ -148,13 +143,9 @@ class GraphQLEntityGen implements CodeGenerator {
                 .addModifiers(PUBLIC)
                 .addMethods(methodSpecs)
                 .addSuperinterface(
-                    isEntity
-                        ? ParameterizedTypeName.get(
-                            ClassName.get(GraphQlEntity.class),
-                            schemaReaderUtil.entityIdClassName(entityClassName))
-                        : isOpType
-                            ? ClassName.get(GraphQlOperationObject.class)
-                            : ClassName.get(GraphQlObject.class))
+                    isOpType
+                        ? ClassName.get(GraphQlOperationObject.class)
+                        : ClassName.get(GraphQlObject.class))
                 .build();
       } else {
         util.note("Skipping unknown entity type: " + typeDefinition);
