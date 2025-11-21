@@ -2,8 +2,7 @@
 
 """
 #TODO: Add support for defining an entity without having an id field (i.e id is implicit, not explicit)
-#TODO: Support custom id field names with argument "entityIdField"
-directive @entity on OBJECT
+directive @entity(entityIdField: String) on OBJECT
 
 """
 Specifies the vajram which is responsible for fetching one or more fields of an graphQL type.

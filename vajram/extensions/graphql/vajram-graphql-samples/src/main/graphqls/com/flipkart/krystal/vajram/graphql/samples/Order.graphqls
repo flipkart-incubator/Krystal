@@ -17,8 +17,8 @@ type Order @entity{
     #hellos: [Hello] @inferIdFromParent
 }
 
-type Dummy @entity{
-    id: ID
+type Dummy @entity(entityIdField: "dummyId"){
+    dummyId: ID
     name: String!
     age: Int
     order: Order

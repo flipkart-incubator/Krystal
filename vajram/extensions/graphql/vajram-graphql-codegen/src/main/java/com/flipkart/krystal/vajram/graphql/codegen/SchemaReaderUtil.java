@@ -412,7 +412,9 @@ public class SchemaReaderUtil {
   }
 
   public String getEntityIdFieldName(TypeDefinition fieldTypeDef) {
-    return DEFAULT_ENTITY_ID_FIELD;
+    return getDirectiveArgumentString(
+            fieldTypeDef, Directives.ENTITY, DirectiveArgs.ENTITY_ID_FIELD)
+        .orElse(DEFAULT_ENTITY_ID_FIELD);
   }
 
   public Optional<GraphQLTypeName> getComposingEntityType(ObjectTypeDefinition typeDefinition) {
