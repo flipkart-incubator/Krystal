@@ -9,6 +9,7 @@ import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.model.Model;
@@ -89,11 +90,19 @@ class GraphQLEntityGen implements CodeGenerator {
         GraphQLTypeName enclosingType = GraphQLTypeName.of(typeDefinition);
 
         boolean idMissing = true;
+        String entityIdFieldName =
+            isEntity
+                ? schemaReaderUtil.getEntityIdFieldName(typeDefinition)
+                : DEFAULT_ENTITY_ID_FIELD;
         if (isEntity) {
           methodSpecs.add(
               MethodSpec.overriding(
                       util.getMethod(() -> GraphQlEntity.class.getMethod(DEFAULT_ENTITY_ID_FIELD)))
                   .addModifiers(PUBLIC, ABSTRACT)
+                  .addAnnotation(
+                      AnnotationSpec.builder(JsonProperty.class)
+                          .addMember("value", "$S", entityIdFieldName)
+                          .build())
                   .returns(schemaReaderUtil.entityIdClassName(entityClassName))
                   .build());
         }
@@ -101,7 +110,7 @@ class GraphQLEntityGen implements CodeGenerator {
           for (int i = 0; i < typeDefinition.getChildren().size(); i++) {
             if (typeDefinition.getChildren().get(i) instanceof FieldDefinition fieldDefinition) {
               String fieldName = fieldDefinition.getName();
-              boolean isEntityIdField = DEFAULT_ENTITY_ID_FIELD.equals(fieldName);
+              boolean isEntityIdField = entityIdFieldName.equals(fieldName);
               if (isEntity && isEntityIdField) {
                 idMissing = false;
                 continue;
@@ -120,9 +129,9 @@ class GraphQLEntityGen implements CodeGenerator {
           if (isEntity && idMissing) {
             util.error(
                 """
-                The entity %s does not have an 'id' field. Every entity MUST have an id.\
-                Either remove the '@entity' directive from the type or add an 'id' field"""
-                    .formatted(entityClassName.simpleName()));
+                The entity %s does not have an '%s' field. Every entity MUST have an id.\
+                Either remove the '@entity' directive from the type or add an '%s' field"""
+                    .formatted(entityClassName.simpleName(), entityIdFieldName, entityIdFieldName));
           }
         }
 

@@ -29,6 +29,7 @@ import com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponseJson;
 import com.flipkart.krystal.vajram.graphql.api.model.SerializableGQlResponseJsonModel;
 import com.flipkart.krystal.vajram.json.Json;
 import com.google.common.base.Suppliers;
+import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
@@ -583,10 +584,20 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
         continue;
       }
 
+      // Check if the interface method has @JsonProperty annotation with custom value
+      String jsonPropertyName = methodName;
+      JsonProperty jsonPropertyAnnotation = method.getAnnotation(JsonProperty.class);
+      if (jsonPropertyAnnotation != null && !jsonPropertyAnnotation.value().isEmpty()) {
+        jsonPropertyName = jsonPropertyAnnotation.value();
+      }
+
       MethodSpec.Builder getter =
           MethodSpec.methodBuilder(methodName)
               .addAnnotation(Override.class)
-              .addAnnotation(JsonProperty.class)
+              .addAnnotation(
+                  AnnotationSpec.builder(JsonProperty.class)
+                      .addMember("value", "$S", jsonPropertyName)
+                      .build())
               .addModifiers(PUBLIC)
               .returns(returnType);
 
@@ -766,6 +777,14 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
         continue;
       }
 
+      // Get the JSON property name
+      String jsonPropertyName = fieldName;
+      JsonProperty jsonPropertyAnnotation =
+          method.getAnnotation(JsonProperty.class);
+      if (jsonPropertyAnnotation != null && !jsonPropertyAnnotation.value().isEmpty()) {
+        jsonPropertyName = jsonPropertyAnnotation.value();
+      }
+
       TypeMirror returnType = method.getReturnType();
 
       if (isListType(returnType)) {
@@ -801,7 +820,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
             List.class,
             Object.class,
             java.util.ArrayList.class);
-        collectErrorsMethod.addCode("  newPath.add($S);\n", fieldName);
+        collectErrorsMethod.addCode("  newPath.add($S);\n", jsonPropertyName);
 
         if (listOfGraphQlModels) {
           // For lists of GraphQL models, handle both list-level and element-level errors
@@ -876,7 +895,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
             List.class,
             Object.class,
             java.util.ArrayList.class);
-        collectErrorsMethod.addCode("  newPath.add($S);\n", fieldName);
+        collectErrorsMethod.addCode("  newPath.add($S);\n", jsonPropertyName);
         collectErrorsMethod.addCode("  $L.handle(\n", fieldName);
         collectErrorsMethod.addCode("      _failure ->\n");
         collectErrorsMethod.addCode("          errorCollector.addError(\n");
@@ -895,7 +914,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
             List.class,
             Object.class,
             java.util.ArrayList.class);
-        collectErrorsMethod.addCode("  newPath.add($S);\n", fieldName);
+        collectErrorsMethod.addCode("  newPath.add($S);\n", jsonPropertyName);
         collectErrorsMethod.addCode("  errorCollector.addError(\n");
         collectErrorsMethod.addCode(
             "      new $T(newPath, err));\n", DefaultGraphQLErrorInfo.class);
