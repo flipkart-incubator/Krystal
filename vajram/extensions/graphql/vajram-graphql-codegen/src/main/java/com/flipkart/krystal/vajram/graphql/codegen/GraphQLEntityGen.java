@@ -9,7 +9,6 @@ import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.model.Model;
@@ -94,30 +93,21 @@ class GraphQLEntityGen implements CodeGenerator {
             isEntity
                 ? schemaReaderUtil.getEntityIdFieldName(typeDefinition)
                 : DEFAULT_ENTITY_ID_FIELD;
-        if (isEntity) {
-          methodSpecs.add(
-              MethodSpec.overriding(
-                      util.getMethod(() -> GraphQlEntity.class.getMethod(DEFAULT_ENTITY_ID_FIELD)))
-                  .addModifiers(PUBLIC, ABSTRACT)
-                  .addAnnotation(
-                      AnnotationSpec.builder(JsonProperty.class)
-                          .addMember("value", "$S", entityIdFieldName)
-                          .build())
-                  .returns(schemaReaderUtil.entityIdClassName(entityClassName))
-                  .build());
-        }
+
         if (typeDefinition.getChildren() != null) {
           for (int i = 0; i < typeDefinition.getChildren().size(); i++) {
             if (typeDefinition.getChildren().get(i) instanceof FieldDefinition fieldDefinition) {
               String fieldName = fieldDefinition.getName();
               boolean isEntityIdField = entityIdFieldName.equals(fieldName);
-              if (isEntity && isEntityIdField) {
-                idMissing = false;
-                continue;
-              }
+
               GraphQlFieldSpec fieldSpec =
                   schemaReaderUtil.fieldSpecFromField(fieldDefinition, "", enclosingType);
               TypeName typeNameForField = graphQlCodeGenUtil.toTypeNameForField(fieldSpec);
+
+              if (isEntity && isEntityIdField) {
+                idMissing = false;
+                typeNameForField = schemaReaderUtil.entityIdClassName(entityClassName);
+              }
 
               methodSpecs.add(
                   MethodSpec.methodBuilder(fieldName)

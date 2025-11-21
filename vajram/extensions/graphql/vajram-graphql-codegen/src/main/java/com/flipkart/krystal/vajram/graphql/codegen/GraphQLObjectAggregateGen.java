@@ -398,6 +398,10 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
     TypeDefinition objectTypeDefinition =
         schemaReaderUtil.typeDefinitionRegistry().getType(objectTypeName.value()).orElseThrow();
     boolean isEntity = objectTypeDefinition.hasDirective(Directives.ENTITY);
+    String entityIdFieldName =
+        isEntity
+            ? schemaReaderUtil.getEntityIdFieldName(objectTypeDefinition)
+            : DEFAULT_ENTITY_ID_FIELD;
     ClassName immutGQlRespJsonClassName = getImmutGQlRespJsonClassName(objectTypeName);
     MethodSpec.Builder builder =
         MethodSpec.methodBuilder("output")
@@ -414,9 +418,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
         immutGQlRespJsonClassName,
         immutGQlRespJsonClassName,
         // Only entities have ids
-        isEntity
-            ? CodeBlock.of(".$L($L)", DEFAULT_ENTITY_ID_FIELD, Facets.ENTITY_ID)
-            : EMPTY_CODE_BLOCK);
+        isEntity ? CodeBlock.of(".$L($L)", entityIdFieldName, Facets.ENTITY_ID) : EMPTY_CODE_BLOCK);
     schemaReaderUtil
         .typeToFetcherToFields()
         .getOrDefault(objectTypeName, Map.of())

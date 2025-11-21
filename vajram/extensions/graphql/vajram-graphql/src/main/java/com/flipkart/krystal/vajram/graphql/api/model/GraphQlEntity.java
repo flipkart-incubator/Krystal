@@ -6,5 +6,5 @@ import com.flipkart.krystal.model.ModelClusterRoot;
     immutableRoot = GraphQlEntity_Immut.class,
     builderRoot = GraphQlEntity_Immut.Builder.class)
 public interface GraphQlEntity<I extends GraphQlEntityId> extends GraphQlObject {
-  I id();
+  // No fixed id() method - entities define their own ID field method with custom names
 }
