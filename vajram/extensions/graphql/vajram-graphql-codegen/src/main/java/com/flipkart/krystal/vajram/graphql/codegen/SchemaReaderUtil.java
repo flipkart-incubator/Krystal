@@ -94,7 +94,8 @@ public class SchemaReaderUtil {
 
     Optional<SchemaDefinition> schemaDefinition = typeDefinitionRegistry.schemaDefinition();
     if (schemaDefinition.isEmpty()) {
-      throw new IllegalStateException("Schema definition is mandatory. Could not find Schema definition.");
+      throw new IllegalStateException(
+          "Schema definition is mandatory. Could not find Schema definition.");
     }
     Map<String, OperationTypeDefinition> operationTypesByOpName =
         schemaDefinition.get().getOperationTypeDefinitions().stream()
