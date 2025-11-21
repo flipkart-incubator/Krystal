@@ -22,7 +22,6 @@ import com.flipkart.krystal.vajram.graphql.api.errors.DefaultGraphQLErrorInfo;
 import com.flipkart.krystal.vajram.graphql.api.errors.ErrorCollector;
 import com.flipkart.krystal.vajram.graphql.api.execution.GraphQLUtils;
 import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlEntity;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlObject;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponseJson;
@@ -1548,7 +1547,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
       if (ifaceElement != null) {
         String ifaceName = ifaceElement.getQualifiedName().toString();
         if (ifaceName.equals(GraphQlObject.class.getCanonicalName())
-            || ifaceName.equals(GraphQlEntity.class.getCanonicalName())) {
+            || ifaceName.equals(GraphQlOperationObject.class.getCanonicalName())) {
           return true;
         }
       }
