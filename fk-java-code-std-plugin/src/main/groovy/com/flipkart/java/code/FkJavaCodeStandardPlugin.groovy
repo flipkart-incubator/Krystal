@@ -128,6 +128,9 @@ class FkJavaCodeStandardPlugin implements Plugin<Project> {
             project.tasks
                     .withType(JavaCompile)
                     .configureEach { JavaCompile task -> task.options.errorprone.enabled = false }
+        } else {
+            //Because of: https://github.com/google/error-prone/issues/4918
+            project.tasks.compileJava.configure { JavaCompile task -> task.options.errorprone.disable("StringConcatToTextBlock") }
         }
     }
 

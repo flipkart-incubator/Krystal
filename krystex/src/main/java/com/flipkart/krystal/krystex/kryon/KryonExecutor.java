@@ -3,6 +3,7 @@ package com.flipkart.krystal.krystex.kryon;
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.concurrent.Futures.propagateCancellation;
 import static com.flipkart.krystal.config.PropertyNames.RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME;
+import static com.flipkart.krystal.data.RequestResponseFuture.forRequest;
 import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.google.common.base.Preconditions.checkArgument;
@@ -242,8 +243,7 @@ public final class KryonExecutor implements KrystalExecutor {
   @SuppressWarnings("FutureReturnValueIgnored")
   public <T> CompletableFuture<@Nullable T> executeKryon(
       ImmutableRequest<T> request, KryonExecutionConfig executionConfig) {
-    RequestResponseFuture<Request<T>, T> requestResponseFuture =
-        new RequestResponseFuture<>(request, new CompletableFuture<>());
+    RequestResponseFuture<Request<T>, T> requestResponseFuture = forRequest(request);
     executeKryon(requestResponseFuture, executionConfig);
     return requestResponseFuture.response();
   }
@@ -769,7 +769,7 @@ public final class KryonExecutor implements KrystalExecutor {
       KryonExecutionConfig executionConfig) {
 
     public CompletableFuture<@Nullable Object> response() {
-      return (CompletableFuture<Object>) requestResponseFuture().response();
+      return (CompletableFuture<@Nullable Object>) requestResponseFuture().response();
     }
 
     public Request<Object> request() {

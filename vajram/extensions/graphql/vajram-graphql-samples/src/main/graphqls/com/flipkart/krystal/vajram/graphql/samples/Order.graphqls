@@ -35,6 +35,7 @@ type Hello @composedType(inEntity: "Order"){
 
 type Name {
     value: String
+    string: String
 }
 
 #{

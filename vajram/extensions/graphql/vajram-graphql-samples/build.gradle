@@ -47,6 +47,10 @@ dependencies {
     testImplementation 'org.assertj:assertj-core'
 }
 
+checkerFramework {
+    excludeTests = true
+}
+
 // 2. Define the Custom Copy Task
 tasks.register('extractGraphqls', Copy) {
     def graphqlsDependency = configurations.compileClasspath.find {
