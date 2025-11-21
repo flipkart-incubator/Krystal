@@ -29,7 +29,6 @@ import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLType;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
