@@ -1360,7 +1360,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
       for (VariableElement param : withBatchingOutputLogic.unbatchOutput().getParameters()) {
         if (param.getSimpleName().contentEquals(BATCHES_VAR)) {
           unbatchOutputParamsCode.add(
-              CodeBlock.of("$T.copyOf($L.keySet())", ImmutableList.class, BATCHES_VAR));
+              CodeBlock.of("$T.unmodifiableCollection($L)", Collections.class, BATCHES_VAR));
         } else if (param.getSimpleName().contentEquals(BATCHED_OUTPUT_VAR)) {
           if (typeUtils.isSameType(
               typeUtils.erasure(param.asType()),

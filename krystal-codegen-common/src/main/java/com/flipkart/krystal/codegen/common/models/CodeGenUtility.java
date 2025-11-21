@@ -80,6 +80,7 @@ import javax.tools.StandardLocation;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.ToString;
+import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -544,6 +545,8 @@ public class CodeGenUtility {
                         CodeBlock.of("$S", "ClassReferencesSubclass"))
                     .collect(joining(",", "{", "}")))
             .build());
+    classBuilder.addAnnotation(
+        AnnotationSpec.builder(Accessors.class).addMember("fluent", "true").build());
     addGeneratedAnnotations(classBuilder);
   }
 
