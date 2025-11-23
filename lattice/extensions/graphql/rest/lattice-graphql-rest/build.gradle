@@ -1,0 +1,18 @@
+plugins {
+    id 'com.flipkart.krystal' version "${krystal_version}"
+}
+
+dependencies {
+    implementation project(':vajram:vajram-java-sdk')
+    implementation project(':krystex')
+    implementation project(':lattice:extensions:rest:lattice-rest-api')
+    implementation project(':lattice:lattice-vajram-sdk')
+    implementation project(':vajram:extensions:graphql:vajram-graphql')
+    implementation 'jakarta.ws.rs:jakarta.ws.rs-api'
+
+    krystalModelsGenProcessor project(':vajram:vajram-codegen')
+}
+
+extraJavaModuleInfo {
+    failOnMissingModuleInfo = false
+}

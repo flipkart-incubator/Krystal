@@ -48,13 +48,13 @@ public abstract class RestPostMappingLatticeSample extends ComputeVajramDef<Json
   static class _InternalFacets {
     @Inject
     @IfAbsent(FAIL)
-    JsonResponse_Immut.Builder reponseBuilder;
+    JsonResponse_Immut.Builder responseBuilder;
   }
 
   @Output
   static JsonResponse output(
-      JsonRequest jsonRequest, String fullPath, JsonResponse_Immut.Builder reponseBuilder) {
-    return reponseBuilder
+      JsonRequest jsonRequest, String fullPath, JsonResponse_Immut.Builder responseBuilder) {
+    return responseBuilder
         .string(
             """
               $$ PATH: %s $$

@@ -5,12 +5,13 @@ import static com.flipkart.krystal.codegen.common.models.Constants.IMMUT_SUFFIX;
 import static com.flipkart.krystal.model.PlainJavaObject.POJO;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.REQUEST_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants._INTERNAL_FACETS_CLASS;
-import static com.flipkart.krystal.vajram.graphql.codegen.Constants.Directives.DATA_FETCHER;
-import static com.flipkart.krystal.vajram.graphql.codegen.Constants.Directives.ID_FETCHER;
+import static com.flipkart.krystal.vajram.graphql.api.Constants.Directives.DATA_FETCHER;
+import static com.flipkart.krystal.vajram.graphql.api.Constants.Directives.ID_FETCHER;
+import static com.flipkart.krystal.vajram.graphql.api.Constants.GRAPHQL_AGGREGATOR_SUFFIX;
+import static com.flipkart.krystal.vajram.graphql.codegen.CodeGenConstants.IF_ABSENT_FAIL;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.INHERIT_ID_FROM_ARGS;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.INHERIT_ID_FROM_PARENT;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.TYPE_AGGREGATOR;
-import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.GRAPHQL_AGGREGATOR;
 import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.getDirectiveArgumentString;
 import static java.util.Map.entry;
 import static javax.lang.model.element.Modifier.*;
@@ -24,13 +25,13 @@ import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.*;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
+import com.flipkart.krystal.vajram.graphql.api.Constants.DirectiveArgs;
+import com.flipkart.krystal.vajram.graphql.api.Constants.Directives;
+import com.flipkart.krystal.vajram.graphql.api.Constants.Facets;
 import com.flipkart.krystal.vajram.graphql.api.execution.GraphQLUtils;
 import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponseJson;
-import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlQueryAggregate;
-import com.flipkart.krystal.vajram.graphql.codegen.Constants.DirectiveArgs;
-import com.flipkart.krystal.vajram.graphql.codegen.Constants.Directives;
-import com.flipkart.krystal.vajram.graphql.codegen.Constants.Facets;
+import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
 import com.google.common.collect.ImmutableMap;
 import com.squareup.javapoet.*;
 import com.squareup.javapoet.TypeName;
@@ -92,7 +93,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
               if (queryType != null && queryType.getName().equals(objectTypeName.value())) {
                 typeAggregator.addSuperinterface(
                     ParameterizedTypeName.get(
-                        ClassName.get(GraphQlQueryAggregate.class),
+                        ClassName.get(GraphQlOperationAggregate.class),
                         asVajramReturnType(objectTypeName)));
               }
               refToFieldMap.forEach(
@@ -153,7 +154,8 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
 
   private ClassName getAggregatorName(GraphQLTypeName typeName) {
     return ClassName.get(
-        schemaReaderUtil.getPackageNameForType(typeName), typeName.value() + GRAPHQL_AGGREGATOR);
+        schemaReaderUtil.getPackageNameForType(typeName),
+        typeName.value() + GRAPHQL_AGGREGATOR_SUFFIX);
   }
 
   private List<TypeSpec> createFacetDefinitions(ObjectTypeDefinition typeDefinition) {
@@ -175,20 +177,20 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                   schemaReaderUtil.entityIdClassName(
                       schemaReaderUtil.typeClassName(composingEntityTypeName)),
                   Facets.ENTITY_ID)
-              .addAnnotation(Constants.IF_ABSENT_FAIL)
+              .addAnnotation(IF_ABSENT_FAIL)
               .build());
     }
     inputs.addField(
         FieldSpec.builder(ExecutionContext.class, Facets.EXECUTION_CONTEXT)
-            .addAnnotation(Constants.IF_ABSENT_FAIL)
+            .addAnnotation(IF_ABSENT_FAIL)
             .build());
     inputs.addField(
         FieldSpec.builder(ClassName.get(VajramExecutionStrategy.class), Facets.EXECUTION_STRATEGY)
-            .addAnnotation(Constants.IF_ABSENT_FAIL)
+            .addAnnotation(IF_ABSENT_FAIL)
             .build());
     inputs.addField(
         FieldSpec.builder(ExecutionStrategyParameters.class, Facets.EXECUTION_STRATEGY_PARAMS)
-            .addAnnotation(Constants.IF_ABSENT_FAIL)
+            .addAnnotation(IF_ABSENT_FAIL)
             .build());
 
     Builder internalFacets = TypeSpec.classBuilder(_INTERNAL_FACETS_CLASS).addModifiers(STATIC);

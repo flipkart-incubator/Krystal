@@ -26,7 +26,7 @@ import lombok.Getter;
 public abstract sealed class DependencySpec<T, CV extends Request, DV extends Request<T>>
     extends AbstractFacetSpec<T, CV> implements Dependency permits FanoutDepSpec, One2OneDepSpec {
 
-  private final Class<DV> onVajram;
+  private final Class<?> onVajram;
   private final VajramID onVajramID;
 
   public DependencySpec(
@@ -35,7 +35,7 @@ public abstract sealed class DependencySpec<T, CV extends Request, DV extends Re
       VajramID ofVajramID,
       DataType<T> dataType,
       Class<CV> ofVajram,
-      Class<DV> onVajram,
+      Class<?> onVajram,
       VajramID onVajramID,
       String documentation,
       boolean isBatched,

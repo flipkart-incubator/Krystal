@@ -74,6 +74,8 @@ include 'lattice:extensions:rest:dropwizard:lattice-rest-dropwizard-codegen'
 
 include 'lattice:extensions:rest:quarkus:lattice-rest-quarkus'
 include 'lattice:extensions:rest:quarkus:lattice-rest-quarkus-codegen'
+
+include 'lattice:extensions:graphql:rest:lattice-graphql-rest'
 /********* LATTICE EXTENSIONS : END ************/
 
 include 'vajram:vajram-samples'

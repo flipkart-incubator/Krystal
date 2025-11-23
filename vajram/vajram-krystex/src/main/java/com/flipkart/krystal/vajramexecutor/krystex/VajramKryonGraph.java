@@ -575,7 +575,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
     return vajramDefinition.vajramId();
   }
 
-  public VajramID getVajramIdByVajramReqType(Class<? extends Request<?>> vajramReqClass) {
+  public VajramID getVajramIdByVajramReqType(Class<? extends Request> vajramReqClass) {
     VajramDefinition vajramDefinition = definitionByReqType.get(vajramReqClass);
     if (vajramDefinition == null) {
       throw new IllegalArgumentException(

@@ -210,10 +210,7 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
             CompletableFuture<R> depResponse =
                 invocationToDecorate.invokeDependency((ClientSideCommand<R>) commandToDispatch);
           }
-          @SuppressWarnings("unchecked")
-          CompletableFuture<R> castMergedResponse =
-              (CompletableFuture<R>) completedFuture(DirectResponse.INSTANCE);
-          return castMergedResponse;
+          return completedFuture(DirectResponse.instance());
         } else {
           throw new IllegalStateException("Unknown command type: " + kryonCommand);
         }

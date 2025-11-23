@@ -1,10 +1,12 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
+import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.asClassName;
 import static com.flipkart.krystal.facets.FacetType.DEPENDENCY;
 
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.facets.FacetType;
 import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.TypeName;
 import javax.lang.model.element.VariableElement;
 import lombok.Builder;
 import lombok.NonNull;
@@ -17,7 +19,7 @@ public record DependencyModel(
     @NonNull VajramInfoLite vajramInfo,
     @NonNull VajramInfoLite depVajramInfo,
     @NonNull CodeGenType dataType,
-    @NonNull ClassName depReqClassName,
+    @NonNull TypeName depReqType,
     boolean canFanout,
     @Nullable String documentation,
     @NonNull VariableElement facetField)
@@ -28,7 +30,11 @@ public record DependencyModel(
     return DEPENDENCY;
   }
 
+  public ClassName depReqClassName() {
+    return asClassName(depReqType());
+  }
+
   public String depReqPackageName() {
-    return depReqClassName.packageName();
+    return depReqClassName().packageName();
   }
 }

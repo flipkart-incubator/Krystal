@@ -116,7 +116,7 @@ public final class DirectKryon
       }
     }
 
-    return CompletableFuture.completedFuture(DirectResponse.INSTANCE);
+    return CompletableFuture.completedFuture(DirectResponse.instance());
   }
 
   private void executeDecoratedOutputLogic(

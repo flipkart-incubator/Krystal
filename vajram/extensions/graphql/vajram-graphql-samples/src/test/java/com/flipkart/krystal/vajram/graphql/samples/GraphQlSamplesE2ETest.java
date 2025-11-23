@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.graphql.samples;
 
 import static com.flipkart.krystal.vajramexecutor.krystex.traits.PredicateDispatchUtil.dispatchTrait;
-import static graphql.language.OperationDefinition.Operation.QUERY;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -14,9 +13,9 @@ import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.graphql.api.execution.GraphQLQuery;
 import com.flipkart.krystal.vajram.graphql.api.execution.GraphQlExecutionFacade;
 import com.flipkart.krystal.vajram.graphql.api.schema.GraphQlLoader;
-import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlQueryAggregate;
-import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlQueryAggregate_Req;
-import com.flipkart.krystal.vajram.graphql.samples.query.Query_GQlAggr_Req;
+import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
+import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate_Req;
+import com.flipkart.krystal.vajram.graphql.samples.querytype.QueryType_GQlAggr_Req;
 import com.flipkart.krystal.vajram.json.Json;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
@@ -62,10 +61,11 @@ public class GraphQlSamplesE2ETest {
     this.graph =
         VajramKryonGraph.builder()
             .loadFromPackage(this.getClass().getPackage().getName())
-            .loadFromPackage(GraphQlQueryAggregate.class.getPackageName())
+            .loadFromPackage(GraphQlOperationAggregate.class.getPackageName())
             .build();
     graph.registerTraitDispatchPolicies(
-        dispatchTrait(GraphQlQueryAggregate_Req.class, graph).alwaysTo(Query_GQlAggr_Req.class));
+        dispatchTrait(GraphQlOperationAggregate_Req.class, graph)
+            .alwaysTo(QueryType_GQlAggr_Req.class));
   }
 
   @AfterEach
@@ -83,14 +83,13 @@ public class GraphQlSamplesE2ETest {
                   executor,
                   KryonExecutionConfig.builder(),
                   new GraphQLQuery(
-                      QUERY,
                       """
                       query {
                         order(id: "order1") {
                           orderItemNames
                           __typename
                         }
-                        dummy(id: "dummy1") {
+                        dummy(dummyId: "dummy1") {
                           name
                           age
                           f1

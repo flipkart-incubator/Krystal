@@ -8,8 +8,9 @@ import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static lombok.AccessLevel.PACKAGE;
 
-import com.flipkart.krystal.vajram.graphql.codegen.Constants.DirectiveArgs;
-import com.flipkart.krystal.vajram.graphql.codegen.Constants.Directives;
+import com.flipkart.krystal.vajram.graphql.api.Constants;
+import com.flipkart.krystal.vajram.graphql.api.Constants.DirectiveArgs;
+import com.flipkart.krystal.vajram.graphql.api.Constants.Directives;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.squareup.javapoet.ClassName;
@@ -46,7 +47,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @Slf4j
 public class SchemaReaderUtil {
 
-  public static final String GRAPHQL_AGGREGATOR = "_GQlAggr";
   public static final String GRAPHQL_SCHEMA_EXTENSION = ".graphqls";
   public static final String CUSTOM_TYPE_DIRECTIVE = "customType";
   public static final String PACKAGE_NAME_DIR_ARG = "packageName";
@@ -300,7 +300,8 @@ public class SchemaReaderUtil {
     try {
       GraphQLTypeName graphQlTypeName = new GraphQLTypeName(fieldTypeDefinition.getName());
       String packageName = getPackageNameForType(graphQlTypeName);
-      String typeAggregatorSimpleName = graphQlTypeName.value() + GRAPHQL_AGGREGATOR;
+      String typeAggregatorSimpleName =
+          graphQlTypeName.value() + Constants.GRAPHQL_AGGREGATOR_SUFFIX;
 
       fieldToTypeAggregator.put(
           fieldSpecFromField(fieldDefinition, "", type),

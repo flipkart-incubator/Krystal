@@ -1,5 +1,7 @@
 package com.flipkart.krystal.codegen.common.models;
 
+import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.asTypeNameWithTypes;
+
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ClassName;
@@ -7,7 +9,6 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeVariableName;
 import com.squareup.javapoet.WildcardTypeName;
-import java.util.ArrayList;
 import java.util.List;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.Modifier;
@@ -59,16 +60,13 @@ public class TypeNameVisitor extends AbstractTypeVisitor14<TypeName, Void> {
       return rawType;
     }
 
-    List<TypeName> typeArgumentNames = new ArrayList<>();
-    for (TypeMirror mirror : t.getTypeArguments()) {
-      typeArgumentNames.add(this.visit(mirror));
-    }
     return enclosing instanceof ParameterizedTypeName
         ? addTypeAnnotations(
             t,
             ((ParameterizedTypeName) enclosing)
-                .nestedClass(rawType.simpleName(), typeArgumentNames))
-        : ParameterizedTypeName.get(rawType, typeArgumentNames.toArray(TypeName[]::new));
+                .nestedClass(
+                    rawType.simpleName(), t.getTypeArguments().stream().map(this::visit).toList()))
+        : asTypeNameWithTypes(rawType, t.getTypeArguments());
   }
 
   @Override
