@@ -16,6 +16,7 @@ import com.flipkart.krystal.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.vajram.graphql.api.errors.DefaultGraphQLErrorInfo;
@@ -1463,19 +1464,17 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
    * Custom model types are user-defined types in the current package or related packages.
    */
   private boolean isCustomModelType(TypeMirror type, CodeGenUtility util) {
-    if (type == null || type.getKind() != TypeKind.DECLARED) {
+    if (!(type instanceof DeclaredType declaredType)) {
       return false;
     }
-
-    // Get the raw type without annotations by extracting the TypeElement
-    Element element = util.processingEnv().getTypeUtils().asElement(type);
-    if (!(element instanceof TypeElement typeElement)) {
-      return false;
-    }
-
-    String qualifiedName = typeElement.getQualifiedName().toString();
-    // Exclude standard Java types
-    return !qualifiedName.startsWith("java.") && !qualifiedName.startsWith("javax.");
+    return util.processingEnv()
+        .getTypeUtils()
+        .isSubtype(
+            type,
+            util.processingEnv()
+                .getElementUtils()
+                .getTypeElement(Model.class.getCanonicalName())
+                .asType());
   }
 
   /**

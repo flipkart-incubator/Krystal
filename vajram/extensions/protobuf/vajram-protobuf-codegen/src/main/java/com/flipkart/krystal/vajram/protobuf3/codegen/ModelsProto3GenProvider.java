@@ -3,8 +3,11 @@ package com.flipkart.krystal.vajram.protobuf3.codegen;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGeneratorProvider;
+import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.serial.SerializableModel;
+import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
 import com.google.auto.service.AutoService;
+import java.util.Set;
 
 /**
  * This code generator generates implementations in the model root hierarchy. More specifically, it
@@ -23,5 +26,10 @@ public class ModelsProto3GenProvider implements ModelsCodeGeneratorProvider {
   @Override
   public CodeGenerator create(ModelsCodeGenContext codeGenContext) {
     return new ModelsProto3Gen(codeGenContext);
+  }
+
+  @Override
+  public Set<Class<? extends ModelProtocol>> getSupportedModelProtocols() {
+    return Set.of(Protobuf3.class);
   }
 }

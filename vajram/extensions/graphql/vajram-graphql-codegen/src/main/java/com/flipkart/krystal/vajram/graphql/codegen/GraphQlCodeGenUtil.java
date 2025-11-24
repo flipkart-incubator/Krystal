@@ -1,5 +1,8 @@
 package com.flipkart.krystal.vajram.graphql.codegen;
 
+import static com.flipkart.krystal.codegen.common.models.Constants.MODULE_ROOT_PATH_KEY;
+import static com.flipkart.krystal.vajram.graphql.api.Constants.GRAPHQL_SCHEMA_FILENAME;
+import static com.flipkart.krystal.vajram.graphql.codegen.CodeGenConstants.GRAPHQL_SRC_DIR;
 import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.CLASS_NAME_DIR_ARG;
 import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.CUSTOM_TYPE_DIRECTIVE;
 import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.PACKAGE_NAME_DIR_ARG;
@@ -15,30 +18,49 @@ import graphql.language.Directive;
 import graphql.language.StringValue;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.List;
-import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+@Slf4j
 public final class GraphQlCodeGenUtil {
 
   @Getter private final SchemaReaderUtil schemaReaderUtil;
 
-  public GraphQlCodeGenUtil(CodeGenUtility util) {
-    this.schemaReaderUtil = new SchemaReaderUtil(getSchemaFile(util));
+  public GraphQlCodeGenUtil(File schemaFile) {
+    this.schemaReaderUtil = new SchemaReaderUtil(schemaFile);
   }
 
-  private static File getSchemaFile(CodeGenUtility util) {
-    FileObject schemaFileObject;
+  public static File getSchemaFile(CodeGenUtility util) {
     try {
-      schemaFileObject =
+      return new File(
           util.processingEnv()
               .getFiler()
-              .getResource(StandardLocation.SOURCE_PATH, "", "Schema.graphqls");
-      return new File(schemaFileObject.toUri());
+              .getResource(StandardLocation.SOURCE_PATH, "", GRAPHQL_SCHEMA_FILENAME)
+              .toUri());
     } catch (IOException e) {
-      throw new RuntimeException(e);
+      util.note(
+          """
+              Failed to get schema file in SOURCE_PATH. This can happen in projects which have not configured a JPMS named moduled. \
+              Trying to look for 'moduleRootPath' annotation processor option""");
+      Path moduleRootPath = util.moduleRootPath();
+      if (moduleRootPath == null) {
+        throw new RuntimeException(
+            "Schema.graphqls was not present in SOURCE_PATH, nor was the "
+                + MODULE_ROOT_PATH_KEY
+                + " passed");
+      }
+      File schemaFile =
+          moduleRootPath.resolve(GRAPHQL_SRC_DIR).resolve(GRAPHQL_SCHEMA_FILENAME).toFile();
+      if (!schemaFile.exists()) {
+        util.note(
+            "Schema.graphqls was not present in SOURCE_PATH, nor was it found in the module path: "
+                + schemaFile.getAbsolutePath());
+      }
+      return schemaFile;
     }
   }
 
@@ -95,9 +117,7 @@ public final class GraphQlCodeGenUtil {
       case "ID" -> {
         GraphQLTypeName enclosingType = fieldSpec.enclosingType();
         yield enclosingType != null
-            ? schemaReaderUtil.entityIdClassName(
-                ClassName.get(
-                    schemaReaderUtil.getPackageNameForType(enclosingType), enclosingType.value()))
+            ? schemaReaderUtil.entityIdClassName(enclosingType)
             : ClassName.get(Object.class);
       }
       default ->

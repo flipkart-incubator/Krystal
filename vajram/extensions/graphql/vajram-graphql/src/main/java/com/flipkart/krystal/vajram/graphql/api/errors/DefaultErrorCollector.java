@@ -1,10 +1,10 @@
 package com.flipkart.krystal.vajram.graphql.api.errors;
 
-import com.flipkart.krystal.vajram.graphql.api.execution.GraphQLUtils;
+import static com.flipkart.krystal.vajram.graphql.api.execution.GraphQLUtils.convertToGraphQlError;
+
 import graphql.GraphQLError;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Default implementation of {@link ErrorCollector} that accumulates errors in a list.
@@ -15,18 +15,21 @@ import java.util.stream.Collectors;
  */
 final class DefaultErrorCollector implements ErrorCollector {
 
-  private final List<GraphQLErrorInfo> errorInfos = new ArrayList<>();
+  private final List<GraphQLError> errorInfos = new ArrayList<>();
 
   @Override
   public void addError(GraphQLErrorInfo errorInfo) {
-    errorInfos.add(errorInfo);
+    errorInfos.add(convertToGraphQlError(errorInfo));
+  }
+
+  @Override
+  public void addError(GraphQLError graphQLError) {
+    errorInfos.add(graphQLError);
   }
 
   @Override
   public List<GraphQLError> getErrors() {
     // Convert all GraphQLErrorInfo instances to GraphQLError using GraphQLUtils
-    return errorInfos.stream()
-        .map(GraphQLUtils::convertToGraphQlError)
-        .collect(Collectors.toList());
+    return errorInfos;
   }
 }

@@ -63,4 +63,4 @@ Note: an instance of a composed type has a one to one correspondence with a give
 """
 #TODO: Validation: Can be used only on @entity fields and @composedType fields.
 #TODO: Validation: When used in @composedTypes, the "inEntity" must match the outer "inEntity"
-directive @composedType(inEntity: String) on OBJECT
+directive @composedType(inEntity: String!) on OBJECT

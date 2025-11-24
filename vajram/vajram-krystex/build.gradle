@@ -26,11 +26,6 @@ dependencies {
     testImplementation 'org.slf4j:slf4j-log4j12'
 }
 
-afterEvaluate {
-    //The main sourceSet doesn't have any vajrams - so remove this dependency
-    compileJava.dependsOn -= "krystalModelsGen"
-}
-
 /*
  * The krystal gradle plugin adds new test tasks and modifies the compileTestJavaTask by making it depend
  * on these new tasks. This seems to be interfering with gradle's ability to copy over the module dependencies

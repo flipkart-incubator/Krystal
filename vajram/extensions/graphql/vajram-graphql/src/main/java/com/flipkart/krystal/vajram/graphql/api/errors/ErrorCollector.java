@@ -34,6 +34,8 @@ public interface ErrorCollector {
    */
   void addError(GraphQLErrorInfo errorInfo);
 
+  void addError(GraphQLError graphQLError);
+
   /**
    * Returns all collected errors as GraphQLError instances.
    *

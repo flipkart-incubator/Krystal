@@ -3,6 +3,7 @@ package com.flipkart.krystal.lattice.vajram;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
+import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
 import com.flipkart.krystal.lattice.core.di.Bindings;
 import com.flipkart.krystal.lattice.core.di.DependencyInjectionBinder;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
@@ -34,9 +35,10 @@ public final class VajramDopant implements SimpleDopant {
 
   static final String DOPANT_TYPE = "krystal.lattice.vajram";
 
-  private final VajramDopantSpec vajramDopantSpec;
   @Getter private final VajramKryonGraph graph;
+  private final VajramDopantSpec vajramDopantSpec;
   private final ThreadingStrategyDopant threadingStrategyDopant;
+  private final List<KryonExecutorConfigurator> kryonExecutorConfigurators = new ArrayList<>();
 
   @Inject
   VajramDopant(
@@ -52,13 +54,15 @@ public final class VajramDopant implements SimpleDopant {
     }
   }
 
+  @SuppressWarnings("ClassEscapesDefinedScope")
   public static VajramDopantSpecBuilder vajramGraph() {
     return new VajramDopantSpecBuilder();
   }
 
-  public KrystexVajramExecutor createExecutor(
+  private KrystexVajramExecutor createExecutor(
       @CalledMethods("executorService") KryonExecutorConfigBuilder kryonConfigBuilder) {
     vajramDopantSpec.kryonExecutorConfigurators().forEach(m -> m.addToConfig(kryonConfigBuilder));
+    kryonExecutorConfigurators.forEach(m -> m.addToConfig(kryonConfigBuilder));
 
     return graph.createExecutor(
         KrystexVajramExecutorConfig.builder()
@@ -92,9 +96,9 @@ public final class VajramDopant implements SimpleDopant {
                   }
                   try (KrystexVajramExecutor executor =
                       createExecutor(executorConfigBuilder.executorService(singleThreadExecutor))) {
-                    CompletableFuture<@Nullable RespT> result = executor.execute(vajramRequest);
-                    return result.whenComplete(
-                        (response, throwable) -> closeAll(requestScopedCloseables));
+                    return executor
+                        .execute(vajramRequest)
+                        .whenComplete((response, throwable) -> closeAll(requestScopedCloseables));
                   } catch (Exception e) {
                     closeAll(requestScopedCloseables);
                     return CompletableFuture.<@Nullable RespT>failedFuture(e);
@@ -113,5 +117,9 @@ public final class VajramDopant implements SimpleDopant {
         log.error("Unable to execute initializer closeable", e);
       }
     }
+  }
+
+  public void configureKryonExecutor(KryonExecutorConfigurator executorConfigurator) {
+    this.kryonExecutorConfigurators.add(executorConfigurator);
   }
 }

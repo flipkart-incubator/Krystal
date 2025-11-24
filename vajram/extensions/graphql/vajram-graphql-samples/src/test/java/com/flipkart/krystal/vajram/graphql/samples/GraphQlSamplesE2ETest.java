@@ -45,7 +45,8 @@ public class GraphQlSamplesE2ETest {
     EXEC_POOL =
         new SingleThreadExecutorsPool(
             "GraphQlSamplesE2ETest", Runtime.getRuntime().availableProcessors());
-    GRAPHQL = new GraphQlLoader().loadGraphQl();
+    GraphQlLoader graphQlLoader = new GraphQlLoader();
+    GRAPHQL = graphQlLoader.loadGraphQl(graphQlLoader.getTypeDefinitionRegistry());
   }
 
   @AfterAll

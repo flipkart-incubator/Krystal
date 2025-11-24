@@ -5,7 +5,6 @@ import static com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObje
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.lattice.ext.rest.api.Body;
 import com.flipkart.krystal.lattice.ext.rest.api.methods.GET;
 import com.flipkart.krystal.lattice.vajram.sdk.InvocableOutsideProcess;
 import com.flipkart.krystal.model.IfAbsent;
@@ -25,9 +24,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @GET
 @Vajram
 public abstract class HttpGetGraphQl extends ComputeVajramDef<Response> {
-  static class _Inputs {
-    @Body ByteArray body;
-  }
+  static class _Inputs {}
 
   static class _InternalFacets {
     @Inject

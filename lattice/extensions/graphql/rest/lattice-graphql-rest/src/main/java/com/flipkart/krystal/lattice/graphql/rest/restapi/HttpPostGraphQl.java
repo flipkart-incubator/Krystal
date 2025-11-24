@@ -3,6 +3,7 @@ package com.flipkart.krystal.lattice.graphql.rest.restapi;
 import static com.flipkart.krystal.lattice.graphql.rest.restapi.HttpPostGraphQl_Fac.queryResponse_n;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject._asExecutionResult;
+import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static java.util.Objects.requireNonNullElse;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
@@ -10,14 +11,18 @@ import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.lattice.ext.rest.api.methods.POST;
 import com.flipkart.krystal.lattice.vajram.sdk.InvocableOutsideProcess;
 import com.flipkart.krystal.model.IfAbsent;
+import com.flipkart.krystal.model.PlainJavaObject;
+import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponseJson;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate_Req;
+import com.flipkart.krystal.vajram.json.Json;
 import graphql.ExecutionInput;
 import jakarta.ws.rs.core.Response;
 import java.util.Map;
@@ -27,7 +32,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @InvocableOutsideProcess
 @POST
 @Vajram
+@SupportedModelProtocols({Json.class, PlainJavaObject.class})
 public abstract class HttpPostGraphQl extends ComputeVajramDef<Response> {
+
   static class _Inputs {
     @IfAbsent(FAIL)
     String query;
@@ -60,6 +67,14 @@ public abstract class HttpPostGraphQl extends ComputeVajramDef<Response> {
 
   @Output
   static Response output(Errable<GraphQlOperationObject> queryResponse) {
-    return Response.ok(_asExecutionResult(queryResponse)).build();
+    try {
+      return Response.ok(
+              Json.OBJECT_WRITER.writeValueAsBytes(
+                  _asExecutionResult(queryResponse).toSpecification()))
+          .header(CONTENT_TYPE, GraphQlResponseJson.INSTANCE.defaultContentType())
+          .build();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 }

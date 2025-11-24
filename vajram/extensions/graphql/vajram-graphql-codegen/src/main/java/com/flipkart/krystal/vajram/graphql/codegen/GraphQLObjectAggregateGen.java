@@ -61,9 +61,9 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
   private final SchemaReaderUtil schemaReaderUtil;
   private final GraphQlCodeGenUtil graphQlCodeGenUtil;
 
-  public GraphQLObjectAggregateGen(CodeGenUtility util) {
+  public GraphQLObjectAggregateGen(CodeGenUtility util, File schemaFile) {
     this.util = util;
-    this.graphQlCodeGenUtil = new GraphQlCodeGenUtil(util);
+    this.graphQlCodeGenUtil = new GraphQlCodeGenUtil(schemaFile);
     this.schemaReaderUtil = graphQlCodeGenUtil.schemaReaderUtil();
   }
 
@@ -160,23 +160,12 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
 
   private List<TypeSpec> createFacetDefinitions(ObjectTypeDefinition typeDefinition) {
     GraphQLTypeName typeName = GraphQLTypeName.of(typeDefinition);
-    Optional<String> composingEntityType =
-        getDirectiveArgumentString(
-            typeDefinition, Directives.COMPOSED_TYPE, DirectiveArgs.IN_ENTITY);
-    boolean isEntity = typeDefinition.hasDirective(Directives.ENTITY);
+
     Builder inputs = TypeSpec.classBuilder("_Inputs").addModifiers(STATIC);
-    GraphQLTypeName composingEntityTypeName = null;
-    if (isEntity) {
-      composingEntityTypeName = typeName;
-    } else if (composingEntityType.isPresent()) {
-      composingEntityTypeName = GraphQLTypeName.of(composingEntityType.get());
-    }
-    if (composingEntityTypeName != null) {
+
+    if (schemaReaderUtil.hasEntityId(typeDefinition)) {
       inputs.addField(
-          FieldSpec.builder(
-                  schemaReaderUtil.entityIdClassName(
-                      schemaReaderUtil.typeClassName(composingEntityTypeName)),
-                  Facets.ENTITY_ID)
+          FieldSpec.builder(schemaReaderUtil.entityIdClassName(typeName), Facets.ENTITY_ID)
               .addAnnotation(IF_ABSENT_FAIL)
               .build());
     }
@@ -287,11 +276,9 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
       FieldDefinition fieldDefinition = fieldSpec.fieldDefinition();
       Optional<TypeDefinition> typeDefinition =
           schemaReaderUtil.typeDefinitionRegistry().getType(fieldDefinition.getType());
-      if (typeDefinition.isPresent()
-          && typeDefinition.get().getDirectivesByName().containsKey("entity")) {
-        GraphQLTypeName refEntityName = new GraphQLTypeName(typeDefinition.get().getName());
+      if (typeDefinition.isPresent() && schemaReaderUtil.hasEntityId(typeDefinition.get())) {
         ClassName entityIdClassName =
-            schemaReaderUtil.entityIdClassName(schemaReaderUtil.typeClassName(refEntityName));
+            schemaReaderUtil.entityIdClassName(GraphQLTypeName.of(typeDefinition.get()));
         GraphQlTypeDecorator innerType = fieldSpec.fieldType();
         boolean isInnerNonNull = false;
         if (innerType.isNonNull()) {
@@ -407,9 +394,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
             .addModifiers(STATIC)
             .returns(asVajramReturnType(objectTypeName));
     if (isEntity) {
-      builder.addParameter(
-          schemaReaderUtil.entityIdClassName(schemaReaderUtil.typeClassName(objectTypeName)),
-          Facets.ENTITY_ID);
+      builder.addParameter(schemaReaderUtil.entityIdClassName(objectTypeName), Facets.ENTITY_ID);
     }
     builder.addStatement(
         "$T.Builder entity = $T._builder()$L",
@@ -484,8 +469,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
             (fetcher, fields) -> {
               if (fetcher instanceof VajramFetcher vajramFetcher) {
                 methodSpecList.add(
-                    GraphQLObjectAggregateGen.this.createFetcherInputResolver(
-                        vajramFetcher, fields, entityType, typeDefinition));
+                    createFetcherInputResolver(vajramFetcher, fields, entityType, typeDefinition));
               }
             });
 
@@ -516,8 +500,6 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
     boolean isParentOpType = schemaReaderUtil.operationTypes().containsKey(parentTypeName);
     boolean parentTypeHasEntityId = !isParentOpType;
 
-    ClassName entityClassName = schemaReaderUtil.typeClassName(parentTypeName);
-    ClassName entityIdClassName = schemaReaderUtil.entityIdClassName(entityClassName);
     String facetName = getFacetName(fetcher, fields);
     List<CodeBlock> depInputNames = new ArrayList<>();
     List<CodeBlock> depInputSetterCode = new ArrayList<>();
@@ -607,7 +589,8 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                 One2OneCommand.class,
                 vajramId);
     if (parentTypeHasEntityId) {
-      methodBuilder.addParameter(entityIdClassName, Facets.ENTITY_ID);
+      methodBuilder.addParameter(
+          schemaReaderUtil.entityIdClassName(parentTypeName), Facets.ENTITY_ID);
     }
     return methodBuilder.build();
   }
@@ -693,7 +676,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
           case INHERIT_ID_FROM_ARGS ->
               CodeBlock.of(
                   "new $T($L.getExecutionStepInfo().getArgument($S))",
-                  schemaReaderUtil.entityIdClassName(schemaReaderUtil.typeClassName(fieldTypeName)),
+                  schemaReaderUtil.entityIdClassName(fieldTypeName),
                   Facets.EXECUTION_STRATEGY_PARAMS + "_new",
                   entityIdFieldName);
           case INHERIT_ID_FROM_PARENT -> CodeBlock.of(Facets.ENTITY_ID);
@@ -836,8 +819,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
         fieldComposingEntityType.ifPresent(
             typeName ->
                 methodBuilder.addParameter(
-                    schemaReaderUtil.entityIdClassName(schemaReaderUtil.typeClassName(typeName)),
-                    entityIdFacetName));
+                    schemaReaderUtil.entityIdClassName(typeName), entityIdFacetName));
       } else if (fetcher instanceof VajramFetcher vajramFetcher) {
         methodBuilder.addParameter(
             ParameterizedTypeName.get(

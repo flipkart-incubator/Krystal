@@ -6,6 +6,7 @@ import lombok.experimental.UtilityClass;
 public class Constants {
 
   public static final String GRAPHQL_AGGREGATOR_SUFFIX = "_GQlAggr";
+  public static final String GRAPHQL_SCHEMA_FILENAME = "Schema.graphqls";
 
   @UtilityClass
   public static class Directives {

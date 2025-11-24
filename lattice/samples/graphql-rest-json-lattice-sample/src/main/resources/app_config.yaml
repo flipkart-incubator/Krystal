@@ -1,0 +1,9 @@
+dopants:
+  - krystal.lattice.threadingStrategy:
+      maxApplicationThreads: 400
+  - krystal.lattice.restService:
+      applicationServer:
+        name: rest-json-lattice-sample-application
+        port: 8789
+      adminServer:
+        port: 8790

@@ -22,11 +22,6 @@ record QuarkusApplicationSpec()
       extends SimpleDopantSpecBuilder<QuarkusApplicationSpec> {
 
     @Override
-    public QuarkusApplicationSpec _buildSpec() {
-      return new QuarkusApplicationSpec();
-    }
-
-    @Override
     public String _dopantType() {
       return APPLICATION_DOPANT_TYPE;
     }

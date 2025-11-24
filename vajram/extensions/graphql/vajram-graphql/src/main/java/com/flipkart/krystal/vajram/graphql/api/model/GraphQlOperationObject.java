@@ -16,14 +16,17 @@ import java.util.Map;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @ModelClusterRoot(
-    immutableRoot = GraphQlObject_Immut.class,
-    builderRoot = GraphQlObject_Immut.Builder.class)
+    immutableRoot = GraphQlOperationObject_Immut.class,
+    builderRoot = GraphQlOperationObject_Immut.Builder.class)
 public interface GraphQlOperationObject extends GraphQlObject {
 
   @Nullable Map<Object, Object> _extensions();
 
   @Override
-  GraphQlObject_Immut _build();
+  GraphQlOperationObject_Immut _build();
+
+  @Override
+  GraphQlOperationObject_Immut.Builder _asBuilder();
 
   @Nullable
   default List<GraphQLError> _errors() {
@@ -52,6 +55,9 @@ public interface GraphQlOperationObject extends GraphQlObject {
   }
 
   default ExecutionResult _asExecutionResult() {
+    if (this instanceof GraphQlOperationError operationError) {
+      return operationError.executionResult();
+    }
     return ExecutionResult.newExecutionResult()
         .data(this._build())
         .errors(_errors())

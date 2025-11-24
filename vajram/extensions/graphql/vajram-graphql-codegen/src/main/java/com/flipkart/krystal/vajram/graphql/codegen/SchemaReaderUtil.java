@@ -160,9 +160,7 @@ public class SchemaReaderUtil {
 
     String[] graphqlSchemaFileNames =
         graphqlsDir.list((dir, name) -> name.endsWith(GRAPHQL_SCHEMA_EXTENSION));
-    if (graphqlSchemaFileNames == null) {
-      throw new IllegalStateException("No files found in 'graphql_schemas' directory");
-    } else {
+    if (graphqlSchemaFileNames != null) {
       for (String graphqlSchemaFileName : graphqlSchemaFileNames) {
         File graphqlSchemaFile = new File(graphqlsDir, graphqlSchemaFileName);
         log.info("Found graphql schema file {} ", graphqlSchemaFile);
@@ -193,10 +191,38 @@ public class SchemaReaderUtil {
     return ClassName.get(getPackageNameForType(graphQLTypeName), graphQLTypeName.value());
   }
 
-  ClassName entityIdClassName(ClassName entityClassName) {
-    ClassName entityIdClassName =
-        ClassName.get(entityClassName.packageName(), entityClassName.simpleName() + "Id");
-    return entityIdClassName;
+  boolean hasEntityId(TypeDefinition typeDefinition) {
+    if (!(typeDefinition instanceof ObjectTypeDefinition objectTypeDefinition)) {
+      return false;
+    }
+    return objectTypeDefinition.hasDirective(Directives.ENTITY)
+        || objectTypeDefinition.hasDirective(Directives.COMPOSED_TYPE);
+  }
+
+  ClassName entityIdClassName(GraphQLTypeName graphQLTypeName) {
+    Optional<TypeDefinition> typeDefinition =
+        typeDefinitionRegistry.getType(graphQLTypeName.value());
+    if (typeDefinition.isEmpty()
+        || !(typeDefinition.get() instanceof ObjectTypeDefinition objectTypeDefinition)) {
+      throw new IllegalArgumentException("Only ObjectTypeDefinitions can have entity ids");
+    }
+
+    boolean isEntity = objectTypeDefinition.hasDirective(Directives.ENTITY);
+
+    Optional<String> composedInEntity =
+        getDirectiveArgumentString(
+            objectTypeDefinition, Directives.COMPOSED_TYPE, DirectiveArgs.IN_ENTITY);
+    if (composedInEntity.isPresent()) {
+      return entityIdClassName(typeClassName(GraphQLTypeName.of(composedInEntity.get())));
+    }
+    if (isEntity) {
+      return entityIdClassName(typeClassName(graphQLTypeName));
+    }
+    throw new IllegalArgumentException("Only '@entity' and '@composedType' can have entity ids");
+  }
+
+  private ClassName entityIdClassName(ClassName entityClassName) {
+    return ClassName.get(entityClassName.packageName(), entityClassName.simpleName() + "Id");
   }
 
   public GraphQlFieldSpec fieldSpecFromField(

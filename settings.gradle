@@ -79,8 +79,9 @@ include 'lattice:extensions:graphql:rest:lattice-graphql-rest'
 /********* LATTICE EXTENSIONS : END ************/
 
 include 'vajram:vajram-samples'
+include 'vajram:extensions:graphql:vajram-graphql-samples'
 include 'lattice:samples:grpc-proto3-lattice-sample'
 include 'lattice:samples:rest-json-lattice-sample'
-include 'vajram:extensions:graphql:vajram-graphql-samples'
+include 'lattice:samples:graphql-rest-json-lattice-sample'
 
 

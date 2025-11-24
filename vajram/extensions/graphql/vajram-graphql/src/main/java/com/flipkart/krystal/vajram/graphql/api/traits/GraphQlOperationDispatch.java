@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.graphql.api.traits;
 
 import static com.flipkart.krystal.core.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.graphql.api.Constants.GRAPHQL_AGGREGATOR_SUFFIX;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static graphql.language.OperationDefinition.Operation.MUTATION;
 import static graphql.language.OperationDefinition.Operation.QUERY;
 import static graphql.language.OperationDefinition.Operation.SUBSCRIPTION;
@@ -11,32 +12,58 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.traits.ComputeDispatchPolicy;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.google.common.collect.ImmutableSet;
 import graphql.ExecutionInput;
 import graphql.language.OperationDefinition.Operation;
 import graphql.language.OperationTypeDefinition;
 import graphql.language.SchemaDefinition;
 import graphql.schema.idl.TypeDefinitionRegistry;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
-public abstract class GraphQlOperationDispatch extends ComputeDispatchPolicy {
+public final class GraphQlOperationDispatch extends ComputeDispatchPolicy {
 
   private final VajramKryonGraph graph;
   private final TypeDefinitionRegistry typeDefinitionRegistry;
+  private final ImmutableSet<Class<? extends Request<?>>> dispatchTargets;
+  private final ImmutableSet<VajramID> dispatchTargetIDs;
 
-  protected GraphQlOperationDispatch(
-      VajramKryonGraph graph, TypeDefinitionRegistry typeDefinitionRegistry) {
+  public GraphQlOperationDispatch(
+      VajramKryonGraph graph,
+      TypeDefinitionRegistry typeDefinitionRegistry,
+      Set<Class<? extends GraphQlOperationAggregate_Req>> dispatchTargets) {
     this.graph = graph;
     this.typeDefinitionRegistry = typeDefinitionRegistry;
+    Set<Class<? extends Request<?>>> reqs = new HashSet<>();
+    for (Class<? extends GraphQlOperationAggregate_Req> dispatchTarget : dispatchTargets) {
+      //noinspection unchecked
+      reqs.add((Class<? extends Request<?>>) dispatchTarget);
+    }
+    //noinspection unchecked
+    this.dispatchTargets = ImmutableSet.copyOf(reqs);
+    this.dispatchTargetIDs =
+        dispatchTargets.stream().map(graph::getVajramIdByVajramReqType).collect(toImmutableSet());
   }
 
   @Override
   public VajramID traitID() {
     return graph.getVajramIdByVajramReqType(GraphQlOperationAggregate_Req.class);
+  }
+
+  @Override
+  public ImmutableSet<Class<? extends Request<?>>> dispatchTargetReqs() {
+    return dispatchTargets;
+  }
+
+  @Override
+  public ImmutableSet<VajramID> dispatchTargetIDs() {
+    return dispatchTargetIDs;
   }
 
   @Override

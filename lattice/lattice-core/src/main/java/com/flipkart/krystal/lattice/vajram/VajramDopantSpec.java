@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-record VajramDopantSpec(
+public record VajramDopantSpec(
     VajramKryonGraph vajramGraph,
     ImmutableList<KryonExecutorConfigurator> kryonExecutorConfigurators)
     implements SimpleDopantSpec<VajramDopant> {
@@ -42,8 +42,9 @@ record VajramDopantSpec(
       return this;
     }
 
-    public VajramDopantSpecBuilder configureKryonExecutor(KryonExecutorConfigurator manager) {
-      kryonExecutorConfigurators.add(manager);
+    public VajramDopantSpecBuilder configureKryonExecutor(
+        KryonExecutorConfigurator executorConfigurator) {
+      kryonExecutorConfigurators.add(executorConfigurator);
       return this;
     }
 

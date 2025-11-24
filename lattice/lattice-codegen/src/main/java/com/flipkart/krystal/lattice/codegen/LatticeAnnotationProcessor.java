@@ -1,6 +1,7 @@
 package com.flipkart.krystal.lattice.codegen;
 
 import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
+import static com.flipkart.krystal.codegen.common.models.Constants.MODULE_ROOT_PATH_KEY;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static java.util.Objects.requireNonNull;
 
@@ -24,7 +25,7 @@ import javax.lang.model.element.TypeElement;
 @SupportedAnnotationTypes("com.flipkart.krystal.lattice.core.LatticeApp")
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 @AutoService(Processor.class)
-@SupportedOptions(CODEGEN_PHASE_KEY)
+@SupportedOptions({CODEGEN_PHASE_KEY, MODULE_ROOT_PATH_KEY})
 public class LatticeAnnotationProcessor extends AbstractKrystalAnnoProcessor {
 
   @Override

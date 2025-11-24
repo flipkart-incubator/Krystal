@@ -95,6 +95,7 @@ public class CodeGenUtility {
   private final Class<?> generator;
   @Getter private final @Nullable CodegenPhase codegenPhase;
   @Getter private final DataTypeRegistry dataTypeRegistry;
+  @Getter private final @Nullable Path moduleRootPath;
 
   public CodeGenUtility(
       ProcessingEnvironment processingEnv,
@@ -106,6 +107,8 @@ public class CodeGenUtility {
     this.generator = generator;
     this.codegenPhase = codegenPhase;
     this.dataTypeRegistry = new DataTypeRegistry();
+    String moduleRootOption = processingEnv.getOptions().get(Constants.MODULE_ROOT_PATH_KEY);
+    this.moduleRootPath = moduleRootOption != null ? Paths.get(moduleRootOption) : null;
   }
 
   public static String capitalizeFirstChar(String str) {
