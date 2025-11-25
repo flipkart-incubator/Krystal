@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.graphql.codegen;
 
 import static com.flipkart.krystal.codegen.common.models.Constants.IMMUT_SUFFIX;
-import static com.flipkart.krystal.vajram.graphql.codegen.Constants.Directives.DATA_FETCHER;
+import static com.flipkart.krystal.vajram.graphql.api.Constants.Directives.DATA_FETCHER;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQLObjectAggregateGen.GRAPHQL_RESPONSE;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.FINAL;
@@ -14,16 +14,17 @@ import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.ModelRoot.ModelType;
 import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.vajram.graphql.api.Constants.Directives;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlEntityId;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlObject;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponseJson;
-import com.flipkart.krystal.vajram.graphql.codegen.Constants.Directives;
 import com.squareup.javapoet.*;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec.Builder;
 import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -35,15 +36,17 @@ import java.util.stream.Collectors;
 class GraphQLEntityGen implements CodeGenerator {
 
   private final CodeGenUtility util;
+  private final GraphQlCodeGenUtil graphQlCodeGenUtil;
+  private final SchemaReaderUtil schemaReaderUtil;
 
-  public GraphQLEntityGen(CodeGenUtility util) {
+  public GraphQLEntityGen(CodeGenUtility util, File schemaFile) {
     this.util = util;
+    this.graphQlCodeGenUtil = new GraphQlCodeGenUtil(schemaFile);
+    this.schemaReaderUtil = graphQlCodeGenUtil.schemaReaderUtil();
   }
 
   @Override
   public void generate() {
-    GraphQlCodeGenUtil graphQlCodeGenUtil = new GraphQlCodeGenUtil(util);
-    SchemaReaderUtil schemaReaderUtil = graphQlCodeGenUtil.schemaReaderUtil();
     TypeDefinitionRegistry typeDefinitionRegistry = schemaReaderUtil.typeDefinitionRegistry();
     String rootPackageName = schemaReaderUtil.rootPackageName();
     Optional<SchemaDefinition> schemaDefinition = typeDefinitionRegistry.schemaDefinition();
@@ -101,7 +104,7 @@ class GraphQLEntityGen implements CodeGenerator {
 
               if (isEntity && isEntityIdField) {
                 idMissing = false;
-                typeNameForField = schemaReaderUtil.entityIdClassName(entityClassName);
+                typeNameForField = schemaReaderUtil.entityIdClassName(graphQLTypeName);
               }
 
               methodSpecs.add(
@@ -156,7 +159,7 @@ class GraphQLEntityGen implements CodeGenerator {
           JavaFile.builder(entityClassName.packageName(), typeSpec).build().toString(),
           null);
       if (isEntity) {
-        var entityIdClassName = schemaReaderUtil.entityIdClassName(entityClassName);
+        var entityIdClassName = schemaReaderUtil.entityIdClassName(graphQLTypeName);
         util.generateSourceFile(
             entityIdClassName.canonicalName(),
             JavaFile.builder(

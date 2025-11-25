@@ -21,7 +21,6 @@ import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionCont
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyInvocation;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
-import com.flipkart.krystal.krystex.request.RequestIdGenerator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.List;
@@ -39,8 +38,7 @@ public final class DirectKryon
           sortedOutputLogicDecoratorsSupplier,
       Function<DependencyExecutionContext, ImmutableMap<String, DependencyDecorator>>
           depDecoratorSuppliers,
-      DecorationOrdering decorationOrdering,
-      RequestIdGenerator requestIdGenerator) {
+      DecorationOrdering decorationOrdering) {
     super(
         definition,
         kryonExecutor,
@@ -116,7 +114,7 @@ public final class DirectKryon
       }
     }
 
-    return CompletableFuture.completedFuture(DirectResponse.INSTANCE);
+    return CompletableFuture.completedFuture(DirectResponse.instance());
   }
 
   private void executeDecoratedOutputLogic(

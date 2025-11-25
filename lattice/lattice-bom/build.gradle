@@ -24,6 +24,7 @@ dependencies {
         api 'com.flipkart.krystal:lattice-rest-quarkus:' + project.lattice_version
         api 'com.flipkart.krystal:lattice-rest:' + project.lattice_version
         api 'com.flipkart.krystal:lattice-vajram-sdk:' + project.lattice_version
+        api 'com.flipkart.krystal:lattice-graphql-rest:' + project.lattice_version
     }
 }
 

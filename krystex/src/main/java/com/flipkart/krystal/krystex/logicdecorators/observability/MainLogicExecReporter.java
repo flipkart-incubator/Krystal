@@ -40,6 +40,7 @@ public final class MainLogicExecReporter
     implements OutputLogicDecorator, KryonExecutorConfigurator {
 
   public static final String DECORATOR_TYPE = MainLogicExecReporter.class.getName();
+
   private final KryonExecutionReport kryonExecutionReport;
   private static final String FILE_PATH = separator + "tmp" + separator + "krystal_exec_graph_";
   private final ObjectMapper objectMapper;
@@ -106,11 +107,6 @@ public final class MainLogicExecReporter
                                           e.response().handle(Errable::errableFrom).getNow(nil())))
                               .collect(toImmutableList()))));
     };
-  }
-
-  @Override
-  public String decoratorType() {
-    return DECORATOR_TYPE;
   }
 
   public KryonExecutionReport getKryonExecutionReport() {

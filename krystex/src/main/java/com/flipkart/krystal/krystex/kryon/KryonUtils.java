@@ -18,7 +18,8 @@ public final class KryonUtils {
   static VajramKryonDefinition validateAsVajram(KryonDefinition kryonDefinition) {
     if (!(kryonDefinition instanceof VajramKryonDefinition vajramKryonDefinition)) {
       throw new IllegalStateException(
-          "Kryon command execution is supported only for vajrams. Found: "
+          "Kryon command execution is supported only for vajrams. "
+              + "Please check that a trait dispatch policy dispatches requests to the trait appropriately. Found: "
               + kryonDefinition.getClass()
               + " VajramId: "
               + kryonDefinition.vajramID());

@@ -14,22 +14,23 @@ import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
-import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
+import java.net.URL;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.regex.Pattern;
+import lombok.extern.slf4j.Slf4j;
 import org.reflections.Reflections;
 import org.reflections.scanners.Scanners;
 import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
 
+@Slf4j
 @Singleton
 public final class GraphQlLoader {
 
@@ -39,14 +40,7 @@ public final class GraphQlLoader {
   @Inject
   public GraphQlLoader() {}
 
-  public GraphQL loadGraphQl() throws IOException {
-
-    SchemaParser schemaParser = new SchemaParser();
-    TypeDefinitionRegistry typeDefinitionRegistryComplete = new TypeDefinitionRegistry();
-
-    for (Map.Entry<String, String> entry : getResourceFileContents().entrySet()) {
-      typeDefinitionRegistryComplete.merge(schemaParser.parse(entry.getValue()));
-    }
+  public GraphQL loadGraphQl(TypeDefinitionRegistry typeDefinitionRegistry) {
 
     RuntimeWiring.Builder runtimeWiring = RuntimeWiring.newRuntimeWiring();
     runtimeWiring.scalar(ExtendedScalars.Object);
@@ -54,9 +48,8 @@ public final class GraphQlLoader {
     runtimeWiring.scalar(ExtendedScalars.Date);
     runtimeWiring.scalar(ExtendedScalars.GraphQLLong);
 
-    SchemaGenerator schemaGenerator = new SchemaGenerator();
     GraphQLSchema graphQLSchema =
-        schemaGenerator.makeExecutableSchema(typeDefinitionRegistryComplete, runtimeWiring.build());
+        new SchemaGenerator().makeExecutableSchema(typeDefinitionRegistry, runtimeWiring.build());
 
     PreparsedDocumentProvider preParsedCache =
         (executionInput, computeFunction) -> {
@@ -72,38 +65,39 @@ public final class GraphQlLoader {
         .build();
   }
 
-  Map<String, String> getResourceFileContents() throws IOException {
-    Map<String, String> fileToContentMap = new HashMap<>();
+  public TypeDefinitionRegistry getTypeDefinitionRegistry() {
+    SchemaParser schemaParser = new SchemaParser();
+    TypeDefinitionRegistry typeDefinitionRegistryComplete = new TypeDefinitionRegistry();
+    for (Entry<String, InputStream> entry : getResourceFileContents().entrySet()) {
+      typeDefinitionRegistryComplete.merge(schemaParser.parse(entry.getValue()));
+    }
+    return typeDefinitionRegistryComplete;
+  }
+
+  public Map<String, InputStream> getResourceFileContents() {
+    Map<String, InputStream> fileToContentMap = new HashMap<>();
     ConfigurationBuilder builder = new ConfigurationBuilder();
-    builder.addUrls(ClasspathHelper.forResource("", this.getClass().getClassLoader()));
+    Collection<URL> resource = ClasspathHelper.forResource("Schema.graphqls");
+    builder.addUrls(resource);
     builder.addScanners(Scanners.Resources);
     Reflections reflections = new Reflections(builder);
     Set<String> files = reflections.getResources(Pattern.compile("(.*).graphqls"));
 
     for (String file : files) {
-      String content = this.readResourceFile(file);
+      InputStream content = null;
+      for (ClassLoader classLoader : ClasspathHelper.classLoaders()) {
+        content = classLoader.getResourceAsStream(file);
+        if (content != null) {
+          break;
+        }
+      }
       if (content != null) {
         fileToContentMap.put(file, content);
+      } else {
+        log.error("Could not read graphqls file {}", file);
       }
     }
-
+    log.info("GraphQl Files loaded: {}", fileToContentMap.keySet());
     return fileToContentMap;
-  }
-
-  private String readResourceFile(String filePath) throws IOException {
-    InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(filePath);
-    if (inputStream == null) {
-      return null;
-    } else {
-      StringBuilder sb = new StringBuilder();
-      BufferedReader br =
-          new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-
-      for (int c = br.read(); c != -1; c = br.read()) {
-        sb.append((char) c);
-      }
-
-      return sb.toString();
-    }
   }
 }

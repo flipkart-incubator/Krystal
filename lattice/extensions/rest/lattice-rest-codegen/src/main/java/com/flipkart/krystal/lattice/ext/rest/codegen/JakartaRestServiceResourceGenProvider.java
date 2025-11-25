@@ -302,7 +302,7 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
             var _vajramRequest = $T._builder()
               $L
             """,
-            vajramInfo.lite().reqImmutPojoType(),
+            vajramInfo.lite().reqImmutPojoClassName(),
             params.keySet().stream()
                 .filter(p -> params.get(p) != FacetParamType.BODY)
                 .map(

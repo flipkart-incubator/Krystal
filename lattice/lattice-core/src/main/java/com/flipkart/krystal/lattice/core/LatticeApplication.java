@@ -81,15 +81,8 @@ public abstract class LatticeApplication {
     String latticeConfigFile = commandLine.getOptionValue(latticeConfigFileOption);
     LatticeAppBootstrap bootstrap = new LatticeAppBootstrap();
     bootstrap(bootstrap);
-    ImmutableMap<Class<? extends DopantSpecBuilder>, DopantSpecBuilder> allSpecBuilders =
+    ImmutableMap<Class<? extends DopantSpecBuilder>, DopantSpecBuilder> bootstrapSpecBuilders =
         ImmutableMap.copyOf(bootstrap.specBuilders());
-
-    BiMap<String, Class<? extends DopantConfig>> configTypesByDopantTypes =
-        getConfigTypesByDopantTypes(allSpecBuilders);
-    configMapper.registerSubtypes(
-        configTypesByDopantTypes.entrySet().stream()
-            .map(e -> new NamedType(e.getValue(), e.getKey()))
-            .toArray(NamedType[]::new));
 
     ImmutableMap<String, Annotation> annotationsByDopantType = getAppAnnotationsByDopantType();
     annotationsByDopantType.forEach(
@@ -97,33 +90,10 @@ public abstract class LatticeApplication {
             dependencyInjectionBinder.bindToInstance(
                 (Class<Annotation>) annotation.annotationType(), annotation));
 
-    LatticeAppConfig latticeAppConfig;
-    System.err.println("Lattice app args in APP: " + Arrays.deepToString(args));
-    if (latticeConfigFile == null) {
-      latticeAppConfig = new LatticeAppConfig();
-    } else {
-      URL configResource =
-          requireNonNull(this.getClass().getClassLoader()).getResource(latticeConfigFile);
-      if (configResource == null) {
-        latticeAppConfig = new LatticeAppConfig();
-
-      } else {
-        latticeAppConfig = configMapper.readValue(configResource, LatticeAppConfig.class);
-      }
-    }
-    latticeAppConfig
-        .configsByDopantType()
-        .forEach(
-            (dopantType, config) -> {
-              Class<DopantConfig> configType =
-                  (Class<DopantConfig>) configTypesByDopantTypes.get(dopantType);
-              if (configType != null) {
-                dependencyInjectionBinder.bindToInstance(configType, config);
-              }
-            });
-    Collection<DopantSpecBuilder> currentIteration = new ArrayList<>(allSpecBuilders.values());
+    Collection<DopantSpecBuilder> currentIteration =
+        new ArrayList<>(bootstrapSpecBuilders.values());
     Map<Class<? extends DopantSpecBuilder>, DopantSpecBuilder> accumulator =
-        new LinkedHashMap<>(allSpecBuilders);
+        new LinkedHashMap<>(bootstrapSpecBuilders);
     while (!currentIteration.isEmpty()) {
       Map<Class<? extends DopantSpecBuilder<?, ?, ?>>, DopantSpecBuilder> newBatch =
           new LinkedHashMap<>();
@@ -141,11 +111,43 @@ public abstract class LatticeApplication {
       currentIteration = newBatch.values();
     }
 
-    Collection<DopantSpecBuilder> values = accumulator.values();
-    SpecBuilders specBuilders = new SpecBuilders(allSpecBuilders);
-    values.forEach(builder -> builder._configure(specBuilders));
+    Collection<DopantSpecBuilder> allSpecBuilders = accumulator.values();
+    SpecBuilders specBuilders = new SpecBuilders(bootstrapSpecBuilders);
+    allSpecBuilders.forEach(builder -> builder._configure(specBuilders));
+    BiMap<String, Class<? extends DopantConfig>> configTypesByDopantTypes =
+        getConfigTypesByDopantTypes(allSpecBuilders);
+    configMapper.registerSubtypes(
+        configTypesByDopantTypes.entrySet().stream()
+            .map(e -> new NamedType(e.getValue(), e.getKey()))
+            .toArray(NamedType[]::new));
+
+    LatticeAppConfig latticeAppConfig;
+    System.err.println("Lattice app args in APP: " + Arrays.deepToString(args));
+    ClassLoader classLoader = requireNonNull(this.getClass().getClassLoader());
+    log.info("Lattice application class loader: {}", classLoader);
+    if (latticeConfigFile == null) {
+      latticeAppConfig = new LatticeAppConfig();
+    } else {
+      URL configResource = classLoader.getResource(latticeConfigFile);
+      if (configResource == null) {
+        latticeAppConfig = new LatticeAppConfig();
+
+      } else {
+        latticeAppConfig = configMapper.readValue(configResource, LatticeAppConfig.class);
+      }
+    }
+    latticeAppConfig
+        .configsByDopantType()
+        .forEach(
+            (dopantType, config) -> {
+              Class<DopantConfig> configType =
+                  (Class<DopantConfig>) configTypesByDopantTypes.get(dopantType);
+              if (configType != null) {
+                dependencyInjectionBinder.bindToInstance(configType, config);
+              }
+            });
     var specs =
-        values.stream()
+        allSpecBuilders.stream()
             .<Optional<DopantSpec>>map(
                 builder -> {
                   boolean noAnnotation =
@@ -238,9 +240,9 @@ public abstract class LatticeApplication {
   public abstract void bootstrap(LatticeAppBootstrap bootstrap);
 
   private BiMap<String, Class<? extends DopantConfig>> getConfigTypesByDopantTypes(
-      ImmutableMap<Class<? extends DopantSpecBuilder>, DopantSpecBuilder> allSpecBuilders) {
+      Collection<DopantSpecBuilder> allSpecBuilders) {
     BiMap<String, Class<? extends DopantConfig>> configTypesByName = HashBiMap.create();
-    for (DopantSpecBuilder<?, ?, ?> specBuilder : allSpecBuilders.values()) {
+    for (DopantSpecBuilder<?, ?, ?> specBuilder : allSpecBuilders) {
       Class<? extends DopantConfig> configurationType = specBuilder._configurationType();
       if (NoConfiguration.class.isAssignableFrom(configurationType)) {
         continue;

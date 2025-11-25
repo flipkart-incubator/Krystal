@@ -174,7 +174,8 @@ public final class KryonExecutor implements KrystalExecutor {
               decoratorType,
               dependencyExecutionContext ->
                   dependencyExecutionContext
-                      .dependency()
+                      .dependentChain()
+                      .latestDependency()
                       .tags()
                       .getAnnotationByType(TraitDependency.class)
                       .isPresent(),
@@ -284,25 +285,29 @@ public final class KryonExecutor implements KrystalExecutor {
         // Perform all data-structure manipulations in the command queue to avoid multi-thread
         // access
         () -> {
-          InvocationId invocationId =
-              preferredReqGenerator.newRequest(() -> "%s:%s".formatted(executorId, executionId));
-          createDependencyKryons(
-              vajramID, kryonDefinitionRegistry.getDependentChainsStart(), executionConfig);
-          if (allExecutions.containsKey(invocationId)) {
-            requestResponseFuture
-                .response()
-                .completeExceptionally(
-                    stackTracelessWrap(
-                        new IllegalArgumentException(
-                            "Received duplicate requests for same instanceId '%s' and execution Id '%s'"
-                                .formatted(executorId, executionId))));
-          } else {
-            //noinspection unchecked
-            allExecutions.put(
-                invocationId,
-                new KryonExecution<>(
-                    vajramID, invocationId, requestResponseFuture, executionConfig));
-            unFlushedExecutions.add(invocationId);
+          try {
+            InvocationId invocationId =
+                preferredReqGenerator.newRequest(() -> "%s:%s".formatted(executorId, executionId));
+            createDependencyKryons(
+                vajramID, kryonDefinitionRegistry.getDependentChainsStart(), executionConfig);
+            if (allExecutions.containsKey(invocationId)) {
+              requestResponseFuture
+                  .response()
+                  .completeExceptionally(
+                      stackTracelessWrap(
+                          new IllegalArgumentException(
+                              "Received duplicate requests for same instanceId '%s' and execution Id '%s'"
+                                  .formatted(executorId, executionId))));
+            } else {
+              //noinspection unchecked
+              allExecutions.put(
+                  invocationId,
+                  new KryonExecution<>(
+                      vajramID, invocationId, requestResponseFuture, executionConfig));
+              unFlushedExecutions.add(invocationId);
+            }
+          } catch (Throwable e) {
+            requestResponseFuture.response().completeExceptionally(e);
           }
         });
   }
@@ -385,8 +390,7 @@ public final class KryonExecutor implements KrystalExecutor {
                       this,
                       this::getOutputLogicDecorators,
                       this::getDependencyDecorators,
-                      executorConfig.decorationOrdering(),
-                      preferredReqGenerator);
+                      executorConfig.decorationOrdering());
             });
   }
 

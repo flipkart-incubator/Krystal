@@ -55,7 +55,7 @@ public abstract class RestPostComplexPathMatching extends ComputeVajramDef<JsonR
   static class _InternalFacets {
     @Inject
     @IfAbsent(FAIL)
-    JsonResponse_Immut.Builder reponseBuilder;
+    JsonResponse_Immut.Builder responseBuilder;
   }
 
   @Output
@@ -65,8 +65,8 @@ public abstract class RestPostComplexPathMatching extends ComputeVajramDef<JsonR
       String name,
       String threePaths,
       int id,
-      JsonResponse_Immut.Builder reponseBuilder) {
-    return reponseBuilder
+      JsonResponse_Immut.Builder responseBuilder) {
+    return responseBuilder
         .string(
             """
               $$ context: %s $$

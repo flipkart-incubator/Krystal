@@ -1,7 +1,6 @@
 package com.flipkart.krystal.krystex.kryon;
 
 import com.flipkart.krystal.core.VajramID;
-import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
@@ -90,13 +89,9 @@ abstract sealed class AbstractKryon<C extends KryonCommand<?>, R extends KryonCo
                       // Reverse the ordering so that the ones with the highest index are applied
                       // first.
                       .reversed());
-          Dependency dependency = dependentChain.latestDependency();
-          if (dependency == null) {
-            return sortedDecorators;
-          }
           sortedDecorators.addAll(
               depDecoratorSuppliers
-                  .apply(new DependencyExecutionContext(dependency, dependentChain))
+                  .apply(new DependencyExecutionContext(depVajramId, dependentChain))
                   .values());
           return sortedDecorators;
         });

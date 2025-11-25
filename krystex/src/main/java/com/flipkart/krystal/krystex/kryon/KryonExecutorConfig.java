@@ -89,8 +89,8 @@ public record KryonExecutorConfig(
 
   public static class KryonExecutorConfigBuilder {
 
-    public @This KryonExecutorConfigBuilder configureWith(KryonExecutorConfigurator applier) {
-      applier.addToConfig(this);
+    public @This KryonExecutorConfigBuilder configureWith(KryonExecutorConfigurator configurator) {
+      configurator.addToConfig(this);
       return this;
     }
   }

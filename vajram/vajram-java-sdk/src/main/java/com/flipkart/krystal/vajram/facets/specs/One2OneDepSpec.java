@@ -34,7 +34,7 @@ public abstract sealed class One2OneDepSpec<T, CV extends Request, DV extends Re
       VajramID ofVajramID,
       DataType<T> type,
       Class<CV> ofVajram,
-      Class<DV> onVajram,
+      Class<?> onVajram,
       VajramID onVajramId,
       String documentation,
       boolean isBatched,

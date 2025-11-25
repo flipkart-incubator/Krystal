@@ -9,13 +9,21 @@ import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
 import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject;
+import graphql.ExecutionInput;
 import graphql.execution.ExecutionContext;
 import graphql.execution.ExecutionStrategyParameters;
+import graphql.language.OperationDefinition.Operation;
 
 @CallGraphDelegationMode(SYNC)
 @Trait
-public interface GraphQlQueryAggregate<T extends GraphQlOperationObject> extends TraitDef<T> {
+public interface GraphQlOperationAggregate<T extends GraphQlOperationObject> extends TraitDef<T> {
   class _Inputs {
+    @IfAbsent(FAIL)
+    ExecutionInput executionInput;
+
+    @IfAbsent(FAIL)
+    Operation operationType;
+
     @IfAbsent(FAIL)
     ExecutionContext graphql_executionContext;
 

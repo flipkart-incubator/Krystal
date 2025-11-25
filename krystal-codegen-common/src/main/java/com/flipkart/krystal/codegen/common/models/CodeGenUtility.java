@@ -23,7 +23,6 @@ import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.serial.SerdeProtocol;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.primitives.Primitives;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
@@ -38,8 +37,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.OffsetDateTime;
@@ -63,6 +60,7 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.MirroredTypesException;
@@ -80,6 +78,7 @@ import javax.tools.StandardLocation;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.ToString;
+import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -96,6 +95,7 @@ public class CodeGenUtility {
   private final Class<?> generator;
   @Getter private final @Nullable CodegenPhase codegenPhase;
   @Getter private final DataTypeRegistry dataTypeRegistry;
+  @Getter private final @Nullable Path moduleRootPath;
 
   public CodeGenUtility(
       ProcessingEnvironment processingEnv,
@@ -107,6 +107,8 @@ public class CodeGenUtility {
     this.generator = generator;
     this.codegenPhase = codegenPhase;
     this.dataTypeRegistry = new DataTypeRegistry();
+    String moduleRootOption = processingEnv.getOptions().get(Constants.MODULE_ROOT_PATH_KEY);
+    this.moduleRootPath = moduleRootOption != null ? Paths.get(moduleRootOption) : null;
   }
 
   public static String capitalizeFirstChar(String str) {
@@ -342,7 +344,8 @@ public class CodeGenUtility {
       var ignored = supplier.get();
       throw new AssertionError("Expected supplier to throw error");
     } catch (MirroredTypeException mte) {
-      return Optional.ofNullable(mte.getTypeMirror());
+      TypeMirror typeMirror = mte.getTypeMirror();
+      return Optional.ofNullable(typeMirror);
     }
   }
 
@@ -473,22 +476,6 @@ public class CodeGenUtility {
     return TypeName.get(dataType.javaModelType(processingEnv));
   }
 
-  public static TypeName toTypeName(Type typeArg) {
-    if (typeArg instanceof ParameterizedType parameterizedType) {
-      final Type rawType = parameterizedType.getRawType();
-      final Type[] typeArgs = parameterizedType.getActualTypeArguments();
-      return ParameterizedTypeName.get(
-          (ClassName) toTypeName(rawType),
-          stream(typeArgs).map(CodeGenUtility::toTypeName).toArray(TypeName[]::new));
-    } else {
-      if (typeArg instanceof Class<?>) {
-        return ClassName.get(Primitives.wrap((Class<?>) typeArg));
-      } else {
-        return ClassName.bestGuess(typeArg.getTypeName());
-      }
-    }
-  }
-
   public static List<? extends TypeMirror> getTypeParameters(TypeMirror returnType) {
     return returnType.accept(
         new SimpleTypeVisitor14<List<? extends TypeMirror>, Void>() {
@@ -544,6 +531,8 @@ public class CodeGenUtility {
                         CodeBlock.of("$S", "ClassReferencesSubclass"))
                     .collect(joining(",", "{", "}")))
             .build());
+    classBuilder.addAnnotation(
+        AnnotationSpec.builder(Accessors.class).addMember("fluent", "true").build());
     addGeneratedAnnotations(classBuilder);
   }
 
@@ -852,5 +841,40 @@ public class CodeGenUtility {
         .filter(elem -> elem instanceof QualifiedNameable)
         .map(element -> requireNonNull((QualifiedNameable) element).getQualifiedName().toString())
         .anyMatch(s -> Objects.equals(s, modelProtocol.getCanonicalName()));
+  }
+
+  public static ClassName asClassName(TypeName typeName) {
+    if (typeName instanceof ClassName className) {
+      return className;
+    } else if (typeName instanceof ParameterizedTypeName parameterizedTypeName) {
+      return parameterizedTypeName.rawType;
+    } else {
+      throw new AssertionError();
+    }
+  }
+
+  public static TypeName asTypeNameWithElements(
+      ClassName className, List<? extends TypeParameterElement> typeParameterElements) {
+    return asTypeNameWithTypes(
+        className, typeParameterElements.stream().map(TypeParameterElement::asType).toList());
+  }
+
+  public static TypeName asTypeNameWithTypes(
+      TypeName className, List<? extends TypeMirror> typeParams) {
+    TypeNameVisitor typeNameVisitor = new TypeNameVisitor(true);
+    List<? extends TypeName> typeNameStream =
+        typeParams.stream().map(typeNameVisitor::visit).toList();
+    return asTypeName(className, typeNameStream);
+  }
+
+  public static TypeName asTypeName(TypeName typeName, List<? extends TypeName> typeNameStream) {
+    if (typeNameStream.isEmpty()) {
+      return typeName;
+    } else if (typeName instanceof ClassName className) {
+      return ParameterizedTypeName.get(className, typeNameStream.toArray(TypeName[]::new));
+    } else {
+      throw new IllegalArgumentException(
+          "If there are type names, the TypeName should be a ClassName");
+    }
   }
 }

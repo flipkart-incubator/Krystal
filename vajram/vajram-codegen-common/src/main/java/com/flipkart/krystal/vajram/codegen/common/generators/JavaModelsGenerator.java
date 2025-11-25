@@ -1,5 +1,8 @@
 package com.flipkart.krystal.vajram.codegen.common.generators;
 
+import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.asClassName;
+import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.asTypeNameWithElements;
+import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.asTypeNameWithTypes;
 import static com.flipkart.krystal.codegen.common.models.CodegenPhase.MODELS;
 import static com.flipkart.krystal.codegen.common.models.Constants.IMMUT_SUFFIX;
 import static com.flipkart.krystal.model.PlainJavaObject.POJO;
@@ -16,7 +19,6 @@ import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.models.CodeGenerationException;
 import com.flipkart.krystal.codegen.common.models.DeclaredTypeVisitor;
-import com.flipkart.krystal.codegen.common.models.TypeNameVisitor;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
 import com.flipkart.krystal.model.IfAbsent;
@@ -37,7 +39,6 @@ import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
-import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeVariableName;
@@ -165,14 +166,8 @@ public final class JavaModelsGenerator implements CodeGenerator {
     ClassName immutModelNameRaw = util.getImmutClassName(modelRootType);
     String packageName = immutModelNameRaw.packageName();
 
-    List<TypeVariableName> typeVariableNames =
-        modelRootType.getTypeParameters().stream().map(TypeVariableName::get).toList();
-
     TypeName immutModelName =
-        typeVariableNames.isEmpty()
-            ? immutModelNameRaw
-            : ParameterizedTypeName.get(
-                immutModelNameRaw, typeVariableNames.toArray(TypeName[]::new));
+        asTypeNameWithElements(immutModelNameRaw, modelRootType.getTypeParameters());
 
     ClassName immutablePojoNameRaw =
         ClassName.get(
@@ -180,14 +175,14 @@ public final class JavaModelsGenerator implements CodeGenerator {
             immutModelNameRaw.simpleName() + POJO.modelClassesSuffix());
 
     TypeName immutablePojoTypeName =
-        typeVariableNames.isEmpty()
-            ? immutablePojoNameRaw
-            : ParameterizedTypeName.get(
-                immutablePojoNameRaw, typeVariableNames.toArray(TypeName[]::new));
+        asTypeNameWithElements(immutablePojoNameRaw, modelRootType.getTypeParameters());
+
+    TypeName builderType =
+        asTypeNameWithElements(ClassName.get("", "Builder"), modelRootType.getTypeParameters());
 
     // Generate the immutable interface and its builder interface
     TypeSpec immutableInterface =
-        generateImmutableInterface(modelRootType, modelMethods, immutModelName);
+        generateImmutableInterface(modelRootType, modelMethods, immutModelName, builderType);
     // Write the immutable interface to a file
     util.writeJavaFile(packageName, immutableInterface, modelRootType);
 
@@ -195,7 +190,8 @@ public final class JavaModelsGenerator implements CodeGenerator {
         || util.typeExplicitlySupportsProtocol(modelRootType, PlainJavaObject.class)) {
       // Generate the POJO class if PlainJavaObject is supported
       TypeSpec immutablePojo =
-          generateImmutablePojo(modelRootType, modelMethods, immutModelName, immutablePojoTypeName);
+          generateImmutablePojo(
+              modelRootType, modelMethods, immutModelName, immutablePojoTypeName, builderType);
       util.writeJavaFile(packageName, immutablePojo, modelRootType);
     }
   }
@@ -251,12 +247,14 @@ public final class JavaModelsGenerator implements CodeGenerator {
    * @param modelRootType The type element representing the model root
    * @param modelMethods The methods from the model root
    * @param immutableModelName The name for the immutable interface
+   * @param builderType
    * @return TypeSpec for the immutable interface
    */
   private TypeSpec generateImmutableInterface(
       TypeElement modelRootType,
       List<ExecutableElement> modelMethods,
-      TypeName immutableModelName) {
+      TypeName immutableModelName,
+      TypeName builderType) {
 
     List<TypeVariableName> typeVariableNames =
         modelRootType.getTypeParameters().stream().map(TypeVariableName::get).toList();
@@ -289,7 +287,6 @@ public final class JavaModelsGenerator implements CodeGenerator {
                                     .getQualifiedName()
                                     .contentEquals(ModelRoot.class.getCanonicalName()))
                         .findAny());
-    TypeNameVisitor typeNameVisitor = new TypeNameVisitor(true);
     TypeName immutableModelRootType =
         parentModelRootTypeOpt
             .flatMap(
@@ -315,15 +312,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
                                     + util.getAnnotationElement(
                                         annotationMirror, "suffixSeparator", String.class)
                                     + IMMUT_SUFFIX);
-                        if (typeArguments.isEmpty()) {
-                          return className;
-                        } else {
-                          return ParameterizedTypeName.get(
-                              className,
-                              typeArguments.stream()
-                                  .map(typeNameVisitor::visit)
-                                  .toArray(TypeName[]::new));
-                        }
+                        return asTypeNameWithTypes(className, typeArguments);
                       });
                 })
             .or(
@@ -360,15 +349,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
                                         annotationMirror, "suffixSeparator", String.class)
                                     + IMMUT_SUFFIX,
                                 "Builder");
-                        if (typeArguments.isEmpty()) {
-                          return className;
-                        } else {
-                          return ParameterizedTypeName.get(
-                              className,
-                              typeArguments.stream()
-                                  .map(typeNameVisitor::visit)
-                                  .toArray(TypeName[]::new));
-                        }
+                        return asTypeNameWithTypes(className, typeArguments);
                       });
                 })
             .or(
@@ -384,43 +365,26 @@ public final class JavaModelsGenerator implements CodeGenerator {
         util.interfaceBuilder(
                 "Builder", typeVariableNames, modelRootType.getQualifiedName().toString())
             .addModifiers(PUBLIC, STATIC)
-            .addSuperinterface(
-                typeParamTypes.isEmpty()
-                    ? modelBuilderRootType
-                    : ParameterizedTypeName.get(
-                        (ClassName) modelBuilderRootType,
-                        typeParamTypes.stream()
-                            .map(typeNameVisitor::visit)
-                            .toArray(TypeName[]::new)))
+            .addSuperinterface(asTypeNameWithTypes(modelBuilderRootType, typeParamTypes))
             .addMethods(
                 generateBuilderInterfaceMethods(
-                    modelMethods, immutableModelName, hasParentModelRoot));
+                    modelMethods, immutableModelName, hasParentModelRoot, builderType));
 
     if (modelRoot.builderExtendsModelRoot()) {
       builderInterface.addSuperinterface(modelRootType.asType());
     }
 
     // Create the immutable interface
-    TypeName modelRootTypeName;
-    if (typeVariableNames.isEmpty()) {
-      modelRootTypeName = ClassName.get(modelRootType);
-    } else {
-      modelRootTypeName =
-          ParameterizedTypeName.get(
-              ClassName.get(modelRootType), typeVariableNames.toArray(TypeName[]::new));
-    }
+    TypeName modelRootTypeName =
+        asTypeNameWithElements(ClassName.get(modelRootType), modelRootType.getTypeParameters());
+
     return util.interfaceBuilder(
             asClassName(immutableModelName).simpleName(),
             typeVariableNames,
             modelRootType.getQualifiedName().toString())
         .addModifiers(PUBLIC)
         .addSuperinterface(modelRootTypeName)
-        .addSuperinterface(
-            typeParamTypes.isEmpty()
-                ? immutableModelRootType
-                : ParameterizedTypeName.get(
-                    (ClassName) immutableModelRootType,
-                    typeParamTypes.stream().map(typeNameVisitor::visit).toArray(TypeName[]::new)))
+        .addSuperinterface(asTypeNameWithTypes(immutableModelRootType, typeParamTypes))
         .addMethod(
             MethodSpec.overriding(util.getMethod(Model.class, "_build", 0))
                 .addModifiers(PUBLIC, DEFAULT)
@@ -435,7 +399,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
         .addMethod(
             MethodSpec.overriding(util.getMethod(Model.class, "_asBuilder", 0))
                 .addModifiers(PUBLIC, ABSTRACT)
-                .returns(asClassName(immutableModelName).nestedClass("Builder"))
+                .returns(builderType)
                 .build())
         .addType(builderInterface.build())
         .build();
@@ -509,12 +473,14 @@ public final class JavaModelsGenerator implements CodeGenerator {
    * @param immutableModelName The name of the immutable interface
    * @param hasParentModelRoot Whether the modelRoot extends another model root (for example in case
    *     of a {@link Trait vajram trait} implementation)
+   * @param builderType
    * @return List of method specs for the builder interface
    */
   private List<MethodSpec> generateBuilderInterfaceMethods(
       List<ExecutableElement> modelMethods,
       TypeName immutableModelName,
-      boolean hasParentModelRoot) {
+      boolean hasParentModelRoot,
+      TypeName builderType) {
     List<MethodSpec> methods = new ArrayList<>();
 
     for (ExecutableElement method : modelMethods) {
@@ -526,7 +492,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
           MethodSpec.methodBuilder(methodName)
               .addModifiers(PUBLIC, ABSTRACT)
               .addParameter(util.getParameterType(method, true), methodName)
-              .returns(ClassName.get("", "Builder"));
+              .returns(builderType);
       if (hasParentModelRoot) {
         methodBuilder.addAnnotation(Override.class);
       }
@@ -541,11 +507,11 @@ public final class JavaModelsGenerator implements CodeGenerator {
                 .build(),
             MethodSpec.overriding(util.getMethod(Model.class, "_newCopy", 0))
                 .addModifiers(PUBLIC, ABSTRACT)
-                .returns(ClassName.get("", "Builder"))
+                .returns(builderType)
                 .build(),
             MethodSpec.overriding(util.getMethod(Model.class, "_asBuilder", 0))
                 .addModifiers(PUBLIC, DEFAULT)
-                .returns(asClassName(immutableModelName).nestedClass("Builder"))
+                .returns(builderType)
                 .addStatement("return this")
                 .build()));
 
@@ -559,13 +525,15 @@ public final class JavaModelsGenerator implements CodeGenerator {
    * @param modelMethods The methods from the model root
    * @param immutableModelName The name of the immutable interface
    * @param immutablePojoName The name for the immutable POJO
+   * @param builderType
    * @return TypeSpec for the immutable POJO
    */
   private TypeSpec generateImmutablePojo(
       TypeElement modelRootType,
       List<ExecutableElement> modelMethods,
       TypeName immutableModelName,
-      TypeName immutablePojoName) {
+      TypeName immutablePojoName,
+      TypeName builderType) {
     List<TypeVariableName> typeVariableNames =
         modelRootType.getTypeParameters().stream().map(TypeVariableName::get).toList();
     // Create fields for the POJO class
@@ -623,12 +591,6 @@ public final class JavaModelsGenerator implements CodeGenerator {
       methods.add(getterMethod(method).build());
     }
 
-    TypeName builderType =
-        typeVariableNames.isEmpty()
-            ? ClassName.get("", "Builder")
-            : ParameterizedTypeName.get(
-                ClassName.get("", "Builder"), typeVariableNames.toArray(TypeName[]::new));
-
     // Create _asBuilder method to return a new Builder instance with all fields
     MethodSpec.Builder asBuilderMethodBuilder =
         MethodSpec.methodBuilder("_asBuilder")
@@ -676,12 +638,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
     // Create builder class
     TypeSpec builderClass =
         generateBuilderClass(
-            modelRootType,
-            typeVariableNames,
-            modelMethods,
-            immutableModelName,
-            immutablePojoName,
-            builderType);
+            modelRootType, modelMethods, immutableModelName, immutablePojoName, builderType);
 
     TypeSpec.Builder classBuilder =
         util.classBuilder(
@@ -752,7 +709,6 @@ public final class JavaModelsGenerator implements CodeGenerator {
    * Generates the builder class for the immutable POJO.
    *
    * @param modelRootType The model Root type
-   * @param typeVariableNames the type variables of the model root type
    * @param modelMethods The methods from the model root
    * @param immutableModelName The name of the immutable interface
    * @param immutablePojoName The name of the immutable POJO
@@ -761,7 +717,6 @@ public final class JavaModelsGenerator implements CodeGenerator {
    */
   private TypeSpec generateBuilderClass(
       TypeElement modelRootType,
-      List<TypeVariableName> typeVariableNames,
       List<ExecutableElement> modelMethods,
       TypeName immutableModelName,
       TypeName immutablePojoName,
@@ -898,13 +853,12 @@ public final class JavaModelsGenerator implements CodeGenerator {
     // Create the builder class
     ClassName builderClassName = asClassName(immutableModelName).nestedClass("Builder");
     return util.classBuilder(
-            "Builder", typeVariableNames, modelRootType.getQualifiedName().toString())
+            "Builder",
+            modelRootType.getTypeParameters().stream().map(TypeVariableName::get).toList(),
+            modelRootType.getQualifiedName().toString())
         .addModifiers(PUBLIC, STATIC, FINAL)
         .addSuperinterface(
-            typeVariableNames.isEmpty()
-                ? builderClassName
-                : ParameterizedTypeName.get(
-                    builderClassName, typeVariableNames.toArray(TypeName[]::new)))
+            asTypeNameWithElements(builderClassName, modelRootType.getTypeParameters()))
         .addFields(fields)
         .addMethod(noArgConstructor)
         .addMethods(dataAccessMethods)
@@ -917,16 +871,6 @@ public final class JavaModelsGenerator implements CodeGenerator {
                 .build())
         .addMethod(builderCopyMethodBuilder.build())
         .build();
-  }
-
-  private ClassName asClassName(TypeName typeName) {
-    if (typeName instanceof ClassName className) {
-      return className;
-    } else if (typeName instanceof ParameterizedTypeName parameterizedTypeName) {
-      return parameterizedTypeName.rawType;
-    } else {
-      throw new AssertionError();
-    }
   }
 
   /**

@@ -6,11 +6,12 @@ import com.squareup.javapoet.CodeBlock;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
+import lombok.Getter;
 
 public final class VariableCodeGenType implements CodeGenType {
 
   private final TypeVariable typeVariable;
-  private final CodeGenType upperBound;
+  @Getter private final CodeGenType upperBound;
 
   public VariableCodeGenType(TypeVariable typeVariable, CodeGenType upperBound) {
     this.typeVariable = typeVariable;
