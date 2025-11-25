@@ -7,8 +7,8 @@ plugins {
 ext {
     clojarsusername = project.properties['clojarsusername'] ?: ""
     clojarspassword = project.properties['clojarspassword'] ?: ""
-    krystal_version = '10.0.0.6-SNAPSHOT'
-    lattice_version = '0.0.19'
+    krystal_version = '10.0.0'
+    lattice_version = '0.0.22'
 
     java_code_std_version = '5.3'
 
@@ -148,8 +148,10 @@ configure(subprojects.findAll {
         exclude group: 'com.google.guava', module: 'listenablefuture'
     }
 
-    //Exclude modules which should not be published or have custom publishing config
-    if (project.name != 'vajram-lang' && project.subprojects.isEmpty()) {
+    // Exclude modules which should not be published or have custom publishing config
+    // vajram-codegen has the 'java-gradle-plugin'  applied - which itself publishes to maven.
+    // So we need to disable it here - else it will lead to duplicate publishing
+    if (project.name !in ['vajram-lang', 'vajram-codegen'] && project.subprojects.isEmpty()) {
         publishing {
             publications {
                 maven(MavenPublication) {
