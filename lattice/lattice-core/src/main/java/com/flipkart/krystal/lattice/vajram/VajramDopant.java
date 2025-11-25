@@ -61,8 +61,8 @@ public final class VajramDopant implements SimpleDopant {
 
   private KrystexVajramExecutor createExecutor(
       @CalledMethods("executorService") KryonExecutorConfigBuilder kryonConfigBuilder) {
-    vajramDopantSpec.kryonExecutorConfigurators().forEach(m -> m.addToConfig(kryonConfigBuilder));
-    kryonExecutorConfigurators.forEach(m -> m.addToConfig(kryonConfigBuilder));
+    vajramDopantSpec.kryonExecutorConfigurators().forEach(kryonConfigBuilder::configureWith);
+    kryonExecutorConfigurators.forEach(kryonConfigBuilder::configureWith);
 
     return graph.createExecutor(
         KrystexVajramExecutorConfig.builder()

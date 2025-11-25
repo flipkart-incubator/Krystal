@@ -36,14 +36,14 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import lombok.Getter;
 
-public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
+public class DefaultTraitDispatcher implements TraitDispatchDecorator {
 
-  public static final String DECORATOR_TYPE = StaticDispatchPolicy.class.getName();
+  public static final String DECORATOR_TYPE = DefaultTraitDispatcher.class.getName();
 
   private final VajramKryonGraph vajramKryonGraph;
   @Getter private final ImmutableMap<VajramID, TraitDispatchPolicy> traitDispatchPolicies;
 
-  public TraitDispatchDecoratorImpl(
+  public DefaultTraitDispatcher(
       VajramKryonGraph vajramKryonGraph,
       ImmutableMap<VajramID, TraitDispatchPolicy> traitDispatchPolicies) {
     this.vajramKryonGraph = vajramKryonGraph;

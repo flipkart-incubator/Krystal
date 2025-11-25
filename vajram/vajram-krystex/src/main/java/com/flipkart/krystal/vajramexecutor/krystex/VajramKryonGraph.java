@@ -64,7 +64,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.batching.DepChainBatcherConfi
 import com.flipkart.krystal.vajramexecutor.krystex.batching.InputBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.batching.InputBatchingDecorator;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.KryonInputInjector;
-import com.flipkart.krystal.vajramexecutor.krystex.traits.TraitDispatchDecoratorImpl;
+import com.flipkart.krystal.vajramexecutor.krystex.traits.DefaultTraitDispatcher;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -139,7 +139,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
 
   private TraitDispatchDecorator traitDispatchDecorator() {
     if (traitDispatchDecorator == null) {
-      traitDispatchDecorator = new TraitDispatchDecoratorImpl(this, traitDispatchPolicies);
+      traitDispatchDecorator = new DefaultTraitDispatcher(this, traitDispatchPolicies);
     }
     return traitDispatchDecorator;
   }

@@ -9,7 +9,6 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfi
 import com.flipkart.krystal.lattice.core.di.Bindings;
 import com.flipkart.krystal.lattice.core.di.Bindings.BindingsBuilder;
 import com.flipkart.krystal.lattice.core.doping.Dopant;
-import com.flipkart.krystal.lattice.core.doping.DopantInitData;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
 import com.flipkart.krystal.lattice.core.headers.Header;
 import com.flipkart.krystal.lattice.core.headers.SingleValueHeader;
@@ -179,8 +178,7 @@ public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerC
       GrpcServerConfig config,
       GrpcServerSpec spec,
       StandardHeadersInterceptor headerInterceptor,
-      VajramDopant vajramDopant)
-      implements DopantInitData<GrpcServer, GrpcServerConfig, GrpcServerSpec> {
+      VajramDopant vajramDopant) {
     @Inject
     public GrpcInitData {}
   }

@@ -10,8 +10,10 @@ import com.flipkart.krystal.core.VajramInvocation;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponseFuture;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject;
+import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate_Req;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate_ReqImmutPojo;
+import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationDispatch;
 import graphql.ExecutionResult;
 import graphql.GraphQLContext;
 import graphql.execution.ExecutionContext;
@@ -26,7 +28,6 @@ import graphql.execution.MergedSelectionSet;
 import graphql.execution.NonNullableFieldValidator;
 import graphql.execution.NonNullableFieldWasNullException;
 import graphql.execution.ResultPath;
-import graphql.language.OperationDefinition;
 import graphql.language.OperationDefinition.Operation;
 import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLObjectType;
@@ -36,8 +37,23 @@ import jakarta.inject.Singleton;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+/**
+ * This execution strategy is responsible for executing a graphql operation by setting the following
+ * fields in the {@link GraphQlOperationAggregate_Req} object.
+ *
+ * <ul>
+ *   <li>operationType
+ *   <li>graphql_executionContext
+ *   <li>graphql_executionStrategy
+ *   <li>graphql_executionStrategyParams
+ * </ul>
+ *
+ * These fields are subsequently used by the {@link GraphQlOperationDispatch} dependency decorator
+ * to dispatch the call to the appropriate vajram implementing the {@link GraphQlOperationAggregate}
+ * trait.
+ */
 @Singleton
-public class VajramExecutionStrategy extends ExecutionStrategy {
+public final class VajramExecutionStrategy extends ExecutionStrategy {
 
   public static final Class<VajramInvocation> VAJRAM_INVOCATION_CTX_KEY = VajramInvocation.class;
   public static final Class<GraphQlOperationAggregate_Req> GRAPHQL_OP_AGGREGATE_REQUEST =
@@ -53,8 +69,7 @@ public class VajramExecutionStrategy extends ExecutionStrategy {
       ExecutionContext executionContext, ExecutionStrategyParameters parameters)
       throws NonNullableFieldWasNullException {
     GraphQLContext graphQLContext = executionContext.getGraphQLContext();
-    OperationDefinition operationDefinition = executionContext.getOperationDefinition();
-    Operation operation = operationDefinition.getOperation();
+    Operation operation = executionContext.getOperationDefinition().getOperation();
     GraphQlOperationAggregate_Req<GraphQlOperationObject> graphQlOperationObjectBuilder =
         requireNonNullElseGet(
             graphQLContext.get(GRAPHQL_OP_AGGREGATE_REQUEST),

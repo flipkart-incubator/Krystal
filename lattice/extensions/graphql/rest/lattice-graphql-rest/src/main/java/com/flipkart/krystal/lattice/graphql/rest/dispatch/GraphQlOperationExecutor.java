@@ -10,32 +10,52 @@ import com.flipkart.krystal.krystex.commands.DirectForwardSend;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecoratorConfig;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyInvocation;
+import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
 import com.flipkart.krystal.krystex.kryon.DirectResponse;
 import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
+import com.flipkart.krystal.lattice.vajram.VajramDopant;
 import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationError;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate_Req;
+import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationDispatch;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import graphql.ExecutionInput;
 import graphql.GraphQL;
+import jakarta.inject.Inject;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * This dependency decorator is responsible to forwarding a {@link GraphQlOperationAggregate_Req} to
+ * the {@link GraphQL} execution logic provided by the <a
+ * href="https://github.com/graphql-java/graphql-java">graphql-java</a> library. The execution
+ * inside the graphql-java library is handled by the {@link VajramExecutionStrategy}. The actual
+ * dispatch of the request to the appropriate vajram is handled by the {@link
+ * GraphQlOperationDispatch} trait dispatch policy which uses properties set by the
+ * VajramExecutionStrategy. This is why a {@link TraitDispatchDecorator} decorator MUST run after
+ * this decorator.
+ */
 @Slf4j
-public class GraphQlOperationDelegator implements DependencyDecorator, KryonExecutorConfigurator {
+public final class GraphQlOperationExecutor
+    implements DependencyDecorator, KryonExecutorConfigurator {
 
-  public static final String DECORATOR_TYPE = GraphQlOperationDelegator.class.getName();
+  public static final String DECORATOR_TYPE = GraphQlOperationExecutor.class.getName();
   private final GraphQL graphQL;
   private final VajramKryonGraph graph;
 
-  public GraphQlOperationDelegator(GraphQL graphQL, VajramKryonGraph graph) {
+  @Inject
+  public GraphQlOperationExecutor(GraphQL graphQL, VajramDopant vajramDopant) {
+    this(graphQL, vajramDopant.graph());
+  }
+
+  public GraphQlOperationExecutor(GraphQL graphQL, VajramKryonGraph graph) {
     this.graphQL = graphQL;
     this.graph = graph;
   }
