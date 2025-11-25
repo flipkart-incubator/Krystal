@@ -22,7 +22,6 @@ import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
-import java.io.IOException;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -41,7 +40,7 @@ public class GraphQlSamplesE2ETest {
   private VajramKryonGraph graph;
 
   @BeforeAll
-  static void beforeAll() throws IOException {
+  static void beforeAll() {
     EXEC_POOL =
         new SingleThreadExecutorsPool(
             "GraphQlSamplesE2ETest", Runtime.getRuntime().availableProcessors());

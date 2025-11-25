@@ -34,7 +34,7 @@ public class GraphQLAnnotationProcessor extends AbstractKrystalAnnoProcessor {
       return false;
     }
     CodeGenUtility util = codeGenUtil();
-    File schemaFile = GraphQlCodeGenUtil.getSchemaFile(util);
+    File schemaFile = GraphQlCodeGenUtil.getSchemaFilePath(util).toFile();
     if (!schemaFile.exists()) {
       util.note("Schema.graphqls not found. Skipping GraphQl Code Generation");
       return false;

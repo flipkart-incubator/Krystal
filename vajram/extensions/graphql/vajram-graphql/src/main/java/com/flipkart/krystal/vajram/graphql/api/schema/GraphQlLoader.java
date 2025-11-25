@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.graphql.api.schema;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.reflections.util.ClasspathHelper.classLoaders;
 
 import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy;
 import graphql.GraphQL;
@@ -85,7 +86,7 @@ public final class GraphQlLoader {
 
     for (String file : files) {
       InputStream content = null;
-      for (ClassLoader classLoader : classLoaders) {
+      for (ClassLoader classLoader : classLoaders(classLoaders)) {
         content = classLoader.getResourceAsStream(file);
         if (content != null) {
           break;

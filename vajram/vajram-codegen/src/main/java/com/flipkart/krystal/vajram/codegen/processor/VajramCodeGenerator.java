@@ -2444,18 +2444,6 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                           immutableFacetsType,
                           immutableFacetsType.nestedClass("Builder"),
                           CodeGenParams.builder().wrapsRequest(true).build()))
-                  //                  .addMethod(
-                  //                      methodBuilder("_build")
-                  //                          .addModifiers(PUBLIC, ABSTRACT)
-                  //                          .returns(immutableFacetsType)
-                  //                          .addAnnotation(Override.class)
-                  //                          .build())
-                  //                  .addMethod(
-                  //                      methodBuilder("_asBuilder")
-                  //                          .addModifiers(PUBLIC, ABSTRACT)
-                  //                          .returns(immutableFacetsType.nestedClass("Builder"))
-                  //                          .addAnnotation(Override.class)
-                  //                          .build())
                   .build())
           .build()
           .writeTo(writer);

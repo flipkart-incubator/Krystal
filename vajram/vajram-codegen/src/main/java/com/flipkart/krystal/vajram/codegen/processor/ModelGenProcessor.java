@@ -104,7 +104,8 @@ public final class ModelGenProcessor extends AbstractKrystalAnnoProcessor {
             s -> {
               try {
                 //noinspection unchecked
-                return (Class<? extends ModelProtocol>) Class.forName(s);
+                return (Class<? extends ModelProtocol>)
+                    Class.forName(s, false, this.getClass().getClassLoader());
               } catch (ClassNotFoundException e) {
                 util.error(Throwables.getStackTraceAsString(e), modelRootType);
                 return null;

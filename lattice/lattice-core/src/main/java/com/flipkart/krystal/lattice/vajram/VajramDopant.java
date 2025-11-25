@@ -109,6 +109,10 @@ public final class VajramDopant implements SimpleDopant {
     return future;
   }
 
+  public void configureKryonExecutor(KryonExecutorConfigurator executorConfigurator) {
+    this.kryonExecutorConfigurators.add(executorConfigurator);
+  }
+
   private static void closeAll(List<AutoCloseable> closeables) {
     for (AutoCloseable closeable : closeables) {
       try {
@@ -117,9 +121,5 @@ public final class VajramDopant implements SimpleDopant {
         log.error("Unable to execute initializer closeable", e);
       }
     }
-  }
-
-  public void configureKryonExecutor(KryonExecutorConfigurator executorConfigurator) {
-    this.kryonExecutorConfigurators.add(executorConfigurator);
   }
 }

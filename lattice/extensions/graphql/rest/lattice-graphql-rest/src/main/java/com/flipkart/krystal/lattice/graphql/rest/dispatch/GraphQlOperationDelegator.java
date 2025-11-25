@@ -55,10 +55,10 @@ public class GraphQlOperationDelegator implements DependencyDecorator, KryonExec
       if (requestResponseFutures.size() > 1) {
         String msg = "As per GraphQl spec, only one operation is allowed to execute at a time";
         log.error(msg);
-        return CompletableFuture.failedFuture(new IllegalArgumentException("msg"));
+        return CompletableFuture.failedFuture(new IllegalArgumentException(msg));
       } else if (requestResponseFutures.isEmpty()) {
         log.error("No requests found. Forwarding message as is");
-        invocationToDecorate.invokeDependency(kryonCommand);
+        return invocationToDecorate.invokeDependency(kryonCommand);
       }
 
       @SuppressWarnings("unchecked")
@@ -116,8 +116,8 @@ public class GraphQlOperationDelegator implements DependencyDecorator, KryonExec
                   requestResponseFuture.response().completeExceptionally(throwable);
                 } else {
                   if (!requestResponseFuture.response().isDone()) {
-                    // This means that some error was encountered before the Aggregation vajram was
-                    // invoked. Propagate the error to the response
+                    // This means the execution was aborted before the Aggregation vajram was
+                    // invoked. Propagate the state to the response.
                     requestResponseFuture
                         .response()
                         .complete(GraphQlOperationError.from(executionResult));

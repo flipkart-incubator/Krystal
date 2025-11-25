@@ -34,13 +34,19 @@ public final class GraphQlCodeGenUtil {
     this.schemaReaderUtil = new SchemaReaderUtil(schemaFile);
   }
 
-  public static File getSchemaFile(CodeGenUtility util) {
+  /**
+   * Returns the path schema file if found in SOURCE_PATH. If not found, it returns the path in the
+   * module path. It is the clients responsibility to check if the file at the given path exists or
+   * not.
+   */
+  public static Path getSchemaFilePath(CodeGenUtility util) {
     try {
       return new File(
-          util.processingEnv()
-              .getFiler()
-              .getResource(StandardLocation.SOURCE_PATH, "", GRAPHQL_SCHEMA_FILENAME)
-              .toUri());
+              util.processingEnv()
+                  .getFiler()
+                  .getResource(StandardLocation.SOURCE_PATH, "", GRAPHQL_SCHEMA_FILENAME)
+                  .toUri())
+          .toPath();
     } catch (IOException e) {
       util.note(
           """
@@ -60,7 +66,7 @@ public final class GraphQlCodeGenUtil {
             "Schema.graphqls was not present in SOURCE_PATH, nor was it found in the module path: "
                 + schemaFile.getAbsolutePath());
       }
-      return schemaFile;
+      return schemaFile.toPath();
     }
   }
 
