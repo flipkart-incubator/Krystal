@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.graphql.api.schema;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.reflections.util.ClasspathHelper.classLoaders;
 
 import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy;
 import graphql.GraphQL;
@@ -66,19 +65,19 @@ public final class GraphQlLoader {
         .build();
   }
 
-  public TypeDefinitionRegistry getTypeDefinitionRegistry(ClassLoader... classLoaders) {
+  public TypeDefinitionRegistry getTypeDefinitionRegistry() {
     SchemaParser schemaParser = new SchemaParser();
     TypeDefinitionRegistry typeDefinitionRegistryComplete = new TypeDefinitionRegistry();
-    for (Entry<String, InputStream> entry : getResourceFileContents(classLoaders).entrySet()) {
+    for (Entry<String, InputStream> entry : getResourceFileContents().entrySet()) {
       typeDefinitionRegistryComplete.merge(schemaParser.parse(entry.getValue()));
     }
     return typeDefinitionRegistryComplete;
   }
 
-  public Map<String, InputStream> getResourceFileContents(ClassLoader... classLoaders) {
+  public Map<String, InputStream> getResourceFileContents() {
     Map<String, InputStream> fileToContentMap = new HashMap<>();
     ConfigurationBuilder builder = new ConfigurationBuilder();
-    Collection<URL> resource = ClasspathHelper.forResource("Schema.graphqls", classLoaders);
+    Collection<URL> resource = ClasspathHelper.forResource("Schema.graphqls");
     builder.addUrls(resource);
     builder.addScanners(Scanners.Resources);
     Reflections reflections = new Reflections(builder);
@@ -86,7 +85,7 @@ public final class GraphQlLoader {
 
     for (String file : files) {
       InputStream content = null;
-      for (ClassLoader classLoader : classLoaders(classLoaders)) {
+      for (ClassLoader classLoader : ClasspathHelper.classLoaders()) {
         content = classLoader.getResourceAsStream(file);
         if (content != null) {
           break;

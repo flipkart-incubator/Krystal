@@ -1,6 +1,5 @@
 package com.flipkart.krystal.lattice.samples.graphql.rest.json;
 
-import com.flipkart.krystal.lattice.core.runtime.MainClassLoaderHolder;
 import com.flipkart.krystal.lattice.graphql.rest.dopant.GraphQlOverRestDopant;
 import com.flipkart.krystal.vajram.graphql.api.schema.GraphQlLoader;
 import com.google.inject.AbstractModule;
@@ -28,17 +27,8 @@ public final class SampleGraphQlServerModule extends AbstractModule {
 
   @Provides
   @Singleton
-  MainClassLoaderHolder mainClassLoaderHolder() {
-    ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-    log.info("Main class loader: {}", classLoader);
-    return new MainClassLoaderHolder(classLoader);
-  }
-
-  @Provides
-  @Singleton
-  TypeDefinitionRegistry provideTypeDefinitionRegistry(
-      GraphQlLoader graphQlLoader, MainClassLoaderHolder mainClassLoaderHolder) {
-    return graphQlLoader.getTypeDefinitionRegistry(mainClassLoaderHolder.classLoader());
+  TypeDefinitionRegistry provideTypeDefinitionRegistry(GraphQlLoader graphQlLoader) {
+    return graphQlLoader.getTypeDefinitionRegistry();
   }
 
   @Provides
