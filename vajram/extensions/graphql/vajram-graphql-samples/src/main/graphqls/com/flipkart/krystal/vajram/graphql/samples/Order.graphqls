@@ -14,12 +14,18 @@ type Order @entity @subPackage(name: "order"){
     hello: Hello @inferIdFromParent
     recommendedHellos: [Hello!] @idFetcher(vajramId: "")
     recommendedOrders: [Order]
+    state: State @dataFetcher(vajramId: "GetOrderState", subPackage: "order")
     hello2: Hello
     name: Name
 
     #TODO: Add check that fields with @inferIdFromParent must be @composedTypes
     #TODO: Add check that fields with @composedTypes cannot be fanout types
     #hellos: [Hello] @inferIdFromParent
+}
+
+enum State {
+    PENDING
+    COMPLETED
 }
 
 type Dummy @entity(entityIdField: "dummyId"){

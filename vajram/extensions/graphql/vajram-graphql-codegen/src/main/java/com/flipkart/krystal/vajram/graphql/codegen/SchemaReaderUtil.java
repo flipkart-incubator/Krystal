@@ -446,9 +446,9 @@ public class SchemaReaderUtil {
   }
 
   String getPackageNameForType(GraphQLTypeName graphQLTypeName) {
-    ObjectTypeDefinition objectTypeDefinition =
+    TypeDefinition objectTypeDefinition =
         requireNonNull(
-            graphQLObjectTypes().get(graphQLTypeName),
+            typeDefinitionRegistry().types().get(graphQLTypeName.value()),
             () -> "Could not find type definition for type: " + graphQLTypeName);
     String subPackage =
         getDirectiveArgumentString(objectTypeDefinition, Directives.SUB_PACKAGE, DirectiveArgs.NAME)
