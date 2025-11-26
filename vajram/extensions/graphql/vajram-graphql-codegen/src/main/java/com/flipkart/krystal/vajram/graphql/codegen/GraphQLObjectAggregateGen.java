@@ -13,6 +13,7 @@ import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.INH
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.INHERIT_ID_FROM_PARENT;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.TYPE_AGGREGATOR;
 import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.getDirectiveArgumentString;
+import static com.google.common.base.Throwables.getStackTraceAsString;
 import static java.util.Map.entry;
 import static javax.lang.model.element.Modifier.*;
 import static javax.lang.model.element.Modifier.FINAL;
@@ -68,82 +69,89 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
   }
 
   public void generate() {
-    util.note("******** generating typeAggregators **********");
-    schemaReaderUtil
-        .aggregatableTypes()
-        .forEach(
-            (objectTypeName, typeDefinition) -> {
-              ClassName className = getAggregatorName(objectTypeName);
-              Map<ClassName, List<GraphQlFieldSpec>> refToFieldMap =
-                  getDfToListOfFieldsDeRef(typeDefinition);
-              TypeSpec.Builder typeAggregator =
-                  util.classBuilder(className.simpleName(), "")
-                      .addModifiers(PUBLIC)
-                      .addModifiers(ABSTRACT)
-                      .superclass(
-                          ParameterizedTypeName.get(
-                              ClassName.get(ComputeVajramDef.class),
-                              asVajramReturnType(objectTypeName)))
-                      .addAnnotation(Vajram.class)
-                      .addAnnotation(AnnotationSpec.builder(Slf4j.class).build())
-                      .addTypes(createFacetDefinitions(typeDefinition))
-                      .addMethods(getInputResolvers(objectTypeName, typeDefinition))
-                      .addMethod(outputLogic(objectTypeName));
-              ObjectTypeDefinition queryType = schemaReaderUtil.queryType();
-              if (queryType != null && queryType.getName().equals(objectTypeName.value())) {
-                typeAggregator.addSuperinterface(
-                    ParameterizedTypeName.get(
-                        ClassName.get(GraphQlOperationAggregate.class),
-                        asVajramReturnType(objectTypeName)));
-              }
-              refToFieldMap.forEach(
-                  (vajramClass, graphQlFieldSpecs) -> {
-                    String vajramId = vajramClass.simpleName();
-                    typeAggregator.addField(
-                        FieldSpec.builder(
-                                ParameterizedTypeName.get(Set.class, String.class),
-                                vajramId + "_FIELDS",
-                                PRIVATE,
-                                STATIC,
-                                FINAL)
-                            .initializer(
-                                "$T.of($L)",
-                                Set.class,
-                                graphQlFieldSpecs.stream()
-                                    .map(f -> CodeBlock.of("$S", f.fieldName()))
-                                    .collect(CodeBlock.joining(",")))
-                            .build());
-                  });
-              JavaFile javaFile =
-                  JavaFile.builder(className.packageName(), typeAggregator.build()).build();
+    Map<GraphQLTypeName, ObjectTypeDefinition> aggregatableTypes =
+        schemaReaderUtil.aggregatableTypes();
+    util.note(
+        "Generating typeAggregators for aggregatable types : '%s'".formatted(aggregatableTypes));
+    aggregatableTypes.forEach(
+        (objectTypeName, typeDefinition) -> {
+          try {
+            ClassName className = getAggregatorName(objectTypeName);
+            Map<ClassName, List<GraphQlFieldSpec>> refToFieldMap =
+                getDfToListOfFieldsDeRef(typeDefinition);
+            Builder typeAggregator =
+                util.classBuilder(className.simpleName(), "")
+                    .addModifiers(PUBLIC)
+                    .addModifiers(ABSTRACT)
+                    .superclass(
+                        ParameterizedTypeName.get(
+                            ClassName.get(ComputeVajramDef.class),
+                            asVajramReturnType(objectTypeName)))
+                    .addAnnotation(Vajram.class)
+                    .addAnnotation(AnnotationSpec.builder(Slf4j.class).build())
+                    .addTypes(createFacetDefinitions(typeDefinition))
+                    .addMethods(getInputResolvers(objectTypeName, typeDefinition))
+                    .addMethod(outputLogic(objectTypeName));
+            ObjectTypeDefinition queryType = schemaReaderUtil.queryType();
+            if (queryType != null && queryType.getName().equals(objectTypeName.value())) {
+              typeAggregator.addSuperinterface(
+                  ParameterizedTypeName.get(
+                      ClassName.get(GraphQlOperationAggregate.class),
+                      asVajramReturnType(objectTypeName)));
+            }
+            refToFieldMap.forEach(
+                (vajramClass, graphQlFieldSpecs) -> {
+                  String vajramId = vajramClass.simpleName();
+                  typeAggregator.addField(
+                      FieldSpec.builder(
+                              ParameterizedTypeName.get(Set.class, String.class),
+                              vajramId + "_FIELDS",
+                              PRIVATE,
+                              STATIC,
+                              FINAL)
+                          .initializer(
+                              "$T.of($L)",
+                              Set.class,
+                              graphQlFieldSpecs.stream()
+                                  .map(f -> CodeBlock.of("$S", f.fieldName()))
+                                  .collect(CodeBlock.joining(",")))
+                          .build());
+                });
+            JavaFile javaFile =
+                JavaFile.builder(className.packageName(), typeAggregator.build()).build();
 
-              StringWriter writer = new StringWriter();
+            StringWriter writer = new StringWriter();
+            try {
+              javaFile.writeTo(writer);
+            } catch (Exception e) {
+              throw new RuntimeException(e);
+            }
+            try {
               try {
-                javaFile.writeTo(writer);
-              } catch (Exception e) {
-                throw new RuntimeException(e);
-              }
-              try {
-                try {
-                  JavaFileObject requestFile =
-                      util.processingEnv().getFiler().createSourceFile(className.canonicalName());
-                  util.note("Successfully Create source file %s".formatted(className));
-                  try (PrintWriter out = new PrintWriter(requestFile.openWriter())) {
-                    out.println(writer);
-                  }
-                } catch (Exception e) {
-                  util.error(
-                      "Error creating java file for className: %s. Error: %s"
-                          .formatted(className, e));
+                JavaFileObject requestFile =
+                    util.processingEnv().getFiler().createSourceFile(className.canonicalName());
+                util.note("Successfully Create source file %s".formatted(className));
+                try (PrintWriter out = new PrintWriter(requestFile.openWriter())) {
+                  out.println(writer);
                 }
               } catch (Exception e) {
-                StringWriter exception = new StringWriter();
-                e.printStackTrace(new PrintWriter(exception));
                 util.error(
-                    "Error while generating file for class %s. Exception: %s"
-                        .formatted(className, exception));
+                    "Error creating java file for className: %s. Error: %s"
+                        .formatted(className, e));
               }
-            });
+            } catch (Exception e) {
+              StringWriter exception = new StringWriter();
+              e.printStackTrace(new PrintWriter(exception));
+              util.error(
+                  "Error while generating file for class %s. Exception: %s"
+                      .formatted(className, exception));
+            }
+          } catch (Throwable e) {
+            util.error(
+                "Error generating GraphQl Object Aggregator for object type '%s' due to exception '%s'"
+                    .formatted(objectTypeName, getStackTraceAsString(e)));
+          }
+        });
   }
 
   private ClassName asVajramReturnType(GraphQLTypeName objectTypeName) {

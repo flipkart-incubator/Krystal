@@ -16,6 +16,8 @@ public class Constants {
     public static final String ID_FETCHER = "idFetcher";
     public static final String INHERIT_ID_FROM_ARGS = "inferIdFromArgs";
     public static final String INHERIT_ID_FROM_PARENT = "inferIdFromParent";
+    public static final String ROOT_PACKAGE = "rootPackage";
+    public static final String SUB_PACKAGE = "subPackage";
   }
 
   @UtilityClass
@@ -24,6 +26,7 @@ public class Constants {
     public static final String SUB_PACKAGE = "subPackage";
     public static final String VAJRAM_ID = "vajramId";
     public static final String ENTITY_ID_FIELD = "entityIdField";
+    public static final String NAME = "name";
   }
 
   @UtilityClass

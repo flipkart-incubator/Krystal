@@ -1,7 +1,12 @@
 #TODO Testcases: A, A!, [A], [A]!, [A!], [A!]! -> 4 types of As (Scalars, entities, composedTypes, types)
-directive @test on ARGUMENT_DEFINITION
-type Order @entity{
+"""
+An order
+"""
+type Order @entity @subPackage(name: "order"){
     id: ID
+    """
+    List of order Item names in this order
+    """
     orderItemNames: [String] @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
     nameString: String @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
     dummy(name: String): Dummy @idFetcher(vajramId: "GetDummyIdForOrder", subPackage: "order")
