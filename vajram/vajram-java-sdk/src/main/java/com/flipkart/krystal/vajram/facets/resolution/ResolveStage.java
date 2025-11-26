@@ -27,14 +27,15 @@ public final class ResolveStage<T, R, DV extends Request<R>> {
    * Creates a resolver spec which does not have any source. This is useful when we want to
    * statically bind a value to a dependency input
    *
-   * @param with a supplier which provides the value which is used to resolve the dependency input
+   * @param valueSupplier a supplier which provides the value which is used to resolve the
+   *     dependency input
    * @return The resultant {@link SimpleInputResolverSpec}
    * @param <CV> The current vajram which is doing the resolution
    */
   public <CV extends Request> SimpleInputResolverSpec<T, CV, DV> usingValueAsResolver(
-      Supplier<T> with) {
+      Supplier<T> valueSupplier) {
     return new SimpleInputResolverSpec<>(
-        targetInput, null, List.of(), new Transformer.None2One(with::get));
+        targetInput, null, List.of(), new Transformer.None2One(valueSupplier));
   }
 
   /**

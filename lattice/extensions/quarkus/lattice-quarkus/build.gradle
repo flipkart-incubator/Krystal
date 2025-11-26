@@ -1,0 +1,14 @@
+dependencies {
+    api platform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
+
+    api project(':lattice:lattice-core')
+    api 'io.quarkus:quarkus-arc'
+    api 'io.quarkus:quarkus-core'
+    api 'io.quarkus.vertx.utils:quarkus-vertx-utils'
+
+    implementation 'io.quarkus:quarkus-vertx'
+}
+
+extraJavaModuleInfo {
+    failOnMissingModuleInfo = false
+}

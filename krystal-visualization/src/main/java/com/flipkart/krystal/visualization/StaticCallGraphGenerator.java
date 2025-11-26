@@ -1,5 +1,7 @@
 package com.flipkart.krystal.visualization;
 
+import static com.flipkart.krystal.visualization.StaticCallGraphHtml.generateStaticCallGraphHtml;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.InputMirror;
@@ -55,11 +57,9 @@ public class StaticCallGraphGenerator {
    * @param startVajram The starting node name to filter the graph, or null/empty for the full
    *     graph.
    * @return A GraphGenerationResult containing the self-contained HTML content.
-   * @throws ClassNotFoundException If a required class is not found during processing.
    */
   public static GraphGenerationResult generateStaticCallGraphContent(
-      VajramKryonGraph vajramKryonGraph, @Nullable String startVajram)
-      throws ClassNotFoundException {
+      VajramKryonGraph vajramKryonGraph, @Nullable String startVajram) {
 
     Graph fullGraph = createGraphData(vajramKryonGraph);
     Graph graphToVisualize = fullGraph;
@@ -78,7 +78,7 @@ public class StaticCallGraphGenerator {
     }
 
     String jsonGraph = graphToJson(graphToVisualize);
-    String htmlContent = StaticCallGraphHtml.generateStaticCallGraphHtml(jsonGraph);
+    String htmlContent = generateStaticCallGraphHtml(jsonGraph);
 
     return GraphGenerationResult.builder().html(htmlContent).build();
   }
@@ -90,8 +90,7 @@ public class StaticCallGraphGenerator {
    * @return A Graph POJO representing the graph structure.
    * @throws ClassNotFoundException if a required class is not found during processing.
    */
-  private static Graph createGraphData(VajramKryonGraph vajramKryonGraph)
-      throws ClassNotFoundException {
+  private static Graph createGraphData(VajramKryonGraph vajramKryonGraph) {
     List<Node> nodes = new ArrayList<>();
     List<Link> links = new ArrayList<>();
 
@@ -104,10 +103,16 @@ public class StaticCallGraphGenerator {
 
       List<Input> inputs = new ArrayList<>();
       for (InputMirror facet : definition.inputMirrors()) {
+        String typeName;
+        try {
+          typeName = facet.type().javaReflectType().getTypeName();
+        } catch (ClassNotFoundException e) {
+          typeName = "<Unknown Type>";
+        }
         inputs.add(
             Input.builder()
                 .name(facet.name())
-                .type(facet.type().javaReflectType().getTypeName())
+                .type(typeName)
                 .isMandatory(
                     !facet
                         .tags()

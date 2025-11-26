@@ -19,7 +19,7 @@ class PartitionedPoolTest {
   }
 
   @Test
-  void totalCount() throws LeaseUnavailableException {
+  void totalCount() {
     PartitionedPool<Object> partitionedPool = new PartitionedPool<>(2);
 
     assertThat(partitionedPool.totalCount()).isEqualTo(0);
@@ -35,7 +35,7 @@ class PartitionedPoolTest {
   }
 
   @Test
-  void getForLeasing_returnsObjectAtIndex() throws LeaseUnavailableException {
+  void getForLeasing_returnsObjectAtIndex() {
     PartitionedPool<Object> partitionedPool = new PartitionedPool<>(10);
 
     for (int i = 0; i < 10; i++) {
@@ -57,13 +57,13 @@ class PartitionedPoolTest {
       partitionedPool.getForLeasing(0);
     } catch (Exception e) {
       assertThat(e)
-          .isInstanceOf(LeaseUnavailableException.class)
+          .isInstanceOf(IllegalArgumentException.class)
           .hasMessage("Index [0] is not available for leasing");
     }
   }
 
   @Test
-  void closeLease_makesObjectAvailable() throws LeaseUnavailableException {
+  void closeLease_makesObjectAvailable() {
     PartitionedPool<Object> partitionedPool = new PartitionedPool<>(1);
     PooledObject<Object> pooledObject = partitionedPool.leaseAndAdd(new Object());
 

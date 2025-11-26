@@ -45,6 +45,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
 class SplitAddTest {
@@ -84,15 +85,15 @@ class SplitAddTest {
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .requestId("chainAdderTest")
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
-                        .singleThreadExecutor(executorLease.get())
+                        .executorId("chainAdderTest")
+                        .executorService(executorLease.get())
                         .configureWith(new MainLogicExecReporter(kryonExecutionReport))
                         // Tests whether executor level disabled dependant chains is working
                         .disabledDependentChains(disabledDepChains(graph)))
                 .build())) {
-      future = executeVajram(graph, krystexVajramExecutor, 0);
+      future = executeVajram(krystexVajramExecutor, 0);
     }
     assertThat(future).succeedsWithin(ofSeconds(1)).isEqualTo(55);
     System.out.println(
@@ -105,9 +106,10 @@ class SplitAddTest {
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .requestId("splitAdderTest")
                 .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+                    KryonExecutorConfig.builder()
+                        .executorId("splitAdderTest")
+                        .executorService(executorLease.get()))
                 .build())) {
       future =
           krystexVajramExecutor.execute(
@@ -120,7 +122,7 @@ class SplitAddTest {
   }
 
   @Disabled("Long running benchmark")
-  @Test
+  @RepeatedTest(5)
   void vajram_benchmark() throws Exception {
     int loopCount = 50_000;
     long javaNativeTimeNs = javaMethodBenchmark(this::splitAdd, loopCount);
@@ -136,17 +138,17 @@ class SplitAddTest {
       try (KrystexVajramExecutor krystexVajramExecutor =
           graph.createExecutor(
               KrystexVajramExecutorConfig.builder()
-                  .requestId("splitAdderTest")
                   .kryonExecutorConfigBuilder(
                       KryonExecutorConfig.builder()
-                          .singleThreadExecutor(executorLease.get())
+                          .executorId("splitAdderTest")
+                          .executorService(executorLease.get())
                           .disabledDependentChains(disabledDepChains(graph)))
                   .build())) {
         metrics[value] =
             ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         long enqueueStart = System.nanoTime();
-        futures[value] = executeVajram(graph, krystexVajramExecutor, value);
+        futures[value] = executeVajram(krystexVajramExecutor, value);
         timeToEnqueueVajram += System.nanoTime() - enqueueStart;
       }
     }
@@ -189,7 +191,7 @@ class SplitAddTest {
   }
 
   @Disabled("Long running benchmark")
-  @Test
+  @RepeatedTest(5)
   void vajram_benchmark_2() throws Exception {
     int outerLoopCount = 100;
     int innerLoopCount = 500;
@@ -208,10 +210,10 @@ class SplitAddTest {
       try (KrystexVajramExecutor krystexVajramExecutor =
           graph.createExecutor(
               KrystexVajramExecutorConfig.builder()
-                  .requestId("splitAdderTest")
                   .kryonExecutorConfigBuilder(
                       KryonExecutorConfig.builder()
-                          .singleThreadExecutor(executorLease.get())
+                          .executorId("splitAdderTest")
+                          .executorService(executorLease.get())
                           .disabledDependentChains(disabledDepChains(graph)))
                   .build())) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
@@ -220,7 +222,7 @@ class SplitAddTest {
         for (int inner_i = 0; inner_i < innerLoopCount; inner_i++) {
           int iterationNum = outer_i * innerLoopCount + inner_i;
           long enqueueStart = System.nanoTime();
-          futures[iterationNum] = executeVajram(graph, krystexVajramExecutor, iterationNum);
+          futures[iterationNum] = executeVajram(krystexVajramExecutor, iterationNum);
           timeToEnqueueVajram += System.nanoTime() - enqueueStart;
         }
       }
@@ -265,7 +267,7 @@ class SplitAddTest {
   }
 
   private static CompletableFuture<Integer> executeVajram(
-      VajramKryonGraph graph, KrystexVajramExecutor krystexVajramExecutor, int multiplier) {
+      KrystexVajramExecutor krystexVajramExecutor, int multiplier) {
     return krystexVajramExecutor.execute(
         SplitAdd_ReqImmutPojo._builder()
             .numbers(

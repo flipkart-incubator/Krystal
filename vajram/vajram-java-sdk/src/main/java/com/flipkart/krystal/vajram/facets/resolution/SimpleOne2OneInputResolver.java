@@ -6,12 +6,13 @@ import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil._r
 
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.ImmutableRequest;
+import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.resolution.ResolverCommand;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.One2OneCommand;
 import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
-import com.google.common.collect.ImmutableList;
+import java.util.List;
 
 /** A resolver which resolves exactly one input of a dependency. */
 public final class SimpleOne2OneInputResolver<S, T, CV extends Request<?>, DV extends Request<?>>
@@ -24,8 +25,7 @@ public final class SimpleOne2OneInputResolver<S, T, CV extends Request<?>, DV ex
 
   @Override
   public ResolverCommand resolve(
-      ImmutableList<? extends ImmutableRequest.Builder<?>> _depRequests,
-      FacetValues _rawFacetValues) {
+      List<? extends Builder<?>> _depRequests, FacetValues _rawFacetValues) {
     {
       try {
         //noinspection unchecked,rawtypes

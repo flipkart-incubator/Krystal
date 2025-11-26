@@ -2,6 +2,8 @@ package com.flipkart.krystal.vajram.codegen.common.models;
 
 import static com.flipkart.krystal.facets.FacetType.INPUT;
 
+import com.flipkart.krystal.annos.ComputeDelegationMode;
+import com.flipkart.krystal.codegen.common.models.TypeNameVisitor;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.google.common.collect.ImmutableList;
@@ -17,17 +19,22 @@ public record VajramInfo(
     VajramInfoLite lite,
     ImmutableList<DefaultFacetModel> givenFacets,
     ImmutableList<DependencyModel> dependencies,
-    @Nullable VajramInfoLite conformsToTraitInfo) {
+    @Nullable VajramInfoLite conformsToTraitInfo,
+    @Nullable ComputeDelegationMode vajramDelegationMode) {
 
   public VajramInfo {
     if (lite.isTrait()) {
       for (DefaultFacetModel defaultFacet : givenFacets) {
         if (!defaultFacet.facetType().equals(INPUT)) {
-          lite.util().error("Only INPUT facets are supported in Traits", defaultFacet.facetField());
+          lite.util()
+              .codegenUtil()
+              .error("Only INPUT facets are supported in Traits", defaultFacet.facetField());
         }
       }
       if (!dependencies.isEmpty()) {
-        lite.util().error("Traits cannot have dependencies", dependencies.get(0).facetField());
+        lite.util()
+            .codegenUtil()
+            .error("Traits cannot have dependencies", dependencies.get(0).facetField());
       }
     }
   }
@@ -36,7 +43,7 @@ public record VajramInfo(
     return Stream.concat(givenFacets.stream(), dependencies.stream());
   }
 
-  public TypeElement vajramClass() {
+  public TypeElement vajramClassElem() {
     return lite.vajramOrReqClass();
   }
 
@@ -47,36 +54,47 @@ public record VajramInfo(
   public Iterable<TypeName> requestInterfaceSuperTypes() {
     return List.of(
         conformsToTraitInfo != null
-            ? conformsToTraitInfo.requestInterfaceType()
+            ? conformsToTraitInfo.requestInterfaceTypeName()
             : ParameterizedTypeName.get(
-                ClassName.get(Request.class), util().toTypeName(lite.responseType()).box()));
+                ClassName.get(Request.class),
+                new TypeNameVisitor(true)
+                    .visit(lite.responseType().javaModelType(util().processingEnv()))));
   }
 
-  private CodeGenUtility util() {
+  private VajramCodeGenUtility util() {
     return lite.util();
   }
 
   public Iterable<TypeName> immutReqInterfaceSuperTypes() {
     return List.of(
-        lite.requestInterfaceType(),
+        lite.requestInterfaceClassName(),
         conformsToTraitInfo != null
-            ? conformsToTraitInfo.immutReqInterfaceType()
+            ? conformsToTraitInfo.reqImmutInterfaceClassName()
             : ParameterizedTypeName.get(
                 ClassName.get(ImmutableRequest.class),
-                util().toTypeName(lite.responseType()).box()));
+                util().codegenUtil().toTypeName(lite.responseType()).box()));
   }
 
   public Iterable<TypeName> reqBuilderInterfaceSuperTypes() {
     return List.of(
-        lite.requestInterfaceType(),
+        lite.requestInterfaceClassName(),
         conformsToTraitInfo != null
-            ? conformsToTraitInfo.immutReqInterfaceType().nestedClass("Builder")
+            ? conformsToTraitInfo.reqImmutInterfaceClassName().nestedClass("Builder")
             : ParameterizedTypeName.get(
                 ClassName.get(ImmutableRequest.Builder.class),
-                util().toTypeName(lite.responseType()).box()));
+                util().codegenUtil().toTypeName(lite.responseType()).box()));
   }
 
   public VajramInfoLite conformsToTraitOrSelf() {
     return conformsToTraitInfo == null ? lite : conformsToTraitInfo;
+  }
+
+  public ClassName facetsInterfaceType() {
+    return ClassName.get(lite.packageName(), vajramName() + Constants.FACETS_CLASS_SUFFIX);
+  }
+
+  public ClassName facetsImmutPojoType() {
+    return ClassName.get(
+        lite.packageName(), vajramName() + Constants.FACETS_IMMUT_POJO_CLASS_SUFFIX);
   }
 }

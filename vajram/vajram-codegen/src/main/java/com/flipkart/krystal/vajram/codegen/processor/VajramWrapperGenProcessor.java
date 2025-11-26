@@ -1,8 +1,10 @@
 package com.flipkart.krystal.vajram.codegen.processor;
 
-import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.FINAL;
-import static com.flipkart.krystal.vajram.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
+import static com.flipkart.krystal.codegen.common.models.CodegenPhase.FINAL;
+import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
+import static com.flipkart.krystal.codegen.common.models.Constants.MODULE_ROOT_PATH_KEY;
 
+import com.flipkart.krystal.codegen.common.models.RunOnlyWhenCodegenPhaseIs;
 import com.google.auto.service.AutoService;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.SupportedAnnotationTypes;
@@ -16,10 +18,6 @@ import javax.lang.model.SourceVersion;
 })
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 @AutoService(Processor.class)
-@SupportedOptions(CODEGEN_PHASE_KEY)
-public final class VajramWrapperGenProcessor extends AbstractVajramCodegenProcessor {
-
-  public VajramWrapperGenProcessor() {
-    super(FINAL);
-  }
-}
+@SupportedOptions({CODEGEN_PHASE_KEY, MODULE_ROOT_PATH_KEY})
+@RunOnlyWhenCodegenPhaseIs(FINAL)
+public final class VajramWrapperGenProcessor extends AbstractVajramCodegenProcessor {}

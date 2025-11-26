@@ -1,10 +1,10 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
+import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.batching.BatchesGroupedBy;
-import com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenType;
 import java.util.List;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.VariableElement;
@@ -31,6 +31,11 @@ public sealed interface FacetGenModel permits DefaultFacetModel, DependencyModel
   default boolean isMandatoryOnServer() {
     IfAbsent ifAbsent = facetField().getAnnotation(IfAbsent.class);
     return ifAbsent != null && ifAbsent.value().isMandatoryOnServer();
+  }
+
+  default boolean isOptionalForClient() {
+    IfAbsent ifAbsent = facetField().getAnnotation(IfAbsent.class);
+    return ifAbsent == null || ifAbsent.value().isOptionalForClient();
   }
 
   @Nullable String documentation();

@@ -1,23 +1,47 @@
 package com.flipkart.krystal.core;
 
-import com.flipkart.krystal.data.FacetValues;
-import com.google.common.collect.ImmutableList;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
+import static java.util.Collections.unmodifiableList;
 
-/**
- * A wrapper class for all the data that is needed by the output logic of a vajram
- *
- * @param facetValues The facets to be used for executing the output logic
- * @param graphExecutor The executor service which is used to execute the krystal graph. Note that
- *     this might be an event loop executor, so no blocking operations are to performed in this.
- *     This useful, for example, in IOVajrams when a piece of logic (Output.unbatch, for example)
- *     needs to be executed in the same thread in which the executor service is running since it has
- *     the relevant logging context etc. configured.
- */
-public record OutputLogicExecutionInput(
-    ImmutableList<? extends FacetValues> facetValues, ExecutorService graphExecutor) {
-  public OutputLogicExecutionInput withFacetValues(List<? extends FacetValues> facetValues) {
-    return new OutputLogicExecutionInput(ImmutableList.copyOf(facetValues), graphExecutor());
+import com.flipkart.krystal.data.ExecutionItem;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+
+/** A wrapper class for all the data that is needed by the output logic of a vajram */
+public final class OutputLogicExecutionInput {
+  private final List<ExecutionItem> facetValueResponses;
+  private final ExecutorService graphExecutor;
+  private CompletableFuture @MonotonicNonNull [] responseFutures;
+
+  public OutputLogicExecutionInput(
+      List<ExecutionItem> facetValueResponses, ExecutorService graphExecutor) {
+    facetValueResponses = unmodifiableList(facetValueResponses);
+    this.facetValueResponses = facetValueResponses;
+    this.graphExecutor = graphExecutor;
+  }
+
+  public OutputLogicExecutionInput withFacetValueResponses(List<ExecutionItem> facetValues) {
+    return new OutputLogicExecutionInput(facetValues, graphExecutor());
+  }
+
+  public List<ExecutionItem> facetValueResponses() {
+    return facetValueResponses;
+  }
+
+  public CompletableFuture[] responseFutures() {
+    if (responseFutures == null) {
+      CompletableFuture[] responseFutures = new CompletableFuture[facetValueResponses.size()];
+      for (int i = 0; i < facetValueResponses.size(); i++) {
+        responseFutures[i] = facetValueResponses.get(i).response();
+      }
+      this.responseFutures = responseFutures;
+      return responseFutures;
+    }
+    return responseFutures;
+  }
+
+  public ExecutorService graphExecutor() {
+    return graphExecutor;
   }
 }

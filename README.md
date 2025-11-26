@@ -15,9 +15,9 @@ Single Bill-Of-Materials artefact with all krystal artefacts versions defined.
    plugin. Developers add this artefact as an annotation processor dependency in their gradle build
    file, and add the `com.flipkart.krystal` plugin to their gradle project.
     1. The annotation processors generate the vajramDef models and impls during compilation phase.
-    2. The krystal plugin adds `codegenVajramModels` gradle task and adds it as a dependency to
+    2. The krystal plugin adds `krystalModelsGen` gradle task and adds it as a dependency to
        the `compileJava` task so that models are code generated on every compile. It also configures
-       the `codegenVajramModels` task to run the annotation processor which generates the models and
+       the `krystalModelsGen` task to run the annotation processor which generates the models and
        the `compileJava` task to generate the vajramDef impl files using the models generated in the
        previous step. The plugin artefact's coordinates
        are `com.flipkart.krystal:com.flipkart.krystal.gradle.plugin`, but developers generally don't
@@ -145,11 +145,11 @@ Example : Need to update version from 1.6 to 1.7
     - Build and `gradle publishToMavenLocal` in krystal root directory
 2. krystal (build.gradle) update
     - update version from 1.6 to 1.7
-    - set `classpath 'com.flipkart.krystal:vajramDef:'+ project.krystal_version` in vajramDef-codegen's
-      buildscript block to `classpath 'com.flipkart.krystal:vajramDef:1.6'`
+    - set `classpath 'com.flipkart.krystal:vajram:'+ project.krystal_version` in vajram-codegen's
+      buildscript block to `classpath 'com.flipkart.krystal:vajram:1.6'`
     - Build and `gradle publishToMavenLocal` in krystal root directory
 3. Final update
-    - revert `classpath 'com.flipkart.krystal:vajramDef:1.6'+ project.krystal_version` in
+    - revert `classpath 'com.flipkart.krystal:vajram:1.6'+ project.krystal_version` in
       vajramDef-codegen's buildscript block
-      to `classpath 'com.flipkart.krystal:vajramDef:'+ project.krystal_version`
+      to `classpath 'com.flipkart.krystal:vajram:'+ project.krystal_version`
     - Build and `publishToMavenLocal` and `publish` in krystal root directory

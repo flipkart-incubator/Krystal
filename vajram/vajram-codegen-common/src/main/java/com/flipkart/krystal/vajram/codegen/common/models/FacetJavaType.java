@@ -1,9 +1,11 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
+import static com.flipkart.krystal.codegen.common.models.Constants.EMPTY_CODE_BLOCK;
 import static com.flipkart.krystal.facets.FacetType.INPUT;
-import static com.flipkart.krystal.vajram.codegen.common.models.Constants.EMPTY_CODE_BLOCK;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.FACET_VALUES_VAR;
 
+import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
+import com.flipkart.krystal.codegen.common.models.TypeAndName;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.model.IfAbsent;
@@ -16,9 +18,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 public abstract sealed class FacetJavaType {
 
-  protected final CodeGenUtility util;
+  protected final VajramCodeGenUtility util;
 
-  public FacetJavaType(CodeGenUtility util) {
+  public FacetJavaType(VajramCodeGenUtility util) {
     this.util = util;
   }
 
@@ -65,13 +67,14 @@ public abstract sealed class FacetJavaType {
 
   public static final class Actual extends FacetJavaType {
 
-    public Actual(CodeGenUtility util) {
+    public Actual(VajramCodeGenUtility util) {
       super(util);
     }
 
     @Override
     public TypeName javaTypeName(FacetGenModel facet) {
-      return util.getTypeName(util.getDataType(facet)).typeName();
+      CodeGenType dataType = util.getDataType(facet);
+      return util.codegenUtil().getTypeName(dataType).typeName();
     }
 
     @Override
@@ -108,13 +111,15 @@ public abstract sealed class FacetJavaType {
 
   public static final class Boxed extends FacetJavaType {
 
-    public Boxed(CodeGenUtility util) {
+    public Boxed(VajramCodeGenUtility util) {
       super(util);
     }
 
     @Override
     public TypeName javaTypeName(FacetGenModel facet) {
-      return util.box(util.getTypeName(util.getDataType(facet))).typeName();
+      CodeGenType dataType = util.getDataType(facet);
+      TypeAndName javaType = util.codegenUtil().getTypeName(dataType);
+      return util.codegenUtil().box(javaType).typeName();
     }
 
     @Override
@@ -125,13 +130,16 @@ public abstract sealed class FacetJavaType {
 
   public static final class OptionalType extends FacetJavaType {
 
-    public OptionalType(CodeGenUtility util) {
+    public OptionalType(VajramCodeGenUtility util) {
       super(util);
     }
 
     @Override
     public TypeName javaTypeName(FacetGenModel facet) {
-      return util.optional(util.box(util.getTypeName(util.getDataType(facet))));
+      CodeGenType dataType = util.getDataType(facet);
+      TypeAndName javaType = util.codegenUtil().getTypeName(dataType);
+      TypeAndName javaType1 = util.codegenUtil().box(javaType);
+      return util.codegenUtil().optional(javaType1);
     }
 
     @Override
@@ -151,7 +159,7 @@ public abstract sealed class FacetJavaType {
 
   public static final class One2OneResponse extends FacetJavaType {
 
-    public One2OneResponse(CodeGenUtility util) {
+    public One2OneResponse(VajramCodeGenUtility util) {
       super(util);
     }
 
@@ -168,7 +176,7 @@ public abstract sealed class FacetJavaType {
 
   public static final class FanoutResponses extends FacetJavaType {
 
-    public FanoutResponses(CodeGenUtility util) {
+    public FanoutResponses(VajramCodeGenUtility util) {
       super(util);
     }
 

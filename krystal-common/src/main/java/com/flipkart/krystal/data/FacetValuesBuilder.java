@@ -12,4 +12,7 @@ public interface FacetValuesBuilder
 
   @Override
   FacetValuesBuilder _newCopy();
+
+  @Override
+  ImmutableRequest.Builder<?> _request();
 }

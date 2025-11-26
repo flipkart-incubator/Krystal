@@ -1,0 +1,33 @@
+schema @rootPackage(name: "com.flipkart.krystal.lattice.samples.graphql.rest.json.logic") {
+    query: SampleQuery
+}
+
+type SampleQuery {
+    account(id: ID!): Account @inferIdFromArgs
+}
+
+type Account @entity{
+    id: ID!
+    createdAt: String!
+    owner: Person @idFetcher(vajramId: "GetOwnerOfAccount")
+}
+
+type Person @entity{
+    id: ID!
+    name: Name! @dataFetcher(vajramId: "GetPersonName")
+    email: String! @dataFetcher(vajramId: "GetPersonEmail")
+    imageData: PersonImageData @inferIdFromParent
+}
+
+type PersonImageData @composedType(inEntity: "Person"){
+    mainUrl: String @dataFetcher(vajramId: "GetImageDataOfPerson")
+    thumbnailUrl: String @dataFetcher(vajramId: "GetImageDataOfPerson")
+    bannerUrl: String @dataFetcher(vajramId: "GetPersonBanner")
+}
+
+type Name {
+    firstName: String!
+    lastName: String!
+}
+
+

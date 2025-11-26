@@ -1,6 +1,10 @@
 package com.flipkart.krystal.krystex;
 
+import static com.flipkart.krystal.krystex.internal.KrystalExecutorExecService.THREAD_LOCAL;
+
 import com.flipkart.krystal.data.ImmutableRequest;
+import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.data.RequestResponseFuture;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -8,7 +12,11 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public interface KrystalExecutor extends AutoCloseable {
 
   <T> CompletableFuture<@Nullable T> executeKryon(
-      ImmutableRequest request, KryonExecutionConfig executionConfig);
+      ImmutableRequest<T> request, KryonExecutionConfig executionConfig);
+
+  <T> void executeKryon(
+      RequestResponseFuture<? extends Request<T>, T> requestResponseFuture,
+      KryonExecutionConfig executionConfig);
 
   /**
    * This method starts execution of all submitted requests. No new kryon execution requests will be
@@ -20,4 +28,8 @@ public interface KrystalExecutor extends AutoCloseable {
 
   /** Abandons all pending execution requests. Any inflight requests will be terminated abruptly. */
   void shutdownNow();
+
+  static @Nullable KrystalExecutor getExecutorForCurrentThread() {
+    return THREAD_LOCAL.get();
+  }
 }

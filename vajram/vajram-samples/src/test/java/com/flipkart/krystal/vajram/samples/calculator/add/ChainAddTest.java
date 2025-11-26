@@ -1,12 +1,13 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
+import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.DIRECT;
 import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.calculator.add.Add.add;
 import static com.flipkart.krystal.vajram.samples.calculator.add.ChainAdd_Fac.chainSum_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.batching.DepChainBatcherConfig.autoRegisterSharedBatchersV2;
+import static com.flipkart.krystal.vajramexecutor.krystex.batching.DepChainBatcherConfig.autoRegisterSharedBatchers;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -43,6 +44,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
 class ChainAddTest {
@@ -81,14 +83,14 @@ class ChainAddTest {
   void chainer_success() throws Exception {
     CompletableFuture<Integer> future;
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
-    autoRegisterSharedBatchersV2(graph, _v -> 100, getDisabledDependentChains(graph));
+    autoRegisterSharedBatchers(graph, _v -> 100, getDisabledDependentChains(graph));
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .requestId("chainAdderTest")
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
-                        .singleThreadExecutor(executorLease.get())
+                        .executorId("chainAdderTest")
+                        .executorService(executorLease.get())
                         .configureWith(new MainLogicExecReporter(kryonExecutionReport)))
                 .build())) {
 
@@ -116,7 +118,7 @@ class ChainAddTest {
   }
 
   @Disabled("Long running benchmark")
-  @Test
+  @RepeatedTest(5)
   void vajram_benchmark() throws Exception {
     int loopCount = 50_000;
     long javaNativeTimeNs = javaMethodBenchmark(this::chainAdd, loopCount);
@@ -127,7 +129,7 @@ class ChainAddTest {
     long startTime = System.nanoTime();
     long timeToCreateExecutors = 0;
     long timeToEnqueueVajram = 0;
-    autoRegisterSharedBatchersV2(graph, _v -> 100, getDisabledDependentChains(graph));
+    autoRegisterSharedBatchers(graph, _v -> 100, getDisabledDependentChains(graph));
     for (int value = 0; value < loopCount; value++) {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor krystexVajramExecutor =
@@ -179,7 +181,7 @@ class ChainAddTest {
   }
 
   @Disabled("Long running benchmark")
-  @Test
+  @RepeatedTest(5)
   void vajram_benchmark_2() throws Exception {
     int outerLoopCount = 100;
     int innerLoopCount = 500;
@@ -193,7 +195,7 @@ class ChainAddTest {
     long startTime = System.nanoTime();
     long timeToCreateExecutors = 0;
     long timeToEnqueueVajram = 0;
-    autoRegisterSharedBatchersV2(graph, _v -> 100, getDisabledDependentChains(graph));
+    autoRegisterSharedBatchers(graph, _v -> 100, getDisabledDependentChains(graph));
     for (int outer_i = 0; outer_i < outerLoopCount; outer_i++) {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor krystexVajramExecutor =
@@ -250,9 +252,11 @@ class ChainAddTest {
 
   private KrystexVajramExecutorConfigBuilder configBuilder() {
     return KrystexVajramExecutorConfig.builder()
-        .requestId("chainAdderTest")
         .kryonExecutorConfigBuilder(
-            KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()));
+            KryonExecutorConfig.builder()
+                .executorId("chainAdderTest")
+                .executorService(executorLease.get())
+                .kryonExecStrategy(DIRECT));
   }
 
   private CompletableFuture<Integer> executeVajram(

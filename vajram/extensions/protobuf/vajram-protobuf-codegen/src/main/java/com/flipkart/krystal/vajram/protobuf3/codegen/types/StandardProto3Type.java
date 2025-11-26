@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajram.protobuf3.codegen.types;
 
 import static java.util.Objects.requireNonNull;
 
-import com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenType;
+import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.ByteString;

@@ -1,6 +1,7 @@
 package com.flipkart.krystal.except;
 
 import java.util.concurrent.CompletionException;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * An exception whose stacktrace is not useful. For example, exceptions used for internal purposes
@@ -16,13 +17,15 @@ import java.util.concurrent.CompletionException;
  */
 public class StackTracelessException extends CompletionException {
 
-  protected StackTracelessException() {}
-
-  public StackTracelessException(String message) {
-    super(message);
+  protected StackTracelessException() {
+    this(null);
   }
 
-  public StackTracelessException(String message, Throwable cause) {
+  public StackTracelessException(@Nullable String message) {
+    this(message, null);
+  }
+
+  public StackTracelessException(@Nullable String message, @Nullable Throwable cause) {
     super(message, cause);
   }
 
@@ -34,8 +37,8 @@ public class StackTracelessException extends CompletionException {
   }
 
   public static CompletionException stackTracelessWrap(Throwable t) {
-    if (t instanceof CompletionException) {
-      return (CompletionException) t;
+    if (t instanceof CompletionException c) {
+      return c;
     }
     String message = t.getMessage();
     return new StackTracelessException(message != null ? message : t.getClass().getName(), t);

@@ -51,18 +51,19 @@ class A2MinusB2Test {
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
                 .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
-                .requestId(REQUEST_ID)
+                    KryonExecutorConfig.builder()
+                        .executorId(REQUEST_ID)
+                        .executorService(executorLease.get()))
                 .build())) {
       future =
           executeVajram(
-              graph, krystexVajramExecutor, A2MinusB2_ReqImmutPojo._builder().a(3).b(2)._build());
+              krystexVajramExecutor, A2MinusB2_ReqImmutPojo._builder().a(3).b(2)._build());
     }
     assertThat(future).succeedsWithin(TEST_TIMEOUT).isEqualTo(2);
   }
 
   private static CompletableFuture<Integer> executeVajram(
-      VajramKryonGraph graph, KrystexVajramExecutor krystexVajramExecutor, A2MinusB2_Req req) {
+      KrystexVajramExecutor krystexVajramExecutor, A2MinusB2_Req req) {
     return krystexVajramExecutor.execute(
         req._build(), KryonExecutionConfig.builder().executionId("1").build());
   }

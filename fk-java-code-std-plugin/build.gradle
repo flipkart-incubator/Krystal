@@ -3,9 +3,6 @@ buildscript {
         mavenCentral()
         gradlePluginPortal()
     }
-    dependencies {
-        classpath 'com.diffplug.spotless:spotless-plugin-gradle:6.16.0'
-    }
 }
 
 plugins {
@@ -14,25 +11,27 @@ plugins {
     id 'maven-publish'
 }
 
+ext {
+    clojarsusername = project.properties['clojarsusername'] ?: ""
+    clojarspassword = project.properties['clojarspassword'] ?: ""
+}
+
 group 'com.flipkart.java.code.standard'
-version '3.6'
+version '5.3'
 
 gradlePlugin {
     plugins {
         simplePlugin {
             id = 'com.flipkart.java.code.standard'
-            implementationClass = 'com.flipkart.java.code.FkJavaCodeStandard'
+            implementationClass = 'com.flipkart.java.code.FkJavaCodeStandardPlugin'
         }
     }
 }
 
 dependencies {
-    implementation 'org.checkerframework:checkerframework-gradle-plugin:0.6.30'
-    implementation 'com.diffplug.spotless:spotless-plugin-gradle:6.16.0'
-    implementation 'net.ltgt.gradle:gradle-errorprone-plugin:4.0.0'
-
-    testImplementation platform('org.junit:junit-bom:5.10.0')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
+    implementation 'org.checkerframework:checkerframework-gradle-plugin:0.6.61'
+    implementation 'com.diffplug.spotless:spotless-plugin-gradle:8.0.0'
+    implementation 'net.ltgt.gradle:gradle-errorprone-plugin:4.3.0'
 }
 
 publishing {

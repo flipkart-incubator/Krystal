@@ -11,7 +11,7 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.exception.MandatoryFacetsMissingException;
-import com.flipkart.krystal.vajram.guice.inputinjection.VajramGuiceInputInjector;
+import com.flipkart.krystal.vajram.guice.injection.VajramGuiceInputInjector;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
@@ -64,23 +64,20 @@ class TooManyQualifiersTest {
   }
 
   private KrystexVajramExecutor createExecutor(VajramKryonGraph vajramKryonGraph) {
+    vajramKryonGraph.registerInputInjector(
+        new VajramGuiceInputInjector(
+            createInjector(
+                binder -> {
+                  binder.bind(String.class).annotatedWith(named("toInject")).toInstance("i2a");
+                  binder
+                      .bind(String.class)
+                      .annotatedWith(TooManyQualifiers.InjectionQualifier.class)
+                      .toInstance("i2b");
+                })));
     return vajramKryonGraph.createExecutor(
         KrystexVajramExecutorConfig.builder()
             .kryonExecutorConfigBuilder(
-                KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
-            .inputInjectionProvider(
-                new VajramGuiceInputInjector(
-                    createInjector(
-                        binder -> {
-                          binder
-                              .bind(String.class)
-                              .annotatedWith(named("toInject"))
-                              .toInstance("i2a");
-                          binder
-                              .bind(String.class)
-                              .annotatedWith(TooManyQualifiers.InjectionQualifier.class)
-                              .toInstance("i2b");
-                        })))
+                KryonExecutorConfig.builder().executorService(executorLease.get()))
             .build());
   }
 }

@@ -2,6 +2,8 @@ package com.flipkart.krystal.krystex.kryon;
 
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.concurrent.Futures.propagateCancellation;
+import static com.flipkart.krystal.config.PropertyNames.RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME;
+import static com.flipkart.krystal.data.RequestResponseFuture.forRequest;
 import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.google.common.base.Preconditions.checkArgument;
@@ -16,25 +18,28 @@ import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.groupingBy;
 import static lombok.AccessLevel.PACKAGE;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.annos.TraitDependency;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.data.RequestResponseFuture;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.KrystalExecutor;
-import com.flipkart.krystal.krystex.commands.Flush;
-import com.flipkart.krystal.krystex.commands.ForwardReceive;
-import com.flipkart.krystal.krystex.commands.ForwardSend;
+import com.flipkart.krystal.krystex.commands.DirectForwardReceive;
+import com.flipkart.krystal.krystex.commands.DirectForwardSend;
+import com.flipkart.krystal.krystex.commands.ForwardReceiveBatch;
+import com.flipkart.krystal.krystex.commands.ForwardSendBatch;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
-import com.flipkart.krystal.krystex.commands.VoidResponse;
 import com.flipkart.krystal.krystex.decoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecoratorConfig;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
 import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
+import com.flipkart.krystal.krystex.internal.KrystalExecutorExecService;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorationInput;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorator;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
@@ -53,6 +58,7 @@ import com.flipkart.krystal.traits.StaticDispatchPolicy;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -60,14 +66,16 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Default implementation of Krystal executor which */
@@ -75,21 +83,24 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class KryonExecutor implements KrystalExecutor {
 
   public enum KryonExecStrategy {
-    BATCH;
+    BATCH,
+    DIRECT
   }
 
   public enum GraphTraversalStrategy {
     DEPTH,
-    BREADTH;
+    BREADTH
   }
 
   private final KryonDefinitionRegistry kryonDefinitionRegistry;
   private final KryonExecutorConfig executorConfig;
 
-  @Getter(PACKAGE)
-  private final SingleThreadExecutor commandQueue;
+  private @MonotonicNonNull ExecutorService commandQueue;
 
-  private final String instanceId;
+  @Getter(PACKAGE)
+  private final SingleThreadExecutor singleThreadExecutor;
+
+  private final String executorId;
 
   /**
    * We need to have a list of request scope global decorators corresponding to each type, in case
@@ -123,10 +134,10 @@ public final class KryonExecutor implements KrystalExecutor {
               DependencyDecorator>>
       dependencyDecorators = new LinkedHashMap<>();
 
-  private final KryonRegistry<?> kryonRegistry = new KryonRegistry<>();
+  private final KryonRegistry<Kryon<?, ?>> kryonRegistry = new KryonRegistry<>();
   private final Map<VajramID, Kryon<?, ?>> decoratedKryons = new HashMap<>();
   private final KryonExecutorMetrics kryonMetrics;
-  private final Map<InvocationId, KryonExecution> allExecutions = new LinkedHashMap<>();
+  private final Map<InvocationId, KryonExecution<?>> allExecutions = new LinkedHashMap<>();
   private final Set<InvocationId> unFlushedExecutions = new LinkedHashSet<>();
   private final Map<VajramID, Set<DependentChain>> dependentChainsPerKryon = new LinkedHashMap<>();
   private final RequestIdGenerator preferredReqGenerator;
@@ -136,13 +147,11 @@ public final class KryonExecutor implements KrystalExecutor {
   private boolean shutdownRequested;
 
   public KryonExecutor(
-      KryonDefinitionRegistry kryonDefinitionRegistry,
-      KryonExecutorConfig executorConfig,
-      String instanceId) {
+      KryonDefinitionRegistry kryonDefinitionRegistry, KryonExecutorConfig executorConfig) {
     this.kryonDefinitionRegistry = kryonDefinitionRegistry;
     this.executorConfig = executorConfig;
-    this.commandQueue = executorConfig.singleThreadExecutor();
-    this.instanceId = instanceId;
+    this.singleThreadExecutor = executorConfig.executorService();
+    this.executorId = executorConfig.executorId();
     this.outputLogicDecoratorConfigs = executorConfig.outputLogicDecoratorConfigs();
     this.dependencyDecoratorConfigs = makeDependencyDecorConfigs(executorConfig);
     this.kryonDecoratorConfigs = executorConfig.kryonDecoratorConfigs();
@@ -165,7 +174,8 @@ public final class KryonExecutor implements KrystalExecutor {
               decoratorType,
               dependencyExecutionContext ->
                   dependencyExecutionContext
-                      .dependency()
+                      .dependentChain()
+                      .latestDependency()
                       .tags()
                       .getAnnotationByType(TraitDependency.class)
                       .isPresent(),
@@ -176,10 +186,11 @@ public final class KryonExecutor implements KrystalExecutor {
     return builder.build();
   }
 
-  private Map<String, OutputLogicDecorator> getOutputLogicDecorators(
+  private NavigableSet<OutputLogicDecorator> getOutputLogicDecorators(
       LogicExecutionContext logicExecutionContext) {
     VajramID vajramID = logicExecutionContext.vajramID();
-    Map<String, OutputLogicDecorator> decorators = new LinkedHashMap<>();
+    TreeSet<OutputLogicDecorator> decorators =
+        new TreeSet<>(executorConfig.decorationOrdering().encounterOrder().reversed());
     outputLogicDecoratorConfigs.forEach(
         (decoratorType, decoratorConfig) -> {
           if (decoratorConfig.shouldDecorate().test(logicExecutionContext)) {
@@ -204,7 +215,7 @@ public final class KryonExecutor implements KrystalExecutor {
                                           vajramID, ImmutableSet.of()))));
                           return logicDecorator;
                         });
-            decorators.put(decoratorType, outputLogicDecorator);
+            decorators.add(outputLogicDecorator);
           }
         });
     return decorators;
@@ -232,60 +243,73 @@ public final class KryonExecutor implements KrystalExecutor {
   @Override
   @SuppressWarnings("FutureReturnValueIgnored")
   public <T> CompletableFuture<@Nullable T> executeKryon(
-      ImmutableRequest request, KryonExecutionConfig executionConfig) {
+      ImmutableRequest<T> request, KryonExecutionConfig executionConfig) {
+    RequestResponseFuture<Request<T>, T> requestResponseFuture = forRequest(request);
+    executeKryon(requestResponseFuture, executionConfig);
+    return requestResponseFuture.response();
+  }
+
+  @Override
+  public <T> void executeKryon(
+      RequestResponseFuture<? extends Request<T>, T> requestResponseFuture,
+      KryonExecutionConfig executionConfig) {
+    @SuppressWarnings("unchecked")
+    ImmutableRequest<Object> castRequest =
+        (ImmutableRequest<Object>) requestResponseFuture.request()._build();
     if (closed) {
       throw new RejectedExecutionException("KryonExecutor is already closed");
     }
     checkArgument(executionConfig != null, "executionConfig can not be null");
-    VajramID vajramID = request._vajramID();
-    @SuppressWarnings("deprecation")
+    VajramID vajramID = castRequest._vajramID();
+    @SuppressWarnings("TestOnlyProblems")
     boolean openAllKryonsForExternalInvocation =
-        executorConfig._riskyOpenAllKryonsForExternalInvocation();
+        Boolean.parseBoolean(
+            System.getProperties()
+                .getProperty(RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME, "false"));
     if (!openAllKryonsForExternalInvocation) {
       if (kryonDefinitionRegistry
           .getOrThrow(vajramID)
           .tags()
-          .getAnnotationByType(ExternallyInvocable.class)
+          .getAnnotationByType(InvocableOutsideGraph.class)
           .isEmpty()) {
         throw new RejectedExecutionException(
-            "External invocation is not allowed for vajramId: " + vajramID);
+            "External invocation is not enabled for vajramId: " + vajramID);
       }
     }
 
     String executionId = executionConfig.executionId();
     checkArgument(executionId != null, "executionConfig.executionId can not be null");
-    InvocationId invocationId =
-        preferredReqGenerator.newRequest("%s:%s".formatted(instanceId, executionId));
 
     //noinspection RedundantCast: This is to avoid nullChecker failing compilation.
-    return enqueueCommand(
-            // Perform all data-structure manipulations in the command queue to avoid multi-thread
-            // access
-            (Supplier<CompletableFuture<@Nullable T>>)
-                () -> {
-                  createDependencyKryons(
-                      vajramID, kryonDefinitionRegistry.getDependentChainsStart(), executionConfig);
-                  CompletableFuture<@Nullable Object> future = new CompletableFuture<>();
-                  if (allExecutions.containsKey(invocationId)) {
-                    future.completeExceptionally(
-                        stackTracelessWrap(
-                            new IllegalArgumentException(
-                                "Received duplicate requests for same instanceId '%s' and execution Id '%s'"
-                                    .formatted(instanceId, executionId))));
-                  } else {
-                    //noinspection unchecked
-                    allExecutions.put(
-                        invocationId,
-                        new KryonExecution(
-                            vajramID, invocationId, request, executionConfig, future));
-                    unFlushedExecutions.add(invocationId);
-                  }
-
-                  @SuppressWarnings("unchecked")
-                  CompletableFuture<@Nullable T> f = (CompletableFuture<@Nullable T>) future;
-                  return f;
-                })
-        .thenCompose(identity());
+    enqueueRunnable(
+        // Perform all data-structure manipulations in the command queue to avoid multi-thread
+        // access
+        () -> {
+          try {
+            InvocationId invocationId =
+                preferredReqGenerator.newRequest(() -> "%s:%s".formatted(executorId, executionId));
+            createDependencyKryons(
+                vajramID, kryonDefinitionRegistry.getDependentChainsStart(), executionConfig);
+            if (allExecutions.containsKey(invocationId)) {
+              requestResponseFuture
+                  .response()
+                  .completeExceptionally(
+                      stackTracelessWrap(
+                          new IllegalArgumentException(
+                              "Received duplicate requests for same instanceId '%s' and execution Id '%s'"
+                                  .formatted(executorId, executionId))));
+            } else {
+              //noinspection unchecked
+              allExecutions.put(
+                  invocationId,
+                  new KryonExecution<>(
+                      vajramID, invocationId, requestResponseFuture, executionConfig));
+              unFlushedExecutions.add(invocationId);
+            }
+          } catch (Throwable e) {
+            requestResponseFuture.response().completeExceptionally(e);
+          }
+        });
   }
 
   private void createDependencyKryons(
@@ -327,36 +351,47 @@ public final class KryonExecutor implements KrystalExecutor {
       concreteVajramIds.add(vajramID);
     }
     for (VajramID finalVajramId : concreteVajramIds) {
-      ImmutableMap<Dependency, VajramID> dependencyKryons = ImmutableMap.of();
+      ImmutableSet<Dependency> dependencyKryons = ImmutableSet.of();
       kryonDefinition = kryonDefinitionRegistry.getOrThrow(finalVajramId);
       if (kryonDefinition instanceof VajramKryonDefinition vajramKryonDefinition) {
         createKryonIfAbsent(finalVajramId, vajramKryonDefinition);
-        dependencyKryons = vajramKryonDefinition.dependencyKryons();
+        dependencyKryons = vajramKryonDefinition.dependencies();
       }
       dependencyKryons.forEach(
-          (dependency, depKryonId) ->
+          dependency ->
               createDependencyKryons(
-                  depKryonId, dependentChain.extend(finalVajramId, dependency), executionConfig));
+                  dependency.onVajramID(),
+                  dependentChain.extend(finalVajramId, dependency),
+                  executionConfig));
       dependentChainsPerKryon
           .computeIfAbsent(finalVajramId, _n -> new LinkedHashSet<>())
           .add(dependentChain);
     }
   }
 
-  @SuppressWarnings("unchecked")
-  private Kryon<? extends KryonCommand, ? extends KryonCommandResponse> createKryonIfAbsent(
+  @CanIgnoreReturnValue
+  private Kryon<? extends KryonCommand<?>, ? extends KryonCommandResponse> createKryonIfAbsent(
       VajramID vajramID, VajramKryonDefinition kryonDefinition) {
-    KryonRegistry<BatchKryon> batchKryonRegistry = (KryonRegistry<BatchKryon>) kryonRegistry;
-    return batchKryonRegistry.createIfAbsent(
+    return kryonRegistry.createIfAbsent(
         vajramID,
         _n ->
-            new BatchKryon(
-                kryonDefinition,
-                this,
-                this::getOutputLogicDecorators,
-                this::getDependencyDecorators,
-                executorConfig.decorationOrdering(),
-                preferredReqGenerator));
+            switch (executorConfig.kryonExecStrategy()) {
+              case BATCH ->
+                  new BatchKryon(
+                      kryonDefinition,
+                      this,
+                      this::getOutputLogicDecorators,
+                      this::getDependencyDecorators,
+                      executorConfig.decorationOrdering(),
+                      preferredReqGenerator);
+              case DIRECT ->
+                  new DirectKryon(
+                      kryonDefinition,
+                      this,
+                      this::getOutputLogicDecorators,
+                      this::getDependencyDecorators,
+                      executorConfig.decorationOrdering());
+            });
   }
 
   /**
@@ -369,7 +404,7 @@ public final class KryonExecutor implements KrystalExecutor {
    */
   @SuppressWarnings("FutureReturnValueIgnored")
   <R extends KryonCommandResponse> CompletableFuture<R> enqueueKryonCommand(
-      Supplier<? extends KryonCommand> kryonCommand) {
+      Supplier<? extends KryonCommand<?>> kryonCommand) {
     return enqueueCommand(
             (Supplier<CompletableFuture<R>>) () -> _executeCommand(kryonCommand.get()))
         .thenCompose(identity());
@@ -386,7 +421,7 @@ public final class KryonExecutor implements KrystalExecutor {
    * command is originating from the same main thread inside the command queue,thus avoiding the
    * potentially unnecessary contention in the thread-safe structures inside the command queue.
    */
-  public <R extends KryonCommandResponse> CompletableFuture<R> executeCommand(
+  <R extends KryonCommandResponse> CompletableFuture<R> executeCommand(
       KryonCommand<R> kryonCommand) {
     if (BREADTH.equals(executorConfig.graphTraversalStrategy())) {
       return enqueueKryonCommand(() -> kryonCommand);
@@ -397,14 +432,32 @@ public final class KryonExecutor implements KrystalExecutor {
   }
 
   private <R extends KryonCommandResponse> CompletableFuture<R> _executeCommand(
-      KryonCommand kryonCommand) {
+      KryonCommand<?> kryonCommand) {
     try {
-      if (kryonCommand instanceof ForwardSend forwardSend) {
-        VajramKryonDefinition vajramKryonDefinition =
-            KryonUtils.validateAsVajram(
-                kryonDefinitionRegistry.getOrThrow(kryonCommand.vajramID()));
+      VajramKryonDefinition vajramKryonDefinition =
+          KryonUtils.validateAsVajram(kryonDefinitionRegistry.getOrThrow(kryonCommand.vajramID()));
+      if (kryonCommand instanceof DirectForwardSend forwardSend) {
+        List<ExecutionItem> list = new ArrayList<>();
+        for (RequestResponseFuture<? extends Request<?>, ?> executableRequest :
+            forwardSend.executableRequests()) {
+          @SuppressWarnings("unchecked")
+          CompletableFuture<@Nullable Object> response =
+              (CompletableFuture<@Nullable Object>) executableRequest.response();
+          list.add(
+              new ExecutionItem(
+                  vajramKryonDefinition
+                      .facetsFromRequest()
+                      .logic()
+                      .facetsFromRequest(executableRequest.request()),
+                  response));
+        }
+
         return _executeCommand(
-            new ForwardReceive(
+            new DirectForwardReceive(forwardSend.vajramID(), list, forwardSend.dependentChain()));
+
+      } else if (kryonCommand instanceof ForwardSendBatch forwardSend) {
+        return _executeCommand(
+            new ForwardReceiveBatch(
                 forwardSend.vajramID(),
                 forwardSend.executableRequests().entrySet().stream()
                     .collect(
@@ -424,45 +477,36 @@ public final class KryonExecutor implements KrystalExecutor {
         return failedFuture(e);
       }
       VajramID vajramID = kryonCommand.vajramID();
-      VajramKryonDefinition kryonDefinition =
-          KryonUtils.validateAsVajram(kryonDefinitionRegistry.getOrThrow(vajramID));
-      @SuppressWarnings("unchecked")
-      Kryon<KryonCommand, R> kryon = getDecoratedKryon(kryonCommand, vajramID);
-      if (kryonCommand instanceof Flush flush) {
-        kryon.executeCommand(flush);
-        @SuppressWarnings("unchecked")
-        CompletableFuture<R> f = completedFuture((R) VoidResponse.getInstance());
-        return f;
-      } else {
-        return kryon.executeCommand(kryonCommand);
-      }
+      Kryon<KryonCommand<?>, R> kryon = getDecoratedKryon(kryonCommand, vajramID);
+      return kryon.executeCommand(kryonCommand);
     } catch (Throwable e) {
+      kryonCommand.error(e);
       return failedFuture(e);
     }
   }
 
   @SuppressWarnings("unchecked")
-  private <R extends KryonCommandResponse> Kryon<KryonCommand, R> getDecoratedKryon(
-      KryonCommand kryonCommand, VajramID kryonId) {
-    return (Kryon<KryonCommand, R>)
+  private <R extends KryonCommandResponse> Kryon<KryonCommand<?>, R> getDecoratedKryon(
+      KryonCommand<?> kryonCommand, VajramID kryonId) {
+    return (Kryon<KryonCommand<?>, R>)
         decoratedKryons.computeIfAbsent(
             kryonId,
             _n -> {
-              Kryon<? extends KryonCommand, ? extends KryonCommandResponse> kryon =
+              Kryon<? extends KryonCommand<?>, ? extends KryonCommandResponse> kryon =
                   kryonRegistry.get(kryonId);
               for (KryonDecorator kryonDecorator :
                   getSortedKryonDecorators(kryonId, kryonCommand)) {
                 kryon =
                     kryonDecorator.decorateKryon(
                         new KryonDecorationInput(
-                            (Kryon<KryonCommand, KryonCommandResponse>) kryon, this));
+                            (Kryon<KryonCommand<?>, KryonCommandResponse>) kryon, this));
               }
               return kryon;
             });
   }
 
   private Set<KryonDecorator> getSortedKryonDecorators(
-      VajramID vajramID, KryonCommand kryonCommand) {
+      VajramID vajramID, KryonCommand<?> kryonCommand) {
     KryonExecutionContext executionContext =
         new KryonExecutionContext(vajramID, kryonCommand.dependentChain());
     TreeSet<KryonDecorator> sortedDecorators =
@@ -487,7 +531,7 @@ public final class KryonExecutor implements KrystalExecutor {
     return sortedDecorators;
   }
 
-  private void validate(KryonCommand kryonCommand) {
+  private void validate(KryonCommand<?> kryonCommand) {
     if (shutdownRequested) {
       throw new RejectedExecutionException("Kryon Executor shutdown requested.");
     }
@@ -502,33 +546,29 @@ public final class KryonExecutor implements KrystalExecutor {
     enqueueRunnable(
         () -> {
           computeDisabledDependentChains();
-          submitBatch(unFlushedExecutions);
-          unFlushedExecutions.stream()
-              .map(requestId -> getKryonExecution(requestId).vajramID())
-              .distinct()
-              .forEach(
-                  kryonId ->
-                      executorConfig
-                          .traitDispatchDecorator()
-                          .<VoidResponse>decorateDependency(this::executeCommand)
-                          .invokeDependency(
-                              new Flush(
-                                  kryonId, kryonDefinitionRegistry.getDependentChainsStart())));
+          switch (executorConfig.kryonExecStrategy()) {
+            case BATCH -> submitBatch(unFlushedExecutions);
+            case DIRECT -> submitDirect(unFlushedExecutions);
+          }
         });
   }
 
   private void computeDisabledDependentChains() {
     depChainsDisabledInAllExecutions.clear();
-    List<ImmutableSet<DependentChain>> disabledDependantChainsPerExecution =
-        unFlushedExecutions.stream()
-            .map(this::getKryonExecution)
-            .map(KryonExecution::executionConfig)
-            .map(KryonExecutionConfig::disabledDependentChains)
-            .toList();
-    disabledDependantChainsPerExecution.stream()
-        .filter(x -> !x.isEmpty())
-        .findAny()
-        .ifPresent(depChainsDisabledInAllExecutions::addAll);
+    List<ImmutableSet<DependentChain>> disabledDependantChainsPerExecution = new ArrayList<>();
+    for (InvocationId unFlushedExecution : unFlushedExecutions) {
+      KryonExecution<?> kryonExecution = getKryonExecution(unFlushedExecution);
+      KryonExecutionConfig executionConfig = kryonExecution.executionConfig();
+      ImmutableSet<DependentChain> disabledDependentChains =
+          executionConfig.disabledDependentChains();
+      disabledDependantChainsPerExecution.add(disabledDependentChains);
+    }
+    for (ImmutableSet<DependentChain> x : disabledDependantChainsPerExecution) {
+      if (!x.isEmpty()) {
+        depChainsDisabledInAllExecutions.addAll(x);
+        break;
+      }
+    }
     for (Set<DependentChain> disabledDepChains : disabledDependantChainsPerExecution) {
       if (depChainsDisabledInAllExecutions.isEmpty()) {
         break;
@@ -538,27 +578,64 @@ public final class KryonExecutor implements KrystalExecutor {
     depChainsDisabledInAllExecutions.addAll(executorConfig.disabledDependentChains());
   }
 
-  private KryonExecution getKryonExecution(InvocationId invocationId) {
-    KryonExecution kryonExecution = allExecutions.get(invocationId);
+  private KryonExecution<?> getKryonExecution(InvocationId invocationId) {
+    KryonExecution<?> kryonExecution = allExecutions.get(invocationId);
     if (kryonExecution == null) {
       throw new AssertionError("No kryon execution found for requestId " + invocationId);
     }
     return kryonExecution;
   }
 
+  private void submitDirect(Set<InvocationId> unFlushedRequests) {
+    Map<VajramID, List<KryonExecution<?>>> executionsByKryon = new HashMap<>();
+    for (InvocationId unFlushedRequest : unFlushedRequests) {
+      executionsByKryon
+          .computeIfAbsent(getKryonExecution(unFlushedRequest).vajramID(), k -> new ArrayList<>())
+          .add(getKryonExecution(unFlushedRequest));
+    }
+    executionsByKryon.forEach(
+        (vajramID, kryonExecutions) -> {
+          try {
+            CompletableFuture<DirectResponse> submissionResponse =
+                executorConfig
+                    .traitDispatchDecorator()
+                    .<DirectResponse>decorateDependency(this::executeCommand)
+                    .invokeDependency(
+                        new DirectForwardSend(
+                            vajramID,
+                            asRequestResponseFutures(kryonExecutions),
+                            kryonDefinitionRegistry.getDependentChainsStart()));
+            submissionResponse.whenComplete(
+                (response, throwable) -> {
+                  if (throwable != null) {
+                    for (KryonExecution<?> kryonExecution : kryonExecutions) {
+                      kryonExecution
+                          .response()
+                          .completeExceptionally(stackTracelessWrap(throwable));
+                    }
+                  }
+                });
+          } catch (Throwable throwable) {
+            for (KryonExecution<?> ke : kryonExecutions) {
+              ke.response().completeExceptionally(stackTracelessWrap(throwable));
+            }
+          }
+        });
+  }
+
   @SuppressWarnings("FutureReturnValueIgnored")
   private void submitBatch(Set<InvocationId> unFlushedRequests) {
-    Map<VajramID, List<KryonExecution>> executionsByKryon =
+    Map<VajramID, List<KryonExecution<?>>> executionsByKryon =
         unFlushedRequests.stream()
             .map(this::getKryonExecution)
             .collect(groupingBy(KryonExecution::vajramID));
     executionsByKryon.forEach(
-        (kryonId, kryonExecutions) -> {
+        (vajramID, kryonExecutions) -> {
           CompletableFuture<BatchResponse> batchResponseFuture;
           try {
-            Map<InvocationId, Request<@Nullable Object>> requests =
+            Map<InvocationId, Request<Object>> requests =
                 new LinkedHashMap<>(kryonExecutions.size());
-            for (KryonExecution kryonExecution : kryonExecutions) {
+            for (KryonExecution<?> kryonExecution : kryonExecutions) {
               requests.put(kryonExecution.instanceExecutionId(), kryonExecution.request());
             }
             batchResponseFuture =
@@ -566,8 +643,8 @@ public final class KryonExecutor implements KrystalExecutor {
                     .traitDispatchDecorator()
                     .<BatchResponse>decorateDependency(this::executeCommand)
                     .invokeDependency(
-                        new ForwardSend(
-                            kryonId,
+                        new ForwardSendBatch(
+                            vajramID,
                             requests,
                             kryonDefinitionRegistry.getDependentChainsStart(),
                             ImmutableMap.of()));
@@ -585,24 +662,36 @@ public final class KryonExecutor implements KrystalExecutor {
               .thenApply(BatchResponse::responses)
               .whenComplete(
                   (responses, throwable) -> {
-                    for (KryonExecution kryonExecution : kryonExecutions) {
+                    for (KryonExecution<?> kryonExecution : kryonExecutions) {
                       if (throwable != null) {
                         kryonExecution
-                            .future()
+                            .requestResponseFuture()
+                            .response()
                             .completeExceptionally(stackTracelessWrap(throwable));
                       } else {
                         linkFutures(
                             responses
                                 .getOrDefault(kryonExecution.instanceExecutionId(), Errable.nil())
                                 .toFuture(),
-                            kryonExecution.future());
+                            kryonExecution.response());
                       }
                     }
                   });
           propagateCancellation(
-              allOf(kryonExecutions.stream().map(getFuture()).toArray(CompletableFuture[]::new)),
+              allOf(
+                  kryonExecutions.stream()
+                      .map(KryonExecution::response)
+                      .toArray(CompletableFuture[]::new)),
               batchResponseFuture);
         });
+  }
+
+  private List<RequestResponseFuture<? extends Request<?>, ?>> asRequestResponseFutures(
+      List<KryonExecution<?>> kryonExecutions) {
+    List<RequestResponseFuture<? extends Request<?>, ?>> list =
+        new ArrayList<>(kryonExecutions.size());
+    kryonExecutions.forEach(ke -> list.add(ke.requestResponseFuture()));
+    return list;
   }
 
   public KryonExecutorMetrics getKryonMetrics() {
@@ -625,7 +714,7 @@ public final class KryonExecutor implements KrystalExecutor {
         () ->
             allOf(
                     allExecutions.values().stream()
-                        .map(getFuture())
+                        .map(KryonExecution::response)
                         .toArray(CompletableFuture[]::new))
                 .whenComplete(
                     (unused, throwable) -> {
@@ -647,12 +736,15 @@ public final class KryonExecutor implements KrystalExecutor {
     this.shutdownRequested = true;
   }
 
-  private void _close0() {
-    this.closed = true;
+  ExecutorService commandQueue() {
+    if (commandQueue == null) {
+      this.commandQueue = new KrystalExecutorExecService(this, executorConfig.executorService());
+    }
+    return commandQueue;
   }
 
-  private static Function<KryonExecution, CompletableFuture<@Nullable Object>> getFuture() {
-    return KryonExecution::future;
+  private void _close0() {
+    this.closed = true;
   }
 
   @SuppressWarnings("FutureReturnValueIgnored")
@@ -670,13 +762,22 @@ public final class KryonExecutor implements KrystalExecutor {
           kryonMetrics.commandQueued();
           return command.get();
         },
-        commandQueue);
+        commandQueue());
   }
 
-  private record KryonExecution(
+  @SuppressWarnings("unchecked")
+  private record KryonExecution<T>(
       VajramID vajramID,
       InvocationId instanceExecutionId,
-      ImmutableRequest<@Nullable Object> request,
-      KryonExecutionConfig executionConfig,
-      CompletableFuture<@Nullable Object> future) {}
+      RequestResponseFuture<? extends Request<T>, T> requestResponseFuture,
+      KryonExecutionConfig executionConfig) {
+
+    public CompletableFuture<@Nullable Object> response() {
+      return (CompletableFuture<@Nullable Object>) requestResponseFuture().response();
+    }
+
+    public Request<Object> request() {
+      return (Request<Object>) requestResponseFuture().request();
+    }
+  }
 }

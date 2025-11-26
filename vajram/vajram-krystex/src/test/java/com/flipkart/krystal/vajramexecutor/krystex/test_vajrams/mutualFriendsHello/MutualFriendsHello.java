@@ -7,7 +7,7 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFri
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHello_Fac.hellos_n;
 import static java.lang.System.lineSeparator;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-@ExternallyInvocable
+@InvocableOutsideGraph
 @Vajram
 public abstract class MutualFriendsHello extends ComputeVajramDef<String> {
   static class _Inputs {

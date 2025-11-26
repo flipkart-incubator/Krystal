@@ -19,7 +19,7 @@ public non-sealed class OptionalOne2OneDepSpec<T, CV extends Request, DV extends
       VajramID vajramID,
       DataType<T> type,
       Class<CV> ofVajram,
-      Class<DV> onVajram,
+      Class<?> onVajram,
       VajramID onVajramId,
       String documentation,
       boolean isBatched,

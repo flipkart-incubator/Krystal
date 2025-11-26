@@ -6,7 +6,7 @@ import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
 public sealed interface SimpleInputResolver extends InputResolver
     permits AbstractSimpleInputResolver {
 
-  public DependencySpec<?, ?, ?> getDependency();
+  DependencySpec<?, ?, ?> getDependency();
 
-  public SimpleInputResolverSpec<?, ?, ?> getResolverSpec();
+  SimpleInputResolverSpec<?, ?, ?> getResolverSpec();
 }

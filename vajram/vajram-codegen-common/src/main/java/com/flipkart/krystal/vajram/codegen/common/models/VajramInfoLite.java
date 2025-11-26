@@ -1,42 +1,71 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
-import static com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility.getImmutRequestInterfaceName;
-import static com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility.getImmutRequestPojoName;
-import static com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility.getRequestInterfaceName;
+import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.asTypeNameWithTypes;
+import static com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility.getImmutRequestInterfaceName;
+import static com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility.getImmutRequestPojoName;
+import static com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility.getRequestInterfaceName;
 
+import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
+import com.flipkart.krystal.codegen.common.datatypes.VariableCodeGenType;
 import com.flipkart.krystal.core.VajramID;
+import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.vajram.Trait;
-import com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenType;
-import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ImmutableMap;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.TypeName;
 import java.util.List;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeMirror;
 import lombok.SneakyThrows;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public record VajramInfoLite(
     VajramID vajramId,
     CodeGenType responseType,
     String packageName,
-    ImmutableBiMap<Integer, String> facetIdNameMapping,
+    ImmutableMap<String, FacetDetail> facetDetails,
     TypeElement vajramOrReqClass,
-    CodeGenUtility util) {
+    List<? extends TypeMirror> typeArguments,
+    String docString,
+    VajramCodeGenUtility util) {
 
-  public ClassName requestInterfaceType() {
+  public ClassName requestInterfaceClassName() {
     return ClassName.get(packageName(), getRequestInterfaceName(vajramId().id()));
   }
 
-  public ClassName immutReqInterfaceType() {
+  public TypeName requestInterfaceTypeName() {
+    return asTypeNameWithTypes(requestInterfaceClassName(), typeArguments());
+  }
+
+  public ClassName reqImmutInterfaceClassName() {
     return ClassName.get(packageName(), getImmutRequestInterfaceName(vajramId().id()));
   }
 
-  public ClassName immutReqPojoType() {
+  public TypeName reqImmutInterfaceTypeName() {
+    return asTypeNameWithTypes(
+        ClassName.get(packageName(), getImmutRequestInterfaceName(vajramId().id())),
+        typeArguments());
+  }
+
+  public ClassName reqImmutPojoClassName() {
     return ClassName.get(packageName(), getImmutRequestPojoName(vajramId().id()));
   }
 
-  public TypeName builderInterfaceType() {
-    return immutReqInterfaceType().nestedClass("Builder");
+  public TypeName reqImmutPojoTypeName() {
+    return asTypeNameWithTypes(reqImmutPojoClassName(), typeArguments());
+  }
+
+  public TypeName reqBuilderInterfaceType() {
+    return asTypeNameWithTypes(
+        reqImmutInterfaceClassName().nestedClass("Builder"), typeArguments());
+  }
+
+  public CodeGenType responseTypeBounds() {
+    if (responseType instanceof VariableCodeGenType vct) {
+      return vct.upperBound();
+    }
+    return responseType;
   }
 
   @SneakyThrows
@@ -51,4 +80,11 @@ public record VajramInfoLite(
   public boolean isVajram() {
     return !isTrait();
   }
+
+  public record FacetDetail(
+      int id,
+      String name,
+      CodeGenType dataType,
+      FacetType facetType,
+      @Nullable String documentation) {}
 }

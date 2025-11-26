@@ -1,5 +1,5 @@
-import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.FINAL
-import static com.flipkart.krystal.vajram.codegen.common.models.Constants.CODEGEN_PHASE_KEY
+import static com.flipkart.krystal.codegen.common.models.CodegenPhase.FINAL
+import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE_KEY
 
 plugins {
     id 'com.flipkart.krystal' version "${krystal_version}"
@@ -11,10 +11,13 @@ dependencies {
     api project(':vajram:vajram-java-sdk')
     api project(':krystex')
 
-    testAnnotationProcessor 'com.flipkart.krystal:vajram-codegen'
     testAnnotationProcessor project(':krystal-common')
-    testAnnotationProcessor project(':vajram:vajram-codegen-common')
+    testAnnotationProcessor project(':krystal-codegen-common')
+    testAnnotationProcessor project(':krystal-codegen-common')
+    testKrystalModelsGenProcessor "com.flipkart.krystal:vajram-codegen:${krystal_version}"
+    testAnnotationProcessor 'org.checkerframework:checker-qual'
 
+    testImplementation project(':vajram:extensions:resilience4j:vajram-resilience4j')
     testImplementation 'com.fasterxml.jackson.core:jackson-annotations'
     testImplementation 'com.fasterxml.jackson.core:jackson-databind'
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
@@ -23,39 +26,21 @@ dependencies {
     testImplementation 'org.slf4j:slf4j-log4j12'
 }
 
-tasks.named('spotlessJava').configure { mustRunAfter('compileTestJava') }
-
-publishing {
-    publications {
-        maven(MavenPublication) {
-            groupId = project.group
-            artifactId = project.name
-            version = project.version
-            from components.java
-        }
-    }
-}
-
-afterEvaluate {
-    //The main sourceSet doesn't have any vajrams - so remove this dependency
-    compileJava.dependsOn -= "codeGenVajramModels"
-}
-
 /*
  * The krystal gradle plugin adds new test tasks and modifies the compileTestJavaTask by making it depend
  * on these new tasks. This seems to be interfering with gradle's ability to copy over the module dependencies
  * from the module-info.java spec to the test modules. To overcome this, we have to manually add --add-exports and
  * --add-reads arguments to the jvm so that test classes compile.
  *
- * This issue happens only when the compileTestJava task is modified to add a dependency on testCodeGenVajramModels.
+ * This issue happens only when the compileTestJava task is modified to add a dependency on testKrystalModelsGen.
  * This is needed only when there are vajrams written in the 'test' directory of the project - which is the case in vajram-krystex.
  * This issue doesn't arise in traditional modules where vajrams are written in 'main' directory.
  *
- * To circumvent this, the krystal gradle plugin does not make `compileTestJava` dependent on `testCodeGenVajramModels`.
- * If any project has vajrams in the test directory, then that project will have to explicitly make `compileTestJava` dependent on `testCodeGenVajramModels`
+ * To circumvent this, the krystal gradle plugin does not make `compileTestJava` dependent on `testKrystalModelsGen`.
+ * If any project has vajrams in the test directory, then that project will have to explicitly make `compileTestJava` dependent on `testKrystalModelsGen`
  * and add custom jvm arguments as done below, so that compilation of test code succeeds.
  */
-tasks.named('testCodeGenVajramModels', JavaCompile).configure {
+tasks.named('testKrystalModelsGen', JavaCompile).configure {
     doFirst {
         def moduleName = 'flipkart.krystal.vajramexecutor.krystex'
         options.compilerArgs += modulePathArgs(moduleName)
@@ -63,46 +48,46 @@ tasks.named('testCodeGenVajramModels', JavaCompile).configure {
 }
 
 compileTestJava {
-    dependsOn 'testCodeGenVajramModels'
+    dependsOn 'testKrystalModelsGen'
     doFirst {
         def moduleName = 'flipkart.krystal.vajramexecutor.krystex'
         options.compilerArgs += modulePathArgs(moduleName)
-        options.compilerArgs += [
-                '--module-path', classpath.asPath,
-                '--patch-module', "$moduleName=" + files(sourceSets.test.java.srcDirs).asPath,
-                '-A' + CODEGEN_PHASE_KEY + '=' + FINAL,
-                '-parameters'
-        ]
+        options.compilerArgs += ['--module-path', classpath.asPath,
+                                 '--patch-module', "$moduleName=" + files(sourceSets.test.java.srcDirs).asPath,
+                                 '-A' + CODEGEN_PHASE_KEY + '=' + FINAL,
+                                 '-parameters']
     }
 }
 
 private static ArrayList<String> modulePathArgs(String moduleName) {
-    [
-            '--add-modules', 'flipkart.krystal.krystex',
-            '--add-reads', "$moduleName=flipkart.krystal.krystex",
+    ['--add-modules', 'flipkart.krystal.krystex',
+     '--add-reads', "$moduleName=flipkart.krystal.krystex",
 
-            '--add-modules', 'org.junit.jupiter.api',
-            '--add-reads', "$moduleName=org.junit.jupiter.api",
+     '--add-modules', 'org.junit.jupiter.api',
+     '--add-reads', "$moduleName=org.junit.jupiter.api",
 
-            '--add-modules', 'org.junit.jupiter.params',
-            '--add-reads', "$moduleName=org.junit.jupiter.params",
+     '--add-modules', 'org.junit.jupiter.params',
+     '--add-reads', "$moduleName=org.junit.jupiter.params",
 
-            '--add-modules', 'org.assertj.core',
-            '--add-reads', "$moduleName=org.assertj.core",
+     '--add-modules', 'org.assertj.core',
+     '--add-reads', "$moduleName=org.assertj.core",
 
-            '--add-modules', 'com.fasterxml.jackson.annotation',
-            '--add-reads', "$moduleName=com.fasterxml.jackson.annotation",
+     '--add-modules', 'com.fasterxml.jackson.annotation',
+     '--add-reads', "$moduleName=com.fasterxml.jackson.annotation",
 
-            '--add-modules', 'com.fasterxml.jackson.databind',
-            '--add-reads', "$moduleName=com.fasterxml.jackson.databind",
+     '--add-modules', 'com.fasterxml.jackson.databind',
+     '--add-reads', "$moduleName=com.fasterxml.jackson.databind",
 
-            '--add-modules', 'com.fasterxml.jackson.datatype.jdk8',
-            '--add-reads', "$moduleName=com.fasterxml.jackson.datatype.jdk8",
+     '--add-modules', 'com.fasterxml.jackson.datatype.jdk8',
+     '--add-reads', "$moduleName=com.fasterxml.jackson.datatype.jdk8",
 
-            '--add-modules', 'com.fasterxml.jackson.datatype.jsr310',
-            '--add-reads', "$moduleName=com.fasterxml.jackson.datatype.jsr310",
+     '--add-modules', 'com.fasterxml.jackson.datatype.jsr310',
+     '--add-reads', "$moduleName=com.fasterxml.jackson.datatype.jsr310",
 
-            '--add-modules', 'lombok',
-            '--add-reads', "$moduleName=lombok",
+     '--add-modules', 'lombok',
+     '--add-reads', "$moduleName=lombok",
+
+     '--add-modules', 'krystal.vajram.ext.resilience4j',
+     '--add-reads', "$moduleName=krystal.vajram.ext.resilience4j",
     ]
 }

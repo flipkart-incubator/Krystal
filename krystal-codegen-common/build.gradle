@@ -1,0 +1,11 @@
+description =
+        '''Common utility code for Krystal code generation.'''
+
+dependencies {
+    api project(':krystal-common')
+    implementation 'com.squareup:javapoet'
+}
+
+checkerFramework {
+    extraJavacArgs += ['-AresolveReflection',]
+}

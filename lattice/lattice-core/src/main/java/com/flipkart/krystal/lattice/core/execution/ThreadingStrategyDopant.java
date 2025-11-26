@@ -1,0 +1,81 @@
+package com.flipkart.krystal.lattice.core.execution;
+
+import static com.flipkart.krystal.lattice.core.execution.ThreadingStrategyDopant.DOPANT_TYPE;
+
+import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.lattice.core.di.Bindings;
+import com.flipkart.krystal.lattice.core.di.DependencyInjectionBinder;
+import com.flipkart.krystal.lattice.core.doping.DopantType;
+import com.flipkart.krystal.lattice.core.doping.DopantWithConfig;
+import com.flipkart.krystal.lattice.core.execution.ThreadingStrategySpec.ThreadingStrategySpecBuilder;
+import com.flipkart.krystal.pooling.Lease;
+import com.flipkart.krystal.pooling.LeaseUnavailableException;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.concurrent.ExecutorService;
+import lombok.extern.slf4j.Slf4j;
+
+@Singleton
+@Slf4j
+@DopantType(DOPANT_TYPE)
+public final class ThreadingStrategyDopant implements DopantWithConfig<ThreadStrategyConfig> {
+  static final String DOPANT_TYPE = "krystal.lattice.threadingStrategy";
+  private final DependencyInjectionBinder binder;
+  private final ThreadingStrategy threadingStrategy;
+
+  private final SingleThreadExecutorsPool executorPool;
+
+  @Inject
+  ThreadingStrategyDopant(
+      ThreadingStrategySpec spec, ThreadStrategyConfig config, DependencyInjectionBinder binder) {
+    this.threadingStrategy = spec.threadingStrategy();
+    this.binder = binder;
+    this.executorPool =
+        switch (threadingStrategy) {
+          case NATIVE_THREAD_PER_REQUEST ->
+              new SingleThreadExecutorsPool(
+                  "ThreadingStrategyDopant-ThreadPerRequestExecutorsPool",
+                  config.maxApplicationThreads());
+          default -> throw new UnsupportedOperationException(threadingStrategy.toString());
+        };
+  }
+
+  public Lease<? extends ExecutorService> getExecutorService() throws LeaseUnavailableException {
+    return executorPool.lease();
+  }
+
+  @SuppressWarnings("ClassEscapesDefinedScope")
+  public static ThreadingStrategySpecBuilder threadingStrategy() {
+    return ThreadingStrategySpec.builder();
+  }
+
+  public RequestScope openRequestScope(Bindings seedMap) {
+    return new RequestScope(binder.openRequestScope(seedMap, threadingStrategy));
+  }
+
+  public static class RequestScope implements AutoCloseable {
+
+    private final Closeable delegate;
+    private boolean closed;
+
+    public RequestScope(Closeable delegate) {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public void close() {
+      if (closed) {
+        return;
+      }
+      try {
+        delegate.close();
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
+      this.closed = true;
+    }
+  }
+}

@@ -11,7 +11,7 @@ public record One2OneCommand<T>(
 
   @SuppressWarnings("RedundantTypeArguments")
   @Override
-  public List<@Nullable T> inputs() {
+  public List<@Nullable T> values() {
     return Collections.<@Nullable T>singletonList(input);
   }
 

@@ -1,22 +1,25 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen;
 
+import static com.flipkart.krystal.codegen.common.models.CodegenPhase.MODELS;
 import static com.flipkart.krystal.facets.FacetType.INPUT;
-import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.MODELS;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.VAJRAM_REQ_PROTO_FILE_SUFFIX;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.VAJRAM_REQ_PROTO_MSG_SUFFIX;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.VAJRAM_REQ_PROTO_OUTER_CLASS_SUFFIX;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.createOutputDirectory;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.getProtobufType;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProto3Applicable;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeMap;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeRepeated;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeScalar;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.validateProtobufCompatibility;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.VAJRAM_REQ_PROTO_FILE_SUFFIX;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.VAJRAM_REQ_PROTO_MSG_SUFFIX;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.VAJRAM_REQ_PROTO_OUTER_CLASS_SUFFIX;
 
+import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.serial.SerialId;
-import com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.DefaultFacetModel;
+import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
-import com.flipkart.krystal.vajram.codegen.common.models.VajramValidationException;
-import com.flipkart.krystal.vajram.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.vajram.codegen.common.spi.VajramCodeGenContext;
 import com.google.common.base.Splitter;
 import java.io.IOException;
@@ -38,7 +41,7 @@ import lombok.extern.slf4j.Slf4j;
 class VajramModelsProto3SchemaGen implements CodeGenerator {
 
   private final VajramCodeGenContext creationContext;
-  private final CodeGenUtility util;
+  private final VajramCodeGenUtility util;
 
   public VajramModelsProto3SchemaGen(VajramCodeGenContext creationContext) {
     this.creationContext = creationContext;
@@ -46,32 +49,33 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
   }
 
   @Override
-  public void generate() throws VajramValidationException {
+  public void generate() {
     if (!isApplicable(creationContext, util)) {
       return;
     }
-    validateProtobufCompatibility(creationContext.vajramInfo(), util);
+    validateProtobufCompatibility(creationContext.vajramInfo(), util.codegenUtil());
     generateProtobufSchema(creationContext.vajramInfo());
   }
 
-  private static boolean isApplicable(VajramCodeGenContext creationContext, CodeGenUtility util) {
+  private static boolean isApplicable(
+      VajramCodeGenContext creationContext, VajramCodeGenUtility util) {
     if (!MODELS.equals(creationContext.codegenPhase())) {
-      util.note("Skipping protobuf codegen since current phase is not MODELS");
+      util.codegenUtil().note("Skipping protobuf schema codegen since current phase is not MODELS");
       return false;
     }
     return isProto3Applicable(creationContext.vajramInfo(), util);
   }
 
   private void generateProtobufSchema(VajramInfo vajramInfo) {
-    String vajramName = vajramInfo.vajramClass().getSimpleName().toString();
+    String vajramName = vajramInfo.vajramClassElem().getSimpleName().toString();
     String packageName = vajramInfo.lite().packageName();
     String reqProtoFileName = vajramName + VAJRAM_REQ_PROTO_FILE_SUFFIX;
 
     try {
       // Create output directory if it doesn't exist
       Path outputDir =
-          ProtoGenUtils.createOutputDirectory(
-              util.detectSourceOutputPath(vajramInfo.vajramClass()), util);
+          createOutputDirectory(
+              util.detectSourceOutputPath(vajramInfo.vajramClassElem()), util.codegenUtil());
 
       // Generate request proto file content
       String reqProtoContent = generateRequestProtoFileContent(vajramInfo, packageName);
@@ -85,9 +89,9 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
       log.info("Generated request protobuf schema file: {}", reqProtoFilePath);
 
     } catch (IOException e) {
-      util.error(
-          String.format("Error generating protobuf schema for %s: %s", vajramName, e.getMessage()),
-          vajramInfo.vajramClass());
+      String message =
+          String.format("Error generating protobuf schema for %s: %s", vajramName, e.getMessage());
+      util.codegenUtil().error(message, vajramInfo.vajramClassElem());
     }
   }
 
@@ -102,7 +106,7 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
   private String generateRequestProtoFileContent(VajramInfo vajramInfo, String packageName) {
     StringBuilder protoBuilder = new StringBuilder();
     String vajramId = vajramInfo.vajramName();
-    String vajramClassName = vajramInfo.vajramClass().getQualifiedName().toString();
+    String vajramClassName = vajramInfo.vajramClassElem().getQualifiedName().toString();
 
     // Add auto-generated comment
     protoBuilder
@@ -142,11 +146,12 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
       SerialId serialId = facet.facetField().getAnnotation(SerialId.class);
       int fieldNumber;
       if (serialId == null) {
-        util.error(
-            String.format(
-                "Missing @SerialId annotation on input '%s' in Vajram '%s'",
-                facet.name(), vajramId),
-            facet.facetField());
+        util.codegenUtil()
+            .error(
+                String.format(
+                    "Missing @SerialId annotation on input '%s' in Vajram '%s'",
+                    facet.name(), vajramId),
+                facet.facetField());
         fieldNumber = -1;
       } else {
 
@@ -156,20 +161,22 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
 
       // Validate the field number
       if (fieldNumber <= 0) {
-        util.error(
-            String.format(
-                "Invalid SerialId %d for input '%s' in Vajram '%s'. SerialId must be positive.",
-                fieldNumber, facet.name(), vajramId),
-            facet.facetField());
+        util.codegenUtil()
+            .error(
+                String.format(
+                    "Invalid SerialId %d for input '%s' in Vajram '%s'. SerialId must be positive.",
+                    fieldNumber, facet.name(), vajramId),
+                facet.facetField());
       }
 
       // Check for duplicate field numbers
       if (!usedFieldNumbers.add(fieldNumber)) {
-        util.error(
-            String.format(
-                "Duplicate SerialId %d for input '%s' in Vajram '%s'",
-                fieldNumber, facet.name(), vajramId),
-            facet.facetField());
+        util.codegenUtil()
+            .error(
+                String.format(
+                    "Duplicate SerialId %d for input '%s' in Vajram '%s'",
+                    fieldNumber, facet.name(), vajramId),
+                facet.facetField());
       }
 
       // Check if the field has the @Mandatory annotation
@@ -193,17 +200,17 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
             util.processingEnv()
                 .getTypeUtils()
                 .erasure(facet.dataType().javaModelType(util.processingEnv()));
-        boolean isRepeated = util.isRawAssignable(rawType, List.class);
-        boolean isMap = util.isRawAssignable(rawType, Map.class);
+        boolean isRepeated = util.codegenUtil().isRawAssignable(rawType, List.class);
+        boolean isMap = util.codegenUtil().isRawAssignable(rawType, Map.class);
         if (!ifAbsentThen.usePlatformDefault() && (isRepeated || isMap)) {
           // Proto3 cannot enforce mandatory fields with FAIL strategy for repeated and
           // map fields
-          util.error(
+          String message =
               String.format(
                   "Input '%s' in Vajram '%s' is a %s field, and has @IfAbsent(%s) which is not supported in protobuf3. "
                       + "Use a different IfAbsent strategy or remove @IfAbsent annotation.",
-                  facet.name(), vajramId, isRepeated ? "repeated" : "map", ifAbsentThen),
-              facet.facetField());
+                  facet.name(), vajramId, isRepeated ? "repeated" : "map", ifAbsentThen);
+          util.codegenUtil().error(message, facet.facetField());
         } else if (ifAbsentThen.usePlatformDefault()) {
           // If the strategy allows defaulting, we can make it a required field in proto3
           isOptional = false;
@@ -226,16 +233,18 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
       // Add 'optional' keyword if needed
       // Note: repeated and map fields don't need the optional keyword
       if (isOptional
-          && ProtoGenUtils.isProtoTypeScalar(facet.dataType(), util)
-          && !ProtoGenUtils.isProtoTypeRepeated(facet.dataType())
-          && !ProtoGenUtils.isProtoTypeMap(facet.dataType())) {
+          && isProtoTypeScalar(facet.dataType(), util.codegenUtil())
+          && !isProtoTypeRepeated(facet.dataType())
+          && !isProtoTypeMap(facet.dataType())) {
         protoBuilder.append("optional ");
       }
 
       // For repeated and map fields, the 'repeated' or 'map<>' prefix is already included in
       // fieldType
       protoBuilder
-          .append(getProtobufType(facet.dataType(), util, facet.facetField()).typeInProtoFile())
+          .append(
+              getProtobufType(facet.dataType(), util.codegenUtil(), facet.facetField())
+                  .typeInProtoFile())
           .append(" ")
           .append(facet.name())
           .append(" = ")

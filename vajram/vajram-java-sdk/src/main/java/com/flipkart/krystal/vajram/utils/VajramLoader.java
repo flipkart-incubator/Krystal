@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajram.utils;
 import static java.lang.reflect.Modifier.isFinal;
 
 import com.flipkart.krystal.vajram.VajramDefRoot;
+import com.flipkart.krystal.vajram.VajramInitData;
 import java.util.Arrays;
 import java.util.List;
 import org.reflections.Reflections;
@@ -19,7 +20,7 @@ public final class VajramLoader {
   }
 
   public static VajramDefRoot<Object> createVajramObjectForClass(
-      Class<? extends VajramDefRoot<?>> clazz) {
+      Class<? extends VajramDefRoot> clazz) {
     List<Class<? extends VajramDefRoot>> impls =
         new Reflections(clazz.getPackageName())
             .getSubTypesOf(clazz).stream()
@@ -52,7 +53,7 @@ public final class VajramLoader {
       throw new RuntimeException("Provided Vajram impl class should be final");
     }
     try {
-      return aClass.getConstructor().newInstance();
+      return aClass.getConstructor(VajramInitData.class).newInstance(new VajramInitData());
     } catch (Throwable e) {
       throw new RuntimeException(e);
     }

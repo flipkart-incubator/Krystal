@@ -1,0 +1,79 @@
+plugins {
+    id 'java-library'
+    id 'com.flipkart.krystal' version "${krystal_version}"
+    id 'com.flipkart.java.code.standard' version "${java_code_std_version}"
+
+}
+
+dependencies {
+    implementation platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
+    krystalModelsGenProcessor platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
+
+    implementation 'com.flipkart.krystal:vajram-java-sdk'
+    implementation 'com.flipkart.krystal:vajram-graphql'
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-graphql-codegen'
+    implementation 'com.graphql-java:graphql-java:24.3'
+    implementation 'com.graphql-java:graphql-java-extended-scalars:24.0'
+
+    annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
+
+    compileOnly "org.projectlombok:lombok:$lombok_version"
+    annotationProcessor "org.projectlombok:lombok:$lombok_version"
+
+    implementation 'org.slf4j:slf4j-api:2.0.11'
+
+    implementation project(':vajram:extensions:json:vajram-json')
+    implementation 'com.fasterxml.jackson.core:jackson-annotations'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+
+
+    testImplementation 'com.flipkart.krystal:vajram-krystex'
+    testImplementation platform('org.assertj:assertj-bom:3.25.2')
+    testImplementation 'org.assertj:assertj-core'
+}
+
+checkerFramework {
+    excludeTests = true
+}
+
+tasks.withType(JavaCompile).configureEach {
+    //Needed so that annotation processors can read the graphqls files
+    it.source(files('src/main/graphqls'))
+}
+sourceSets {
+    //Needed so that graphqls files are available on the classpath and application can load the file
+    main {
+        resources {
+            // Add the custom directory to the resource source path
+            srcDirs 'src/main/graphqls'
+        }
+    }
+}
+// Define the Custom Copy Task
+tasks.register('extractGraphqls', Copy) {
+    def graphqlsDependency = configurations.compileClasspath.find {
+        it.name.contains('vajram-graphql')
+    }
+    if (graphqlsDependency == null) {
+        throw new GradleException("Could not find vajram-graphql JAR in compileClasspath")
+    }
+    // Use zipTree to treat the JAR file as a directory tree
+    from zipTree(graphqlsDependency)
+
+    // Filter to only copy the required files (e.g., all .graphqls files)
+    include '**/*.graphqls'
+
+    // Destination: Copy them into your main resources output folder.
+    // This makes them available on the classpath.
+    into sourceSets.main.output.resourcesDir
+
+    // Configure task inputs/outputs for up-to-date checking
+    inputs.files(graphqlsDependency)
+    outputs.dir(sourceSets.main.output.resourcesDir)
+}
+
+// Ensure the copy task runs before resource processing
+processResources.configure {
+    dependsOn('extractGraphqls')
+}

@@ -17,6 +17,10 @@ public class DecorationOrdering {
 
   private final ImmutableMap<String, Integer> decoratorTypeIndices;
 
+  public DecorationOrdering(String... orderedDecoratorIds) {
+    this(ImmutableSet.copyOf(orderedDecoratorIds));
+  }
+
   /**
    * @param orderedDecoratorIds The first id in this list will process the command first and the
    *     command response last in relation to later decorator ids.

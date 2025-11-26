@@ -3,19 +3,10 @@ description =
 
 dependencies {
     api project(':vajram:vajram-java-sdk')
+    implementation project(':krystal-codegen-common')
     implementation 'com.squareup:javapoet'
 }
 
-publishing {
-    publications {
-        maven(MavenPublication) {
-            groupId = project.group
-            artifactId = project.name
-            version = project.version
-            from components.java
-        }
-    }
-}
 
 checkerFramework {
     extraJavacArgs += ['-AresolveReflection',]

@@ -1,0 +1,8 @@
+dependencies {
+    api project(':krystal-codegen-common')
+    api project(':vajram:vajram-codegen-common')
+    api project(':lattice:lattice-core')
+
+    api 'com.squareup:javapoet'
+    implementation 'org.projectlombok:lombok'
+}

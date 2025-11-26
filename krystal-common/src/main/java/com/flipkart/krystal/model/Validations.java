@@ -7,7 +7,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public class Validations {
   public static <T> T validateMandatory(@Nullable T t, String typeName, String dataFieldName) {
     if (t == null) {
-      throw new MandatoryDataMissingException(typeName, dataFieldName);
+      throw new MandatoryFieldMissingException(typeName, dataFieldName);
     }
     return t;
   }

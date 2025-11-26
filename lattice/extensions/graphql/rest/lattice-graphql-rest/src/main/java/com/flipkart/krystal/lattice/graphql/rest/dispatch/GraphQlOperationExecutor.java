@@ -1,0 +1,167 @@
+package com.flipkart.krystal.lattice.graphql.rest.dispatch;
+
+import static java.util.concurrent.CompletableFuture.completedFuture;
+
+import com.flipkart.krystal.core.VajramInvocation;
+import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.data.RequestResponseFuture;
+import com.flipkart.krystal.krystex.commands.ClientSideCommand;
+import com.flipkart.krystal.krystex.commands.DirectForwardSend;
+import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
+import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecoratorConfig;
+import com.flipkart.krystal.krystex.dependencydecoration.DependencyInvocation;
+import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
+import com.flipkart.krystal.krystex.kryon.DirectResponse;
+import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
+import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
+import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
+import com.flipkart.krystal.lattice.vajram.VajramDopant;
+import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationError;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject;
+import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
+import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate_Req;
+import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationDispatch;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import graphql.ExecutionInput;
+import graphql.GraphQL;
+import jakarta.inject.Inject;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * This dependency decorator is responsible to forwarding a {@link GraphQlOperationAggregate_Req} to
+ * the {@link GraphQL} execution logic provided by the <a
+ * href="https://github.com/graphql-java/graphql-java">graphql-java</a> library. The execution
+ * inside the graphql-java library is handled by the {@link VajramExecutionStrategy}. The actual
+ * dispatch of the request to the appropriate vajram is handled by the {@link
+ * GraphQlOperationDispatch} trait dispatch policy which uses properties set by the
+ * VajramExecutionStrategy. This is why a {@link TraitDispatchDecorator} decorator MUST run after
+ * this decorator.
+ */
+@Slf4j
+public final class GraphQlOperationExecutor
+    implements DependencyDecorator, KryonExecutorConfigurator {
+
+  public static final String DECORATOR_TYPE = GraphQlOperationExecutor.class.getName();
+  private final GraphQL graphQL;
+  private final VajramKryonGraph graph;
+
+  @Inject
+  public GraphQlOperationExecutor(GraphQL graphQL, VajramDopant vajramDopant) {
+    this(graphQL, vajramDopant.graph());
+  }
+
+  public GraphQlOperationExecutor(GraphQL graphQL, VajramKryonGraph graph) {
+    this.graphQL = graphQL;
+    this.graph = graph;
+  }
+
+  @Override
+  public <R extends KryonCommandResponse> DependencyInvocation<R> decorateDependency(
+      DependencyInvocation<R> invocationToDecorate) {
+    return kryonCommand -> {
+      if (!(kryonCommand instanceof DirectForwardSend directForwardSend)) {
+        log.error(
+            "Only DirectForwardSend supported by {}. Forwarding the command as is",
+            decoratorType());
+        return invocationToDecorate.invokeDependency(kryonCommand);
+      }
+      List<? extends RequestResponseFuture<? extends Request<?>, ?>> requestResponseFutures =
+          directForwardSend.executableRequests();
+      if (requestResponseFutures.size() > 1) {
+        String msg = "As per GraphQl spec, only one operation is allowed to execute at a time";
+        log.error(msg);
+        return CompletableFuture.failedFuture(new IllegalArgumentException(msg));
+      } else if (requestResponseFutures.isEmpty()) {
+        log.error("No requests found. Forwarding message as is");
+        return invocationToDecorate.invokeDependency(kryonCommand);
+      }
+
+      @SuppressWarnings("unchecked")
+      RequestResponseFuture<? extends Request<?>, GraphQlOperationObject> requestResponseFuture =
+          (RequestResponseFuture<? extends Request<?>, GraphQlOperationObject>)
+              requestResponseFutures.get(0);
+      Request<?> request = requestResponseFuture.request();
+      if (!(request instanceof GraphQlOperationAggregate_Req<?> graphQlOperationAggregateReq)) {
+        log.error(
+            """
+                {} only supports requests of type {}. \
+                This decorator should only we used on dependencies on vajram. {} \
+                This seems to be a configuration error. Forwarding command as-is.""",
+            decoratorType(),
+            GraphQlOperationAggregate_Req.class,
+            GraphQlOperationAggregate.class);
+        return invocationToDecorate.invokeDependency(kryonCommand);
+      }
+      ExecutionInput executionInput = graphQlOperationAggregateReq.executionInput();
+      if (executionInput == null) {
+        log.error(
+            "Could not delegate GraphQlOperationAggregate_Req because executionInput was null. Forwarding command as is");
+        return invocationToDecorate.invokeDependency(kryonCommand);
+      }
+
+      graphQL
+          .executeAsync(
+              executionInput.transform(
+                  execInputBuilder ->
+                      execInputBuilder.graphQLContext(
+                          Map.of(
+                              VajramExecutionStrategy.VAJRAM_INVOCATION_CTX_KEY,
+                              (VajramInvocation<GraphQlOperationObject>)
+                                  computedRequestResponseFuture -> {
+                                    Request<GraphQlOperationObject> computedRequest =
+                                        computedRequestResponseFuture.request();
+                                    @SuppressWarnings("unchecked")
+                                    ClientSideCommand<R> newCommand =
+                                        (ClientSideCommand<R>)
+                                            new DirectForwardSend(
+                                                computedRequest._vajramID(),
+                                                List.of(
+                                                    new RequestResponseFuture<>(
+                                                        computedRequest,
+                                                        requestResponseFuture.response())),
+                                                kryonCommand.dependentChain());
+
+                                    invocationToDecorate.invokeDependency(newCommand);
+                                  }))))
+          .whenComplete(
+              (executionResult, throwable) -> {
+                if (throwable != null) {
+                  // This means that there was some error because of which the Aggregation vajram
+                  // was never invoked. Propagate the error to the response
+                  requestResponseFuture.response().completeExceptionally(throwable);
+                } else {
+                  if (!requestResponseFuture.response().isDone()) {
+                    // This means the execution was aborted before the Aggregation vajram was
+                    // invoked. Propagate the state to the response.
+                    requestResponseFuture
+                        .response()
+                        .complete(GraphQlOperationError.from(executionResult));
+                  }
+                }
+              });
+
+      return completedFuture(DirectResponse.instance());
+    };
+  }
+
+  @Override
+  public void addToConfig(KryonExecutorConfigBuilder configBuilder) {
+    configBuilder.dependencyDecoratorConfig(
+        DECORATOR_TYPE,
+        new DependencyDecoratorConfig(
+            DECORATOR_TYPE,
+            dependencyExecutionContext -> {
+              Optional<Class<? extends Request<?>>> depVajramReq =
+                  graph.getVajramReqByVajramId(dependencyExecutionContext.depVajramId());
+              return depVajramReq.isPresent()
+                  && GraphQlOperationAggregate_Req.class.isAssignableFrom(depVajramReq.get());
+            },
+            _c -> DECORATOR_TYPE,
+            _c -> this));
+  }
+}

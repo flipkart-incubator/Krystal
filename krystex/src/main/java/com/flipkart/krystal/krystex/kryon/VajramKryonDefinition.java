@@ -1,10 +1,12 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import com.flipkart.krystal.core.GraphExecutionData;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.facets.resolution.ResolverDefinition;
+import com.flipkart.krystal.krystex.GraphExecutionLogic;
 import com.flipkart.krystal.krystex.LogicDefinition;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
@@ -16,20 +18,16 @@ import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
 import java.util.Set;
 
-/**
- * A stateless, reusable definition of a Kryon
- *
- * @param dependencyKryons Map of dependency name to kryonId.
- */
+/** A stateless, reusable definition of a Kryon */
 public record VajramKryonDefinition(
     VajramID vajramID,
     ImmutableSet<Facet> facets,
     KryonLogicId outputLogicId,
-    ImmutableMap<Dependency, VajramID> dependencyKryons,
     ImmutableMap<ResolverDefinition, Resolver> resolversByDefinition,
     LogicDefinition<CreateNewRequest> createNewRequest,
     LogicDefinition<FacetsFromRequest> facetsFromRequest,
     KryonDefinitionRegistry kryonDefinitionRegistry,
+    GraphExecutionLogic graphExecutionLogic,
     KryonDefinitionView view,
     ElementTags tags)
     implements KryonDefinition {
@@ -38,23 +36,27 @@ public record VajramKryonDefinition(
       VajramID vajramID,
       Set<? extends Facet> facets,
       KryonLogicId outputLogicId,
-      ImmutableMap<Dependency, VajramID> dependencyKryons,
       ImmutableMap<ResolverDefinition, Resolver> resolversByDefinition,
       LogicDefinition<CreateNewRequest> createNewRequest,
       LogicDefinition<FacetsFromRequest> facetsFromRequest,
       KryonDefinitionRegistry kryonDefinitionRegistry,
+      GraphExecutionLogic graphExecutionLogic,
       ElementTags tags) {
     this(
         vajramID,
         ImmutableSet.copyOf(facets),
         outputLogicId,
-        dependencyKryons,
         resolversByDefinition,
         createNewRequest,
         facetsFromRequest,
         kryonDefinitionRegistry,
-        KryonDefinitionView.createView(facets, resolversByDefinition, dependencyKryons),
+        graphExecutionLogic,
+        KryonDefinitionView.createView(facets, resolversByDefinition),
         tags);
+  }
+
+  public ImmutableSet<Dependency> dependencies() {
+    return view.dependencies();
   }
 
   public VajramKryonDefinition {
@@ -71,6 +73,10 @@ public record VajramKryonDefinition(
 
   public <T> OutputLogicDefinition<T> getOutputLogicDefinition() {
     return kryonDefinitionRegistry().logicDefinitionRegistry().getOutputLogic(outputLogicId());
+  }
+
+  public void executeGraph(GraphExecutionData graphExecutionData) {
+    graphExecutionLogic.executeGraph(graphExecutionData);
   }
 
   @Override

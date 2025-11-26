@@ -6,7 +6,7 @@ import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depIn
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.resolve;
 import static com.flipkart.krystal.vajram.samples.calculator.Add2And3_Fac.sumOf2And3_s;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -18,7 +18,7 @@ import com.flipkart.krystal.vajram.samples.calculator.add.Add_Req;
 import com.google.common.collect.ImmutableCollection;
 
 /** Returns the sum of numbers '2' and '3' */
-@ExternallyInvocable
+@InvocableOutsideGraph
 @Vajram
 abstract class Add2And3 extends ComputeVajramDef<Integer> {
 

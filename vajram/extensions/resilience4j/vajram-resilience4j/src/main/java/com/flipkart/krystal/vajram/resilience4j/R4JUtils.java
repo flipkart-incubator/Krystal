@@ -1,0 +1,23 @@
+package com.flipkart.krystal.vajram.resilience4j;
+
+import static java.util.concurrent.CompletableFuture.allOf;
+
+import com.flipkart.krystal.core.OutputLogicExecutionInput;
+import com.flipkart.krystal.krystex.OutputLogic;
+import io.github.resilience4j.decorators.Decorators;
+import io.github.resilience4j.decorators.Decorators.DecorateCompletionStage;
+
+public final class R4JUtils {
+
+  @SuppressWarnings("RedundantTypeArguments") // To avoid nullChecker errors
+  public static DecorateCompletionStage<Void> decorateAsyncExecute(
+      OutputLogic<Object> logicToDecorate, OutputLogicExecutionInput input) {
+    return Decorators.ofCompletionStage(
+        () -> {
+          logicToDecorate.execute(input);
+          return allOf(input.responseFutures()).handle((unused, throwable) -> null);
+        });
+  }
+
+  private R4JUtils() {}
+}

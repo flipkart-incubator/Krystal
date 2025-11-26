@@ -11,7 +11,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
-import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
@@ -19,7 +18,6 @@ import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.traits.ComputeDispatchPolicyImpl;
-import com.flipkart.krystal.vajramexecutor.krystex.traits.DispatchTargetComputing;
 import com.flipkart.krystal.vajramexecutor.krystex.traits.DispatchTargetComputing.DispatchTargetReqTypeComputer;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -249,7 +247,7 @@ class CustomerServiceAgentComputeTest {
   private KrystexVajramExecutorConfig getExecutorConfig() {
     return KrystexVajramExecutorConfig.builder()
         .kryonExecutorConfigBuilder(
-            KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+            KryonExecutorConfig.builder().executorService(executorLease.get()))
         .build();
   }
 }

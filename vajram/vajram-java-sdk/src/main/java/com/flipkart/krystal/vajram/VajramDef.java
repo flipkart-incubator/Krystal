@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram;
 
+import com.flipkart.krystal.core.GraphExecutionData;
 import com.flipkart.krystal.core.OutputLogicExecutionInput;
-import com.flipkart.krystal.core.OutputLogicExecutionResults;
 import com.flipkart.krystal.data.FacetValuesBuilder;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
@@ -43,7 +43,7 @@ import com.google.common.collect.ImmutableList;
  *       (within a few minutes)
  *   <li>Later:(DelayableVajrams) (To be introduced in the future) These are vajrams whose output
  *       logics delegate computation to a longrunning process which is not expected to finish
- *       anytime soon - i.e it might take hours, days or maybe even years for that long running
+ *       anytime soon - i.e. it might take hours, days or maybe even years for that long-running
  *       process to complete.
  * </ul>
  *
@@ -60,7 +60,9 @@ public sealed interface VajramDef<T> extends VajramDefRoot<T>
     return getSimpleInputResolvers();
   }
 
-  OutputLogicExecutionResults<T> execute(OutputLogicExecutionInput _logicInput);
+  void execute(OutputLogicExecutionInput _logicInput);
 
-  FacetValuesBuilder facetsFromRequest(Request<?> request);
+  void executeGraph(GraphExecutionData _graphExecData);
+
+  FacetValuesBuilder facetsFromRequest(Request<?> _request);
 }

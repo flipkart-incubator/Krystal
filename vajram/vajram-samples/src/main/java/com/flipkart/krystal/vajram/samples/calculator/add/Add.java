@@ -3,7 +3,8 @@ package com.flipkart.krystal.vajram.samples.calculator.add;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.lang.Boolean.TRUE;
+import static java.util.concurrent.CompletableFuture.supplyAsync;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.NonNil;
@@ -13,21 +14,23 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.batching.BatchesGroupedBy;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
+import java.util.Collection;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.LongAdder;
+import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Adds two numbers - {@code numberOne} and {@code numberTwo} and returns the result. While {@code
  * numberOne} is a mandatory input, {@code numberTwo} is optional and defaults to zero if not set.
  */
-@SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
+@SuppressWarnings("initialization.field.uninitialized")
+@Slf4j
 @Vajram
 public abstract class Add extends IOVajramDef<Integer> {
 
@@ -60,27 +63,30 @@ public abstract class Add extends IOVajramDef<Integer> {
 
   @Output.Batched
   static CompletableFuture<BatchAddResult> batchedOutput(
-      ImmutableCollection<Add_BatchItem> _batchItems, Optional<Boolean> fail) {
+      Collection<Add_BatchItem> _batchItems, @Nullable Boolean fail) {
     CALL_COUNTER.increment();
-    if (fail.orElse(false)) {
+    if (TRUE.equals(fail)) {
       throw new RuntimeException("Adder failed because fail flag was set");
     }
-    return completedFuture(
-        new BatchAddResult(
-            _batchItems.stream()
-                .collect(
-                    toImmutableMap(
-                        addBatchItem ->
-                            ImmutableList.of(addBatchItem.numberOne(), addBatchItem.numberTwo()),
-                        batch -> add(batch.numberOne(), batch.numberTwo())))));
+    return supplyAsync(
+        () ->
+            new BatchAddResult(
+                _batchItems.stream()
+                    .collect(
+                        toImmutableMap(
+                            addBatchItem ->
+                                ImmutableList.of(
+                                    addBatchItem.numberOne(), addBatchItem.numberTwo()),
+                            batch -> add(batch.numberOne(), batch.numberTwo())))));
   }
 
   @Output.Unbatch
   static Map<Add_BatchItem, Errable<Integer>> unbatchOutput(
-      Errable<BatchAddResult> _batchedOutput) {
+      Collection<Add_BatchItem> _batchItems, Errable<BatchAddResult> _batchedOutput) {
     if (!(_batchedOutput instanceof NonNil<BatchAddResult> nonNil)) {
       return ImmutableMap.of();
     }
+    log.info("Batch Items: {}", _batchItems);
     return nonNil.value().result().entrySet().stream()
         .collect(
             toImmutableMap(

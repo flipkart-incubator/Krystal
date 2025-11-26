@@ -1,9 +1,9 @@
 package com.flipkart.krystal.krystex.kryon;
 
 import com.flipkart.krystal.core.VajramID;
-import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.resolution.ResolverDefinition;
+import com.flipkart.krystal.krystex.GraphExecutionLogic;
 import com.flipkart.krystal.krystex.LogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
@@ -43,24 +43,24 @@ public final class KryonDefinitionRegistry {
   }
 
   public VajramKryonDefinition newVajramKryonDefinition(
-      String kryonId,
+      VajramID vajramID,
       Set<? extends Facet> facets,
       KryonLogicId outputLogicId,
-      ImmutableMap<Dependency, VajramID> dependencyKryons,
       ImmutableMap<ResolverDefinition, Resolver> resolversByDefinition,
       LogicDefinition<CreateNewRequest> createNewRequest,
       LogicDefinition<FacetsFromRequest> facetsFromRequest,
+      GraphExecutionLogic graphExecutionLogic,
       ElementTags tags) {
     VajramKryonDefinition kryonDefinition =
         new VajramKryonDefinition(
-            new VajramID(kryonId),
+            vajramID,
             facets,
             outputLogicId,
-            dependencyKryons,
             resolversByDefinition,
             createNewRequest,
             facetsFromRequest,
             this,
+            graphExecutionLogic,
             tags);
     kryonDefinitions.put(kryonDefinition.vajramID(), kryonDefinition);
     return kryonDefinition;

@@ -3,11 +3,11 @@ package com.flipkart.krystal.vajram.samples.customer_service;
 import static com.flipkart.krystal.annos.ComputeDelegationMode.NONE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.traits.UseForPredicateDispatch;
 import com.flipkart.krystal.vajram.Trait;
-import com.flipkart.krystal.vajram.TraitRoot;
+import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
 
 /**
@@ -17,8 +17,8 @@ import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
  */
 @Trait
 @CallGraphDelegationMode(NONE)
-@ExternallyInvocable
-public interface CustomerServiceAgent extends TraitRoot<String> {
+@InvocableOutsideGraph
+public interface CustomerServiceAgent extends TraitDef<String> {
   @SuppressWarnings("initialization.field.uninitialized")
   class _Inputs {
     @IfAbsent(FAIL)
