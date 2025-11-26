@@ -485,6 +485,7 @@
           <option value="override.param" />
           <option value="SameParameterValue" />
           <option value="BooleanMethodIsAlwaysInverted" />
+          <option value="ConstantValue" />
         </list>
       </option>
     </inspection_tool>
