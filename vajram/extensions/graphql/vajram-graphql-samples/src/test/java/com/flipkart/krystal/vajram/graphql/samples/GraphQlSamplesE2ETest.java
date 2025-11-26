@@ -87,6 +87,7 @@ public class GraphQlSamplesE2ETest {
                       query {
                         order(id: "order1") {
                           orderItemNames
+                          state
                           __typename
                         }
                         dummy(dummyId: "dummy1") {
