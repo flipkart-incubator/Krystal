@@ -649,17 +649,25 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
     String entityIdFieldName = schemaReaderUtil.getEntityIdFieldName(fieldTypeDef);
     GraphQlFetcherType fetcherType = fetcher.type();
     if (isParentOpType) {
-      if (fieldSpec.fieldDefinition().getInputValueDefinitions().size() != 1) {
-        throw util.errorAndThrow(
-            "Entity fields in operation types must contain exactly one argument: " + fieldName);
-      } else {
-        String argName = fieldSpec.fieldDefinition().getInputValueDefinitions().get(0).getName();
-        if (!entityIdFieldName.equals(argName)) {
+      if (fetcherType == INHERIT_ID_FROM_ARGS) {
+        // This means the user has declared that the arguments must contain exactly one ID which is
+        // same as the id of the entity type of the field
+        if (fieldSpec.fieldDefinition().getInputValueDefinitions().size() != 1) {
           throw util.errorAndThrow(
-              "Entity field argument name '%s' in operation type '%s' does not match entity id '%s' of entity '%s'"
-                  .formatted(
-                      argName, parentTypeName.value(), entityIdFieldName, fieldTypeName.value()));
+              "Entity fields in operation types must contain exactly one argument: " + fieldName);
+        } else {
+          String argName = fieldSpec.fieldDefinition().getInputValueDefinitions().get(0).getName();
+          if (!entityIdFieldName.equals(argName)) {
+            throw util.errorAndThrow(
+                "Entity field argument name '%s' in operation type '%s' does not match entity id '%s' of entity '%s'"
+                    .formatted(
+                        argName, parentTypeName.value(), entityIdFieldName, fieldTypeName.value()));
+          }
         }
+      } else if (fetcherType == INHERIT_ID_FROM_PARENT) {
+        throw util.errorAndThrow(
+            "Entity field '%s' cannot inherit id from parent when parent '%s' is an operation type"
+                .formatted(fieldName, parentTypeName.value()));
       }
     } else if (fetcherType == INHERIT_ID_FROM_PARENT
         && !parentComposingEntityType.equals(fieldComposingEntityType)) {

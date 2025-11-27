@@ -8,7 +8,7 @@ import java.util.concurrent.ExecutorService;
  *
  * <p>This means that ComputeVajrams cannot make network calls to compute the output value. They
  * cannot submit the computation task to an {@link ExecutorService}, nor can they make any other IO
- * calls like disk look ups or even calls to other processes to compute the output.
+ * calls like disk look-ups or even calls to other processes to compute the output.
  *
  * @param <T> The type of the output of this vajram.
  */
