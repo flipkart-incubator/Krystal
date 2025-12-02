@@ -1,0 +1,91 @@
+type Seller @entity(name: "Seller", identifierKey: "sellerId") {
+    sellerId: ID!
+    profile: SellerProfile @dataFetcher(vajramId: "GetSellerBaseInfo")
+    stateDetails : SellerStateDetails @dataFetcher(vajramId: "GetSellerBaseInfo")
+    metadata: SellerMetadata @dataFetcher(vajramId: "GetSellerMetadataInfo")
+    sellerHolidays: SellerHolidays @dataFetcher(vajramId: "GetSellerHolidays")
+    brandDetails: SellerBrandDetails @dataFetcher(vajramId: "GetSellerBrand")
+    locationDetails: SellerLocationDetails @dataFetcher(vajramId: "GetSellerLocationDetails")
+}
+
+type SellerStateDetails {
+    state: SellerState
+    reasonCodes: [ReasonCodes] @dataFetcher(vajramId: "GetSellerReactivationClauses")
+}
+
+type ReasonCodes {
+    reasonCode: String
+    reactivationClause: String
+    applyComments: String
+}
+
+type SellerProfile {
+    businessName: String
+    displayName: String
+    description: String
+    sellerName: String
+    city: String
+    pincode: Int
+}
+
+type SellerMetadata {
+    faSeller: Boolean
+    redirectState: Int
+    refurbSeller: Boolean
+}
+
+type SellerHolidays {
+    vacations: [Vacation]
+    weeklyOff: WeeklyOff
+}
+
+type SellerBrandDetails {
+    requestId: String
+    requestStatus: String
+    comments: [String]
+}
+
+type Vacation {
+    date: String
+    reason: String
+    comment: String
+}
+
+type WeeklyOff {
+    day: String
+    enabled: Int
+    comment: String
+}
+
+enum SellerState {
+    ACTIVE
+    ONBOARDING
+    ONHOLD
+    DELETED
+}
+
+type SellerLocationDetails {
+    locations: [Location]
+}
+
+type Location {
+    locationId: String
+    stateDetails: LocationStateDetails
+}
+
+type LocationStateDetails {
+    state: LocationState
+    reasonCodes: [LocationReasonCode]
+}
+
+type LocationReasonCode {
+    name: String
+}
+
+enum LocationState {
+    ACTIVE
+    ONBOARDING
+    ONHOLD
+    DELETED
+}
+

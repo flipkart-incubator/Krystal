@@ -1,4 +1,35 @@
 #TODO: validation: rootPackage is mandatory
+
+# Sample input types demonstrating GraphQL input type generation
+input DummyFilterInput {
+    """Filter by name"""
+    name: String
+    """Minimum age"""
+    minAge: Int
+    """Maximum age"""
+    maxAge: Int
+    """Preferred types"""
+    preferredTypes: [String!]
+    """Include inactive dummies"""
+    includeInactive: Boolean
+}
+
+input OrderFilterInput {
+    """Filter by order status"""
+    status: String
+    """Filter by minimum amount"""
+    minAmount: Float
+    """Date range filter"""
+    dateRange: DateRangeInput
+}
+
+input DateRangeInput {
+    """Start date"""
+    from: String
+    """End date"""
+    to: String
+}
+
 schema @rootPackage(name: "com.flipkart.krystal.vajram.graphql.samples") {
     query: Query
 }

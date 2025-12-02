@@ -1,4 +1,14 @@
 type Query {
     """will return order using id, using OrderGraphQLAggregator"""
     order(id: ID): Order @inferIdFromArgs
+    
+    """Search dummy IDs using filter criteria - demonstrates input type usage"""
+    searchDummyIds(filter: DummyFilterInput): [String] @dataFetcher(vajramId: "SearchDummyIds", subPackage: "query")
+    
+    """
+    Search order IDs using filter criteria - demonstrates nested input types
+    NOTE: For entity lists, return IDs and let the client fetch full entities using the order(id:) query
+    This is the recommended pattern in Krystal GraphQL for filtered entity list queries
+    """
+    searchOrderIds(filter: OrderFilterInput): [String] @dataFetcher(vajramId: "SearchOrderIds", subPackage: "query")
 }
