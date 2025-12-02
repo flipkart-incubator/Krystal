@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.graphql.samples;
 
 import static com.flipkart.krystal.vajramexecutor.krystex.traits.PredicateDispatchUtil.dispatchTrait;
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -15,6 +16,9 @@ import com.flipkart.krystal.vajram.graphql.api.execution.GraphQlExecutionFacade;
 import com.flipkart.krystal.vajram.graphql.api.schema.GraphQlLoader;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate_Req;
+import com.flipkart.krystal.vajram.graphql.samples.dummy.Dummy;
+import com.flipkart.krystal.vajram.graphql.samples.order.Order;
+import com.flipkart.krystal.vajram.graphql.samples.querytype.QueryType;
 import com.flipkart.krystal.vajram.graphql.samples.querytype.QueryType_GQlAggr_Req;
 import com.flipkart.krystal.vajram.json.Json;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
@@ -23,6 +27,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.AfterAll;
@@ -96,16 +101,34 @@ public class GraphQlSamplesE2ETest {
                           f1
                           __typename
                         }
+                        mostRecentOrder(userId: "user1") {
+                          orderItemNames
+                        }
                         __typename
                       }
                       """,
                       Map.of()));
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
+    ExecutionResult executionResult = result.join();
+    Object data = executionResult.getData();
+    assertThat(data).isInstanceOf(QueryType.class);
+    QueryType queryType = (QueryType) data;
+
+    Order order = requireNonNull(queryType.order());
+    Dummy dummy = requireNonNull(queryType.dummy());
+    Order mostRecentOrder = requireNonNull(queryType.mostRecentOrder());
+    assertThat(order.orderItemNames()).isEqualTo(List.of("order1_1", "order1_2"));
+    assertThat(order.nameString()).isEqualTo("testOrderName");
+    assertThat(order.__typename()).isEqualTo("Order");
+    assertThat(dummy.__typename()).isEqualTo("Dummy");
+    assertThat(mostRecentOrder.orderItemNames())
+        .isEqualTo(List.of("MostRecentOrderOf_user1_1", "MostRecentOrderOf_user1_2"));
+
     System.out.println(
         Json.OBJECT_WRITER
             .withDefaultPrettyPrinter()
-            .writeValueAsString(result.join().toSpecification()));
+            .writeValueAsString(executionResult.toSpecification()));
   }
 
   private KrystexVajramExecutor createExecutor() {
