@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.LongAdder;
+import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -29,6 +30,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * numberOne} is a mandatory input, {@code numberTwo} is optional and defaults to zero if not set.
  */
 @SuppressWarnings("initialization.field.uninitialized")
+@Slf4j
 @Vajram
 public abstract class Add extends IOVajramDef<Integer> {
 
@@ -80,10 +82,11 @@ public abstract class Add extends IOVajramDef<Integer> {
 
   @Output.Unbatch
   static Map<Add_BatchItem, Errable<Integer>> unbatchOutput(
-      Errable<BatchAddResult> _batchedOutput) {
+      Collection<Add_BatchItem> _batchItems, Errable<BatchAddResult> _batchedOutput) {
     if (!(_batchedOutput instanceof NonNil<BatchAddResult> nonNil)) {
       return ImmutableMap.of();
     }
+    log.info("Batch Items: {}", _batchItems);
     return nonNil.value().result().entrySet().stream()
         .collect(
             toImmutableMap(

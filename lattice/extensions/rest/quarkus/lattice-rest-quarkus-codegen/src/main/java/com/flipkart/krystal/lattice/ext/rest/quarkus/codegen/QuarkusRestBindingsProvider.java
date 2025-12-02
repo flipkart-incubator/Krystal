@@ -4,7 +4,7 @@ import static com.flipkart.krystal.lattice.codegen.spi.BindingsProvider.BindingS
 
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.codegen.spi.BindingsProvider;
-import com.flipkart.krystal.lattice.rest.RestService;
+import com.flipkart.krystal.lattice.ext.rest.RestService;
 import com.google.auto.service.AutoService;
 import com.google.common.collect.ImmutableList;
 import com.squareup.javapoet.ClassName;

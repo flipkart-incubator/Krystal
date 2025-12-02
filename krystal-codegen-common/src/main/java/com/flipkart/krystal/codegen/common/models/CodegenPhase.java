@@ -1,8 +1,8 @@
 package com.flipkart.krystal.codegen.common.models;
 
 /**
- * Code generation phases followed by the vajram-codegen plugin. The phases are executed in the same
- * order as defined in this enum
+ * Code generation phases followed by the krystal-codegen architecture. The phases are executed in
+ * the same order as defined in this enum
  */
 public enum CodegenPhase {
 

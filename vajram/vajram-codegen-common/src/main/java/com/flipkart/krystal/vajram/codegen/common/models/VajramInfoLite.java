@@ -1,10 +1,12 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
+import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.asTypeNameWithTypes;
 import static com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility.getImmutRequestInterfaceName;
 import static com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility.getImmutRequestPojoName;
 import static com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility.getRequestInterfaceName;
 
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
+import com.flipkart.krystal.codegen.common.datatypes.VariableCodeGenType;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.vajram.Trait;
@@ -14,6 +16,7 @@ import com.squareup.javapoet.TypeName;
 import java.util.List;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeMirror;
 import lombok.SneakyThrows;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -23,23 +26,46 @@ public record VajramInfoLite(
     String packageName,
     ImmutableMap<String, FacetDetail> facetDetails,
     TypeElement vajramOrReqClass,
+    List<? extends TypeMirror> typeArguments,
     String docString,
     VajramCodeGenUtility util) {
 
-  public ClassName requestInterfaceType() {
+  public ClassName requestInterfaceClassName() {
     return ClassName.get(packageName(), getRequestInterfaceName(vajramId().id()));
   }
 
-  public ClassName reqImmutInterfaceType() {
+  public TypeName requestInterfaceTypeName() {
+    return asTypeNameWithTypes(requestInterfaceClassName(), typeArguments());
+  }
+
+  public ClassName reqImmutInterfaceClassName() {
     return ClassName.get(packageName(), getImmutRequestInterfaceName(vajramId().id()));
   }
 
-  public ClassName reqImmutPojoType() {
+  public TypeName reqImmutInterfaceTypeName() {
+    return asTypeNameWithTypes(
+        ClassName.get(packageName(), getImmutRequestInterfaceName(vajramId().id())),
+        typeArguments());
+  }
+
+  public ClassName reqImmutPojoClassName() {
     return ClassName.get(packageName(), getImmutRequestPojoName(vajramId().id()));
   }
 
-  public TypeName builderInterfaceType() {
-    return reqImmutInterfaceType().nestedClass("Builder");
+  public TypeName reqImmutPojoTypeName() {
+    return asTypeNameWithTypes(reqImmutPojoClassName(), typeArguments());
+  }
+
+  public TypeName reqBuilderInterfaceType() {
+    return asTypeNameWithTypes(
+        reqImmutInterfaceClassName().nestedClass("Builder"), typeArguments());
+  }
+
+  public CodeGenType responseTypeBounds() {
+    if (responseType instanceof VariableCodeGenType vct) {
+      return vct.upperBound();
+    }
+    return responseType;
   }
 
   @SneakyThrows

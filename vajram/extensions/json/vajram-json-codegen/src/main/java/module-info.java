@@ -6,4 +6,5 @@ module flipkart.krystal.vajram.ext.json.codegen {
   requires com.fasterxml.jackson.databind;
   requires org.checkerframework.checker.qual;
   requires com.google.auto.service;
+  requires com.google.common;
 }

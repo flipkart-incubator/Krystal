@@ -10,7 +10,7 @@ public class StringReqGenerator implements RequestIdGenerator {
   }
 
   @Override
-  public InvocationId newRequest(Object seed) {
-    return new InvocationId(seed);
+  public InvocationId newRequest(Supplier<Object> seed) {
+    return new InvocationId(seed.get());
   }
 }

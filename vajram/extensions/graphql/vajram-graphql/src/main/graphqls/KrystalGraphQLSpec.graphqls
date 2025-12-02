@@ -2,8 +2,7 @@
 
 """
 #TODO: Add support for defining an entity without having an id field (i.e id is implicit, not explicit)
-#TODO: Support custom id field names with argument "entityIdField"
-directive @entity on OBJECT
+directive @entity(entityIdField: String) on OBJECT
 
 """
 Specifies the vajram which is responsible for fetching one or more fields of an graphQL type.
@@ -57,6 +56,11 @@ the sub package suffix can be specified separately in the @dataFetcher and @idFe
 directive @rootPackage(name: String!) on SCHEMA
 
 """
+Specifies the sub package inside @rootPackage under which all the models corresponding to an object are to be generated
+"""
+directive @subPackage(name: String!) on OBJECT
+
+"""
 Specifies that a given non-entity type can be composed inside an entity of type entityType.
 This means that any @dataFetchers or @idFetchers on the fields of the type must accept
 the entity Id of the specified entity and compute the values of the fields based on the entity Id.
@@ -64,4 +68,4 @@ Note: an instance of a composed type has a one to one correspondence with a give
 """
 #TODO: Validation: Can be used only on @entity fields and @composedType fields.
 #TODO: Validation: When used in @composedTypes, the "inEntity" must match the outer "inEntity"
-directive @composedType(inEntity: String) on OBJECT
+directive @composedType(inEntity: String!) on OBJECT

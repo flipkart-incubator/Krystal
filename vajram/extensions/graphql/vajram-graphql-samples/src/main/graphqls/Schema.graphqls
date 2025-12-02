@@ -31,5 +31,5 @@ input DateRangeInput {
 }
 
 schema @rootPackage(name: "com.flipkart.krystal.vajram.graphql.samples") {
-    query: Query
+    query: QueryType
 }

@@ -1,13 +1,20 @@
 #TODO Testcases: A, A!, [A], [A]!, [A!], [A!]! -> 4 types of As (Scalars, entities, composedTypes, types)
-type Order @entity{
+"""
+An order
+"""
+type Order @entity @subPackage(name: "order"){
     id: ID
-    orderItemNames: [String]! @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
+    """
+    List of order Item names in this order
+    """
+    orderItemNames: [String] @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
     nameString: String @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
     dummy(name: String): Dummy @idFetcher(vajramId: "GetDummyIdForOrder", subPackage: "order")
     dummies(filter: Boolean, preferredType: String, count: Int): [Dummy!]! @idFetcher(vajramId: "GetDummyIds", subPackage: "order")
     hello: Hello @inferIdFromParent
     recommendedHellos: [Hello!] @idFetcher(vajramId: "")
     recommendedOrders: [Order]
+    state: State @dataFetcher(vajramId: "GetOrderState", subPackage: "order")
     hello2: Hello
     name: Name
 
@@ -16,8 +23,13 @@ type Order @entity{
     #hellos: [Hello] @inferIdFromParent
 }
 
-type Dummy @entity{
-    id: ID
+enum State {
+    PENDING
+    COMPLETED
+}
+
+type Dummy @entity(entityIdField: "dummyId"){
+    dummyId: ID
     name: String!
     age: Int
     order: Order
@@ -34,6 +46,7 @@ type Hello @composedType(inEntity: "Order"){
 
 type Name {
     value: String
+    string: String
 }
 
 #{

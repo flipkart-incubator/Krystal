@@ -1,15 +1,17 @@
 package com.flipkart.krystal.vajram.graphql.codegen;
 
-import static com.flipkart.krystal.vajram.graphql.api.AbstractGraphQLEntity.DEFAULT_ENTITY_ID_FIELD;
+import static com.flipkart.krystal.vajram.graphql.api.execution.QueryAnalyseUtil.DEFAULT_ENTITY_ID_FIELD;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.MULTI_FIELD_DATA_FETCHER;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.SINGLE_FIELD_DATA_FETCHER;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static lombok.AccessLevel.PACKAGE;
 
-import com.flipkart.krystal.vajram.graphql.codegen.Constants.DirectiveArgs;
-import com.flipkart.krystal.vajram.graphql.codegen.Constants.Directives;
+import com.flipkart.krystal.vajram.graphql.api.Constants;
+import com.flipkart.krystal.vajram.graphql.api.Constants.DirectiveArgs;
+import com.flipkart.krystal.vajram.graphql.api.Constants.Directives;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.squareup.javapoet.ClassName;
@@ -46,7 +48,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @Slf4j
 public class SchemaReaderUtil {
 
-  public static final String GRAPHQL_AGGREGATOR = "_GQlAggr";
   public static final String GRAPHQL_SCHEMA_EXTENSION = ".graphqls";
   public static final String CUSTOM_TYPE_DIRECTIVE = "customType";
   public static final String PACKAGE_NAME_DIR_ARG = "packageName";
@@ -68,11 +69,15 @@ public class SchemaReaderUtil {
   @Getter private final TypeDefinitionRegistry typeDefinitionRegistry;
 
   @Getter
-  private final ImmutableMap<@NonNull GraphQLTypeName, @NonNull ObjectTypeDefinition> graphQLTypes;
+  private final ImmutableMap<@NonNull GraphQLTypeName, @NonNull ObjectTypeDefinition>
+      graphQLObjectTypes;
 
   @Getter private final Map<GraphQLTypeName, @NonNull ObjectTypeDefinition> entityTypes;
   @Getter private final Map<GraphQLTypeName, @NonNull ObjectTypeDefinition> composedTypes;
+
+  /** Types which need a GraphqlAggregate vajram generated */
   @Getter private final Map<GraphQLTypeName, ObjectTypeDefinition> aggregatableTypes;
+
   @Getter private final Map<GraphQLTypeName, ObjectTypeDefinition> operationTypes;
 
   @Getter private final @Nullable ObjectTypeDefinition queryType;
@@ -82,36 +87,38 @@ public class SchemaReaderUtil {
   public SchemaReaderUtil(File schemaFile) {
     this.typeDefinitionRegistry = getTypeDefinitionRegistry(schemaFile);
     this.rootPackageName = getRootPackageName(typeDefinitionRegistry);
-    this.graphQLTypes = computeGraphQLTypes(typeDefinitionRegistry);
+    this.graphQLObjectTypes = computeGraphQLTypes(typeDefinitionRegistry);
     this.entityTypes =
-        Maps.filterValues(graphQLTypes, typeDef -> typeDef.hasDirective(Directives.ENTITY));
+        Maps.filterValues(graphQLObjectTypes, typeDef -> typeDef.hasDirective(Directives.ENTITY));
     this.composedTypes =
-        Maps.filterValues(graphQLTypes, typeDef -> typeDef.hasDirective(Directives.COMPOSED_TYPE));
+        Maps.filterValues(
+            graphQLObjectTypes, typeDef -> typeDef.hasDirective(Directives.COMPOSED_TYPE));
 
     Map<GraphQLTypeName, @NonNull ObjectTypeDefinition> aggregatableTypes =
         new HashMap<>(entityTypes);
     aggregatableTypes.putAll(composedTypes);
 
+    Optional<SchemaDefinition> schemaDefinition = typeDefinitionRegistry.schemaDefinition();
+    if (schemaDefinition.isEmpty()) {
+      throw new IllegalStateException(
+          "Schema definition is mandatory. Could not find Schema definition.");
+    }
     Map<String, OperationTypeDefinition> operationTypesByOpName =
-        typeDefinitionRegistry.schemaDefinition().get().getOperationTypeDefinitions().stream()
+        schemaDefinition.get().getOperationTypeDefinitions().stream()
             .collect(Collectors.toMap(OperationTypeDefinition::getName, op -> op));
     Map<GraphQLTypeName, OperationTypeDefinition> operationTypesByType =
-        typeDefinitionRegistry.schemaDefinition().get().getOperationTypeDefinitions().stream()
+        schemaDefinition.get().getOperationTypeDefinitions().stream()
             .collect(
                 Collectors.toMap(
                     operationTypeDefinition ->
                         GraphQLTypeName.of(operationTypeDefinition.getTypeName().getName()),
                     op -> op));
-    this.operationTypes = Maps.filterKeys(graphQLTypes, operationTypesByType::containsKey);
-
-    System.err.println(graphQLTypes);
-    System.err.println(operationTypesByType);
-    System.err.println(operationTypes);
+    this.operationTypes = Maps.filterKeys(graphQLObjectTypes, operationTypesByType::containsKey);
 
     OperationTypeDefinition queryOpDef = operationTypesByOpName.get("query");
     if (queryOpDef != null) {
       GraphQLTypeName queryTypeName = GraphQLTypeName.of(queryOpDef.getTypeName().getName());
-      this.queryType = graphQLTypes.get(queryTypeName);
+      this.queryType = graphQLObjectTypes.get(queryTypeName);
       if (this.queryType != null) {
         aggregatableTypes.put(queryTypeName, queryType);
       }
@@ -122,7 +129,7 @@ public class SchemaReaderUtil {
     OperationTypeDefinition mutationOpDef = operationTypesByOpName.get("mutation");
     if (mutationOpDef != null) {
       GraphQLTypeName queryTypeName = GraphQLTypeName.of(mutationOpDef.getTypeName().getName());
-      this.mutationType = graphQLTypes.get(queryTypeName);
+      this.mutationType = graphQLObjectTypes.get(queryTypeName);
       if (this.mutationType != null) {
         aggregatableTypes.put(queryTypeName, mutationType);
       }
@@ -133,7 +140,7 @@ public class SchemaReaderUtil {
     OperationTypeDefinition subscriptionOpDef = operationTypesByOpName.get("subscription");
     if (subscriptionOpDef != null) {
       GraphQLTypeName queryTypeName = GraphQLTypeName.of(subscriptionOpDef.getTypeName().getName());
-      this.subscriptionType = graphQLTypes.get(queryTypeName);
+      this.subscriptionType = graphQLObjectTypes.get(queryTypeName);
       if (this.subscriptionType != null) {
         aggregatableTypes.put(queryTypeName, subscriptionType);
       }
@@ -159,9 +166,7 @@ public class SchemaReaderUtil {
 
     String[] graphqlSchemaFileNames =
         graphqlsDir.list((dir, name) -> name.endsWith(GRAPHQL_SCHEMA_EXTENSION));
-    if (graphqlSchemaFileNames == null) {
-      throw new IllegalStateException("No files found in 'graphql_schemas' directory");
-    } else {
+    if (graphqlSchemaFileNames != null) {
       for (String graphqlSchemaFileName : graphqlSchemaFileNames) {
         File graphqlSchemaFile = new File(graphqlsDir, graphqlSchemaFileName);
         log.info("Found graphql schema file {} ", graphqlSchemaFile);
@@ -178,24 +183,52 @@ public class SchemaReaderUtil {
   private static String getRootPackageName(TypeDefinitionRegistry typeDefinitionRegistry) {
     SchemaDefinition schemaExtensionDefinition =
         typeDefinitionRegistry.schemaDefinition().orElseThrow();
-    List<Directive> rootPackages = schemaExtensionDefinition.getDirectives("rootPackage");
+    List<Directive> rootPackages = schemaExtensionDefinition.getDirectives(Directives.ROOT_PACKAGE);
     if (rootPackages.size() != 1) {
       throw new IllegalStateException(
           "Expected exactly 1 @rootPackage directive on schema definition. Found :"
               + rootPackages.size());
     }
     Directive rootPackage = rootPackages.get(0);
-    return ((StringValue) rootPackage.getArgument("name").getValue()).getValue();
+    return ((StringValue) rootPackage.getArgument(DirectiveArgs.NAME).getValue()).getValue();
   }
 
   ClassName typeClassName(GraphQLTypeName graphQLTypeName) {
     return ClassName.get(getPackageNameForType(graphQLTypeName), graphQLTypeName.value());
   }
 
-  ClassName entityIdClassName(ClassName entityClassName) {
-    ClassName entityIdClassName =
-        ClassName.get(entityClassName.packageName(), entityClassName.simpleName() + "Id");
-    return entityIdClassName;
+  boolean hasEntityId(TypeDefinition typeDefinition) {
+    if (!(typeDefinition instanceof ObjectTypeDefinition objectTypeDefinition)) {
+      return false;
+    }
+    return objectTypeDefinition.hasDirective(Directives.ENTITY)
+        || objectTypeDefinition.hasDirective(Directives.COMPOSED_TYPE);
+  }
+
+  ClassName entityIdClassName(GraphQLTypeName graphQLTypeName) {
+    Optional<TypeDefinition> typeDefinition =
+        typeDefinitionRegistry.getType(graphQLTypeName.value());
+    if (typeDefinition.isEmpty()
+        || !(typeDefinition.get() instanceof ObjectTypeDefinition objectTypeDefinition)) {
+      throw new IllegalArgumentException("Only ObjectTypeDefinitions can have entity ids");
+    }
+
+    boolean isEntity = objectTypeDefinition.hasDirective(Directives.ENTITY);
+
+    Optional<String> composedInEntity =
+        getDirectiveArgumentString(
+            objectTypeDefinition, Directives.COMPOSED_TYPE, DirectiveArgs.IN_ENTITY);
+    if (composedInEntity.isPresent()) {
+      return entityIdClassName(typeClassName(GraphQLTypeName.of(composedInEntity.get())));
+    }
+    if (isEntity) {
+      return entityIdClassName(typeClassName(graphQLTypeName));
+    }
+    throw new IllegalArgumentException("Only '@entity' and '@composedType' can have entity ids");
+  }
+
+  private ClassName entityIdClassName(ClassName entityClassName) {
+    return ClassName.get(entityClassName.packageName(), entityClassName.simpleName() + "Id");
   }
 
   public GraphQlFieldSpec fieldSpecFromField(
@@ -221,7 +254,12 @@ public class SchemaReaderUtil {
       for (FieldDefinition fieldDefinition : objectTypeDefinition.getFieldDefinitions()) {
         Type<?> fieldDefinitionType = fieldDefinition.getType();
         TypeDefinition fieldTypeDefinition =
-            typeRegistry.getType(fieldDefinitionType).orElseThrow();
+            typeRegistry
+                .getType(fieldDefinitionType)
+                .orElseThrow(
+                    () ->
+                        new IllegalStateException(
+                            "Could not find type for field: " + fieldDefinition));
 
         String path = "";
         if (fieldDefinition.hasDirective(Directives.DATA_FETCHER)) {
@@ -299,7 +337,8 @@ public class SchemaReaderUtil {
     try {
       GraphQLTypeName graphQlTypeName = new GraphQLTypeName(fieldTypeDefinition.getName());
       String packageName = getPackageNameForType(graphQlTypeName);
-      String typeAggregatorSimpleName = graphQlTypeName.value() + GRAPHQL_AGGREGATOR;
+      String typeAggregatorSimpleName =
+          graphQlTypeName.value() + Constants.GRAPHQL_AGGREGATOR_SUFFIX;
 
       fieldToTypeAggregator.put(
           fieldSpecFromField(fieldDefinition, "", type),
@@ -407,11 +446,24 @@ public class SchemaReaderUtil {
   }
 
   String getPackageNameForType(GraphQLTypeName graphQLTypeName) {
-    return rootPackageName + "." + graphQLTypeName.value().toLowerCase();
+    TypeDefinition objectTypeDefinition =
+        requireNonNull(
+            typeDefinitionRegistry().types().get(graphQLTypeName.value()),
+            () -> "Could not find type definition for type: " + graphQLTypeName);
+    String subPackage =
+        getDirectiveArgumentString(objectTypeDefinition, Directives.SUB_PACKAGE, DirectiveArgs.NAME)
+            .orElse(graphQLTypeName.value().toLowerCase())
+            .trim();
+    if (!subPackage.isEmpty()) {
+      subPackage = "." + subPackage;
+    }
+    return rootPackageName + subPackage;
   }
 
   public String getEntityIdFieldName(TypeDefinition fieldTypeDef) {
-    return DEFAULT_ENTITY_ID_FIELD;
+    return getDirectiveArgumentString(
+            fieldTypeDef, Directives.ENTITY, DirectiveArgs.ENTITY_ID_FIELD)
+        .orElse(DEFAULT_ENTITY_ID_FIELD);
   }
 
   public Optional<GraphQLTypeName> getComposingEntityType(ObjectTypeDefinition typeDefinition) {

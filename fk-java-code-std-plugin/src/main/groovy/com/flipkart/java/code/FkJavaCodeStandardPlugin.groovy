@@ -92,7 +92,13 @@ class FkJavaCodeStandardPlugin implements Plugin<Project> {
         project.tasks.named('spotlessJava').configure { mustRunAfter('compileTestJava') }
 
         project.afterEvaluate(p -> {
-            p.tasks.named('assemble') {
+            p.tasks.named('compileJava') {
+                it.finalizedBy('spotlessApply')
+            }
+        })
+
+        project.afterEvaluate(p -> {
+            p.tasks.named('build') {
                 it.dependsOn('spotlessApply')
             }
         })
@@ -122,6 +128,9 @@ class FkJavaCodeStandardPlugin implements Plugin<Project> {
             project.tasks
                     .withType(JavaCompile)
                     .configureEach { JavaCompile task -> task.options.errorprone.enabled = false }
+        } else {
+            //Because of: https://github.com/google/error-prone/issues/4918
+            project.tasks.compileJava.configure { JavaCompile task -> task.options.errorprone.disable("StringConcatToTextBlock") }
         }
     }
 

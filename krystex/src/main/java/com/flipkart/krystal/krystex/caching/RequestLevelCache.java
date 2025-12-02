@@ -56,16 +56,16 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
   }
 
   @Override
-  public Kryon<KryonCommand, KryonCommandResponse> decorateKryon(
+  public Kryon<KryonCommand<?>, KryonCommandResponse> decorateKryon(
       KryonDecorationInput decorationInput) {
     return new CachingDecoratedKryon(decorationInput.kryon());
   }
 
-  private class CachingDecoratedKryon implements Kryon<KryonCommand, KryonCommandResponse> {
+  private class CachingDecoratedKryon implements Kryon<KryonCommand<?>, KryonCommandResponse> {
 
-    private final Kryon<KryonCommand, KryonCommandResponse> kryon;
+    private final Kryon<KryonCommand<?>, KryonCommandResponse> kryon;
 
-    private CachingDecoratedKryon(Kryon<KryonCommand, KryonCommandResponse> kryon) {
+    private CachingDecoratedKryon(Kryon<KryonCommand<?>, KryonCommandResponse> kryon) {
       this.kryon = kryon;
     }
 
@@ -75,7 +75,7 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
     }
 
     @Override
-    public CompletableFuture<KryonCommandResponse> executeCommand(KryonCommand kryonCommand) {
+    public CompletableFuture<KryonCommandResponse> executeCommand(KryonCommand<?> kryonCommand) {
       if (kryonCommand instanceof ForwardReceiveBatch forwardBatch) {
         return readFromCache(kryon, forwardBatch);
       } else if (kryonCommand instanceof DirectForwardReceive directForwardReceive) {
@@ -88,7 +88,7 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
     }
 
     private CompletableFuture<KryonCommandResponse> readFromCache(
-        Kryon<KryonCommand, KryonCommandResponse> kryon, DirectForwardReceive command) {
+        Kryon<KryonCommand<?>, KryonCommandResponse> kryon, DirectForwardReceive command) {
       List<ExecutionItem> cacheMisses = new ArrayList<>();
       for (ExecutionItem executionItem : command.executionItems()) {
         FacetValues facetValues = executionItem.facetValues();
@@ -107,7 +107,7 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
 
     @SuppressWarnings("FutureReturnValueIgnored")
     private CompletableFuture<KryonCommandResponse> readFromCache(
-        Kryon<KryonCommand, KryonCommandResponse> kryon, ForwardReceiveBatch forwardBatch) {
+        Kryon<KryonCommand<?>, KryonCommandResponse> kryon, ForwardReceiveBatch forwardBatch) {
       var executableRequests = forwardBatch.executableInvocations();
       Map<InvocationId, FacetValues> cacheMisses = new LinkedHashMap<>();
       Map<InvocationId, CompletableFuture<@Nullable Object>> cacheHits = new LinkedHashMap<>();

@@ -1,5 +1,5 @@
 plugins {
-    id 'com.flipkart.java.code.standard' version '5.0'
+    id 'com.flipkart.java.code.standard' version '5.3'
     id 'org.gradlex.extra-java-module-info' version '1.11'
     id 'java-test-fixtures'
 }
@@ -7,10 +7,10 @@ plugins {
 ext {
     clojarsusername = project.properties['clojarsusername'] ?: ""
     clojarspassword = project.properties['clojarspassword'] ?: ""
-    krystal_version = '10.0.0.3-SNAPSHOT'
-    lattice_version = '0.0.12'
+    krystal_version = '10.0.4'
+    lattice_version = '0.1.1'
 
-    java_code_std_version = '5.0'
+    java_code_std_version = '5.3'
 
     protobuf_version = '4.31.1'
     grpc_version = '1.73.0'
@@ -148,8 +148,10 @@ configure(subprojects.findAll {
         exclude group: 'com.google.guava', module: 'listenablefuture'
     }
 
-    //Exclude modules which should not be published or have custom publishing config
-    if (project.name != 'vajram-lang' && project.subprojects.isEmpty()) {
+    // Exclude modules which should not be published or have custom publishing config
+    // vajram-codegen has the 'java-gradle-plugin'  applied - which itself publishes to maven.
+    // So we need to disable it here - else it will lead to duplicate publishing
+    if (project.name !in ['vajram-lang', 'vajram-codegen'] && project.subprojects.isEmpty()) {
         publishing {
             publications {
                 maven(MavenPublication) {

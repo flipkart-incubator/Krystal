@@ -6,7 +6,6 @@ import static com.squareup.javapoet.CodeBlock.joining;
 import static java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.joining;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -24,7 +23,6 @@ import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.serial.SerdeProtocol;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.primitives.Primitives;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
@@ -34,12 +32,11 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeSpec.Builder;
+import com.squareup.javapoet.TypeVariableName;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.OffsetDateTime;
@@ -63,6 +60,7 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.MirroredTypesException;
@@ -80,6 +78,7 @@ import javax.tools.StandardLocation;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.ToString;
+import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -96,6 +95,7 @@ public class CodeGenUtility {
   private final Class<?> generator;
   @Getter private final @Nullable CodegenPhase codegenPhase;
   @Getter private final DataTypeRegistry dataTypeRegistry;
+  @Getter private final @Nullable Path moduleRootPath;
 
   public CodeGenUtility(
       ProcessingEnvironment processingEnv,
@@ -107,6 +107,8 @@ public class CodeGenUtility {
     this.generator = generator;
     this.codegenPhase = codegenPhase;
     this.dataTypeRegistry = new DataTypeRegistry();
+    String moduleRootOption = processingEnv.getOptions().get(Constants.MODULE_ROOT_PATH_KEY);
+    this.moduleRootPath = moduleRootOption != null ? Paths.get(moduleRootOption) : null;
   }
 
   public static String capitalizeFirstChar(String str) {
@@ -342,7 +344,8 @@ public class CodeGenUtility {
       var ignored = supplier.get();
       throw new AssertionError("Expected supplier to throw error");
     } catch (MirroredTypeException mte) {
-      return Optional.ofNullable(mte.getTypeMirror());
+      TypeMirror typeMirror = mte.getTypeMirror();
+      return Optional.ofNullable(typeMirror);
     }
   }
 
@@ -393,8 +396,7 @@ public class CodeGenUtility {
   }
 
   private static List<? extends TypeMirror> getTypeMirrors(DeclaredType targetType) {
-    List<? extends TypeMirror> typeParameters = targetType.getTypeArguments();
-    return typeParameters;
+    return targetType.getTypeArguments();
   }
 
   public void note(CharSequence message) {
@@ -474,22 +476,6 @@ public class CodeGenUtility {
     return TypeName.get(dataType.javaModelType(processingEnv));
   }
 
-  public static TypeName toTypeName(Type typeArg) {
-    if (typeArg instanceof ParameterizedType parameterizedType) {
-      final Type rawType = parameterizedType.getRawType();
-      final Type[] typeArgs = parameterizedType.getActualTypeArguments();
-      return ParameterizedTypeName.get(
-          (ClassName) toTypeName(rawType),
-          stream(typeArgs).map(CodeGenUtility::toTypeName).toArray(TypeName[]::new));
-    } else {
-      if (typeArg instanceof Class<?>) {
-        return ClassName.get(Primitives.wrap((Class<?>) typeArg));
-      } else {
-        return ClassName.bestGuess(typeArg.getTypeName());
-      }
-    }
-  }
-
   public static List<? extends TypeMirror> getTypeParameters(TypeMirror returnType) {
     return returnType.accept(
         new SimpleTypeVisitor14<List<? extends TypeMirror>, Void>() {
@@ -535,30 +521,6 @@ public class CodeGenUtility {
     }
   }
 
-  /**
-   * Creates a class builder with the given class name. If the simpleName is a blank string, then
-   * the builder represents an anonymous class.
-   *
-   * @param simpleName simple name of class
-   * @param generatedForCanonicalName canonical name of the originating class for which the class is
-   *     being generated. Pass empty string if there is not such class.
-   * @return a class builder with the given class name, with the {@link Generated} annotation
-   *     applied on the class
-   */
-  public Builder classBuilder(String simpleName, String generatedForCanonicalName) {
-    Builder classBuilder;
-    if (simpleName.isBlank()) {
-      classBuilder = TypeSpec.anonymousClassBuilder("");
-    } else {
-      classBuilder = TypeSpec.classBuilder(simpleName);
-    }
-    if (!generatedForCanonicalName.isBlank()) {
-      classBuilder.addJavadoc("@see $L", generatedForCanonicalName);
-    }
-    addDefaultAnnotations(classBuilder);
-    return classBuilder;
-  }
-
   private void addDefaultAnnotations(Builder classBuilder) {
     classBuilder.addAnnotation(
         AnnotationSpec.builder(SuppressWarnings.class)
@@ -569,6 +531,8 @@ public class CodeGenUtility {
                         CodeBlock.of("$S", "ClassReferencesSubclass"))
                     .collect(joining(",", "{", "}")))
             .build());
+    classBuilder.addAnnotation(
+        AnnotationSpec.builder(Accessors.class).addMember("fluent", "true").build());
     addGeneratedAnnotations(classBuilder);
   }
 
@@ -585,23 +549,65 @@ public class CodeGenUtility {
                 .build());
   }
 
+  public TypeSpec.Builder classBuilder(String simpleName, String generatedForCanonicalName) {
+    return classBuilder(simpleName, List.of(), generatedForCanonicalName);
+  }
+
+  /**
+   * Creates a class builder with the given class name. If the simpleName is a blank string, then
+   * the builder represents an anonymous class.
+   *
+   * @param simpleName simple name of class
+   * @param typeVariableNames Type variables of the interface, if any
+   * @param generatedForCanonicalName canonical name of the originating class for which the class is
+   *     being generated. Pass empty string if there is not such class.
+   * @return a class builder with the given class name, with the {@link Generated} annotation
+   *     applied on the class
+   */
+  public TypeSpec.Builder classBuilder(
+      String simpleName,
+      List<TypeVariableName> typeVariableNames,
+      String generatedForCanonicalName) {
+    TypeSpec.Builder classBuilder;
+    if (simpleName.isBlank()) {
+      classBuilder = TypeSpec.anonymousClassBuilder("");
+    } else {
+      classBuilder = TypeSpec.classBuilder(simpleName);
+    }
+    if (!generatedForCanonicalName.isBlank()) {
+      classBuilder.addJavadoc("@see $L", generatedForCanonicalName);
+    }
+    classBuilder.addTypeVariables(typeVariableNames);
+    addDefaultAnnotations(classBuilder);
+    return classBuilder;
+  }
+
+  public TypeSpec.Builder interfaceBuilder(String interfaceName, String generatedForCanonicalName) {
+    return interfaceBuilder(interfaceName, List.of(), generatedForCanonicalName);
+  }
+
   /**
    * Creates a class builder with the given class name. If the interfaceName is a blank string, then
    * the builder represents an anonymous class.
    *
    * @param interfaceName fully qualified class name
+   * @param typeVariableNames Type variables of the interface, if any
    * @param generatedForCanonicalName canonical name of the originating class for which the
    *     interface is being generated
    * @return a class builder with the given class name, with the {@link Generated} annotation
    *     applied on the class
    */
-  public Builder interfaceBuilder(String interfaceName, String generatedForCanonicalName) {
-    Builder interfaceBuilder;
+  public TypeSpec.Builder interfaceBuilder(
+      String interfaceName,
+      List<TypeVariableName> typeVariableNames,
+      String generatedForCanonicalName) {
+    TypeSpec.Builder interfaceBuilder;
     if (interfaceName.isBlank()) {
       throw new RuntimeException("interface name cannot be blank");
     } else {
       interfaceBuilder = TypeSpec.interfaceBuilder(interfaceName);
     }
+    interfaceBuilder.addTypeVariables(typeVariableNames);
     addDefaultAnnotations(interfaceBuilder);
     if (!generatedForCanonicalName.isBlank()) {
       interfaceBuilder.addJavadoc("@see $L", generatedForCanonicalName);
@@ -744,7 +750,6 @@ public class CodeGenUtility {
     return requireNonNull(sourcePath.getParent());
   }
 
-  @SuppressWarnings("unchecked")
   public <T> T getAnnotationElement(
       AnnotationMirror parentModelRootAnno, String annoElement, Class<T> type) {
     return type.cast(
@@ -800,7 +805,7 @@ public class CodeGenUtility {
    * Determines the parameter type for a method return type, handling Optional types.
    *
    * @param method The method
-   * @param isBuilder
+   * @param isBuilder is this a builder?
    * @return The appropriate parameter type
    */
   public TypeName getParameterType(ExecutableElement method, boolean isBuilder) {
@@ -836,5 +841,40 @@ public class CodeGenUtility {
         .filter(elem -> elem instanceof QualifiedNameable)
         .map(element -> requireNonNull((QualifiedNameable) element).getQualifiedName().toString())
         .anyMatch(s -> Objects.equals(s, modelProtocol.getCanonicalName()));
+  }
+
+  public static ClassName asClassName(TypeName typeName) {
+    if (typeName instanceof ClassName className) {
+      return className;
+    } else if (typeName instanceof ParameterizedTypeName parameterizedTypeName) {
+      return parameterizedTypeName.rawType;
+    } else {
+      throw new AssertionError();
+    }
+  }
+
+  public static TypeName asTypeNameWithElements(
+      ClassName className, List<? extends TypeParameterElement> typeParameterElements) {
+    return asTypeNameWithTypes(
+        className, typeParameterElements.stream().map(TypeParameterElement::asType).toList());
+  }
+
+  public static TypeName asTypeNameWithTypes(
+      TypeName className, List<? extends TypeMirror> typeParams) {
+    TypeNameVisitor typeNameVisitor = new TypeNameVisitor(true);
+    List<? extends TypeName> typeNameStream =
+        typeParams.stream().map(typeNameVisitor::visit).toList();
+    return asTypeName(className, typeNameStream);
+  }
+
+  public static TypeName asTypeName(TypeName typeName, List<? extends TypeName> typeNameStream) {
+    if (typeNameStream.isEmpty()) {
+      return typeName;
+    } else if (typeName instanceof ClassName className) {
+      return ParameterizedTypeName.get(className, typeNameStream.toArray(TypeName[]::new));
+    } else {
+      throw new IllegalArgumentException(
+          "If there are type names, the TypeName should be a ClassName");
+    }
   }
 }

@@ -358,6 +358,7 @@
     <inspection_tool class="RedundantFileCreation" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="RedundantHeadOrLastOption" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="RedundantLengthCheck" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RedundantModifiersValueLombok" enabled="true" level="INFORMATION" enabled_by_default="true" editorAttributes="INFORMATION_ATTRIBUTES" />
     <inspection_tool class="RedundantRecordConstructor" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="RedundantScheduledForRemovalAnnotation" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="RedundantStringOperation" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -482,6 +483,9 @@
           <option value="return" />
           <option value="override.return" />
           <option value="override.param" />
+          <option value="SameParameterValue" />
+          <option value="BooleanMethodIsAlwaysInverted" />
+          <option value="ConstantValue" />
         </list>
       </option>
     </inspection_tool>

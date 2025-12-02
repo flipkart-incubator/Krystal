@@ -20,7 +20,7 @@ public final class VajramLoader {
   }
 
   public static VajramDefRoot<Object> createVajramObjectForClass(
-      Class<? extends VajramDefRoot<?>> clazz) {
+      Class<? extends VajramDefRoot> clazz) {
     List<Class<? extends VajramDefRoot>> impls =
         new Reflections(clazz.getPackageName())
             .getSubTypesOf(clazz).stream()

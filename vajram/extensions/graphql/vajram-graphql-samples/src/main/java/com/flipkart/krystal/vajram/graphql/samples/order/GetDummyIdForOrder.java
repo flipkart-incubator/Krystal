@@ -6,10 +6,8 @@ import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.graphql.api.GraphQLFetcher;
 import com.flipkart.krystal.vajram.graphql.samples.dummy.DummyId;
 
-@GraphQLFetcher
 @Vajram
 public abstract class GetDummyIdForOrder extends ComputeVajramDef<DummyId> {
   @SuppressWarnings("initialization.field.uninitialized")

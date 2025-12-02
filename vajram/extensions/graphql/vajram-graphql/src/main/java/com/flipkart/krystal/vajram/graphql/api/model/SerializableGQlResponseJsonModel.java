@@ -12,7 +12,4 @@ public interface SerializableGQlResponseJsonModel extends SerializableModel {
   default SerdeProtocol _serdeProtocol() {
     return GraphQlResponseJson.INSTANCE;
   }
-
-  @Override
-  byte[] _serialize() throws Exception;
 }

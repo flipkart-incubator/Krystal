@@ -31,7 +31,7 @@ public final class Constants {
   public static final String IMMUT_REQUEST_SUFFIX = REQUEST_SUFFIX + IMMUT_SUFFIX;
   public static final String IMMUT_REQUEST_POJO_SUFFIX =
       REQUEST_SUFFIX + IMMUT_SUFFIX + POJO.modelClassesSuffix();
-  public static final String FACETS_IMMUT_CLASS_SUFFIX =
+  public static final String FACETS_IMMUT_POJO_CLASS_SUFFIX =
       FACETS_CLASS_SUFFIX + IMMUT_SUFFIX + POJO.modelClassesSuffix();
   public static final String WRPR_SUFFIX = "_Wrpr";
 

@@ -34,7 +34,7 @@ public class PredicateDispatchUtil {
   }
 
   public static <T, R> DispatchCaseBuilder<R> when(
-      InputMirrorSpec<T, ? extends Request<R>> input, InputValueMatcher<T> inputValueMatcher) {
+      InputMirrorSpec<T, ? extends Request> input, InputValueMatcher<T> inputValueMatcher) {
     checkArgument(
         input.tags().getAnnotationByType(UseForPredicateDispatch.class).isPresent(),
         "Only the trait Inputs annotated as @UseForPredicateDispatch can be used for dynamic dispatching");
@@ -51,6 +51,13 @@ public class PredicateDispatchUtil {
     public final PredicateDispatchPolicy conditionally(
         PredicatesDispatchCase<? extends Request<?>>... dispatchCases) {
       return new PredicateDispatchPolicyImpl(traitReq, ImmutableList.copyOf(dispatchCases), graph);
+    }
+
+    public final PredicateDispatchPolicy alwaysTo(Class<? extends R> dispatchTarget) {
+      return new PredicateDispatchPolicyImpl(
+          traitReq,
+          ImmutableList.of(new PredicatesDispatchCase<>(ImmutableMap.of(), dispatchTarget)),
+          graph);
     }
 
     public final PredicateDispatchPolicyImpl computingTargetWith(
@@ -71,7 +78,7 @@ public class PredicateDispatchUtil {
     private ImmutableMap<InputMirror, InputValueMatcher<?>> facetPredicates;
 
     public <P> DispatchCaseBuilder<T> and(
-        InputMirrorSpec<P, ? extends Request<T>> input, InputValueMatcher<P> dataType) {
+        InputMirrorSpec<P, ? extends Request<? extends T>> input, InputValueMatcher<P> dataType) {
       checkArgument(
           !facetPredicates.containsKey(input),
           "Facet " + input + " already has a type check in this case");
@@ -81,8 +88,8 @@ public class PredicateDispatchUtil {
       return new DispatchCaseBuilder<>(ImmutableMap.copyOf(newMap));
     }
 
-    public PredicatesDispatchCase<? extends Request<T>> to(
-        Class<? extends Request<T>> dispatchTarget) {
+    public PredicatesDispatchCase<? extends Request<? extends T>> to(
+        Class<? extends Request<? extends T>> dispatchTarget) {
       checkArgument(
           dispatchTarget.getAnnotation(VajramRequestRoot.class) != null,
           "Expecting a Vajram request root class, i.e. one with the @VajramRequestRoot annotation");
@@ -94,8 +101,8 @@ public class PredicateDispatchUtil {
   @AllArgsConstructor(access = PRIVATE)
   public static class PredicatesDispatchCase<T extends Request<?>> implements DispatchCase {
 
-    ImmutableMap<InputMirror, InputValueMatcher<?>> inputPredicates;
-    Class<? extends T> dispatchTarget;
+    private final ImmutableMap<InputMirror, InputValueMatcher<?>> inputPredicates;
+    private final Class<? extends T> dispatchTarget;
 
     public ImmutableSet<InputMirror> dispatchEnabledInputs() {
       return inputPredicates.keySet();

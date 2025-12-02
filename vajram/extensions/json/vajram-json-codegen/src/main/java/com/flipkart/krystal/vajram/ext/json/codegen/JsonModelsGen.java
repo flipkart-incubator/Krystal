@@ -25,15 +25,18 @@ import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.vajram.json.Json;
 import com.flipkart.krystal.vajram.json.SerializableJsonModel;
+import com.google.common.base.Suppliers;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.QualifiedNameable;
@@ -104,12 +107,30 @@ final class JsonModelsGen implements CodeGenerator {
     TypeName byteArrayType = ArrayTypeName.of(TypeName.BYTE);
 
     classBuilder.addField(
-        FieldSpec.builder(ObjectReader.class, "_READER", PRIVATE, STATIC, FINAL)
-            .initializer("$T.OBJECT_READER.forType($T.class)", Json.class, immutableJsonModelName)
+        FieldSpec.builder(
+                ParameterizedTypeName.get(Supplier.class, ObjectReader.class),
+                "_READER",
+                PRIVATE,
+                STATIC,
+                FINAL)
+            .initializer(
+                "$T.memoize(() -> $T.OBJECT_READER.forType($T.class))",
+                Suppliers.class,
+                Json.class,
+                immutableJsonModelName)
             .build());
     classBuilder.addField(
-        FieldSpec.builder(ObjectWriter.class, "_WRITER", PRIVATE, STATIC, FINAL)
-            .initializer("$T.OBJECT_WRITER.forType($T.class)", Json.class, immutableJsonModelName)
+        FieldSpec.builder(
+                ParameterizedTypeName.get(Supplier.class, ObjectWriter.class),
+                "_WRITER",
+                PRIVATE,
+                STATIC,
+                FINAL)
+            .initializer(
+                "$T.memoize(() ->$T.OBJECT_WRITER.forType($T.class))",
+                Suppliers.class,
+                Json.class,
+                immutableJsonModelName)
             .build());
     classBuilder.addField(FieldSpec.builder(immutablePojoName, "_pojo", PRIVATE).build());
     classBuilder.addField(
@@ -124,7 +145,7 @@ final class JsonModelsGen implements CodeGenerator {
             .addCode(
 """
 if (_serializedPayload == null) {
-  this._serializedPayload = _WRITER.writeValueAsBytes(this);
+  this._serializedPayload = _WRITER.get().writeValueAsBytes(this);
 }
 return _serializedPayload;
 """)
@@ -154,7 +175,7 @@ return _serializedPayload;
 """
         if (_pojo == null && _serializedPayload != null) {
           try{
-            _pojo = _READER.readValue(_serializedPayload, $T.class)._pojo();
+            _pojo = _READER.get().readValue(_serializedPayload, $T.class)._pojo();
           } catch (Exception e) {
             throw new RuntimeException("Failed to deserialize json bytes", e);
           }

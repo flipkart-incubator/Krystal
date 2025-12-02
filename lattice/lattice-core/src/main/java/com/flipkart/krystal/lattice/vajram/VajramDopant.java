@@ -3,6 +3,7 @@ package com.flipkart.krystal.lattice.vajram;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
+import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
 import com.flipkart.krystal.lattice.core.di.Bindings;
 import com.flipkart.krystal.lattice.core.di.DependencyInjectionBinder;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
@@ -17,12 +18,12 @@ import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
-import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.builder.qual.CalledMethods;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -34,9 +35,10 @@ public final class VajramDopant implements SimpleDopant {
 
   static final String DOPANT_TYPE = "krystal.lattice.vajram";
 
+  @Getter private final VajramKryonGraph graph;
   private final VajramDopantSpec vajramDopantSpec;
-  private final VajramKryonGraph vajramGraph;
   private final ThreadingStrategyDopant threadingStrategyDopant;
+  private final List<KryonExecutorConfigurator> kryonExecutorConfigurators = new ArrayList<>();
 
   @Inject
   VajramDopant(
@@ -44,23 +46,25 @@ public final class VajramDopant implements SimpleDopant {
       DependencyInjectionBinder injectionBinder,
       ThreadingStrategyDopant threadingStrategyDopant) {
     this.vajramDopantSpec = vajramDopantSpec;
-    this.vajramGraph = vajramDopantSpec.vajramGraph();
+    this.graph = vajramDopantSpec.vajramGraph();
     this.threadingStrategyDopant = threadingStrategyDopant;
     VajramInjectionProvider vajramInjectionProvider = injectionBinder.toVajramInjectionProvider();
     if (vajramInjectionProvider != null) {
-      this.vajramGraph.registerInputInjector(vajramInjectionProvider);
+      this.graph.registerInputInjector(vajramInjectionProvider);
     }
   }
 
+  @SuppressWarnings("ClassEscapesDefinedScope")
   public static VajramDopantSpecBuilder vajramGraph() {
     return new VajramDopantSpecBuilder();
   }
 
-  public KrystexVajramExecutor createExecutor(
+  private KrystexVajramExecutor createExecutor(
       @CalledMethods("executorService") KryonExecutorConfigBuilder kryonConfigBuilder) {
-    vajramDopantSpec.kryonExecutorConfigurators().forEach(m -> m.addToConfig(kryonConfigBuilder));
+    vajramDopantSpec.kryonExecutorConfigurators().forEach(kryonConfigBuilder::configureWith);
+    kryonExecutorConfigurators.forEach(kryonConfigBuilder::configureWith);
 
-    return vajramGraph.createExecutor(
+    return graph.createExecutor(
         KrystexVajramExecutorConfig.builder()
             .kryonExecutorConfigBuilder(kryonConfigBuilder)
             .build());
@@ -82,41 +86,40 @@ public final class VajramDopant implements SimpleDopant {
     CompletableFuture<RespT> future =
         CompletableFuture.supplyAsync(
                 () -> {
-                  List<AutoCloseable> initCloseables = new ArrayList<>();
+                  List<AutoCloseable> requestScopedCloseables = new ArrayList<>();
+                  var requestScope = threadingStrategyDopant.openRequestScope(requestScopeSeeds);
+                  requestScopedCloseables.add(requestScope);
+                  requestScopedCloseables.add(lease);
                   for (RequestInitializer requestInitializer :
                       executionContext.requestScopeInitializers()) {
-                    initCloseables.add(requestInitializer.init());
+                    requestScopedCloseables.add(requestInitializer.init());
                   }
-                  Closeable requestScope =
-                      threadingStrategyDopant.openRequestScope(requestScopeSeeds);
                   try (KrystexVajramExecutor executor =
                       createExecutor(executorConfigBuilder.executorService(singleThreadExecutor))) {
                     return executor
                         .execute(vajramRequest)
-                        .whenComplete(
-                            (response, throwable) -> {
-                              try {
-                                requestScope.close();
-                              } catch (Throwable e) {
-                                log.error("Unable to close request scope", e);
-                              }
-                              try {
-                                lease.close();
-                              } catch (Throwable e) {
-                                log.error("Unable to close executor Service lease", e);
-                              }
-                              for (AutoCloseable closeable : initCloseables) {
-                                try {
-                                  closeable.close();
-                                } catch (Throwable e) {
-                                  log.error("Unable to execute initializer closeable", e);
-                                }
-                              }
-                            });
+                        .whenComplete((response, throwable) -> closeAll(requestScopedCloseables));
+                  } catch (Exception e) {
+                    closeAll(requestScopedCloseables);
+                    return CompletableFuture.<@Nullable RespT>failedFuture(e);
                   }
                 },
                 singleThreadExecutor)
             .thenCompose(f -> f);
     return future;
+  }
+
+  public void configureKryonExecutor(KryonExecutorConfigurator executorConfigurator) {
+    this.kryonExecutorConfigurators.add(executorConfigurator);
+  }
+
+  private static void closeAll(List<AutoCloseable> closeables) {
+    for (AutoCloseable closeable : closeables) {
+      try {
+        closeable.close();
+      } catch (Throwable e) {
+        log.error("Unable to execute initializer closeable", e);
+      }
+    }
   }
 }

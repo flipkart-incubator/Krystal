@@ -3,10 +3,10 @@ package com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.logic;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
-import com.flipkart.krystal.lattice.rest.api.Path;
-import com.flipkart.krystal.lattice.rest.api.PathParam;
-import com.flipkart.krystal.lattice.rest.api.QueryParam;
-import com.flipkart.krystal.lattice.rest.api.methods.GET;
+import com.flipkart.krystal.lattice.ext.rest.api.Path;
+import com.flipkart.krystal.lattice.ext.rest.api.PathParam;
+import com.flipkart.krystal.lattice.ext.rest.api.QueryParam;
+import com.flipkart.krystal.lattice.ext.rest.api.methods.GET;
 import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.models.JsonResponse;
 import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.models.JsonResponse_Immut;
 import com.flipkart.krystal.lattice.vajram.sdk.InvocableOutsideProcess;
@@ -20,7 +20,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A sample vajram to demonstrate integration between rest and vajrams. This vajram can be invoked
- * via a Http Rest call by remote clients.
+ * via an Http Rest call by remote clients.
  */
 @SuppressWarnings("initialization.field.uninitialized")
 @InvocableOutsideGraph
@@ -42,7 +42,7 @@ public abstract class RestGetMappingLatticeSample extends ComputeVajramDef<JsonR
   static class _InternalFacets {
     @Inject
     @IfAbsent(FAIL)
-    JsonResponse_Immut.Builder reponseBuilder;
+    JsonResponse_Immut.Builder responseBuilder;
 
     @Inject
     @IfAbsent(FAIL)
@@ -55,8 +55,8 @@ public abstract class RestGetMappingLatticeSample extends ComputeVajramDef<JsonR
       @Nullable String name,
       @Nullable String age,
       UriInfo uriInfo,
-      JsonResponse_Immut.Builder reponseBuilder) {
-    return reponseBuilder
+      JsonResponse_Immut.Builder responseBuilder) {
+    return responseBuilder
         .path(fullPath)
         .qp_name(name)
         .qp_age(age)

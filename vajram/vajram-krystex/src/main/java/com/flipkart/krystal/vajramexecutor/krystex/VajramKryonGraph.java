@@ -64,7 +64,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.batching.DepChainBatcherConfi
 import com.flipkart.krystal.vajramexecutor.krystex.batching.InputBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.batching.InputBatchingDecorator;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.KryonInputInjector;
-import com.flipkart.krystal.vajramexecutor.krystex.traits.TraitDispatchDecoratorImpl;
+import com.flipkart.krystal.vajramexecutor.krystex.traits.DefaultTraitDispatcher;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -95,7 +95,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
   private final LogicDefRegistryDecorator logicRegistryDecorator;
 
   private final Map<VajramID, VajramDefinition> vajramDefinitions = new ConcurrentHashMap<>();
-  private final Map<Class<? extends VajramDefRoot<?>>, VajramDefinition> definitionByDefType =
+  private final Map<Class<? extends VajramDefRoot>, VajramDefinition> definitionByDefType =
       new ConcurrentHashMap<>();
   private final Map<Class<? extends Request<?>>, VajramDefinition> definitionByReqType =
       new ConcurrentHashMap<>();
@@ -116,14 +116,14 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
 
   @lombok.Builder
   private VajramKryonGraph(
-      Set<String> packagePrefixes, Set<Class<? extends VajramDefRoot<?>>> classes) {
+      Set<String> packagePrefixes, Set<Class<? extends VajramDefRoot>> classes) {
     LogicDefinitionRegistry logicDefinitionRegistry = new LogicDefinitionRegistry();
     this.kryonDefinitionRegistry = new KryonDefinitionRegistry(logicDefinitionRegistry);
     this.logicRegistryDecorator = new LogicDefRegistryDecorator(logicDefinitionRegistry);
     for (String packagePrefix : packagePrefixes) {
       loadVajramsFromClassPath(packagePrefix).forEach(this::registerVajram);
     }
-    for (Class<? extends VajramDefRoot<?>> clazz : classes) {
+    for (Class<? extends VajramDefRoot> clazz : classes) {
       this.registerVajram(VajramLoader.createVajramObjectForClass(clazz));
     }
   }
@@ -139,7 +139,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
 
   private TraitDispatchDecorator traitDispatchDecorator() {
     if (traitDispatchDecorator == null) {
-      traitDispatchDecorator = new TraitDispatchDecoratorImpl(this, traitDispatchPolicies);
+      traitDispatchDecorator = new DefaultTraitDispatcher(this, traitDispatchPolicies);
     }
     return traitDispatchDecorator;
   }
@@ -414,9 +414,9 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                                   .toList())),
                   sources,
                   (depRequests, facets) -> {
-                    validateMandatory(vajramId, facets, sourceFacets);
                     ResolverCommand resolverCommand;
                     try {
+                      validateMandatory(vajramId, facets, sourceFacets);
                       if (inputResolver instanceof One2OneInputResolver singleInputResolver) {
                         resolverCommand = singleInputResolver.resolve(depRequests, facets);
                       } else if (inputResolver instanceof FanoutInputResolver fanoutInputResolver) {
@@ -575,7 +575,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
     return vajramDefinition.vajramId();
   }
 
-  public VajramID getVajramIdByVajramReqType(Class<? extends Request<?>> vajramReqClass) {
+  public VajramID getVajramIdByVajramReqType(Class<? extends Request> vajramReqClass) {
     VajramDefinition vajramDefinition = definitionByReqType.get(vajramReqClass);
     if (vajramDefinition == null) {
       throw new IllegalArgumentException(
@@ -591,7 +591,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
   @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
   public static final class VajramKryonGraphBuilder {
     private final Set<String> packagePrefixes = new LinkedHashSet<>();
-    private final Set<Class<? extends VajramDefRoot<?>>> classes = new LinkedHashSet<>();
+    private final Set<Class<? extends VajramDefRoot>> classes = new LinkedHashSet<>();
 
     public VajramKryonGraphBuilder loadFromPackage(String packagePrefix) {
       packagePrefixes.add(packagePrefix);
@@ -599,7 +599,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
     }
 
     @SafeVarargs
-    public final VajramKryonGraphBuilder loadClasses(Class<? extends VajramDefRoot<?>>... classes) {
+    public final VajramKryonGraphBuilder loadClasses(Class<? extends VajramDefRoot>... classes) {
       this.classes.addAll(Arrays.asList(classes));
       return this;
     }
@@ -614,8 +614,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
 
     @SuppressWarnings({"UnusedMethod", "UnusedVariable", "unused"})
     // Make this private so that client use loadFromPackage instead.
-    private VajramKryonGraphBuilder classes(
-        Set<Class<? extends VajramDefRoot<?>>> packagePrefixes) {
+    private VajramKryonGraphBuilder classes(Set<Class<? extends VajramDefRoot>> packagePrefixes) {
       return this;
     }
   }

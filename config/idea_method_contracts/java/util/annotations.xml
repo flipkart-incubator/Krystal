@@ -1,7 +1,8 @@
 <root>
   <item name='java.util.Map V getOrDefault(java.lang.Object, V)'>
     <annotation name='org.jetbrains.annotations.Contract'>
-      <val val="&quot;_, null -&gt; null; _, !null -&gt; !null&quot;"/>
+      <val name="value" val="&quot;_, !null -&gt; !null&quot;"/>
+      <val name="pure" val="true"/>
     </annotation>
   </item>
 </root>

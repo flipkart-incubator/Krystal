@@ -11,8 +11,13 @@ plugins {
     id 'maven-publish'
 }
 
+ext {
+    clojarsusername = project.properties['clojarsusername'] ?: ""
+    clojarspassword = project.properties['clojarspassword'] ?: ""
+}
+
 group 'com.flipkart.java.code.standard'
-version '5.0'
+version '5.3'
 
 gradlePlugin {
     plugins {

@@ -10,14 +10,15 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.lattice.core.di.Bindings;
 import com.flipkart.krystal.lattice.core.di.Bindings.BindingsBuilder;
-import com.flipkart.krystal.lattice.core.doping.Dopant;
+import com.flipkart.krystal.lattice.core.doping.SimpleDopant;
 import com.flipkart.krystal.lattice.core.headers.Header;
 import com.flipkart.krystal.lattice.core.headers.SingleValueHeader;
 import com.flipkart.krystal.lattice.ext.quarkus.app.QuarkusApplicationDopant;
+import com.flipkart.krystal.lattice.ext.rest.RestService;
+import com.flipkart.krystal.lattice.ext.rest.RestServiceDopant;
+import com.flipkart.krystal.lattice.ext.rest.api.status.HttpResponseStatusException;
+import com.flipkart.krystal.lattice.ext.rest.config.RestServerConfig;
 import com.flipkart.krystal.lattice.ext.rest.quarkus.restServer.QuarkusRestServerSpec.QuarkusRestServerSpecBuilder;
-import com.flipkart.krystal.lattice.rest.RestService;
-import com.flipkart.krystal.lattice.rest.RestServiceDopant;
-import com.flipkart.krystal.lattice.rest.api.status.HttpResponseStatusException;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.tags.Names;
 import io.quarkus.vertx.utils.NoBoundChecksBuffer;
@@ -38,10 +39,9 @@ import org.jboss.resteasy.plugins.server.vertx.VertxRequestHandler;
 import org.jboss.resteasy.plugins.server.vertx.VertxResteasyDeployment;
 
 @Slf4j
-public final class QuarkusRestServerDopant implements Dopant<RestService, QuarkusRestServerConfig> {
-  static final String REST_SERVER_DOPANT_TYPE = "krystal.lattice.restServer.quarkus";
+public final class QuarkusRestServerDopant implements SimpleDopant {
+  static final String QUARKUS_REST_SERVER_DOPANT_TYPE = "krystal.lattice.restServer.quarkus";
 
-  private final QuarkusRestServerConfig config;
   private final RestService restService;
   private final QuarkusApplicationDopant quarkusApplicationDopant;
   private final RestServiceDopant restServiceDopant;
@@ -50,10 +50,8 @@ public final class QuarkusRestServerDopant implements Dopant<RestService, Quarku
   @Inject
   QuarkusRestServerDopant(
       RestService restService,
-      QuarkusRestServerConfig config,
       RestServiceDopant restServiceDopant,
       QuarkusApplicationDopant quarkusApplicationDopant) {
-    this.config = config;
     this.restService = restService;
     this.quarkusApplicationDopant = quarkusApplicationDopant;
     this.restServiceDopant = restServiceDopant;
@@ -67,28 +65,43 @@ public final class QuarkusRestServerDopant implements Dopant<RestService, Quarku
   public void start() {
     Vertx vertx = quarkusApplicationDopant.vertx();
 
+    startServer(
+        restServiceDopant.config().applicationServer(),
+        vertx,
+        restServiceDopant.allApplicationRestResources());
+    RestServerConfig adminServer = restServiceDopant.config().adminServer();
+    if (adminServer != null) {
+      startServer(adminServer, vertx, restServiceDopant.allAdminRestResources());
+    }
+  }
+
+  private void startServer(RestServerConfig restServerConfig, Vertx vertx, List<?> restResources) {
     HttpServerOptions httpServerOptions = new HttpServerOptions();
-    httpServerOptions.setPort(config.port());
+
+    httpServerOptions.setPort(restServerConfig.port());
     vertx
         .createHttpServer(httpServerOptions)
-        .requestHandler(jaxRsRequestHandler(vertx))
+        .requestHandler(jaxRsRequestHandler(vertx, restResources))
         .listen(
             result -> {
               if (result.succeeded()) {
-                log.info("Server started on port {} ", config.port());
+                log.info(
+                    "Server '{}' started on port {} ",
+                    restServerConfig.name(),
+                    restServerConfig.port());
               } else {
-                log.error("", result.cause());
+                log.error("Could not start server {}", restServerConfig.name(), result.cause());
               }
             });
   }
 
-  private Handler<HttpServerRequest> jaxRsRequestHandler(Vertx vertx) {
+  private Handler<HttpServerRequest> jaxRsRequestHandler(Vertx vertx, List<?> serverResources) {
     VertxResteasyDeployment deployment = new VertxResteasyDeployment();
     deployment.start();
 
     closeables.add(deployment::stop);
     VertxRegistry registry = deployment.getRegistry();
-    restServiceDopant.getResources().forEach(registry::addSingletonResource);
+    serverResources.forEach(registry::addSingletonResource);
     return new VertxRequestHandler(vertx, deployment, restService.pathPrefix());
   }
 
@@ -142,7 +155,6 @@ public final class QuarkusRestServerDopant implements Dopant<RestService, Quarku
                 } else {
                   routingContext.fail(INTERNAL_SERVER_ERROR.code());
                 }
-                return;
               }
             });
   }

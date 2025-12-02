@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajram.codegen.plugin;
 import static com.flipkart.krystal.codegen.common.models.CodegenPhase.FINAL;
 import static com.flipkart.krystal.codegen.common.models.CodegenPhase.MODELS;
 import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
+import static com.flipkart.krystal.codegen.common.models.Constants.MODULE_ROOT_PATH_KEY;
 import static com.flipkart.krystal.config.PropertyNames.RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.VAJRAM_MODELS_GEN_DIR_NAME;
 
@@ -126,7 +127,14 @@ public class VajramPlugin implements Plugin<Project> {
                   .fileValue(project.file(mainModelsGenDir));
               task.getOptions()
                   .getCompilerArgs()
-                  .addAll(List.of("-proc:only", "-A" + CODEGEN_PHASE_KEY + '=' + MODELS));
+                  .addAll(
+                      List.of(
+                          "-proc:only",
+                          "-A" + CODEGEN_PHASE_KEY + '=' + MODELS,
+                          "-A"
+                              + MODULE_ROOT_PATH_KEY
+                              + "="
+                              + project.getProjectDir().getAbsolutePath()));
             })
         .configure(
             krystalModelsGen ->

@@ -1,14 +1,13 @@
 package com.flipkart.krystal.krystex.kryon;
 
 import com.flipkart.krystal.core.VajramID;
-import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
-import com.flipkart.krystal.krystex.dependencydecoration.VajramInvocation;
+import com.flipkart.krystal.krystex.dependencydecoration.DependencyInvocation;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.google.common.collect.ImmutableMap;
@@ -20,7 +19,7 @@ import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonCommandResponse>
+abstract sealed class AbstractKryon<C extends KryonCommand<?>, R extends KryonCommandResponse>
     implements Kryon<C, R> permits BatchKryon, DirectKryon {
   /**
    * Initial capacity for maps and sets. In load tests in real-world applications, substantial CPU
@@ -90,13 +89,9 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonComma
                       // Reverse the ordering so that the ones with the highest index are applied
                       // first.
                       .reversed());
-          Dependency dependency = dependentChain.latestDependency();
-          if (dependency == null) {
-            return sortedDecorators;
-          }
           sortedDecorators.addAll(
               depDecoratorSuppliers
-                  .apply(new DependencyExecutionContext(dependency, dependentChain))
+                  .apply(new DependencyExecutionContext(depVajramId, dependentChain))
                   .values());
           return sortedDecorators;
         });
@@ -126,13 +121,13 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonComma
     }
   }
 
-  protected <R2 extends KryonCommandResponse> VajramInvocation<R2> decorateVajramInvocation(
+  protected <R2 extends KryonCommandResponse> DependencyInvocation<R2> decorateVajramInvocation(
       DependentChain dependentChain,
       VajramID depVajramID,
-      VajramInvocation<R2> invocationToDecorate) {
+      DependencyInvocation<R2> invocationToDecorate) {
     for (DependencyDecorator dependencyDecorator :
         getSortedDependencyDecorators(depVajramID, dependentChain)) {
-      VajramInvocation<R2> previousDecoratedInvocation = invocationToDecorate;
+      DependencyInvocation<R2> previousDecoratedInvocation = invocationToDecorate;
       invocationToDecorate = dependencyDecorator.decorateDependency(previousDecoratedInvocation);
     }
     return invocationToDecorate;
