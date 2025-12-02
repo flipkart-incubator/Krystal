@@ -172,13 +172,14 @@ public final class KryonExecutor implements KrystalExecutor {
           decoratorType,
           new DependencyDecoratorConfig(
               decoratorType,
-              dependencyExecutionContext ->
-                  dependencyExecutionContext
-                      .dependentChain()
-                      .latestDependency()
-                      .tags()
-                      .getAnnotationByType(TraitDependency.class)
-                      .isPresent(),
+              dependencyExecutionContext -> {
+                Dependency dependency =
+                    dependencyExecutionContext.dependentChain().latestDependency();
+                if (dependency == null) {
+                  return false;
+                }
+                return dependency.tags().getAnnotationByType(TraitDependency.class).isPresent();
+              },
               d -> decoratorType,
               c -> traitDispatchDecorator));
     }
