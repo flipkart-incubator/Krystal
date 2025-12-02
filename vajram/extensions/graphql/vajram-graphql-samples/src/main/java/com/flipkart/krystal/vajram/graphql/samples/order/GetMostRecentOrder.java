@@ -1,23 +1,22 @@
-package com.flipkart.krystal.lattice.samples.graphql.rest.json.logic;
+package com.flipkart.krystal.vajram.graphql.samples.order;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 
-import com.flipkart.krystal.lattice.samples.graphql.rest.json.logic.person.PersonId;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
 
 @Vajram
-public abstract class GetPersonBanner extends ComputeVajramDef<String> {
+public abstract class GetMostRecentOrder extends ComputeVajramDef<OrderId> {
   @SuppressWarnings("initialization.field.uninitialized")
   static class _Inputs {
     @IfAbsent(FAIL)
-    PersonId id;
+    String userId;
   }
 
   @Output
-  static String outputLogic(PersonId id) {
-    return id.value() + "-bannerUrl.png";
+  static OrderId mostRecentOrder(String userId) {
+    return new OrderId("MostRecentOrderOf_" + userId);
   }
 }
