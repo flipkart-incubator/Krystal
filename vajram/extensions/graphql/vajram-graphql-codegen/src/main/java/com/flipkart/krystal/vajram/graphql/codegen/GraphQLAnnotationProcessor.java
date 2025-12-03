@@ -49,6 +49,24 @@ public class GraphQLAnnotationProcessor extends AbstractKrystalAnnoProcessor {
               + "; Classes: "
               + roundEnv.getElementsAnnotatedWith(annotation));
     }
+    if (!generated) {
+      // Generate input types FIRST (needed by aggregators and vajrams)
+      try {
+        new GraphQLInputTypeGen(util).generate();
+      } catch (Exception e) {
+        util.error("[GraphQL Input Type Codegen Exception] " + getStackTraceAsString(e));
+      }
+      try {
+        new GraphQLTypeAggregatorGen(codeGenUtil()).generate();
+      } catch (Exception e) {
+        util.error("[GraphQL Codegen Exception] " + getStackTraceAsString(e));
+      }
+      try {
+        new GraphQLEntityGen(util).generate();
+      } catch (Exception e) {
+        util.error("[GraphQL Codegen Exception] " + getStackTraceAsString(e));
+      }
+      generated = true;
     try {
       new GraphQLObjectAggregateGen(codeGenUtil(), schemaFile).generate();
     } catch (Exception e) {
