@@ -4,9 +4,8 @@ import static com.flipkart.krystal.codegen.common.models.Constants.MODULE_ROOT_P
 import static com.flipkart.krystal.vajram.graphql.api.Constants.GRAPHQL_SCHEMA_FILENAME;
 import static com.flipkart.krystal.vajram.graphql.codegen.CodeGenConstants.GRAPHQL_SRC_DIR;
 import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.CLASS_NAME_DIR_ARG;
-import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.CUSTOM_TYPE_DIRECTIVE;
+import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.JAVA_TYPE_DIRECTIVE;
 import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.PACKAGE_NAME_DIR_ARG;
-import static java.util.Objects.requireNonNullElse;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.squareup.javapoet.AnnotationSpec;
@@ -20,6 +19,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import javax.tools.StandardLocation;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -99,23 +99,22 @@ public final class GraphQlCodeGenUtil {
   }
 
   ClassName getTypeNameForField(PlainType fieldType, GraphQlFieldSpec fieldSpec) {
-    GraphQLTypeName typeName = new GraphQLTypeName(fieldType.graphQlType().getName());
-    String packageName = null;
-    for (Directive directive : fieldSpec.fieldDefinition().getDirectives()) {
-      if (directive.getName().equals(CUSTOM_TYPE_DIRECTIVE)) {
-        for (Argument argument : directive.getArguments()) {
-          if (argument.getName().equals(PACKAGE_NAME_DIR_ARG)
-              && argument.getValue() instanceof StringValue stringValue) {
-            packageName = stringValue.getValue();
-          }
-          if (argument.getName().equals(CLASS_NAME_DIR_ARG)
-              && argument.getValue() instanceof StringValue stringValue) {
-            typeName = new GraphQLTypeName(stringValue.getValue());
-          }
-        }
-      }
+    String graphQlTypeName = fieldType.graphQlType().getName();
+
+    // Priority 1: Check for field-level @javaType directive (highest priority - per-field override)
+    ClassName fieldLevelOverride = getFieldLevelJavaType(fieldSpec);
+    if (fieldLevelOverride != null) {
+      return fieldLevelOverride;
     }
-    return switch (fieldType.graphQlType().getName()) {
+
+    // Priority 2: Check for scalar-level @javaType directive (schema-wide for scalar type)
+    Optional<ClassName> scalarJavaType = schemaReaderUtil.getJavaTypeForScalar(graphQlTypeName);
+    if (scalarJavaType.isPresent()) {
+      return scalarJavaType.get();
+    }
+
+    // Priority 3: Built-in GraphQL scalar types
+    return switch (graphQlTypeName) {
       case "String" -> ClassName.get(String.class);
       case "Int" -> ClassName.get(Integer.class);
       case "Boolean" -> ClassName.get(Boolean.class);
@@ -126,10 +125,43 @@ public final class GraphQlCodeGenUtil {
             ? schemaReaderUtil.entityIdClassName(enclosingType)
             : ClassName.get(Object.class);
       }
-      default ->
-          ClassName.get(
-              requireNonNullElse(packageName, schemaReaderUtil.getPackageNameForType(typeName)),
-              typeName.value());
+      // Priority 4: Custom types (enums, objects) - look up in type registry
+      default -> {
+        GraphQLTypeName typeName = new GraphQLTypeName(graphQlTypeName);
+        yield ClassName.get(schemaReaderUtil.getPackageNameForType(typeName), typeName.value());
+      }
     };
+  }
+
+  /**
+   * Extracts the Java type from a field-level @javaType directive if present. This allows per-field
+   * override of the Java type, taking highest priority over scalar-level mappings.
+   *
+   * @param fieldSpec the field specification to check
+   * @return the ClassName if @javaType is present on the field, null otherwise
+   */
+  private @Nullable ClassName getFieldLevelJavaType(GraphQlFieldSpec fieldSpec) {
+    String packageName = null;
+    String className = null;
+
+    for (Directive directive : fieldSpec.fieldDefinition().getDirectives()) {
+      if (directive.getName().equals(JAVA_TYPE_DIRECTIVE)) {
+        for (Argument argument : directive.getArguments()) {
+          if (argument.getName().equals(PACKAGE_NAME_DIR_ARG)
+              && argument.getValue() instanceof StringValue stringValue) {
+            packageName = stringValue.getValue();
+          }
+          if (argument.getName().equals(CLASS_NAME_DIR_ARG)
+              && argument.getValue() instanceof StringValue stringValue) {
+            className = stringValue.getValue();
+          }
+        }
+      }
+    }
+
+    if (packageName != null && className != null) {
+      return ClassName.get(packageName, className);
+    }
+    return null;
   }
 }
