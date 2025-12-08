@@ -136,9 +136,6 @@ public final class GraphQlCodeGenUtil {
   /**
    * Extracts the Java type from a field-level @javaType directive if present. This allows per-field
    * override of the Java type, taking highest priority over scalar-level mappings.
-   *
-   * @param fieldSpec the field specification to check
-   * @return the ClassName if @javaType is present on the field, null otherwise
    */
   private @Nullable ClassName getFieldLevelJavaType(GraphQlFieldSpec fieldSpec) {
     String packageName = null;

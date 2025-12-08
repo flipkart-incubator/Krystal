@@ -39,7 +39,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -53,10 +52,6 @@ public class SchemaReaderUtil {
   public static final String JAVA_TYPE_DIRECTIVE = "javaType";
   public static final String PACKAGE_NAME_DIR_ARG = "packageName";
   public static final String CLASS_NAME_DIR_ARG = "className";
-
-  /** Built-in GraphQL scalar types that don't need explicit definition in the type registry */
-  private static final Set<String> BUILT_IN_SCALARS =
-      Set.of("String", "Int", "Float", "Boolean", "ID");
 
   @Getter(PACKAGE)
   private final Map<GraphQLTypeName, Map<GraphQlFieldSpec, ClassName>>
@@ -258,15 +253,6 @@ public class SchemaReaderUtil {
 
       for (FieldDefinition fieldDefinition : objectTypeDefinition.getFieldDefinitions()) {
         Type<?> fieldDefinitionType = fieldDefinition.getType();
-        String unwrappedTypeName = unwrapTypeName(fieldDefinitionType);
-
-        // Check if it's a built-in scalar or a custom scalar with @javaType directive
-        if (isScalarType(unwrappedTypeName)) {
-          // Skip scalar types - they don't have fetchers or aggregators
-          // Code generation will handle them in GraphQlCodeGenUtil
-          continue;
-        }
-
         TypeDefinition fieldTypeDefinition =
             typeRegistry
                 .getType(fieldDefinitionType)
@@ -518,40 +504,5 @@ public class SchemaReaderUtil {
               return Optional.of(
                   ClassName.get(packageNameValue.getValue(), classNameValue.getValue()));
             });
-  }
-
-  /**
-   * Checks if a type name represents a scalar type. A scalar type is either: 1. A built-in GraphQL
-   * scalar (String, Int, Float, Boolean, ID) 2. A custom scalar defined with the `scalar` keyword
-   * in the schema
-   *
-   * @param typeName the name of the type to check
-   * @return true if the type is a scalar, false otherwise
-   */
-  public boolean isScalarType(String typeName) {
-    if (BUILT_IN_SCALARS.contains(typeName)) {
-      return true;
-    }
-    // Check if it's a custom scalar defined in the schema
-    return typeDefinitionRegistry.getType(typeName, ScalarTypeDefinition.class).isPresent();
-  }
-
-  /**
-   * Unwraps a GraphQL type to get the base type name. For example: -
-   * NonNullType(ListType(TypeName)) -> TypeName - ListType(NonNullType(TypeName)) -> TypeName -
-   * NonNullType(TypeName) -> TypeName - TypeName -> TypeName
-   *
-   * @param type the GraphQL type to unwrap
-   * @return the base type name as a string
-   */
-  public static String unwrapTypeName(Type<?> type) {
-    if (type instanceof NonNullType nonNullType) {
-      return unwrapTypeName(nonNullType.getType());
-    } else if (type instanceof ListType listType) {
-      return unwrapTypeName(listType.getType());
-    } else if (type instanceof TypeName typeName) {
-      return typeName.getName();
-    }
-    throw new IllegalArgumentException("Unknown type: " + type);
   }
 }
