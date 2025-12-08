@@ -474,12 +474,7 @@ public class SchemaReaderUtil {
             .map(GraphQLTypeName::of);
   }
 
-  /**
-   * Gets the Java type mapping for a scalar type from the @javaType directive.
-   *
-   * @param scalarName the name of the scalar type
-   * @return Optional containing the ClassName if @javaType directive is present, empty otherwise
-   */
+  /** Gets the Java type mapping for a scalar type from the @javaType directive. */
   public Optional<ClassName> getJavaTypeForScalar(String scalarName) {
     return typeDefinitionRegistry
         .getType(scalarName, ScalarTypeDefinition.class)
@@ -490,15 +485,22 @@ public class SchemaReaderUtil {
                 return Optional.empty();
               }
 
-              Directive directive = javaTypeDirectives.get(0);
+              Directive directive = javaTypeDirectives.getFirst();
               Argument packageNameArg = directive.getArgument(PACKAGE_NAME_DIR_ARG);
               Argument classNameArg = directive.getArgument(CLASS_NAME_DIR_ARG);
 
-              if (packageNameArg == null
-                  || classNameArg == null
-                  || !(packageNameArg.getValue() instanceof StringValue packageNameValue)
+              if (packageNameArg == null || classNameArg == null) {
+                throw new IllegalStateException(
+                    "Scalar '%s' has @javaType directive without required 'packageName' or 'className' argument"
+                        .formatted(scalarName));
+              }
+
+              if (!(packageNameArg.getValue() instanceof StringValue packageNameValue)
                   || !(classNameArg.getValue() instanceof StringValue classNameValue)) {
-                return Optional.empty();
+                throw new IllegalStateException(
+                    "Scalar '%s' @javaType directive: 'packageName' and 'className' must be a String literal, got: %s"
+                        .formatted(
+                            scalarName, packageNameArg.getValue().getClass().getSimpleName()));
               }
 
               return Optional.of(

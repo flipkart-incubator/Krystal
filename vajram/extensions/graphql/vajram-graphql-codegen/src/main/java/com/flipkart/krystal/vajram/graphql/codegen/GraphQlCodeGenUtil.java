@@ -101,36 +101,32 @@ public final class GraphQlCodeGenUtil {
   ClassName getTypeNameForField(PlainType fieldType, GraphQlFieldSpec fieldSpec) {
     String graphQlTypeName = fieldType.graphQlType().getName();
 
-    // Priority 1: Check for field-level @javaType directive (highest priority - per-field override)
     ClassName fieldLevelOverride = getFieldLevelJavaType(fieldSpec);
     if (fieldLevelOverride != null) {
       return fieldLevelOverride;
     }
 
-    // Priority 2: Check for scalar-level @javaType directive (schema-wide for scalar type)
     Optional<ClassName> scalarJavaType = schemaReaderUtil.getJavaTypeForScalar(graphQlTypeName);
-    if (scalarJavaType.isPresent()) {
-      return scalarJavaType.get();
-    }
 
-    // Priority 3: Built-in GraphQL scalar types
-    return switch (graphQlTypeName) {
-      case "String" -> ClassName.get(String.class);
-      case "Int" -> ClassName.get(Integer.class);
-      case "Boolean" -> ClassName.get(Boolean.class);
-      case "Float" -> ClassName.get(Float.class);
-      case "ID" -> {
-        GraphQLTypeName enclosingType = fieldSpec.enclosingType();
-        yield enclosingType != null
-            ? schemaReaderUtil.entityIdClassName(enclosingType)
-            : ClassName.get(Object.class);
-      }
-      // Priority 4: Custom types (enums, objects) - look up in type registry
-      default -> {
-        GraphQLTypeName typeName = new GraphQLTypeName(graphQlTypeName);
-        yield ClassName.get(schemaReaderUtil.getPackageNameForType(typeName), typeName.value());
-      }
-    };
+    return scalarJavaType.orElseGet(
+        () ->
+            switch (graphQlTypeName) {
+              case "String" -> ClassName.get(String.class);
+              case "Int" -> ClassName.get(Integer.class);
+              case "Boolean" -> ClassName.get(Boolean.class);
+              case "Float" -> ClassName.get(Float.class);
+              case "ID" -> {
+                GraphQLTypeName enclosingType = fieldSpec.enclosingType();
+                yield enclosingType != null
+                    ? schemaReaderUtil.entityIdClassName(enclosingType)
+                    : ClassName.get(Object.class);
+              }
+              default -> {
+                GraphQLTypeName typeName = new GraphQLTypeName(graphQlTypeName);
+                yield ClassName.get(
+                    schemaReaderUtil.getPackageNameForType(typeName), typeName.value());
+              }
+            });
   }
 
   /**
