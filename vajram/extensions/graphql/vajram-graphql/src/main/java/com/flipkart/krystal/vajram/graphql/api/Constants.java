@@ -18,7 +18,6 @@ public class Constants {
     public static final String INHERIT_ID_FROM_PARENT = "inferIdFromParent";
     public static final String ROOT_PACKAGE = "rootPackage";
     public static final String SUB_PACKAGE = "subPackage";
-    public static final String JAVA_TYPE = "javaType";
   }
 
   @UtilityClass
@@ -28,8 +27,6 @@ public class Constants {
     public static final String VAJRAM_ID = "vajramId";
     public static final String ENTITY_ID_FIELD = "entityIdField";
     public static final String NAME = "name";
-    public static final String PACKAGE_NAME = "packageName";
-    public static final String CLASS_NAME = "className";
   }
 
   @UtilityClass
