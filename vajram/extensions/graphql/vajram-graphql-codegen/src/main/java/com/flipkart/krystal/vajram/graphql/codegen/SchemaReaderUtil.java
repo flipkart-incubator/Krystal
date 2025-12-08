@@ -498,9 +498,11 @@ public class SchemaReaderUtil {
               if (!(packageNameArg.getValue() instanceof StringValue packageNameValue)
                   || !(classNameArg.getValue() instanceof StringValue classNameValue)) {
                 throw new IllegalStateException(
-                    "Scalar '%s' @javaType directive: 'packageName' and 'className' must be a String literal, got: %s"
+                    "Scalar '%s' @javaType directive: 'packageName' and 'className' must be String literals, got packageName: %s, className: %s"
                         .formatted(
-                            scalarName, packageNameArg.getValue().getClass().getSimpleName()));
+                            scalarName,
+                            packageNameArg.getValue().getClass().getSimpleName(),
+                            classNameArg.getValue().getClass().getSimpleName()));
               }
 
               return Optional.of(

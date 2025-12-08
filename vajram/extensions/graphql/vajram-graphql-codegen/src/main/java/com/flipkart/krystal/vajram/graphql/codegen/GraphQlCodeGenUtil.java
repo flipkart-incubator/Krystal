@@ -134,26 +134,31 @@ public final class GraphQlCodeGenUtil {
    * override of the Java type, taking highest priority over scalar-level mappings.
    */
   private @Nullable ClassName getFieldLevelJavaType(GraphQlFieldSpec fieldSpec) {
-    String packageName = null;
-    String className = null;
-
     for (Directive directive : fieldSpec.fieldDefinition().getDirectives()) {
-      if (directive.getName().equals(JAVA_TYPE_DIRECTIVE)) {
-        for (Argument argument : directive.getArguments()) {
-          if (argument.getName().equals(PACKAGE_NAME_DIR_ARG)
-              && argument.getValue() instanceof StringValue stringValue) {
-            packageName = stringValue.getValue();
-          }
-          if (argument.getName().equals(CLASS_NAME_DIR_ARG)
-              && argument.getValue() instanceof StringValue stringValue) {
-            className = stringValue.getValue();
-          }
-        }
+      if (!directive.getName().equals(JAVA_TYPE_DIRECTIVE)) {
+        continue;
       }
-    }
 
-    if (packageName != null && className != null) {
-      return ClassName.get(packageName, className);
+      Argument packageNameArg = directive.getArgument(PACKAGE_NAME_DIR_ARG);
+      Argument classNameArg = directive.getArgument(CLASS_NAME_DIR_ARG);
+
+      if (packageNameArg == null || classNameArg == null) {
+        throw new IllegalStateException(
+            "Field '%s' has @javaType directive without required 'packageName' or 'className' argument"
+                .formatted(fieldSpec.fieldName()));
+      }
+
+      if (!(packageNameArg.getValue() instanceof StringValue packageNameValue)
+          || !(classNameArg.getValue() instanceof StringValue classNameValue)) {
+        throw new IllegalStateException(
+            "Field '%s' @javaType directive: 'packageName' and 'className' must be String literals, got packageName: %s, className: %s"
+                .formatted(
+                    fieldSpec.fieldName(),
+                    packageNameArg.getValue().getClass().getSimpleName(),
+                    classNameArg.getValue().getClass().getSimpleName()));
+      }
+
+      return ClassName.get(packageNameValue.getValue(), classNameValue.getValue());
     }
     return null;
   }
