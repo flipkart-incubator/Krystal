@@ -1100,7 +1100,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
 
       // Get element type name for loop variable
       TypeMirror elementType = getListElementType(returnType);
-      String singularName = fieldName + "Item";
+      String singularName = fieldName + "_item";
 
       directSetter.beginControlFlow("for ($T $L : $L)", elementType, singularName, fieldName);
       directSetter.addStatement("_result.add($T.withValue($L))", Errable.class, singularName);
