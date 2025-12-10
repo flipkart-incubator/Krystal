@@ -44,18 +44,18 @@ with the directive @composedType whose "inEntity" argument matches the composing
 directive @inferIdFromParent on FIELD_DEFINITION
 
 """
-Specifies the Java type mapping for a GraphQL scalar type or field.
+Specifies the Java type mapping for a GraphQL scalar type.
 
-Examples:
+Example:
   scalar Timestamp
     @specifiedBy(url: "https://scalars.graphql.org/andimarek/date-time.html")
     @javaType(packageName: "java.time", className: "OffsetDateTime")
 
   type Order {
-    createdAt: Timestamp                     # Uses scalar-level @javaType → OffsetDateTime
+    createdAt: Timestamp    # Will be mapped to java.time.OffsetDateTime
   }
 """
-directive @javaType(packageName : String!, className: String!) on SCALAR | FIELD_DEFINITION
+directive @javaType(packageName : String!, className: String!) on SCALAR
 
 """
 Specifies the root package under which all data fetchers and id fetchers vajrams are located.

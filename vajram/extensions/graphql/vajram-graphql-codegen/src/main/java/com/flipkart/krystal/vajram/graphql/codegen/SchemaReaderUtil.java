@@ -474,39 +474,47 @@ public class SchemaReaderUtil {
             .map(GraphQLTypeName::of);
   }
 
+  /**
+   * Extracts ClassName from a @javaType directive's packageName and className arguments.
+   */
+  static ClassName extractClassNameFromJavaTypeDirective(
+      DirectivesContainer<?> directivesContainer, String contextDescription) {
+    List<Directive> javaTypeDirectives = directivesContainer.getDirectives(JAVA_TYPE_DIRECTIVE);
+    if (javaTypeDirectives.isEmpty()) {
+      return null;
+    }
+
+    Directive directive = javaTypeDirectives.getFirst();
+    Argument packageNameArg = directive.getArgument(PACKAGE_NAME_DIR_ARG);
+    Argument classNameArg = directive.getArgument(CLASS_NAME_DIR_ARG);
+
+    if (packageNameArg == null || classNameArg == null) {
+      throw new IllegalStateException(
+          "%s has @javaType directive without required 'packageName' or 'className' argument"
+              .formatted(contextDescription));
+    }
+
+    if (!(packageNameArg.getValue() instanceof StringValue packageNameValue)
+        || !(classNameArg.getValue() instanceof StringValue classNameValue)) {
+      throw new IllegalStateException(
+          "%s @javaType directive: 'packageName' and 'className' must be String literals, got packageName: %s, className: %s"
+              .formatted(
+                  contextDescription,
+                  packageNameArg.getValue().getClass().getSimpleName(),
+                  classNameArg.getValue().getClass().getSimpleName()));
+    }
+
+    return ClassName.get(packageNameValue.getValue(), classNameValue.getValue());
+  }
+
   /** Gets the Java type mapping for a scalar type from the @javaType directive. */
-  public Optional<ClassName> getJavaTypeForScalar(String scalarName) {
+  public @Nullable ClassName getJavaTypeForScalar(String scalarName) {
     return typeDefinitionRegistry
         .getType(scalarName, ScalarTypeDefinition.class)
-        .flatMap(
-            scalarDef -> {
-              List<Directive> javaTypeDirectives = scalarDef.getDirectives(JAVA_TYPE_DIRECTIVE);
-              if (javaTypeDirectives.isEmpty()) {
-                return Optional.empty();
-              }
-
-              Directive directive = javaTypeDirectives.getFirst();
-              Argument packageNameArg = directive.getArgument(PACKAGE_NAME_DIR_ARG);
-              Argument classNameArg = directive.getArgument(CLASS_NAME_DIR_ARG);
-
-              if (packageNameArg == null || classNameArg == null) {
-                throw new IllegalStateException(
-                    "Scalar '%s' has @javaType directive without required 'packageName' or 'className' argument"
-                        .formatted(scalarName));
-              }
-
-              if (!(packageNameArg.getValue() instanceof StringValue packageNameValue)
-                  || !(classNameArg.getValue() instanceof StringValue classNameValue)) {
-                throw new IllegalStateException(
-                    "Scalar '%s' @javaType directive: 'packageName' and 'className' must be String literals, got packageName: %s, className: %s"
-                        .formatted(
-                            scalarName,
-                            packageNameArg.getValue().getClass().getSimpleName(),
-                            classNameArg.getValue().getClass().getSimpleName()));
-              }
-
-              return Optional.of(
-                  ClassName.get(packageNameValue.getValue(), classNameValue.getValue()));
-            });
+        .map(
+            scalarDef ->
+                extractClassNameFromJavaTypeDirective(
+                    scalarDef, "Scalar '%s'".formatted(scalarName)))
+        .orElse(null);
   }
 }
