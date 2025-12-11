@@ -15,7 +15,9 @@ import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 import lombok.Builder;
 import lombok.NonNull;
 import lombok.Singular;
@@ -48,6 +50,7 @@ public record KryonExecutorConfig(
     @Singular ImmutableMap<String, KryonDecoratorConfig> kryonDecoratorConfigs,
     @Singular ImmutableMap<String, DependencyDecoratorConfig> dependencyDecoratorConfigs,
     @NonNull SingleThreadExecutor executorService,
+    Function<SingleThreadExecutor, ExecutorService> executorServiceTransformer,
     TraitDispatchDecorator traitDispatchDecorator,
     boolean debug) {
   private static final AtomicLong EXEC_COUNT = new AtomicLong();
@@ -85,6 +88,18 @@ public record KryonExecutorConfig(
     if (traitDispatchDecorator == null) {
       traitDispatchDecorator = DependencyDecorator.NO_OP::decorateDependency;
     }
+    if (executorServiceTransformer == null) {
+      executorServiceTransformer = singleThreadExecutor -> singleThreadExecutor;
+    }
+  }
+
+  @Override
+  public @NonNull SingleThreadExecutor executorService() {
+    return executorService;
+  }
+
+  public ExecutorService tranformedExecutorService() {
+    return executorServiceTransformer.apply(executorService);
   }
 
   public static class KryonExecutorConfigBuilder {

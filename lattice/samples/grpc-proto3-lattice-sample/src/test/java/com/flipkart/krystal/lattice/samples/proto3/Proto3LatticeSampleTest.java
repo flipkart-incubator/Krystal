@@ -25,7 +25,7 @@ import com.flipkart.krystal.vajram.exception.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajram.guice.injection.VajramGuiceInputInjector;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
@@ -44,7 +44,7 @@ class Proto3LatticeSampleTest {
   private static final String REQUEST_ID = "protoExhaustiveTest";
   private final TestRequestLevelCache requestLevelCache = new TestRequestLevelCache();
 
-  private VajramKryonGraph graph;
+  private VajramGraph graph;
   private Lease<SingleThreadExecutor> executorLease;
 
   @BeforeAll
@@ -60,7 +60,7 @@ class Proto3LatticeSampleTest {
   @BeforeEach
   void setUp() throws LeaseUnavailableException {
     this.executorLease = EXEC_POOL.lease();
-    this.graph = VajramKryonGraph.builder().loadClasses(Proto3LatticeSample.class).build();
+    this.graph = VajramGraph.builder().loadClasses(Proto3LatticeSample.class).build();
     this.graph.registerInputInjector(
         new VajramGuiceInputInjector(
             Guice.createInjector(

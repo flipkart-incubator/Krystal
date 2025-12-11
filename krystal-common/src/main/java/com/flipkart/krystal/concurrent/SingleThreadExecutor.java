@@ -8,7 +8,6 @@ import com.google.common.annotations.VisibleForTesting;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.ForkJoinWorkerThread;
-import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -34,7 +33,7 @@ public class SingleThreadExecutor extends ForkJoinPool {
 
         /* asyncMode= */ true, /* Same as default - used for async event processing.*/
 
-        /* corePoolSize= */ 1, /* Default is 0. Set to one because we know we will needexactly one thread.*/
+        /* corePoolSize= */ 1, /* Default is 0. Set to one because we know we will need exactly one thread.*/
 
         // Make sure not more than 1 thread is active, so that non-thread safe
         // code can execute safely.
@@ -82,7 +81,6 @@ public class SingleThreadExecutor extends ForkJoinPool {
     }
   }
 
-  @ToString
   private static final class SingleThreadFactory implements ForkJoinWorkerThreadFactory {
     private final String poolName;
     private @MonotonicNonNull ForkJoinWorkerThread singleThread;

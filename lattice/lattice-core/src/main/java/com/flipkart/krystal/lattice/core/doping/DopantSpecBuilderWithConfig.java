@@ -8,15 +8,12 @@ public abstract class DopantSpecBuilderWithConfig<
         DS extends DopantSpec<NoAnnotation, C, ? extends DopantWithConfig<C>>>
     implements DopantSpecBuilder<NoAnnotation, C, DS> {
 
-  public abstract DS _buildSpec(@Nullable C configuration);
+  public DS _buildSpec(@Nullable C configuration) {
+    return _buildSpec();
+  }
 
   @Override
   public Class<NoAnnotation> _annotationType() {
     return NoAnnotation.class;
-  }
-
-  @Override
-  public final DS _buildSpec(@Nullable NoAnnotation annotation, @Nullable C configuration) {
-    return _buildSpec(configuration);
   }
 }

@@ -14,13 +14,14 @@ import com.flipkart.krystal.krystex.kryon.DependentChainStart;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.OutputLogicDecoratorContext;
+import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.batching.InputBatcher;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -92,10 +93,10 @@ public record DepChainBatcherConfig(
                 instanceId, inputBatcherSupplier.get(), dependentChains::contains));
   }
 
-  private static void registerBatchers(
+  private static InputBatcherConfig registerBatchers(
       Map<VajramID, Map<Integer, Set<DependentChain>>> ioNodes,
       BatchSizeSupplier batchSizeSupplier,
-      VajramKryonGraph graph) {
+      VajramGraph graph) {
     Map<VajramID, ImmutableList<DepChainBatcherConfig>> depChainBatcherConfigs =
         new LinkedHashMap<>();
     ioNodes.forEach(
@@ -114,8 +115,7 @@ public record DepChainBatcherConfig(
             depChainBatcherConfigs.put(vajramId, ImmutableList.copyOf(inputModulatorConfigs));
           }
         });
-    graph.registerInputBatchers(
-        new InputBatcherConfig(ImmutableMap.copyOf(depChainBatcherConfigs)));
+    return new InputBatcherConfig(ImmutableMap.copyOf(depChainBatcherConfigs));
   }
 
   /**
@@ -141,7 +141,7 @@ public record DepChainBatcherConfig(
     throw new UnsupportedOperationException();
   }
 
-  private static boolean isBatchingNeededForIoVajram(VajramKryonGraph graph, VajramID ioNode) {
+  private static boolean isBatchingNeededForIoVajram(VajramGraph graph, VajramID ioNode) {
     VajramDefinition ioNodeVajram = graph.getVajramDefinition(ioNode);
     for (FacetSpec facetSpec : ioNodeVajram.facetSpecs()) {
       if (facetSpec.isBatched()) {
@@ -156,14 +156,18 @@ public record DepChainBatcherConfig(
     int getBatchSize(VajramID vajramId);
   }
 
-  public static void autoRegisterSharedBatchers(
-      VajramKryonGraph graph, BatchSizeSupplier batchSizeSupplier) {
-    autoRegisterSharedBatchers(graph, batchSizeSupplier, ImmutableSet.of());
+  public static InputBatcherConfig autoRegisterSharedBatchers(
+      VajramGraph graph,
+      BatchSizeSupplier batchSizeSupplier,
+      TraitDispatchPolicies traitDispatchPolicies) {
+    return autoRegisterSharedBatchers(
+        graph, batchSizeSupplier, traitDispatchPolicies, ImmutableSet.of());
   }
 
-  public static void autoRegisterSharedBatchers(
-      VajramKryonGraph graph,
+  public static InputBatcherConfig autoRegisterSharedBatchers(
+      VajramGraph graph,
       BatchSizeSupplier batchSizeSupplier,
+      TraitDispatchPolicies traitDispatchPolicies,
       ImmutableSet<DependentChain> disabledDependentChains) {
     List<VajramDefinition> externallyInvocableVajrams =
         graph.vajramDefinitions().values().stream()
@@ -180,19 +184,21 @@ public record DepChainBatcherConfig(
           vajramDefinition.vajramId(),
           graph.kryonDefinitionRegistry().getDependentChainsStart(),
           0,
-          disabledDependentChains);
+          disabledDependentChains,
+          traitDispatchPolicies);
     }
-    registerBatchers(ioVajramsToOrdinalChains, batchSizeSupplier, graph);
+    return registerBatchers(ioVajramsToOrdinalChains, batchSizeSupplier, graph);
   }
 
   private static void collateDepChainOrdinals(
       Map<VajramID, Map<Integer, Set<DependentChain>>> ioVajramsToOrdinalChains,
       Map<VajramID, Integer> vajramsToResponseOrdinals,
-      VajramKryonGraph graph,
+      VajramGraph graph,
       VajramID vajramIDBeingInvoked,
       DependentChain incomingDepChain,
       int incomingOrdinal,
-      ImmutableSet<DependentChain> disabledDependentChains) {
+      ImmutableSet<DependentChain> disabledDependentChains,
+      TraitDispatchPolicies traitDispatchPolicies) {
     if (disabledDependentChains.contains(incomingDepChain)) {
       return;
     }
@@ -202,10 +208,16 @@ public record DepChainBatcherConfig(
     for (Dependency dependency : dependencies) {
       DependentChain outgoingDepChain =
           incomingDepChain.extend(vajramBeingInvoked.vajramId(), dependency);
-      for (VajramID depVajramID : getDispatchTargets(dependency.onVajramID(), graph)) {
+      for (VajramID depVajramID :
+          getDispatchTargets(dependency.onVajramID(), graph, traitDispatchPolicies)) {
         int depSourceOrdinal =
             computeSourceOrdinal(
-                dependency, incomingOrdinal, dependencyOrdinals, vajramsToResponseOrdinals, graph);
+                dependency,
+                incomingOrdinal,
+                dependencyOrdinals,
+                vajramsToResponseOrdinals,
+                graph,
+                traitDispatchPolicies);
         collateDepChainOrdinals(
             ioVajramsToOrdinalChains,
             vajramsToResponseOrdinals,
@@ -213,14 +225,16 @@ public record DepChainBatcherConfig(
             depVajramID,
             outgoingDepChain,
             depSourceOrdinal,
-            disabledDependentChains);
+            disabledDependentChains,
+            traitDispatchPolicies);
       }
     }
 
     if (vajramBeingInvoked.def() instanceof IOVajramDef<?>) {
       final int depChainOrdinal =
           incomingOrdinal
-              + computeResponseOrdinal(vajramIDBeingInvoked, vajramsToResponseOrdinals, graph);
+              + computeResponseOrdinal(
+                  vajramIDBeingInvoked, vajramsToResponseOrdinals, graph, traitDispatchPolicies);
       ioVajramsToOrdinalChains
           .computeIfAbsent(vajramIDBeingInvoked, _vid -> new HashMap<>())
           .computeIfAbsent(depChainOrdinal, _depth -> new HashSet<>())
@@ -238,11 +252,11 @@ public record DepChainBatcherConfig(
   }
 
   private static Collection<VajramID> getDispatchTargets(
-      VajramID depVajramID, VajramKryonGraph graph) {
+      VajramID depVajramID, VajramGraph graph, TraitDispatchPolicies traitDispatchPolicies) {
     VajramDefinition depVajramDef = graph.getVajramDefinition(depVajramID);
     Collection<VajramID> depVajramIDs = new ArrayList<>();
     if (depVajramDef.isTrait()) {
-      TraitDispatchPolicy traitDispatchPolicy = graph.getTraitDispatchPolicy(depVajramID);
+      TraitDispatchPolicy traitDispatchPolicy = traitDispatchPolicies.get(depVajramID);
       if (traitDispatchPolicy == null) {
         throw new IllegalStateException(
             "Trait "
@@ -250,7 +264,7 @@ public record DepChainBatcherConfig(
                 + " does not have a trait dispatch policy defined. Cannot auto-compute batcher config.");
       }
       for (VajramID vajramID : traitDispatchPolicy.dispatchTargetIDs()) {
-        depVajramIDs.addAll(getDispatchTargets(vajramID, graph));
+        depVajramIDs.addAll(getDispatchTargets(vajramID, graph, traitDispatchPolicies));
       }
     } else {
       depVajramIDs = List.of(depVajramID);
@@ -263,7 +277,8 @@ public record DepChainBatcherConfig(
       int incomingOrdinal,
       Map<Dependency, Integer> dependencySourceOrdinals,
       Map<VajramID, Integer> vajramsToResponseOrdinals,
-      VajramKryonGraph graph) {
+      VajramGraph graph,
+      TraitDispatchPolicies traitDispatchPolicies) {
     if (dependencySourceOrdinals.containsKey(dependency)) {
       return dependencySourceOrdinals.get(dependency);
     }
@@ -277,7 +292,8 @@ public record DepChainBatcherConfig(
       ImmutableSet<? extends Facet> sources = resolver.sources();
       for (Facet source : sources) {
         if (source instanceof Dependency depSource) {
-          for (VajramID sourceDispatchTarget : getDispatchTargets(depSource.onVajramID(), graph)) {
+          for (VajramID sourceDispatchTarget :
+              getDispatchTargets(depSource.onVajramID(), graph, traitDispatchPolicies)) {
             sourceOrdinal =
                 max(
                     sourceOrdinal,
@@ -286,9 +302,13 @@ public record DepChainBatcherConfig(
                             incomingOrdinal,
                             dependencySourceOrdinals,
                             vajramsToResponseOrdinals,
-                            graph)
+                            graph,
+                            traitDispatchPolicies)
                         + computeResponseOrdinal(
-                            sourceDispatchTarget, vajramsToResponseOrdinals, graph));
+                            sourceDispatchTarget,
+                            vajramsToResponseOrdinals,
+                            graph,
+                            traitDispatchPolicies));
           }
         }
       }
@@ -300,7 +320,8 @@ public record DepChainBatcherConfig(
   private static int computeResponseOrdinal(
       VajramID vajramBeingInvokedID,
       Map<VajramID, Integer> vajramsToResponseOrdinals,
-      VajramKryonGraph graph) {
+      VajramGraph graph,
+      TraitDispatchPolicies traitDispatchPolicies) {
     if (!vajramsToResponseOrdinals.containsKey(vajramBeingInvokedID)) {
       VajramDefinition vajramBeingInvoked = graph.getVajramDefinition(vajramBeingInvokedID);
       List<Dependency> dependencies = getDependencies(vajramBeingInvoked);
@@ -316,12 +337,16 @@ public record DepChainBatcherConfig(
           for (Facet source : sources) {
             if (source instanceof Dependency depSource) {
               Collection<VajramID> dispatchTargets =
-                  getDispatchTargets(depSource.onVajramID(), graph);
+                  getDispatchTargets(depSource.onVajramID(), graph, traitDispatchPolicies);
               for (VajramID dispatchTarget : dispatchTargets) {
                 sourceOrdinal =
                     max(
                         sourceOrdinal,
-                        computeResponseOrdinal(dispatchTarget, vajramsToResponseOrdinals, graph));
+                        computeResponseOrdinal(
+                            dispatchTarget,
+                            vajramsToResponseOrdinals,
+                            graph,
+                            traitDispatchPolicies));
               }
             }
           }

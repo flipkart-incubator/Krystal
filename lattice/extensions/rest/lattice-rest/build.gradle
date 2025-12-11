@@ -1,12 +1,16 @@
+plugins {
+    id 'org.kordamp.gradle.jandex' version "${jandex_plugin_version}"
+}
+
 dependencies {
     implementation project(':lattice:extensions:rest:lattice-rest-api')
     implementation project(':lattice:lattice-core')
     implementation project(':vajram:vajram-java-sdk')
     implementation project(':krystal-visualization')
 
-
-    implementation 'org.jboss.resteasy:resteasy-core'
     api 'jakarta.ws.rs:jakarta.ws.rs-api'
+
+    implementation 'jakarta.enterprise:jakarta.enterprise.cdi-api'
 }
 
 extraJavaModuleInfo {

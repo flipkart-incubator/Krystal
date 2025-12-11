@@ -16,7 +16,7 @@ import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent.*;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.traits.ComputeDispatchPolicyImpl;
 import com.flipkart.krystal.vajramexecutor.krystex.traits.DispatchTargetComputing.DispatchTargetReqTypeComputer;
 import com.google.common.collect.ImmutableSet;
@@ -40,7 +40,7 @@ class CustomerServiceAgentComputeTest {
     EXEC_POOL = new SingleThreadExecutorsPool("Test", 4);
   }
 
-  private VajramKryonGraph graph;
+  private VajramGraph graph;
   private Lease<SingleThreadExecutor> executorLease;
 
   @BeforeEach
@@ -49,7 +49,7 @@ class CustomerServiceAgentComputeTest {
 
     // Build the graph with all the vajram implementations
     graph =
-        VajramKryonGraph.builder()
+        VajramGraph.builder()
             .loadFromPackage(CustomerServiceAgent.class.getPackageName())
             .build();
 

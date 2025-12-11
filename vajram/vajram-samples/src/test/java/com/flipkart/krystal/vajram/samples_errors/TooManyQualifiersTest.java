@@ -14,8 +14,8 @@ import com.flipkart.krystal.vajram.exception.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajram.guice.injection.VajramGuiceInputInjector;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramKryonGraphBuilder;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph.VajramKryonGraphBuilder;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -38,7 +38,7 @@ class TooManyQualifiersTest {
   @BeforeEach
   void setUp() throws LeaseUnavailableException {
     this.executorLease = EXEC_POOL.lease();
-    graph = VajramKryonGraph.builder().loadFromPackage(TooManyQualifiers.class.getPackageName());
+    graph = VajramGraph.builder().loadFromPackage(TooManyQualifiers.class.getPackageName());
   }
 
   @AfterEach
@@ -49,8 +49,8 @@ class TooManyQualifiersTest {
   @Test
   void tooManyQualifiersInjectionFacet_throws() {
     CompletableFuture<@Nullable String> result;
-    try (VajramKryonGraph vajramKryonGraph = graph.build();
-        KrystexVajramExecutor executor = createExecutor(vajramKryonGraph)) {
+    try (VajramGraph vajramGraph = graph.build();
+        KrystexVajramExecutor executor = createExecutor(vajramGraph)) {
       result = executor.execute(TooManyQualifiers_ReqImmutPojo._builder().input("i1")._build());
     }
     assertThat(result)
@@ -63,8 +63,8 @@ class TooManyQualifiersTest {
                 + " does not have a value) ]");
   }
 
-  private KrystexVajramExecutor createExecutor(VajramKryonGraph vajramKryonGraph) {
-    vajramKryonGraph.registerInputInjector(
+  private KrystexVajramExecutor createExecutor(VajramGraph vajramGraph) {
+    vajramGraph.registerInputInjector(
         new VajramGuiceInputInjector(
             createInjector(
                 binder -> {
@@ -74,7 +74,7 @@ class TooManyQualifiersTest {
                       .annotatedWith(TooManyQualifiers.InjectionQualifier.class)
                       .toInstance("i2b");
                 })));
-    return vajramKryonGraph.createExecutor(
+    return vajramGraph.createExecutor(
         KrystexVajramExecutorConfig.builder()
             .kryonExecutorConfigBuilder(
                 KryonExecutorConfig.builder().executorService(executorLease.get()))

@@ -12,7 +12,7 @@ import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.samples.user.response_pojos.UserWithProfile;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -31,14 +31,14 @@ class GetUserProfilesFromUserIdsTest {
     EXEC_POOL = new SingleThreadExecutorsPool("GetUserProfilesFromUserIds", 4);
   }
 
-  private VajramKryonGraph graph;
+  private VajramGraph graph;
   private Lease<SingleThreadExecutor> executorLease;
 
   @BeforeEach
   void setUp() throws LeaseUnavailableException {
     this.executorLease = EXEC_POOL.lease();
     this.graph =
-        VajramKryonGraph.builder()
+        VajramGraph.builder()
             .loadClasses(
                 GetUserProfilesFromUserIds.class,
                 GetUserWithProfile.class,

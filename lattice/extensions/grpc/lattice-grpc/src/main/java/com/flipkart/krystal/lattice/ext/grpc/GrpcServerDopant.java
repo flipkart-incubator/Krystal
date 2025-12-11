@@ -12,7 +12,7 @@ import com.flipkart.krystal.lattice.core.doping.Dopant;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
 import com.flipkart.krystal.lattice.core.headers.Header;
 import com.flipkart.krystal.lattice.core.headers.SingleValueHeader;
-import com.flipkart.krystal.lattice.vajram.VajramDopant;
+import com.flipkart.krystal.lattice.krystex.KrystexDopant;
 import com.flipkart.krystal.lattice.vajram.VajramRequestExecutionContext;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.tags.Names;
@@ -50,7 +50,7 @@ public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerC
 
   private final GrpcServerConfig config;
   private final GrpcServer annotation;
-  private final VajramDopant vajramDopant;
+  private final KrystexDopant krystexDopant;
   private final StandardHeadersInterceptor headerInterceptor;
 
   private @MonotonicNonNull Server server;
@@ -60,7 +60,7 @@ public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerC
     this.grpcServerSpec = initData.spec();
     this.annotation = initData.annotation();
     this.config = initData.config();
-    this.vajramDopant = initData.vajramDopant();
+    this.krystexDopant = initData.krystexDopant();
     this.headerInterceptor = initData.headerInterceptor();
   }
 
@@ -113,7 +113,7 @@ public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerC
       configBuilder.executorId(requestId);
     }
     try {
-      vajramDopant
+      krystexDopant
           .executeRequest(
               VajramRequestExecutionContext.<RespT>builder()
                   .vajramRequest(request)
@@ -178,7 +178,7 @@ public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerC
       GrpcServerConfig config,
       GrpcServerSpec spec,
       StandardHeadersInterceptor headerInterceptor,
-      VajramDopant vajramDopant) {
+      KrystexDopant krystexDopant) {
     @Inject
     public GrpcInitData {}
   }

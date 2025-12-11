@@ -1,0 +1,6 @@
+dependencies {
+    implementation project(':lattice:lattice-codegen')
+    implementation project(':lattice:extensions:cdi:lattice-cdi')
+
+    implementation 'jakarta.enterprise:jakarta.enterprise.cdi-api'
+}

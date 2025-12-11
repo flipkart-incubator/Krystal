@@ -11,6 +11,8 @@ import com.squareup.javapoet.TypeName;
 import jakarta.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -72,7 +74,8 @@ public class LatticeCodegenUtils {
     ExecutableElement parentCtor;
     if (injectionCtors.size() > 1 || (injectionCtors.isEmpty() && noArgCtor == null)) {
       throw util.errorAndThrow(
-          "A dopant must have exactly one public/protected constructor with the @Inject annotation OR a public/protected no arg constructor",
+          "A dopant must have exactly one public/protected constructor with the @Inject annotation OR a public/protected no arg constructor. Please fix :"
+              + dopantClass,
           dopantElement);
     }
     if (!injectionCtors.isEmpty()) {
@@ -90,6 +93,15 @@ public class LatticeCodegenUtils {
     }
     return constructorBuilder.addStatement(
         "super($L)", params.stream().collect(CodeBlock.joining(",")));
+  }
+
+  public static ClassName getDiBindingContainerName(
+      LatticeCodegenContext context, String identifier) {
+    return ClassName.get(
+        context.codeGenUtility().codegenUtil().getPackageName(context.latticeAppTypeElement()),
+        Stream.of(context.latticeAppTypeElement().getSimpleName().toString(), identifier, "Module")
+            .filter(s -> !s.isBlank())
+            .collect(Collectors.joining("_")));
   }
 
   private static boolean isVisible(Element element) {

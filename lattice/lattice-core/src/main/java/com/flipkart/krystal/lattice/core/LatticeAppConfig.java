@@ -1,5 +1,7 @@
 package com.flipkart.krystal.lattice.core;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -29,8 +31,7 @@ public final class LatticeAppConfig {
   public Map<String, DopantConfig> configsByDopantType() {
     if (dopantConfigsAsMap == null) {
       dopantConfigsAsMap =
-          dopants.stream()
-              .collect(ImmutableMap.toImmutableMap(DopantConfig::_dopantType, Function.identity()));
+          dopants.stream().collect(toImmutableMap(DopantConfig::_dopantType, Function.identity()));
     }
     return dopantConfigsAsMap;
   }

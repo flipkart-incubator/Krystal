@@ -32,8 +32,8 @@ import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.samples.calculator.Formula;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramKryonGraphBuilder;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph.VajramKryonGraphBuilder;
 import com.google.common.collect.ImmutableSet;
 import java.time.Clock;
 import java.util.ArrayList;
@@ -57,7 +57,7 @@ class SplitAddTest {
     EXEC_POOL = new SingleThreadExecutorsPool("Test", 4);
   }
 
-  private VajramKryonGraph graph;
+  private VajramGraph graph;
   private ObjectMapper objectMapper;
   private Lease<SingleThreadExecutor> executorLease;
 
@@ -324,12 +324,12 @@ class SplitAddTest {
   }
 
   private static VajramKryonGraphBuilder loadFromClasspath(String... packagePrefixes) {
-    VajramKryonGraphBuilder builder = VajramKryonGraph.builder();
+    VajramKryonGraphBuilder builder = VajramGraph.builder();
     Arrays.stream(packagePrefixes).forEach(builder::loadFromPackage);
     return builder;
   }
 
-  private static ImmutableSet<DependentChain> disabledDepChains(VajramKryonGraph graph) {
+  private static ImmutableSet<DependentChain> disabledDepChains(VajramGraph graph) {
     String splitAdderId = graph.getVajramIdByVajramDefType(SplitAdd.class).id();
     return ImmutableSet.of(
         graph.computeDependentChain(

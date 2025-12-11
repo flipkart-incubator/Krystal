@@ -30,6 +30,10 @@ public final class GraphQlCodeGenUtil {
 
   @Getter private final SchemaReaderUtil schemaReaderUtil;
 
+  public GraphQlCodeGenUtil(CodeGenUtility util) {
+    this(getSchemaFilePath(util).toFile());
+  }
+
   public GraphQlCodeGenUtil(File schemaFile) {
     this.schemaReaderUtil = new SchemaReaderUtil(schemaFile);
   }
@@ -65,6 +69,9 @@ public final class GraphQlCodeGenUtil {
         util.note(
             "Schema.graphqls was not present in SOURCE_PATH, nor was it found in the module path: "
                 + schemaFile.getAbsolutePath());
+      }
+      if (!schemaFile.exists()) {
+        util.note("Schema.graphqls not found. GraphQl Code Generation May be skipped");
       }
       return schemaFile.toPath();
     }

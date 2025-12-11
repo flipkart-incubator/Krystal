@@ -14,29 +14,31 @@ import com.flipkart.krystal.lattice.core.doping.Dopant;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
 import com.flipkart.krystal.lattice.core.headers.Header;
 import com.flipkart.krystal.lattice.core.headers.SingleValueHeader;
-import com.flipkart.krystal.lattice.ext.rest.RestServiceDopantSpec.RestServiceDopantSpecBuilder;
+import com.flipkart.krystal.lattice.core.headers.StandardHeaderNames;
 import com.flipkart.krystal.lattice.ext.rest.api.status.HttpResponseStatusException;
 import com.flipkart.krystal.lattice.ext.rest.config.RestServiceDopantConfig;
 import com.flipkart.krystal.lattice.ext.rest.visualization.StaticKrystalGraphResource;
-import com.flipkart.krystal.lattice.vajram.VajramDopant;
+import com.flipkart.krystal.lattice.krystex.KrystexDopant;
 import com.flipkart.krystal.lattice.vajram.VajramRequestExecutionContext;
 import com.flipkart.krystal.lattice.vajram.VajramRequestExecutionContext.VajramRequestExecutionContextBuilder;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.tags.Names;
+import jakarta.enterprise.context.RequestScoped;
+import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.Response.ResponseBuilder;
 import jakarta.ws.rs.core.UriInfo;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletionStage;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.NonNull;
-import org.jboss.resteasy.core.ResteasyContext;
 
 @Slf4j
 @DopantType(RestServiceDopant.REST_SERVICE_DOPANT_TYPE)
@@ -45,12 +47,17 @@ public abstract class RestServiceDopant implements Dopant<RestService, RestServi
   public static final String REST_SERVICE_DOPANT_TYPE = "krystal.lattice.restService";
 
   @Getter private final RestServiceDopantConfig config;
-  private final VajramDopant vajramDopant;
+  private final KrystexDopant krystexDopant;
+  private final RestServiceDopantSpec spec;
 
   @Inject
-  protected RestServiceDopant(RestServiceDopantInitData initData) {
-    this.config = initData.restServiceDopantSpec().config();
-    this.vajramDopant = initData.vajramDopant();
+  protected RestServiceDopant(
+      RestServiceDopantSpec restServiceDopantSpec,
+      RestServiceDopantConfig config,
+      KrystexDopant krystexDopant) {
+    this.spec = restServiceDopantSpec;
+    this.config = config;
+    this.krystexDopant = krystexDopant;
   }
 
   public <RespT> CompletionStage<Response> executeHttpRequest(
@@ -61,8 +68,12 @@ public abstract class RestServiceDopant implements Dopant<RestService, RestServi
     if (requestIds != null && !requestIds.isEmpty()) {
       executorConfigBuilder.executorId(requestIds.get(0));
     }
+
     return executeHttpRequest(
-            vajramRequest, getRequestScopeSeeds(headers, uriInfo), executorConfigBuilder)
+            VajramRequestExecutionContext.<RespT>builder()
+                .vajramRequest(vajramRequest)
+                .requestScopeSeeds(getRequestScopeSeeds(headers, uriInfo))
+                .executorConfigBuilder(executorConfigBuilder))
         .thenApply(
             response -> {
               ResponseBuilder responseBuilder;
@@ -109,32 +120,31 @@ public abstract class RestServiceDopant implements Dopant<RestService, RestServi
       Bindings requestScopeSeeds,
       KryonExecutorConfigBuilder kryonExecutorConfigBuilder)
       throws HttpResponseStatusException {
+    VajramRequestExecutionContextBuilder<RespT> contextBuilder =
+        VajramRequestExecutionContext.<RespT>builder()
+            .vajramRequest(vajramRequest)
+            .requestScopeSeeds(requestScopeSeeds)
+            .executorConfigBuilder(kryonExecutorConfigBuilder);
+    //    transferResteasyContext(contextBuilder);
+    return executeHttpRequest(contextBuilder);
+  }
+
+  public <RespT> @NonNull CompletionStage<RespT> executeHttpRequest(
+      VajramRequestExecutionContextBuilder<RespT> contextBuilder) {
     try {
-      VajramRequestExecutionContextBuilder<RespT> contextBuilder =
-          VajramRequestExecutionContext.<RespT>builder()
-              .vajramRequest(vajramRequest)
-              .requestScopeSeeds(requestScopeSeeds)
-              .executorConfigBuilder(kryonExecutorConfigBuilder);
-      transferResteasyContext(contextBuilder);
-      return vajramDopant.executeRequest(contextBuilder.build());
+      return krystexDopant.executeRequest(contextBuilder.build());
     } catch (LeaseUnavailableException e) {
       log.error("Could not lease out single thread executor. Aborting request", e);
       throw new HttpResponseStatusException(StatusCodes.LEASE_UNAVAILABLE);
     }
   }
 
-  /**
-   * Transfer the RESTEasy context to Krystal thread so that request scope data accesses work as
-   * expected.
-   */
-  private static <RespT> void transferResteasyContext(
-      VajramRequestExecutionContextBuilder<RespT> contextBuilder) {
-
-    Map<Class<?>, Object> contextDataMap = ResteasyContext.getContextDataMap(false);
-    if (contextDataMap != null) {
-      contextBuilder.requestScopeInitializer(
-          () -> ResteasyContext.addCloseableContextDataLevel(contextDataMap));
-    }
+  @Produces
+  @RequestScoped
+  @Named(StandardHeaderNames.ACCEPT)
+  public Header getAcceptHeader(HttpHeaders httpHeaders) {
+    return Header.of(
+        StandardHeaderNames.ACCEPT, httpHeaders.getRequestHeader(StandardHeaderNames.ACCEPT));
   }
 
   private static Bindings getRequestScopeSeeds(HttpHeaders headers, UriInfo uriInfo) {
@@ -156,25 +166,19 @@ public abstract class RestServiceDopant implements Dopant<RestService, RestServi
   }
 
   public final List<? extends @NonNull Object> allApplicationRestResources() {
-    return customApplicationResources();
+    ArrayList<Object> objects = new ArrayList<>(customApplicationResources());
+    objects.addAll(spec.customJakartaResources());
+    return objects;
   }
 
   public final List<? extends @NonNull Object> allAdminRestResources() {
-    return List.of(new StaticKrystalGraphResource(vajramDopant));
+    if (spec.serveStaticKrystalCallGraph()) {
+      return List.of(new StaticKrystalGraphResource(krystexDopant));
+    }
+    return List.of();
   }
 
   protected List<? extends @NonNull Object> customApplicationResources() {
     return List.of();
-  }
-
-  public static RestServiceDopantSpecBuilder restService() {
-    return RestServiceDopantSpec.builder();
-  }
-
-  protected record RestServiceDopantInitData(
-      RestServiceDopantSpec restServiceDopantSpec, VajramDopant vajramDopant) {
-
-    @Inject
-    protected RestServiceDopantInitData {}
   }
 }

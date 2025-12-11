@@ -9,10 +9,10 @@ import graphql.execution.preparsed.PreparsedDocumentProvider;
 import graphql.scalars.ExtendedScalars;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.idl.RuntimeWiring;
+import graphql.schema.idl.RuntimeWiring.Builder;
 import graphql.schema.idl.SchemaGenerator;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
-import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.InputStream;
 import java.net.URL;
@@ -36,36 +36,26 @@ public final class GraphQlLoader {
 
   private final ConcurrentHashMap<String, PreparsedDocumentEntry> documentCache =
       new ConcurrentHashMap<>();
+  private final TypeDefinitionRegistry typeDefinitionRegistry;
+  private final GraphQL graphQL;
 
-  @Inject
-  public GraphQlLoader() {}
-
-  public GraphQL loadGraphQl(TypeDefinitionRegistry typeDefinitionRegistry) {
-
-    RuntimeWiring.Builder runtimeWiring = RuntimeWiring.newRuntimeWiring();
-    runtimeWiring.scalar(ExtendedScalars.Object);
-    runtimeWiring.scalar(ExtendedScalars.DateTime);
-    runtimeWiring.scalar(ExtendedScalars.Date);
-    runtimeWiring.scalar(ExtendedScalars.GraphQLLong);
-
-    GraphQLSchema graphQLSchema =
-        new SchemaGenerator().makeExecutableSchema(typeDefinitionRegistry, runtimeWiring.build());
-
-    PreparsedDocumentProvider preParsedCache =
-        (executionInput, computeFunction) -> {
-          Function<String, PreparsedDocumentEntry> mapCompute =
-              key -> computeFunction.apply(executionInput);
-          return completedFuture(
-              documentCache.computeIfAbsent(executionInput.getQuery(), mapCompute));
-        };
-
-    return GraphQL.newGraphQL(graphQLSchema)
-        .queryExecutionStrategy(new VajramExecutionStrategy())
-        .preparsedDocumentProvider(preParsedCache)
-        .build();
+  public GraphQlLoader() {
+    this.typeDefinitionRegistry = computeTypeDefinitionRegistry();
+    this.graphQL = getGraphQl(typeDefinitionRegistry);
   }
 
   public TypeDefinitionRegistry getTypeDefinitionRegistry() {
+    return typeDefinitionRegistry;
+  }
+
+  public GraphQL getGraphQl() {
+    return graphQL;
+  }
+
+  private TypeDefinitionRegistry computeTypeDefinitionRegistry() {
+    if (typeDefinitionRegistry != null) {
+      return typeDefinitionRegistry;
+    }
     SchemaParser schemaParser = new SchemaParser();
     TypeDefinitionRegistry typeDefinitionRegistryComplete = new TypeDefinitionRegistry();
     for (Entry<String, InputStream> entry : getResourceFileContents().entrySet()) {
@@ -74,7 +64,7 @@ public final class GraphQlLoader {
     return typeDefinitionRegistryComplete;
   }
 
-  public Map<String, InputStream> getResourceFileContents() {
+  private Map<String, InputStream> getResourceFileContents() {
     Map<String, InputStream> fileToContentMap = new HashMap<>();
     ConfigurationBuilder builder = new ConfigurationBuilder();
     Collection<URL> resource = ClasspathHelper.forResource("Schema.graphqls");
@@ -99,5 +89,29 @@ public final class GraphQlLoader {
     }
     log.info("GraphQl Files loaded: {}", fileToContentMap.keySet());
     return fileToContentMap;
+  }
+
+  public GraphQL getGraphQl(TypeDefinitionRegistry typeDefinitionRegistry) {
+    Builder runtimeWiring = RuntimeWiring.newRuntimeWiring();
+    runtimeWiring.scalar(ExtendedScalars.Object);
+    runtimeWiring.scalar(ExtendedScalars.DateTime);
+    runtimeWiring.scalar(ExtendedScalars.Date);
+    runtimeWiring.scalar(ExtendedScalars.GraphQLLong);
+
+    GraphQLSchema graphQLSchema =
+        new SchemaGenerator().makeExecutableSchema(typeDefinitionRegistry, runtimeWiring.build());
+
+    PreparsedDocumentProvider preParsedCache =
+        (executionInput, computeFunction) -> {
+          Function<String, PreparsedDocumentEntry> mapCompute =
+              key -> computeFunction.apply(executionInput);
+          return completedFuture(
+              documentCache.computeIfAbsent(executionInput.getQuery(), mapCompute));
+        };
+
+    return GraphQL.newGraphQL(graphQLSchema)
+        .queryExecutionStrategy(new VajramExecutionStrategy())
+        .preparsedDocumentProvider(preParsedCache)
+        .build();
   }
 }

@@ -2,7 +2,7 @@ package com.flipkart.krystal.lattice.core.headers;
 
 import java.util.List;
 
-public sealed interface Header permits HeaderImpl {
+public interface Header {
   String name();
 
   List<String> values();

@@ -14,21 +14,18 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class KrystexVajramExecutor implements VajramExecutor {
 
-  private final VajramKryonGraph vajramKryonGraph;
   private final KrystalExecutor krystalExecutor;
 
   @Builder
   public KrystexVajramExecutor(
-      @NonNull VajramKryonGraph vajramKryonGraph,
-      @NonNull KrystexVajramExecutorConfig executorConfig) {
-    this.vajramKryonGraph = vajramKryonGraph;
+      @NonNull KrystexGraph executableGraph, @NonNull KrystexVajramExecutorConfig executorConfig) {
     this.krystalExecutor =
         new KryonExecutor(
-            vajramKryonGraph.kryonDefinitionRegistry(),
+            executableGraph.vajramGraph().kryonDefinitionRegistry(),
             executorConfig
                 .kryonExecutorConfigBuilder()
-                .configureWith(vajramKryonGraph.inputInjectionConfig())
-                .configureWith(vajramKryonGraph.inputBatchingConfig())
+                .configureWith(executableGraph.inputInjectionConfig())
+                .configureWith(executableGraph.inputBatchingConfig())
                 .build());
   }
 
@@ -44,7 +41,6 @@ public class KrystexVajramExecutor implements VajramExecutor {
 
   public <T> CompletableFuture<@Nullable T> execute(
       ImmutableRequest<T> vajramRequest, KryonExecutionConfig executionConfig) {
-    vajramKryonGraph.loadKryonSubGraphIfNeeded(vajramRequest._vajramID());
     RequestResponseFuture<ImmutableRequest<T>, T> requestResponseFuture =
         new RequestResponseFuture<>(vajramRequest, new CompletableFuture<>());
     execute(requestResponseFuture, executionConfig);
@@ -54,7 +50,6 @@ public class KrystexVajramExecutor implements VajramExecutor {
   public <T> void execute(
       RequestResponseFuture<? extends Request<T>, T> requestResponseFuture,
       KryonExecutionConfig executionConfig) {
-    vajramKryonGraph.loadKryonSubGraphIfNeeded(requestResponseFuture.request()._vajramID());
     krystalExecutor.executeKryon(requestResponseFuture, executionConfig);
   }
 

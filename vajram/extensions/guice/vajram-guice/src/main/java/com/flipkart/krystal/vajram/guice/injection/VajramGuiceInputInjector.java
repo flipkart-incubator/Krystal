@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajram.guice.injection;
 import static com.flipkart.krystal.data.Errable.errableFrom;
 import static com.flipkart.krystal.data.Errable.nil;
 import static com.flipkart.krystal.facets.FacetType.INJECTION;
+import static com.flipkart.krystal.vajram.inputinjection.InputInjectionUtils.getQualifiers;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
@@ -13,11 +14,9 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import jakarta.inject.Inject;
 import jakarta.inject.Provider;
-import jakarta.inject.Qualifier;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.NonNull;
@@ -67,26 +66,16 @@ public class VajramGuiceInputInjector implements VajramInjectionProvider {
   }
 
   private <T> Optional<Annotation> getQualifier(VajramID vajramID, FacetSpec<T, ?> facetDef) {
-    List<Annotation> qualifierAnnotations =
-        facetDef.tags().annotations().stream()
-            .<Annotation>mapMulti(
-                (tag, consumer) -> {
-                  boolean isQualifierAnno =
-                      tag.annotationType().getAnnotation(Qualifier.class) != null;
-                  if (isQualifierAnno) {
-                    consumer.accept(tag);
-                  }
-                })
-            .toList();
-    if (qualifierAnnotations.isEmpty()) {
+    Annotation[] qualifierAnnotations = getQualifiers(facetDef);
+    if (qualifierAnnotations.length == 0) {
       return Optional.empty();
-    } else if (qualifierAnnotations.size() == 1) {
-      return Optional.ofNullable(qualifierAnnotations.get(0));
+    } else if (qualifierAnnotations.length == 1) {
+      return Optional.ofNullable(qualifierAnnotations[0]);
     } else {
       throw new IllegalStateException(
           ("More than one @jakarta.inject.Qualifier annotations (%s) found on input '%s' of vajram '%s'."
                   + " This is not allowed")
-              .formatted(qualifierAnnotations, facetDef.name(), vajramID.id()));
+              .formatted(qualifierAnnotations, facetDef.name(), vajramID));
     }
   }
 }

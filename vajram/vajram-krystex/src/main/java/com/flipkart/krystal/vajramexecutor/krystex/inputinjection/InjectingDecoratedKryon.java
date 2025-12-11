@@ -23,7 +23,7 @@ import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.facets.specs.DefaultFacetSpec;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -37,15 +37,15 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 class InjectingDecoratedKryon implements Kryon<KryonCommand<?>, KryonCommandResponse> {
 
   private final Kryon<KryonCommand<?>, KryonCommandResponse> kryon;
-  private final VajramKryonGraph vajramKryonGraph;
+  private final VajramGraph vajramGraph;
   private final @Nullable VajramInjectionProvider injectionProvider;
 
   InjectingDecoratedKryon(
       Kryon<KryonCommand<?>, KryonCommandResponse> kryon,
-      VajramKryonGraph vajramKryonGraph,
+      VajramGraph vajramGraph,
       @Nullable VajramInjectionProvider injectionProvider) {
     this.kryon = kryon;
-    this.vajramKryonGraph = vajramKryonGraph;
+    this.vajramGraph = vajramGraph;
     this.injectionProvider = injectionProvider;
   }
 
@@ -57,7 +57,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand<?>, KryonCommandResp
   @Override
   public CompletableFuture<KryonCommandResponse> executeCommand(KryonCommand<?> kryonCommand) {
     VajramDefinition vajramDefinition =
-        vajramKryonGraph.getVajramDefinition(vajramID(kryonCommand.vajramID().id()));
+        vajramGraph.getVajramDefinition(vajramID(kryonCommand.vajramID().id()));
     if (vajramDefinition.metadata().isInputInjectionNeeded()
         && vajramDefinition.def() instanceof VajramDef<?>) {
       if (kryonCommand instanceof ForwardReceiveBatch forwardBatch) {
