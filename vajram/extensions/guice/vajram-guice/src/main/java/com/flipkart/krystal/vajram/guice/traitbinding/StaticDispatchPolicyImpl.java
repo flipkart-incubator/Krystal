@@ -10,7 +10,7 @@ import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.tags.ElementTags;
 import com.flipkart.krystal.traits.StaticDispatchPolicy;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Key;
@@ -33,15 +33,15 @@ public class StaticDispatchPolicyImpl extends StaticDispatchPolicy {
   @Getter private final ImmutableSet<Class<? extends Request<?>>> dispatchTargetReqs;
   @Getter private final ImmutableSet<VajramID> dispatchTargetIDs;
 
-  private final VajramKryonGraph vajramKryonGraph;
+  private final VajramGraph vajramGraph;
   private final ImmutableMap<Key<? extends Request<?>>, Class<? extends Request<?>>> bindingsByKey;
 
   private final Map<VajramID, Map<QualWrapper, Class<? extends Request<?>>>> bindingsByQualifier =
       new LinkedHashMap<>();
 
   public StaticDispatchPolicyImpl(
-      VajramKryonGraph vajramKryonGraph, VajramID traitID, TraitBinder traitBinder) {
-    this.vajramKryonGraph = vajramKryonGraph;
+      VajramGraph vajramGraph, VajramID traitID, TraitBinder traitBinder) {
+    this.vajramGraph = vajramGraph;
     this.traitID = traitID;
     this.bindingsByKey =
         traitBinder.traitBindings().stream()
@@ -52,7 +52,7 @@ public class StaticDispatchPolicyImpl extends StaticDispatchPolicy {
             .collect(toImmutableSet());
     this.dispatchTargetIDs =
         dispatchTargetReqs.stream()
-            .map(vajramKryonGraph::getVajramIdByVajramReqType)
+            .map(vajramGraph::getVajramIdByVajramReqType)
             .collect(toImmutableSet());
   }
 
@@ -78,7 +78,7 @@ public class StaticDispatchPolicyImpl extends StaticDispatchPolicy {
 
   @Override
   public VajramID getDispatchTargetID(Dependency dependency) {
-    return vajramKryonGraph.getVajramIdByVajramReqType(getDispatchTarget(dependency));
+    return vajramGraph.getVajramIdByVajramReqType(getDispatchTarget(dependency));
   }
 
   @Override
@@ -88,7 +88,7 @@ public class StaticDispatchPolicyImpl extends StaticDispatchPolicy {
 
   @Override
   public VajramID getDispatchTargetID(@Nullable Annotation qualifier) {
-    return vajramKryonGraph.getVajramIdByVajramReqType(getDispatchTarget(qualifier));
+    return vajramGraph.getVajramIdByVajramReqType(getDispatchTarget(qualifier));
   }
 
   private Class<? extends Request<?>> getDispatchTarget(QualWrapper qualWrapper) {
@@ -98,7 +98,7 @@ public class StaticDispatchPolicyImpl extends StaticDispatchPolicy {
             qualWrapper,
             qualifierWrapper -> {
               Key<? extends Request<?>> key;
-              VajramDefinition vajramDefinition = vajramKryonGraph.getVajramDefinition(traitID);
+              VajramDefinition vajramDefinition = vajramGraph.getVajramDefinition(traitID);
               Class<? extends Request<?>> traitReq = vajramDefinition.reqRootType();
               Annotation qualifier = qualifierWrapper.qualifier();
               if (qualifier == null) {

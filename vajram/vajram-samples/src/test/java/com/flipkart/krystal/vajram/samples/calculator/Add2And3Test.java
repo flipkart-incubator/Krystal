@@ -9,7 +9,7 @@ import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import java.util.concurrent.CompletableFuture;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
@@ -25,8 +25,8 @@ class Add2And3Test {
     EXEC_POOL = new SingleThreadExecutorsPool("Test", 4);
   }
 
-  private final VajramKryonGraph graph =
-      VajramKryonGraph.builder().loadFromPackage(Add2And3.class.getPackageName()).build();
+  private final VajramGraph graph =
+      VajramGraph.builder().loadFromPackage(Add2And3.class.getPackageName()).build();
 
   private Lease<SingleThreadExecutor> executorLease;
 

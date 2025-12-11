@@ -9,15 +9,17 @@ import static javax.lang.model.element.Modifier.STATIC;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
-import com.flipkart.krystal.lattice.codegen.spi.DepInjectBinderGen;
 import com.flipkart.krystal.lattice.codegen.spi.LatticeAppImplContributor;
 import com.flipkart.krystal.lattice.codegen.spi.LatticeCodeGeneratorProvider;
+import com.flipkart.krystal.lattice.codegen.spi.di.DepInjectBinderGen;
+import com.flipkart.krystal.lattice.core.LatticeApplication;
 import com.google.auto.service.AutoService;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
+import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import java.io.IOException;
 import java.io.StringWriter;
@@ -53,10 +55,9 @@ public final class LatticeAppImplGenProvider implements LatticeCodeGeneratorProv
               .toList();
       if (services.size() > 1) {
         throw util.errorAndThrow(
-            "Found more than one Service Providers for 'DepInjectBinderGenProvider'. This is not allowed");
+            "Found more than one Service Providers for 'DepInjectBinderGen'. This is not allowed");
       } else if (services.isEmpty()) {
-        throw util.errorAndThrow(
-            "Could not find any Service Providers for 'DepInjectBinderGenProvider'");
+        throw util.errorAndThrow("Could not find any Service Providers for 'DepInjectBinderGen'");
       }
       this.depInjectBinderGen = services.get(0);
     }
@@ -83,12 +84,33 @@ public final class LatticeAppImplGenProvider implements LatticeCodeGeneratorProv
               .addModifiers(PUBLIC)
               .superclass(latticeApp.asType())
               .addMethod(getMainMethod(latticeAppImplClassName, latticeApp, context))
+              .addMethods(
+                  ServiceLoader.load(
+                          LatticeAppImplContributor.class, this.getClass().getClassLoader())
+                      .stream()
+                      .map(ServiceLoader.Provider::get)
+                      .map(contrib -> contrib.methods(context))
+                      .flatMap(List::stream)
+                      .toList())
+              .addFields(
+                  ServiceLoader.load(
+                          LatticeAppImplContributor.class, this.getClass().getClassLoader())
+                      .stream()
+                      .map(ServiceLoader.Provider::get)
+                      .map(contrib -> contrib.fields(context))
+                      .flatMap(List::stream)
+                      .toList())
               .addAnnotations(getTypeAnnotations())
               .addMethod(
                   MethodSpec.overriding(
                           requireNonNull(
-                              util.getMethod(latticeApp, "getDependencyInjectionBinder", 0)
-                                  .orElse(null)))
+                              util.getMethod(
+                                  LatticeApplication.class, "getDependencyInjectionBinder", 0)))
+                      .returns(
+                          TypeName.get(
+                              util.getTypeFromAnnotationMember(
+                                      context.latticeApp()::dependencyInjectionBinder)
+                                  .orElseThrow(() -> new AssertionError("Not possible"))))
                       .addCode("$L", depInjectBinderGen.getBinderCreationCode(context))
                       .build());
 

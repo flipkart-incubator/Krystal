@@ -579,6 +579,7 @@ public class CodeGenUtility {
     }
     classBuilder.addTypeVariables(typeVariableNames);
     addDefaultAnnotations(classBuilder);
+    classBuilder.addAnnotation(Slf4j.class);
     return classBuilder;
   }
 

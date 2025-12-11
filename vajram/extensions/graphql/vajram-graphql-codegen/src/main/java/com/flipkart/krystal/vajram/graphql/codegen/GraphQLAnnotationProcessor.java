@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajram.graphql.codegen;
 import static com.flipkart.krystal.codegen.common.models.CodegenPhase.MODELS;
 import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
 import static com.flipkart.krystal.codegen.common.models.Constants.MODULE_ROOT_PATH_KEY;
+import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlCodeGenUtil.getSchemaFilePath;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 
 import com.flipkart.krystal.codegen.common.models.AbstractKrystalAnnoProcessor;
@@ -34,7 +35,7 @@ public class GraphQLAnnotationProcessor extends AbstractKrystalAnnoProcessor {
       return false;
     }
     CodeGenUtility util = codeGenUtil();
-    File schemaFile = GraphQlCodeGenUtil.getSchemaFilePath(util).toFile();
+    File schemaFile = getSchemaFilePath(util).toFile();
     if (!schemaFile.exists()) {
       util.note("Schema.graphqls not found. Skipping GraphQl Code Generation");
       return false;

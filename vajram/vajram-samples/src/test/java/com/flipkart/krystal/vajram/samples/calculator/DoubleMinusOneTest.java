@@ -7,7 +7,7 @@ import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -25,8 +25,8 @@ class DoubleMinusOneTest {
     EXEC_POOL = new SingleThreadExecutorsPool("Test", Runtime.getRuntime().availableProcessors());
   }
 
-  private final VajramKryonGraph graph =
-      VajramKryonGraph.builder().loadFromPackage(DoubleMinusOne.class.getPackageName()).build();
+  private final VajramGraph graph =
+      VajramGraph.builder().loadFromPackage(DoubleMinusOne.class.getPackageName()).build();
   private Lease<SingleThreadExecutor> executorLease;
 
   @BeforeEach

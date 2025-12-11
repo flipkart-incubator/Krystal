@@ -46,8 +46,8 @@ import com.flipkart.krystal.vajram.samples.calculator.add.Add_FacImmutPojo;
 import com.flipkart.krystal.vajram.samples.calculator.divide.Divide_FacImmutPojo;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramKryonGraphBuilder;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph.VajramKryonGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.batching.InputBatcherConfig;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -112,7 +112,7 @@ class FormulaTest {
   @EnumSource(KryonExecStrategy.class)
   void formula_success(KryonExecStrategy kryonExecStrategy) {
     CompletableFuture<Integer> future;
-    VajramKryonGraph graph = this.graph.build();
+    VajramGraph graph = this.graph.build();
     graph.registerInputBatchers(
         simpleInputBatcher(
             graph.getVajramIdByVajramDefType(Add.class), () -> new InputBatcherImpl(100)));
@@ -135,7 +135,7 @@ class FormulaTest {
   @Test
   void formula_computeDepFails_failsWithException() {
     CompletableFuture<Integer> future;
-    VajramKryonGraph graph = this.graph.build();
+    VajramGraph graph = this.graph.build();
     graph.registerInputBatchers(
         simpleInputBatcher(
             graph.getVajramIdByVajramDefType(Add.class), () -> new InputBatcherImpl(100)));
@@ -164,7 +164,7 @@ class FormulaTest {
   @Test
   void formula_ioDepFails_failsWithSameException() {
     CompletableFuture<Integer> future;
-    VajramKryonGraph graph = this.graph.build();
+    VajramGraph graph = this.graph.build();
     graph.registerInputInjector(injectAdderFailure());
     graph.registerInputBatchers(
         simpleInputBatcher(
@@ -199,7 +199,7 @@ class FormulaTest {
     // won't be able to cleanly divide this total executionsCount equally to the executors.
     int executionsCount = 216;
     SingleThreadExecutor[] executors = getExecutors(parallelism);
-    VajramKryonGraph graph = this.graph.build();
+    VajramGraph graph = this.graph.build();
     CompletableFuture<?>[] submissionFutures = new CompletableFuture[parallelism];
     @SuppressWarnings("unchecked")
     CompletableFuture<Integer>[] futures = new CompletableFuture[executionsCount];
@@ -262,7 +262,7 @@ class FormulaTest {
     int loopCount = 1_000_000;
 
     SingleThreadExecutor[] executors = getExecutors(executorCount);
-    VajramKryonGraph graph = this.graph.build();
+    VajramGraph graph = this.graph.build();
     long javaNativeTimeNs = javaMethodBenchmark(FormulaTest::syncFormula, loopCount);
     long javaFuturesTimeNs = Util.javaFuturesBenchmark(FormulaTest::asyncFormula, loopCount);
     CompletableFuture<?>[] submissionFutures = new CompletableFuture[executorCount];
@@ -340,7 +340,7 @@ class FormulaTest {
     int outerLoopCount = 1000;
     int innerLoopCount = 1000;
     int loopCount = outerLoopCount * innerLoopCount;
-    VajramKryonGraph graph =
+    VajramGraph graph =
         this.graph
             //    .maxParallelismPerCore(1)
             .build();
@@ -470,7 +470,7 @@ class FormulaTest {
   @Test
   void formula_success_withAllMockedDependencies() {
     CompletableFuture<Integer> future;
-    VajramKryonGraph graph = this.graph.build();
+    VajramGraph graph = this.graph.build();
     graph.registerInputBatchers(
         simpleInputBatcher(
             graph.getVajramIdByVajramDefType(Add.class), () -> new InputBatcherImpl(100)));
@@ -501,7 +501,7 @@ class FormulaTest {
   @Test
   void formula_success_with_mockedDependencyAdder() {
     CompletableFuture<Integer> future;
-    VajramKryonGraph graph = this.graph.build();
+    VajramGraph graph = this.graph.build();
     graph.registerInputBatchers(
         simpleInputBatcher(
             graph.getVajramIdByVajramDefType(Add.class), () -> new InputBatcherImpl(100)));
@@ -530,7 +530,7 @@ class FormulaTest {
   @Test
   void formula_success_with_mockedDependencyDivider() {
     CompletableFuture<Integer> future;
-    VajramKryonGraph graph = this.graph.build();
+    VajramGraph graph = this.graph.build();
     graph.registerInputBatchers(
         simpleInputBatcher(
             graph.getVajramIdByVajramDefType(Add.class), () -> new InputBatcherImpl(100)));
@@ -559,7 +559,7 @@ class FormulaTest {
   @Test
   void formula_failure() {
     CompletableFuture<Integer> future;
-    VajramKryonGraph graph = this.graph.build();
+    VajramGraph graph = this.graph.build();
     graph.registerInputBatchers(
         simpleInputBatcher(
             graph.getVajramIdByVajramDefType(Add.class), () -> new InputBatcherImpl(100)));

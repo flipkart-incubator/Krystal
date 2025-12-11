@@ -1,0 +1,5 @@
+dependencies {
+    api project(':vajram:vajram-java-sdk')
+    api project(':vajram:vajram-krystex')
+    api 'jakarta.enterprise:jakarta.enterprise.cdi-api'
+}

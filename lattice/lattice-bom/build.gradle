@@ -7,24 +7,28 @@ javaPlatform.allowDependencies()
 dependencies {
     api platform(project(':krystal-bom'))
 
-    constraints {
-        api 'com.flipkart.krystal:lattice-codegen:' + project.lattice_version
-        api 'com.flipkart.krystal:lattice-core:' + project.lattice_version
-        api 'com.flipkart.krystal:lattice-grpc-codegen:' + project.lattice_version
-        api 'com.flipkart.krystal:lattice-grpc:' + project.lattice_version
-        api 'com.flipkart.krystal:lattice-guice-codegen:' + project.lattice_version
-        api 'com.flipkart.krystal:lattice-guice-servlet:' + project.lattice_version
-        api 'com.flipkart.krystal:lattice-guice:' + project.lattice_version
-        api 'com.flipkart.krystal:lattice-json-codegen:' + project.lattice_version
-        api 'com.flipkart.krystal:lattice-protobuf-codegen:' + project.lattice_version
-        api 'com.flipkart.krystal:lattice-protobuf:' + project.lattice_version
-        api 'com.flipkart.krystal:lattice-rest-api:' + project.lattice_version
-        api 'com.flipkart.krystal:lattice-rest-codegen:' + project.lattice_version
-        api 'com.flipkart.krystal:lattice-rest-quarkus-codegen:' + project.lattice_version
-        api 'com.flipkart.krystal:lattice-rest-quarkus:' + project.lattice_version
-        api 'com.flipkart.krystal:lattice-rest:' + project.lattice_version
-        api 'com.flipkart.krystal:lattice-vajram-sdk:' + project.lattice_version
-        api 'com.flipkart.krystal:lattice-graphql-rest:' + project.lattice_version
+    constraints { c->
+        c.api 'com.flipkart.krystal:lattice-codegen:' + project.lattice_version
+        c.api 'com.flipkart.krystal:lattice-core:' + project.lattice_version
+        c.api 'com.flipkart.krystal:lattice-grpc-codegen:' + project.lattice_version
+        c.api 'com.flipkart.krystal:lattice-grpc:' + project.lattice_version
+        c.api 'com.flipkart.krystal:lattice-cdi:' + project.lattice_version
+        c.api 'com.flipkart.krystal:lattice-cdi-codegen:' + project.lattice_version
+        c.api 'com.flipkart.krystal:lattice-guice-codegen:' + project.lattice_version
+        c.api 'com.flipkart.krystal:lattice-guice-servlet:' + project.lattice_version
+        c.api 'com.flipkart.krystal:lattice-guice:' + project.lattice_version
+        c.api 'com.flipkart.krystal:lattice-json-codegen:' + project.lattice_version
+        c.api 'com.flipkart.krystal:lattice-protobuf-codegen:' + project.lattice_version
+        c.api 'com.flipkart.krystal:lattice-protobuf:' + project.lattice_version
+        c.api 'com.flipkart.krystal:lattice-rest-api:' + project.lattice_version
+        c.api 'com.flipkart.krystal:lattice-rest-codegen:' + project.lattice_version
+        c.api 'com.flipkart.krystal:lattice-rest-quarkus-codegen:' + project.lattice_version
+        c.api 'com.flipkart.krystal:lattice-quarkus-arc-codegen:' + project.lattice_version
+        c.api 'com.flipkart.krystal:lattice-rest-quarkus:' + project.lattice_version
+        c.api 'com.flipkart.krystal:lattice-rest:' + project.lattice_version
+        c.api 'com.flipkart.krystal:lattice-vajram-sdk:' + project.lattice_version
+        c.api 'com.flipkart.krystal:lattice-graphql-rest:' + project.lattice_version
+        c.api 'com.flipkart.krystal:lattice-graphql-codegen:' + project.lattice_version
     }
 }
 

@@ -15,8 +15,8 @@ import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.samples.calculator.add.Add;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramKryonGraphBuilder;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph.VajramKryonGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.batching.DepChainBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.batching.InputBatcherConfig;
 import com.google.common.collect.ImmutableList;
@@ -54,7 +54,7 @@ class AddZeroTest {
   @Test
   void addZero_missingResolver_success() {
     CompletableFuture<Integer> future;
-    VajramKryonGraph graph = this.graph.build();
+    VajramGraph graph = this.graph.build();
     VajramID vajramID = graph.getVajramIdByVajramDefType(Add.class);
     graph.registerInputBatchers(
         new InputBatcherConfig(

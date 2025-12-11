@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.graphql.codegen;
 
+import static com.flipkart.krystal.vajram.graphql.api.Constants.GRAPHQL_AGGREGATOR_SUFFIX;
 import static com.flipkart.krystal.vajram.graphql.api.execution.QueryAnalyseUtil.DEFAULT_ENTITY_ID_FIELD;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.MULTI_FIELD_DATA_FETCHER;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.SINGLE_FIELD_DATA_FETCHER;
@@ -472,5 +473,17 @@ public class SchemaReaderUtil {
         : getDirectiveArgumentString(
                 typeDefinition, Directives.COMPOSED_TYPE, DirectiveArgs.IN_ENTITY)
             .map(GraphQLTypeName::of);
+  }
+
+  public boolean isOperationType(GraphQLTypeName objectTypeName) {
+    return (queryType() != null && objectTypeName.value().equals(queryType().getName()))
+        || mutationType() != null && objectTypeName.value().equals(mutationType().getName())
+        || subscriptionType() != null
+            && objectTypeName.value().equals(subscriptionType().getName());
+  }
+
+  public ClassName getAggregatorName(GraphQLTypeName typeName) {
+    return ClassName.get(
+        getPackageNameForType(typeName), typeName.value() + GRAPHQL_AGGREGATOR_SUFFIX);
   }
 }

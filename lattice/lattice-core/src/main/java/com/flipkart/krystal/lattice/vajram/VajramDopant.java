@@ -1,32 +1,13 @@
 package com.flipkart.krystal.lattice.vajram;
 
-import com.flipkart.krystal.concurrent.SingleThreadExecutor;
-import com.flipkart.krystal.data.ImmutableRequest;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
-import com.flipkart.krystal.lattice.core.di.Bindings;
-import com.flipkart.krystal.lattice.core.di.DependencyInjectionBinder;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
 import com.flipkart.krystal.lattice.core.doping.SimpleDopant;
-import com.flipkart.krystal.lattice.core.execution.ThreadingStrategyDopant;
-import com.flipkart.krystal.lattice.vajram.VajramDopantSpec.VajramDopantSpecBuilder;
-import com.flipkart.krystal.pooling.Lease;
-import com.flipkart.krystal.pooling.LeaseUnavailableException;
-import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
+import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ExecutorService;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.builder.qual.CalledMethods;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Singleton
 @Slf4j
@@ -35,91 +16,11 @@ public final class VajramDopant implements SimpleDopant {
 
   static final String DOPANT_TYPE = "krystal.lattice.vajram";
 
-  @Getter private final VajramKryonGraph graph;
-  private final VajramDopantSpec vajramDopantSpec;
-  private final ThreadingStrategyDopant threadingStrategyDopant;
-  private final List<KryonExecutorConfigurator> kryonExecutorConfigurators = new ArrayList<>();
+  @Getter(onMethod_ = {@Produces, @Singleton})
+  private final VajramGraph vajramGraph;
 
   @Inject
-  VajramDopant(
-      VajramDopantSpec vajramDopantSpec,
-      DependencyInjectionBinder injectionBinder,
-      ThreadingStrategyDopant threadingStrategyDopant) {
-    this.vajramDopantSpec = vajramDopantSpec;
-    this.graph = vajramDopantSpec.vajramGraph();
-    this.threadingStrategyDopant = threadingStrategyDopant;
-    VajramInjectionProvider vajramInjectionProvider = injectionBinder.toVajramInjectionProvider();
-    if (vajramInjectionProvider != null) {
-      this.graph.registerInputInjector(vajramInjectionProvider);
-    }
-  }
-
-  @SuppressWarnings("ClassEscapesDefinedScope")
-  public static VajramDopantSpecBuilder vajramGraph() {
-    return new VajramDopantSpecBuilder();
-  }
-
-  private KrystexVajramExecutor createExecutor(
-      @CalledMethods("executorService") KryonExecutorConfigBuilder kryonConfigBuilder) {
-    vajramDopantSpec.kryonExecutorConfigurators().forEach(kryonConfigBuilder::configureWith);
-    kryonExecutorConfigurators.forEach(kryonConfigBuilder::configureWith);
-
-    return graph.createExecutor(
-        KrystexVajramExecutorConfig.builder()
-            .kryonExecutorConfigBuilder(kryonConfigBuilder)
-            .build());
-  }
-
-  public <RespT extends @Nullable Object> CompletionStage<RespT> executeRequest(
-      VajramRequestExecutionContext<RespT> executionContext) throws LeaseUnavailableException {
-    ImmutableRequest<RespT> vajramRequest = executionContext.vajramRequest();
-    Bindings requestScopeSeeds = executionContext.requestScopeSeeds();
-    KryonExecutorConfigBuilder executorConfigBuilder = executionContext.executorConfigBuilder();
-    Lease<? extends ExecutorService> lease;
-    lease = threadingStrategyDopant.getExecutorService();
-    ExecutorService executorService = lease.get();
-    if (!(executorService instanceof SingleThreadExecutor singleThreadExecutor)) {
-      throw new UnsupportedOperationException(
-          "Expected 'SingleThreadExecutor'. Found " + executorService.getClass());
-    }
-    @SuppressWarnings("assignment")
-    CompletableFuture<RespT> future =
-        CompletableFuture.supplyAsync(
-                () -> {
-                  List<AutoCloseable> requestScopedCloseables = new ArrayList<>();
-                  var requestScope = threadingStrategyDopant.openRequestScope(requestScopeSeeds);
-                  requestScopedCloseables.add(requestScope);
-                  requestScopedCloseables.add(lease);
-                  for (RequestInitializer requestInitializer :
-                      executionContext.requestScopeInitializers()) {
-                    requestScopedCloseables.add(requestInitializer.init());
-                  }
-                  try (KrystexVajramExecutor executor =
-                      createExecutor(executorConfigBuilder.executorService(singleThreadExecutor))) {
-                    return executor
-                        .execute(vajramRequest)
-                        .whenComplete((response, throwable) -> closeAll(requestScopedCloseables));
-                  } catch (Exception e) {
-                    closeAll(requestScopedCloseables);
-                    return CompletableFuture.<@Nullable RespT>failedFuture(e);
-                  }
-                },
-                singleThreadExecutor)
-            .thenCompose(f -> f);
-    return future;
-  }
-
-  public void configureKryonExecutor(KryonExecutorConfigurator executorConfigurator) {
-    this.kryonExecutorConfigurators.add(executorConfigurator);
-  }
-
-  private static void closeAll(List<AutoCloseable> closeables) {
-    for (AutoCloseable closeable : closeables) {
-      try {
-        closeable.close();
-      } catch (Throwable e) {
-        log.error("Unable to execute initializer closeable", e);
-      }
-    }
+  VajramDopant(VajramDopantSpec vajramDopantSpec) {
+    this.vajramGraph = vajramDopantSpec.vajramGraphBuilder().build();
   }
 }

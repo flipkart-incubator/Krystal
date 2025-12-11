@@ -19,4 +19,5 @@ module flipkart.krystal.vajram {
   requires com.google.auto.value.annotations;
   requires static lombok;
   requires static org.slf4j;
+  requires jakarta.inject;
 }

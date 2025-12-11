@@ -13,7 +13,7 @@ import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.RejectedExecutionException;
 import org.assertj.core.util.Throwables;
@@ -32,8 +32,8 @@ class DivideTest {
     EXEC_POOL = new SingleThreadExecutorsPool("Test", 4);
   }
 
-  private final VajramKryonGraph graph =
-      VajramKryonGraph.builder().loadFromPackage(Divide.class.getPackageName()).build();
+  private final VajramGraph graph =
+      VajramGraph.builder().loadFromPackage(Divide.class.getPackageName()).build();
   private Lease<SingleThreadExecutor> executorLease;
 
   @BeforeEach

@@ -33,7 +33,7 @@ import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.google.common.collect.ImmutableSet;
 import java.time.Clock;
 import java.util.ArrayList;
@@ -56,7 +56,7 @@ class ChainAddTest {
     EXEC_POOL = new SingleThreadExecutorsPool("Test", 4);
   }
 
-  private VajramKryonGraph graph;
+  private VajramGraph graph;
   private ObjectMapper objectMapper;
 
   private Lease<SingleThreadExecutor> executorLease;
@@ -64,7 +64,7 @@ class ChainAddTest {
   @BeforeEach
   void setUp() throws LeaseUnavailableException {
     Add.CALL_COUNTER.reset();
-    this.graph = VajramKryonGraph.builder().loadClasses(ChainAdd.class, Add.class).build();
+    this.graph = VajramGraph.builder().loadClasses(ChainAdd.class, Add.class).build();
     this.executorLease = EXEC_POOL.lease();
     this.objectMapper =
         new ObjectMapper()
@@ -83,7 +83,8 @@ class ChainAddTest {
   void chainer_success() throws Exception {
     CompletableFuture<Integer> future;
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
-    autoRegisterSharedBatchers(graph, _v -> 100, getDisabledDependentChains(graph));
+    autoRegisterSharedBatchers(graph, _v -> 100, traitDispatchPolicies, getDisabledDependentChains(graph)
+    );
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
@@ -129,7 +130,8 @@ class ChainAddTest {
     long startTime = System.nanoTime();
     long timeToCreateExecutors = 0;
     long timeToEnqueueVajram = 0;
-    autoRegisterSharedBatchers(graph, _v -> 100, getDisabledDependentChains(graph));
+    autoRegisterSharedBatchers(graph, _v -> 100, traitDispatchPolicies, getDisabledDependentChains(graph)
+    );
     for (int value = 0; value < loopCount; value++) {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor krystexVajramExecutor =
@@ -195,7 +197,8 @@ class ChainAddTest {
     long startTime = System.nanoTime();
     long timeToCreateExecutors = 0;
     long timeToEnqueueVajram = 0;
-    autoRegisterSharedBatchers(graph, _v -> 100, getDisabledDependentChains(graph));
+    autoRegisterSharedBatchers(graph, _v -> 100, traitDispatchPolicies, getDisabledDependentChains(graph)
+    );
     for (int outer_i = 0; outer_i < outerLoopCount; outer_i++) {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor krystexVajramExecutor =
@@ -322,7 +325,7 @@ class ChainAddTest {
     return completedFuture(a + b);
   }
 
-  private static ImmutableSet<DependentChain> getDisabledDependentChains(VajramKryonGraph graph) {
+  private static ImmutableSet<DependentChain> getDisabledDependentChains(VajramGraph graph) {
     return ImmutableSet.of(
         graph.computeDependentChain(
             graph.getVajramIdByVajramDefType(ChainAdd.class).id(),

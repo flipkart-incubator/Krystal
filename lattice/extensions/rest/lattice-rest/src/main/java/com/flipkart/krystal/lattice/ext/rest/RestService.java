@@ -1,5 +1,6 @@
 package com.flipkart.krystal.lattice.ext.rest;
 
+import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
@@ -11,7 +12,7 @@ import java.lang.annotation.Target;
 
 @Retention(RUNTIME)
 @Inherited
-@Target(TYPE)
+@Target({TYPE, METHOD})
 @DopantType(RestServiceDopant.REST_SERVICE_DOPANT_TYPE)
 public @interface RestService {
 

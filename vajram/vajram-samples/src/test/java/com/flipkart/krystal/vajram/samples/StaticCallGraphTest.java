@@ -39,7 +39,7 @@ import com.flipkart.krystal.vajram.samples.customer_service.L1CallAgent_Req;
 import com.flipkart.krystal.vajram.samples.customer_service.L1EmailAgent_Req;
 import com.flipkart.krystal.vajram.samples.customer_service.L2CallAgent_Req;
 import com.flipkart.krystal.vajram.samples.customer_service.L3EmailAgent_Req;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.flipkart.krystal.visualization.models.GraphGenerationResult;
 import org.junit.jupiter.api.Test;
 
@@ -47,13 +47,13 @@ class StaticCallGraphTest {
 
   @Test
   void testStaticCallGraphContainsGivenStartVajram() throws Exception {
-    try (VajramKryonGraph vajramKryonGraph =
-        VajramKryonGraph.builder()
+    try (VajramGraph vajramGraph =
+        VajramGraph.builder()
             .loadFromPackage("com.flipkart.krystal.vajram.samples.calculator")
             .build()) {
 
       // Generate static call graph for A2MinusB2
-      GraphGenerationResult result = generateStaticCallGraphContent(vajramKryonGraph, "A2MinusB2");
+      GraphGenerationResult result = generateStaticCallGraphContent(vajramGraph, "A2MinusB2");
 
       String htmlContent = result.html();
 
@@ -103,8 +103,8 @@ class StaticCallGraphTest {
   @Test
   void testCompleteStaticCallGraph() throws Exception {
 
-    try (VajramKryonGraph graph =
-        VajramKryonGraph.builder().loadFromPackage("com.flipkart.krystal.vajram.samples").build()) {
+    try (VajramGraph graph =
+        VajramGraph.builder().loadFromPackage("com.flipkart.krystal.vajram.samples").build()) {
       TraitBinder traitBinder = new TraitBinder();
       traitBinder
           .bindTrait(MultiAdd_Req.class)
@@ -180,8 +180,8 @@ class StaticCallGraphTest {
 
   @Test
   void graphWithTraits_expandsDispatchTarget() throws Exception {
-    try (VajramKryonGraph graph =
-        VajramKryonGraph.builder()
+    try (VajramGraph graph =
+        VajramGraph.builder()
             .loadClasses(
                 AddUsingTraits.class,
                 MultiAdd.class,
@@ -247,7 +247,7 @@ class StaticCallGraphTest {
   @Test
   void testEmptyGraphShowsNoVajramsMessage() throws Exception {
 
-    try (VajramKryonGraph emptyGraph = VajramKryonGraph.builder().build()) {
+    try (VajramGraph emptyGraph = VajramGraph.builder().build()) {
 
       // Generate static call graph for the empty graph
       GraphGenerationResult result = generateStaticCallGraphContent(emptyGraph, null);

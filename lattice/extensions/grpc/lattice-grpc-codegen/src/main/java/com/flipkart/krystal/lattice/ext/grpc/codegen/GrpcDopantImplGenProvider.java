@@ -7,6 +7,7 @@ import static com.flipkart.krystal.vajram.protobuf3.Protobuf3.PROTOBUF_3;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_MSG_SUFFIX;
 import static java.util.Map.entry;
 import static java.util.Objects.requireNonNull;
+import static javax.lang.model.element.Modifier.PUBLIC;
 
 import com.flipkart.krystal.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
@@ -81,7 +82,10 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
               .superclass(GrpcServerDopant.class);
 
       classBuilder.addMethod(
-          latticeCodegenUtils.dopantConstructorOverride(GrpcServerDopant.class).build());
+          latticeCodegenUtils
+              .dopantConstructorOverride(GrpcServerDopant.class)
+              .addModifiers(PUBLIC)
+              .build());
       serviceDefinitions(grpcServer, classBuilder);
 
       util.codegenUtil()

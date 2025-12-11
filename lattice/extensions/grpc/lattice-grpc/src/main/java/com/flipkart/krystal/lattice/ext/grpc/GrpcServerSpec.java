@@ -6,11 +6,12 @@ import com.flipkart.krystal.lattice.core.doping.DopantSpec;
 import com.flipkart.krystal.lattice.core.doping.DopantSpecBuilder;
 import com.flipkart.krystal.lattice.core.headers.StandardHeaderNames;
 import io.grpc.Context;
-import lombok.Data;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import lombok.Builder;
 
-record GrpcServerSpec(Context.Key<String> requestIdContextKey)
+@Builder(buildMethodName = "_buildSpec")
+public record GrpcServerSpec(Context.Key<String> requestIdContextKey)
     implements DopantSpec<GrpcServer, GrpcServerConfig, GrpcServerDopant> {
+
   private static final Context.Key<String> ACCEPT_HEADER_CONTEXT_KEY =
       Context.key(StandardHeaderNames.ACCEPT);
 
@@ -23,34 +24,26 @@ record GrpcServerSpec(Context.Key<String> requestIdContextKey)
     return GrpcServerDopant.class;
   }
 
-  @Data
-  public static class GrpcServerSpecBuilder
+  @Override
+  public Class<GrpcServerConfig> _configurationType() {
+    return GrpcServerConfig.class;
+  }
+
+  @Override
+  public String _dopantType() {
+    return GrpcServerDopant.DOPANT_TYPE;
+  }
+
+  public static final class GrpcServerSpecBuilder
       implements DopantSpecBuilder<GrpcServer, GrpcServerConfig, GrpcServerSpec> {
-    private final Context.Key<String> requestIdContextKey = Context.key(REQUEST_ID);
 
-    GrpcServerSpecBuilder() {}
-
-    @SuppressWarnings("ClassEscapesDefinedScope")
-    @Override
-    public GrpcServerSpec _buildSpec(
-        @Nullable GrpcServer annotation, @Nullable GrpcServerConfig configuration) {
-      return new GrpcServerSpec(requestIdContextKey);
+    GrpcServerSpecBuilder() {
+      requestIdContextKey(Context.key(REQUEST_ID));
     }
 
     @Override
     public Class<GrpcServer> _annotationType() {
       return GrpcServer.class;
-    }
-
-    @SuppressWarnings("ClassEscapesDefinedScope")
-    @Override
-    public Class<GrpcServerConfig> _configurationType() {
-      return GrpcServerConfig.class;
-    }
-
-    @Override
-    public String _dopantType() {
-      return GrpcServerDopant.DOPANT_TYPE;
     }
   }
 }

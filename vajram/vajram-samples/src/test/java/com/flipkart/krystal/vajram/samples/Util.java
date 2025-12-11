@@ -8,8 +8,8 @@ import static java.util.concurrent.CompletableFuture.allOf;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
 import com.flipkart.krystal.pooling.MultiLeasePool;
 import com.flipkart.krystal.pooling.MultiLeasePoolStats;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramKryonGraphBuilder;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph.VajramKryonGraphBuilder;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -110,7 +110,7 @@ public final class Util {
   }
 
   public static VajramKryonGraphBuilder loadFromClasspath(String... packagePrefixes) {
-    VajramKryonGraphBuilder builder = VajramKryonGraph.builder();
+    VajramKryonGraphBuilder builder = VajramGraph.builder();
     stream(packagePrefixes).forEach(builder::loadFromPackage);
     return builder;
   }

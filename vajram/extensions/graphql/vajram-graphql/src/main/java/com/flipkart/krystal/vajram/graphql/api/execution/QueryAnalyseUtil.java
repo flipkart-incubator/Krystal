@@ -7,7 +7,7 @@ import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.google.common.collect.ImmutableSet;
 import graphql.com.google.common.collect.ImmutableMap;
 import graphql.execution.ExecutionContext;
@@ -32,7 +32,7 @@ public class QueryAnalyseUtil {
       Map<String, Map<String, List<String>>> reverseEntityTypeToFieldResolverMap,
       Map<String, Map<String, String>> entityToRefToTypeMap,
       Map<String, Map<String, String>> entityTypeToReferenceFetcher,
-      VajramKryonGraph vajramKryonGraph) {
+      VajramGraph vajramGraph) {
 
     GraphQLSchema graphQLSchema = executionContext.getGraphQLSchema();
     ExecutableNormalizedOperation executableNormalizedOperation =
@@ -79,7 +79,7 @@ public class QueryAnalyseUtil {
     setSkipDependentChains(
         vajramsToExecute,
         dependentChainToSkip,
-        vajramKryonGraph,
+        vajramGraph,
         queriedEntity,
         reverseEntityTypeToFieldResolverMap,
         entityToRefToTypeMap,
@@ -108,7 +108,7 @@ public class QueryAnalyseUtil {
   private static void setSkipDependentChains(
       Set<VajramID> vajramsToExecute,
       Set<DependentChain> dependentChainToSkip,
-      VajramKryonGraph vajramNodeGraph,
+      VajramGraph vajramNodeGraph,
       String queriedEntity,
       Map<String, Map<String, List<String>>> reverseEntityTypeToFieldResolverMap,
       Map<String, Map<String, String>> entityToRefToTypeMap,
@@ -146,7 +146,7 @@ public class QueryAnalyseUtil {
   private static void setSkipDependentChainPerEntity(
       Set<VajramID> vajramsToExecute,
       Set<DependentChain> dependentChainToSkip,
-      VajramKryonGraph vajramNodeGraph,
+      VajramGraph vajramNodeGraph,
       String entity,
       List<Dependency> dependencyList,
       Map<String, Map<String, String>> entityToRefToTypeMap,

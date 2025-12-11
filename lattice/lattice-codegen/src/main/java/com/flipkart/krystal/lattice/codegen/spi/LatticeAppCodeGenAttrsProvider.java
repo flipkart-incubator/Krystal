@@ -21,6 +21,7 @@ public interface LatticeAppCodeGenAttrsProvider {
    */
   @Builder
   record LatticeAppCodeGenAttributes(
+      // TODO: Remote needsRequestScopedHeaders? Is it used anywhere?
       Trilean needsRequestScopedHeaders, ImmutableList<TypeElement> remotelyInvocableVajrams) {
 
     public LatticeAppCodeGenAttributes {

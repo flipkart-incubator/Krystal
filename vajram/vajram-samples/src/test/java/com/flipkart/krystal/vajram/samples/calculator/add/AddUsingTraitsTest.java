@@ -27,7 +27,7 @@ import com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiAddQuali
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.google.common.collect.ImmutableSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -44,7 +44,7 @@ class AddUsingTraitsTest {
   @SuppressWarnings("unchecked")
   private static final Lease<SingleThreadExecutor>[] EXECUTOR_LEASES = new Lease[MAX_THREADS];
 
-  private VajramKryonGraph graph;
+  private VajramGraph graph;
   private Lease<SingleThreadExecutor> executorLease;
 
   @BeforeAll
@@ -181,7 +181,7 @@ class AddUsingTraitsTest {
   }
 
   private static CompletableFuture<ThreeSums> executeVajram(
-      VajramKryonGraph graph,
+      VajramGraph graph,
       KrystexVajramExecutor krystexVajramExecutor,
       List<Integer> numbers1,
       List<Integer> numbers2,
@@ -199,7 +199,7 @@ class AddUsingTraitsTest {
             .build());
   }
 
-  private static ImmutableSet<DependentChain> getDisabledDependentChains(VajramKryonGraph graph) {
+  private static ImmutableSet<DependentChain> getDisabledDependentChains(VajramGraph graph) {
     String vajramId = graph.getVajramIdByVajramDefType(AddUsingTraits.class).id();
     return ImmutableSet.of(
         graph.computeDependentChain(vajramId, sum2_s, chainSum_s, chainSum_s),

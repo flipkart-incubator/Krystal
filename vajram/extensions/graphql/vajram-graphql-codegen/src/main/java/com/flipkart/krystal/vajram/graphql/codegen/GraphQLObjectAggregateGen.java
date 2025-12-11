@@ -7,7 +7,6 @@ import static com.flipkart.krystal.vajram.codegen.common.models.Constants.REQUES
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants._INTERNAL_FACETS_CLASS;
 import static com.flipkart.krystal.vajram.graphql.api.Constants.Directives.DATA_FETCHER;
 import static com.flipkart.krystal.vajram.graphql.api.Constants.Directives.ID_FETCHER;
-import static com.flipkart.krystal.vajram.graphql.api.Constants.GRAPHQL_AGGREGATOR_SUFFIX;
 import static com.flipkart.krystal.vajram.graphql.codegen.CodeGenConstants.IF_ABSENT_FAIL;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.INHERIT_ID_FROM_ARGS;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.INHERIT_ID_FROM_PARENT;
@@ -76,11 +75,11 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
     aggregatableTypes.forEach(
         (objectTypeName, typeDefinition) -> {
           try {
-            ClassName className = getAggregatorName(objectTypeName);
+            ClassName aggregatorName = schemaReaderUtil.getAggregatorName(objectTypeName);
             Map<ClassName, List<GraphQlFieldSpec>> refToFieldMap =
                 getDfToListOfFieldsDeRef(typeDefinition);
             Builder typeAggregator =
-                util.classBuilder(className.simpleName(), "")
+                util.classBuilder(aggregatorName.simpleName(), "")
                     .addModifiers(PUBLIC)
                     .addModifiers(ABSTRACT)
                     .superclass(
@@ -88,12 +87,10 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                             ClassName.get(ComputeVajramDef.class),
                             asVajramReturnType(objectTypeName)))
                     .addAnnotation(Vajram.class)
-                    .addAnnotation(AnnotationSpec.builder(Slf4j.class).build())
                     .addTypes(createFacetDefinitions(typeDefinition))
                     .addMethods(getInputResolvers(objectTypeName, typeDefinition))
                     .addMethod(outputLogic(objectTypeName));
-            ObjectTypeDefinition queryType = schemaReaderUtil.queryType();
-            if (queryType != null && queryType.getName().equals(objectTypeName.value())) {
+            if (schemaReaderUtil.isOperationType(objectTypeName)) {
               typeAggregator.addSuperinterface(
                   ParameterizedTypeName.get(
                       ClassName.get(GraphQlOperationAggregate.class),
@@ -118,7 +115,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                           .build());
                 });
             JavaFile javaFile =
-                JavaFile.builder(className.packageName(), typeAggregator.build()).build();
+                JavaFile.builder(aggregatorName.packageName(), typeAggregator.build()).build();
 
             StringWriter writer = new StringWriter();
             try {
@@ -129,22 +126,24 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
             try {
               try {
                 JavaFileObject requestFile =
-                    util.processingEnv().getFiler().createSourceFile(className.canonicalName());
-                util.note("Successfully Create source file %s".formatted(className));
+                    util.processingEnv()
+                        .getFiler()
+                        .createSourceFile(aggregatorName.canonicalName());
+                util.note("Successfully Create source file %s".formatted(aggregatorName));
                 try (PrintWriter out = new PrintWriter(requestFile.openWriter())) {
                   out.println(writer);
                 }
               } catch (Exception e) {
                 util.error(
                     "Error creating java file for className: %s. Error: %s"
-                        .formatted(className, e));
+                        .formatted(aggregatorName, e));
               }
             } catch (Exception e) {
               StringWriter exception = new StringWriter();
               e.printStackTrace(new PrintWriter(exception));
               util.error(
                   "Error while generating file for class %s. Exception: %s"
-                      .formatted(className, exception));
+                      .formatted(aggregatorName, exception));
             }
           } catch (Throwable e) {
             util.error(
@@ -158,12 +157,6 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
     ClassName className = schemaReaderUtil.typeClassName(objectTypeName);
     return ClassName.get(className.packageName(), className.simpleName() + "_" + IMMUT_SUFFIX)
         .nestedClass("Builder");
-  }
-
-  private ClassName getAggregatorName(GraphQLTypeName typeName) {
-    return ClassName.get(
-        schemaReaderUtil.getPackageNameForType(typeName),
-        typeName.value() + GRAPHQL_AGGREGATOR_SUFFIX);
   }
 
   private List<TypeSpec> createFacetDefinitions(ObjectTypeDefinition typeDefinition) {
@@ -541,7 +534,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                     .addMember(
                         "dep",
                         "$T.$L_n",
-                        getFacetClassName(getAggregatorName(parentTypeName)),
+                        getFacetClassName(schemaReaderUtil.getAggregatorName(parentTypeName)),
                         facetName)
                     .addMember(
                         "depInputs",
@@ -764,7 +757,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                     .addMember(
                         "dep",
                         "$T.$L_n",
-                        getFacetClassName(getAggregatorName(parentTypeName)),
+                        getFacetClassName(schemaReaderUtil.getAggregatorName(parentTypeName)),
                         fieldName)
                     .addMember(
                         "depInputs",

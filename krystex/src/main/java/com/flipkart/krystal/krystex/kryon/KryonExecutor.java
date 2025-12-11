@@ -739,7 +739,8 @@ public final class KryonExecutor implements KrystalExecutor {
 
   ExecutorService commandQueue() {
     if (commandQueue == null) {
-      this.commandQueue = new KrystalExecutorExecService(this, executorConfig.executorService());
+      this.commandQueue =
+          new KrystalExecutorExecService(this, executorConfig.tranformedExecutorService());
     }
     return commandQueue;
   }

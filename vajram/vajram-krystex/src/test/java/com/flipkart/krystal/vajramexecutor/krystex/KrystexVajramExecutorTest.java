@@ -39,7 +39,7 @@ import com.flipkart.krystal.vajram.exception.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajram.resilience4j.bulkhead.Resilience4JBulkhead;
 import com.flipkart.krystal.vajram.resilience4j.curcuitbreaker.Resilience4JCircuitBreaker;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramKryonGraphBuilder;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph.VajramKryonGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.batching.DepChainBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.batching.InputBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.batching.InputBatchingDecorator;
@@ -99,7 +99,7 @@ class KrystexVajramExecutorTest {
   private Lease<SingleThreadExecutor> executorLease;
   private TestRequestContext requestContext;
   private ObjectMapper objectMapper;
-  private VajramKryonGraph graph;
+  private VajramGraph graph;
   private DecorationOrdering decorationOrdering;
 
   private final KryonExecStrategy kryonExecStrategy;
@@ -137,7 +137,7 @@ class KrystexVajramExecutorTest {
     FriendsService.CALL_COUNTER.reset();
     TestUserService.REQUESTS.clear();
     Hello.CALL_COUNTER.reset();
-    Optional.ofNullable(graph).ifPresent(VajramKryonGraph::close);
+    Optional.ofNullable(graph).ifPresent(VajramGraph::close);
     executorLease.close();
   }
 
@@ -730,7 +730,7 @@ class KrystexVajramExecutorTest {
   }
 
   private static VajramKryonGraphBuilder loadFromClasspath(String... packagePrefixes) {
-    VajramKryonGraphBuilder builder = VajramKryonGraph.builder();
+    VajramKryonGraphBuilder builder = VajramGraph.builder();
     Arrays.stream(packagePrefixes).forEach(builder::loadFromPackage);
     return builder;
   }

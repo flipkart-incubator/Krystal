@@ -591,6 +591,10 @@ public class VajramCodeGenUtility {
     return vajramName + REQUEST_SUFFIX;
   }
 
+  public static ClassName getRequestInterfaceName(ClassName vajramName) {
+    return ClassName.get(vajramName.packageName(), vajramName.simpleName() + REQUEST_SUFFIX);
+  }
+
   public static String getImmutRequestInterfaceName(String vajramName) {
     return vajramName + IMMUT_REQUEST_SUFFIX;
   }

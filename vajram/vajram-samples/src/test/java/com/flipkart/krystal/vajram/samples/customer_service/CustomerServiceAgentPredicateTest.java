@@ -20,7 +20,7 @@ import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent.*;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.AfterEach;
@@ -36,7 +36,7 @@ class CustomerServiceAgentPredicateTest {
     EXEC_POOL = new SingleThreadExecutorsPool("Test", 4);
   }
 
-  private VajramKryonGraph graph;
+  private VajramGraph graph;
   private Lease<SingleThreadExecutor> executorLease;
 
   @BeforeEach
@@ -45,7 +45,7 @@ class CustomerServiceAgentPredicateTest {
 
     // Build the graph with all the vajram implementations
     graph =
-        VajramKryonGraph.builder()
+        VajramGraph.builder()
             .loadFromPackage(CustomerServiceAgent.class.getPackageName())
             .build();
 

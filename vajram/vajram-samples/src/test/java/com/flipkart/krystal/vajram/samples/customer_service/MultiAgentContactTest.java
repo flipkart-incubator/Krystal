@@ -25,7 +25,7 @@ import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent
 import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent.Email;
 import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent.InitialCommunication;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -62,8 +62,8 @@ class MultiAgentContactTest {
   @Test
   void dynamicPredicateDispatch_multipleDispatchTargets_success() {
     // Build the graph with all the vajram implementations
-    VajramKryonGraph graph =
-        VajramKryonGraph.builder()
+    VajramGraph graph =
+        VajramGraph.builder()
             .loadFromPackage(MultiAgentContact.class.getPackageName())
             .build();
 
@@ -135,8 +135,8 @@ class MultiAgentContactTest {
   @Test
   void dynamicDispatchCompute_multipleDispatchTargets_success() {
     // Build the graph with all the vajram implementations
-    VajramKryonGraph graph =
-        VajramKryonGraph.builder()
+    VajramGraph graph =
+        VajramGraph.builder()
             .loadFromPackage(MultiAgentContact.class.getPackageName())
             .build();
 

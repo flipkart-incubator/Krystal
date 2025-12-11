@@ -15,17 +15,17 @@ import com.flipkart.krystal.krystex.kryon.DirectResponse;
 import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
-import com.flipkart.krystal.lattice.vajram.VajramDopant;
 import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationError;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate_Req;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationDispatch;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import graphql.ExecutionInput;
 import graphql.GraphQL;
 import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -43,19 +43,17 @@ import lombok.extern.slf4j.Slf4j;
  * this decorator.
  */
 @Slf4j
+@Singleton
 public final class GraphQlOperationExecutor
     implements DependencyDecorator, KryonExecutorConfigurator {
 
   public static final String DECORATOR_TYPE = GraphQlOperationExecutor.class.getName();
+
   private final GraphQL graphQL;
-  private final VajramKryonGraph graph;
+  private final VajramGraph graph;
 
   @Inject
-  public GraphQlOperationExecutor(GraphQL graphQL, VajramDopant vajramDopant) {
-    this(graphQL, vajramDopant.graph());
-  }
-
-  public GraphQlOperationExecutor(GraphQL graphQL, VajramKryonGraph graph) {
+  public GraphQlOperationExecutor(GraphQL graphQL, VajramGraph graph) {
     this.graphQL = graphQL;
     this.graph = graph;
   }

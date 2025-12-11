@@ -22,8 +22,9 @@ import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
 import com.flipkart.krystal.krystex.request.InvocationId;
 import com.flipkart.krystal.traits.DynamicDispatchPolicy;
 import com.flipkart.krystal.traits.StaticDispatchPolicy;
+import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
@@ -40,13 +41,12 @@ public class DefaultTraitDispatcher implements TraitDispatchDecorator {
 
   public static final String DECORATOR_TYPE = DefaultTraitDispatcher.class.getName();
 
-  private final VajramKryonGraph vajramKryonGraph;
-  @Getter private final ImmutableMap<VajramID, TraitDispatchPolicy> traitDispatchPolicies;
+  private final VajramGraph vajramGraph;
+  @Getter private final TraitDispatchPolicies traitDispatchPolicies;
 
   public DefaultTraitDispatcher(
-      VajramKryonGraph vajramKryonGraph,
-      ImmutableMap<VajramID, TraitDispatchPolicy> traitDispatchPolicies) {
-    this.vajramKryonGraph = vajramKryonGraph;
+      VajramGraph vajramGraph, TraitDispatchPolicies traitDispatchPolicies) {
+    this.vajramGraph = vajramGraph;
     this.traitDispatchPolicies = traitDispatchPolicies;
   }
 
@@ -55,7 +55,7 @@ public class DefaultTraitDispatcher implements TraitDispatchDecorator {
   public <R extends KryonCommandResponse> DependencyInvocation<R> decorateDependency(
       DependencyInvocation<R> invocationToDecorate) {
     return kryonCommand -> {
-      if (!vajramKryonGraph.getVajramDefinition(kryonCommand.vajramID()).isTrait()) {
+      if (!vajramGraph.getVajramDefinition(kryonCommand.vajramID()).isTrait()) {
         return invocationToDecorate.invokeDependency(kryonCommand);
       }
       VajramID traitId = kryonCommand.vajramID();
@@ -204,7 +204,7 @@ public class DefaultTraitDispatcher implements TraitDispatchDecorator {
           ImmutableSet<Class<? extends Request<?>>> dispatchTargets =
               dynamicPolicy.dispatchTargetReqs();
           for (Class<? extends Request<?>> dispatchTarget : dispatchTargets) {
-            VajramID dispatchTargetId = vajramKryonGraph.getVajramIdByVajramReqType(dispatchTarget);
+            VajramID dispatchTargetId = vajramGraph.getVajramIdByVajramReqType(dispatchTarget);
             List<RequestResponseFuture<? extends Request<?>, ?>> requestsForTarget =
                 requireNonNullElse(dispatchRequests.remove(dispatchTargetId), List.of());
 

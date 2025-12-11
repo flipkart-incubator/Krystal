@@ -12,7 +12,7 @@ import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import java.util.concurrent.CompletableFuture;
 import org.assertj.core.util.Throwables;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -29,7 +29,7 @@ class AddTest {
     EXEC_POOL = new SingleThreadExecutorsPool("Test", 4);
   }
 
-  private final VajramKryonGraph graph = VajramKryonGraph.builder().loadClasses(Add.class).build();
+  private final VajramGraph graph = VajramGraph.builder().loadClasses(Add.class).build();
   private Lease<SingleThreadExecutor> executorLease;
 
   @BeforeEach
@@ -45,7 +45,7 @@ class AddTest {
   @Test
   void withOutNumberTwo_usesPlatformDefaultValue_success() {
     // Create a VajramKryonGraph and KrystexVajramExecutor
-    VajramKryonGraph graph = VajramKryonGraph.builder().loadClasses(Add.class).build();
+    VajramGraph graph = VajramGraph.builder().loadClasses(Add.class).build();
     KrystexVajramExecutorConfig config =
         KrystexVajramExecutorConfig.builder()
             .kryonExecutorConfigBuilder(
