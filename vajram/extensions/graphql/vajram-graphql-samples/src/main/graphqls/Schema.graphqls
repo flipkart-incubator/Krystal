@@ -1,4 +1,27 @@
 #TODO: validation: rootPackage is mandatory
+
+"""
+ISO-8601 compliant date-time with timezone (e.g., "2023-12-25T10:30:00+00:00")
+"""
+scalar DateTime
+  @specifiedBy(url: "https://scalars.graphql.org/andimarek/date-time.html")
+  @javaType(packageName: "java.time", className: "OffsetDateTime")
+
+"""
+ISO-8601 compliant date without time (e.g., "2023-12-25")
+"""
+scalar Date
+  @specifiedBy(url: "https://the-guild.dev/graphql/scalars/docs/scalars/date")
+  @javaType(packageName: "java.time", className: "LocalDate")
+
+"""
+64-bit signed integer (e.g., 9223372036854775807)
+Useful for: timestamps in milliseconds, large identifiers, byte counts
+"""
+scalar Long
+  @specifiedBy(url: "https://the-guild.dev/graphql/scalars/docs/scalars/long")
+  @javaType(packageName: "java.lang", className: "Long")
+
 schema @rootPackage(name: "com.flipkart.krystal.vajram.graphql.samples") {
     query: QueryType
 }

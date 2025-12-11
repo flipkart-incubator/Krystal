@@ -49,7 +49,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public class SchemaReaderUtil {
 
   public static final String GRAPHQL_SCHEMA_EXTENSION = ".graphqls";
-  public static final String CUSTOM_TYPE_DIRECTIVE = "customType";
+  public static final String JAVA_TYPE_DIRECTIVE = "javaType";
   public static final String PACKAGE_NAME_DIR_ARG = "packageName";
   public static final String CLASS_NAME_DIR_ARG = "className";
 
@@ -472,5 +472,49 @@ public class SchemaReaderUtil {
         : getDirectiveArgumentString(
                 typeDefinition, Directives.COMPOSED_TYPE, DirectiveArgs.IN_ENTITY)
             .map(GraphQLTypeName::of);
+  }
+
+  /**
+   * Extracts ClassName from a @javaType directive's packageName and className arguments.
+   */
+  static ClassName extractClassNameFromJavaTypeDirective(
+      DirectivesContainer<?> directivesContainer, String contextDescription) {
+    List<Directive> javaTypeDirectives = directivesContainer.getDirectives(JAVA_TYPE_DIRECTIVE);
+    if (javaTypeDirectives.isEmpty()) {
+      return null;
+    }
+
+    Directive directive = javaTypeDirectives.getFirst();
+    Argument packageNameArg = directive.getArgument(PACKAGE_NAME_DIR_ARG);
+    Argument classNameArg = directive.getArgument(CLASS_NAME_DIR_ARG);
+
+    if (packageNameArg == null || classNameArg == null) {
+      throw new IllegalStateException(
+          "%s has @javaType directive without required 'packageName' or 'className' argument"
+              .formatted(contextDescription));
+    }
+
+    if (!(packageNameArg.getValue() instanceof StringValue packageNameValue)
+        || !(classNameArg.getValue() instanceof StringValue classNameValue)) {
+      throw new IllegalStateException(
+          "%s @javaType directive: 'packageName' and 'className' must be String literals, got packageName: %s, className: %s"
+              .formatted(
+                  contextDescription,
+                  packageNameArg.getValue().getClass().getSimpleName(),
+                  classNameArg.getValue().getClass().getSimpleName()));
+    }
+
+    return ClassName.get(packageNameValue.getValue(), classNameValue.getValue());
+  }
+
+  /** Gets the Java type mapping for a scalar type from the @javaType directive. */
+  public @Nullable ClassName getJavaTypeForScalar(String scalarName) {
+    return typeDefinitionRegistry
+        .getType(scalarName, ScalarTypeDefinition.class)
+        .map(
+            scalarDef ->
+                extractClassNameFromJavaTypeDirective(
+                    scalarDef, "Scalar '%s'".formatted(scalarName)))
+        .orElse(null);
   }
 }
