@@ -50,34 +50,22 @@ public class GraphQLAnnotationProcessor extends AbstractKrystalAnnoProcessor {
               + roundEnv.getElementsAnnotatedWith(annotation));
     }
     if (!generated) {
-      // Generate input types FIRST (needed by aggregators and vajrams)
+      // Generate all GraphQL models (inputs, entities, enums, operation types)
       try {
-        new GraphQLInputTypeGen(util).generate();
+        new GraphQlModelGen(util, schemaFile).generate();
       } catch (Exception e) {
-        util.error("[GraphQL Input Type Codegen Exception] " + getStackTraceAsString(e));
+        util.error("[GraphQL Model Codegen Exception] " + getStackTraceAsString(e));
       }
+
+      // Generate type aggregators
       try {
-        new GraphQLTypeAggregatorGen(codeGenUtil()).generate();
-      } catch (Exception e) {
-        util.error("[GraphQL Codegen Exception] " + getStackTraceAsString(e));
-      }
-      try {
-        new GraphQLEntityGen(util).generate();
+        new GraphQLObjectAggregateGen(util, schemaFile, roundEnv).generate();
       } catch (Exception e) {
         util.error("[GraphQL Codegen Exception] " + getStackTraceAsString(e));
       }
+
       generated = true;
-    try {
-      new GraphQLObjectAggregateGen(codeGenUtil(), schemaFile).generate();
-    } catch (Exception e) {
-      util.error("[GraphQL Codegen Exception] " + getStackTraceAsString(e));
     }
-    try {
-      new GraphQLEntityGen(util, schemaFile).generate();
-    } catch (Exception e) {
-      util.error("[GraphQL Codegen Exception] " + getStackTraceAsString(e));
-    }
-    generated = true;
     return false;
   }
 }

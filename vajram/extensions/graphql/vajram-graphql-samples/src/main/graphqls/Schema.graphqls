@@ -30,6 +30,21 @@ input DateRangeInput {
     to: String
 }
 
+"""Custom input type for seller queries"""
+input SellerInput {
+    """Seller ID to fetch details for"""
+    sellerId: String!
+    
+    """Start date for metrics calculation (ISO 8601 format: YYYY-MM-DD)"""
+    startDate: String
+    
+    """End date for metrics calculation (ISO 8601 format: YYYY-MM-DD)"""
+    endDate: String
+    
+    """Request ID for tracking and debugging"""
+    requestId: String
+}
+
 schema @rootPackage(name: "com.flipkart.krystal.vajram.graphql.samples") {
-    query: QueryType
+    query: Query
 }
