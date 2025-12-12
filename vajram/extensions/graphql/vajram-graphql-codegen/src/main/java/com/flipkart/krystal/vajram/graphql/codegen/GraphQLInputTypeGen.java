@@ -17,6 +17,8 @@ import graphql.language.InputValueDefinition;
 import graphql.language.ListType;
 import graphql.language.NonNullType;
 import graphql.schema.idl.TypeDefinitionRegistry;
+import java.io.File;
+import java.nio.file.Path;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -38,7 +40,9 @@ public class GraphQLInputTypeGen {
 
   public GraphQLInputTypeGen(CodeGenUtility util) {
     this.util = util;
-    GraphQlCodeGenUtil gqlUtil = new GraphQlCodeGenUtil(util);
+    Path schemaFilePath = GraphQlCodeGenUtil.getSchemaFilePath(util);
+    File schemaFile = schemaFilePath.toFile();
+    GraphQlCodeGenUtil gqlUtil = new GraphQlCodeGenUtil(schemaFile);
     this.schemaReaderUtil = gqlUtil.schemaReaderUtil();
     this.typeRegistry = schemaReaderUtil.typeDefinitionRegistry();
   }
@@ -180,4 +184,3 @@ public class GraphQLInputTypeGen {
     }
   }
 }
-
