@@ -20,10 +20,13 @@ import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
+import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent.AgentType;
 import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent.Call;
 import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent.Email;
 import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent.InitialCommunication;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.google.common.collect.ImmutableSet;
@@ -63,34 +66,34 @@ class MultiAgentContactTest {
   void dynamicPredicateDispatch_multipleDispatchTargets_success() {
     // Build the graph with all the vajram implementations
     VajramGraph graph =
-        VajramGraph.builder()
-            .loadFromPackage(MultiAgentContact.class.getPackageName())
-            .build();
+        VajramGraph.builder().loadFromPackage(MultiAgentContact.class.getPackageName()).build();
+    KrystexGraphBuilder kGraph = KrystexGraph.builder().vajramGraph(graph);
 
     // Create and register dispatch policy
-    graph.registerTraitDispatchPolicies(
-        dispatchTrait(CustomerServiceAgent_Req.class, graph)
-            .conditionally(
-                when(agentType_s, equalsEnum(L1))
-                    .and(initialCommunication_s, isInstanceOf(Call.class))
-                    .to(L1CallAgent_Req.class),
-                when(agentType_s, equalsEnum(L1))
-                    .and(initialCommunication_s, isInstanceOf(Email.class))
-                    .to(L1EmailAgent_Req.class),
-                when(agentType_s, equalsEnum(L2))
-                    .and(initialCommunication_s, isInstanceOf(Call.class))
-                    .to(L2CallAgent_Req.class),
-                when(agentType_s, equalsEnum(L3))
-                    .and(initialCommunication_s, isInstanceOf(Email.class))
-                    .to(L3EmailAgent_Req.class),
-                when(initialCommunication_s, isInstanceOf(Call.class))
-                    .to(DefaultCallAgent_Req.class),
-                when(initialCommunication_s, isInstanceOf(Email.class))
-                    .to(DefaultEmailAgent_Req.class),
-                // Default fallback
-                when(agentType_s, isAnyValue())
-                    .and(initialCommunication_s, isAnyValue())
-                    .to(DefaultCustomerServiceAgent_Req.class)));
+    kGraph.traitDispatchPolicies(
+        new TraitDispatchPolicies(
+            dispatchTrait(CustomerServiceAgent_Req.class, graph)
+                .conditionally(
+                    when(agentType_s, equalsEnum(L1))
+                        .and(initialCommunication_s, isInstanceOf(Call.class))
+                        .to(L1CallAgent_Req.class),
+                    when(agentType_s, equalsEnum(L1))
+                        .and(initialCommunication_s, isInstanceOf(Email.class))
+                        .to(L1EmailAgent_Req.class),
+                    when(agentType_s, equalsEnum(L2))
+                        .and(initialCommunication_s, isInstanceOf(Call.class))
+                        .to(L2CallAgent_Req.class),
+                    when(agentType_s, equalsEnum(L3))
+                        .and(initialCommunication_s, isInstanceOf(Email.class))
+                        .to(L3EmailAgent_Req.class),
+                    when(initialCommunication_s, isInstanceOf(Call.class))
+                        .to(DefaultCallAgent_Req.class),
+                    when(initialCommunication_s, isInstanceOf(Email.class))
+                        .to(DefaultEmailAgent_Req.class),
+                    // Default fallback
+                    when(agentType_s, isAnyValue())
+                        .and(initialCommunication_s, isAnyValue())
+                        .to(DefaultCustomerServiceAgent_Req.class))));
     // Create request for L1 agent and Call communication
     MultiAgentContact_ReqImmut request =
         MultiAgentContact_ReqImmutPojo._builder()
@@ -100,7 +103,7 @@ class MultiAgentContactTest {
 
     // Execute and verify
     CompletableFuture<@Nullable List<String>> responses;
-    try (var executor = graph.createExecutor(getExecutorConfig())) {
+    try (var executor = kGraph.build().createExecutor(getExecutorConfig())) {
       responses = executor.execute(request);
     }
 
@@ -136,9 +139,8 @@ class MultiAgentContactTest {
   void dynamicDispatchCompute_multipleDispatchTargets_success() {
     // Build the graph with all the vajram implementations
     VajramGraph graph =
-        VajramGraph.builder()
-            .loadFromPackage(MultiAgentContact.class.getPackageName())
-            .build();
+        VajramGraph.builder().loadFromPackage(MultiAgentContact.class.getPackageName()).build();
+    KrystexGraphBuilder kGraph = KrystexGraph.builder().vajramGraph(graph);
 
     record Key(
         @Nullable AgentType agentType,
@@ -154,23 +156,24 @@ class MultiAgentContactTest {
     map.put(new Key(null, null), DefaultCustomerServiceAgent_Req.class);
 
     // Create and register dispatch policy
-    graph.registerTraitDispatchPolicies(
-        dispatchTrait(CustomerServiceAgent_Req.class, graph)
-            .computingTargetWith(
-                request -> {
-                  var ic = request.initialCommunication();
-                  var aClass = ic == null ? null : ic.getClass();
-                  var target = map.get(new Key(request.agentType(), aClass));
-                  if (target != null) {
-                    return Optional.of(target);
-                  }
-                  target = map.get(new Key(null, aClass));
-                  if (target != null) {
-                    return Optional.of(target);
-                  }
-                  return Optional.ofNullable(map.get(new Key(null, null)));
-                },
-                ImmutableSet.copyOf(map.values())));
+    kGraph.traitDispatchPolicies(
+        new TraitDispatchPolicies(
+            dispatchTrait(CustomerServiceAgent_Req.class, graph)
+                .computingTargetWith(
+                    request -> {
+                      var ic = request.initialCommunication();
+                      var aClass = ic == null ? null : ic.getClass();
+                      var target = map.get(new Key(request.agentType(), aClass));
+                      if (target != null) {
+                        return Optional.of(target);
+                      }
+                      target = map.get(new Key(null, aClass));
+                      if (target != null) {
+                        return Optional.of(target);
+                      }
+                      return Optional.ofNullable(map.get(new Key(null, null)));
+                    },
+                    ImmutableSet.copyOf(map.values()))));
     // Create request for L1 agent and Call communication
     MultiAgentContact_ReqImmut request =
         MultiAgentContact_ReqImmutPojo._builder()
@@ -180,7 +183,7 @@ class MultiAgentContactTest {
 
     // Execute and verify
     CompletableFuture<@Nullable List<String>> responses;
-    try (var executor = graph.createExecutor(getExecutorConfig()); ) {
+    try (var executor = kGraph.build().createExecutor(getExecutorConfig()); ) {
       responses = executor.execute(request);
     }
 

@@ -156,15 +156,20 @@ public record DepChainBatcherConfig(
     int getBatchSize(VajramID vajramId);
   }
 
-  public static InputBatcherConfig autoRegisterSharedBatchers(
+  public static InputBatcherConfig computeSharedBatcherConfig(
+      VajramGraph graph, BatchSizeSupplier batchSizeSupplier) {
+    return computeSharedBatcherConfig(graph, batchSizeSupplier, new TraitDispatchPolicies());
+  }
+
+  public static InputBatcherConfig computeSharedBatcherConfig(
       VajramGraph graph,
       BatchSizeSupplier batchSizeSupplier,
       TraitDispatchPolicies traitDispatchPolicies) {
-    return autoRegisterSharedBatchers(
+    return computeSharedBatcherConfig(
         graph, batchSizeSupplier, traitDispatchPolicies, ImmutableSet.of());
   }
 
-  public static InputBatcherConfig autoRegisterSharedBatchers(
+  public static InputBatcherConfig computeSharedBatcherConfig(
       VajramGraph graph,
       BatchSizeSupplier batchSizeSupplier,
       TraitDispatchPolicies traitDispatchPolicies,

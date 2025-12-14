@@ -2,4 +2,6 @@ dependencies {
     implementation project(':lattice:lattice-codegen')
     implementation project(':vajram:extensions:graphql:vajram-graphql')
     implementation project(':vajram:extensions:graphql:vajram-graphql-codegen')
+
+    implementation 'jakarta.enterprise:jakarta.enterprise.cdi-api'
 }

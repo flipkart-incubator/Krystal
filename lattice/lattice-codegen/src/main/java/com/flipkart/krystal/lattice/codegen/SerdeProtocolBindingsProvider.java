@@ -1,6 +1,5 @@
 package com.flipkart.krystal.lattice.codegen;
 
-import static com.flipkart.krystal.lattice.codegen.spi.di.BindingScope.StandardBindingScope.REQUEST;
 import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
@@ -213,7 +212,7 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
                           "acceptHeader")
                       .build()),
               providingLogics.stream().collect(CodeBlock.joining(" else ")),
-              REQUEST));
+              null));
     }
 
     return ImmutableList.of(new BindingsContainer(ImmutableList.copyOf(bindings)));

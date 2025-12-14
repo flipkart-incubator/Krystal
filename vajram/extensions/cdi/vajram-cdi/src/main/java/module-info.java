@@ -4,4 +4,6 @@ module krystal.vajram.ext.cdi {
   requires flipkart.krystal.vajram;
   requires jakarta.inject;
   requires jakarta.cdi;
+  requires static lombok;
+  requires org.slf4j;
 }

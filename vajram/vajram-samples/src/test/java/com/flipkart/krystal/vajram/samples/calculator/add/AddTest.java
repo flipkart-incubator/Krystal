@@ -10,6 +10,8 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
@@ -30,11 +32,13 @@ class AddTest {
   }
 
   private final VajramGraph graph = VajramGraph.builder().loadClasses(Add.class).build();
+  private KrystexGraphBuilder kGraph;
   private Lease<SingleThreadExecutor> executorLease;
 
   @BeforeEach
   void setUp() throws LeaseUnavailableException {
     this.executorLease = EXEC_POOL.lease();
+    this.kGraph = KrystexGraph.builder().vajramGraph(graph);
   }
 
   @AfterEach
@@ -45,7 +49,6 @@ class AddTest {
   @Test
   void withOutNumberTwo_usesPlatformDefaultValue_success() {
     // Create a VajramKryonGraph and KrystexVajramExecutor
-    VajramGraph graph = VajramGraph.builder().loadClasses(Add.class).build();
     KrystexVajramExecutorConfig config =
         KrystexVajramExecutorConfig.builder()
             .kryonExecutorConfigBuilder(
@@ -54,7 +57,7 @@ class AddTest {
                     .executorService(new SingleThreadExecutor("adderTest")))
             .build();
     CompletableFuture<Integer> future;
-    try (KrystexVajramExecutor executor = graph.createExecutor(config)) {
+    try (KrystexVajramExecutor executor = kGraph.build().createExecutor(config)) {
       // Execute the Adder Vajram without passing numberTwo
       future =
           executor.execute(
@@ -80,7 +83,7 @@ class AddTest {
                     .executorService(executorService))
             .build();
     CompletableFuture<Thread> resultThreadFuture = new CompletableFuture<>();
-    try (KrystexVajramExecutor krystexVajramExecutor = graph.createExecutor(config)) {
+    try (KrystexVajramExecutor krystexVajramExecutor = kGraph.build().createExecutor(config)) {
       result =
           krystexVajramExecutor.execute(
               Add_ReqImmutPojo._builder().numberOne(5)._build(),

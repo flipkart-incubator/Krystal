@@ -353,8 +353,7 @@ public class VajramCodeGenUtility {
             () -> getNextAvailableFacetId(takenFacetIds, nextFacetId)));
     depBuilder.name(facetName);
     Optional<TypeMirror> vajramReqType =
-        codegenUtil
-            .getTypeFromAnnotationMember(dependency::withVajramReq)
+        Optional.of(codegenUtil.getTypeFromAnnotationMember(dependency::withVajramReq))
             .filter(
                 typeMirror ->
                     !checkNotNull((QualifiedNameable) typeUtils.asElement(typeMirror))
@@ -363,8 +362,7 @@ public class VajramCodeGenUtility {
                             CodeGenUtility.getTypeElement(Request.class.getName(), processingEnv)
                                 .getQualifiedName()));
     Optional<TypeMirror> vajramType =
-        codegenUtil
-            .getTypeFromAnnotationMember(dependency::onVajram)
+        Optional.of(codegenUtil.getTypeFromAnnotationMember(dependency::onVajram))
             .filter(
                 typeMirror ->
                     !checkNotNull((QualifiedNameable) typeUtils.asElement(typeMirror))

@@ -5,6 +5,7 @@ import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStr
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.DIRECT;
+import static com.flipkart.krystal.vajramexecutor.krystex.batching.DepChainBatcherConfig.computeSharedBatcherConfig;
 import static java.time.Duration.ofSeconds;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -38,8 +39,9 @@ import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.exception.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajram.resilience4j.bulkhead.Resilience4JBulkhead;
 import com.flipkart.krystal.vajram.resilience4j.curcuitbreaker.Resilience4JCircuitBreaker;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph.VajramKryonGraphBuilder;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph.VajramGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.batching.DepChainBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.batching.InputBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.batching.InputBatchingDecorator;
@@ -99,7 +101,8 @@ class KrystexVajramExecutorTest {
   private Lease<SingleThreadExecutor> executorLease;
   private TestRequestContext requestContext;
   private ObjectMapper objectMapper;
-  private VajramGraph graph;
+  private VajramGraph vGraph;
+  private KrystexGraphBuilder kGraph;
   private DecorationOrdering decorationOrdering;
 
   private final KryonExecStrategy kryonExecStrategy;
@@ -137,19 +140,18 @@ class KrystexVajramExecutorTest {
     FriendsService.CALL_COUNTER.reset();
     TestUserService.REQUESTS.clear();
     Hello.CALL_COUNTER.reset();
-    Optional.ofNullable(graph).ifPresent(VajramGraph::close);
     executorLease.close();
   }
 
   @Test
   void executeCompute_noDependencies_success() {
-    graph =
-        loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello").build();
+    kGraph = loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello");
     CompletableFuture<String> result;
     requestContext.requestId("vajramWithNoDependencies");
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
+        kGraph
+            .build()
+            .createExecutor(getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
       result = krystexVajramExecutor.execute(this.helloRequest(requestContext));
     }
     assertThat(result).succeedsWithin(TIMEOUT).isEqualTo("Hello! user_id_1");
@@ -157,13 +159,13 @@ class KrystexVajramExecutorTest {
 
   @Test
   void executeCompute_optionalInputProvided_success() {
-    graph =
-        loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello").build();
+    kGraph = loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello");
     CompletableFuture<String> result;
     requestContext.requestId("vajramWithNoDependencies");
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
+        kGraph
+            .build()
+            .createExecutor(getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
       result =
           krystexVajramExecutor.execute(
               helloRequestBuilder(requestContext).greeting("Namaste")._build());
@@ -173,14 +175,14 @@ class KrystexVajramExecutorTest {
 
   @Test
   void executeIo_singleRequestNoBatcher_success() {
-    graph =
-        loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice")
-            .build();
+    kGraph =
+        loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice");
     CompletableFuture<TestUserInfo> userInfo123;
     requestContext.requestId("ioVajramSingleRequestNoBatcher");
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
+        kGraph
+            .build()
+            .createExecutor(getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
       userInfo123 = krystexVajramExecutor.execute(this.testUserServiceRequest(requestContext));
     }
     assertThat(userInfo123)
@@ -191,17 +193,17 @@ class KrystexVajramExecutorTest {
 
   @Test
   void executeIo_withBatcherMultipleRequests_calledOnlyOnce() {
-    graph =
+    kGraph =
         loadFromClasspath(
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends")
-            .build();
-    DepChainBatcherConfig.autoRegisterSharedBatchers(graph, _v -> 3);
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends");
+    kGraph.inputBatcherConfig(computeSharedBatcherConfig(vGraph, _v -> 3));
     CompletableFuture<String> helloString;
     requestContext.requestId("ioVajramWithBatcherMultipleRequests");
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
+        kGraph
+            .build()
+            .createExecutor(getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
       helloString = krystexVajramExecutor.execute(this.helloFriendsRequest(requestContext));
     }
     assertThat(helloString)
@@ -215,19 +217,19 @@ class KrystexVajramExecutorTest {
 
   @Test
   void executeCompute_sequentialDependency_success() {
-    graph =
+    kGraph =
         loadFromClasspath(
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2")
-            .build();
-    graph.registerInputBatchers(
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2");
+    kGraph.inputBatcherConfig(
         singleBatcherConfig(TestUserService.class, () -> new InputBatcherImpl(2)));
     CompletableFuture<String> helloString;
     requestContext.requestId("sequentialDependency");
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
+        kGraph
+            .build()
+            .createExecutor(getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
       helloString = krystexVajramExecutor.execute(this.helloFriendsV2Request(requestContext));
     }
     assertThat(helloString)
@@ -239,19 +241,19 @@ class KrystexVajramExecutorTest {
 
   @Test
   void executeWithFacets_success() {
-    graph =
+    kGraph =
         loadFromClasspath(
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2")
-            .build();
-    graph.registerInputBatchers(
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2");
+    kGraph.inputBatcherConfig(
         singleBatcherConfig(TestUserService.class, () -> new InputBatcherImpl(2)));
     CompletableFuture<String> helloString;
     requestContext.requestId("sequentialDependency");
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
+        kGraph
+            .build()
+            .createExecutor(getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
       helloString =
           krystexVajramExecutor.execute(
               this.helloFriendsV2Request(requestContext),
@@ -266,7 +268,7 @@ class KrystexVajramExecutorTest {
 
   @Test
   void executeCompute_missingMandatoryInput_throwsException() {
-    graph =
+    var graph =
         loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello").build();
     CompletableFuture<String> result;
     requestContext.requestId("vajramWithNoDependencies");
@@ -281,23 +283,23 @@ class KrystexVajramExecutorTest {
         .withCauseExactlyInstanceOf(MandatoryFacetsMissingException.class)
         .withMessageContaining(
             "Vajram v<"
-                + graph.getVajramIdByVajramDefType(Hello.class).id()
+                + graph.vajramGraph().getVajramIdByVajramDefType(Hello.class).id()
                 + "> did not receive these mandatory inputs: [ 'name'");
   }
 
   @Test
   void execute_multiRequestNoInputBatcher_cacheHitSuccess() {
-    graph =
+    kGraph =
         loadFromClasspath(
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends")
-            .build();
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends");
     CompletableFuture<TestUserInfo> userInfo;
     CompletableFuture<String> helloFriends;
     requestContext.requestId("multiRequestNoInputBatcher_cacheHitSuccess");
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
+        kGraph
+            .build()
+            .createExecutor(getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
       userInfo =
           krystexVajramExecutor.execute(
               TestUserService_ReqImmutPojo._builder().userId("user_id_1")._build(),
@@ -319,17 +321,17 @@ class KrystexVajramExecutorTest {
 
   @Test
   void execute_multiRequestWithBatcher_cacheHitSuccess() {
-    graph =
+    kGraph =
         loadFromClasspath(
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends")
-            .build();
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends");
     CompletableFuture<TestUserInfo> userInfo;
     CompletableFuture<String> helloFriends;
     requestContext.requestId("ioVajramSingleRequestNoBatcher");
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
+        kGraph
+            .build()
+            .createExecutor(getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
       userInfo =
           krystexVajramExecutor.execute(
               TestUserService_ReqImmutPojo._builder().userId("user_id_1:friend_1")._build(),
@@ -357,28 +359,29 @@ class KrystexVajramExecutorTest {
 
   @Test
   void execute_multiResolverFanouts_permutesTheFanouts() throws Exception {
-    graph =
+    kGraph =
         loadFromClasspath(
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.audit",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello")
-            .build();
-    graph.registerInputBatchers(
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.audit",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello");
+    kGraph.inputBatcherConfig(
         singleBatcherConfig(TestUserService.class, () -> new InputBatcherImpl(6)));
     CompletableFuture<String> multiHellos;
     requestContext.requestId("execute_multiResolverFanouts_permutesTheFanouts");
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder()
-                        .executorService(executorLease.get())
-                        .kryonExecStrategy(kryonExecStrategy)
-                        .graphTraversalStrategy(graphTraversalStrategy)
-                        .configureWith(new MainLogicExecReporter(kryonExecutionReport)))
-                .build())) {
+        kGraph
+            .build()
+            .createExecutor(
+                KrystexVajramExecutorConfig.builder()
+                    .kryonExecutorConfigBuilder(
+                        KryonExecutorConfig.builder()
+                            .executorService(executorLease.get())
+                            .kryonExecStrategy(kryonExecStrategy)
+                            .graphTraversalStrategy(graphTraversalStrategy)
+                            .configureWith(new MainLogicExecReporter(kryonExecutionReport)))
+                    .build())) {
       multiHellos =
           krystexVajramExecutor.execute(
               MultiHelloFriends_ReqImmutPojo._builder()
@@ -400,20 +403,20 @@ class KrystexVajramExecutorTest {
   @Test
   void flush_singleDepthParallelDependencyDefaultInputBatcherConfig_flushes2Batchers(
       TestInfo testInfo) {
-    graph =
+    kGraph =
         loadFromClasspath(
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.audit",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello")
-            .build();
-    graph.registerInputBatchers(
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.audit",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello");
+    kGraph.inputBatcherConfig(
         singleBatcherConfig(TestUserService.class, () -> new InputBatcherImpl(100)));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
+        kGraph
+            .build()
+            .createExecutor(getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
       multiHellos =
           krystexVajramExecutor.execute(
               MultiHelloFriends_ReqImmutPojo._builder()
@@ -440,19 +443,19 @@ class KrystexVajramExecutorTest {
   @Test
   void flush_singleDepthParallelDependencySharedInputBatcherConfig_flushes1Batcher(
       TestInfo testInfo) {
-    graph =
+    kGraph =
         loadFromClasspath(
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.audit",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello")
-            .build();
-    DepChainBatcherConfig.autoRegisterSharedBatchers(graph, _v -> 100);
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.audit",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello");
+    kGraph.inputBatcherConfig(computeSharedBatcherConfig(vGraph, _v -> 100));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
+        kGraph
+            .build()
+            .createExecutor(getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
       multiHellos =
           krystexVajramExecutor.execute(
               MultiHelloFriends_ReqImmutPojo._builder()
@@ -502,20 +505,20 @@ class KrystexVajramExecutorTest {
   @Test
   void flush_singleDepthSkipParallelDependencySharedInputBatcherConfig_flushes1Batcher(
       TestInfo testInfo) {
-    graph =
+    kGraph =
         loadFromClasspath(
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.audit",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello")
-            .build();
-    DepChainBatcherConfig.autoRegisterSharedBatchers(graph, _v -> 100);
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.audit",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello");
+    kGraph.inputBatcherConfig(computeSharedBatcherConfig(vGraph, _v -> 100));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
+        kGraph
+            .build()
+            .createExecutor(getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
       multiHellos =
           krystexVajramExecutor.execute(
               MultiHelloFriends_ReqImmutPojo._builder()
@@ -538,14 +541,15 @@ class KrystexVajramExecutorTest {
 
   @Test
   void close_sequentialDependency_flushesBatcher(TestInfo testInfo) {
-    graph =
-        loadFromClasspath(
+    var graph =
+        getVajramGraphBuilder(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2")
             .build();
-    graph.registerInputBatchers(
+    KrystexGraphBuilder kGraph = KrystexGraph.builder().vajramGraph(graph);
+    kGraph.inputBatcherConfig(
         new InputBatcherConfig(
             ImmutableMap.of(
                 graph.getVajramIdByVajramDefType(TestUserService.class),
@@ -556,8 +560,9 @@ class KrystexVajramExecutorTest {
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
+        kGraph
+            .build()
+            .createExecutor(getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
       multiHellos =
           krystexVajramExecutor.execute(
               MultiHelloFriendsV2_ReqImmutPojo._builder()
@@ -575,19 +580,19 @@ class KrystexVajramExecutorTest {
 
   @Test
   void flush_sequentialDependency_flushesSharedBatchers(TestInfo testInfo) {
-    graph =
+    kGraph =
         loadFromClasspath(
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello")
-            .build();
-    DepChainBatcherConfig.autoRegisterSharedBatchers(graph, vajramId -> 100);
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello");
+    kGraph.inputBatcherConfig(computeSharedBatcherConfig(vGraph, vajramId -> 100));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
+        kGraph
+            .build()
+            .createExecutor(getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
       multiHellos =
           krystexVajramExecutor.execute(
               MutualFriendsHello_ReqImmutPojo._builder().userId("user_id_1")._build());
@@ -603,19 +608,19 @@ class KrystexVajramExecutorTest {
 
   @Test
   void flush_sequentialSkipDependency_flushesSharedBatchers(TestInfo testInfo) {
-    graph =
+    kGraph =
         loadFromClasspath(
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello")
-            .build();
-    DepChainBatcherConfig.autoRegisterSharedBatchers(graph, _v -> 100);
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello");
+    kGraph.inputBatcherConfig(computeSharedBatcherConfig(vGraph, _v -> 100));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
+        kGraph
+            .build()
+            .createExecutor(getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
       multiHellos =
           krystexVajramExecutor.execute(
               MutualFriendsHello_ReqImmutPojo._builder().userId("user_id_1").skip(true)._build());
@@ -628,14 +633,16 @@ class KrystexVajramExecutorTest {
   void flush_skippingADependency_flushesCompleteCallGraph(TestInfo testInfo) {
     CompletableFuture<FlushCommand> friendServiceFlushCommand = new CompletableFuture<>();
     CompletableFuture<FlushCommand> userServiceFlushCommand = new CompletableFuture<>();
-    graph =
-        loadFromClasspath(
+    var graph =
+        getVajramGraphBuilder(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2")
             .build();
-    graph.registerInputBatchers(
+
+    KrystexGraphBuilder kGraph = KrystexGraph.builder().vajramGraph(graph);
+    kGraph.inputBatcherConfig(
         new InputBatcherConfig(
             ImmutableMap.of(
                 graph.getVajramIdByVajramDefType(FriendsService.class),
@@ -683,8 +690,9 @@ class KrystexVajramExecutorTest {
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
+        kGraph
+            .build()
+            .createExecutor(getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
       multiHellos =
           krystexVajramExecutor.execute(
               MultiHelloFriendsV2_ReqImmutPojo._builder()
@@ -729,8 +737,13 @@ class KrystexVajramExecutorTest {
         ._build();
   }
 
-  private static VajramKryonGraphBuilder loadFromClasspath(String... packagePrefixes) {
-    VajramKryonGraphBuilder builder = VajramGraph.builder();
+  private KrystexGraphBuilder loadFromClasspath(String... packagePrefixes) {
+    vGraph = getVajramGraphBuilder(packagePrefixes).build();
+    return KrystexGraph.builder().vajramGraph(vGraph);
+  }
+
+  private static VajramGraphBuilder getVajramGraphBuilder(String... packagePrefixes) {
+    VajramGraphBuilder builder = VajramGraph.builder();
     Arrays.stream(packagePrefixes).forEach(builder::loadFromPackage);
     return builder;
   }
@@ -744,7 +757,7 @@ class KrystexVajramExecutorTest {
       Class<? extends VajramDefRoot<?>> vajramType, Supplier<InputBatcher> inputBatcherSupplier) {
     return new InputBatcherConfig(
         ImmutableMap.of(
-            graph.getVajramIdByVajramDefType(vajramType),
+            vGraph.getVajramIdByVajramDefType(vajramType),
             ImmutableList.of(DepChainBatcherConfig.simple(inputBatcherSupplier))));
   }
 }

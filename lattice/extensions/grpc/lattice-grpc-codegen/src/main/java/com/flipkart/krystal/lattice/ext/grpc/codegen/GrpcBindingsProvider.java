@@ -1,8 +1,5 @@
 package com.flipkart.krystal.lattice.ext.grpc.codegen;
 
-import static com.flipkart.krystal.lattice.codegen.spi.di.BindingScope.StandardBindingScope.LAZY_SINGLETON;
-import static com.flipkart.krystal.lattice.codegen.spi.di.BindingScope.StandardBindingScope.REQUEST;
-
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenUtils;
@@ -21,6 +18,8 @@ import com.google.common.collect.ImmutableList;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Named;
 import javax.lang.model.element.TypeElement;
 
@@ -45,7 +44,7 @@ public final class GrpcBindingsProvider implements BindingsProvider {
     return new ImplTypeBinding(
         ClassName.get(GrpcServerDopant.class),
         latticeCodegenUtils.getDopantImplName(latticeAppElem, GrpcServerDopant.class),
-        LAZY_SINGLETON);
+        AnnotationSpec.builder(ApplicationScoped.class).build());
   }
 
   private static Binding bindAcceptHeaderInRequestScope() {
@@ -55,6 +54,6 @@ public final class GrpcBindingsProvider implements BindingsProvider {
         AnnotationSpec.builder(Named.class)
             .addMember("value", "$L", CodeBlock.of("$T.$L", StandardHeaderNames.class, "ACCEPT"))
             .build(),
-        REQUEST);
+        AnnotationSpec.builder(RequestScoped.class).build());
   }
 }

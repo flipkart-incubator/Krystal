@@ -13,10 +13,12 @@ import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.samples.calculator.add.Add;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph.VajramKryonGraphBuilder;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph.VajramGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.batching.DepChainBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.batching.InputBatcherConfig;
 import com.google.common.collect.ImmutableList;
@@ -35,7 +37,7 @@ class AddZeroTest {
     EXEC_POOL = new SingleThreadExecutorsPool("Test", Runtime.getRuntime().availableProcessors());
   }
 
-  private VajramKryonGraphBuilder graph;
+  private VajramGraphBuilder graph;
   private static final String REQUEST_ID = "addZeroTest";
 
   private Lease<SingleThreadExecutor> executorLease;
@@ -56,19 +58,22 @@ class AddZeroTest {
     CompletableFuture<Integer> future;
     VajramGraph graph = this.graph.build();
     VajramID vajramID = graph.getVajramIdByVajramDefType(Add.class);
-    graph.registerInputBatchers(
+    KrystexGraphBuilder kGraph = KrystexGraph.builder().vajramGraph(graph);
+    kGraph.inputBatcherConfig(
         new InputBatcherConfig(
             ImmutableMap.of(
                 vajramID,
                 ImmutableList.of(DepChainBatcherConfig.simple(() -> new InputBatcherImpl(100))))));
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder()
-                        .executorId(REQUEST_ID)
-                        .executorService(executorLease.get()))
-                .build())) {
+        kGraph
+            .build()
+            .createExecutor(
+                KrystexVajramExecutorConfig.builder()
+                    .kryonExecutorConfigBuilder(
+                        KryonExecutorConfig.builder()
+                            .executorId(REQUEST_ID)
+                            .executorService(executorLease.get()))
+                    .build())) {
       future =
           krystexVajramExecutor.execute(
               AddZero_ReqImmutPojo._builder().number(5)._build(),

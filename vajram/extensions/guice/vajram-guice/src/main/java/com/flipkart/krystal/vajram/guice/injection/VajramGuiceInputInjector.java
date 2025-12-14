@@ -1,12 +1,9 @@
 package com.flipkart.krystal.vajram.guice.injection;
 
-import static com.flipkart.krystal.data.Errable.errableFrom;
-import static com.flipkart.krystal.data.Errable.nil;
 import static com.flipkart.krystal.facets.FacetType.INJECTION;
 import static com.flipkart.krystal.vajram.inputinjection.InputInjectionUtils.getQualifiers;
 
 import com.flipkart.krystal.core.VajramID;
-import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
@@ -19,7 +16,6 @@ import java.lang.reflect.Type;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
-import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -34,35 +30,31 @@ public class VajramGuiceInputInjector implements VajramInjectionProvider {
   }
 
   @Override
-  public <T> Errable<@NonNull T> get(VajramID vajramID, FacetSpec<T, ?> facetDef) {
+  public <T> Provider<T> get(VajramID vajramID, FacetSpec<T, ?> facetDef) {
     if (!INJECTION.equals(facetDef.facetType())) {
-      return nil();
+      return () -> null;
     }
-    return errableFrom(
-        () -> {
-          @SuppressWarnings("unchecked")
-          Provider<T> provider =
-              (Provider<T>)
-                  providerCache
-                      .computeIfAbsent(vajramID, _v -> new LinkedHashMap<>())
-                      .computeIfAbsent(
-                          facetDef.name(),
-                          _i -> {
-                            try {
-                              Type type = facetDef.type().javaReflectType();
-                              var annotation = getQualifier(vajramID, facetDef);
-                              if (annotation.isEmpty()) {
-                                return injector.getProvider(Key.get(type));
-                              } else {
-                                return injector.getProvider(Key.get(type, annotation.get()));
-                              }
-                            } catch (ClassNotFoundException e) {
-                              throw new StackTracelessException(
-                                  "Unable to load data type of Input", e);
-                            }
-                          });
-          return provider.get();
-        });
+    @SuppressWarnings("unchecked")
+    Provider<T> provider =
+        (Provider<T>)
+            providerCache
+                .computeIfAbsent(vajramID, _v -> new LinkedHashMap<>())
+                .computeIfAbsent(
+                    facetDef.name(),
+                    _i -> {
+                      try {
+                        Type type = facetDef.type().javaReflectType();
+                        var annotation = getQualifier(vajramID, facetDef);
+                        if (annotation.isEmpty()) {
+                          return injector.getProvider(Key.get(type));
+                        } else {
+                          return injector.getProvider(Key.get(type, annotation.get()));
+                        }
+                      } catch (ClassNotFoundException e) {
+                        throw new StackTracelessException("Unable to load data type of Input", e);
+                      }
+                    });
+    return provider;
   }
 
   private <T> Optional<Annotation> getQualifier(VajramID vajramID, FacetSpec<T, ?> facetDef) {

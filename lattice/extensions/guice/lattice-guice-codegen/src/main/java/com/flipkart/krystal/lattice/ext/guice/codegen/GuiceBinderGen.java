@@ -62,8 +62,7 @@ return new $guiceModuleBinder:T(
                     .getTypeUtils()
                     .asElement(
                         util.getTypeFromAnnotationMember(
-                                context.latticeApp()::dependencyInjectionBinder)
-                            .orElseThrow(() -> new AssertionError("Not possible"))));
+                            context.latticeApp()::dependencyInjectionBinder)));
     return dependencyInjectionBinder;
   }
 

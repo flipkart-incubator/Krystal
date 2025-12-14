@@ -2,9 +2,7 @@ package com.flipkart.krystal.lattice.core.execution;
 
 import static com.flipkart.krystal.lattice.core.execution.ThreadingStrategyDopant.DOPANT_TYPE;
 import static java.util.Objects.requireNonNull;
-import static java.util.Objects.requireNonNullElse;
 
-import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.lattice.core.di.Bindings;
 import com.flipkart.krystal.lattice.core.di.DependencyInjectionProvider;
@@ -31,7 +29,7 @@ public final class ThreadingStrategyDopant implements DopantWithConfig<Threading
   private final ThreadingStrategy threadingStrategy;
 
   private final SingleThreadExecutorsPool executorPool;
-  @Getter private final Function<SingleThreadExecutor, ExecutorService> executorServiceTransformer;
+  @Getter private final Function<ExecutorService, ExecutorService> executorServiceTransformer;
 
   @Inject
   ThreadingStrategyDopant(
@@ -48,8 +46,8 @@ public final class ThreadingStrategyDopant implements DopantWithConfig<Threading
     this.threadingStrategy = spec.threadingStrategy();
     this.binder = binder;
     this.executorServiceTransformer =
-        requireNonNullElse(
-            spec.executorServiceTransformer(), singleThreadExecutor -> singleThreadExecutor);
+        // Reduce all transformer functions to a single one which applies all of them in order
+        spec.executorServiceTransformers().stream().reduce(Function.identity(), Function::andThen);
     this.executorPool =
         switch (threadingStrategy) {
           case POOLED_NATIVE_THREAD_PER_REQUEST ->

@@ -1,9 +1,6 @@
 package com.flipkart.krystal.lattice.codegen;
 
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.lowerCaseFirstChar;
-import static com.flipkart.krystal.lattice.codegen.DepInjectionFramework.CDI_LITE;
-import static com.flipkart.krystal.lattice.codegen.spi.di.BindingScope.StandardBindingScope.EAGER_SINGLETON;
-import static com.flipkart.krystal.lattice.codegen.spi.di.BindingScope.StandardBindingScope.UNKNOWN_SCOPE;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Map.entry;
 import static java.util.Map.ofEntries;
@@ -14,13 +11,13 @@ import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.STATIC;
 
 import com.flipkart.krystal.lattice.codegen.spi.di.Binding;
-import com.flipkart.krystal.lattice.codegen.spi.di.BindingScope;
-import com.flipkart.krystal.lattice.codegen.spi.di.BindingScope.StandardBindingScope;
 import com.flipkart.krystal.lattice.codegen.spi.di.BindingsContainer;
 import com.flipkart.krystal.lattice.codegen.spi.di.BindingsProvider;
 import com.flipkart.krystal.lattice.codegen.spi.di.ProviderMethod;
 import com.flipkart.krystal.lattice.core.LatticeAppBootstrap;
 import com.flipkart.krystal.lattice.core.LatticeAppConfig;
+import com.flipkart.krystal.lattice.core.di.Produces;
+import com.flipkart.krystal.lattice.core.di.Produces.NoScope;
 import com.flipkart.krystal.lattice.core.doping.AutoConfigure;
 import com.flipkart.krystal.lattice.core.doping.DopantConfig.NoAnnotation;
 import com.flipkart.krystal.lattice.core.doping.DopantConfig.NoConfiguration;
@@ -36,14 +33,15 @@ import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeName;
 import jakarta.enterprise.context.NormalScope;
-import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Qualifier;
 import jakarta.inject.Scope;
+import jakarta.inject.Singleton;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
@@ -314,7 +312,7 @@ public class DopantBindingsProvider implements BindingsProvider {
                                       })
                                   .collect(CodeBlock.joining("\n")))))
                   .build(),
-              EAGER_SINGLETON));
+              AnnotationSpec.builder(Singleton.class).build()));
     }
     return bindings;
   }
@@ -329,7 +327,7 @@ public class DopantBindingsProvider implements BindingsProvider {
           .codeGenUtility()
           .codegenUtil()
           .isRawAssignable(dopantConfigType, NoConfiguration.class)) {
-        // This dopant has not configuration.
+        // This dopant has no configuration.
         continue;
       }
       bindings.add(
@@ -344,7 +342,7 @@ public class DopantBindingsProvider implements BindingsProvider {
                   dopantConfigType,
                   latticeAppConfigVarName,
                   dopantTypesInfo.dopantTypeString()),
-              EAGER_SINGLETON));
+              AnnotationSpec.builder(Singleton.class).build()));
     }
     return bindings;
   }
@@ -370,7 +368,7 @@ public class DopantBindingsProvider implements BindingsProvider {
                   "return $T.class.getAnnotation($T.class);",
                   context.latticeAppTypeElement().asType(),
                   dopantAnnoType),
-              EAGER_SINGLETON));
+              AnnotationSpec.builder(Singleton.class).build()));
     }
     return bindings;
   }
@@ -396,7 +394,7 @@ public class DopantBindingsProvider implements BindingsProvider {
             dependencies.stream()
                 .map(p -> CodeBlock.of("$L", p.name))
                 .collect(CodeBlock.joining(", "))),
-        EAGER_SINGLETON);
+        AnnotationSpec.builder(Singleton.class).build());
   }
 
   private List<Binding> dopantProducerBindings(
@@ -412,34 +410,17 @@ public class DopantBindingsProvider implements BindingsProvider {
           .forEach(
               element -> {
                 List<? extends AnnotationMirror> annotationMirrors = element.getAnnotationMirrors();
-                List<AnnotationMirror> qualifierAnnotations = new ArrayList<>();
-                List<AnnotationMirror> scopeAnnotations = new ArrayList<>();
-                for (AnnotationMirror annotationMirror : annotationMirrors) {
-                  if (annotationMirror
-                          .getAnnotationType()
-                          .asElement()
-                          .getAnnotation(Qualifier.class)
-                      != null) {
-                    qualifierAnnotations.add(annotationMirror);
-                  }
-                  if (annotationMirror.getAnnotationType().asElement().getAnnotation(Scope.class)
-                          != null
-                      || annotationMirror
-                              .getAnnotationType()
-                              .asElement()
-                              .getAnnotation(NormalScope.class)
-                          != null) {
-                    scopeAnnotations.add(annotationMirror);
-                  }
-                }
-                if (scopeAnnotations.size() > 1) {
-                  throw new IllegalArgumentException(
-                      "Multiple scope annotations are not supported. Found on: " + element);
-                }
-                AnnotationMirror scopeAnnotation = null;
-                if (!scopeAnnotations.isEmpty()) {
-                  scopeAnnotation = scopeAnnotations.get(0);
-                }
+                Produces producesAnno = element.getAnnotation(Produces.class);
+                List<AnnotationMirror> qualifierAnnotations =
+                    annotationMirrors.stream()
+                        .filter(
+                            annotationMirror ->
+                                annotationMirror
+                                        .getAnnotationType()
+                                        .asElement()
+                                        .getAnnotation(Qualifier.class)
+                                    != null)
+                        .collect(Collectors.toList());
                 String dopantVarName = lowerCaseFirstChar(dopantElem.getSimpleName().toString());
                 List<ParameterSpec> additionalParams =
                     element.getParameters().stream()
@@ -464,10 +445,29 @@ public class DopantBindingsProvider implements BindingsProvider {
                 List<AnnotationSpec> annotationSpecs =
                     new ArrayList<>(
                         qualifierAnnotations.stream().map(AnnotationSpec::get).toList());
-                BindingScope bindingScope = StandardBindingScope.of(scopeAnnotation);
-                if (scopeAnnotation != null && bindingScope == UNKNOWN_SCOPE) {
-                  annotationSpecs.add(AnnotationSpec.get(scopeAnnotation));
+
+                TypeMirror scopedTypeMirror =
+                    context
+                        .codeGenUtility()
+                        .codegenUtil()
+                        .getTypeFromAnnotationMember(producesAnno::inScope);
+                TypeElement scopeElem =
+                    (TypeElement)
+                        context
+                            .codeGenUtility()
+                            .processingEnv()
+                            .getTypeUtils()
+                            .asElement(scopedTypeMirror);
+                if (!ClassName.get(scopeElem).equals(ClassName.get(NoScope.class))
+                    && scopeElem.getAnnotation(Scope.class) != null
+                    && scopeElem.getAnnotation(NormalScope.class) != null) {
+                  context
+                      .codeGenUtility()
+                      .codegenUtil()
+                      .error(
+                          "@Produces(scope=) class must have be scope (must have @jakarta.inject.Scope or @NormalScope annotation)");
                 }
+
                 bindings.add(
                     new ProviderMethod(
                         variableName(returnType, context.codeGenUtility().processingEnv()),
@@ -481,8 +481,7 @@ public class DopantBindingsProvider implements BindingsProvider {
                                 .map(p -> CodeBlock.of("$L", p.name))
                                 .collect(CodeBlock.joining(", "))),
                         annotationSpecs,
-                        bindingScope,
-                        CDI_LITE));
+                        AnnotationSpec.builder(ClassName.get(scopeElem)).build()));
               });
     }
     return bindings;

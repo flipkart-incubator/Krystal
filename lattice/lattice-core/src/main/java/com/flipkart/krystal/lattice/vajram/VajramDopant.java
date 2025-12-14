@@ -1,9 +1,9 @@
 package com.flipkart.krystal.lattice.vajram;
 
+import com.flipkart.krystal.lattice.core.di.Produces;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
 import com.flipkart.krystal.lattice.core.doping.SimpleDopant;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
-import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.Getter;
@@ -16,7 +16,7 @@ public final class VajramDopant implements SimpleDopant {
 
   static final String DOPANT_TYPE = "krystal.lattice.vajram";
 
-  @Getter(onMethod_ = {@Produces, @Singleton})
+  @Getter(onMethod_ = @Produces(inScope = Singleton.class))
   private final VajramGraph vajramGraph;
 
   @Inject

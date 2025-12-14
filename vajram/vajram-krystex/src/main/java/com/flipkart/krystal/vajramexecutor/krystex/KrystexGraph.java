@@ -46,11 +46,12 @@ public final class KrystexGraph {
   @Builder
   public KrystexGraph(
       @NonNull VajramGraph vajramGraph,
-      @NonNull TraitDispatchPolicies traitDispatchPolicies,
+      @Nullable TraitDispatchPolicies traitDispatchPolicies,
       @Nullable InputBatcherConfig inputBatcherConfig,
       @Nullable VajramInjectionProvider injectionProvider) {
     this.vajramGraph = vajramGraph;
-    this.traitDispatchPolicies = traitDispatchPolicies;
+    this.traitDispatchPolicies =
+        traitDispatchPolicies != null ? traitDispatchPolicies : new TraitDispatchPolicies();
     this.traitDispatchDecorator =
         new DefaultTraitDispatcher(vajramGraph, this.traitDispatchPolicies);
     this.inputInjectionConfig = create(injectionProvider, vajramGraph);

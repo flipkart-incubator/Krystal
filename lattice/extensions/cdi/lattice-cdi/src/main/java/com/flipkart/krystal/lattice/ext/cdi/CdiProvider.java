@@ -7,7 +7,7 @@ import com.flipkart.krystal.lattice.core.di.Bindings;
 import com.flipkart.krystal.lattice.core.di.DependencyInjectionProvider;
 import com.flipkart.krystal.lattice.core.di.InjectionValueProvider;
 import com.flipkart.krystal.lattice.core.execution.ThreadingStrategy;
-import com.flipkart.krystal.vajram.ext.cdi.injection.VajramCdiInjector;
+import com.flipkart.krystal.vajram.ext.cdi.injection.VajramCdiDynamicInjector;
 import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
 import jakarta.enterprise.inject.spi.CDI;
 import jakarta.inject.Singleton;
@@ -51,7 +51,7 @@ public final class CdiProvider implements DependencyInjectionProvider {
 
   @Override
   public VajramInjectionProvider toVajramInjectionProvider() {
-    return new VajramCdiInjector();
+    return new VajramCdiDynamicInjector();
   }
 
   @Override

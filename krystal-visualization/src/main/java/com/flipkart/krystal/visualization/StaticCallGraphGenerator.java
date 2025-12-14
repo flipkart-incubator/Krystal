@@ -86,16 +86,16 @@ public class StaticCallGraphGenerator {
   /**
    * Creates the graph data structure from the VajramKryonGraph.
    *
-   * @param vajramGraph The graph containing all Vajram definitions.
+   * @param krystexGraph The graph containing all Vajram definitions.
    * @return A Graph POJO representing the graph structure.
    * @throws ClassNotFoundException if a required class is not found during processing.
    */
-  private static Graph createGraphData(KrystexGraph vajramGraph) {
+  private static Graph createGraphData(KrystexGraph krystexGraph) {
     List<Node> nodes = new ArrayList<>();
     List<Link> links = new ArrayList<>();
 
     Map<VajramID, VajramDefinition> vajramDefinitions =
-        vajramGraph.vajramGraph().vajramDefinitions();
+        krystexGraph.vajramGraph().vajramDefinitions();
 
     // Create nodes
     for (Map.Entry<VajramID, VajramDefinition> entry : vajramDefinitions.entrySet()) {
@@ -170,7 +170,7 @@ public class StaticCallGraphGenerator {
       }
       // Create links from trait to its conforming dispatch targets
       if (definition.isTrait()) {
-        TraitDispatchPolicy traitDispatchPolicy = vajramGraph.getTraitDispatchPolicy(vajramId);
+        TraitDispatchPolicy traitDispatchPolicy = krystexGraph.getTraitDispatchPolicy(vajramId);
         if (traitDispatchPolicy != null) {
           ImmutableCollection<VajramID> conformingVajrams = traitDispatchPolicy.dispatchTargetIDs();
           for (VajramID conformant : conformingVajrams) {

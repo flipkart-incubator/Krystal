@@ -9,7 +9,7 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
 import com.flipkart.krystal.pooling.MultiLeasePool;
 import com.flipkart.krystal.pooling.MultiLeasePoolStats;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph.VajramKryonGraphBuilder;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph.VajramGraphBuilder;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -109,8 +109,8 @@ public final class Util {
             multiLeasePoolStats.peakPoolSize());
   }
 
-  public static VajramKryonGraphBuilder loadFromClasspath(String... packagePrefixes) {
-    VajramKryonGraphBuilder builder = VajramGraph.builder();
+  public static VajramGraphBuilder loadFromClasspath(String... packagePrefixes) {
+    VajramGraphBuilder builder = VajramGraph.builder();
     stream(packagePrefixes).forEach(builder::loadFromPackage);
     return builder;
   }

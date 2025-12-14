@@ -32,7 +32,7 @@ public final class KryonInputInjector implements KryonDecorator {
   }
 
   @Override
-  public Kryon<KryonCommand<?>, KryonCommandResponse> decorateKryon(
+  public Kryon<KryonCommand<? extends KryonCommandResponse>, KryonCommandResponse> decorateKryon(
       KryonDecorationInput decorationInput) {
     return new InjectingDecoratedKryon(decorationInput.kryon(), vajramGraph, inputInjector);
   }

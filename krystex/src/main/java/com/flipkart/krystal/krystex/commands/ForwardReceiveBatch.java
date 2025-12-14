@@ -4,8 +4,8 @@ import static java.util.Collections.unmodifiableMap;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.krystex.kryon.BatchResponse;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
-import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
 import com.flipkart.krystal.krystex.request.InvocationId;
 import com.google.common.collect.Sets;
 import java.util.Map;
@@ -16,7 +16,7 @@ public record ForwardReceiveBatch(
     Map<InvocationId, FacetValues> executableInvocations,
     DependentChain dependentChain,
     Map<InvocationId, String> invocationsToSkip)
-    implements MultiRequestCommand<KryonCommandResponse>, ServerSideCommand<KryonCommandResponse> {
+    implements MultiRequestCommand<BatchResponse>, ServerSideCommand<BatchResponse> {
 
   /**
    * @param vajramID

@@ -66,16 +66,6 @@ subprojects {
             downloadJavadoc = false
         }
     }
-
-    //Make sure all platform modules have published before running applications
-//    tasks.named { it.contains('quarkusDev') || it.contains('run') }.configureEach { quarkusDev ->
-//        for (final def project in rootProject.subprojects) {
-//            def task = project.tasks.named('publishToMavenLocal').get()
-//            if (task != null && task.name == 'publishToMavenLocal') {
-//                quarkusDev.dependsOn task
-//            }
-//        }
-//    }
 }
 
 configure(subprojects.findAll {

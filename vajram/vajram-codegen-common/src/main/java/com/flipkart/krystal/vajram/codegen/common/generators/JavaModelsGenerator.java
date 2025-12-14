@@ -318,7 +318,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
             .or(
                 () ->
                     modelClusterRootAnno
-                        .flatMap(anno -> util.getTypeFromAnnotationMember(anno::immutableRoot))
+                        .map(anno -> util.getTypeFromAnnotationMember(anno::immutableRoot))
                         .map(tm -> (TypeElement) util.processingEnv().getTypeUtils().asElement(tm))
                         .map(ClassName::get))
             .orElse(ClassName.get(ImmutableModel.class));
@@ -355,7 +355,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
             .or(
                 () ->
                     modelClusterRootAnno
-                        .flatMap(anno -> util.getTypeFromAnnotationMember(anno::builderRoot))
+                        .map(anno -> util.getTypeFromAnnotationMember(anno::builderRoot))
                         .map(tm -> (TypeElement) util.processingEnv().getTypeUtils().asElement(tm))
                         .map(ClassName::get))
             .orElse(ClassName.get(ImmutableModel.Builder.class));

@@ -15,10 +15,10 @@ public record QuarkusApplicationSpec() implements SimpleDopantSpec<QuarkusApplic
   public void autoConfigure(
       @AutoConfigure ThreadingStrategySpecBuilder threadingStrategySpecBuilder) {
     threadingStrategySpecBuilder.executorServiceTransformer(
-        singleThreadExecutor ->
+        executorService ->
             SmallRyeContextManagerProvider.getManager()
                 .newManagedExecutorBuilder()
-                .withExecutorService(singleThreadExecutor)
+                .withExecutorService(executorService)
                 .build());
   }
 

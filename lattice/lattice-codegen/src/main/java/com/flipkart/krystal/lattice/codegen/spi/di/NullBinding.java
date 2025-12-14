@@ -10,7 +10,7 @@ public record NullBinding(
     ClassName bindFrom,
     @Nullable CodeBlock qualifierExpression,
     @Nullable AnnotationSpec qualifierAnnotation,
-    BindingScope scope)
+    @Nullable AnnotationSpec scope)
     implements Binding {
 
   @Override

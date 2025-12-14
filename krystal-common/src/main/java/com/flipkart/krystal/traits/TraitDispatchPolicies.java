@@ -15,12 +15,14 @@ public class TraitDispatchPolicies {
     this(List.of());
   }
 
-  public TraitDispatchPolicies(@Nullable List<TraitDispatchPolicy> traitDispatchPolicies) {
+  public TraitDispatchPolicies(TraitDispatchPolicy... traitDispatchPolicies) {
+    this(List.of(traitDispatchPolicies));
+  }
+
+  public TraitDispatchPolicies(List<TraitDispatchPolicy> traitDispatchPolicies) {
     this.traitDispatchPolicies =
-        traitDispatchPolicies == null
-            ? ImmutableMap.of()
-            : traitDispatchPolicies.stream()
-                .collect(toImmutableMap(TraitDispatchPolicy::traitID, identity()));
+        traitDispatchPolicies.stream()
+            .collect(toImmutableMap(TraitDispatchPolicy::traitID, identity()));
   }
 
   public @Nullable TraitDispatchPolicy get(VajramID traitId) {

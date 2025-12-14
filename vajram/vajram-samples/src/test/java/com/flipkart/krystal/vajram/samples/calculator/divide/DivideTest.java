@@ -11,6 +11,7 @@ import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
@@ -52,13 +53,16 @@ class DivideTest {
         System.setProperty(
             RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME, FALSE.toString());
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder()
-                        .executorId("subtract")
-                        .executorService(executorLease.get()))
-                .build())) {
+        KrystexGraph.builder()
+            .vajramGraph(graph)
+            .build()
+            .createExecutor(
+                KrystexVajramExecutorConfig.builder()
+                    .kryonExecutorConfigBuilder(
+                        KryonExecutorConfig.builder()
+                            .executorId("subtract")
+                            .executorService(executorLease.get()))
+                    .build())) {
       assertThatThrownBy(
               () ->
                   krystexVajramExecutor.execute(
@@ -80,13 +84,16 @@ class DivideTest {
     CompletableFuture<@Nullable Integer> result;
     CompletableFuture<Thread> resultThreadFuture = new CompletableFuture<>();
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder()
-                        .executorId("subtract")
-                        .executorService(executorService))
-                .build())) {
+        KrystexGraph.builder()
+            .vajramGraph(graph)
+            .build()
+            .createExecutor(
+                KrystexVajramExecutorConfig.builder()
+                    .kryonExecutorConfigBuilder(
+                        KryonExecutorConfig.builder()
+                            .executorId("subtract")
+                            .executorService(executorService))
+                    .build())) {
       result =
           krystexVajramExecutor.execute(
               Divide_ReqImmutPojo._builder().numerator(5).denominator(7)._build());

@@ -1,7 +1,6 @@
 package com.flipkart.krystal.lattice.codegen;
 
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.lowerCaseFirstChar;
-import static com.flipkart.krystal.lattice.codegen.spi.di.BindingScope.StandardBindingScope.LAZY_SINGLETON;
 
 import com.flipkart.krystal.lattice.codegen.spi.di.BindingsContainer;
 import com.flipkart.krystal.lattice.codegen.spi.di.BindingsProvider;
@@ -11,9 +10,11 @@ import com.flipkart.krystal.lattice.core.LatticeAppConfig;
 import com.flipkart.krystal.lattice.core.LatticeApplication;
 import com.google.auto.service.AutoService;
 import com.google.common.collect.ImmutableList;
+import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.ParameterSpec;
+import jakarta.enterprise.context.ApplicationScoped;
 import java.util.List;
 
 @AutoService(BindingsProvider.class)
@@ -36,6 +37,6 @@ public final class LatticePlatformBindingsProvider implements BindingsProvider {
                             .build()),
                     CodeBlock.of(
                         "return $L.loadConfig($L);", latticeAppVarName, latticeAppBootstrapVarName),
-                    LAZY_SINGLETON))));
+                    AnnotationSpec.builder(ApplicationScoped.class).build()))));
   }
 }

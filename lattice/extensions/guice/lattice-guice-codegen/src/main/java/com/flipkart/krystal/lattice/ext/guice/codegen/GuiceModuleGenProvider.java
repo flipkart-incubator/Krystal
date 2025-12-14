@@ -16,8 +16,6 @@ import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.codegen.spi.LatticeAppCodeGenAttrsProvider;
 import com.flipkart.krystal.lattice.codegen.spi.LatticeCodeGeneratorProvider;
 import com.flipkart.krystal.lattice.codegen.spi.di.Binding;
-import com.flipkart.krystal.lattice.codegen.spi.di.BindingScope;
-import com.flipkart.krystal.lattice.codegen.spi.di.BindingScope.StandardBindingScope;
 import com.flipkart.krystal.lattice.codegen.spi.di.BindingsContainer;
 import com.flipkart.krystal.lattice.codegen.spi.di.ImplTypeBinding;
 import com.flipkart.krystal.lattice.codegen.spi.di.NullBinding;
@@ -27,14 +25,15 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.servlet.RequestScoped;
 import com.google.inject.util.Providers;
+import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec.Builder;
 import jakarta.enterprise.inject.Vetoed;
 import jakarta.inject.Singleton;
-import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -47,6 +46,7 @@ import java.util.stream.StreamSupport;
 import javax.lang.model.element.TypeElement;
 import lombok.SneakyThrows;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.checker.nullness.qual.PolyNull;
 
 @AutoService(LatticeCodeGeneratorProvider.class)
 public class GuiceModuleGenProvider implements LatticeCodeGeneratorProvider {
@@ -137,9 +137,9 @@ public class GuiceModuleGenProvider implements LatticeCodeGeneratorProvider {
                 """,
               implTypeBinding.parentType(),
               implTypeBinding.childType(),
-              getScopeAnnotation(implTypeBinding.bindingScope()));
+              getScopeAnnotation(implTypeBinding.scope()));
         } else if (binding instanceof NullBinding nullBinding) {
-          Class<? extends Annotation> scopeAnnotation = getScopeAnnotation(nullBinding.scope());
+          ClassName scopeAnnotation = getScopeAnnotation(nullBinding.scope());
           CodeBlock annotatedWith = nullBinding.qualifierExpression();
           codeBlock.addStatement(
               """
@@ -174,7 +174,7 @@ public class GuiceModuleGenProvider implements LatticeCodeGeneratorProvider {
       List<MethodSpec> providers = new ArrayList<>();
       for (Binding binding : bindingGens) {
         if (binding instanceof ProviderMethod providerMethod) {
-          Class<? extends Annotation> scopeAnnotation = getScopeAnnotation(providerMethod.scope());
+          @Nullable ClassName scopeAnnotation = getScopeAnnotation(providerMethod.scope());
           MethodSpec.Builder builder =
               MethodSpec.methodBuilder(providerMethod.identifierName())
                   .returns(providerMethod.boundType())
@@ -191,15 +191,18 @@ public class GuiceModuleGenProvider implements LatticeCodeGeneratorProvider {
       return providers;
     }
 
-    private static @Nullable Class<? extends Annotation> getScopeAnnotation(BindingScope scope) {
-      if (!(scope instanceof StandardBindingScope standardScope)) {
+    private static @PolyNull ClassName getScopeAnnotation(@PolyNull AnnotationSpec scope) {
+      if (scope == null) {
         return null;
       }
-      return switch (standardScope) {
-        case UNKNOWN_SCOPE, NO_SCOPE -> null;
-        case REQUEST -> RequestScoped.class;
-        case LAZY_SINGLETON, EAGER_SINGLETON -> Singleton.class;
-      };
+      TypeName type = scope.type;
+      if (type.equals(ClassName.get(jakarta.enterprise.context.RequestScoped.class))) {
+        return ClassName.get(RequestScoped.class);
+      }
+      if (type.equals(ClassName.get(jakarta.enterprise.context.ApplicationScoped.class))) {
+        return ClassName.get(Singleton.class);
+      }
+      return (ClassName) scope.type;
     }
   }
 }

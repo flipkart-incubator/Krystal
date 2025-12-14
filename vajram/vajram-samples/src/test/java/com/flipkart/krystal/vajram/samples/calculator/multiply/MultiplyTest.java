@@ -5,6 +5,7 @@ import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
@@ -43,13 +44,16 @@ class MultiplyTest {
   void multiply_success() {
     CompletableFuture<Integer> future;
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder()
-                        .executorId("multiply")
-                        .executorService(executorLease.get()))
-                .build())) {
+        KrystexGraph.builder()
+            .vajramGraph(graph)
+            .build()
+            .createExecutor(
+                KrystexVajramExecutorConfig.builder()
+                    .kryonExecutorConfigBuilder(
+                        KryonExecutorConfig.builder()
+                            .executorId("multiply")
+                            .executorService(executorLease.get()))
+                    .build())) {
       future =
           krystexVajramExecutor.execute(
               Multiply_ReqImmutPojo._builder().numberOne(3).numberTwo(9)._build());

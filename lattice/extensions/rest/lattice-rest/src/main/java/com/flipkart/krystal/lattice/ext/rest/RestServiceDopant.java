@@ -10,6 +10,7 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.lattice.core.di.Bindings;
 import com.flipkart.krystal.lattice.core.di.Bindings.BindingsBuilder;
+import com.flipkart.krystal.lattice.core.di.Produces;
 import com.flipkart.krystal.lattice.core.doping.Dopant;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
 import com.flipkart.krystal.lattice.core.headers.Header;
@@ -25,7 +26,6 @@ import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.tags.Names;
 import jakarta.enterprise.context.RequestScoped;
-import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.ws.rs.core.HttpHeaders;
@@ -139,8 +139,7 @@ public abstract class RestServiceDopant implements Dopant<RestService, RestServi
     }
   }
 
-  @Produces
-  @RequestScoped
+  @Produces(inScope = RequestScoped.class)
   @Named(StandardHeaderNames.ACCEPT)
   public Header getAcceptHeader(HttpHeaders httpHeaders) {
     return Header.of(
@@ -166,7 +165,7 @@ public abstract class RestServiceDopant implements Dopant<RestService, RestServi
   }
 
   public final List<? extends @NonNull Object> allApplicationRestResources() {
-    ArrayList<Object> objects = new ArrayList<>(customApplicationResources());
+    ArrayList<Object> objects = new ArrayList<>(declaredApplicationResources());
     objects.addAll(spec.customJakartaResources());
     return objects;
   }
@@ -178,7 +177,7 @@ public abstract class RestServiceDopant implements Dopant<RestService, RestServi
     return List.of();
   }
 
-  protected List<? extends @NonNull Object> customApplicationResources() {
+  protected List<? extends @NonNull Object> declaredApplicationResources() {
     return List.of();
   }
 }

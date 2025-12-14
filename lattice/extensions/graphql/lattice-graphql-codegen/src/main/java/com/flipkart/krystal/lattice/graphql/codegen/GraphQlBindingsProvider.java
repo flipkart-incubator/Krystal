@@ -1,6 +1,5 @@
 package com.flipkart.krystal.lattice.graphql.codegen;
 
-import static com.flipkart.krystal.lattice.codegen.spi.di.BindingScope.StandardBindingScope.LAZY_SINGLETON;
 import static com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility.getRequestInterfaceName;
 
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
@@ -14,11 +13,13 @@ import com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.google.auto.service.AutoService;
 import com.google.common.collect.ImmutableList;
+import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.ParameterSpec;
 import graphql.language.ObjectTypeDefinition;
 import graphql.schema.idl.TypeDefinitionRegistry;
+import jakarta.enterprise.context.ApplicationScoped;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -62,6 +63,6 @@ public class GraphQlBindingsProvider implements BindingsProvider {
                         operationTypes.stream()
                             .map(className -> CodeBlock.of("$T.class", className))
                             .collect(CodeBlock.joining(", "))),
-                    LAZY_SINGLETON))));
+                    AnnotationSpec.builder(ApplicationScoped.class).build()))));
   }
 }

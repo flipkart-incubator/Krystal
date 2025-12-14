@@ -10,6 +10,8 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.samples.user.response_pojos.UserWithProfile;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
@@ -32,6 +34,7 @@ class GetUserProfilesFromUserIdsTest {
   }
 
   private VajramGraph graph;
+  private KrystexGraphBuilder kGraph;
   private Lease<SingleThreadExecutor> executorLease;
 
   @BeforeEach
@@ -45,12 +48,12 @@ class GetUserProfilesFromUserIdsTest {
                 GetUser.class,
                 GetUserProfile.class)
             .build();
+    this.kGraph = KrystexGraph.builder().vajramGraph(graph);
   }
 
   @AfterEach
   void tearDown() {
     executorLease.close();
-    graph.close();
   }
 
   @AfterAll
@@ -62,13 +65,15 @@ class GetUserProfilesFromUserIdsTest {
   void testErrorContamination_CorrectAndIncorrectInputs() throws Exception {
     CompletableFuture<List<UserWithProfile>> future;
     try (KrystexVajramExecutor executor =
-        graph.createExecutor(
-            KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder()
-                        .executorId("error-contaminated-test")
-                        .executorService(executorLease.get()))
-                .build())) {
+        kGraph
+            .build()
+            .createExecutor(
+                KrystexVajramExecutorConfig.builder()
+                    .kryonExecutorConfigBuilder(
+                        KryonExecutorConfig.builder()
+                            .executorId("error-contaminated-test")
+                            .executorService(executorLease.get()))
+                    .build())) {
 
       List<String> userIds = Arrays.asList("Incorrect_User_Id", "Correct_User_Id");
 
@@ -87,13 +92,15 @@ class GetUserProfilesFromUserIdsTest {
   void testAllCorrectInputs_success() throws Exception {
     CompletableFuture<List<UserWithProfile>> future;
     try (KrystexVajramExecutor executor =
-        graph.createExecutor(
-            KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder()
-                        .executorId("all-correct-inputs-test")
-                        .executorService(executorLease.get()))
-                .build())) {
+        kGraph
+            .build()
+            .createExecutor(
+                KrystexVajramExecutorConfig.builder()
+                    .kryonExecutorConfigBuilder(
+                        KryonExecutorConfig.builder()
+                            .executorId("all-correct-inputs-test")
+                            .executorService(executorLease.get()))
+                    .build())) {
 
       List<String> userIds =
           Arrays.asList("Correct_User_Id_1", "Correct_User_Id_2", "Correct_User_Id_3");
@@ -113,13 +120,15 @@ class GetUserProfilesFromUserIdsTest {
   void testAllIncorrectInputs_success() throws Exception {
     CompletableFuture<List<UserWithProfile>> future;
     try (KrystexVajramExecutor executor =
-        graph.createExecutor(
-            KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder()
-                        .executorId("all-fail-test")
-                        .executorService(executorLease.get()))
-                .build())) {
+        kGraph
+            .build()
+            .createExecutor(
+                KrystexVajramExecutorConfig.builder()
+                    .kryonExecutorConfigBuilder(
+                        KryonExecutorConfig.builder()
+                            .executorId("all-fail-test")
+                            .executorService(executorLease.get()))
+                    .build())) {
 
       List<String> userIds = Arrays.asList("Incorrect_User_Id", "Incorrect_User_Id");
 

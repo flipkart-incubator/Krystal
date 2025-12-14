@@ -28,7 +28,6 @@ import io.grpc.Status;
 import io.grpc.StatusException;
 import io.grpc.stub.StreamObserver;
 import jakarta.inject.Inject;
-import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -56,12 +55,17 @@ public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerC
   private @MonotonicNonNull Server server;
 
   @Inject
-  protected GrpcServerDopant(GrpcInitData initData) {
-    this.grpcServerSpec = initData.spec();
-    this.annotation = initData.annotation();
-    this.config = initData.config();
-    this.krystexDopant = initData.krystexDopant();
-    this.headerInterceptor = initData.headerInterceptor();
+  protected GrpcServerDopant(
+      GrpcServer annotation,
+      GrpcServerConfig config,
+      GrpcServerSpec spec,
+      StandardHeadersInterceptor headerInterceptor,
+      KrystexDopant krystexDopant) {
+    this.annotation = annotation;
+    this.config = config;
+    this.grpcServerSpec = spec;
+    this.krystexDopant = krystexDopant;
+    this.headerInterceptor = headerInterceptor;
   }
 
   @Override
@@ -170,16 +174,5 @@ public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerC
     if (server != null) {
       server.awaitTermination();
     }
-  }
-
-  @Singleton
-  protected record GrpcInitData(
-      GrpcServer annotation,
-      GrpcServerConfig config,
-      GrpcServerSpec spec,
-      StandardHeadersInterceptor headerInterceptor,
-      KrystexDopant krystexDopant) {
-    @Inject
-    public GrpcInitData {}
   }
 }

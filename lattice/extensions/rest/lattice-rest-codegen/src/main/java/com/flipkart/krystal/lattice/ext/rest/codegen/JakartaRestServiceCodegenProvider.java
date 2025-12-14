@@ -199,7 +199,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
                     util.getMethod(
                         RestServiceDopant.class,
                         RestServiceDopant.class
-                            .getDeclaredMethod("customApplicationResources")
+                            .getDeclaredMethod("declaredApplicationResources")
                             .getName(),
                         0))
                 .addStatement(
@@ -332,9 +332,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
                               requireNonNull(
                                   util.processingEnv()
                                       .getTypeUtils()
-                                      .asElement(
-                                          util.getTypeFromAnnotationMember(s::protocol)
-                                              .orElseThrow(AssertionError::new))),
+                                      .asElement(util.getTypeFromAnnotationMember(s::protocol))),
                           s -> s));
           serdeConfigsMap.putAll(collect);
           Element bodyTypeElem =
@@ -347,9 +345,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
                 requireNonNull(
                     util.processingEnv()
                         .getTypeUtils()
-                        .asElement(
-                            util.getTypeFromAnnotationMember(serdeConfig::protocol)
-                                .orElseThrow(AssertionError::new))),
+                        .asElement(util.getTypeFromAnnotationMember(serdeConfig::protocol))),
                 serdeConfig);
           }
           supportedModelProtocols = bodyTypeElem.getAnnotation(SupportedModelProtocols.class);
@@ -363,9 +359,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
                               requireNonNull(
                                   util.processingEnv()
                                       .getTypeUtils()
-                                      .asElement(
-                                          util.getTypeFromAnnotationMember(s::protocol)
-                                              .orElseThrow(AssertionError::new))),
+                                      .asElement(util.getTypeFromAnnotationMember(s::protocol))),
                           s -> s));
           serdeConfigsMap.putAll(collect);
         }

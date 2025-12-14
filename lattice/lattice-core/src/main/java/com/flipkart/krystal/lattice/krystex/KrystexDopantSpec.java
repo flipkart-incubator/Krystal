@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableList;
 import java.util.List;
 import java.util.function.Consumer;
 import lombok.Builder;
+import lombok.NonNull;
 import lombok.Singular;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.common.returnsreceiver.qual.This;
@@ -34,7 +35,7 @@ public record KrystexDopantSpec(
           ImmutableList<KryonExecutorConfigurator> configureExecutorWith,
       DependencyInjectionProvider dependencyInjectionProvider,
       @Singular("buildKrystexGraphWith") List<Consumer<KrystexGraphBuilder>> buildKrystexGraphWith,
-      List<TraitDispatchPolicy> traitDispatchPolicies,
+      @NonNull List<TraitDispatchPolicy> traitDispatchPolicies,
       BatchingConfigurator batchingConfigurator) {
     KrystexGraphBuilder kGraphBuilder =
         krystexGraphBuilder != null ? krystexGraphBuilder : KrystexGraph.builder();
