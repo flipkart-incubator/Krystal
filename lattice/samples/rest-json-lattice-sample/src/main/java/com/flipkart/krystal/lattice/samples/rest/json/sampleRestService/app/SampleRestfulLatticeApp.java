@@ -21,7 +21,6 @@ import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.logic.Re
 import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.logic.RestPostComplexPathMatching;
 import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.logic.RestPostMappingLatticeSample;
 import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.logic.RestStreamingSample;
-import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.logic.StreamingDirect;
 import com.flipkart.krystal.lattice.vajram.VajramDopantSpec;
 import com.flipkart.krystal.lattice.vajram.VajramDopantSpec.VajramDopantSpecBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
@@ -66,9 +65,7 @@ public abstract class SampleRestfulLatticeApp extends LatticeApplication {
 
   @DopeWith
   public static RestServiceDopantSpecBuilder rest() {
-    return RestServiceDopantSpec.builder()
-        .serveStaticKrystalCallGraph()
-        .customJakartaResource(new StreamingDirect());
+    return RestServiceDopantSpec.builder();
   }
 
   @DopeWith

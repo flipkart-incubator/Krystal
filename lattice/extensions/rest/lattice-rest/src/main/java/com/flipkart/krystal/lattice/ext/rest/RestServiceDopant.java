@@ -18,7 +18,6 @@ import com.flipkart.krystal.lattice.core.headers.SingleValueHeader;
 import com.flipkart.krystal.lattice.core.headers.StandardHeaderNames;
 import com.flipkart.krystal.lattice.ext.rest.api.status.HttpResponseStatusException;
 import com.flipkart.krystal.lattice.ext.rest.config.RestServiceDopantConfig;
-import com.flipkart.krystal.lattice.ext.rest.visualization.StaticKrystalGraphResource;
 import com.flipkart.krystal.lattice.krystex.KrystexDopant;
 import com.flipkart.krystal.lattice.vajram.VajramRequestExecutionContext;
 import com.flipkart.krystal.lattice.vajram.VajramRequestExecutionContext.VajramRequestExecutionContextBuilder;
@@ -148,19 +147,6 @@ public abstract class RestServiceDopant implements Dopant<RestService, RestServi
       }
     }
     return seeds.build();
-  }
-
-  public final List<? extends @NonNull Object> allApplicationRestResources() {
-    ArrayList<Object> objects = new ArrayList<>(declaredApplicationResources());
-    objects.addAll(spec.customJakartaResources());
-    return objects;
-  }
-
-  public final List<? extends @NonNull Object> allAdminRestResources() {
-    if (spec.serveStaticKrystalCallGraph()) {
-      return List.of(new StaticKrystalGraphResource(krystexDopant));
-    }
-    return List.of();
   }
 
   protected List<? extends @NonNull Object> declaredApplicationResources() {

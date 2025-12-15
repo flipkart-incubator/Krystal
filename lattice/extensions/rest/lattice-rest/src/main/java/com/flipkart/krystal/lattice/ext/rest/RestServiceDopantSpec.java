@@ -7,13 +7,10 @@ import com.flipkart.krystal.lattice.core.doping.DopantSpec;
 import com.flipkart.krystal.lattice.core.doping.DopantSpecBuilder;
 import com.flipkart.krystal.lattice.core.execution.ThreadingStrategySpec.ThreadingStrategySpecBuilder;
 import com.flipkart.krystal.lattice.ext.rest.config.RestServiceDopantConfig;
-import java.util.List;
 import lombok.Builder;
-import lombok.Singular;
 
 @Builder(buildMethodName = "_buildSpec")
-public record RestServiceDopantSpec(
-    boolean serveStaticKrystalCallGraph, @Singular List<Object> customJakartaResources)
+public record RestServiceDopantSpec()
     implements DopantSpec<RestService, RestServiceDopantConfig, RestServiceDopant> {
 
   @Override
@@ -36,18 +33,6 @@ public record RestServiceDopantSpec(
 
   public static final class RestServiceDopantSpecBuilder
       implements DopantSpecBuilder<RestService, RestServiceDopantConfig, RestServiceDopantSpec> {
-
-    public RestServiceDopantSpecBuilder serveStaticKrystalCallGraph() {
-      return this.serveStaticKrystalCallGraph(true);
-    }
-
-    @SuppressWarnings("SameParameterValue")
-    private RestServiceDopantSpecBuilder serveStaticKrystalCallGraph(
-        boolean serveStaticKrystalCallGraph) {
-      this.serveStaticKrystalCallGraph = serveStaticKrystalCallGraph;
-      return this;
-    }
-
     @Override
     public Class<RestService> _annotationType() {
       return RestService.class;

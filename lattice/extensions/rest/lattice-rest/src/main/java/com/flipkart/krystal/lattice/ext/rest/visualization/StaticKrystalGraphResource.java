@@ -6,6 +6,7 @@ import com.flipkart.krystal.lattice.krystex.KrystexDopant;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 @Path("_krystal/lattice/restService")
@@ -19,7 +20,7 @@ public class StaticKrystalGraphResource {
 
   @Path("staticGraph.html")
   @GET
-  @Produces("text/html")
+  @Produces(MediaType.TEXT_HTML)
   public Response getStaticGraph() {
     return Response.ok(generateStaticCallGraphContent(krystexDopant.executableGraph(), null).html())
         .build();
