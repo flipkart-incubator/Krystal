@@ -55,7 +55,8 @@ public abstract class SampleRestfulLatticeApp extends LatticeApplication {
                     RestGetMappingLatticeSample.class,
                     RestPostMappingLatticeSample.class,
                     RestPostComplexPathMatching.class,
-                    RestHeadMappingLatticeSample.class));
+                    RestHeadMappingLatticeSample.class,
+                    RestStreamingSample.class));
   }
 
   @DopeWith

@@ -8,6 +8,7 @@ import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 
+import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
@@ -36,12 +37,14 @@ import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
+import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
+import com.squareup.javapoet.WildcardTypeName;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
-import jakarta.ws.rs.container.AsyncResponse;
-import jakarta.ws.rs.container.Suspended;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.UriInfo;
@@ -53,8 +56,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.ServiceLoader;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Flow.Publisher;
 import java.util.function.Function;
+import java.util.stream.Stream;
+import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
@@ -231,15 +240,39 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
               .map(ModelProtocolConfig::serdeProtocol)
               .collect(
                   toMap(c -> requireNonNull(c.getClass().getCanonicalName()), Function.identity()));
+      CodeGenType vajramResponseType = vajramInfo.lite().responseType();
+      List<? extends AnnotationMirror> annotations = vajramInfo.lite().annotations();
+      Optional<? extends AnnotationMirror> producesAnnotation =
+          annotations.stream()
+              .filter(
+                  a -> a.getAnnotationType().toString().equals(Produces.class.getCanonicalName()))
+              .findAny();
+
+      ProcessingEnvironment processingEnv = context.codeGenUtility().processingEnv();
+      TypeName jakartaResourceReturnType;
+      boolean returnsPublisher;
+      WildcardTypeName wildCard = WildcardTypeName.subtypeOf(Object.class);
+
+      ParameterizedTypeName publisherType =
+          ParameterizedTypeName.get(ClassName.get(Publisher.class), wildCard);
+      if (context
+          .codeGenUtility()
+          .codegenUtil()
+          .isRawAssignable(
+              vajramResponseType.rawType().javaModelType(processingEnv), Publisher.class)) {
+        jakartaResourceReturnType = publisherType;
+        returnsPublisher = true;
+      } else {
+        jakartaResourceReturnType =
+            ParameterizedTypeName.get(ClassName.get(CompletionStage.class), wildCard);
+        returnsPublisher = false;
+      }
 
       MethodSpec.Builder methodBuilder =
           MethodSpec.methodBuilder(lowerCaseFirstChar(vajramInfo.vajramName()))
               .addAnnotation(restMethod.jakartaAnnotation())
               .addModifiers(PUBLIC)
-              .addParameter(
-                  ParameterSpec.builder(AsyncResponse.class, "_asyncResponse")
-                      .addAnnotation(Suspended.class)
-                      .build())
+              .returns(jakartaResourceReturnType)
               .addParameter(
                   ParameterSpec.builder(HttpHeaders.class, "_httpHeaders")
                       .addAnnotation(Context.class)
@@ -248,6 +281,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
                   ParameterSpec.builder(UriInfo.class, "_uriInfo")
                       .addAnnotation(Context.class)
                       .build());
+      producesAnnotation.map(AnnotationSpec::get).ifPresent(methodBuilder::addAnnotation);
 
       Map<FacetGenModel, FacetParamType> params = new LinkedHashMap<>();
       FacetGenModel bodyFacet = null;
@@ -414,22 +448,24 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
                   .setName(
                       lowerCaseFirstChar(vajramInfo.vajramName())
                           + "_"
-                          + serdeProtocol.modelClassesSuffix());
+                          + serdeProtocol.modelClassesSuffix())
+                  .returns( // Need to set this again because setName sets return type to Void
+                      jakartaResourceReturnType);
 
           serdeSpecificMethodBuilder
-              //              .addAnnotation(
-              //                  AnnotationSpec.builder(Consumes.class)
-              //                      .addMember(
-              //                          "value",
-              //                          "{$L}",
-              //                          Stream.concat(Arrays.stream(contentTypes),
-              // Stream.of("*/*"))
-              //                              .map(c -> CodeBlock.of("$S", c))
-              //                              .collect(CodeBlock.joining(", ")))
-              //                      .build())
+              .addAnnotation(
+                  AnnotationSpec.builder(Consumes.class)
+                      .addMember(
+                          "value",
+                          "{$L}",
+                          Stream.concat(Arrays.stream(contentTypes), Stream.of("*/*"))
+                              .map(c -> CodeBlock.of("$S", c))
+                              .collect(CodeBlock.joining(", ")))
+                      .build())
               .addParameter(
-              ParameterSpec.builder(byte[].class, bodyFacet == null ? "_body" : bodyFacet.name())
-                  .build());
+                  ParameterSpec.builder(
+                          byte[].class, bodyFacet == null ? "_body" : bodyFacet.name())
+                      .build());
 
           if (bodyFacet != null) {
             TypeElement bodyFacetModelType =
@@ -466,20 +502,27 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
         resourceMethods.add(methodBuilder);
       }
       return resourceMethods.stream()
-          .map(
-              r ->
+          .peek(
+              r -> {
+                r.addStatement(
+                    """
+                          $T _completionStage = _restServiceDopant
+                            .executeHttpRequest(_vajramRequest._build(), _httpHeaders, _uriInfo)
+                      """,
+                    ParameterizedTypeName.get(
+                        ClassName.get(CompletionStage.class),
+                        returnsPublisher ? publisherType : wildCard));
+                if (returnsPublisher) {
                   r.addStatement(
                       """
-                          this._restServiceDopant
-                            .executeHttpRequest(_vajramRequest._build(), _httpHeaders, _uriInfo)
-                            .whenComplete((_result, _error) -> {
-                              if (_error != null) {
-                                _asyncResponse.resume(_error);
-                              } else {
-                                _asyncResponse.resume(_result);
-                              }
-                            })
-                      """))
+                        $T _publisher = _restServiceDopant.toPublisher(_completionStage)
+                  """,
+                      publisherType);
+                  r.addStatement("return _publisher");
+                } else {
+                  r.addStatement("return _completionStage");
+                }
+              })
           .map(MethodSpec.Builder::build)
           .toList();
     }

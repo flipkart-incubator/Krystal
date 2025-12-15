@@ -1,6 +1,3 @@
-plugins {
-    id 'org.kordamp.gradle.jandex' version "${jandex_plugin_version}"
-}
 dependencies {
     api project(':lattice:lattice-vajram-sdk')
     api project(':vajram:vajram-java-sdk')

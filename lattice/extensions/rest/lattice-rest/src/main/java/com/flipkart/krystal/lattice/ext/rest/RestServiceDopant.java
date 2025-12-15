@@ -25,6 +25,8 @@ import com.flipkart.krystal.lattice.vajram.VajramRequestExecutionContext.VajramR
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.tags.Names;
+import io.smallrye.mutiny.Multi;
+import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -36,6 +38,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Flow.Publisher;
+import java.util.function.Function;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -60,7 +64,7 @@ public abstract class RestServiceDopant implements Dopant<RestService, RestServi
     this.krystexDopant = krystexDopant;
   }
 
-  public <RespT> CompletionStage<Response> executeHttpRequest(
+  public <RespT, T> CompletionStage<T> executeHttpRequest(
       ImmutableRequest<RespT> vajramRequest, HttpHeaders headers, UriInfo uriInfo)
       throws HttpResponseStatusException {
     List<String> requestIds = headers.getRequestHeader(REQUEST_ID);
@@ -69,67 +73,49 @@ public abstract class RestServiceDopant implements Dopant<RestService, RestServi
       executorConfigBuilder.executorId(requestIds.get(0));
     }
 
-    return executeHttpRequest(
-            VajramRequestExecutionContext.<RespT>builder()
-                .vajramRequest(vajramRequest)
-                .requestScopeSeeds(getRequestScopeSeeds(headers, uriInfo))
-                .executorConfigBuilder(executorConfigBuilder))
-        .thenApply(
-            response -> {
-              ResponseBuilder responseBuilder;
-              int contentLength = 0;
-              try {
-                if (response == null || response instanceof Unit) {
-                  responseBuilder = Response.ok();
-                } else if (response instanceof byte[] bytes) {
-                  contentLength = bytes.length;
-                  responseBuilder = Response.ok(bytes);
-                } else if (response instanceof SerializableModel serializableResponse) {
-                  byte[] bytes = serializableResponse._serialize();
-                  contentLength = bytes.length;
-                  responseBuilder =
-                      Response.ok(bytes)
-                          .header(
-                              CONTENT_TYPE,
-                              serializableResponse._serdeProtocol().defaultContentType());
-                } else if (response instanceof ResponseBuilder rb) {
-                  return rb.build();
-                } else if (response instanceof Response r) {
-                  return r;
-                } else {
-                  log.error(
-                      "Executing vajram request of type {} an unsupported response model of type {}. Supported types are: {}",
-                      vajramRequest.getClass(),
-                      response.getClass(),
-                      List.of(
-                          byte[].class,
-                          SerializableModel.class,
-                          ResponseBuilder.class,
-                          Response.class));
-                  responseBuilder = Response.serverError();
-                }
-              } catch (Throwable e) {
-                responseBuilder = Response.serverError();
-              }
-              return responseBuilder.header(CONTENT_LENGTH, contentLength).build();
-            });
+    //noinspection unchecked
+    return (CompletionStage<T>)
+        executeHttpRequest(
+                VajramRequestExecutionContext.<RespT>builder()
+                    .vajramRequest(vajramRequest)
+                    .requestScopeSeeds(getRequestScopeSeeds(headers, uriInfo))
+                    .executorConfigBuilder(executorConfigBuilder))
+            .thenApply(
+                response -> {
+                  ResponseBuilder responseBuilder;
+                  int contentLength = 0;
+                  try {
+                    if (response == null || response instanceof Unit) {
+                      responseBuilder = Response.ok();
+                    } else if (response instanceof SerializableModel serializableResponse) {
+                      byte[] bytes = serializableResponse._serialize();
+                      contentLength = bytes.length;
+                      responseBuilder =
+                          Response.ok(bytes)
+                              .header(
+                                  CONTENT_TYPE,
+                                  serializableResponse._serdeProtocol().defaultContentType());
+                    } else if (response instanceof ResponseBuilder rb) {
+                      return rb.build();
+                    } else if (response instanceof Response r) {
+                      return r;
+                    } else {
+                      return response;
+                    }
+                  } catch (Throwable e) {
+                    responseBuilder = Response.serverError();
+                  }
+                  return responseBuilder.header(CONTENT_LENGTH, contentLength).build();
+                });
   }
 
-  public <RespT> CompletionStage<RespT> executeHttpRequest(
-      ImmutableRequest<RespT> vajramRequest,
-      Bindings requestScopeSeeds,
-      KryonExecutorConfigBuilder kryonExecutorConfigBuilder)
-      throws HttpResponseStatusException {
-    VajramRequestExecutionContextBuilder<RespT> contextBuilder =
-        VajramRequestExecutionContext.<RespT>builder()
-            .vajramRequest(vajramRequest)
-            .requestScopeSeeds(requestScopeSeeds)
-            .executorConfigBuilder(kryonExecutorConfigBuilder);
-    //    transferResteasyContext(contextBuilder);
-    return executeHttpRequest(contextBuilder);
+  public <T> Publisher<T> toPublisher(CompletionStage<Publisher<? extends T>> futurePublisher) {
+    return Multi.createFrom()
+        .uni(Uni.createFrom().completionStage(futurePublisher))
+        .flatMap(Function.identity());
   }
 
-  public <RespT> @NonNull CompletionStage<RespT> executeHttpRequest(
+  private <RespT> @NonNull CompletionStage<RespT> executeHttpRequest(
       VajramRequestExecutionContextBuilder<RespT> contextBuilder) {
     try {
       return krystexDopant.executeRequest(contextBuilder.build());

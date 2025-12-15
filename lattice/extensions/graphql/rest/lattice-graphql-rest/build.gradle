@@ -1,6 +1,5 @@
 plugins {
     id 'com.flipkart.krystal' version "${krystal_version}"
-    id 'org.kordamp.gradle.jandex' version "${jandex_plugin_version}"
 }
 
 dependencies {

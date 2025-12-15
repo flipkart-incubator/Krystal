@@ -2,11 +2,6 @@ plugins {
     id 'com.flipkart.java.code.standard' version '5.3'
     id 'org.gradlex.extra-java-module-info' version '1.11'
     id 'java-test-fixtures'
-
-    // Needed as a workaround for gradle bug:
-    // https://github.com/gradle/gradle/issues/17559
-    // https://github.com/kordamp/jandex-gradle-plugin/issues/25
-    id 'org.kordamp.gradle.jandex' version '2.3.0' apply false
 }
 
 ext {
@@ -21,8 +16,6 @@ ext {
     grpc_version = '1.73.0'
     quarkus_version = '3.30.2'
     lombok_version = '1.18.36'
-
-    jandex_plugin_version = '2.3.0'
 }
 
 subprojects {
@@ -131,6 +124,7 @@ configure(subprojects.findAll {
             c.implementation 'org.slf4j:slf4j-api:2.0.11'
             c.implementation 'org.yaml:snakeyaml:2.3'
             c.implementation 'org.javassist:javassist:3.30.2-GA'
+            c.implementation 'io.smallrye.reactive:mutiny:3.1.0'
 
             c.runtimeOnly 'jakarta.servlet:jakarta.servlet-api:6.1.0'
             c.implementation 'jakarta.enterprise:jakarta.enterprise.cdi-api:4.1.0'

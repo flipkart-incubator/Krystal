@@ -6,8 +6,7 @@ import static com.flipkart.krystal.facets.resolution.ResolverCommand.skip;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.tags.ElementTags.emptyTags;
 import static com.flipkart.krystal.vajram.facets.FacetValidation.validateMandatoryFacet;
-import static com.flipkart.krystal.vajram.utils.VajramLoader.createVajramObjectForClass;
-import static com.flipkart.krystal.vajram.utils.VajramLoader.loadVajramsFromClassPath;
+import static com.flipkart.krystal.vajram.utils.VajramLoader.loadVajrams;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
@@ -95,19 +94,8 @@ public final class VajramGraph {
     Map<Class<? extends VajramDefRoot>, VajramDefinition> definitionByDefType =
         new LinkedHashMap<>();
     Map<Class<? extends Request<?>>, VajramDefinition> definitionByReqType = new LinkedHashMap<>();
-    for (String packagePrefix : packagePrefixes) {
-      loadVajramsFromClassPath(packagePrefix)
-          .forEach(
-              vajramDef ->
-                  registerVajram(
-                      vajramDef, vajramDefinitions, definitionByDefType, definitionByReqType));
-    }
-    for (Class<? extends VajramDefRoot> clazz : classes) {
-      registerVajram(
-          createVajramObjectForClass(clazz),
-          vajramDefinitions,
-          definitionByDefType,
-          definitionByReqType);
+    for (VajramDefRoot<Object> vajramDef : loadVajrams(packagePrefixes, classes)) {
+      registerVajram(vajramDef, vajramDefinitions, definitionByDefType, definitionByReqType);
     }
     this.vajramDefinitions = ImmutableMap.copyOf(vajramDefinitions);
     this.definitionByDefType = ImmutableMap.copyOf(definitionByDefType);
@@ -228,16 +216,6 @@ public final class VajramGraph {
           vajramDefinition.vajramTags());
     }
     vajramExecutables.add(vajramId);
-    if (vajramDefinition.isTrait()) {
-      // Since this is a trait, we need to load all the conformers of this trait so that
-      // invocations of this trait can be routed to the correct conforming Vajram.
-      //        TraitDispatchPolicy traitDispatchPolicy = traitDispatchPolicies.get(vajramId);
-      //        if (traitDispatchPolicy != null) {
-      //          for (VajramID dispatchTarget : traitDispatchPolicy.dispatchTargetIDs()) {
-      //            loadKryonSubgraph(dispatchTarget, loadingInProgress);
-      //          }
-      //        }
-    }
   }
 
   private InputResolverCreationResult createKryonLogicsForInputResolvers(
