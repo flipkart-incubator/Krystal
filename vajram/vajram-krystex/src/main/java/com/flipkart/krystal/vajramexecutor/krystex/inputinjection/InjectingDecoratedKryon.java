@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajramexecutor.krystex.inputinjection;
 
 import static com.flipkart.krystal.core.VajramID.vajramID;
+import static com.flipkart.krystal.data.Errable.errableFrom;
 import static com.flipkart.krystal.facets.FacetType.INJECTION;
 
 import com.flipkart.krystal.core.VajramID;
@@ -14,6 +15,7 @@ import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.krystex.commands.DirectForwardReceive;
 import com.flipkart.krystal.krystex.commands.ForwardReceiveBatch;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
+import com.flipkart.krystal.krystex.kryon.BatchResponse;
 import com.flipkart.krystal.krystex.kryon.Kryon;
 import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
 import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
@@ -23,9 +25,12 @@ import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.facets.specs.DefaultFacetSpec;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.google.common.collect.ImmutableMap;
+import jakarta.inject.Provider;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -34,18 +39,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
-class InjectingDecoratedKryon implements Kryon<KryonCommand<?>, KryonCommandResponse> {
+class InjectingDecoratedKryon
+    implements Kryon<KryonCommand<? extends KryonCommandResponse>, KryonCommandResponse> {
 
-  private final Kryon<KryonCommand<?>, KryonCommandResponse> kryon;
-  private final VajramKryonGraph vajramKryonGraph;
+  private final Kryon<KryonCommand<? extends KryonCommandResponse>, KryonCommandResponse> kryon;
+  private final VajramGraph vajramGraph;
   private final @Nullable VajramInjectionProvider injectionProvider;
 
   InjectingDecoratedKryon(
-      Kryon<KryonCommand<?>, KryonCommandResponse> kryon,
-      VajramKryonGraph vajramKryonGraph,
+      Kryon<KryonCommand<? extends KryonCommandResponse>, KryonCommandResponse> kryon,
+      VajramGraph vajramGraph,
       @Nullable VajramInjectionProvider injectionProvider) {
     this.kryon = kryon;
-    this.vajramKryonGraph = vajramKryonGraph;
+    this.vajramGraph = vajramGraph;
     this.injectionProvider = injectionProvider;
   }
 
@@ -55,9 +61,10 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand<?>, KryonCommandResp
   }
 
   @Override
-  public CompletableFuture<KryonCommandResponse> executeCommand(KryonCommand<?> kryonCommand) {
+  public CompletableFuture<KryonCommandResponse> executeCommand(
+      KryonCommand<? extends KryonCommandResponse> kryonCommand) {
     VajramDefinition vajramDefinition =
-        vajramKryonGraph.getVajramDefinition(vajramID(kryonCommand.vajramID().id()));
+        vajramGraph.getVajramDefinition(vajramID(kryonCommand.vajramID().id()));
     if (vajramDefinition.metadata().isInputInjectionNeeded()
         && vajramDefinition.def() instanceof VajramDef<?>) {
       if (kryonCommand instanceof ForwardReceiveBatch forwardBatch) {
@@ -84,7 +91,23 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand<?>, KryonCommandResp
 
     for (ExecutionItem executionItem : forwardReceive.executionItems()) {
       FacetValuesBuilder facetsBuilder = executionItem.facetValues();
-      injectFacetsOfVajram(vajramDefinition, injectableFacets, facetsBuilder);
+      List<AutoCloseable> closeables =
+          injectFacetsOfVajram(vajramDefinition, injectableFacets, facetsBuilder);
+      // For DI frameworks which support manual lifecycle management, call close so that any
+      // instance with custom lifecycle can be destroyed. Here we call close when the response is
+      // received.
+      executionItem
+          .response()
+          .whenComplete(
+              (o, throwable) -> {
+                for (var closeable : closeables) {
+                  try {
+                    closeable.close();
+                  } catch (Exception e) {
+                    log.error("Failed to close injected closeable", e);
+                  }
+                }
+              });
     }
     return kryon.executeCommand(forwardReceive);
   }
@@ -109,21 +132,25 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand<?>, KryonCommandResp
       InvocationId invocationId = entry.getKey();
       FacetValuesBuilder facetsBuilder;
       facetsBuilder = entry.getValue()._asBuilder();
-      newRequests.put(
-          invocationId, injectFacetsOfVajram(vajramDefinition, injectableFacets, facetsBuilder));
+      injectFacetsOfVajram(vajramDefinition, injectableFacets, facetsBuilder);
+      newRequests.put(invocationId, facetsBuilder);
     }
-    return kryon.executeCommand(
+    KryonCommand<BatchResponse> kryonCommand =
         new ForwardReceiveBatch(
             forwardBatch.vajramID(),
             newRequests.build(),
             forwardBatch.dependentChain(),
-            forwardBatch.invocationsToSkip()));
+            forwardBatch.invocationsToSkip());
+    CompletableFuture<KryonCommandResponse> resp = kryon.executeCommand(kryonCommand);
+    resp.whenComplete((kryonCommandResponse, throwable) -> {});
+    return resp;
   }
 
-  private FacetValuesBuilder injectFacetsOfVajram(
+  private List<AutoCloseable> injectFacetsOfVajram(
       VajramDefinition vajramDefinition,
       Set<FacetSpec<?, ?>> injectableFacets,
       FacetValuesBuilder facetsBuilder) {
+    List<AutoCloseable> closeables = new ArrayList<>();
     for (var facetSpec : injectableFacets) {
       if (!(facetSpec instanceof DefaultFacetSpec<?, ?> defaultFacetSpec)) {
         continue;
@@ -132,9 +159,23 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand<?>, KryonCommandResp
       if (facetValue.valueOpt().isPresent()) {
         continue;
       }
-      // Input was not resolved by calling vajram.
-      Errable<Object> injectedValue = getInjectedValue(vajramDefinition.vajramId(), facetSpec);
-      if (injectedValue instanceof Failure<Object> f) {
+      Provider<Object> provider;
+      Errable<Object> value;
+      try {
+        provider = getInjectedValue(vajramDefinition.vajramId(), facetSpec);
+        if (provider instanceof AutoCloseable closeable) {
+          closeables.add(closeable);
+        }
+        value = errableFrom(provider::get);
+      } catch (Exception e) {
+        log.error(
+            "Could not inject input {} of vajram {}",
+            facetSpec,
+            kryon.getKryonDefinition().vajramID().id(),
+            e);
+        value = Errable.withError(e);
+      }
+      if (value instanceof Failure<Object> f) {
         defaultFacetSpec.setFacetValue(facetsBuilder, new ErrableFacetValue<>(f));
         log.error(
             "Could not inject input {} of vajram {}",
@@ -142,31 +183,18 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand<?>, KryonCommandResp
             kryon.getKryonDefinition().vajramID().id(),
             f.error());
       }
-      defaultFacetSpec.setFacetValue(facetsBuilder, new ErrableFacetValue<>(injectedValue));
+      defaultFacetSpec.setFacetValue(facetsBuilder, new ErrableFacetValue<>(value));
     }
-    return facetsBuilder;
+    return closeables;
   }
 
   @SuppressWarnings("unchecked")
-  private Errable<Object> getInjectedValue(VajramID vajramId, FacetSpec<?, ?> facetDef) {
+  private Provider<Object> getInjectedValue(VajramID vajramId, FacetSpec<?, ?> facetDef)
+      throws Exception {
     VajramInjectionProvider inputInjector = this.injectionProvider;
     if (inputInjector == null) {
-      var exception = new StackTracelessException("Dependency injector is null");
-      log.error(
-          "Cannot inject input {} of vajram {}",
-          facetDef,
-          kryon.getKryonDefinition().vajramID().id(),
-          exception);
-      return Errable.withError(exception);
+      throw new StackTracelessException("Dependency injector is null");
     }
-    try {
-      return (Errable<Object>) inputInjector.get(vajramId, facetDef);
-    } catch (Throwable e) {
-      String message =
-          "Could not inject input %s of vajram %s"
-              .formatted(facetDef, kryon.getKryonDefinition().vajramID().id());
-      log.error(message, e);
-      return Errable.withError(e);
-    }
+    return (Provider<Object>) inputInjector.get(vajramId, facetDef);
   }
 }

@@ -1,39 +1,42 @@
 package com.flipkart.krystal.lattice.ext.guice.codegen;
 
+import static com.flipkart.krystal.lattice.codegen.LatticeCodegenUtils.getDiBindingContainerName;
+import static com.flipkart.krystal.lattice.codegen.spi.di.BindingsContainer.getBindingContainers;
 import static java.util.Map.entry;
 import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
-import com.flipkart.krystal.lattice.codegen.spi.DepInjectBinderGen;
+import com.flipkart.krystal.lattice.codegen.spi.di.BindingsContainer;
+import com.flipkart.krystal.lattice.codegen.spi.di.DepInjectBinderGen;
 import com.flipkart.krystal.lattice.core.LatticeApplication;
-import com.flipkart.krystal.lattice.ext.guice.GuiceModuleBinder;
-import com.flipkart.krystal.lattice.ext.guice.servlet.GuiceServletModuleBinder;
+import com.flipkart.krystal.lattice.ext.guice.GuiceInjectionProvider;
+import com.flipkart.krystal.lattice.ext.guice.servlet.GuiceServletInjectionProvider;
 import com.google.auto.service.AutoService;
-import com.google.inject.servlet.RequestScoped;
 import com.squareup.javapoet.CodeBlock;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 @AutoService(DepInjectBinderGen.class)
 public final class GuiceBinderGen implements DepInjectBinderGen {
 
   @Override
   public CodeBlock getBinderCreationCode(LatticeCodegenContext context) {
-    TypeElement dependencyInjectionBinder = getDependencyInjectionBinder(context);
 
     if (!isApplicable(context)) {
       throw new UnsupportedOperationException();
     }
+    Map<String, List<BindingsContainer>> bindingContainers = getBindingContainers(context);
     return CodeBlock.builder()
         .addNamed(
 """
 return new $guiceModuleBinder:T(
+    this,
     $customBinderCreator:L
-    new $abstractModule:T());
+    $autoGenModules:L);
 """,
             Map.ofEntries(
                 entry(
@@ -41,12 +44,16 @@ return new $guiceModuleBinder:T(
                     userDefinedDepInjectBinderMethod(context).isPresent()
                         ? CodeBlock.of("super.getDependencyInjectionBinder().getRootModule(),")
                         : CodeBlock.builder().build()),
-                entry("guiceModuleBinder", dependencyInjectionBinder),
-                entry("abstractModule", GuiceModuleGenProvider.getModuleClassName(context))))
+                entry("guiceModuleBinder", getDependencyInjectionBinder(context)),
+                entry(
+                    "autoGenModules",
+                    bindingContainers.keySet().stream()
+                        .map(id -> CodeBlock.of("new $T()", getDiBindingContainerName(context, id)))
+                        .collect(CodeBlock.joining(",")))))
         .build();
   }
 
-  static @NonNull TypeElement getDependencyInjectionBinder(LatticeCodegenContext context) {
+  static TypeElement getDependencyInjectionBinder(LatticeCodegenContext context) {
     CodeGenUtility util = context.codeGenUtility().codegenUtil();
 
     TypeElement dependencyInjectionBinder =
@@ -56,8 +63,7 @@ return new $guiceModuleBinder:T(
                     .getTypeUtils()
                     .asElement(
                         util.getTypeFromAnnotationMember(
-                                context.latticeApp()::dependencyInjectionBinder)
-                            .orElseThrow(() -> new AssertionError("Not possible"))));
+                            context.latticeApp()::dependencyInjectionBinder)));
     return dependencyInjectionBinder;
   }
 
@@ -67,25 +73,19 @@ return new $guiceModuleBinder:T(
   }
 
   static boolean isGuiceBinderConfigured(LatticeCodegenContext context) {
-    return getDependencyInjectionBinder(context)
-            .equals(
-                context
-                    .codeGenUtility()
-                    .processingEnv()
-                    .getElementUtils()
-                    .getTypeElement(GuiceModuleBinder.class.getCanonicalName()))
-        || getDependencyInjectionBinder(context)
-            .equals(
-                context
-                    .codeGenUtility()
-                    .processingEnv()
-                    .getElementUtils()
-                    .getTypeElement(GuiceServletModuleBinder.class.getCanonicalName()));
-  }
-
-  @Override
-  public CodeBlock getRequestScope() {
-    return CodeBlock.of("@$T", RequestScoped.class);
+    TypeElement dependencyInjectionBinder = getDependencyInjectionBinder(context);
+    return dependencyInjectionBinder.equals(
+            context
+                .codeGenUtility()
+                .processingEnv()
+                .getElementUtils()
+                .getTypeElement(GuiceInjectionProvider.class.getCanonicalName()))
+        || dependencyInjectionBinder.equals(
+            context
+                .codeGenUtility()
+                .processingEnv()
+                .getElementUtils()
+                .getTypeElement(GuiceServletInjectionProvider.class.getCanonicalName()));
   }
 
   private Optional<ExecutableElement> userDefinedDepInjectBinderMethod(

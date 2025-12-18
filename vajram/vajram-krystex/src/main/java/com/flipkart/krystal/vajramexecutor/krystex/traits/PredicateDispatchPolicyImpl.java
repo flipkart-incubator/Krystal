@@ -6,7 +6,7 @@ import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.traits.DispatchCase;
 import com.flipkart.krystal.traits.PredicateDispatchPolicy;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import java.util.Collection;
@@ -19,12 +19,12 @@ public final class PredicateDispatchPolicyImpl extends PredicateDispatchPolicy {
   @Getter private final ImmutableList<DispatchCase> dispatchCases;
   @Getter private final ImmutableSet<VajramID> dispatchTargetIDs;
   @Getter private final ImmutableSet<Class<? extends Request<?>>> dispatchTargetReqs;
-  @NonNull private final VajramKryonGraph graph;
+  @NonNull private final VajramGraph graph;
 
   public PredicateDispatchPolicyImpl(
       Class<? extends Request<?>> traitReqType,
       ImmutableList<DispatchCase> traitDispatchCases,
-      VajramKryonGraph graph) {
+      VajramGraph graph) {
     this.graph = graph;
     this.traitID = graph.getVajramIdByVajramReqType(traitReqType);
     this.dispatchCases = traitDispatchCases;

@@ -13,7 +13,7 @@ import com.flipkart.krystal.traits.matchers.InputValueMatcher;
 import com.flipkart.krystal.vajram.TraitRequestRoot;
 import com.flipkart.krystal.vajram.VajramRequestRoot;
 import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -26,7 +26,7 @@ import lombok.Value;
 public class PredicateDispatchUtil {
 
   public static <R extends Request<?>> InputDispatcherBuilder<R> dispatchTrait(
-      Class<R> traitReq, VajramKryonGraph graph) {
+      Class<R> traitReq, VajramGraph graph) {
     checkArgument(
         traitReq.getAnnotation(TraitRequestRoot.class) != null,
         "Expecting a trait request root i.e a request class with the annotation @TraitRequestRoot");
@@ -45,7 +45,7 @@ public class PredicateDispatchUtil {
   public static class InputDispatcherBuilder<R extends Request<?>> {
 
     private final Class<R> traitReq;
-    private final VajramKryonGraph graph;
+    private final VajramGraph graph;
 
     @SafeVarargs
     public final PredicateDispatchPolicy conditionally(

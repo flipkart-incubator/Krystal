@@ -6,6 +6,7 @@ dependencies {
     implementation project(':vajram:extensions:protobuf:vajram-protobuf-codegen')
     implementation project(':vajram:extensions:protobuf:vajram-protobuf3')
 
+    implementation 'jakarta.enterprise:jakarta.enterprise.cdi-api'
     implementation 'com.squareup:javapoet'
 }
 extraJavaModuleInfo {

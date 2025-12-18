@@ -12,7 +12,7 @@ import com.flipkart.krystal.lattice.core.doping.Dopant;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
 import com.flipkart.krystal.lattice.core.headers.Header;
 import com.flipkart.krystal.lattice.core.headers.SingleValueHeader;
-import com.flipkart.krystal.lattice.vajram.VajramDopant;
+import com.flipkart.krystal.lattice.krystex.KrystexDopant;
 import com.flipkart.krystal.lattice.vajram.VajramRequestExecutionContext;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.tags.Names;
@@ -28,7 +28,6 @@ import io.grpc.Status;
 import io.grpc.StatusException;
 import io.grpc.stub.StreamObserver;
 import jakarta.inject.Inject;
-import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -50,18 +49,23 @@ public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerC
 
   private final GrpcServerConfig config;
   private final GrpcServer annotation;
-  private final VajramDopant vajramDopant;
+  private final KrystexDopant krystexDopant;
   private final StandardHeadersInterceptor headerInterceptor;
 
   private @MonotonicNonNull Server server;
 
   @Inject
-  protected GrpcServerDopant(GrpcInitData initData) {
-    this.grpcServerSpec = initData.spec();
-    this.annotation = initData.annotation();
-    this.config = initData.config();
-    this.vajramDopant = initData.vajramDopant();
-    this.headerInterceptor = initData.headerInterceptor();
+  protected GrpcServerDopant(
+      GrpcServer annotation,
+      GrpcServerConfig config,
+      GrpcServerSpec spec,
+      StandardHeadersInterceptor headerInterceptor,
+      KrystexDopant krystexDopant) {
+    this.annotation = annotation;
+    this.config = config;
+    this.grpcServerSpec = spec;
+    this.krystexDopant = krystexDopant;
+    this.headerInterceptor = headerInterceptor;
   }
 
   @Override
@@ -113,7 +117,7 @@ public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerC
       configBuilder.executorId(requestId);
     }
     try {
-      vajramDopant
+      krystexDopant
           .executeRequest(
               VajramRequestExecutionContext.<RespT>builder()
                   .vajramRequest(request)
@@ -166,20 +170,10 @@ public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerC
   }
 
   @Override
-  public void tryMainMethodExit() throws InterruptedException {
+  public int tryApplicationExit() throws InterruptedException {
     if (server != null) {
       server.awaitTermination();
     }
-  }
-
-  @Singleton
-  protected record GrpcInitData(
-      GrpcServer annotation,
-      GrpcServerConfig config,
-      GrpcServerSpec spec,
-      StandardHeadersInterceptor headerInterceptor,
-      VajramDopant vajramDopant) {
-    @Inject
-    public GrpcInitData {}
+    return 0;
   }
 }

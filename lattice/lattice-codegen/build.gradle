@@ -4,5 +4,7 @@ dependencies {
     api project(':lattice:lattice-core')
 
     api 'com.squareup:javapoet'
+
+    implementation 'jakarta.enterprise:jakarta.enterprise.cdi-api'
     implementation 'org.projectlombok:lombok'
 }

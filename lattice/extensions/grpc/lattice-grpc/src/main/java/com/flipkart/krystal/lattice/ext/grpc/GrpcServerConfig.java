@@ -6,7 +6,7 @@ import com.flipkart.krystal.lattice.core.doping.DopantConfig;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
 
 @DopantType(DOPANT_TYPE)
-record GrpcServerConfig(int port) implements DopantConfig {
+public record GrpcServerConfig(int port) implements DopantConfig {
 
   @Override
   public String _dopantType() {

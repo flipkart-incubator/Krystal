@@ -8,4 +8,4 @@ import java.util.List;
 
 public record DirectForwardReceive(
     VajramID vajramID, List<ExecutionItem> executionItems, DependentChain dependentChain)
-    implements MultiRequestDirectCommand<DirectResponse>, ServerSideCommand<DirectResponse> {}
+    implements MultiRequestDirectCommand, ServerSideCommand<DirectResponse> {}

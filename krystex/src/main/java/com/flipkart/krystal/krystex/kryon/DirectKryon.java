@@ -28,8 +28,7 @@ import java.util.NavigableSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
-public final class DirectKryon
-    extends AbstractKryon<MultiRequestDirectCommand<DirectResponse>, DirectResponse> {
+public final class DirectKryon extends AbstractKryon<MultiRequestDirectCommand, DirectResponse> {
 
   DirectKryon(
       VajramKryonDefinition definition,
@@ -49,8 +48,7 @@ public final class DirectKryon
 
   @SuppressWarnings("FutureReturnValueIgnored")
   @Override
-  public CompletableFuture<DirectResponse> executeCommand(
-      MultiRequestDirectCommand<DirectResponse> kryonCommand) {
+  public CompletableFuture<DirectResponse> executeCommand(MultiRequestDirectCommand kryonCommand) {
     DependentChain dependentChain = kryonCommand.dependentChain();
     VajramID vajramID = kryonDefinition.vajramID();
 

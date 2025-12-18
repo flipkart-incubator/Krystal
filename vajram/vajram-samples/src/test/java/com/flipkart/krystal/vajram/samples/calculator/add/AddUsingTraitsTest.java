@@ -19,15 +19,18 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
+import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.vajram.guice.traitbinding.StaticDispatchPolicyImpl;
 import com.flipkart.krystal.vajram.guice.traitbinding.TraitBinder;
 import com.flipkart.krystal.vajram.samples.Util;
 import com.flipkart.krystal.vajram.samples.calculator.add.AddUsingTraits.ThreeSums;
 import com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiAddQualifier;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.google.common.collect.ImmutableSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -44,8 +47,9 @@ class AddUsingTraitsTest {
   @SuppressWarnings("unchecked")
   private static final Lease<SingleThreadExecutor>[] EXECUTOR_LEASES = new Lease[MAX_THREADS];
 
-  private VajramKryonGraph graph;
+  private VajramGraph graph;
   private Lease<SingleThreadExecutor> executorLease;
+  private KrystexGraphBuilder kGraph;
 
   @BeforeAll
   static void beforeAll() throws LeaseUnavailableException {
@@ -79,9 +83,11 @@ class AddUsingTraitsTest {
         .annotatedWith(MultiAddQualifier.Creator.create(SPLIT))
         .to(SplitAdd_Req.class);
     this.graph = Util.loadFromClasspath(AddUsingTraits.class.getPackageName()).build();
-    this.graph.registerTraitDispatchPolicies(
-        new StaticDispatchPolicyImpl(
-            graph, graph.getVajramIdByVajramDefType(MultiAdd.class), traitBinder));
+    this.kGraph = KrystexGraph.builder().vajramGraph(graph);
+    this.kGraph.traitDispatchPolicies(
+        new TraitDispatchPolicies(
+            new StaticDispatchPolicyImpl(
+                graph, graph.getVajramIdByVajramDefType(MultiAdd.class), traitBinder)));
   }
 
   @Test
@@ -99,7 +105,7 @@ class AddUsingTraitsTest {
     CompletableFuture<ThreeSums> future;
 
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(executorConfig().build())) {
+        kGraph.build().createExecutor(executorConfig().build())) {
       // Execute the vajram
       future = executeVajram(graph, krystexVajramExecutor, numbers1, numbers2, numbers3);
     }
@@ -123,7 +129,7 @@ class AddUsingTraitsTest {
     CompletableFuture<ThreeSums> future;
 
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(executorConfig().build())) {
+        kGraph.build().createExecutor(executorConfig().build())) {
 
       // Execute the vajram with empty lists
       future = executeVajram(graph, krystexVajramExecutor, emptyList, emptyList, emptyList);
@@ -163,7 +169,7 @@ class AddUsingTraitsTest {
     CompletableFuture<ThreeSums> future;
 
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(executorConfig().build())) {
+        kGraph.build().createExecutor(executorConfig().build())) {
 
       // Execute the vajram with different sized lists
       future = executeVajram(graph, krystexVajramExecutor, smallList, mediumList, largeList);
@@ -181,7 +187,7 @@ class AddUsingTraitsTest {
   }
 
   private static CompletableFuture<ThreeSums> executeVajram(
-      VajramKryonGraph graph,
+      VajramGraph graph,
       KrystexVajramExecutor krystexVajramExecutor,
       List<Integer> numbers1,
       List<Integer> numbers2,
@@ -199,7 +205,7 @@ class AddUsingTraitsTest {
             .build());
   }
 
-  private static ImmutableSet<DependentChain> getDisabledDependentChains(VajramKryonGraph graph) {
+  private static ImmutableSet<DependentChain> getDisabledDependentChains(VajramGraph graph) {
     String vajramId = graph.getVajramIdByVajramDefType(AddUsingTraits.class).id();
     return ImmutableSet.of(
         graph.computeDependentChain(vajramId, sum2_s, chainSum_s, chainSum_s),

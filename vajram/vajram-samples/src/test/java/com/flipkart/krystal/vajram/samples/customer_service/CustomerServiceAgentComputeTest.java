@@ -14,9 +14,12 @@ import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
+import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent.*;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.traits.ComputeDispatchPolicyImpl;
 import com.flipkart.krystal.vajramexecutor.krystex.traits.DispatchTargetComputing.DispatchTargetReqTypeComputer;
 import com.google.common.collect.ImmutableSet;
@@ -40,7 +43,7 @@ class CustomerServiceAgentComputeTest {
     EXEC_POOL = new SingleThreadExecutorsPool("Test", 4);
   }
 
-  private VajramKryonGraph graph;
+  private KrystexGraphBuilder kGraph;
   private Lease<SingleThreadExecutor> executorLease;
 
   @BeforeEach
@@ -48,10 +51,9 @@ class CustomerServiceAgentComputeTest {
     this.executorLease = EXEC_POOL.lease();
 
     // Build the graph with all the vajram implementations
-    graph =
-        VajramKryonGraph.builder()
-            .loadFromPackage(CustomerServiceAgent.class.getPackageName())
-            .build();
+    VajramGraph graph =
+        VajramGraph.builder().loadFromPackage(CustomerServiceAgent.class.getPackageName()).build();
+    this.kGraph = KrystexGraph.builder().vajramGraph(graph);
 
     Map<
             AgentType,
@@ -80,25 +82,26 @@ class CustomerServiceAgentComputeTest {
                     .collect(toSet()),
                 Set.copyOf(defaultsByCommType.values())));
     dispatchTargets.add(DefaultCustomerServiceAgent_Req.class);
-    graph.registerTraitDispatchPolicies(
-        new ComputeDispatchPolicyImpl<>(
-            CustomerServiceAgent_Req.class,
-            (DispatchTargetReqTypeComputer<CustomerServiceAgent_Req>)
-                (dependency, request) -> {
-                  InitialCommunication initialCommunication = request.initialCommunication();
-                  var commType =
-                      initialCommunication == null
-                          ? CustomerServiceAgent_Req.class
-                          : initialCommunication.getClass();
-                  return byAgent
-                      .getOrDefault(request.agentType(), Map.of())
-                      .getOrDefault(
-                          commType,
-                          defaultsByCommType.getOrDefault(
-                              commType, DefaultCustomerServiceAgent_Req.class));
-                },
-            ImmutableSet.copyOf(dispatchTargets),
-            graph));
+    kGraph.traitDispatchPolicies(
+        new TraitDispatchPolicies(
+            new ComputeDispatchPolicyImpl<>(
+                CustomerServiceAgent_Req.class,
+                (DispatchTargetReqTypeComputer<CustomerServiceAgent_Req>)
+                    (dependency, request) -> {
+                      InitialCommunication initialCommunication = request.initialCommunication();
+                      var commType =
+                          initialCommunication == null
+                              ? CustomerServiceAgent_Req.class
+                              : initialCommunication.getClass();
+                      return byAgent
+                          .getOrDefault(request.agentType(), Map.of())
+                          .getOrDefault(
+                              commType,
+                              defaultsByCommType.getOrDefault(
+                                  commType, DefaultCustomerServiceAgent_Req.class));
+                    },
+                ImmutableSet.copyOf(dispatchTargets),
+                graph)));
   }
 
   @AfterEach
@@ -118,7 +121,7 @@ class CustomerServiceAgentComputeTest {
 
     // Execute and verify
     CompletableFuture<@Nullable String> result;
-    try (var executor = graph.createExecutor(getExecutorConfig()); ) {
+    try (var executor = kGraph.build().createExecutor(getExecutorConfig()); ) {
       result = executor.execute(request);
     }
 
@@ -137,7 +140,7 @@ class CustomerServiceAgentComputeTest {
             ._build();
 
     CompletableFuture<@Nullable String> result;
-    try (var executor = graph.createExecutor(getExecutorConfig()); ) {
+    try (var executor = kGraph.build().createExecutor(getExecutorConfig()); ) {
       result = executor.execute(request);
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("L1 Agent");
@@ -155,7 +158,7 @@ class CustomerServiceAgentComputeTest {
             ._build();
 
     CompletableFuture<@Nullable String> result;
-    try (var executor = graph.createExecutor(getExecutorConfig()); ) {
+    try (var executor = kGraph.build().createExecutor(getExecutorConfig()); ) {
       result = executor.execute(request);
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("L2 Agent");
@@ -173,7 +176,7 @@ class CustomerServiceAgentComputeTest {
             ._build();
 
     CompletableFuture<@Nullable String> result;
-    try (var executor = graph.createExecutor(getExecutorConfig()); ) {
+    try (var executor = kGraph.build().createExecutor(getExecutorConfig()); ) {
       result = executor.execute(request);
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("L3 Agent");
@@ -195,7 +198,7 @@ class CustomerServiceAgentComputeTest {
             ._build();
 
     CompletableFuture<@Nullable String> result;
-    try (var executor = graph.createExecutor(getExecutorConfig())) {
+    try (var executor = kGraph.build().createExecutor(getExecutorConfig())) {
       result = executor.execute(request);
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("I am an email Agent");
@@ -214,7 +217,7 @@ class CustomerServiceAgentComputeTest {
             ._build();
 
     CompletableFuture<@Nullable String> result;
-    try (var executor = graph.createExecutor(getExecutorConfig()); ) {
+    try (var executor = kGraph.build().createExecutor(getExecutorConfig()); ) {
       result = executor.execute(request);
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("I am a call Agent");
@@ -233,7 +236,7 @@ class CustomerServiceAgentComputeTest {
             ._build();
 
     CompletableFuture<@Nullable String> result;
-    try (var executor = graph.createExecutor(getExecutorConfig()); ) {
+    try (var executor = kGraph.build().createExecutor(getExecutorConfig()); ) {
       result = executor.execute(request);
     }
     assertThat(result)

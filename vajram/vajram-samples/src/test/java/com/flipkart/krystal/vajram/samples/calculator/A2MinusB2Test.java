@@ -10,10 +10,11 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.samples.Util;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramKryonGraphBuilder;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph.VajramGraphBuilder;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -29,7 +30,7 @@ class A2MinusB2Test {
     EXEC_POOL = new SingleThreadExecutorsPool("Test", 4);
   }
 
-  private VajramKryonGraphBuilder graph;
+  private VajramGraphBuilder graph;
   private Lease<SingleThreadExecutor> executorLease;
 
   @BeforeEach
@@ -46,15 +47,18 @@ class A2MinusB2Test {
   @Test
   void success() {
     CompletableFuture<Integer> future;
-    VajramKryonGraph graph = this.graph.build();
+    VajramGraph graph = this.graph.build();
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder()
-                        .executorId(REQUEST_ID)
-                        .executorService(executorLease.get()))
-                .build())) {
+        KrystexGraph.builder()
+            .vajramGraph(graph)
+            .build()
+            .createExecutor(
+                KrystexVajramExecutorConfig.builder()
+                    .kryonExecutorConfigBuilder(
+                        KryonExecutorConfig.builder()
+                            .executorId(REQUEST_ID)
+                            .executorService(executorLease.get()))
+                    .build())) {
       future =
           executeVajram(
               krystexVajramExecutor, A2MinusB2_ReqImmutPojo._builder().a(3).b(2)._build());

@@ -1,0 +1,5 @@
+dependencies {
+    api project(':lattice:lattice-core')
+    api project(':vajram:extensions:cdi:vajram-cdi')
+    api 'jakarta.enterprise:jakarta.enterprise.cdi-api'
+}

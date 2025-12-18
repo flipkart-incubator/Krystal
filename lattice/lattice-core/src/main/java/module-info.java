@@ -23,4 +23,5 @@ module flipkart.krystal.lattice.core {
   requires org.apache.commons.cli;
   requires org.checkerframework.checker.qual;
   requires static lombok;
+  requires jakarta.cdi;
 }

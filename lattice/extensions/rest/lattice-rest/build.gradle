@@ -4,9 +4,10 @@ dependencies {
     implementation project(':vajram:vajram-java-sdk')
     implementation project(':krystal-visualization')
 
-
-    implementation 'org.jboss.resteasy:resteasy-core'
     api 'jakarta.ws.rs:jakarta.ws.rs-api'
+
+    implementation 'jakarta.enterprise:jakarta.enterprise.cdi-api'
+    implementation 'io.smallrye.reactive:mutiny'
 }
 
 extraJavaModuleInfo {

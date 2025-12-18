@@ -2,25 +2,27 @@ package com.flipkart.krystal.lattice.ext.rest.visualization;
 
 import static com.flipkart.krystal.visualization.StaticCallGraphGenerator.generateStaticCallGraphContent;
 
-import com.flipkart.krystal.lattice.vajram.VajramDopant;
+import com.flipkart.krystal.lattice.krystex.KrystexDopant;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 @Path("_krystal/lattice/restService")
 public class StaticKrystalGraphResource {
 
-  private final VajramDopant vajramDopant;
+  private final KrystexDopant krystexDopant;
 
-  public StaticKrystalGraphResource(VajramDopant vajramDopant) {
-    this.vajramDopant = vajramDopant;
+  public StaticKrystalGraphResource(KrystexDopant krystexDopant) {
+    this.krystexDopant = krystexDopant;
   }
 
   @Path("staticGraph.html")
   @GET
-  @Produces("text/html")
+  @Produces(MediaType.TEXT_HTML)
   public Response getStaticGraph() {
-    return Response.ok(generateStaticCallGraphContent(vajramDopant.graph(), null).html()).build();
+    return Response.ok(generateStaticCallGraphContent(krystexDopant.executableGraph(), null).html())
+        .build();
   }
 }

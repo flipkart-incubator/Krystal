@@ -83,19 +83,12 @@ class FkJavaCodeStandardPlugin implements Plugin<Project> {
 
         project.extensions.findByType(SpotlessExtension)
                 .java {
-                    target('src/*/java/**/*.java',
-                            'build/generated/sources/annotationProcessor/**/*.java')
+                    target('src/*/java/**/*.java')
                     googleJavaFormat()
                 }
 
         project.tasks.named('spotlessJava').configure { mustRunAfter('compileJava') }
         project.tasks.named('spotlessJava').configure { mustRunAfter('compileTestJava') }
-
-        project.afterEvaluate(p -> {
-            p.tasks.named('compileJava') {
-                it.finalizedBy('spotlessApply')
-            }
-        })
 
         project.afterEvaluate(p -> {
             p.tasks.named('build') {

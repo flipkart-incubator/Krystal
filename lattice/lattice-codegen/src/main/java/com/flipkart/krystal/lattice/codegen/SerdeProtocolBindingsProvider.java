@@ -1,14 +1,16 @@
 package com.flipkart.krystal.lattice.codegen;
 
-import static com.flipkart.krystal.lattice.codegen.spi.BindingsProvider.BindingScope.REQUEST;
 import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider;
 import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider.ModelProtocolConfig;
-import com.flipkart.krystal.lattice.codegen.spi.BindingsProvider;
 import com.flipkart.krystal.lattice.codegen.spi.DefaultSerdeProtocolProvider;
 import com.flipkart.krystal.lattice.codegen.spi.LatticeAppCodeGenAttrsProvider;
+import com.flipkart.krystal.lattice.codegen.spi.di.Binding;
+import com.flipkart.krystal.lattice.codegen.spi.di.BindingsContainer;
+import com.flipkart.krystal.lattice.codegen.spi.di.BindingsProvider;
+import com.flipkart.krystal.lattice.codegen.spi.di.ProviderMethod;
 import com.flipkart.krystal.lattice.core.headers.Header;
 import com.flipkart.krystal.lattice.core.headers.StandardHeaderNames;
 import com.flipkart.krystal.model.Model;
@@ -40,7 +42,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class SerdeProtocolBindingsProvider implements BindingsProvider {
 
   @Override
-  public ImmutableList<Binding> bindings(LatticeCodegenContext context) {
+  public ImmutableList<BindingsContainer> bindings(LatticeCodegenContext context) {
     VajramCodeGenUtility util = context.codeGenUtility();
     ServiceLoader<LatticeAppCodeGenAttrsProvider> providers =
         ServiceLoader.load(LatticeAppCodeGenAttrsProvider.class, this.getClass().getClassLoader());
@@ -198,20 +200,22 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
               immutBuilderClassName,
               List.of(
                   ParameterSpec.builder(
-                      ClassName.get(Header.class)
-                          .annotated(AnnotationSpec.builder(Nullable.class).build())
-                          .annotated(
-                              AnnotationSpec.builder(Named.class)
-                                  .addMember(
-                                      "value",
-                                      CodeBlock.of("$T.$L", StandardHeaderNames.class, "ACCEPT"))
-                                  .build()),
-                      "acceptHeader")),
+                          ClassName.get(Header.class)
+                              .annotated(
+                                  AnnotationSpec.builder(Nullable.class).build(),
+                                  AnnotationSpec.builder(Named.class)
+                                      .addMember(
+                                          "value",
+                                          CodeBlock.of(
+                                              "$T.$L", StandardHeaderNames.class, "ACCEPT"))
+                                      .build()),
+                          "acceptHeader")
+                      .build()),
               providingLogics.stream().collect(CodeBlock.joining(" else ")),
-              REQUEST));
+              null));
     }
 
-    return ImmutableList.copyOf(bindings);
+    return ImmutableList.of(new BindingsContainer(ImmutableList.copyOf(bindings)));
   }
 
   private @Nullable TypeElement getDefaultSerializationProtocol(LatticeCodegenContext context) {

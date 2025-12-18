@@ -15,7 +15,9 @@ import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 import lombok.Builder;
 import lombok.NonNull;
 import lombok.Singular;
@@ -32,8 +34,13 @@ import org.checkerframework.common.returnsreceiver.qual.This;
  * @param graphTraversalStrategy DEPTH is more performant and memory efficient. BREADTH is sometimes
  *     useful for debugging
  * @param kryonDecoratorConfigs The request scoped kryon decorators to be applied
- * @param executorService MANDATORY! This is used as the event loop for the message passing within
- *     this execution.
+ * @param executorService This is used as the event loop for the message passing within this
+ *     execution.
+ * @param executorServiceTransformer Used to transform the {@link #executorService} so that it can
+ *     be wrapped with additional functionality like context propagation. The transformed {@link
+ *     ExecutorService}(s) MUST eventually delegate all tasks to the same {@link
+ *     SingleThreadExecutor} instance which is provided to the {@link #executorService}. Else this
+ *     can lead unpredictable behaviour.
  * @param traitDispatchDecorator used to determine the conformant vajrams bound to traits
  * @param debug If true, more human-readable names are give to entities - might be memory
  *     inefficient.
@@ -48,6 +55,7 @@ public record KryonExecutorConfig(
     @Singular ImmutableMap<String, KryonDecoratorConfig> kryonDecoratorConfigs,
     @Singular ImmutableMap<String, DependencyDecoratorConfig> dependencyDecoratorConfigs,
     @NonNull SingleThreadExecutor executorService,
+    Function<ExecutorService, ExecutorService> executorServiceTransformer,
     TraitDispatchDecorator traitDispatchDecorator,
     boolean debug) {
   private static final AtomicLong EXEC_COUNT = new AtomicLong();
@@ -84,6 +92,9 @@ public record KryonExecutorConfig(
     }
     if (traitDispatchDecorator == null) {
       traitDispatchDecorator = DependencyDecorator.NO_OP::decorateDependency;
+    }
+    if (executorServiceTransformer == null) {
+      executorServiceTransformer = Function.identity();
     }
   }
 

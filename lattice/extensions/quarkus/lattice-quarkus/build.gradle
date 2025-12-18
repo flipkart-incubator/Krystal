@@ -5,8 +5,9 @@ dependencies {
     api 'io.quarkus:quarkus-arc'
     api 'io.quarkus:quarkus-core'
     api 'io.quarkus.vertx.utils:quarkus-vertx-utils'
+    api 'io.quarkus:quarkus-smallrye-context-propagation'
 
-    implementation 'io.quarkus:quarkus-vertx'
+    api 'io.quarkus:quarkus-vertx'
 }
 
 extraJavaModuleInfo {

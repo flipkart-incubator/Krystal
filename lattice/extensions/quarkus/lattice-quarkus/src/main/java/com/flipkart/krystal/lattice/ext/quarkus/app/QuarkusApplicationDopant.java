@@ -1,34 +1,33 @@
 package com.flipkart.krystal.lattice.ext.quarkus.app;
 
+import static com.flipkart.krystal.lattice.ext.quarkus.app.QuarkusApplicationDopant.APPLICATION_DOPANT_TYPE;
+
+import com.flipkart.krystal.lattice.core.doping.DopantType;
 import com.flipkart.krystal.lattice.core.doping.SimpleDopant;
 import com.flipkart.krystal.lattice.ext.quarkus.app.QuarkusApplicationSpec.QuarkusApplicationSpecBuilder;
+import io.quarkus.arc.Unremovable;
 import io.quarkus.runtime.Quarkus;
-import io.vertx.core.Vertx;
-import jakarta.enterprise.inject.spi.CDI;
 import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@DopantType(APPLICATION_DOPANT_TYPE)
+@Singleton
+@Unremovable
 public final class QuarkusApplicationDopant implements SimpleDopant {
   static final String APPLICATION_DOPANT_TYPE = "krystal.lattice.quarkus.app";
 
-  private final Vertx vertx;
-
   @Inject
-  public QuarkusApplicationDopant() {
-    this.vertx = CDI.current().select(Vertx.class).get();
-  }
+  public QuarkusApplicationDopant() {}
 
   public static QuarkusApplicationSpecBuilder quarkusApplication() {
     return QuarkusApplicationSpec.builder();
   }
 
-  public Vertx vertx() {
-    return vertx;
-  }
-
   @Override
-  public void tryMainMethodExit() {
+  public int tryApplicationExit() {
     Quarkus.waitForExit();
+    return 0;
   }
 }

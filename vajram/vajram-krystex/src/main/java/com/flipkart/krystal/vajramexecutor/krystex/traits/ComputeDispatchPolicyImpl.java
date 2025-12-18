@@ -6,7 +6,7 @@ import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.traits.ComputeDispatchPolicy;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.traits.DispatchTargetComputing.DispatchTargetComputer;
 import com.google.common.collect.ImmutableSet;
 import lombok.Getter;
@@ -14,7 +14,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class ComputeDispatchPolicyImpl<T extends Request<?>> extends ComputeDispatchPolicy {
 
-  private final VajramKryonGraph graph;
+  private final VajramGraph graph;
   private final Class<T> traitReqType;
 
   @Getter private final VajramID traitID;
@@ -27,7 +27,7 @@ public final class ComputeDispatchPolicyImpl<T extends Request<?>> extends Compu
       Class<T> traitReqType,
       DispatchTargetComputer<T> dispatchTargetComputer,
       ImmutableSet<Class<? extends T>> dispatchTargetReqs,
-      VajramKryonGraph graph) {
+      VajramGraph graph) {
     this.traitReqType = traitReqType;
     this.graph = graph;
     this.traitID = graph.getVajramIdByVajramReqType(traitReqType);

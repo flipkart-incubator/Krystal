@@ -339,13 +339,17 @@ public class CodeGenUtility {
     }
   }
 
-  public Optional<TypeMirror> getTypeFromAnnotationMember(Supplier<Class<?>> supplier) {
+  public TypeMirror getTypeFromAnnotationMember(Supplier<Class<?>> supplier) {
     try {
       var ignored = supplier.get();
       throw new AssertionError("Expected supplier to throw error");
     } catch (MirroredTypeException mte) {
       TypeMirror typeMirror = mte.getTypeMirror();
-      return Optional.ofNullable(typeMirror);
+      if (typeMirror == null) {
+        throw new AssertionError(
+            "This is possible only if exception mte was serialized and deserialized, which is not the case");
+      }
+      return typeMirror;
     }
   }
 
@@ -579,6 +583,7 @@ public class CodeGenUtility {
     }
     classBuilder.addTypeVariables(typeVariableNames);
     addDefaultAnnotations(classBuilder);
+    classBuilder.addAnnotation(Slf4j.class);
     return classBuilder;
   }
 

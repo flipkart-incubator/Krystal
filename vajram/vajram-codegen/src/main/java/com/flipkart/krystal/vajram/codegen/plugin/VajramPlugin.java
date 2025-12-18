@@ -164,6 +164,10 @@ public class VajramPlugin implements Plugin<Project> {
 
                           // So that vajram wrappers are generated during compilation
                           "-A" + CODEGEN_PHASE_KEY + '=' + FINAL,
+                          "-A"
+                              + MODULE_ROOT_PATH_KEY
+                              + "="
+                              + project.getProjectDir().getAbsolutePath(),
 
                           // So that @Resolver method param names can be read at runtime
                           // in case @Using annotation has not been used on the parameters

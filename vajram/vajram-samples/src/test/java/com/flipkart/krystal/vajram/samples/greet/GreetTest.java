@@ -30,11 +30,13 @@ import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecR
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.guice.injection.VajramGuiceInputInjector;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramKryonGraphBuilder;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph.VajramGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.KryonInputInjector;
 import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness;
 import com.google.common.collect.ImmutableSet;
@@ -65,7 +67,7 @@ class GreetTest {
     EXEC_POOL = new SingleThreadExecutorsPool("Test", 4);
   }
 
-  private VajramKryonGraphBuilder graph;
+  private VajramGraphBuilder graph;
   private ObjectMapper objectMapper;
   private static final String USER_ID = "user@123";
   private static final String USER_NAME = "Ranchoddas Shamaldas Chanchad";
@@ -94,7 +96,7 @@ class GreetTest {
                 .add(RequestLevelCache.DECORATOR_TYPE)
                 .add(KryonInputInjector.DECORATOR_TYPE)
                 .build());
-    graph = VajramKryonGraph.builder().loadFromPackage(PACKAGE_PATH);
+    graph = VajramGraph.builder().loadFromPackage(PACKAGE_PATH);
 
     objectMapper =
         new ObjectMapper()
@@ -127,18 +129,21 @@ class GreetTest {
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
     RequestContext requestContext = new RequestContext(REQUEST_ID, USER_ID);
     assertThat(analyticsEventSink.events).isEmpty();
-    VajramKryonGraph vajramKryonGraph = graph.build();
-    vajramKryonGraph.registerInputInjector(new VajramGuiceInputInjector(injector));
+    VajramGraph vajramGraph = graph.build();
+    KrystexGraphBuilder kGraph = KrystexGraph.builder().vajramGraph(vajramGraph);
+    kGraph.injectionProvider(new VajramGuiceInputInjector(injector));
     try (KrystexVajramExecutor krystexVajramExecutor =
-        vajramKryonGraph.createExecutor(
-            KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder()
-                        .executorId(REQUEST_ID)
-                        .executorService(executorLease.get())
-                        .decorationOrdering(decorationOrdering)
-                        .configureWith(new MainLogicExecReporter(kryonExecutionReport)))
-                .build())) {
+        kGraph
+            .build()
+            .createExecutor(
+                KrystexVajramExecutorConfig.builder()
+                    .kryonExecutorConfigBuilder(
+                        KryonExecutorConfig.builder()
+                            .executorId(REQUEST_ID)
+                            .executorService(executorLease.get())
+                            .decorationOrdering(decorationOrdering)
+                            .configureWith(new MainLogicExecReporter(kryonExecutionReport)))
+                    .build())) {
       future = executeVajram(krystexVajramExecutor, requestContext);
     }
     assertThat(future)
@@ -185,15 +190,18 @@ class GreetTest {
                     .executorService(executorLease.get())
                     .graphTraversalStrategy(GraphTraversalStrategy.DEPTH));
     RequestContext requestContext = new RequestContext(REQUEST_ID, USER_ID);
-    VajramKryonGraph vajramKryonGraph = graph.build();
-    vajramKryonGraph.registerInputInjector(new VajramGuiceInputInjector(injector));
+    VajramGraph vajramGraph = graph.build();
+    KrystexGraphBuilder kGraph = KrystexGraph.builder().vajramGraph(vajramGraph);
+    kGraph.injectionProvider(new VajramGuiceInputInjector(injector));
     try (KrystexVajramExecutor krystexVajramExecutor =
-        vajramKryonGraph.createExecutor(
-            VajramTestHarness.prepareForTest(executorConfig.build(), requestLevelCache)
-                .withMock(
-                    UserService_FacImmutPojo._builder().userId(USER_ID)._build(),
-                    withValue(new UserInfo(USER_ID, USER_NAME)))
-                .buildConfig())) {
+        kGraph
+            .build()
+            .createExecutor(
+                VajramTestHarness.prepareForTest(executorConfig.build(), requestLevelCache)
+                    .withMock(
+                        UserService_FacImmutPojo._builder().userId(USER_ID)._build(),
+                        withValue(new UserInfo(USER_ID, USER_NAME)))
+                    .buildConfig())) {
       future = executeVajram(krystexVajramExecutor, requestContext);
     }
     assertThat(future).succeedsWithin(TIMEOUT).asInstanceOf(STRING).contains(USER_NAME);
@@ -210,15 +218,18 @@ class GreetTest {
                     .executorService(executorLease.get())
                     .graphTraversalStrategy(GraphTraversalStrategy.DEPTH));
     RequestContext requestContext = new RequestContext(REQUEST_ID, USER_ID);
-    VajramKryonGraph vajramKryonGraph = graph.build();
-    vajramKryonGraph.registerInputInjector(new VajramGuiceInputInjector(injector));
+    VajramGraph vajramGraph = graph.build();
+    KrystexGraphBuilder krystexGraph = KrystexGraph.builder().vajramGraph(vajramGraph);
+    krystexGraph.injectionProvider(new VajramGuiceInputInjector(injector));
     try (KrystexVajramExecutor krystexVajramExecutor =
-        vajramKryonGraph.createExecutor(
-            VajramTestHarness.prepareForTest(executorConfig.build(), requestLevelCache)
-                .withMock(
-                    UserService_FacImmutPojo._builder().userId(USER_ID)._build(),
-                    Errable.withError(new IOException("Request Timeout")))
-                .buildConfig())) {
+        krystexGraph
+            .build()
+            .createExecutor(
+                VajramTestHarness.prepareForTest(executorConfig.build(), requestLevelCache)
+                    .withMock(
+                        UserService_FacImmutPojo._builder().userId(USER_ID)._build(),
+                        Errable.withError(new IOException("Request Timeout")))
+                    .buildConfig())) {
       future = executeVajram(krystexVajramExecutor, requestContext);
     }
     assertThat(future).succeedsWithin(TIMEOUT).asInstanceOf(STRING).doesNotContain(USER_NAME);

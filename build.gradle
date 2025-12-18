@@ -1,5 +1,5 @@
 plugins {
-    id 'com.flipkart.java.code.standard' version '5.3'
+    id 'com.flipkart.java.code.standard' version '5.4'
     id 'org.gradlex.extra-java-module-info' version '1.11'
     id 'java-test-fixtures'
 }
@@ -10,11 +10,11 @@ ext {
     krystal_version = '10.0.4'
     lattice_version = '0.1.1'
 
-    java_code_std_version = '5.3'
+    java_code_std_version = '5.4'
 
     protobuf_version = '4.31.1'
     grpc_version = '1.73.0'
-    quarkus_version = '3.23.2'
+    quarkus_version = '3.30.4'
     lombok_version = '1.18.36'
 }
 
@@ -48,6 +48,15 @@ subprojects {
                     }
                 }
             }
+        }
+    }
+
+    idea {
+        module {
+            // Disables the download of source JARs
+            downloadSources = false
+            // Optionally, disable Javadocs too
+            downloadJavadoc = false
         }
     }
 }
@@ -98,48 +107,46 @@ configure(subprojects.findAll {
         api platform("com.google.protobuf:protobuf-bom:${protobuf_version}")
         api platform("io.grpc:grpc-bom:${grpc_version}")
 
-        constraints {
-            implementation "org.projectlombok:lombok:$lombok_version"
-            implementation 'com.google.api.grpc:proto-google-common-protos:2.56.0'
-            implementation 'com.google.auto.service:auto-service-annotations:1.1.1'
-            implementation 'com.google.code.findbugs:jsr305:3.0.2'
-            api 'com.google.guava:guava:33.4.8-jre'
-            implementation 'com.google.guava:guava:33.4.8-jre'
-            implementation 'com.google.j2objc:j2objc-annotations:3.0.0'
-            implementation 'com.squareup:javapoet:1.13.0'
-            implementation 'commons-cli:commons-cli:1.6.0'
-            implementation 'jakarta.inject:jakarta.inject-api:2.0.1'
-            implementation 'jakarta.ws.rs:jakarta.ws.rs-api:4.0.0'
-            implementation 'javax.annotation:javax.annotation-api:1.3.2'
-            implementation 'org.reflections:reflections:0.10.2'
-            implementation 'org.slf4j:slf4j-api:2.0.11'
-            implementation 'org.yaml:snakeyaml:2.3'
-            implementation 'org.jboss.resteasy:resteasy-vertx:7.0.0.Beta1'
-            implementation 'org.jboss.resteasy:resteasy-core:7.0.0.Beta1'
-            implementation 'org.javassist:javassist:3.30.2-GA'
+        constraints { c ->
+            c.implementation "org.projectlombok:lombok:$lombok_version"
+            c.implementation 'com.google.api.grpc:proto-google-common-protos:2.56.0'
+            c.implementation 'com.google.auto.service:auto-service-annotations:1.1.1'
+            c.implementation 'com.google.code.findbugs:jsr305:3.0.2'
+            c.api 'com.google.guava:guava:33.4.8-jre'
+            c.implementation 'com.google.guava:guava:33.4.8-jre'
+            c.implementation 'com.google.j2objc:j2objc-annotations:3.0.0'
+            c.implementation 'com.squareup:javapoet:1.13.0'
+            c.implementation 'commons-cli:commons-cli:1.6.0'
+            c.implementation 'jakarta.inject:jakarta.inject-api:2.0.1'
+            c.implementation 'jakarta.ws.rs:jakarta.ws.rs-api:4.0.0'
+            c.implementation 'javax.annotation:javax.annotation-api:1.3.2'
+            c.implementation 'org.reflections:reflections:0.10.2'
+            c.implementation 'org.slf4j:slf4j-api:2.0.11'
+            c.implementation 'org.yaml:snakeyaml:2.3'
+            c.implementation 'org.javassist:javassist:3.30.2-GA'
+            c.implementation 'io.smallrye.reactive:mutiny:3.1.0'
 
-            runtimeOnly 'jakarta.servlet:jakarta.servlet-api:6.1.0'
-            implementation 'jakarta.enterprise:jakarta.enterprise.cdi-api:4.1.0'
+            c.runtimeOnly 'jakarta.servlet:jakarta.servlet-api:6.1.0'
+            c.implementation 'jakarta.enterprise:jakarta.enterprise.cdi-api:4.1.0'
 
+            c.compileOnly "org.projectlombok:lombok:$lombok_version"
+            c.compileOnly 'com.google.auto.value:auto-value-annotations:1.11.0'
+            c.compileOnly 'org.jetbrains:annotations:26.0.2'
 
-            compileOnly "org.projectlombok:lombok:$lombok_version"
-            compileOnly 'com.google.auto.value:auto-value-annotations:1.11.0'
-            compileOnly 'org.jetbrains:annotations:26.0.2'
+            c.annotationProcessor "org.projectlombok:lombok:$lombok_version"
+            c.annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
+            c.annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
+            c.annotationProcessor 'com.google.guava:failureaccess:1.0.2'
+            c.annotationProcessor 'com.google.j2objc:j2objc-annotations:3.0.0'
 
-            annotationProcessor "org.projectlombok:lombok:$lombok_version"
-            annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
-            annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
-            annotationProcessor 'com.google.guava:failureaccess:1.0.2'
-            annotationProcessor 'com.google.j2objc:j2objc-annotations:3.0.0'
+            c.implementation 'com.graphql-java:graphql-java:24.3'
+            c.implementation 'com.graphql-java:graphql-java-extended-scalars:24.0'
 
-            implementation 'com.graphql-java:graphql-java:24.3'
-            implementation 'com.graphql-java:graphql-java-extended-scalars:24.0'
+            c.testImplementation 'com.google.j2objc:j2objc-annotations:3.0.0'
 
-            testImplementation 'com.google.j2objc:j2objc-annotations:3.0.0'
-
-            testAnnotationProcessor "org.projectlombok:lombok:$lombok_version"
-            testAnnotationProcessor 'com.google.guava:failureaccess:1.0.2'
-            testAnnotationProcessor 'com.google.j2objc:j2objc-annotations:3.0.0'
+            c.testAnnotationProcessor "org.projectlombok:lombok:$lombok_version"
+            c.testAnnotationProcessor 'com.google.guava:failureaccess:1.0.2'
+            c.testAnnotationProcessor 'com.google.j2objc:j2objc-annotations:3.0.0'
 
         }
     }
@@ -228,15 +235,3 @@ configure(subprojects.findAll {
         knownModule('com.flipkart.krystal:vajram-codegen-common', 'flipkart.krystal.vajram.codegen.common')
     }
 }
-
-//gradle.taskGraph.whenReady { taskGraph ->
-//    println """\
-//=======================================
-//Tasks
-//=======================================
-//"""
-//    taskGraph.getAllTasks().eachWithIndex { task, n ->
-//        println "${n + 1} $task"
-//        task.dependsOn.eachWithIndex { depObj, m -> println "  ${m + 1} $depObj" }
-//    }
-//}

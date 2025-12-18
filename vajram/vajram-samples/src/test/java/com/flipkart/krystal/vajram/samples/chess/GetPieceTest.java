@@ -14,8 +14,11 @@ import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
+import com.flipkart.krystal.traits.TraitDispatchPolicies;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -31,7 +34,7 @@ class GetPieceTest {
     EXEC_POOL = new SingleThreadExecutorsPool("Test", 4);
   }
 
-  private VajramKryonGraph graph;
+  private KrystexGraphBuilder kGraph;
   private Lease<SingleThreadExecutor> executorLease;
 
   @BeforeEach
@@ -39,14 +42,17 @@ class GetPieceTest {
     this.executorLease = EXEC_POOL.lease();
 
     // Build the graph with all the vajram implementations
-    graph = VajramKryonGraph.builder().loadFromPackage(GetPiece.class.getPackageName()).build();
+    VajramGraph graph =
+        VajramGraph.builder().loadFromPackage(GetPiece.class.getPackageName()).build();
+    this.kGraph = KrystexGraph.builder().vajramGraph(graph);
 
     // Create and register dispatch policy
-    graph.registerTraitDispatchPolicies(
-        dispatchTrait(GetPiece_Req.class, graph)
-            .conditionally(
-                when(type_s, equalsEnum(KNIGHT)).to(GetKnight_Req.class),
-                when(type_s, equalsEnum(ROOK)).to(GetRook_Req.class)));
+    kGraph.traitDispatchPolicies(
+        new TraitDispatchPolicies(
+            dispatchTrait(GetPiece_Req.class, graph)
+                .conditionally(
+                    when(type_s, equalsEnum(KNIGHT)).to(GetKnight_Req.class),
+                    when(type_s, equalsEnum(ROOK)).to(GetRook_Req.class))));
   }
 
   @AfterEach
@@ -57,7 +63,7 @@ class GetPieceTest {
   @Test
   void getPiece_KnightType_returnsKnight() {
     CompletableFuture<Knight> result;
-    try (var executor = graph.createExecutor(getExecutorConfig())) {
+    try (var executor = kGraph.build().createExecutor(getExecutorConfig())) {
       result = executor.execute(GetPiece_ReqImmutPojo.<Knight>_builder().type(KNIGHT)._build());
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT).isEqualTo(new Knight());
@@ -66,7 +72,7 @@ class GetPieceTest {
   @Test
   void getPiece_RookType_returnsRook() {
     CompletableFuture<Rook> result;
-    try (var executor = graph.createExecutor(getExecutorConfig())) {
+    try (var executor = kGraph.build().createExecutor(getExecutorConfig())) {
       result = executor.execute(GetPiece_ReqImmutPojo.<Rook>_builder().type(ROOK)._build());
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT).isEqualTo(new Rook());

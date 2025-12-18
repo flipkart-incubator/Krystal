@@ -11,8 +11,8 @@ dependencies {
     implementation project(':lattice:lattice-vajram-sdk')
     implementation project(':vajram:extensions:graphql:vajram-graphql')
     implementation project(':vajram:extensions:json:vajram-json')
-    implementation 'jakarta.ws.rs:jakarta.ws.rs-api'
 
+    implementation 'jakarta.enterprise:jakarta.enterprise.cdi-api'
     krystalModelsGenProcessor project(':vajram:vajram-codegen')
     krystalModelsGenProcessor project(':vajram:extensions:json:vajram-json-codegen')
     krystalModelsGenProcessor project(':vajram:extensions:graphql:vajram-graphql-codegen')

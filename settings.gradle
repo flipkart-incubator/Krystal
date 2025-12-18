@@ -19,13 +19,11 @@ dependencyResolutionManagement {
 rootProject.name = 'krystal'
 
 include 'code-coverage-report'
-include 'honeycomb'
 include 'krystal-bom'
 include 'krystal-codegen-common'
 include 'krystal-common'
 include 'krystal-visualization'
 include 'krystex'
-
 
 include 'vajram:vajram-codegen'
 include 'vajram:vajram-codegen-common'
@@ -33,7 +31,10 @@ include 'vajram:vajram-java-sdk'
 include 'vajram:vajram-krystex'
 include 'vajram:vajram-lang'
 
+/* ******** VAJRAM EXTENSIONS : START *********** */
+
 include 'vajram:extensions:guice:vajram-guice'
+include 'vajram:extensions:cdi:vajram-cdi'
 include 'vajram:extensions:json:vajram-json'
 include 'vajram:extensions:json:vajram-json-codegen'
 include 'vajram:extensions:protobuf:vajram-protobuf-codegen'
@@ -43,14 +44,20 @@ include 'vajram:extensions:resilience4j:vajram-resilience4j'
 include 'vajram:extensions:graphql:vajram-graphql'
 include 'vajram:extensions:graphql:vajram-graphql-codegen'
 
-/********* LATTICE CORE : START************/
+/* ******** VAJRAM EXTENSIONS : END *********** */
+
+
+/* ******** LATTICE CORE : START *********** */
 include 'lattice:lattice-bom'
 include 'lattice:lattice-codegen'
 include 'lattice:lattice-core'
 include 'lattice:lattice-vajram-sdk'
-/********* LATTICE CORE : END ************/
+/* ******** LATTICE CORE : END *********** */
 
-/********* LATTICE EXTENSIONS : START ************/
+/* ******** LATTICE EXTENSIONS : START *********** */
+include 'lattice:extensions:cdi:lattice-cdi'
+include 'lattice:extensions:cdi:lattice-cdi-codegen'
+
 include 'lattice:extensions:guice:lattice-guice'
 include 'lattice:extensions:guice:lattice-guice-codegen'
 include 'lattice:extensions:guice:lattice-guice-servlet'
@@ -68,6 +75,7 @@ include 'lattice:extensions:rest:lattice-rest-api'
 include 'lattice:extensions:rest:lattice-rest-codegen'
 
 include 'lattice:extensions:quarkus:lattice-quarkus'
+include 'lattice:extensions:quarkus:lattice-quarkus-arc-codegen'
 
 include 'lattice:extensions:rest:dropwizard:lattice-rest-dropwizard'
 include 'lattice:extensions:rest:dropwizard:lattice-rest-dropwizard-codegen'
@@ -75,13 +83,17 @@ include 'lattice:extensions:rest:dropwizard:lattice-rest-dropwizard-codegen'
 include 'lattice:extensions:rest:quarkus:lattice-rest-quarkus'
 include 'lattice:extensions:rest:quarkus:lattice-rest-quarkus-codegen'
 
+include 'lattice:extensions:graphql:lattice-graphql-codegen'
 include 'lattice:extensions:graphql:rest:lattice-graphql-rest'
-/********* LATTICE EXTENSIONS : END ************/
 
+/* ******** LATTICE EXTENSIONS : END *********** */
+
+/* ******** SAMPLE PROJECTS : START *********** */
 include 'vajram:vajram-samples'
 include 'vajram:extensions:graphql:vajram-graphql-samples'
 include 'lattice:samples:grpc-proto3-lattice-sample'
 include 'lattice:samples:rest-json-lattice-sample'
 include 'lattice:samples:graphql-rest-json-lattice-sample'
+/* ******** SAMPLE PROJECTS : END *********** */
 
 

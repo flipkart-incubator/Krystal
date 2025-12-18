@@ -11,9 +11,10 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
+import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.vajram.graphql.api.execution.GraphQLQuery;
 import com.flipkart.krystal.vajram.graphql.api.execution.GraphQlExecutionFacade;
-import com.flipkart.krystal.vajram.graphql.api.schema.GraphQlLoader;
+import com.flipkart.krystal.vajram.graphql.api.schema.GraphQlInitializer;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate_Req;
 import com.flipkart.krystal.vajram.graphql.samples.dummy.Dummy;
@@ -21,9 +22,11 @@ import com.flipkart.krystal.vajram.graphql.samples.order.Order;
 import com.flipkart.krystal.vajram.graphql.samples.querytype.QueryType;
 import com.flipkart.krystal.vajram.graphql.samples.querytype.QueryType_GQlAggr_Req;
 import com.flipkart.krystal.vajram.json.Json;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
 import java.time.Duration;
@@ -42,15 +45,15 @@ public class GraphQlSamplesE2ETest {
 
   private static SingleThreadExecutorsPool EXEC_POOL;
   private static GraphQL GRAPHQL;
-  private VajramKryonGraph graph;
+  private KrystexGraphBuilder kGraph;
 
   @BeforeAll
   static void beforeAll() {
     EXEC_POOL =
         new SingleThreadExecutorsPool(
             "GraphQlSamplesE2ETest", Runtime.getRuntime().availableProcessors());
-    GraphQlLoader graphQlLoader = new GraphQlLoader();
-    GRAPHQL = graphQlLoader.loadGraphQl(graphQlLoader.getTypeDefinitionRegistry());
+    GraphQlInitializer graphQlInitializer = new GraphQlInitializer();
+    GRAPHQL = graphQlInitializer.getGraphQl();
   }
 
   @AfterAll
@@ -63,14 +66,16 @@ public class GraphQlSamplesE2ETest {
   @BeforeEach
   void setUp() throws LeaseUnavailableException {
     this.executorLease = EXEC_POOL.lease();
-    this.graph =
-        VajramKryonGraph.builder()
+    VajramGraph vGraph =
+        VajramGraph.builder()
             .loadFromPackage(this.getClass().getPackage().getName())
             .loadFromPackage(GraphQlOperationAggregate.class.getPackageName())
             .build();
-    graph.registerTraitDispatchPolicies(
-        dispatchTrait(GraphQlOperationAggregate_Req.class, graph)
-            .alwaysTo(QueryType_GQlAggr_Req.class));
+    this.kGraph = KrystexGraph.builder().vajramGraph(vGraph);
+    kGraph.traitDispatchPolicies(
+        new TraitDispatchPolicies(
+            dispatchTrait(GraphQlOperationAggregate_Req.class, vGraph)
+                .alwaysTo(QueryType_GQlAggr_Req.class)));
   }
 
   @AfterEach
@@ -132,10 +137,12 @@ public class GraphQlSamplesE2ETest {
   }
 
   private KrystexVajramExecutor createExecutor() {
-    return graph.createExecutor(
-        KrystexVajramExecutorConfig.builder()
-            .kryonExecutorConfigBuilder(
-                KryonExecutorConfig.builder().executorService(executorLease.get()))
-            .build());
+    return kGraph
+        .build()
+        .createExecutor(
+            KrystexVajramExecutorConfig.builder()
+                .kryonExecutorConfigBuilder(
+                    KryonExecutorConfig.builder().executorService(executorLease.get()))
+                .build());
   }
 }

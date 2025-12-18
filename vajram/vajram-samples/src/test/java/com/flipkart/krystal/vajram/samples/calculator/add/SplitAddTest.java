@@ -30,10 +30,11 @@ import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecR
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.samples.calculator.Formula;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramKryonGraphBuilder;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph.VajramGraphBuilder;
 import com.google.common.collect.ImmutableSet;
 import java.time.Clock;
 import java.util.ArrayList;
@@ -57,7 +58,7 @@ class SplitAddTest {
     EXEC_POOL = new SingleThreadExecutorsPool("Test", 4);
   }
 
-  private VajramKryonGraph graph;
+  private VajramGraph graph;
   private ObjectMapper objectMapper;
   private Lease<SingleThreadExecutor> executorLease;
 
@@ -83,16 +84,19 @@ class SplitAddTest {
     CompletableFuture<Integer> future;
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder()
-                        .executorId("chainAdderTest")
-                        .executorService(executorLease.get())
-                        .configureWith(new MainLogicExecReporter(kryonExecutionReport))
-                        // Tests whether executor level disabled dependant chains is working
-                        .disabledDependentChains(disabledDepChains(graph)))
-                .build())) {
+        KrystexGraph.builder()
+            .vajramGraph(graph)
+            .build()
+            .createExecutor(
+                KrystexVajramExecutorConfig.builder()
+                    .kryonExecutorConfigBuilder(
+                        KryonExecutorConfig.builder()
+                            .executorId("chainAdderTest")
+                            .executorService(executorLease.get())
+                            .configureWith(new MainLogicExecReporter(kryonExecutionReport))
+                            // Tests whether executor level disabled dependant chains is working
+                            .disabledDependentChains(disabledDepChains(graph)))
+                    .build())) {
       future = executeVajram(krystexVajramExecutor, 0);
     }
     assertThat(future).succeedsWithin(ofSeconds(1)).isEqualTo(55);
@@ -104,13 +108,16 @@ class SplitAddTest {
   void emptyNumbers_returnsZero_success() {
     CompletableFuture<Integer> future;
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder()
-                        .executorId("splitAdderTest")
-                        .executorService(executorLease.get()))
-                .build())) {
+        KrystexGraph.builder()
+            .vajramGraph(graph)
+            .build()
+            .createExecutor(
+                KrystexVajramExecutorConfig.builder()
+                    .kryonExecutorConfigBuilder(
+                        KryonExecutorConfig.builder()
+                            .executorId("splitAdderTest")
+                            .executorService(executorLease.get()))
+                    .build())) {
       future =
           krystexVajramExecutor.execute(
               SplitAdd_ReqImmutPojo._builder().numbers(List.of())._build(),
@@ -136,14 +143,17 @@ class SplitAddTest {
     for (int value = 0; value < loopCount; value++) {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor krystexVajramExecutor =
-          graph.createExecutor(
-              KrystexVajramExecutorConfig.builder()
-                  .kryonExecutorConfigBuilder(
-                      KryonExecutorConfig.builder()
-                          .executorId("splitAdderTest")
-                          .executorService(executorLease.get())
-                          .disabledDependentChains(disabledDepChains(graph)))
-                  .build())) {
+          KrystexGraph.builder()
+              .vajramGraph(graph)
+              .build()
+              .createExecutor(
+                  KrystexVajramExecutorConfig.builder()
+                      .kryonExecutorConfigBuilder(
+                          KryonExecutorConfig.builder()
+                              .executorId("splitAdderTest")
+                              .executorService(executorLease.get())
+                              .disabledDependentChains(disabledDepChains(graph)))
+                      .build())) {
         metrics[value] =
             ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
@@ -208,14 +218,17 @@ class SplitAddTest {
     for (int outer_i = 0; outer_i < outerLoopCount; outer_i++) {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor krystexVajramExecutor =
-          graph.createExecutor(
-              KrystexVajramExecutorConfig.builder()
-                  .kryonExecutorConfigBuilder(
-                      KryonExecutorConfig.builder()
-                          .executorId("splitAdderTest")
-                          .executorService(executorLease.get())
-                          .disabledDependentChains(disabledDepChains(graph)))
-                  .build())) {
+          KrystexGraph.builder()
+              .vajramGraph(graph)
+              .build()
+              .createExecutor(
+                  KrystexVajramExecutorConfig.builder()
+                      .kryonExecutorConfigBuilder(
+                          KryonExecutorConfig.builder()
+                              .executorId("splitAdderTest")
+                              .executorService(executorLease.get())
+                              .disabledDependentChains(disabledDepChains(graph)))
+                      .build())) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         metrics[outer_i] =
             ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
@@ -323,13 +336,13 @@ class SplitAddTest {
     return completedFuture(a + b);
   }
 
-  private static VajramKryonGraphBuilder loadFromClasspath(String... packagePrefixes) {
-    VajramKryonGraphBuilder builder = VajramKryonGraph.builder();
+  private static VajramGraphBuilder loadFromClasspath(String... packagePrefixes) {
+    VajramGraphBuilder builder = VajramGraph.builder();
     Arrays.stream(packagePrefixes).forEach(builder::loadFromPackage);
     return builder;
   }
 
-  private static ImmutableSet<DependentChain> disabledDepChains(VajramKryonGraph graph) {
+  private static ImmutableSet<DependentChain> disabledDepChains(VajramGraph graph) {
     String splitAdderId = graph.getVajramIdByVajramDefType(SplitAdd.class).id();
     return ImmutableSet.of(
         graph.computeDependentChain(

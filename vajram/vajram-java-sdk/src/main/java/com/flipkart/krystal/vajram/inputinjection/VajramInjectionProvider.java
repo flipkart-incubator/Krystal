@@ -3,7 +3,7 @@ package com.flipkart.krystal.vajram.inputinjection;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import jakarta.inject.Provider;
 
 /**
  * An adapter interface which allows Krystal to support Dependency Injection. Clients can implement
@@ -27,5 +27,5 @@ public interface VajramInjectionProvider {
    *     framework, or a failure Errable containing the error encountered why injection, or a nil
    *     Errable if the binding is optional.
    */
-  <T> Errable<@NonNull T> get(VajramID vajramID, FacetSpec<T, ?> facetDef) throws Exception;
+  <T> Provider<T> get(VajramID vajramID, FacetSpec<T, ?> facetDef) throws Exception;
 }

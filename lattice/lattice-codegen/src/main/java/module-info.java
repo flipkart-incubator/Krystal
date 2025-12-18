@@ -5,6 +5,7 @@ module flipkart.krystal.lattice.codegen {
 
   exports com.flipkart.krystal.lattice.codegen;
   exports com.flipkart.krystal.lattice.codegen.spi;
+  exports com.flipkart.krystal.lattice.codegen.spi.di;
 
   requires com.google.auto.service;
   requires com.google.common;
@@ -16,4 +17,5 @@ module flipkart.krystal.lattice.codegen {
   requires java.xml;
   requires org.checkerframework.checker.qual;
   requires static lombok;
+  requires jakarta.cdi;
 }

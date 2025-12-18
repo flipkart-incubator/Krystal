@@ -13,7 +13,7 @@ public record DirectForwardSend(
     VajramID vajramID,
     List<? extends RequestResponseFuture<? extends Request<?>, ?>> executableRequests,
     DependentChain dependentChain)
-    implements MultiRequestDirectCommand<DirectResponse>, ClientSideCommand<DirectResponse> {
+    implements MultiRequestDirectCommand, ClientSideCommand<DirectResponse> {
 
   public boolean shouldSkip() {
     return executableRequests.isEmpty();

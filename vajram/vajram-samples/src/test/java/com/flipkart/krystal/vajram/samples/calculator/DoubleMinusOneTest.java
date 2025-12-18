@@ -5,9 +5,10 @@ import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -25,8 +26,8 @@ class DoubleMinusOneTest {
     EXEC_POOL = new SingleThreadExecutorsPool("Test", Runtime.getRuntime().availableProcessors());
   }
 
-  private final VajramKryonGraph graph =
-      VajramKryonGraph.builder().loadFromPackage(DoubleMinusOne.class.getPackageName()).build();
+  private final VajramGraph graph =
+      VajramGraph.builder().loadFromPackage(DoubleMinusOne.class.getPackageName()).build();
   private Lease<SingleThreadExecutor> executorLease;
 
   @BeforeEach
@@ -43,13 +44,16 @@ class DoubleMinusOneTest {
   void doubleMinusOne_success() {
     CompletableFuture<Integer> future;
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder()
-                        .executorId("doubleMinusOne")
-                        .executorService(executorLease.get()))
-                .build())) {
+        KrystexGraph.builder()
+            .vajramGraph(graph)
+            .build()
+            .createExecutor(
+                KrystexVajramExecutorConfig.builder()
+                    .kryonExecutorConfigBuilder(
+                        KryonExecutorConfig.builder()
+                            .executorId("doubleMinusOne")
+                            .executorService(executorLease.get()))
+                    .build())) {
       future =
           krystexVajramExecutor.execute(
               DoubleMinusOne_ReqImmutPojo._builder().numbers(List.of(1, 2, 3))._build());
@@ -61,13 +65,16 @@ class DoubleMinusOneTest {
   void doubleMinusOne_duplicateNumbers_success() {
     CompletableFuture<Integer> future;
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder()
-                        .executorId("doubleMinusOne")
-                        .executorService(executorLease.get()))
-                .build())) {
+        KrystexGraph.builder()
+            .vajramGraph(graph)
+            .build()
+            .createExecutor(
+                KrystexVajramExecutorConfig.builder()
+                    .kryonExecutorConfigBuilder(
+                        KryonExecutorConfig.builder()
+                            .executorId("doubleMinusOne")
+                            .executorService(executorLease.get()))
+                    .build())) {
       future =
           krystexVajramExecutor.execute(
               DoubleMinusOne_ReqImmutPojo._builder().numbers(List.of(1, 1, 3))._build());
@@ -79,13 +86,16 @@ class DoubleMinusOneTest {
   void doubleMinusOne_noNumbers_success() {
     CompletableFuture<Integer> future;
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder()
-                        .executorId("doubleMinusOne")
-                        .executorService(executorLease.get()))
-                .build())) {
+        KrystexGraph.builder()
+            .vajramGraph(graph)
+            .build()
+            .createExecutor(
+                KrystexVajramExecutorConfig.builder()
+                    .kryonExecutorConfigBuilder(
+                        KryonExecutorConfig.builder()
+                            .executorId("doubleMinusOne")
+                            .executorService(executorLease.get()))
+                    .build())) {
       future =
           krystexVajramExecutor.execute(
               DoubleMinusOne_ReqImmutPojo._builder().numbers(List.of())._build());

@@ -7,9 +7,10 @@ import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import java.util.concurrent.CompletableFuture;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
@@ -25,8 +26,8 @@ class Add2And3Test {
     EXEC_POOL = new SingleThreadExecutorsPool("Test", 4);
   }
 
-  private final VajramKryonGraph graph =
-      VajramKryonGraph.builder().loadFromPackage(Add2And3.class.getPackageName()).build();
+  private final VajramGraph graph =
+      VajramGraph.builder().loadFromPackage(Add2And3.class.getPackageName()).build();
 
   private Lease<SingleThreadExecutor> executorLease;
 
@@ -44,13 +45,16 @@ class Add2And3Test {
   void add2And3_success() {
     CompletableFuture<Integer> future;
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder()
-                        .executorId("add2and3")
-                        .executorService(executorLease.get()))
-                .build())) {
+        KrystexGraph.builder()
+            .vajramGraph(graph)
+            .build()
+            .createExecutor(
+                KrystexVajramExecutorConfig.builder()
+                    .kryonExecutorConfigBuilder(
+                        KryonExecutorConfig.builder()
+                            .executorId("add2and3")
+                            .executorService(executorLease.get()))
+                    .build())) {
       future = krystexVajramExecutor.execute(Add2And3_ReqImmutPojo._builder()._build());
     }
     Assertions.assertThat(future).succeedsWithin(TEST_TIMEOUT).isEqualTo(5);

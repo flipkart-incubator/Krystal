@@ -18,9 +18,12 @@ import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
+import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent.*;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.AfterEach;
@@ -36,7 +39,8 @@ class CustomerServiceAgentPredicateTest {
     EXEC_POOL = new SingleThreadExecutorsPool("Test", 4);
   }
 
-  private VajramKryonGraph graph;
+  private VajramGraph graph;
+  private KrystexGraphBuilder kGraph;
   private Lease<SingleThreadExecutor> executorLease;
 
   @BeforeEach
@@ -45,34 +49,34 @@ class CustomerServiceAgentPredicateTest {
 
     // Build the graph with all the vajram implementations
     graph =
-        VajramKryonGraph.builder()
-            .loadFromPackage(CustomerServiceAgent.class.getPackageName())
-            .build();
+        VajramGraph.builder().loadFromPackage(CustomerServiceAgent.class.getPackageName()).build();
+    this.kGraph = KrystexGraph.builder().vajramGraph(graph);
 
     // Create and register dispatch policy
-    graph.registerTraitDispatchPolicies(
-        dispatchTrait(CustomerServiceAgent_Req.class, graph)
-            .conditionally(
-                when(agentType_s, equalsEnum(L1))
-                    .and(initialCommunication_s, isInstanceOf(Call.class))
-                    .to(L1CallAgent_Req.class),
-                when(agentType_s, equalsEnum(L1))
-                    .and(initialCommunication_s, isInstanceOf(Email.class))
-                    .to(L1EmailAgent_Req.class),
-                when(agentType_s, equalsEnum(L2))
-                    .and(initialCommunication_s, isInstanceOf(Call.class))
-                    .to(L2CallAgent_Req.class),
-                when(agentType_s, equalsEnum(L3))
-                    .and(initialCommunication_s, isInstanceOf(Email.class))
-                    .to(L3EmailAgent_Req.class),
-                when(initialCommunication_s, isInstanceOf(Call.class))
-                    .to(DefaultCallAgent_Req.class),
-                when(initialCommunication_s, isInstanceOf(Email.class))
-                    .to(DefaultEmailAgent_Req.class),
-                // Default fallback
-                when(agentType_s, isAnyValue())
-                    .and(initialCommunication_s, isAnyValue())
-                    .to(DefaultCustomerServiceAgent_Req.class)));
+    kGraph.traitDispatchPolicies(
+        new TraitDispatchPolicies(
+            dispatchTrait(CustomerServiceAgent_Req.class, graph)
+                .conditionally(
+                    when(agentType_s, equalsEnum(L1))
+                        .and(initialCommunication_s, isInstanceOf(Call.class))
+                        .to(L1CallAgent_Req.class),
+                    when(agentType_s, equalsEnum(L1))
+                        .and(initialCommunication_s, isInstanceOf(Email.class))
+                        .to(L1EmailAgent_Req.class),
+                    when(agentType_s, equalsEnum(L2))
+                        .and(initialCommunication_s, isInstanceOf(Call.class))
+                        .to(L2CallAgent_Req.class),
+                    when(agentType_s, equalsEnum(L3))
+                        .and(initialCommunication_s, isInstanceOf(Email.class))
+                        .to(L3EmailAgent_Req.class),
+                    when(initialCommunication_s, isInstanceOf(Call.class))
+                        .to(DefaultCallAgent_Req.class),
+                    when(initialCommunication_s, isInstanceOf(Email.class))
+                        .to(DefaultEmailAgent_Req.class),
+                    // Default fallback
+                    when(agentType_s, isAnyValue())
+                        .and(initialCommunication_s, isAnyValue())
+                        .to(DefaultCustomerServiceAgent_Req.class))));
   }
 
   @AfterEach
@@ -92,7 +96,7 @@ class CustomerServiceAgentPredicateTest {
 
     // Execute and verify
     CompletableFuture<@Nullable String> result;
-    try (var executor = graph.createExecutor(getExecutorConfig())) {
+    try (var executor = kGraph.build().createExecutor(getExecutorConfig())) {
       result = executor.execute(request);
     }
 
@@ -111,7 +115,7 @@ class CustomerServiceAgentPredicateTest {
             ._build();
 
     CompletableFuture<@Nullable String> result;
-    try (var executor = graph.createExecutor(getExecutorConfig())) {
+    try (var executor = kGraph.build().createExecutor(getExecutorConfig())) {
       result = executor.execute(request);
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("L1 Agent");
@@ -129,7 +133,7 @@ class CustomerServiceAgentPredicateTest {
             ._build();
 
     CompletableFuture<@Nullable String> result;
-    try (var executor = graph.createExecutor(getExecutorConfig())) {
+    try (var executor = kGraph.build().createExecutor(getExecutorConfig())) {
       result = executor.execute(request);
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("L2 Agent");
@@ -147,7 +151,7 @@ class CustomerServiceAgentPredicateTest {
             ._build();
 
     CompletableFuture<@Nullable String> result;
-    try (var executor = graph.createExecutor(getExecutorConfig())) {
+    try (var executor = kGraph.build().createExecutor(getExecutorConfig())) {
       result = executor.execute(request);
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("L3 Agent");
@@ -169,7 +173,7 @@ class CustomerServiceAgentPredicateTest {
             ._build();
 
     CompletableFuture<@Nullable String> result;
-    try (var executor = graph.createExecutor(getExecutorConfig())) {
+    try (var executor = kGraph.build().createExecutor(getExecutorConfig())) {
       result = executor.execute(request);
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("I am an email Agent");
@@ -188,7 +192,7 @@ class CustomerServiceAgentPredicateTest {
             ._build();
 
     CompletableFuture<@Nullable String> result;
-    try (var executor = graph.createExecutor(getExecutorConfig())) {
+    try (var executor = kGraph.build().createExecutor(getExecutorConfig())) {
       result = executor.execute(request);
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("I am a call Agent");
@@ -207,7 +211,7 @@ class CustomerServiceAgentPredicateTest {
             ._build();
 
     CompletableFuture<@Nullable String> result;
-    try (var executor = graph.createExecutor(getExecutorConfig())) {
+    try (var executor = kGraph.build().createExecutor(getExecutorConfig())) {
       result = executor.execute(request);
     }
     assertThat(result)

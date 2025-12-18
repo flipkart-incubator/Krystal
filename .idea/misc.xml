@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="EntryPointsManager">
-    <list size="3">
-      <item index="0" class="java.lang.String" itemvalue="com.flipkart.krystal.model.IfAbsent" />
-      <item index="1" class="java.lang.String" itemvalue="com.google.auto.service.AutoService" />
-      <item index="2" class="java.lang.String" itemvalue="com.google.inject.Provides" />
+    <list size="5">
+      <item index="0" class="java.lang.String" itemvalue="com.flipkart.krystal.lattice.core.doping.AutoConfigure" />
+      <item index="1" class="java.lang.String" itemvalue="com.flipkart.krystal.model.IfAbsent" />
+      <item index="2" class="java.lang.String" itemvalue="com.google.auto.service.AutoService" />
+      <item index="3" class="java.lang.String" itemvalue="com.google.inject.Provides" />
+      <item index="4" class="java.lang.String" itemvalue="jakarta.enterprise.inject.Produces" />
     </list>
   </component>
   <component name="ExternalStorageConfigurationManager" enabled="true" />
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_17" default="true" project-jdk-name="17" project-jdk-type="JavaSDK" />
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_17" default="true" project-jdk-name="17" project-jdk-type="JavaSDK">
+    <output url="file://$PROJECT_DIR$/out" />
+  </component>
 </project>

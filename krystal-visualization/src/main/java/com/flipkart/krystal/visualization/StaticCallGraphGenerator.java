@@ -14,7 +14,7 @@ import com.flipkart.krystal.vajram.VajramDefRoot;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
 import com.flipkart.krystal.visualization.models.Graph;
 import com.flipkart.krystal.visualization.models.GraphGenerationResult;
 import com.flipkart.krystal.visualization.models.Input;
@@ -53,15 +53,15 @@ public class StaticCallGraphGenerator {
    *
    * <p>The generated HTML is self-contained with all CSS and JavaScript embedded
    *
-   * @param vajramKryonGraph The graph containing all Vajram definitions and their dependencies.
+   * @param vajramGraph The graph containing all Vajram definitions and their dependencies.
    * @param startVajram The starting node name to filter the graph, or null/empty for the full
    *     graph.
    * @return A GraphGenerationResult containing the self-contained HTML content.
    */
   public static GraphGenerationResult generateStaticCallGraphContent(
-      VajramKryonGraph vajramKryonGraph, @Nullable String startVajram) {
+      KrystexGraph vajramGraph, @Nullable String startVajram) {
 
-    Graph fullGraph = createGraphData(vajramKryonGraph);
+    Graph fullGraph = createGraphData(vajramGraph);
     Graph graphToVisualize = fullGraph;
 
     if (startVajram != null && !startVajram.isBlank()) {
@@ -86,15 +86,16 @@ public class StaticCallGraphGenerator {
   /**
    * Creates the graph data structure from the VajramKryonGraph.
    *
-   * @param vajramKryonGraph The graph containing all Vajram definitions.
+   * @param krystexGraph The graph containing all Vajram definitions.
    * @return A Graph POJO representing the graph structure.
    * @throws ClassNotFoundException if a required class is not found during processing.
    */
-  private static Graph createGraphData(VajramKryonGraph vajramKryonGraph) {
+  private static Graph createGraphData(KrystexGraph krystexGraph) {
     List<Node> nodes = new ArrayList<>();
     List<Link> links = new ArrayList<>();
 
-    Map<VajramID, VajramDefinition> vajramDefinitions = vajramKryonGraph.vajramDefinitions();
+    Map<VajramID, VajramDefinition> vajramDefinitions =
+        krystexGraph.vajramGraph().vajramDefinitions();
 
     // Create nodes
     for (Map.Entry<VajramID, VajramDefinition> entry : vajramDefinitions.entrySet()) {
@@ -169,7 +170,7 @@ public class StaticCallGraphGenerator {
       }
       // Create links from trait to its conforming dispatch targets
       if (definition.isTrait()) {
-        TraitDispatchPolicy traitDispatchPolicy = vajramKryonGraph.getTraitDispatchPolicy(vajramId);
+        TraitDispatchPolicy traitDispatchPolicy = krystexGraph.getTraitDispatchPolicy(vajramId);
         if (traitDispatchPolicy != null) {
           ImmutableCollection<VajramID> conformingVajrams = traitDispatchPolicy.dispatchTargetIDs();
           for (VajramID conformant : conformingVajrams) {

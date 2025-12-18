@@ -11,7 +11,7 @@ import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.traits.ComputeDispatchPolicy;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.google.common.collect.ImmutableSet;
 import graphql.ExecutionInput;
 import graphql.language.OperationDefinition.Operation;
@@ -29,16 +29,16 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @Slf4j
 public final class GraphQlOperationDispatch extends ComputeDispatchPolicy {
 
-  private final VajramKryonGraph graph;
+  private final VajramGraph graph;
   private final TypeDefinitionRegistry typeDefinitionRegistry;
   private final ImmutableSet<Class<? extends Request<?>>> dispatchTargets;
   private final ImmutableSet<VajramID> dispatchTargetIDs;
 
   public GraphQlOperationDispatch(
-      VajramKryonGraph graph,
+      VajramGraph vajramGraph,
       TypeDefinitionRegistry typeDefinitionRegistry,
       Set<Class<? extends GraphQlOperationAggregate_Req>> dispatchTargets) {
-    this.graph = graph;
+    this.graph = vajramGraph;
     this.typeDefinitionRegistry = typeDefinitionRegistry;
     Set<Class<? extends Request<?>>> reqs = new HashSet<>();
     for (Class<? extends GraphQlOperationAggregate_Req> dispatchTarget : dispatchTargets) {
@@ -48,7 +48,9 @@ public final class GraphQlOperationDispatch extends ComputeDispatchPolicy {
     //noinspection unchecked
     this.dispatchTargets = ImmutableSet.copyOf(reqs);
     this.dispatchTargetIDs =
-        dispatchTargets.stream().map(graph::getVajramIdByVajramReqType).collect(toImmutableSet());
+        dispatchTargets.stream()
+            .map(vajramGraph::getVajramIdByVajramReqType)
+            .collect(toImmutableSet());
   }
 
   @Override
