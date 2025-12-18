@@ -3,19 +3,12 @@ package com.flipkart.krystal.vajram.graphql.codegen;
 import static com.flipkart.krystal.codegen.common.models.Constants.MODULE_ROOT_PATH_KEY;
 import static com.flipkart.krystal.vajram.graphql.api.Constants.GRAPHQL_SCHEMA_FILENAME;
 import static com.flipkart.krystal.vajram.graphql.codegen.CodeGenConstants.GRAPHQL_SRC_DIR;
-import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.CLASS_NAME_DIR_ARG;
-import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.CUSTOM_TYPE_DIRECTIVE;
-import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.PACKAGE_NAME_DIR_ARG;
-import static java.util.Objects.requireNonNullElse;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
-import graphql.language.Argument;
-import graphql.language.Directive;
-import graphql.language.StringValue;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -99,23 +92,14 @@ public final class GraphQlCodeGenUtil {
   }
 
   ClassName getTypeNameForField(PlainType fieldType, GraphQlFieldSpec fieldSpec) {
-    GraphQLTypeName typeName = new GraphQLTypeName(fieldType.graphQlType().getName());
-    String packageName = null;
-    for (Directive directive : fieldSpec.fieldDefinition().getDirectives()) {
-      if (directive.getName().equals(CUSTOM_TYPE_DIRECTIVE)) {
-        for (Argument argument : directive.getArguments()) {
-          if (argument.getName().equals(PACKAGE_NAME_DIR_ARG)
-              && argument.getValue() instanceof StringValue stringValue) {
-            packageName = stringValue.getValue();
-          }
-          if (argument.getName().equals(CLASS_NAME_DIR_ARG)
-              && argument.getValue() instanceof StringValue stringValue) {
-            typeName = new GraphQLTypeName(stringValue.getValue());
-          }
-        }
-      }
+    String graphQlTypeName = fieldType.graphQlType().getName();
+
+    ClassName scalarJavaType = schemaReaderUtil.getJavaTypeForScalar(graphQlTypeName);
+    if (scalarJavaType != null) {
+      return scalarJavaType;
     }
-    return switch (fieldType.graphQlType().getName()) {
+
+    return switch (graphQlTypeName) {
       case "String" -> ClassName.get(String.class);
       case "Int" -> ClassName.get(Integer.class);
       case "Boolean" -> ClassName.get(Boolean.class);
@@ -126,10 +110,10 @@ public final class GraphQlCodeGenUtil {
             ? schemaReaderUtil.entityIdClassName(enclosingType)
             : ClassName.get(Object.class);
       }
-      default ->
-          ClassName.get(
-              requireNonNullElse(packageName, schemaReaderUtil.getPackageNameForType(typeName)),
-              typeName.value());
+      default -> {
+        GraphQLTypeName typeName = new GraphQLTypeName(graphQlTypeName);
+        yield ClassName.get(schemaReaderUtil.getPackageNameForType(typeName), typeName.value());
+      }
     };
   }
 }
