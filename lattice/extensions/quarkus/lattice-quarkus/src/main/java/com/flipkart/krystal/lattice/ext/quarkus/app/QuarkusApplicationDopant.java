@@ -26,7 +26,8 @@ public final class QuarkusApplicationDopant implements SimpleDopant {
   }
 
   @Override
-  public void tryMainMethodExit() {
+  public int tryApplicationExit() {
     Quarkus.waitForExit();
+    return 0;
   }
 }

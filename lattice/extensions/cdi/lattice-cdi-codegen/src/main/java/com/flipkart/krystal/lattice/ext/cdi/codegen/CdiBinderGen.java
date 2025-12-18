@@ -19,7 +19,6 @@ public final class CdiBinderGen implements DepInjectBinderGen {
 
   @Override
   public CodeBlock getBinderCreationCode(LatticeCodegenContext context) {
-
     if (!isApplicable(context)) {
       throw new UnsupportedOperationException();
     }

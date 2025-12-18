@@ -12,7 +12,7 @@ public interface DependencyInjectionProvider {
 
   <T> void bind(Class<T> type, Class<? extends T> to);
 
-  InjectionValueProvider getInjector();
+  InjectionValueProvider getValueProvider();
 
   default @Nullable VajramInjectionProvider toVajramInjectionProvider() {
     return null;

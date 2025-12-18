@@ -14,7 +14,7 @@ import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.vajram.graphql.api.execution.GraphQLQuery;
 import com.flipkart.krystal.vajram.graphql.api.execution.GraphQlExecutionFacade;
-import com.flipkart.krystal.vajram.graphql.api.schema.GraphQlLoader;
+import com.flipkart.krystal.vajram.graphql.api.schema.GraphQlInitializer;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate_Req;
 import com.flipkart.krystal.vajram.graphql.samples.dummy.Dummy;
@@ -52,8 +52,8 @@ public class GraphQlSamplesE2ETest {
     EXEC_POOL =
         new SingleThreadExecutorsPool(
             "GraphQlSamplesE2ETest", Runtime.getRuntime().availableProcessors());
-    GraphQlLoader graphQlLoader = new GraphQlLoader();
-    GRAPHQL = graphQlLoader.getGraphQl();
+    GraphQlInitializer graphQlInitializer = new GraphQlInitializer();
+    GRAPHQL = graphQlInitializer.getGraphQl();
   }
 
   @AfterAll

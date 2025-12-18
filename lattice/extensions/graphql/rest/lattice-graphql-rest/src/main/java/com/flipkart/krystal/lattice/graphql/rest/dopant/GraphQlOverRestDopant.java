@@ -5,7 +5,7 @@ import static com.flipkart.krystal.lattice.graphql.rest.dopant.GraphQlOverRestDo
 import com.flipkart.krystal.lattice.core.di.Produces;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
 import com.flipkart.krystal.lattice.core.doping.SimpleDopant;
-import com.flipkart.krystal.vajram.graphql.api.schema.GraphQlLoader;
+import com.flipkart.krystal.vajram.graphql.api.schema.GraphQlInitializer;
 import graphql.GraphQL;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import jakarta.inject.Inject;
@@ -16,20 +16,20 @@ import jakarta.inject.Singleton;
 public final class GraphQlOverRestDopant implements SimpleDopant {
 
   public static final String DOPANT_TYPE = "krystal.lattice.graphql.overRest";
-  private final GraphQlLoader graphQlLoader;
+  private final GraphQlInitializer graphQlInitializer;
 
   @Inject
   public GraphQlOverRestDopant() {
-    this.graphQlLoader = new GraphQlLoader();
+    this.graphQlInitializer = new GraphQlInitializer();
   }
 
   @Produces(inScope = Singleton.class)
   public GraphQL graphQL() {
-    return graphQlLoader.getGraphQl();
+    return graphQlInitializer.getGraphQl();
   }
 
   @Produces(inScope = Singleton.class)
   public TypeDefinitionRegistry typeDefinitionRegistry() {
-    return graphQlLoader.getTypeDefinitionRegistry();
+    return graphQlInitializer.getTypeDefinitionRegistry();
   }
 }

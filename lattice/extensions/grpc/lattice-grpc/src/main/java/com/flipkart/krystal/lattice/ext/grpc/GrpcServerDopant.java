@@ -170,9 +170,10 @@ public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerC
   }
 
   @Override
-  public void tryMainMethodExit() throws InterruptedException {
+  public int tryApplicationExit() throws InterruptedException {
     if (server != null) {
       server.awaitTermination();
     }
+    return 0;
   }
 }

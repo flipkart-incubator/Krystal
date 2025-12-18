@@ -13,6 +13,7 @@ import graphql.schema.idl.RuntimeWiring.Builder;
 import graphql.schema.idl.SchemaGenerator;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
+import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.InputStream;
 import java.net.URL;
@@ -32,14 +33,15 @@ import org.reflections.util.ConfigurationBuilder;
 
 @Slf4j
 @Singleton
-public final class GraphQlLoader {
+public final class GraphQlInitializer {
 
   private final ConcurrentHashMap<String, PreparsedDocumentEntry> documentCache =
       new ConcurrentHashMap<>();
   private final TypeDefinitionRegistry typeDefinitionRegistry;
   private final GraphQL graphQL;
 
-  public GraphQlLoader() {
+  @Inject
+  public GraphQlInitializer() {
     this.typeDefinitionRegistry = computeTypeDefinitionRegistry();
     this.graphQL = getGraphQl(typeDefinitionRegistry);
   }
@@ -91,7 +93,7 @@ public final class GraphQlLoader {
     return fileToContentMap;
   }
 
-  public GraphQL getGraphQl(TypeDefinitionRegistry typeDefinitionRegistry) {
+  private GraphQL getGraphQl(TypeDefinitionRegistry typeDefinitionRegistry) {
     Builder runtimeWiring = RuntimeWiring.newRuntimeWiring();
     runtimeWiring.scalar(ExtendedScalars.Object);
     runtimeWiring.scalar(ExtendedScalars.DateTime);

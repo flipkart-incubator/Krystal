@@ -64,6 +64,6 @@ public abstract class SampleGrpcLatticeApp extends LatticeApplication {
 
   @Override
   public GuiceInjectionProvider getDependencyInjectionBinder() {
-    return new GuiceInjectionProvider(new CustomGuiceModule());
+    return new GuiceInjectionProvider(this, new CustomGuiceModule());
   }
 }

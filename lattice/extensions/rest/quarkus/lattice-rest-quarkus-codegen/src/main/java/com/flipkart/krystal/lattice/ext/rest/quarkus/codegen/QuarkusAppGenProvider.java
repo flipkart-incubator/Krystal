@@ -64,9 +64,8 @@ public class QuarkusAppGenProvider implements LatticeCodeGeneratorProvider {
                       .addMethod(
                           MethodSpec.overriding(util.getMethod(QuarkusApplication.class, "run", 1))
                               .addStatement(
-                                  "latticeApp.init(args)",
+                                  "return latticeApp.init(args)",
                                   ClassName.get(packageName, appClassName + "_Impl"))
-                              .addStatement("return 0")
                               .build())
                       .build())
               .build(),

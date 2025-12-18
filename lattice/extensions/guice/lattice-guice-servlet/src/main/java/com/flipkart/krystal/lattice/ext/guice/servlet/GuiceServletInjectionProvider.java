@@ -1,5 +1,6 @@
 package com.flipkart.krystal.lattice.ext.guice.servlet;
 
+import com.flipkart.krystal.lattice.core.LatticeApplication;
 import com.flipkart.krystal.lattice.core.di.BindingKey.AnnotationKey;
 import com.flipkart.krystal.lattice.core.di.BindingKey.AnnotationTypeKey;
 import com.flipkart.krystal.lattice.core.di.BindingKey.SimpleKey;
@@ -16,8 +17,8 @@ import java.util.List;
 import java.util.Map;
 
 public final class GuiceServletInjectionProvider extends GuiceInjectionProvider {
-  public GuiceServletInjectionProvider(Module... modules) {
-    super(modules);
+  public GuiceServletInjectionProvider(LatticeApplication latticeApp, Module... modules) {
+    super(latticeApp, modules);
   }
 
   @Override

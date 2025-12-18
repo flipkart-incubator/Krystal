@@ -161,7 +161,8 @@ public final class LatticeAppImplGenProvider implements LatticeCodeGeneratorProv
             .addParameter(ParameterSpec.builder(String[].class, "_args").build())
             .addException(Exception.class)
             .addNamedCode(
-                "new $implClass:T().init(_args);", Map.of("implClass", latticeAppImplClassName))
+                "$system:T.exit(new $implClass:T().init(_args));",
+                Map.of("system", System.class, "implClass", latticeAppImplClassName))
             .build();
       }
     }

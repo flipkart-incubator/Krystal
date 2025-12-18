@@ -34,6 +34,7 @@ public final class GuiceBinderGen implements DepInjectBinderGen {
         .addNamed(
 """
 return new $guiceModuleBinder:T(
+    this,
     $customBinderCreator:L
     $autoGenModules:L);
 """,

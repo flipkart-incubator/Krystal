@@ -10,6 +10,7 @@ import com.flipkart.krystal.lattice.core.execution.ThreadingStrategy;
 import com.flipkart.krystal.vajram.ext.cdi.injection.VajramCdiDynamicInjector;
 import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
 import jakarta.enterprise.inject.spi.CDI;
+import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.Closeable;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +21,7 @@ public final class CdiProvider implements DependencyInjectionProvider {
 
   private final CDI<Object> currentCDI;
 
+  @Inject
   public CdiProvider() {
     currentCDI = CDI.current();
   }
@@ -40,7 +42,7 @@ public final class CdiProvider implements DependencyInjectionProvider {
   }
 
   @Override
-  public InjectionValueProvider getInjector() {
+  public InjectionValueProvider getValueProvider() {
     return new InjectionValueProvider() {
       @Override
       public <T> Errable<T> getInstance(Class<T> clazz) {
@@ -56,7 +58,7 @@ public final class CdiProvider implements DependencyInjectionProvider {
 
   @Override
   public Closeable openRequestScope(Bindings seedMap, ThreadingStrategy threadingStrategy) {
-    log.warn("CDI doesn't support opening request scope");
+    log.info("CDI doesn't support opening request scope explicitly");
     return () -> {};
   }
 }

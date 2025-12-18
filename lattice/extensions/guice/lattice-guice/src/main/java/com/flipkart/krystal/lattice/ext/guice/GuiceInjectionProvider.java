@@ -1,5 +1,6 @@
 package com.flipkart.krystal.lattice.ext.guice;
 
+import com.flipkart.krystal.lattice.core.LatticeApplication;
 import com.flipkart.krystal.lattice.core.di.Bindings;
 import com.flipkart.krystal.lattice.core.di.DependencyInjectionProvider;
 import com.flipkart.krystal.lattice.core.execution.ThreadingStrategy;
@@ -24,13 +25,16 @@ public class GuiceInjectionProvider implements DependencyInjectionProvider {
   private @MonotonicNonNull AbstractModule rootModule;
   private @MonotonicNonNull GuiceValueProvider guiceValueProvider;
   private @MonotonicNonNull VajramGuiceInputInjector vajramGuiceInputInjector;
+  private final LatticeApplication latticeApp;
   private final ImmutableList<? extends Module> modules;
 
-  public GuiceInjectionProvider(Module... modules) {
-    this(ImmutableList.copyOf(modules));
+  public GuiceInjectionProvider(LatticeApplication latticeApp, Module... modules) {
+    this(latticeApp, ImmutableList.copyOf(modules));
   }
 
-  public GuiceInjectionProvider(ImmutableList<? extends Module> modules) {
+  private GuiceInjectionProvider(
+      LatticeApplication latticeApp, ImmutableList<? extends Module> modules) {
+    this.latticeApp = latticeApp;
     this.modules = modules;
   }
 
@@ -55,10 +59,22 @@ public class GuiceInjectionProvider implements DependencyInjectionProvider {
   }
 
   @Override
-  public GuiceValueProvider getInjector() {
+  public GuiceValueProvider getValueProvider() {
     GuiceValueProvider guiceValueProvider = this.guiceValueProvider;
     if (guiceValueProvider == null) {
-      guiceValueProvider = new GuiceValueProvider(Guice.createInjector(getRootModule()));
+      guiceValueProvider =
+          new GuiceValueProvider(
+              Guice.createInjector(
+                  getRootModule(),
+                  new AbstractModule() {
+                    @Override
+                    protected void configure() {
+                      binder().bind(LatticeApplication.class).toInstance(latticeApp);
+                      binder()
+                          .bind(DependencyInjectionProvider.class)
+                          .toInstance(GuiceInjectionProvider.this);
+                    }
+                  }));
       this.guiceValueProvider = guiceValueProvider;
     }
     return guiceValueProvider;
@@ -84,7 +100,7 @@ public class GuiceInjectionProvider implements DependencyInjectionProvider {
   @Override
   public VajramInjectionProvider toVajramInjectionProvider() {
     if (vajramGuiceInputInjector == null) {
-      vajramGuiceInputInjector = new VajramGuiceInputInjector(getInjector().injector());
+      vajramGuiceInputInjector = new VajramGuiceInputInjector(getValueProvider().injector());
     }
     return vajramGuiceInputInjector;
   }

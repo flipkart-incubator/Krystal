@@ -19,6 +19,7 @@ import com.flipkart.krystal.lattice.core.doping.DopantSpec;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
+import com.google.common.collect.ImmutableList;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Arrays;
@@ -55,50 +56,69 @@ public abstract class LatticeApplication {
           .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
           .disable(SerializationFeature.FAIL_ON_SELF_REFERENCES);
 
-  private String[] args;
+  private ImmutableList<String> args;
 
   public abstract DependencyInjectionProvider getDependencyInjectionBinder();
 
   @SuppressWarnings("unchecked")
-  public final void init(String[] args) throws Exception {
-    this.args = args;
+  public final int init(String[] args) throws Exception {
+    this.args = ImmutableList.copyOf(args);
 
     DependencyInjectionProvider dependencyInjectionProvider = getDependencyInjectionBinder();
 
-    try {
-      dependencyInjectionProvider.bindToInstance(
-          DependencyInjectionProvider.class, dependencyInjectionProvider);
-      dependencyInjectionProvider.bindToInstance(LatticeApplication.class, this);
-    } catch (UnsupportedOperationException e) {
-      log.warn(
-          "Unable to bind LatticeApplication and DependencyInjectionBinder to the injector. The DI framework should take care of this");
-    }
-
-    InjectionValueProvider injector = dependencyInjectionProvider.getInjector();
-
     System.err.println("Lattice app args in APP: " + Arrays.deepToString(args));
 
-    List<? extends Dopant<?, ?>> dopants =
-        injector
-            .getInstance(LatticeAppBootstrap.class)
-            .valueOrThrow()
-            .configuredSpecs()
-            .values()
-            .stream()
-            .map(
-                spec -> {
-                  Class<? extends Dopant<?, ?>> clazz = spec.dopantClass();
-                  return injector.getInstance(clazz).valueOrThrow();
-                })
-            .filter(Objects::nonNull)
-            .toList();
+    InjectionValueProvider injector = dependencyInjectionProvider.getValueProvider();
+    List<Dopant> dopants = injector.getInstance(LatticeDopantSet.class).valueOrThrow().dopants();
     for (Dopant<?, ?> dopant : dopants) {
       dopant.start(args);
     }
     var itr = dopants.listIterator(dopants.size());
+    int exitCode = 0;
     while (itr.hasPrevious()) {
-      itr.previous().tryMainMethodExit();
+      int dopantExitCode = itr.previous().tryApplicationExit();
+      if (exitCode == 0 && dopantExitCode != 0) {
+        exitCode = dopantExitCode;
+      }
     }
+    return exitCode;
+  }
+
+  public LatticeAppConfig loadConfig(LatticeAppBootstrap latticeAppBootstrap) {
+    configMapper.registerSubtypes(
+        getConfigTypesByDopantTypes(latticeAppBootstrap.configuredSpecs().values())
+            .entrySet()
+            .stream()
+            .map(e -> new NamedType(e.getValue(), e.getKey()))
+            .toArray(NamedType[]::new));
+    Option latticeConfigFileOption =
+        new Option("l", "lattice_config_file", true, "Lattice app config file");
+    CommandLine commandLine;
+    try {
+      commandLine =
+          new DefaultParser()
+              .parse(new Options().addOption(latticeConfigFileOption), args.toArray(String[]::new));
+    } catch (ParseException e) {
+      throw new RuntimeException(e);
+    }
+    String latticeConfigFile = commandLine.getOptionValue(latticeConfigFileOption);
+    LatticeAppConfig latticeAppConfig;
+    ClassLoader classLoader = requireNonNull(this.getClass().getClassLoader());
+    if (latticeConfigFile == null) {
+      latticeAppConfig = new LatticeAppConfig();
+    } else {
+      URL configResource = classLoader.getResource(latticeConfigFile);
+      if (configResource == null) {
+        latticeAppConfig = new LatticeAppConfig();
+      } else {
+        try {
+          latticeAppConfig = configMapper.readValue(configResource, LatticeAppConfig.class);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    }
+    return latticeAppConfig;
   }
 
   private BiMap<String, Class<? extends DopantConfig>> getConfigTypesByDopantTypes(
@@ -131,41 +151,5 @@ public abstract class LatticeApplication {
       }
     }
     return configTypesByName;
-  }
-
-  public LatticeAppConfig loadConfig(LatticeAppBootstrap latticeAppBootstrap) {
-    configMapper.registerSubtypes(
-        getConfigTypesByDopantTypes(latticeAppBootstrap.configuredSpecs().values())
-            .entrySet()
-            .stream()
-            .map(e -> new NamedType(e.getValue(), e.getKey()))
-            .toArray(NamedType[]::new));
-    Option latticeConfigFileOption =
-        new Option("l", "lattice_config_file", true, "Lattice app config file");
-    CommandLine commandLine;
-    try {
-      commandLine =
-          new DefaultParser().parse(new Options().addOption(latticeConfigFileOption), args);
-    } catch (ParseException e) {
-      throw new RuntimeException(e);
-    }
-    String latticeConfigFile = commandLine.getOptionValue(latticeConfigFileOption);
-    LatticeAppConfig latticeAppConfig;
-    ClassLoader classLoader = requireNonNull(this.getClass().getClassLoader());
-    if (latticeConfigFile == null) {
-      latticeAppConfig = new LatticeAppConfig();
-    } else {
-      URL configResource = classLoader.getResource(latticeConfigFile);
-      if (configResource == null) {
-        latticeAppConfig = new LatticeAppConfig();
-      } else {
-        try {
-          latticeAppConfig = configMapper.readValue(configResource, LatticeAppConfig.class);
-        } catch (IOException e) {
-          throw new RuntimeException(e);
-        }
-      }
-    }
-    return latticeAppConfig;
   }
 }

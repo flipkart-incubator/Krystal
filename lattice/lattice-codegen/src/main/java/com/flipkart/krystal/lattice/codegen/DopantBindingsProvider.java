@@ -16,6 +16,7 @@ import com.flipkart.krystal.lattice.codegen.spi.di.BindingsProvider;
 import com.flipkart.krystal.lattice.codegen.spi.di.ProviderMethod;
 import com.flipkart.krystal.lattice.core.LatticeAppBootstrap;
 import com.flipkart.krystal.lattice.core.LatticeAppConfig;
+import com.flipkart.krystal.lattice.core.LatticeDopantSet;
 import com.flipkart.krystal.lattice.core.di.Produces;
 import com.flipkart.krystal.lattice.core.di.Produces.NoScope;
 import com.flipkart.krystal.lattice.core.doping.AutoConfigure;
@@ -196,6 +197,7 @@ public class DopantBindingsProvider implements BindingsProvider {
     List<Binding> dopantConfigBindings = dopantConfigBindings(context, infosBySpecBuilder.values());
     List<Binding> dopantAnnoBindings = dopantAnnoBindings(context, infosBySpecBuilder.values());
     Binding appBootstrapBinding = appBootstrapBinding(infosBySpecBuilder.values());
+    Binding dopantSetBinding = dopantSetBinding(infosBySpecBuilder.values());
     List<Binding> dopantProducerBindings =
         dopantProducerBindings(context, infosBySpecBuilder.values());
     return ImmutableList.of(
@@ -205,7 +207,8 @@ public class DopantBindingsProvider implements BindingsProvider {
                     dopantSpecBindings.stream(),
                     dopantConfigBindings.stream(),
                     dopantAnnoBindings.stream(),
-                    Stream.of(appBootstrapBinding))
+                    Stream.of(appBootstrapBinding),
+                    Stream.of(dopantSetBinding))
                 .flatMap(identity())
                 .collect(toImmutableList())),
         new BindingsContainer(ImmutableList.copyOf(dopantProducerBindings)));
@@ -391,6 +394,30 @@ public class DopantBindingsProvider implements BindingsProvider {
         CodeBlock.of(
             "return new $T($L);",
             LatticeAppBootstrap.class,
+            dependencies.stream()
+                .map(p -> CodeBlock.of("$L", p.name))
+                .collect(CodeBlock.joining(", "))),
+        AnnotationSpec.builder(Singleton.class).build());
+  }
+
+  private Binding dopantSetBinding(Collection<DopantTypesInfo> dopantTypesInfos) {
+    List<ParameterSpec> dependencies =
+        dopantTypesInfos.stream()
+            .map(DopantTypesInfo::dopantElem)
+            .map(
+                element ->
+                    ParameterSpec.builder(
+                            TypeName.get(element.asType()),
+                            lowerCaseFirstChar(element.getSimpleName().toString()))
+                        .build())
+            .toList();
+    return new ProviderMethod(
+        LatticeDopantSet.class.getSimpleName(),
+        ClassName.get(LatticeDopantSet.class),
+        dependencies,
+        CodeBlock.of(
+            "return new $T($L);",
+            LatticeDopantSet.class,
             dependencies.stream()
                 .map(p -> CodeBlock.of("$L", p.name))
                 .collect(CodeBlock.joining(", "))),
