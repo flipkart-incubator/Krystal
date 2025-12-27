@@ -8,18 +8,12 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * @param applicationServer config for the "main" application server
- * @param adminServer Config for the admin server
  */
 @DopantType(REST_SERVICE_DOPANT_TYPE)
-public record RestServiceDopantConfig(
-    RestServerConfig applicationServer, @Nullable RestServerConfig adminServer)
-    implements DopantConfig {
+public record RestServiceDopantConfig(RestServerConfig applicationServer) implements DopantConfig {
 
   public RestServiceDopantConfig {
     applicationServer = applicationServer.withNameIfNotNamed("application");
-    if (adminServer != null) {
-      adminServer = adminServer.withNameIfNotNamed("admin");
-    }
   }
 
   @Override

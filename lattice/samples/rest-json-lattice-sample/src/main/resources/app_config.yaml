@@ -4,6 +4,3 @@ dopants:
   - krystal.lattice.restService:
       applicationServer:
         name: rest-json-lattice-sample-application
-        port: 8789
-      adminServer:
-        port: 8790

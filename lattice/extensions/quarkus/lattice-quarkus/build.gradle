@@ -1,3 +1,6 @@
+plugins {
+    id 'org.kordamp.gradle.jandex' version "${kordamp_jandex_version}"
+}
 dependencies {
     api platform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
 

@@ -1,3 +1,7 @@
+plugins {
+    id 'org.kordamp.gradle.jandex' version "${kordamp_jandex_version}"
+}
+
 dependencies {
     implementation project(':lattice:extensions:rest:lattice-rest-api')
     implementation project(':lattice:lattice-core')

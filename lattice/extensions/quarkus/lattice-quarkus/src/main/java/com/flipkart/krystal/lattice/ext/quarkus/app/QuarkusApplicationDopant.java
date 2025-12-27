@@ -14,7 +14,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @DopantType(APPLICATION_DOPANT_TYPE)
 @Singleton
-@Unremovable
 public final class QuarkusApplicationDopant implements SimpleDopant {
   static final String APPLICATION_DOPANT_TYPE = "krystal.lattice.quarkus.app";
 

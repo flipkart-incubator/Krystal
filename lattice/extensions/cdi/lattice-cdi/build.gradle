@@ -1,3 +1,7 @@
+plugins {
+    id 'org.kordamp.gradle.jandex' version "${kordamp_jandex_version}"
+}
+
 dependencies {
     api project(':lattice:lattice-core')
     api project(':vajram:extensions:cdi:vajram-cdi')
