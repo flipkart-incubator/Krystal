@@ -33,7 +33,6 @@ import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.Response.ResponseBuilder;
 import jakarta.ws.rs.core.UriInfo;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletionStage;
@@ -51,14 +50,9 @@ public abstract class RestServiceDopant implements Dopant<RestService, RestServi
 
   @Getter private final RestServiceDopantConfig config;
   private final KrystexDopant krystexDopant;
-  private final RestServiceDopantSpec spec;
 
   @Inject
-  protected RestServiceDopant(
-      RestServiceDopantSpec restServiceDopantSpec,
-      RestServiceDopantConfig config,
-      KrystexDopant krystexDopant) {
-    this.spec = restServiceDopantSpec;
+  protected RestServiceDopant(RestServiceDopantConfig config, KrystexDopant krystexDopant) {
     this.config = config;
     this.krystexDopant = krystexDopant;
   }
