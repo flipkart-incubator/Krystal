@@ -486,6 +486,7 @@
           <option value="SameParameterValue" />
           <option value="BooleanMethodIsAlwaysInverted" />
           <option value="ConstantValue" />
+          <option value="argument" />
         </list>
       </option>
     </inspection_tool>

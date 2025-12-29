@@ -1,10 +1,10 @@
 package com.flipkart.krystal.vajram.exception;
 
-import com.flipkart.krystal.except.StackTracelessException;
+import com.flipkart.krystal.except.KrystalCompletionException;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public final class MandatoryFacetMissingException extends StackTracelessException {
+public final class MandatoryFacetMissingException extends KrystalCompletionException {
 
   private final String vajramName;
   private final String facetName;

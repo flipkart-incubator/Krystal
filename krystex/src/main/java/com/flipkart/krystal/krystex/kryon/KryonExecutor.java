@@ -4,7 +4,9 @@ import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.concurrent.Futures.propagateCancellation;
 import static com.flipkart.krystal.config.PropertyNames.RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME;
 import static com.flipkart.krystal.data.RequestResponseFuture.forRequest;
-import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
+import static com.flipkart.krystal.except.KrystalCompletionException.wrapAsCompletionException;
+import static com.flipkart.krystal.except.KrystalExceptions.setStackTracingStrategyForCurrentThread;
+import static com.flipkart.krystal.except.StackTracingStrategy.FILL;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -27,6 +29,7 @@ import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponseFuture;
+import com.flipkart.krystal.except.StackTracingStrategy;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.commands.DirectForwardReceive;
@@ -75,6 +78,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.initialization.qual.Initialized;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Default implementation of Krystal executor which */
@@ -157,10 +161,17 @@ public final class KryonExecutor implements KrystalExecutor {
     this.kryonMetrics = new KryonExecutorMetrics();
     this.preferredReqGenerator =
         executorConfig.debug() ? new StringReqGenerator() : new IntReqGenerator();
-    this.commandQueue =
+
+    // Suppress checkerframework errors caused by passing "this" to KrystalExecutorExecService.
+    // This is not an issue here because this is the last thing we are doing before exiting the
+    // constructor
+    @SuppressWarnings({"assignment", "argument"})
+    @Initialized
+    KrystalExecutorExecService decoratedExecService =
         new KrystalExecutorExecService(
             this,
             executorConfig.executorServiceTransformer().apply(executorConfig.executorService()));
+    this.commandQueue = decoratedExecService;
   }
 
   private static ImmutableMap<String, DependencyDecoratorConfig> makeDependencyDecorConfigs(
@@ -268,8 +279,7 @@ public final class KryonExecutor implements KrystalExecutor {
     @SuppressWarnings("TestOnlyProblems")
     boolean openAllKryonsForExternalInvocation =
         Boolean.parseBoolean(
-            System.getProperties()
-                .getProperty(RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME, "false"));
+            System.getProperty(RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME, "false"));
     if (!openAllKryonsForExternalInvocation) {
       if (kryonDefinitionRegistry
           .getOrThrow(vajramID)
@@ -298,7 +308,7 @@ public final class KryonExecutor implements KrystalExecutor {
               requestResponseFuture
                   .response()
                   .completeExceptionally(
-                      stackTracelessWrap(
+                      wrapAsCompletionException(
                           new IllegalArgumentException(
                               "Received duplicate requests for same instanceId '%s' and execution Id '%s'"
                                   .formatted(executorId, executionId))));
@@ -620,13 +630,13 @@ public final class KryonExecutor implements KrystalExecutor {
                     for (KryonExecution<?> kryonExecution : kryonExecutions) {
                       kryonExecution
                           .response()
-                          .completeExceptionally(stackTracelessWrap(throwable));
+                          .completeExceptionally(wrapAsCompletionException(throwable));
                     }
                   }
                 });
           } catch (Throwable throwable) {
             for (KryonExecution<?> ke : kryonExecutions) {
-              ke.response().completeExceptionally(stackTracelessWrap(throwable));
+              ke.response().completeExceptionally(wrapAsCompletionException(throwable));
             }
           }
         });
@@ -676,7 +686,7 @@ public final class KryonExecutor implements KrystalExecutor {
                         kryonExecution
                             .requestResponseFuture()
                             .response()
-                            .completeExceptionally(stackTracelessWrap(throwable));
+                            .completeExceptionally(wrapAsCompletionException(throwable));
                       } else {
                         linkFutures(
                             responses
@@ -758,17 +768,37 @@ public final class KryonExecutor implements KrystalExecutor {
     enqueueCommand(
         () -> {
           command.run();
-          return new Object();
+          return null;
         });
   }
 
   private <T> CompletableFuture<T> enqueueCommand(Supplier<T> command) {
     return supplyAsync(
-        () -> {
-          kryonMetrics.commandQueued();
-          return command.get();
-        },
+        decorateTask(
+            () -> {
+              kryonMetrics.commandQueued();
+              return command.get();
+            }),
         commandQueue());
+  }
+
+  private <T> Supplier<T> decorateTask(Supplier<T> task) {
+    return configureStackTracing(task);
+  }
+
+  private <T> Supplier<T> configureStackTracing(Supplier<T> task) {
+    if (executorConfig.debug()) {
+      return () -> {
+        StackTracingStrategy oldValue = setStackTracingStrategyForCurrentThread(FILL);
+        try {
+          return task.get();
+        } finally {
+          setStackTracingStrategyForCurrentThread(oldValue);
+        }
+      };
+    } else {
+      return task;
+    }
   }
 
   @SuppressWarnings("unchecked")

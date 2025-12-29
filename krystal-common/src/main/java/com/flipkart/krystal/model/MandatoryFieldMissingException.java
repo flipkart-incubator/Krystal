@@ -1,9 +1,9 @@
 package com.flipkart.krystal.model;
 
-import com.flipkart.krystal.except.StackTracelessException;
+import com.flipkart.krystal.except.KrystalCompletionException;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
-public class MandatoryFieldMissingException extends StackTracelessException {
+public class MandatoryFieldMissingException extends KrystalCompletionException {
 
   private final String modelType;
   private final String dataFieldName;

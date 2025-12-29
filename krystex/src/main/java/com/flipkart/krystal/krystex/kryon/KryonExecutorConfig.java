@@ -42,8 +42,8 @@ import org.checkerframework.common.returnsreceiver.qual.This;
  *     SingleThreadExecutor} instance which is provided to the {@link #executorService}. Else this
  *     can lead unpredictable behaviour.
  * @param traitDispatchDecorator used to determine the conformant vajrams bound to traits
- * @param debug If true, more human-readable names are give to entities - might be memory
- *     inefficient.
+ * @param debug If true, more human-readable names are give to entities and logging is more verbose
+ *     - might have a performance impact.
  */
 public record KryonExecutorConfig(
     String executorId,

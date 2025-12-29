@@ -25,7 +25,6 @@ import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.tags.Names;
 import io.smallrye.mutiny.Multi;
-import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -38,7 +37,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Flow.Publisher;
 import java.util.function.Function;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
@@ -48,12 +46,10 @@ public abstract class RestServiceDopant implements Dopant<RestService, RestServi
 
   public static final String REST_SERVICE_DOPANT_TYPE = "krystal.lattice.restService";
 
-  @Getter private final RestServiceDopantConfig config;
   private final KrystexDopant krystexDopant;
 
   @Inject
-  protected RestServiceDopant(RestServiceDopantConfig config, KrystexDopant krystexDopant) {
-    this.config = config;
+  protected RestServiceDopant(KrystexDopant krystexDopant) {
     this.krystexDopant = krystexDopant;
   }
 
@@ -103,9 +99,7 @@ public abstract class RestServiceDopant implements Dopant<RestService, RestServi
   }
 
   public <T> Publisher<T> toPublisher(CompletionStage<Publisher<? extends T>> futurePublisher) {
-    return Multi.createFrom()
-        .uni(Uni.createFrom().completionStage(futurePublisher))
-        .flatMap(Function.identity());
+    return Multi.createFrom().completionStage(futurePublisher).flatMap(Function.identity());
   }
 
   private <RespT> @NonNull CompletionStage<RespT> executeHttpRequest(

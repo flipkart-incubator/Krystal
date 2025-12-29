@@ -1,8 +1,8 @@
 package com.flipkart.krystal.concurrent;
 
-import static com.flipkart.krystal.except.StackTracelessCancellationException.stackTracelessCancellation;
-import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
+import static com.flipkart.krystal.except.KrystalCompletionException.wrapAsCompletionException;
 
+import com.flipkart.krystal.except.KrystalCancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.BiConsumer;
@@ -22,7 +22,7 @@ public final class Futures {
     BiConsumer<@Nullable Object, Throwable> action =
         (unused, throwable) -> {
           if (from.isDone() && !to.isDone()) {
-            to.completeExceptionally(stackTracelessCancellation());
+            to.completeExceptionally(new KrystalCancellationException());
           }
         };
     if (executorService == null) {
@@ -45,7 +45,7 @@ public final class Futures {
     BiConsumer<@PolyNull T, Throwable> action =
         (result, error) -> {
           if (error != null) {
-            to.completeExceptionally(stackTracelessWrap(error));
+            to.completeExceptionally(wrapAsCompletionException(error));
           } else {
             to.complete(result);
           }

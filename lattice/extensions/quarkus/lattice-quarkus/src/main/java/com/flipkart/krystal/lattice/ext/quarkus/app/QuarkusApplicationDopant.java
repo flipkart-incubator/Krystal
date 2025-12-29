@@ -4,8 +4,6 @@ import static com.flipkart.krystal.lattice.ext.quarkus.app.QuarkusApplicationDop
 
 import com.flipkart.krystal.lattice.core.doping.DopantType;
 import com.flipkart.krystal.lattice.core.doping.SimpleDopant;
-import com.flipkart.krystal.lattice.ext.quarkus.app.QuarkusApplicationSpec.QuarkusApplicationSpecBuilder;
-import io.quarkus.arc.Unremovable;
 import io.quarkus.runtime.Quarkus;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -19,10 +17,6 @@ public final class QuarkusApplicationDopant implements SimpleDopant {
 
   @Inject
   public QuarkusApplicationDopant() {}
-
-  public static QuarkusApplicationSpecBuilder quarkusApplication() {
-    return QuarkusApplicationSpec.builder();
-  }
 
   @Override
   public int tryApplicationExit() {

@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.utils;
 
 import static java.lang.reflect.Modifier.isFinal;
+import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.vajram.VajramDefRoot;
 import com.flipkart.krystal.vajram.VajramInitData;
@@ -31,7 +32,9 @@ public final class VajramLoader {
         new ArrayList<>(loadAllVajrams(new Reflections(ConfigurationBuilder.build(packages))));
 
     Set<String> containingPackages =
-        vajramDefClasses.stream().map(c -> c.getPackage().getName()).collect(Collectors.toSet());
+        vajramDefClasses.stream()
+            .map(c -> requireNonNull(c.getPackage()).getName())
+            .collect(Collectors.toSet());
     Reflections reflections = new Reflections(ConfigurationBuilder.build(containingPackages));
     vajramDefClasses.stream()
         .map(vajramDefClass -> loadVajram(vajramDefClass, reflections))

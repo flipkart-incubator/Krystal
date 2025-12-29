@@ -3,7 +3,7 @@ package com.flipkart.krystal.krystex.kryon;
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.data.Errable.nil;
 import static com.flipkart.krystal.data.Errable.withError;
-import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
+import static com.flipkart.krystal.except.KrystalCompletionException.wrapAsCompletionException;
 import static com.flipkart.krystal.facets.resolution.ResolverCommand.executeWithRequests;
 import static com.flipkart.krystal.facets.resolution.ResolverCommand.skip;
 import static com.flipkart.krystal.krystex.kryon.KryonUtils.enqueueOrExecuteCommand;
@@ -178,7 +178,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
 
       executeOutputLogicIfPossible(dependentChain);
     } catch (Throwable e) {
-      resultForDepChain.completeExceptionally(stackTracelessWrap(e));
+      resultForDepChain.completeExceptionally(wrapAsCompletionException(e));
     }
     return resultForDepChain;
   }
@@ -605,7 +605,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
                 new OutputLogicExecutionInput(
                     ImmutableList.of(outputLogicFacets), kryonExecutor.commandQueue()));
           } catch (Throwable e) {
-            outputLogicFacets.response().completeExceptionally(stackTracelessWrap(e));
+            outputLogicFacets.response().completeExceptionally(wrapAsCompletionException(e));
           }
           resultsByRequest.put(invocationId, outputLogicFacets.response());
         });

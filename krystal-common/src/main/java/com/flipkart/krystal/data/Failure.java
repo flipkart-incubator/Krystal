@@ -2,7 +2,7 @@ package com.flipkart.krystal.data;
 
 import static java.util.concurrent.CompletableFuture.failedFuture;
 
-import com.flipkart.krystal.except.StackTracelessException;
+import com.flipkart.krystal.except.KrystalCompletionException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -74,7 +74,9 @@ public final class Failure<T> implements Errable<T> {
   }
 
   private RuntimeException asRuntimeException() {
-    return error instanceof RuntimeException e ? e : new StackTracelessException("Failure", error);
+    return error instanceof RuntimeException e
+        ? e
+        : new KrystalCompletionException("Failure", error);
   }
 
   @SuppressWarnings("unchecked")

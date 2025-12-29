@@ -11,7 +11,7 @@ import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FacetValuesBuilder;
 import com.flipkart.krystal.data.Failure;
-import com.flipkart.krystal.except.StackTracelessException;
+import com.flipkart.krystal.except.KrystalCompletionException;
 import com.flipkart.krystal.krystex.commands.DirectForwardReceive;
 import com.flipkart.krystal.krystex.commands.ForwardReceiveBatch;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
@@ -193,7 +193,7 @@ class InjectingDecoratedKryon
       throws Exception {
     VajramInjectionProvider inputInjector = this.injectionProvider;
     if (inputInjector == null) {
-      throw new StackTracelessException("Dependency injector is null");
+      throw new KrystalCompletionException("Dependency injector is null");
     }
     return (Provider<Object>) inputInjector.get(vajramId, facetDef);
   }

@@ -4,7 +4,7 @@ import static com.flipkart.krystal.facets.FacetType.INJECTION;
 import static com.flipkart.krystal.vajram.inputinjection.InputInjectionUtils.getQualifiers;
 
 import com.flipkart.krystal.core.VajramID;
-import com.flipkart.krystal.except.StackTracelessException;
+import com.flipkart.krystal.except.KrystalCompletionException;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
 import com.google.inject.Injector;
@@ -51,7 +51,8 @@ public class VajramGuiceInputInjector implements VajramInjectionProvider {
                           return injector.getProvider(Key.get(type, annotation.get()));
                         }
                       } catch (ClassNotFoundException e) {
-                        throw new StackTracelessException("Unable to load data type of Input", e);
+                        throw new KrystalCompletionException(
+                            "Unable to load data type of Input", e);
                       }
                     });
     return provider;
