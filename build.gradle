@@ -1,5 +1,6 @@
+//file:noinspection SpellCheckingInspection
 plugins {
-    id 'com.flipkart.java.code.standard' version '5.4'
+    id 'com.flipkart.java.code.standard' version '5.6'
     id 'org.gradlex.extra-java-module-info' version '1.11'
     id 'java-test-fixtures'
 
@@ -15,7 +16,7 @@ ext {
     krystal_version = '10.0.4'
     lattice_version = '0.1.1'
 
-    java_code_std_version = '5.4'
+    java_code_std_version = '5.6'
 
     protobuf_version = '4.31.1'
     grpc_version = '1.73.0'
@@ -50,7 +51,7 @@ subprojects {
                 licenses {
                     license {
                         name = 'The Apache License, Version 2.0'
-                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
                     }
                 }
             }
@@ -131,6 +132,7 @@ configure(subprojects.findAll {
             c.implementation 'org.yaml:snakeyaml:2.3'
             c.implementation 'org.javassist:javassist:3.30.2-GA'
             c.implementation 'io.smallrye.reactive:mutiny:3.1.0'
+            c.implementation 'com.google.googlejavaformat:google-java-format:1.28.0'
 
             c.runtimeOnly 'jakarta.servlet:jakarta.servlet-api:6.1.0'
             c.implementation 'jakarta.enterprise:jakarta.enterprise.cdi-api:4.1.0'
@@ -235,6 +237,7 @@ configure(subprojects.findAll {
         knownModule('com.graphql-java:graphql-java', 'com.graphqljava')
         knownModule('com.graphql-java:graphql-java-extended-scalars', 'com.graphqljava.extendedscalars')
         knownModule('org.yaml:snakeyaml', 'org.yaml.snakeyaml')
+        knownModule('com.google.googlejavaformat:google-java-format', 'com.google.googlejavaformat')
 
         knownModule('com.flipkart.krystal:vajram-java-sdk', 'flipkart.krystal.vajram')
         knownModule('com.flipkart.krystal:krystal-codegen-common', 'flipkart.krystal.codegen.common')

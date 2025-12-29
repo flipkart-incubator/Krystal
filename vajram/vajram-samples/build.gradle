@@ -88,6 +88,7 @@ extraJavaModuleInfo {
     knownModule('com.google.j2objc:j2objc-annotations', 'com.google.j2objc.annotations')
     knownModule('org.reflections:reflections', 'org.reflections')
     knownModule('org.javassist:javassist', 'org.javassist')
+    knownModule('com.google.googlejavaformat:google-java-format', 'com.google.googlejavaformat')
 
 }
 /** END: JPMS compatibility configurations **/

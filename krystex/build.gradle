@@ -15,8 +15,3 @@ dependencies {
 
     testFixturesImplementation 'org.checkerframework:checker-qual'
 }
-
-spotlessJava {
-    dependsOn('compileTestFixturesJava')
-}
-

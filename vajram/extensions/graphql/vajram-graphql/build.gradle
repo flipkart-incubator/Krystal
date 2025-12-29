@@ -17,9 +17,13 @@ dependencies {
     api project(':vajram:vajram-java-sdk')
     implementation project(':vajram:vajram-krystex')
     implementation project(':vajram:extensions:json:vajram-json')
-    krystalModelsGenProcessor "com.flipkart.krystal:vajram-codegen:${krystal_version}"
+    krystalModelsGenProcessor project(':vajram:vajram-codegen')
 
     api 'com.graphql-java:graphql-java'
     api 'com.graphql-java:graphql-java-extended-scalars'
     implementation 'org.reflections:reflections'
+}
+
+extraJavaModuleInfo {
+    failOnMissingModuleInfo = false
 }

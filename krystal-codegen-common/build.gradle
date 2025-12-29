@@ -4,6 +4,7 @@ description =
 dependencies {
     api project(':krystal-common')
     implementation 'com.squareup:javapoet'
+    implementation 'com.google.googlejavaformat:google-java-format'
 }
 
 checkerFramework {

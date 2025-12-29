@@ -3,6 +3,7 @@ package com.flipkart.krystal.codegen.common.models;
 import static com.flipkart.krystal.codegen.common.models.Constants.IMMUT_SUFFIX;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.squareup.javapoet.CodeBlock.joining;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
@@ -23,6 +24,7 @@ import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.serial.SerdeProtocol;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.googlejavaformat.java.GoogleJavaFormatTool;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
@@ -33,6 +35,8 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeSpec.Builder;
 import com.squareup.javapoet.TypeVariableName;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -96,6 +100,7 @@ public class CodeGenUtility {
   @Getter private final @Nullable CodegenPhase codegenPhase;
   @Getter private final DataTypeRegistry dataTypeRegistry;
   @Getter private final @Nullable Path moduleRootPath;
+  private final GoogleJavaFormatTool codeFormatter;
 
   public CodeGenUtility(
       ProcessingEnvironment processingEnv,
@@ -109,6 +114,7 @@ public class CodeGenUtility {
     this.dataTypeRegistry = new DataTypeRegistry();
     String moduleRootOption = processingEnv.getOptions().get(Constants.MODULE_ROOT_PATH_KEY);
     this.moduleRootPath = moduleRootOption != null ? Paths.get(moduleRootOption) : null;
+    this.codeFormatter = new GoogleJavaFormatTool();
   }
 
   public static String capitalizeFirstChar(String str) {
@@ -321,6 +327,15 @@ public class CodeGenUtility {
 
   public void generateSourceFile(
       String canonicalClassName, String code, @Nullable TypeElement originatingElement) {
+
+    ByteArrayOutputStream formattedCodeOutput = new ByteArrayOutputStream();
+    codeFormatter.run(
+        new ByteArrayInputStream(code.getBytes(UTF_8)),
+        formattedCodeOutput,
+        System.err,
+        // "-" arg means format input from input stream provided above. See
+        // com.google.googlejavaformat.java.CommandLineOptions for reference
+        "-");
     try {
       JavaFileObject requestFile =
           processingEnv
@@ -330,7 +345,7 @@ public class CodeGenUtility {
                   Optional.ofNullable(originatingElement).stream().toArray(Element[]::new));
       note("Successfully created source file %s".formatted(canonicalClassName));
       try (PrintWriter out = new PrintWriter(requestFile.openWriter())) {
-        out.println(code);
+        out.print(formattedCodeOutput.toString(UTF_8));
       }
     } catch (Exception e) {
       error(
