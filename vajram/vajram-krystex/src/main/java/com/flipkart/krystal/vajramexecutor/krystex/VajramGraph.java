@@ -360,7 +360,8 @@ public final class VajramGraph {
           try {
             vajramDef.execute(input.withFacetValueResponses(validInputs));
           } catch (Throwable e) {
-            validInputs.forEach(i -> i.response().completeExceptionally(wrapAsCompletionException(e)));
+            validInputs.forEach(
+                i -> i.response().completeExceptionally(wrapAsCompletionException(e)));
           }
         };
     return logicRegistryDecorator.newOutputLogic(

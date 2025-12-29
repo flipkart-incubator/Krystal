@@ -22,7 +22,7 @@ public class KrystalExceptions {
    * @return The stack tracing strategy prior to this set.
    */
   public static @Nullable StackTracingStrategy setStackTracingStrategyForCurrentThread(
-      StackTracingStrategy stackTracingStrategy) {
+      @Nullable StackTracingStrategy stackTracingStrategy) {
     StackTracingStrategy oldValue = STACK_TRACING_STRATEGY.get();
     STACK_TRACING_STRATEGY.set(stackTracingStrategy);
     return oldValue;

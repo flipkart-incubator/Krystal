@@ -4,7 +4,6 @@ import static com.flipkart.krystal.lattice.ext.rest.RestServiceDopant.REST_SERVI
 
 import com.flipkart.krystal.lattice.core.doping.DopantConfig;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * @param applicationServer config for the "main" application server

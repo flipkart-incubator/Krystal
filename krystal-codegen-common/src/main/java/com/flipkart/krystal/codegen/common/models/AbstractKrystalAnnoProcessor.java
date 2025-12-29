@@ -2,7 +2,6 @@ package com.flipkart.krystal.codegen.common.models;
 
 import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
 import static java.util.Objects.requireNonNull;
-import static java.util.Objects.requireNonNullElse;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -43,7 +42,7 @@ public abstract class AbstractKrystalAnnoProcessor extends AbstractProcessor {
     log.info(
         "Initializing {} with expected codegen phase {}",
         this.getClass().getSimpleName(),
-        requireNonNullElse(expectedPhase, "<any>"));
+        Objects.<Object>requireNonNullElse(expectedPhase, "<any>"));
   }
 
   @Override

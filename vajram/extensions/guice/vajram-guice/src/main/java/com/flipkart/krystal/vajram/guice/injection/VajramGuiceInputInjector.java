@@ -51,7 +51,8 @@ public class VajramGuiceInputInjector implements VajramInjectionProvider {
                           return injector.getProvider(Key.get(type, annotation.get()));
                         }
                       } catch (ClassNotFoundException e) {
-                        throw new KrystalCompletionException("Unable to load data type of Input", e);
+                        throw new KrystalCompletionException(
+                            "Unable to load data type of Input", e);
                       }
                     });
     return provider;

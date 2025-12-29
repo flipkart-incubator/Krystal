@@ -74,7 +74,9 @@ public final class Failure<T> implements Errable<T> {
   }
 
   private RuntimeException asRuntimeException() {
-    return error instanceof RuntimeException e ? e : new KrystalCompletionException("Failure", error);
+    return error instanceof RuntimeException e
+        ? e
+        : new KrystalCompletionException("Failure", error);
   }
 
   @SuppressWarnings("unchecked")

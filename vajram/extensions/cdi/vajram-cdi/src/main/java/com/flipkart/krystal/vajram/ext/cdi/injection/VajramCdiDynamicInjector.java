@@ -45,7 +45,8 @@ public class VajramCdiDynamicInjector implements VajramInjectionProvider {
                       try {
                         type = facetDef.type().javaReflectType();
                       } catch (ClassNotFoundException e) {
-                        throw new KrystalCompletionException("Unable to load data type of Input", e);
+                        throw new KrystalCompletionException(
+                            "Unable to load data type of Input", e);
                       }
                       Bean<?> bean =
                           beanContainer.resolve(

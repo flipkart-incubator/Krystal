@@ -4,9 +4,9 @@ import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.concurrent.Futures.propagateCancellation;
 import static com.flipkart.krystal.config.PropertyNames.RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME;
 import static com.flipkart.krystal.data.RequestResponseFuture.forRequest;
+import static com.flipkart.krystal.except.KrystalCompletionException.wrapAsCompletionException;
 import static com.flipkart.krystal.except.KrystalExceptions.setStackTracingStrategyForCurrentThread;
 import static com.flipkart.krystal.except.StackTracingStrategy.FILL;
-import static com.flipkart.krystal.except.KrystalCompletionException.wrapAsCompletionException;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -78,6 +78,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.initialization.qual.Initialized;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Default implementation of Krystal executor which */
@@ -160,10 +161,17 @@ public final class KryonExecutor implements KrystalExecutor {
     this.kryonMetrics = new KryonExecutorMetrics();
     this.preferredReqGenerator =
         executorConfig.debug() ? new StringReqGenerator() : new IntReqGenerator();
-    this.commandQueue =
+
+    // Suppress checkerframework errors caused by passing "this" to KrystalExecutorExecService.
+    // This is not an issue here because this is the last thing we are doing before exiting the
+    // constructor
+    @SuppressWarnings({"assignment", "argument"})
+    @Initialized
+    KrystalExecutorExecService decoratedExecService =
         new KrystalExecutorExecService(
             this,
             executorConfig.executorServiceTransformer().apply(executorConfig.executorService()));
+    this.commandQueue = decoratedExecService;
   }
 
   private static ImmutableMap<String, DependencyDecoratorConfig> makeDependencyDecorConfigs(

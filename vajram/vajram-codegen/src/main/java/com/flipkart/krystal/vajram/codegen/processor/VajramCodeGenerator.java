@@ -1267,7 +1267,9 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
     valueMap.put("stackTracelessException", KrystalCompletionException.class);
     valueMap.put(
         "stackTracelessWrap",
-        KrystalCompletionException.class.getMethod("wrapAsCompletionException", Throwable.class).getName());
+        KrystalCompletionException.class
+            .getMethod("wrapAsCompletionException", Throwable.class)
+            .getName());
     valueMap.put("batchItemExecItem", BatchItemExecutionItem.class);
 
     valueMap.put("batchKeyName", BATCH_KEY_NAME);

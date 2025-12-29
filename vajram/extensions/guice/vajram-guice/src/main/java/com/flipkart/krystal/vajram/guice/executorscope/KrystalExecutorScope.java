@@ -13,32 +13,39 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Scopes a single execution of a block of code. Apply this scope with a try/finally block:
+ * Scopes a single execution of a block of code. Enter the scope using a KrystalExecutor and close
+ * the scopeInstance when All futures are done:
  *
  * <pre><code>
- *   try(var scopeInstance = scope.enter(krystalExecutor)){
+ *   try(KrystexVajramExecutor vajramExecutor = krystexGraph.createExecutor(vajramExecConfig)) {
+ *     var scopeInstance = scope.enter(vajramExecutor.getKrystalExecutor());
  *     // explicitly seed some seed objects...
- *     scopeInstance.seed(Key.get(SomeObject.class), someObject);
- *     // create and access scoped objects
+ *     scopeInstance.seed(SomeObject.class, someObject);
+ *     // execute Krystal requests
+ *     var future1 = vajramExecutor.execute(request1);
+ *     var future2 = vajramExecutor.execute(request2);
+ *     var future3 = vajramExecutor.execute(request3);
+ *     // wait for all futures to complete
+ *     CompletableFuture.allOf(future1, future2, future3).whenComplete((r,t) -> {
+ *       scopeInstance.close();
+ *     });
  *   }
+ *
  * </code></pre>
  *
- * The scope can be initialized with one or more seed values by calling <code>
- * seed(krystalExecutor, key, value)
- * </code> before the injector will be called upon to provide for this key. A typical use is for a
- * servlet filter to enter/exit the scope, representing a Request Scope, and seed HttpServletRequest
- * and HttpServletResponse. For each key inserted with seed(), you must include a corresponding
- * binding:
+ * You might have to pre-bind to a dummy provider in the guice module to prevent errors:
  *
  * <pre><code>
  *   bind(key)
  *       .toProvider(KrystalExecutorScope.&lt;KeyClass&gt;seededKeyProvider())
- *       .in(ScopeAnnotation.class);
+ *       .in(KrystalExecutorScoped.class);
  * </code></pre>
  *
  * @author Ram Anvesh
  */
 public class KrystalExecutorScope implements Scope {
+
+  public static final KrystalExecutorScope INSTANCE = new KrystalExecutorScope();
 
   private final Map<KrystalExecutor, Map<Key<?>, Object>> values = new HashMap<>();
 
@@ -50,6 +57,8 @@ public class KrystalExecutorScope implements Scope {
                 + " explicitly seeded in this scope by calling"
                 + " KrystalExecutorScope.seed(), but was not.");
       };
+
+  private KrystalExecutorScope() {}
 
   public ScopeInstance enter(KrystalExecutor krystalExecutor) {
     checkState(
