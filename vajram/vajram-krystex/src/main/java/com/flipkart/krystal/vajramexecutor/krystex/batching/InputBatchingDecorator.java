@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajramexecutor.krystex.batching;
 
-import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
+import static com.flipkart.krystal.except.KrystalException.wrapAsCompletionException;
 import static java.util.Collections.unmodifiableSet;
 
 import com.flipkart.krystal.config.ConfigProvider;
@@ -118,7 +118,7 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
         logicToDecorate.execute(outputLogicExecutionInput.withFacetValueResponses(facetsList));
       } catch (Throwable e) {
         for (ExecutionItem f : facetsList) {
-          f.response().completeExceptionally(stackTracelessWrap(e));
+          f.response().completeExceptionally(wrapAsCompletionException(e));
         }
       }
     }

@@ -1,6 +1,6 @@
 package com.flipkart.krystal.data;
 
-import com.flipkart.krystal.except.StackTracelessException;
+import com.flipkart.krystal.except.KrystalException;
 import com.flipkart.krystal.except.ThrowingCallable;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -53,7 +53,7 @@ public sealed interface Errable<T> permits Success, Failure {
    *   <li>Nil: throws {@link NilValueException}
    *   <li>Failure: throws a {@link RuntimeException} representing the throwable which caused the
    *       failure. If the throwable is a {@link RuntimeException}, it is thrown as is. Else it is
-   *       wrapped in a {@link StackTracelessException} and thrown.
+   *       wrapped in a {@link KrystalException} and thrown.
    * </ul>
    */
   T valueOrThrow();

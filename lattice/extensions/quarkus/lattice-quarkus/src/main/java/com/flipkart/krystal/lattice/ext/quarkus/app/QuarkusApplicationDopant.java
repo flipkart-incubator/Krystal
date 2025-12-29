@@ -20,10 +20,6 @@ public final class QuarkusApplicationDopant implements SimpleDopant {
   @Inject
   public QuarkusApplicationDopant() {}
 
-  public static QuarkusApplicationSpecBuilder quarkusApplication() {
-    return QuarkusApplicationSpec.builder();
-  }
-
   @Override
   public int tryApplicationExit() {
     Quarkus.waitForExit();

@@ -275,7 +275,7 @@ class KrystexVajramExecutorTest {
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
-      result = krystexVajramExecutor.execute(this.incompleteHelloRequest());
+      result = krystexVajramExecutor.execute(incompleteHelloRequest());
     }
     assertThat(result)
         .failsWithin(TIMEOUT)
@@ -285,6 +285,45 @@ class KrystexVajramExecutorTest {
             "Vajram v<"
                 + graph.vajramGraph().getVajramIdByVajramDefType(Hello.class).id()
                 + "> did not receive these mandatory inputs: [ 'name'");
+  }
+
+  @Test
+  void executeCompute_exceptionThrown_hasNoStacktrace() {
+    var graph =
+        loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello").build();
+    CompletableFuture<String> result;
+    requestContext.requestId("vajramWithNoDependencies");
+    try (KrystexVajramExecutor krystexVajramExecutor =
+        graph.createExecutor(
+            getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build())) {
+      result = krystexVajramExecutor.execute(incompleteHelloRequest());
+    }
+    assertThat(result)
+        .failsWithin(TIMEOUT)
+        .withThrowableOfType(ExecutionException.class)
+        .havingCause()
+        .isInstanceOf(MandatoryFacetsMissingException.class)
+        .satisfies(cause -> assertThat(cause.getStackTrace()).isEmpty());
+  }
+
+  @Test
+  void executeCompute_exceptionThrownInDebugMode_hasStacktrace() {
+    var graph =
+        loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello").build();
+    CompletableFuture<String> result;
+    requestContext.requestId("vajramWithNoDependencies");
+    KrystexVajramExecutorConfig executorConfig =
+        getExecutorConfig(kryonExecStrategy, graphTraversalStrategy).build();
+    executorConfig.kryonExecutorConfigBuilder().debug(true);
+    try (KrystexVajramExecutor krystexVajramExecutor = graph.createExecutor(executorConfig)) {
+      result = krystexVajramExecutor.execute(incompleteHelloRequest());
+    }
+    assertThat(result)
+        .failsWithin(TIMEOUT)
+        .withThrowableOfType(ExecutionException.class)
+        .havingCause()
+        .isInstanceOf(MandatoryFacetsMissingException.class)
+        .satisfies(cause -> assertThat(cause.getStackTrace()).isNotEmpty());
   }
 
   @Test

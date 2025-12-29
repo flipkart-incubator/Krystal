@@ -73,7 +73,7 @@ import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.data.RequestResponseFuture;
-import com.flipkart.krystal.except.StackTracelessException;
+import com.flipkart.krystal.except.KrystalException;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.facets.FacetUtils;
@@ -185,6 +185,7 @@ import javax.lang.model.util.Types;
 import lombok.EqualsAndHashCode;
 import lombok.EqualsAndHashCode.Include;
 import lombok.Getter;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -1198,6 +1199,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
     return executeMethodBuilder.build();
   }
 
+  @SneakyThrows
   private void batchedExecuteMethodBuilder(MethodSpec.Builder executeMethodBuilder) {
     if (!(requireNonNull(getParsedVajramData().logicMethods(), "Vajrams must have output logic.")
             .outputLogics()
@@ -1262,7 +1264,10 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
     valueMap.put("facetValues", FacetValues.class);
     valueMap.put("executionItem", ExecutionItem.class);
     valueMap.put("immutableFacetValues", ImmutableFacetValues.class);
-    valueMap.put("stackTracelessException", StackTracelessException.class);
+    valueMap.put("stackTracelessException", KrystalException.class);
+    valueMap.put(
+        "stackTracelessWrap",
+        KrystalException.class.getMethod("wrapAsCompletionException", Throwable.class).getName());
     valueMap.put("batchItemExecItem", BatchItemExecutionItem.class);
 
     valueMap.put("batchKeyName", BATCH_KEY_NAME);
@@ -1403,7 +1408,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                             _entry.executionItem().response().complete(null);
                         } else {
                           _entry.executionItem().response().completeExceptionally(
-                            $stackTracelessException:T.stackTracelessWrap(_throwable));
+                            $stackTracelessException:T.$stackTracelessWrap:L(_throwable));
                         }
                       }
                     }, $logicInput:L.graphExecutor());

@@ -19,8 +19,8 @@ public final class GraphQlOverRestDopant implements SimpleDopant {
   private final GraphQlInitializer graphQlInitializer;
 
   @Inject
-  public GraphQlOverRestDopant() {
-    this.graphQlInitializer = new GraphQlInitializer();
+  public GraphQlOverRestDopant(GraphQlInitializer graphQlInitializer) {
+    this.graphQlInitializer = graphQlInitializer;
   }
 
   @Produces(inScope = Singleton.class)

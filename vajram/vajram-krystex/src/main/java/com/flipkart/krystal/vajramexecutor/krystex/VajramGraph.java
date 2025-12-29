@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
 import static com.flipkart.krystal.core.VajramID.vajramID;
-import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
+import static com.flipkart.krystal.except.KrystalException.wrapAsCompletionException;
 import static com.flipkart.krystal.facets.resolution.ResolverCommand.skip;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.tags.ElementTags.emptyTags;
@@ -354,13 +354,13 @@ public final class VajramGraph {
                   validateMandatory(vajramId, inputs.facetValues(), facetSpecs);
                   validInputs.add(inputs);
                 } catch (Throwable e) {
-                  inputs.response().completeExceptionally(stackTracelessWrap(e));
+                  inputs.response().completeExceptionally(wrapAsCompletionException(e));
                 }
               });
           try {
             vajramDef.execute(input.withFacetValueResponses(validInputs));
           } catch (Throwable e) {
-            validInputs.forEach(i -> i.response().completeExceptionally(stackTracelessWrap(e)));
+            validInputs.forEach(i -> i.response().completeExceptionally(wrapAsCompletionException(e)));
           }
         };
     return logicRegistryDecorator.newOutputLogic(

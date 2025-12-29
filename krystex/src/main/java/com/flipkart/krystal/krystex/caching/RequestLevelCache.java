@@ -2,13 +2,13 @@ package com.flipkart.krystal.krystex.caching;
 
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.concurrent.Futures.propagateCompletion;
-import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
+import static com.flipkart.krystal.except.KrystalException.wrapAsCompletionException;
 import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.FacetValues;
-import com.flipkart.krystal.except.StackTracelessException;
+import com.flipkart.krystal.except.KrystalException;
 import com.flipkart.krystal.krystex.commands.DirectForwardReceive;
 import com.flipkart.krystal.krystex.commands.ForwardReceiveBatch;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
@@ -39,7 +39,7 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
   public static final String DECORATOR_TYPE = RequestLevelCache.class.getName();
 
   private static final Errable<Object> UNKNOWN_ERROR =
-      Errable.withError(new StackTracelessException("Unknown error in request cache"));
+      Errable.withError(new KrystalException("Unknown error in request cache"));
 
   private final Map<CacheKey, CompletableFuture<@Nullable Object>> cache = new LinkedHashMap<>();
 
@@ -156,7 +156,7 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
                       newCacheEntries
                           .computeIfAbsent(
                               requestId, _r -> new CompletableFuture<@Nullable Object>())
-                          .completeExceptionally(stackTracelessWrap(throwable)));
+                          .completeExceptionally(wrapAsCompletionException(throwable)));
             } else {
               RuntimeException e =
                   new RuntimeException("Expecting BatchResponse. Found " + kryonResponse);

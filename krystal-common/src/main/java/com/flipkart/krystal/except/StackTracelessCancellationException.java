@@ -1,5 +1,7 @@
 package com.flipkart.krystal.except;
 
+import static com.flipkart.krystal.except.KrystalException.getStackTracingStrategyForCurrentThread;
+
 import java.util.concurrent.CancellationException;
 
 /**
@@ -16,10 +18,7 @@ import java.util.concurrent.CancellationException;
  */
 public class StackTracelessCancellationException extends CancellationException {
 
-  private static final StackTracelessCancellationException INSTANCE =
-      new StackTracelessCancellationException();
-
-  private StackTracelessCancellationException() {}
+  public StackTracelessCancellationException() {}
 
   public StackTracelessCancellationException(String message) {
     super(message);
@@ -28,11 +27,9 @@ public class StackTracelessCancellationException extends CancellationException {
   @SuppressWarnings("NonSynchronizedMethodOverridesSynchronizedMethod")
   @Override
   public final Throwable fillInStackTrace() {
-    // This exception is used to complete exceptions. Stack trace is not useful.
-    return this;
-  }
-
-  public static StackTracelessCancellationException stackTracelessCancellation() {
-    return INSTANCE;
+    return switch (getStackTracingStrategyForCurrentThread()) {
+      case FILL -> super.fillInStackTrace();
+      case DEFAULT, DONT_FILL -> this;
+    };
   }
 }

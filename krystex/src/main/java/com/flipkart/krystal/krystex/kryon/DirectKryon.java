@@ -1,6 +1,6 @@
 package com.flipkart.krystal.krystex.kryon;
 
-import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
+import static com.flipkart.krystal.except.KrystalException.wrapAsCompletionException;
 
 import com.flipkart.krystal.core.CommunicationFacade;
 import com.flipkart.krystal.core.GraphExecutionData;
@@ -106,7 +106,7 @@ public final class DirectKryon extends AbstractKryon<MultiRequestDirectCommand, 
       } catch (Throwable e) {
         for (ExecutionItem executionItem : executionItems) {
           if (!executionItem.response().isDone()) {
-            executionItem.response().completeExceptionally(stackTracelessWrap(e));
+            executionItem.response().completeExceptionally(wrapAsCompletionException(e));
           }
         }
       }
@@ -131,7 +131,7 @@ public final class DirectKryon extends AbstractKryon<MultiRequestDirectCommand, 
           new OutputLogicExecutionInput(
               ImmutableList.of(executionItem), kryonExecutor.commandQueue()));
     } catch (Throwable e) {
-      executionItem.response().completeExceptionally(stackTracelessWrap(e));
+      executionItem.response().completeExceptionally(wrapAsCompletionException(e));
     }
   }
 }

@@ -10,6 +10,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import org.checkerframework.checker.initialization.qual.UnknownInitialization;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @SuppressWarnings({"override.return", "override.param"})
@@ -20,7 +21,8 @@ public final class KrystalExecutorExecService implements ExecutorService {
   private final ExecutorService delegate;
   private final KrystalExecutor kryonExecutor;
 
-  public KrystalExecutorExecService(KrystalExecutor kryonExecutor, ExecutorService delegate) {
+  public KrystalExecutorExecService(
+      @UnknownInitialization KrystalExecutor kryonExecutor, ExecutorService delegate) {
     this.kryonExecutor = kryonExecutor;
     this.delegate = delegate;
   }
