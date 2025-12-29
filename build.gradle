@@ -1,6 +1,6 @@
 //file:noinspection SpellCheckingInspection
 plugins {
-    id 'com.flipkart.java.code.standard' version '5.4'
+    id 'com.flipkart.java.code.standard' version '5.6'
     id 'org.gradlex.extra-java-module-info' version '1.11'
     id 'java-test-fixtures'
 
@@ -16,7 +16,7 @@ ext {
     krystal_version = '10.0.4'
     lattice_version = '0.1.1'
 
-    java_code_std_version = '5.4'
+    java_code_std_version = '5.6'
 
     protobuf_version = '4.31.1'
     grpc_version = '1.73.0'
