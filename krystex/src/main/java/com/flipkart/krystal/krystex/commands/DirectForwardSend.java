@@ -1,6 +1,6 @@
 package com.flipkart.krystal.krystex.commands;
 
-import static com.flipkart.krystal.except.KrystalException.wrapAsCompletionException;
+import static com.flipkart.krystal.except.KrystalCompletionException.wrapAsCompletionException;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Request;

@@ -73,7 +73,7 @@ import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.data.RequestResponseFuture;
-import com.flipkart.krystal.except.KrystalException;
+import com.flipkart.krystal.except.KrystalCompletionException;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.facets.FacetUtils;
@@ -1264,10 +1264,10 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
     valueMap.put("facetValues", FacetValues.class);
     valueMap.put("executionItem", ExecutionItem.class);
     valueMap.put("immutableFacetValues", ImmutableFacetValues.class);
-    valueMap.put("stackTracelessException", KrystalException.class);
+    valueMap.put("stackTracelessException", KrystalCompletionException.class);
     valueMap.put(
         "stackTracelessWrap",
-        KrystalException.class.getMethod("wrapAsCompletionException", Throwable.class).getName());
+        KrystalCompletionException.class.getMethod("wrapAsCompletionException", Throwable.class).getName());
     valueMap.put("batchItemExecItem", BatchItemExecutionItem.class);
 
     valueMap.put("batchKeyName", BATCH_KEY_NAME);

@@ -1,9 +1,9 @@
 package com.flipkart.krystal.lattice.ext.rest.api.status;
 
-import com.flipkart.krystal.except.KrystalException;
+import com.flipkart.krystal.except.KrystalCompletionException;
 import lombok.Getter;
 
-public class HttpResponseStatusException extends KrystalException {
+public class HttpResponseStatusException extends KrystalCompletionException {
 
   @Getter private final HttpResponseStatus status;
 

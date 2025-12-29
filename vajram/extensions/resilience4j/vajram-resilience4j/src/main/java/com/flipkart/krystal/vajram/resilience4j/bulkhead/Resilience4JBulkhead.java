@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.resilience4j.bulkhead;
 
-import static com.flipkart.krystal.except.KrystalException.wrapAsCompletionException;
+import static com.flipkart.krystal.except.KrystalCompletionException.wrapAsCompletionException;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.concurrent.CompletableFuture.allOf;
 

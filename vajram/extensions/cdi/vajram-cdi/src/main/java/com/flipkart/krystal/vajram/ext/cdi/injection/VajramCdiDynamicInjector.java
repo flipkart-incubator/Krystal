@@ -5,7 +5,7 @@ import static com.flipkart.krystal.vajram.ext.cdi.injection.DependentRefProvider
 import static com.flipkart.krystal.vajram.inputinjection.InputInjectionUtils.getQualifiers;
 
 import com.flipkart.krystal.core.VajramID;
-import com.flipkart.krystal.except.KrystalException;
+import com.flipkart.krystal.except.KrystalCompletionException;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
 import jakarta.enterprise.inject.spi.Bean;
@@ -45,7 +45,7 @@ public class VajramCdiDynamicInjector implements VajramInjectionProvider {
                       try {
                         type = facetDef.type().javaReflectType();
                       } catch (ClassNotFoundException e) {
-                        throw new KrystalException("Unable to load data type of Input", e);
+                        throw new KrystalCompletionException("Unable to load data type of Input", e);
                       }
                       Bean<?> bean =
                           beanContainer.resolve(

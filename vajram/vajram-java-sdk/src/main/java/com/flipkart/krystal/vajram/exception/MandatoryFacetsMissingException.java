@@ -3,11 +3,11 @@ package com.flipkart.krystal.vajram.exception;
 import static java.util.Collections.unmodifiableMap;
 
 import com.flipkart.krystal.core.VajramID;
-import com.flipkart.krystal.except.KrystalException;
+import com.flipkart.krystal.except.KrystalCompletionException;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
-public class MandatoryFacetsMissingException extends KrystalException {
+public class MandatoryFacetsMissingException extends KrystalCompletionException {
 
   private final VajramID vajramID;
   private final Map<String, Throwable> failedMandatoryInputs;

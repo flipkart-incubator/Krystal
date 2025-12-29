@@ -1,6 +1,6 @@
 package com.flipkart.krystal.except;
 
-import static com.flipkart.krystal.except.KrystalException.getStackTracingStrategyForCurrentThread;
+import static com.flipkart.krystal.except.KrystalExceptions.getStackTracingStrategyForCurrentThread;
 
 import java.util.concurrent.CancellationException;
 
@@ -16,11 +16,11 @@ import java.util.concurrent.CancellationException;
  * @implNote This class overrides {@link Throwable#fillInStackTrace()} and skips filling the stack
  *     trace to improve performance.
  */
-public class StackTracelessCancellationException extends CancellationException {
+public class KrystalCancellationException extends CancellationException {
 
-  public StackTracelessCancellationException() {}
+  public KrystalCancellationException() {}
 
-  public StackTracelessCancellationException(String message) {
+  public KrystalCancellationException(String message) {
     super(message);
   }
 

@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajramexecutor.krystex.batching;
 
-import static com.flipkart.krystal.except.KrystalException.wrapAsCompletionException;
+import static com.flipkart.krystal.except.KrystalCompletionException.wrapAsCompletionException;
 import static java.util.Collections.unmodifiableSet;
 
 import com.flipkart.krystal.config.ConfigProvider;
