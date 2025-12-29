@@ -17,4 +17,5 @@ module flipkart.krystal.codegen.common {
   requires static lombok;
   requires com.google.errorprone.annotations;
   requires jdk.jshell;
+  requires com.google.googlejavaformat;
 }
