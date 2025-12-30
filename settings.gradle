@@ -16,7 +16,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = 'krystal'
+rootProject.name = 'Krystal'
 
 include 'code-coverage-report'
 include 'krystal-bom'
