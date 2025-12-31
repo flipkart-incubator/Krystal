@@ -13,7 +13,6 @@ import io.smallrye.mutiny.Uni;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.time.Duration;
 import lombok.extern.slf4j.Slf4j;
 import org.glassfish.jersey.server.ChunkedOutput;
@@ -29,7 +28,7 @@ public abstract class RestStreamingSample extends ComputeVajramDef<ChunkedOutput
 
   @Output
   static ChunkedOutput<String> streamBytes() {
-    ChunkedOutput<String> chunkedOutput = new ChunkedOutput<>(ByteBuffer.class);
+    ChunkedOutput<String> chunkedOutput = new ChunkedOutput<>(String.class);
     Multi.createBy()
         .repeating()
         .uni(

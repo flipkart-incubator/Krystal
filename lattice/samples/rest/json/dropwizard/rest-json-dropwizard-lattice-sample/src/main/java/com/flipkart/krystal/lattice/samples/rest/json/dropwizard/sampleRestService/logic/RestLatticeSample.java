@@ -22,8 +22,8 @@ import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * A sample vajram to demonstrate integration between grpc and vajrams. This vajram can be invoked
- * via a GRPC call by remote clients.
+ * A sample vajram to demonstrate integration between Rest and vajrams. This vajram can be invoked
+ * via a Rest call by remote clients.
  */
 @SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
 @InvocableOutsideGraph
@@ -61,7 +61,7 @@ public abstract class RestLatticeSample extends ComputeVajramDef<JsonResponse> {
   static class _InternalFacets {
     @Inject
     @IfAbsent(FAIL)
-    JsonResponse_Immut.Builder reponseBuilder;
+    JsonResponse_Immut.Builder responseBuilder;
   }
 
   @Output
@@ -74,8 +74,8 @@ public abstract class RestLatticeSample extends ComputeVajramDef<JsonResponse> {
       Long mandatoryLongInput,
       @Nullable ByteArray optionalByteString,
       ByteArray defaultByteString,
-      JsonResponse_Immut.Builder reponseBuilder) {
-    return reponseBuilder
+      JsonResponse_Immut.Builder responseBuilder) {
+    return responseBuilder
         .string(
             """
               Ding Ding Ding

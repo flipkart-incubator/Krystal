@@ -42,7 +42,7 @@ public abstract class RestHeadMappingLatticeSample extends ComputeVajramDef<Json
   static class _InternalFacets {
     @Inject
     @IfAbsent(FAIL)
-    JsonResponse_Immut.Builder reponseBuilder;
+    JsonResponse_Immut.Builder responseBuilder;
 
     @Inject
     @IfAbsent(FAIL)
@@ -55,7 +55,7 @@ public abstract class RestHeadMappingLatticeSample extends ComputeVajramDef<Json
       @Nullable String name,
       @Nullable String age,
       UriInfo uriInfo,
-      JsonResponse_Immut.Builder reponseBuilder) {
-    return reponseBuilder.string("").mandatoryInt(0)._build();
+      JsonResponse_Immut.Builder responseBuilder) {
+    return responseBuilder.string("").mandatoryInt(0)._build();
   }
 }

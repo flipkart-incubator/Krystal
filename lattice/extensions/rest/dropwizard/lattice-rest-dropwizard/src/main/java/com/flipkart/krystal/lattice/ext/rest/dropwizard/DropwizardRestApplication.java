@@ -21,7 +21,7 @@ public abstract class DropwizardRestApplication extends Application<Configuratio
   private final RestServiceDopantConfig restServiceDopantConfig;
   private final StaticKrystalGraphResource krystalGraphResource;
 
-  private Errable<Server> server = nil();
+  private volatile Errable<Server> server = nil();
 
   @Inject
   public DropwizardRestApplication(

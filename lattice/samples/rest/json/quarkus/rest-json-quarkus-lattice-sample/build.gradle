@@ -7,7 +7,7 @@ plugins {
 }
 
 application {
-    mainClass = 'com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.app.SampleRestfulLatticeApp_Impl'
+    mainClass = 'com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.app.RestfulQuarkusApp_Impl'
 }
 
 dependencies {
