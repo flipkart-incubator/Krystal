@@ -20,7 +20,6 @@ public abstract class DropwizardRestApplication extends Application<Configuratio
   private final RestServiceDopant restServiceDopant;
   private final RestServiceDopantConfig restServiceDopantConfig;
   private final StaticKrystalGraphResource krystalGraphResource;
-  private final FlowPublisherMessageBodyWriter flowPublisherMessageBodyWriter;
 
   private Errable<Server> server = nil();
 
@@ -28,12 +27,10 @@ public abstract class DropwizardRestApplication extends Application<Configuratio
   public DropwizardRestApplication(
       RestServiceDopant restServiceDopant,
       RestServiceDopantConfig restServiceDopantConfig,
-      StaticKrystalGraphResource krystalGraphResource,
-      FlowPublisherMessageBodyWriter flowPublisherMessageBodyWriter) {
+      StaticKrystalGraphResource krystalGraphResource) {
     this.restServiceDopant = restServiceDopant;
     this.restServiceDopantConfig = restServiceDopantConfig;
     this.krystalGraphResource = krystalGraphResource;
-    this.flowPublisherMessageBodyWriter = flowPublisherMessageBodyWriter;
   }
 
   @Override
@@ -47,7 +44,6 @@ public abstract class DropwizardRestApplication extends Application<Configuratio
     if (serveStaticKrystalGraph) {
       environment.jersey().register(krystalGraphResource);
     }
-    environment.jersey().register(flowPublisherMessageBodyWriter);
   }
 
   @SuppressWarnings("BusyWait")

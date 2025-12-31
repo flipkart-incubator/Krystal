@@ -24,12 +24,12 @@ import org.glassfish.jersey.server.ChunkedOutput;
 @SupportedModelProtocols({Json.class, PlainJavaObject.class})
 @Vajram
 @Produces(MediaType.TEXT_PLAIN)
-public abstract class RestStreamingSample extends ComputeVajramDef<ChunkedOutput<ByteBuffer>> {
+public abstract class RestStreamingSample extends ComputeVajramDef<ChunkedOutput<String>> {
   private static int count;
 
   @Output
-  static ChunkedOutput<ByteBuffer> streamBytes() {
-    ChunkedOutput<ByteBuffer> chunkedOutput = new ChunkedOutput<>(ByteBuffer.class);
+  static ChunkedOutput<String> streamBytes() {
+    ChunkedOutput<String> chunkedOutput = new ChunkedOutput<>(ByteBuffer.class);
     Multi.createBy()
         .repeating()
         .uni(
@@ -37,17 +37,24 @@ public abstract class RestStreamingSample extends ComputeVajramDef<ChunkedOutput
               long counter = count++;
               log.info("StreamingDirect.post {}", counter);
               return Uni.createFrom()
-                  .item(ByteBuffer.wrap((counter + ": All work and no play\n").getBytes()))
+                  .item(counter + ": All work and no play\n")
                   .onItem()
                   .delayIt()
-                  .by(Duration.ofSeconds(1));
+                  .by(Duration.ofMillis(10));
             })
         .atMost(1_000)
         .subscribe()
         .with(
-            byteBuffer -> {
+            string -> {
               try {
-                chunkedOutput.write(byteBuffer);
+                chunkedOutput.write(string);
+              } catch (IOException e) {
+                throw new RuntimeException(e);
+              }
+            },
+            () -> {
+              try {
+                chunkedOutput.close();
               } catch (IOException e) {
                 throw new RuntimeException(e);
               }
