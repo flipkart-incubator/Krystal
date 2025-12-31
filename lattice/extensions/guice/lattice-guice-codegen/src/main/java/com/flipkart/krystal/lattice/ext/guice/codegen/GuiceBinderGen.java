@@ -10,8 +10,8 @@ import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.codegen.spi.di.BindingsContainer;
 import com.flipkart.krystal.lattice.codegen.spi.di.DepInjectBinderGen;
 import com.flipkart.krystal.lattice.core.LatticeApplication;
-import com.flipkart.krystal.lattice.ext.guice.GuiceInjectionProvider;
-import com.flipkart.krystal.lattice.ext.guice.servlet.GuiceServletInjectionProvider;
+import com.flipkart.krystal.lattice.ext.guice.GuiceFramework;
+import com.flipkart.krystal.lattice.ext.guice.servlet.GuiceServletFramework;
 import com.google.auto.service.AutoService;
 import com.squareup.javapoet.CodeBlock;
 import java.util.List;
@@ -42,7 +42,7 @@ return new $guiceModuleBinder:T(
                 entry(
                     "customBinderCreator",
                     userDefinedDepInjectBinderMethod(context).isPresent()
-                        ? CodeBlock.of("super.getDependencyInjectionBinder().getRootModule(),")
+                        ? CodeBlock.of("super.getDependencyInjector().getRootModule(),")
                         : CodeBlock.builder().build()),
                 entry("guiceModuleBinder", getDependencyInjectionBinder(context)),
                 entry(
@@ -63,7 +63,7 @@ return new $guiceModuleBinder:T(
                     .getTypeUtils()
                     .asElement(
                         util.getTypeFromAnnotationMember(
-                            context.latticeApp()::dependencyInjectionBinder)));
+                            context.latticeApp()::dependencyInjectionFramework)));
     return dependencyInjectionBinder;
   }
 
@@ -79,13 +79,13 @@ return new $guiceModuleBinder:T(
                 .codeGenUtility()
                 .processingEnv()
                 .getElementUtils()
-                .getTypeElement(GuiceInjectionProvider.class.getCanonicalName()))
+                .getTypeElement(GuiceFramework.class.getCanonicalName()))
         || dependencyInjectionBinder.equals(
             context
                 .codeGenUtility()
                 .processingEnv()
                 .getElementUtils()
-                .getTypeElement(GuiceServletInjectionProvider.class.getCanonicalName()));
+                .getTypeElement(GuiceServletFramework.class.getCanonicalName()));
   }
 
   private Optional<ExecutableElement> userDefinedDepInjectBinderMethod(
@@ -94,9 +94,7 @@ return new $guiceModuleBinder:T(
     CodeGenUtility util = context.codeGenUtility().codegenUtil();
     try {
       return util.getMethod(
-          typeElement,
-          LatticeApplication.class.getMethod("getDependencyInjectionBinder").getName(),
-          0);
+          typeElement, LatticeApplication.class.getMethod("getDependencyInjector").getName(), 0);
     } catch (Exception e) {
       throw util.errorAndThrow(
           "Application class has no 'getDependencyInjectionBinder' method. "

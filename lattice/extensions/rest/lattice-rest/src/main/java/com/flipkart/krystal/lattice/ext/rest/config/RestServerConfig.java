@@ -3,7 +3,7 @@ package com.flipkart.krystal.lattice.ext.rest.config;
 import lombok.Builder;
 
 @Builder(toBuilder = true)
-public record RestServerConfig(String name) {
+public record RestServerConfig(String name, boolean serveStaticKrystalGraph) {
 
   public RestServerConfig {
     if (name == null) {

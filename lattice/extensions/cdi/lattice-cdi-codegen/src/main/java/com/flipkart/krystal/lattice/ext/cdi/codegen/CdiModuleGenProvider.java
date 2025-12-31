@@ -16,7 +16,7 @@ import com.flipkart.krystal.lattice.codegen.spi.di.BindingsContainer;
 import com.flipkart.krystal.lattice.codegen.spi.di.ImplTypeBinding;
 import com.flipkart.krystal.lattice.codegen.spi.di.NullBinding;
 import com.flipkart.krystal.lattice.codegen.spi.di.ProviderMethod;
-import com.flipkart.krystal.lattice.ext.cdi.CdiProvider;
+import com.flipkart.krystal.lattice.ext.cdi.CdiFramework;
 import com.google.auto.service.AutoService;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
@@ -82,7 +82,7 @@ public class CdiModuleGenProvider implements LatticeCodeGeneratorProvider {
                       .codeGenUtility()
                       .processingEnv()
                       .getElementUtils()
-                      .getTypeElement(CdiProvider.class.getCanonicalName()));
+                      .getTypeElement(CdiFramework.class.getCanonicalName()));
     }
 
     private List<MethodSpec> getProviderMethods(List<Binding> bindings) {

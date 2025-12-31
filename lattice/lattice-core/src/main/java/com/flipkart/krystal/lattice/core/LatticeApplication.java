@@ -10,7 +10,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.flipkart.krystal.lattice.core.di.DependencyInjectionProvider;
+import com.flipkart.krystal.lattice.core.di.DependencyInjectionFramework;
 import com.flipkart.krystal.lattice.core.di.InjectionValueProvider;
 import com.flipkart.krystal.lattice.core.doping.Dopant;
 import com.flipkart.krystal.lattice.core.doping.DopantConfig;
@@ -57,17 +57,17 @@ public abstract class LatticeApplication {
 
   private ImmutableList<String> args;
 
-  public abstract DependencyInjectionProvider getDependencyInjectionBinder();
+  public abstract DependencyInjectionFramework getDependencyInjector();
 
   @SuppressWarnings("unchecked")
-  public final int init(String[] args) throws Exception {
+  public final int run(String[] args) throws Exception {
     this.args = ImmutableList.copyOf(args);
 
-    DependencyInjectionProvider dependencyInjectionProvider = getDependencyInjectionBinder();
+    DependencyInjectionFramework dependencyInjectionFramework = getDependencyInjector();
 
     System.err.println("Lattice app args in APP: " + Arrays.deepToString(args));
 
-    InjectionValueProvider injector = dependencyInjectionProvider.getValueProvider();
+    InjectionValueProvider injector = dependencyInjectionFramework.getValueProvider();
     List<Dopant> dopants = injector.getInstance(LatticeDopantSet.class).valueOrThrow().dopants();
     for (Dopant<?, ?> dopant : dopants) {
       dopant.start(args);

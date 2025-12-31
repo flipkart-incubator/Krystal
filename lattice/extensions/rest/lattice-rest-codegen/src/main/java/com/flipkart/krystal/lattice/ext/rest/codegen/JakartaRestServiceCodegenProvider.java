@@ -199,7 +199,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
               .superclass(RestServiceDopant.class)
               .addMethod(
                   latticeCodegenUtils
-                      .dopantConstructorOverride(RestServiceDopant.class)
+                      .constructorOverride(RestServiceDopant.class)
                       .addModifiers(PUBLIC)
                       .build());
       if (!resourceClassNames.isEmpty()) {

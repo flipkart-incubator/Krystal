@@ -3,7 +3,7 @@ package com.flipkart.krystal.lattice.krystex;
 import static com.flipkart.krystal.lattice.krystex.KrystexDopant.DOPANT_TYPE;
 
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
-import com.flipkart.krystal.lattice.core.di.DependencyInjectionProvider;
+import com.flipkart.krystal.lattice.core.di.DependencyInjectionFramework;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
 import com.flipkart.krystal.lattice.core.doping.SimpleDopantSpec;
 import com.flipkart.krystal.lattice.core.doping.SimpleDopantSpecBuilder;
@@ -32,15 +32,15 @@ public record KrystexDopantSpec(
       @Nullable KrystexGraphBuilder krystexGraphBuilder,
       @Singular("configureExecutorWith")
           ImmutableList<KryonExecutorConfigurator> configureExecutorWith,
-      DependencyInjectionProvider dependencyInjectionProvider,
+      DependencyInjectionFramework dependencyInjectionFramework,
       @Singular("buildKrystexGraphWith") List<Consumer<KrystexGraphBuilder>> buildKrystexGraphWith,
       @Nullable List<TraitDispatchPolicy> traitDispatchPolicies,
       BatchingConfigurator batchingConfigurator) {
     KrystexGraphBuilder kGraphBuilder =
         krystexGraphBuilder != null ? krystexGraphBuilder : KrystexGraph.builder();
-    if (dependencyInjectionProvider != null) {
+    if (dependencyInjectionFramework != null) {
       VajramInjectionProvider vajramInjectionProvider =
-          dependencyInjectionProvider.toVajramInjectionProvider();
+          dependencyInjectionFramework.toVajramInjectionProvider();
       if (vajramInjectionProvider != null) {
         kGraphBuilder.injectionProvider(vajramInjectionProvider);
       }

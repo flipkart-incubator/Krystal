@@ -1,8 +1,9 @@
 dependencies {
-    implementation project(':krystal-codegen-common')
-    implementation project(':lattice:lattice-codegen')
-    implementation project(':lattice:lattice-core')
-    implementation project(':vajram:extensions:json:vajram-json')
+    api project(':vajram:extensions:json:vajram-json-codegen')
+    api project(':krystal-codegen-common')
+    api project(':lattice:lattice-codegen')
+    api project(':lattice:lattice-core')
+    api project(':vajram:extensions:json:vajram-json')
 
     implementation 'com.squareup:javapoet'
 }

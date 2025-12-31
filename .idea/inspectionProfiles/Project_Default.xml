@@ -487,6 +487,7 @@
           <option value="BooleanMethodIsAlwaysInverted" />
           <option value="ConstantValue" />
           <option value="argument" />
+          <option value="BusyWait" />
         </list>
       </option>
     </inspection_tool>

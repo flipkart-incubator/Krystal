@@ -7,7 +7,7 @@ plugins {
 }
 
 application {
-    mainClass = 'com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.app.SampleGrpcLatticeApp_Impl'
+    mainClass = 'com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.app.GrpcApp_Impl'
 }
 
 dependencies {

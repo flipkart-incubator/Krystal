@@ -5,7 +5,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.lattice.core.di.Bindings;
-import com.flipkart.krystal.lattice.core.di.DependencyInjectionProvider;
+import com.flipkart.krystal.lattice.core.di.DependencyInjectionFramework;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
 import com.flipkart.krystal.lattice.core.doping.DopantWithConfig;
 import com.flipkart.krystal.pooling.Lease;
@@ -25,7 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 @DopantType(DOPANT_TYPE)
 public final class ThreadingStrategyDopant implements DopantWithConfig<ThreadingStrategyConfig> {
   public static final String DOPANT_TYPE = "krystal.lattice.threadingStrategy";
-  private final DependencyInjectionProvider binder;
+  private final DependencyInjectionFramework binder;
   private final ThreadingStrategy threadingStrategy;
 
   private final SingleThreadExecutorsPool executorPool;
@@ -35,7 +35,7 @@ public final class ThreadingStrategyDopant implements DopantWithConfig<Threading
   ThreadingStrategyDopant(
       ThreadingStrategySpec spec,
       ThreadingStrategyConfig config,
-      DependencyInjectionProvider binder) {
+      DependencyInjectionFramework binder) {
     requireNonNull(
         config,
         "Configuration is mandatory for dopant '"

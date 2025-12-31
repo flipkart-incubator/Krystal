@@ -48,16 +48,16 @@ public class LatticeCodegenUtils {
             + DOPANT_IMPL_SUFFIX);
   }
 
-  public MethodSpec.Builder dopantConstructorOverride(Class<? extends Dopant<?, ?>> dopantClass) {
-    TypeElement dopantElement =
+  public MethodSpec.Builder constructorOverride(Class<?> clazz) {
+    TypeElement clazzElement =
         requireNonNull(
             util.processingEnv()
                 .getElementUtils()
-                .getTypeElement(requireNonNull(dopantClass.getCanonicalName())));
+                .getTypeElement(requireNonNull(clazz.getCanonicalName())));
 
     List<ExecutableElement> injectionCtors = new ArrayList<>();
     ExecutableElement noArgCtor = null;
-    for (Element element : dopantElement.getEnclosedElements()) {
+    for (Element element : clazzElement.getEnclosedElements()) {
       if (!isVisible(element)) {
         continue;
       }
@@ -74,9 +74,9 @@ public class LatticeCodegenUtils {
     ExecutableElement parentCtor;
     if (injectionCtors.size() > 1 || (injectionCtors.isEmpty() && noArgCtor == null)) {
       throw util.errorAndThrow(
-          "A dopant must have exactly one public/protected constructor with the @Inject annotation OR a public/protected no arg constructor. Please fix :"
-              + dopantClass,
-          dopantElement);
+          "A class which needs to be overriden must have exactly one public/protected constructor with the @Inject annotation OR a public/protected no arg constructor. Please fix :"
+              + clazz,
+          clazzElement);
     }
     if (!injectionCtors.isEmpty()) {
       parentCtor = injectionCtors.get(0);

@@ -21,7 +21,7 @@ dependencies {
     compileOnly "org.projectlombok:lombok:$lombok_version"
     annotationProcessor "org.projectlombok:lombok:$lombok_version"
 
-    implementation 'org.slf4j:slf4j-api:2.0.11'
+    implementation 'org.slf4j:slf4j-api:2.0.13'
 
     implementation project(':vajram:extensions:json:vajram-json')
     implementation 'com.fasterxml.jackson.core:jackson-annotations'

@@ -137,6 +137,10 @@ public abstract class RestServiceDopant implements Dopant<RestService, RestServi
     return seeds.build();
   }
 
+  public List<? extends @NonNull Object> allApplicationResources() {
+    return declaredApplicationResources();
+  }
+
   protected List<? extends @NonNull Object> declaredApplicationResources() {
     return List.of();
   }

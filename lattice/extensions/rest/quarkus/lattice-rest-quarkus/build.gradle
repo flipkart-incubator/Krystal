@@ -8,7 +8,6 @@ dependencies {
 
     implementation 'jakarta.ws.rs:jakarta.ws.rs-api'
     implementation 'io.quarkus:quarkus-rest'
-    implementation project(':vajram:extensions:json:vajram-json')
 }
 
 extraJavaModuleInfo {
