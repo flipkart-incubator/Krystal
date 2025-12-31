@@ -1,10 +1,18 @@
 dependencies {
-    implementation project(':krystal-codegen-common')
+    implementation platform('ru.vyarus.guicey:guicey-bom:8.0.0')
+
     implementation project(':lattice:extensions:rest:lattice-rest-codegen')
+    implementation project(':lattice:extensions:rest:dropwizard:lattice-rest-dropwizard')
+
+    implementation project(':krystal-codegen-common')
     implementation project(':lattice:lattice-codegen')
     implementation project(':vajram:extensions:json:vajram-json')
+    implementation project(':lattice:extensions:guice:lattice-guice')
 
-    implementation 'io.dropwizard:dropwizard-core:4.0.15'
+    implementation 'jakarta.ws.rs:jakarta.ws.rs-api'
+
+    implementation 'io.dropwizard:dropwizard-core:5.0.0'
+    implementation 'ru.vyarus:dropwizard-guicey'
 }
 
 extraJavaModuleInfo {

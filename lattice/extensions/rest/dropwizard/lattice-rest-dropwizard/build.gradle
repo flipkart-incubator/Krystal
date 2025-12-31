@@ -1,0 +1,13 @@
+dependencies {
+    api project(':lattice:extensions:rest:lattice-rest')
+    api project(':lattice:extensions:rest:lattice-rest-api')
+
+    api 'io.dropwizard:dropwizard-core:5.0.0'
+    api 'jakarta.ws.rs:jakarta.ws.rs-api'
+
+    implementation 'io.smallrye.reactive:mutiny'
+}
+
+extraJavaModuleInfo {
+    failOnMissingModuleInfo = false
+}

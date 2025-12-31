@@ -3,6 +3,7 @@ package com.flipkart.krystal.lattice.ext.rest.visualization;
 import static com.flipkart.krystal.visualization.StaticCallGraphGenerator.generateStaticCallGraphContent;
 
 import com.flipkart.krystal.lattice.krystex.KrystexDopant;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
@@ -14,6 +15,7 @@ public class StaticKrystalGraphResource {
 
   private final KrystexDopant krystexDopant;
 
+  @Inject
   public StaticKrystalGraphResource(KrystexDopant krystexDopant) {
     this.krystexDopant = krystexDopant;
   }

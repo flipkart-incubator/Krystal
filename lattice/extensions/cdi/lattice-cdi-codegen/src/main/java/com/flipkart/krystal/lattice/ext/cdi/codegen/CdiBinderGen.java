@@ -6,7 +6,7 @@ import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.codegen.spi.di.DepInjectBinderGen;
 import com.flipkart.krystal.lattice.core.LatticeApplication;
-import com.flipkart.krystal.lattice.ext.cdi.CdiProvider;
+import com.flipkart.krystal.lattice.ext.cdi.CdiFramework;
 import com.google.auto.service.AutoService;
 import com.squareup.javapoet.CodeBlock;
 import java.util.Optional;
@@ -37,7 +37,7 @@ public final class CdiBinderGen implements DepInjectBinderGen {
                     .getTypeUtils()
                     .asElement(
                         util.getTypeFromAnnotationMember(
-                            context.latticeApp()::dependencyInjectionBinder)));
+                            context.latticeApp()::dependencyInjectionFramework)));
     return dependencyInjectionBinder;
   }
 
@@ -50,9 +50,9 @@ public final class CdiBinderGen implements DepInjectBinderGen {
                     .codeGenUtility()
                     .processingEnv()
                     .getElementUtils()
-                    .getTypeElement(CdiProvider.class.getCanonicalName()));
+                    .getTypeElement(CdiFramework.class.getCanonicalName()));
     if (isCdiApp) {
-      userDefinedDepInjectBinderMethod(context)
+      userDefinedDepInjectorMethod(context)
           .ifPresent(
               userDefinedDepInjectBinderMethod ->
                   context
@@ -65,15 +65,12 @@ public final class CdiBinderGen implements DepInjectBinderGen {
     return isCdiApp;
   }
 
-  private Optional<ExecutableElement> userDefinedDepInjectBinderMethod(
-      LatticeCodegenContext context) {
+  private Optional<ExecutableElement> userDefinedDepInjectorMethod(LatticeCodegenContext context) {
     TypeElement typeElement = context.latticeAppTypeElement();
     CodeGenUtility util = context.codeGenUtility().codegenUtil();
     try {
       return util.getMethod(
-          typeElement,
-          LatticeApplication.class.getMethod("getDependencyInjectionBinder").getName(),
-          0);
+          typeElement, LatticeApplication.class.getMethod("getDependencyInjector").getName(), 0);
     } catch (Exception e) {
       throw util.errorAndThrow(
           "LatticeApplication.class has no 'getDependencyInjectionBinder' method. "

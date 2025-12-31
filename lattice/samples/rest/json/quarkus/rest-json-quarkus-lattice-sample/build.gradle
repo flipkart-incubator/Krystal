@@ -1,0 +1,69 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'com.flipkart.krystal' version "${krystal_version}"
+    id 'com.flipkart.java.code.standard' version "${java_code_std_version}"
+    id 'io.quarkus' version "${quarkus_version}"
+}
+
+application {
+    mainClass = 'com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.app.SampleRestfulLatticeApp_Impl'
+}
+
+dependencies {
+    /** START: Lattice dependencies **/
+
+    implementation platform("com.flipkart.krystal:lattice-bom:${lattice_version}")
+    implementation platform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
+    krystalModelsGenProcessor platform("com.flipkart.krystal:lattice-bom:${lattice_version}")
+
+    implementation 'com.flipkart.krystal:lattice-core'
+    implementation 'com.flipkart.krystal:lattice-cdi'
+    implementation 'com.flipkart.krystal:lattice-rest-quarkus'
+    implementation 'com.flipkart.krystal:vajram-json'
+    implementation 'com.flipkart.krystal:vajram-java-sdk'
+    implementation 'io.quarkus:quarkus-smallrye-context-propagation'
+
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:lattice-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:lattice-cdi-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-json-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:lattice-json-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:lattice-rest-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:lattice-rest-quarkus-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:lattice-quarkus-arc-codegen'
+
+    testImplementation 'com.flipkart.krystal:vajram-krystex'
+
+    /** END: Lattice dependencies **/
+
+    runtimeOnly 'jakarta.servlet:jakarta.servlet-api'
+
+    implementation 'jakarta.inject:jakarta.inject-api'
+
+    compileOnly "org.projectlombok:lombok:$lombok_version"
+    compileOnly 'com.google.auto.value:auto-value-annotations:1.11.0'
+    annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+    implementation platform('org.assertj:assertj-bom:3.25.2')
+    testImplementation 'org.assertj:assertj-core'
+}
+
+extraJavaModuleInfo {
+    failOnMissingModuleInfo = false
+}
+
+configurations {
+    krystalModelsGenProcessorPath {
+        attributes {
+            attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.class, Category.LIBRARY));
+            attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.class, Usage.JAVA_RUNTIME));
+            attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.class, LibraryElements.JAR));
+            attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling.class, Bundling.EXTERNAL));
+            attribute(TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE, objects.named(TargetJvmEnvironment.class, TargetJvmEnvironment.STANDARD_JVM));
+        }
+    }
+}
+

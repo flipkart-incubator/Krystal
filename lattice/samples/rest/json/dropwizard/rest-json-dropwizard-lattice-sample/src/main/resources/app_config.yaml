@@ -1,0 +1,9 @@
+dopants:
+  - krystal.lattice.threadingStrategy:
+      maxApplicationThreads: 400
+  - krystal.lattice.restService:
+      applicationServer:
+        name: rest-json-lattice-sample-application
+        serveStaticKrystalGraph: true
+  - krystal.lattice.DropwizardServerDopant:
+      args: [ /Users/ram.anvesh/Personal/codebase/flipkart-incubator/Krystal/lattice/samples/rest/json/dropwizard/rest-json-dropwizard-lattice-sample/src/main/resources/dw_config.yaml ]

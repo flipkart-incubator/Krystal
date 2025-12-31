@@ -7,7 +7,7 @@ dependencies {
     jacocoAggregation project(':vajram:vajram-samples')
     jacocoAggregation project(':vajram:vajram-krystex')
     jacocoAggregation project(':lattice:samples:grpc-proto3-lattice-sample')
-    jacocoAggregation project(':lattice:samples:rest-json-lattice-sample')
+    jacocoAggregation project(':lattice:samples:rest:json:quarkus:rest-json-quarkus-lattice-sample')
 }
 
 reporting {

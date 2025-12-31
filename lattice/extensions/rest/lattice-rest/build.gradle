@@ -4,7 +4,7 @@ plugins {
 
 dependencies {
     implementation project(':lattice:extensions:rest:lattice-rest-api')
-    implementation project(':lattice:lattice-core')
+    api project(':lattice:lattice-core')
     implementation project(':vajram:vajram-java-sdk')
     implementation project(':krystal-visualization')
 

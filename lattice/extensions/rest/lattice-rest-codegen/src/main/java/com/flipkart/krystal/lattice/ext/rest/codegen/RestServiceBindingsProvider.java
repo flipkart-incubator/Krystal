@@ -7,19 +7,14 @@ import com.flipkart.krystal.lattice.codegen.spi.di.BindingsContainer;
 import com.flipkart.krystal.lattice.codegen.spi.di.BindingsProvider;
 import com.flipkart.krystal.lattice.codegen.spi.di.ImplTypeBinding;
 import com.flipkart.krystal.lattice.codegen.spi.di.NullBinding;
-import com.flipkart.krystal.lattice.core.headers.Header;
-import com.flipkart.krystal.lattice.core.headers.StandardHeaderNames;
 import com.flipkart.krystal.lattice.ext.rest.RestService;
 import com.flipkart.krystal.lattice.ext.rest.RestServiceDopant;
-import com.flipkart.krystal.tags.Names;
 import com.google.auto.service.AutoService;
 import com.google.common.collect.ImmutableList;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.CodeBlock;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.context.RequestScoped;
-import jakarta.inject.Named;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.UriInfo;
 import javax.lang.model.element.TypeElement;
@@ -36,10 +31,7 @@ public final class RestServiceBindingsProvider implements BindingsProvider {
     return ImmutableList.of(
         new BindingsContainer(
             ImmutableList.of(
-                restServerDopantBinding(context),
-                httpHeadersBinding(),
-                uriInfoBinding(),
-                bindAcceptHeaderInRequestScope())));
+                restServerDopantBinding(context), httpHeadersBinding(), uriInfoBinding())));
   }
 
   private ImplTypeBinding restServerDopantBinding(LatticeCodegenContext context) {
@@ -66,16 +58,6 @@ public final class RestServiceBindingsProvider implements BindingsProvider {
         ClassName.get(UriInfo.class),
         null,
         null,
-        AnnotationSpec.builder(RequestScoped.class).build());
-  }
-
-  private static Binding bindAcceptHeaderInRequestScope() {
-    return new NullBinding(
-        ClassName.get(Header.class),
-        CodeBlock.of("$T.$L($T.$L)", Names.class, "named", StandardHeaderNames.class, "ACCEPT"),
-        AnnotationSpec.builder(Named.class)
-            .addMember("value", "$L", CodeBlock.of("$T.$L", StandardHeaderNames.class, "ACCEPT"))
-            .build(),
         AnnotationSpec.builder(RequestScoped.class).build());
   }
 }

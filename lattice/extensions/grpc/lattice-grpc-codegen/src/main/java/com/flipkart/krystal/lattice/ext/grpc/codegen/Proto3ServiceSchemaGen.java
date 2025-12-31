@@ -9,6 +9,7 @@ import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants
 import static java.util.Arrays.deepToString;
 import static java.util.Objects.requireNonNull;
 
+import com.flipkart.krystal.codegen.common.models.CodeGenUtility.AnnotationInfo;
 import com.flipkart.krystal.codegen.common.models.CodeValidationException;
 import com.flipkart.krystal.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
@@ -26,18 +27,16 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
-import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.SimpleAnnotationValueVisitor14;
 import javax.tools.Diagnostic.Kind;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 /**
  * Code generator which generates protobuf schema for a request proto containing the input facets of
@@ -62,41 +61,26 @@ class Proto3ServiceSchemaGen implements CodeGenerator {
       return;
     }
     util.codegenUtil().note("Starting proto service schema gen");
-    GrpcServerAnno grpcServer = getGrpcServer();
+    AnnotationInfo<GrpcServer> grpcServer =
+        context
+            .codeGenUtility()
+            .codegenUtil()
+            .getAnnotationInfo(context.latticeAppTypeElement(), GrpcServer.class);
     if (grpcServer == null) {
-      util.codegenUtil().note("Grpc Server is null");
+      util.codegenUtil().note("grpc Server is null");
       return;
     }
     validate(grpcServer);
-    generateServerFile(grpcServer.grpcServer());
+    generateServerFile(grpcServer.annotation());
   }
-
-  private @Nullable GrpcServerAnno getGrpcServer() {
-    TypeElement latticeAppType = context.latticeAppTypeElement();
-    GrpcServer grpcServer = latticeAppType.getAnnotation(GrpcServer.class);
-    Optional<? extends AnnotationMirror> mirror =
-        latticeAppType.getAnnotationMirrors().stream()
-            .filter(
-                annotationMirror ->
-                    annotationMirror.getAnnotationType().asElement() instanceof QualifiedNameable q
-                        && q.getQualifiedName().contentEquals(GrpcServer.class.getCanonicalName()))
-            .findAny();
-    if (grpcServer != null && mirror.isPresent()) {
-      return new GrpcServerAnno(grpcServer, mirror.get());
-    }
-
-    return null;
-  }
-
-  record GrpcServerAnno(GrpcServer grpcServer, AnnotationMirror mirror) {}
 
   /** Validates the Vajram for protobuf compatibility. Throws exceptions if validations fail. */
-  void validate(GrpcServerAnno anno) throws CodeValidationException {
+  void validate(@MonotonicNonNull AnnotationInfo<GrpcServer> anno) throws CodeValidationException {
     Map<String, ? extends AnnotationValue> elementValues =
         anno.mirror().getElementValues().entrySet().stream()
             .collect(Collectors.toMap(e -> e.getKey().getSimpleName().toString(), Entry::getValue));
-    if (anno.grpcServer().serverName().isEmpty()) {
-      String message = "Grpc serverName cannot be empty";
+    if (anno.annotation().serverName().isEmpty()) {
+      String message = "grpc serverName cannot be empty";
       util.processingEnv()
           .getMessager()
           .printMessage(
@@ -108,9 +92,9 @@ class Proto3ServiceSchemaGen implements CodeGenerator {
       throw new CodeValidationException(message);
     }
 
-    GrpcService[] grpcServices = anno.grpcServer().services();
+    GrpcService[] grpcServices = anno.annotation().services();
     if (grpcServices.length == 0) {
-      String message = "No Services registered with the Grpc server. This is not allowed";
+      String message = "No Services registered with the grpc server. This is not allowed";
       util.processingEnv()
           .getMessager()
           .printMessage(
@@ -147,7 +131,7 @@ class Proto3ServiceSchemaGen implements CodeGenerator {
       String serviceName = grpcService.serviceName();
       AnnotationMirror serviceAnnoMirror = list.get(i);
       if (serviceName.isEmpty()) {
-        String message = "Grpc Service name cannot be empty";
+        String message = "grpc Service name cannot be empty";
         util.processingEnv()
             .getMessager()
             .printMessage(

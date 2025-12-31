@@ -83,7 +83,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
 
       classBuilder.addMethod(
           latticeCodegenUtils
-              .dopantConstructorOverride(GrpcServerDopant.class)
+              .constructorOverride(GrpcServerDopant.class)
               .addModifiers(PUBLIC)
               .build());
       serviceDefinitions(grpcServer, classBuilder);

@@ -32,7 +32,6 @@ import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec.Builder;
-import jakarta.enterprise.inject.Vetoed;
 import jakarta.inject.Singleton;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -82,7 +81,6 @@ public class GuiceModuleGenProvider implements LatticeCodeGeneratorProvider {
                     latticeAppTypeElement.getQualifiedName().toString())
                 .addModifiers(PUBLIC)
                 // Add vetoed to prevent jakarta CDI from picking up the producer methods
-                .addAnnotation(Vetoed.class)
                 .superclass(AbstractModule.class)
                 .addMethod(
                     MethodSpec.overriding(

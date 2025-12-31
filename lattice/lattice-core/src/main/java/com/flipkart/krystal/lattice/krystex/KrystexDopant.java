@@ -6,7 +6,7 @@ import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.lattice.core.di.Bindings;
-import com.flipkart.krystal.lattice.core.di.DependencyInjectionProvider;
+import com.flipkart.krystal.lattice.core.di.DependencyInjectionFramework;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
 import com.flipkart.krystal.lattice.core.doping.SimpleDopant;
 import com.flipkart.krystal.lattice.core.execution.ThreadingStrategyDopant;
@@ -45,13 +45,13 @@ public final class KrystexDopant implements SimpleDopant {
   @Inject
   public KrystexDopant(
       KrystexDopantSpec krystexDopantSpec,
-      DependencyInjectionProvider dependencyInjectionProvider,
+      DependencyInjectionFramework dependencyInjectionFramework,
       VajramDopant vajramDopant,
       ThreadingStrategyDopant threadingStrategyDopant) {
     this.krystexDopantSpec = krystexDopantSpec;
     this.threadingStrategyDopant = threadingStrategyDopant;
     KrystexGraphBuilder krystexGraphBuilder = krystexDopantSpec.krystexGraphBuilder();
-    krystexGraphBuilder.injectionProvider(dependencyInjectionProvider.toVajramInjectionProvider());
+    krystexGraphBuilder.injectionProvider(dependencyInjectionFramework.toVajramInjectionProvider());
     this.executableGraph = krystexGraphBuilder.vajramGraph(vajramDopant.vajramGraph()).build();
   }
 

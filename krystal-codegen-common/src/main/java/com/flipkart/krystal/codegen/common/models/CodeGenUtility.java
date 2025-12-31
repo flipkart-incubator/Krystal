@@ -40,6 +40,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -58,6 +59,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.AnnotatedConstruct;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -461,12 +463,13 @@ public class CodeGenUtility {
 
   private static String getCallerInfo() {
     StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-
-    // stackTrace[0] = Thread.getStackTrace()
-    // stackTrace[1] = CodeGenUtility.getCallerInfo()
-    // stackTrace[2] = a private util method (_note/_error)
-    // stackTrace[3] = a public util method
-    // stackTrace[4 and above] = the actual callers
+    /*
+    stackTrace[0] = Thread.getStackTrace()
+    stackTrace[1] = CodeGenUtility.getCallerInfo()
+    stackTrace[2] = a private util method (_note/_error)
+    stackTrace[3] = a public util method
+    stackTrace[4 and above] = the actual callers
+    */
     if (stackTrace.length > 4) {
       StringBuilder callerInfo = new StringBuilder();
       for (int i = Math.min(5, stackTrace.length - 1); i >= 4; i--) {
@@ -897,4 +900,22 @@ public class CodeGenUtility {
           "If there are type names, the TypeName should be a ClassName");
     }
   }
+
+  public <T extends Annotation> @Nullable AnnotationInfo<T> getAnnotationInfo(
+      AnnotatedConstruct annotatedElement, Class<T> annoClass) {
+    T annotation = annotatedElement.getAnnotation(annoClass);
+    Optional<? extends AnnotationMirror> mirror =
+        annotatedElement.getAnnotationMirrors().stream()
+            .filter(
+                annotationMirror ->
+                    annotationMirror.getAnnotationType().asElement() instanceof QualifiedNameable q
+                        && q.getQualifiedName().contentEquals(annoClass.getCanonicalName()))
+            .findAny();
+    if (annotation != null && mirror.isPresent()) {
+      return new AnnotationInfo<>(annotation, mirror.get());
+    }
+    return null;
+  }
+
+  public record AnnotationInfo<T>(T annotation, AnnotationMirror mirror) {}
 }

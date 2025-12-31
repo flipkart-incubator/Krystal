@@ -8,7 +8,7 @@ import com.flipkart.krystal.lattice.core.LatticeApplication;
 import com.flipkart.krystal.lattice.core.doping.DopeWith;
 import com.flipkart.krystal.lattice.core.execution.ThreadingStrategySpec;
 import com.flipkart.krystal.lattice.core.execution.ThreadingStrategySpec.ThreadingStrategySpecBuilder;
-import com.flipkart.krystal.lattice.ext.cdi.CdiProvider;
+import com.flipkart.krystal.lattice.ext.cdi.CdiFramework;
 import com.flipkart.krystal.lattice.ext.quarkus.app.QuarkusApplicationSpec;
 import com.flipkart.krystal.lattice.ext.quarkus.app.QuarkusApplicationSpec.QuarkusApplicationSpecBuilder;
 import com.flipkart.krystal.lattice.ext.rest.RestService;
@@ -28,7 +28,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.traits.DefaultTraitDispatcher
 
 @LatticeApp(
     description = "A sample graphql server on rest+json",
-    dependencyInjectionBinder = CdiProvider.class)
+    dependencyInjectionFramework = CdiFramework.class)
 @RestService(resourceVajrams = HttpPostGraphQl.class)
 public abstract class SampleGraphQlServerApp extends LatticeApplication {
 

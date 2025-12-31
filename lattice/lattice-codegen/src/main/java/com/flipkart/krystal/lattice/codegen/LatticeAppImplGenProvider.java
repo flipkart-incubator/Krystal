@@ -2,7 +2,6 @@ package com.flipkart.krystal.lattice.codegen;
 
 import static com.flipkart.krystal.lattice.codegen.LatticeCodegenUtils.LATTICE_APP_IMPL_SUFFIX;
 import static com.squareup.javapoet.TypeName.VOID;
-import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
@@ -103,13 +102,12 @@ public final class LatticeAppImplGenProvider implements LatticeCodeGeneratorProv
               .addAnnotations(getTypeAnnotations())
               .addMethod(
                   MethodSpec.overriding(
-                          requireNonNull(
-                              util.getMethod(
-                                  LatticeApplication.class, "getDependencyInjectionBinder", 0)))
+                          util.getMethod(
+                              () -> LatticeApplication.class.getMethod("getDependencyInjector")))
                       .returns(
                           TypeName.get(
                               util.getTypeFromAnnotationMember(
-                                  context.latticeApp()::dependencyInjectionBinder)))
+                                  context.latticeApp()::dependencyInjectionFramework)))
                       .addCode("$L", depInjectBinderGen.getBinderCreationCode(context))
                       .build());
 
@@ -161,7 +159,7 @@ public final class LatticeAppImplGenProvider implements LatticeCodeGeneratorProv
             .addParameter(ParameterSpec.builder(String[].class, "_args").build())
             .addException(Exception.class)
             .addNamedCode(
-                "$system:T.exit(new $implClass:T().init(_args));",
+                "$system:T.exit(new $implClass:T().run(_args));",
                 Map.of("system", System.class, "implClass", latticeAppImplClassName))
             .build();
       }
