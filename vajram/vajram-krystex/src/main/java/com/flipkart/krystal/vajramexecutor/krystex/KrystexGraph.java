@@ -29,6 +29,10 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+/**
+ * A directed acyclic graph which encapsulates a {@link VajramGraph} and adds the ability to create
+ * executors which can execute vajrams in the graph.
+ */
 @Slf4j
 public final class KrystexGraph {
 
