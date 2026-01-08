@@ -21,9 +21,9 @@ import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.serial.SerdeProtocol;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlInputJson;
-import com.flipkart.krystal.vajram.graphql.api.model.SerializableGQlInputJsonModel;
 import com.flipkart.krystal.vajram.json.Json;
 import com.google.common.base.Suppliers;
 import com.squareup.javapoet.AnnotationSpec;
@@ -207,7 +207,14 @@ final class GraphQlInputJsonModelGen implements CodeGenerator {
     return classBuilder
         .addModifiers(PUBLIC, FINAL)
         .addSuperinterface(immutableModelName)
-        .addSuperinterface(SerializableGQlInputJsonModel.class)
+        .addSuperinterface(SerializableModel.class)
+        .addMethod(
+            MethodSpec.methodBuilder("_serdeProtocol")
+                .addAnnotation(Override.class)
+                .addModifiers(PUBLIC)
+                .returns(SerdeProtocol.class)
+                .addStatement("return $T.INSTANCE", GraphQlInputJson.class)
+                .build())
         .addMethod(
             // Add constructor accepting pojo
             MethodSpec.constructorBuilder()

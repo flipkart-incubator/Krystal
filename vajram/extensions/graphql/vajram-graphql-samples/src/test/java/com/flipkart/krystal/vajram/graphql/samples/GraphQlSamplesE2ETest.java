@@ -1,7 +1,5 @@
 package com.flipkart.krystal.vajram.graphql.samples;
 
-import static com.flipkart.krystal.vajram.graphql.samples.order.GetOrderSummary.UNIX_EPOCH_DATE;
-import static com.flipkart.krystal.vajram.graphql.samples.order.GetOrderSummary.UNIX_EPOCH_DATE_TIME;
 import static com.flipkart.krystal.vajramexecutor.krystex.traits.PredicateDispatchUtil.dispatchTrait;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.fail;
@@ -309,21 +307,8 @@ public class GraphQlSamplesE2ETest {
 
     // Verify data is present
     Object data = executionResult.getData();
-    assertThat(data).isInstanceOf(QueryType.class);
-    QueryType queryType = (QueryType) data;
-
-    Order order = requireNonNull(queryType.order());
-    Dummy dummy = requireNonNull(queryType.dummy());
-    Order mostRecentOrder = requireNonNull(queryType.mostRecentOrder());
-    assertThat(order.orderItemNames()).isEqualTo(List.of("order1_1", "order1_2"));
-    assertThat(order.nameString()).isEqualTo("testOrderName");
-    assertThat(order.__typename()).isEqualTo("Order");
-    assertThat(order.orderItemsCount()).isEqualTo(Long.MAX_VALUE);
-    assertThat(order.orderPlacedAt()).isEqualTo(UNIX_EPOCH_DATE_TIME);
-    assertThat(order.orderAcceptDate()).isEqualTo(UNIX_EPOCH_DATE);
-    assertThat(dummy.__typename()).isEqualTo("Dummy");
-    assertThat(mostRecentOrder.orderItemNames())
-        .isEqualTo(List.of("MostRecentOrderOf_user1_1", "MostRecentOrderOf_user1_2"));
+    assertThat(data).isInstanceOf(Query.class);
+    Query query = (Query) data;
 
     // Print output
     System.out.println("=== OUTPUT (GraphQL Response) ===");
@@ -333,21 +318,17 @@ public class GraphQlSamplesE2ETest {
             .writeValueAsString(executionResult.toSpecification()));
     System.out.println();
 
-    // The data might be a Map or Query object depending on execution
-    if (data != null && data instanceof Query query) {
-      Seller seller = query.sellerDetails();
-      if (seller != null) {
-        // Verify seller response structure
-        assertThat(seller.__typename()).isEqualTo("Seller");
-        assertThat(seller.id()).isNotNull();
-        assertThat(seller.name()).isNotNull();
-        assertThat(seller.rating()).isNotNull();
-        assertThat(seller.totalSales()).isNotNull();
-        assertThat(seller.activeOrders()).isNotNull();
-        assertThat(seller.status()).isNotNull();
-        assertThat(seller.createdDate()).isNotNull();
-      }
-    }
+    // Verify seller response structure
+    Seller seller = query.sellerDetails();
+    assertThat(seller).isNotNull();
+    assertThat(seller.__typename()).isEqualTo("Seller");
+    assertThat(seller.id()).isNotNull();
+    assertThat(seller.name()).isNotNull();
+    assertThat(seller.rating()).isNotNull();
+    assertThat(seller.totalSales()).isNotNull();
+    assertThat(seller.activeOrders()).isNotNull();
+    assertThat(seller.status()).isNotNull();
+    assertThat(seller.createdDate()).isNotNull();
     // If data is in a different format or null, at least verify SellerInput was accepted (no
     // errors)
     // The important part is that the query executed without errors, meaning SellerInput was

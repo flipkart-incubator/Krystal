@@ -42,8 +42,6 @@ public final class GraphQlLoader {
   public GraphQlLoader() {}
 
   public GraphQL loadGraphQl(TypeDefinitionRegistry typeDefinitionRegistry) {
-    // Extract root package name from schema
-    String rootPackageName = extractRootPackageName(typeDefinitionRegistry);
 
     RuntimeWiring.Builder runtimeWiring = RuntimeWiring.newRuntimeWiring();
     runtimeWiring.scalar(ExtendedScalars.Object);

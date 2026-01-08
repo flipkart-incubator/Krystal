@@ -1,38 +1,19 @@
 package com.flipkart.krystal.vajram.graphql.api.schema;
 
-import static com.flipkart.krystal.vajram.graphql.api.model.GraphQlInputJson.INSTANCE;
-
 import graphql.schema.idl.TypeDefinitionRegistry;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * Registry for mapping GraphQL input type names to their corresponding Java classes.
+ * Abstract base class for mapping GraphQL input type names to their corresponding Java classes.
  *
- * <p>This class maintains a cache of GraphQL input type names to generated Krystal input model
- * classes, enabling variable coercion at the execution level.
+ * <p>This class follows Krystal's "No reflection" principle. A concrete implementation is generated
+ * at compile time by {@code GraphQlInputTypeRegistryGen} that directly imports and calls the
+ * registry's static method, eliminating all reflection usage.
+ *
+ * <p>The generated implementation ({@code GraphQlInputTypeWiringFactoryImpl}) is located in the
+ * root package and should be used directly, or instantiated via the static factory method.
  */
-@Slf4j
-public class GraphQlInputTypeWiringFactory {
-
-  private final TypeDefinitionRegistry typeDefinitionRegistry;
-  private final String rootPackageName;
-  private final Map<String, Class<?>> inputTypeClassCache = new ConcurrentHashMap<>();
-
-  /**
-   * Creates a registry for the given schema.
-   *
-   * @param typeDefinitionRegistry The GraphQL schema type registry
-   * @param rootPackageName The root package name where input types are generated (e.g.,
-   *     "com.flipkart.krystal.vajram.graphql.samples")
-   */
-  public GraphQlInputTypeWiringFactory(
-      TypeDefinitionRegistry typeDefinitionRegistry, String rootPackageName) {
-    this.typeDefinitionRegistry = typeDefinitionRegistry;
-    this.rootPackageName = rootPackageName;
-  }
+public abstract class GraphQlInputTypeWiringFactory {
 
   /**
    * Gets the Java class for a GraphQL input type name.
@@ -41,9 +22,7 @@ public class GraphQlInputTypeWiringFactory {
    * @return The Java class, or null if not found
    */
   @Nullable
-  public Class<?> getInputTypeClass(String graphQlTypeName) {
-    return findInputTypeClass(graphQlTypeName);
-  }
+  public abstract Class<?> getInputTypeClass(String graphQlTypeName);
 
   /**
    * Gets the coercing instance for a GraphQL input type name.
@@ -53,7 +32,7 @@ public class GraphQlInputTypeWiringFactory {
    */
   @Nullable
   public GraphQlInputTypeCoercing getCoercing(String graphQlTypeName) {
-    Class<?> inputTypeClass = findInputTypeClass(graphQlTypeName);
+    Class<?> inputTypeClass = getInputTypeClass(graphQlTypeName);
     if (inputTypeClass == null) {
       return null;
     }
@@ -61,33 +40,28 @@ public class GraphQlInputTypeWiringFactory {
   }
 
   /**
-   * Attempts to find the generated input type class for a given GraphQL type name.
+   * Creates a factory instance by loading the generated implementation.
    *
-   * <p>For example, for GraphQL type "SellerInput", this will look for {@code
-   * SellerInput_ImmutGQlInputJson} in the input package.
+   * <p>This method uses Class.forName once to load the generated factory implementation class. The
+   * generated implementation itself uses zero reflection - it directly imports and calls the
+   * registry's static method.
+   *
+   * @param typeDefinitionRegistry The GraphQL schema type registry
+   * @param rootPackageName The root package name where the generated factory is located
+   * @return A factory instance, or null if the generated factory class cannot be loaded
    */
   @Nullable
-  private Class<?> findInputTypeClass(String graphQlTypeName) {
-    return inputTypeClassCache.computeIfAbsent(
-        graphQlTypeName,
-        typeName -> {
-          try {
-            String packageName = rootPackageName + ".input";
-            String className = typeName + INSTANCE.modelClassesSuffix();
-            String fullClassName = packageName + "." + className;
-
-            try {
-              return Class.forName(fullClassName);
-            } catch (ClassNotFoundException e) {
-              log.debug(
-                  "Could not find input type class: {}. Input types may not be generated yet.",
-                  fullClassName);
-              return null;
-            }
-          } catch (Exception e) {
-            log.warn("Error finding input type class for {}: {}", typeName, e.getMessage());
-            return null;
-          }
-        });
+  public static GraphQlInputTypeWiringFactory create(
+      TypeDefinitionRegistry typeDefinitionRegistry, String rootPackageName) {
+    try {
+      String factoryClassName = rootPackageName + ".GraphQlInputTypeWiringFactoryImpl";
+      Class<?> factoryClass = Class.forName(factoryClassName);
+      java.lang.reflect.Constructor<?> constructor =
+          factoryClass.getDeclaredConstructor(TypeDefinitionRegistry.class);
+      return (GraphQlInputTypeWiringFactory) constructor.newInstance(typeDefinitionRegistry);
+    } catch (Exception e) {
+      // Generated factory may not exist yet, or no input types exist
+      return null;
+    }
   }
 }

@@ -57,6 +57,13 @@ public class GraphQLAnnotationProcessor extends AbstractKrystalAnnoProcessor {
         util.error("[GraphQL Model Codegen Exception] " + getStackTraceAsString(e));
       }
 
+      // Generate input type registry (must be after input types are generated)
+      try {
+        new GraphQlInputTypeRegistryGen(util).generate();
+      } catch (Exception e) {
+        util.error("[GraphQL Input Type Registry Codegen Exception] " + getStackTraceAsString(e));
+      }
+
       // Generate type aggregators
       try {
         new GraphQLObjectAggregateGen(util, schemaFile, roundEnv).generate();
