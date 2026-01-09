@@ -45,9 +45,10 @@ class MultiplyTest {
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
+                .vajramKryonGraph(graph)
                 .requestId("multiply")
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+                .kryonExecutorConfig(
+                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()).build())
                 .build())) {
       future =
           krystexVajramExecutor.execute(

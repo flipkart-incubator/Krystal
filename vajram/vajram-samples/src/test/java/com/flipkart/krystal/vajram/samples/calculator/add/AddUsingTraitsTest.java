@@ -140,9 +140,10 @@ class AddUsingTraitsTest {
 
   private KrystexVajramExecutorConfigBuilder executorConfig() {
     return KrystexVajramExecutorConfig.builder()
+        .vajramKryonGraph(graph)
         .requestId(REQUEST_ID)
-        .kryonExecutorConfigBuilder(
-            KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()));
+        .kryonExecutorConfig(
+            KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()).build());
   }
 
   @Test

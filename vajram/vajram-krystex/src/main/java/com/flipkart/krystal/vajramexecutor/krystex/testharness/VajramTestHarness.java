@@ -22,14 +22,14 @@ import java.util.Map;
 public class VajramTestHarness {
 
   private final Map<VajramID, Map<ImmutableFacetValues, Errable<Object>>> vajramIdMockData;
-  private final KrystexVajramExecutorConfig kryonExecutorConfig;
+  private final KrystexVajramExecutorConfig vajramExecutorConfig;
   private final TestRequestLevelCache requestLevelCache;
 
   @Inject
   public VajramTestHarness(
       KrystexVajramExecutorConfig krystexVajramExecutorConfig,
       TestRequestLevelCache requestLevelCache) {
-    this.kryonExecutorConfig = krystexVajramExecutorConfig;
+    this.vajramExecutorConfig = krystexVajramExecutorConfig;
     this.requestLevelCache = requestLevelCache;
     this.vajramIdMockData = new HashMap<>();
   }
@@ -53,20 +53,25 @@ public class VajramTestHarness {
             vajramRequestErrableMap.forEach(
                 (objectVajramRequest, objectErrable) ->
                     requestLevelCache.primeCache(objectVajramRequest, objectErrable.toFuture())));
-    KryonExecutorConfigBuilder configBuilder = kryonExecutorConfig.kryonExecutorConfigBuilder();
+    KryonExecutorConfigBuilder configBuilder = vajramExecutorConfig.kryonExecutorConfigBuilder();
     KryonDecoratorConfig kryonDecoratorConfig =
         configBuilder.build().kryonDecoratorConfigs().get(RequestLevelCache.DECORATOR_TYPE);
     if (kryonDecoratorConfig == null) {
-      kryonExecutorConfig
-          .kryonExecutorConfigBuilder()
-          .kryonDecoratorConfig(
-              RequestLevelCache.DECORATOR_TYPE,
-              new KryonDecoratorConfig(
-                  RequestLevelCache.DECORATOR_TYPE,
-                  executionContext -> vajramIdMockData.containsKey(executionContext.vajramID()),
-                  executionContext -> RequestLevelCache.DECORATOR_TYPE,
-                  kryonExecutionContext -> requestLevelCache));
+      return vajramExecutorConfig.toBuilder()
+          .kryonExecutorConfig(
+              vajramExecutorConfig
+                  .kryonExecutorConfigBuilder()
+                  .kryonDecoratorConfig(
+                      RequestLevelCache.DECORATOR_TYPE,
+                      new KryonDecoratorConfig(
+                          RequestLevelCache.DECORATOR_TYPE,
+                          executionContext ->
+                              vajramIdMockData.containsKey(executionContext.vajramID()),
+                          executionContext -> RequestLevelCache.DECORATOR_TYPE,
+                          kryonExecutionContext -> requestLevelCache))
+                  .build())
+          .build();
     }
-    return kryonExecutorConfig;
+    return vajramExecutorConfig;
   }
 }

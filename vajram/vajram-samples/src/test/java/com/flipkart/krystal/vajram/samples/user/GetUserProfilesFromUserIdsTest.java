@@ -64,9 +64,10 @@ class GetUserProfilesFromUserIdsTest {
     try (KrystexVajramExecutor executor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
+                .vajramKryonGraph(graph)
                 .requestId("error-contaminated-test")
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+                .kryonExecutorConfig(
+                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()).build())
                 .build())) {
 
       List<String> userIds = Arrays.asList("Incorrect_User_Id", "Correct_User_Id");
@@ -88,9 +89,10 @@ class GetUserProfilesFromUserIdsTest {
     try (KrystexVajramExecutor executor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
+                .vajramKryonGraph(graph)
                 .requestId("all-correct-inputs-test")
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+                .kryonExecutorConfig(
+                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()).build())
                 .build())) {
 
       List<String> userIds =
@@ -113,9 +115,10 @@ class GetUserProfilesFromUserIdsTest {
     try (KrystexVajramExecutor executor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
+                .vajramKryonGraph(graph)
                 .requestId("all-fail-test")
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+                .kryonExecutorConfig(
+                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()).build())
                 .build())) {
 
       List<String> userIds = Arrays.asList("Incorrect_User_Id", "Incorrect_User_Id");

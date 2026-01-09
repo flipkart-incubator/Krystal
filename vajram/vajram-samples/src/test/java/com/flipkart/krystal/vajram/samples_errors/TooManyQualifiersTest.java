@@ -66,8 +66,9 @@ class TooManyQualifiersTest {
   private KrystexVajramExecutor createExecutor(VajramKryonGraph vajramKryonGraph) {
     return vajramKryonGraph.createExecutor(
         KrystexVajramExecutorConfig.builder()
-            .kryonExecutorConfigBuilder(
-                KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+            .vajramKryonGraph(vajramKryonGraph)
+            .kryonExecutorConfig(
+                KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()).build())
             .inputInjectionProvider(
                 new VajramGuiceInputInjector(
                     createInjector(
