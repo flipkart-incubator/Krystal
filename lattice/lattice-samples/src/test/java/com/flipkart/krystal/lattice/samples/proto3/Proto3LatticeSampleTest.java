@@ -77,9 +77,10 @@ class Proto3LatticeSampleTest {
     try (KrystexVajramExecutor executor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
+                .vajramKryonGraph(graph)
                 .requestId(REQUEST_ID)
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+                .kryonExecutorConfig(
+                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()).build())
                 .build())) {
       result =
           executor.execute(
@@ -117,9 +118,10 @@ class Proto3LatticeSampleTest {
     try (KrystexVajramExecutor executor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
+                .vajramKryonGraph(graph)
                 .requestId(REQUEST_ID)
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+                .kryonExecutorConfig(
+                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()).build())
                 .build())) {
       result =
           executor.execute(
@@ -155,9 +157,10 @@ class Proto3LatticeSampleTest {
     try (KrystexVajramExecutor executor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
+                .vajramKryonGraph(graph)
                 .requestId(REQUEST_ID)
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+                .kryonExecutorConfig(
+                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()).build())
                 .build())) {
       result =
           executor.execute(
@@ -187,9 +190,10 @@ class Proto3LatticeSampleTest {
     try (KrystexVajramExecutor executor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
+                .vajramKryonGraph(graph)
                 .requestId(REQUEST_ID)
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+                .kryonExecutorConfig(
+                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()).build())
                 .build())) {
       result =
           executor.execute(
@@ -219,9 +223,10 @@ class Proto3LatticeSampleTest {
     try (KrystexVajramExecutor executor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
+                .vajramKryonGraph(graph)
                 .requestId(REQUEST_ID)
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+                .kryonExecutorConfig(
+                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()).build())
                 .build())) {
       result =
           executor.execute(
@@ -256,9 +261,12 @@ class Proto3LatticeSampleTest {
         graph.createExecutor(
             VajramTestHarness.prepareForTest(
                     KrystexVajramExecutorConfig.builder()
+                        .vajramKryonGraph(graph)
                         .requestId(REQUEST_ID)
-                        .kryonExecutorConfigBuilder(
-                            KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+                        .kryonExecutorConfig(
+                            KryonExecutorConfig.builder()
+                                .singleThreadExecutor(executorLease.get())
+                                .build())
                         .build(),
                     requestLevelCache)
                 .withMock(
@@ -295,9 +303,10 @@ class Proto3LatticeSampleTest {
     try (KrystexVajramExecutor executor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
+                .vajramKryonGraph(graph)
                 .requestId(REQUEST_ID)
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+                .kryonExecutorConfig(
+                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()).build())
                 .build())) {
       result =
           executor.execute(

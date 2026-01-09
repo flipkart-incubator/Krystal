@@ -20,11 +20,13 @@ class AddTest {
     VajramKryonGraph graph = VajramKryonGraph.builder().loadClasses(Add.class).build();
     KrystexVajramExecutorConfig config =
         KrystexVajramExecutorConfig.builder()
+            .vajramKryonGraph(graph)
             .requestId("adderTest")
-            .kryonExecutorConfigBuilder(
+            .kryonExecutorConfig(
                 KryonExecutorConfig.builder()
                     .singleThreadExecutor(new SingleThreadExecutor("adderTest"))
-                    ._riskyOpenAllKryonsForExternalInvocation(true))
+                    ._riskyOpenAllKryonsForExternalInvocation(true)
+                    .build())
             .build();
     CompletableFuture<Integer> future;
     try (KrystexVajramExecutor executor = graph.createExecutor(config)) {

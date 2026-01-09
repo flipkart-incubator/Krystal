@@ -45,11 +45,13 @@ class DoubleMinusOneTest {
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
+                .vajramKryonGraph(graph)
                 .requestId("doubleMinusOne")
-                .kryonExecutorConfigBuilder(
+                .kryonExecutorConfig(
                     KryonExecutorConfig.builder()
                         .singleThreadExecutor(executorLease.get())
-                        ._riskyOpenAllKryonsForExternalInvocation(true))
+                        ._riskyOpenAllKryonsForExternalInvocation(true)
+                        .build())
                 .build())) {
       future =
           krystexVajramExecutor.execute(
@@ -64,11 +66,13 @@ class DoubleMinusOneTest {
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
+                .vajramKryonGraph(graph)
                 .requestId("doubleMinusOne")
-                .kryonExecutorConfigBuilder(
+                .kryonExecutorConfig(
                     KryonExecutorConfig.builder()
                         .singleThreadExecutor(executorLease.get())
-                        ._riskyOpenAllKryonsForExternalInvocation(true))
+                        ._riskyOpenAllKryonsForExternalInvocation(true)
+                        .build())
                 .build())) {
       future =
           krystexVajramExecutor.execute(
@@ -83,11 +87,13 @@ class DoubleMinusOneTest {
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
+                .vajramKryonGraph(graph)
                 .requestId("doubleMinusOne")
-                .kryonExecutorConfigBuilder(
+                .kryonExecutorConfig(
                     KryonExecutorConfig.builder()
                         .singleThreadExecutor(executorLease.get())
-                        ._riskyOpenAllKryonsForExternalInvocation(true))
+                        ._riskyOpenAllKryonsForExternalInvocation(true)
+                        .build())
                 .build())) {
       future =
           krystexVajramExecutor.execute(

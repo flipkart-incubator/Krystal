@@ -4,12 +4,7 @@ import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
-import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
-import com.flipkart.krystal.krystex.kryondecoration.KryonExecutionContext;
 import com.flipkart.krystal.vajram.exec.VajramExecutor;
-import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
-import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.KryonInputInjector;
 import java.util.concurrent.CompletableFuture;
 import lombok.Builder;
 import lombok.NonNull;
@@ -25,14 +20,10 @@ public class KrystexVajramExecutor implements VajramExecutor {
       @NonNull VajramKryonGraph vajramKryonGraph,
       @NonNull KrystexVajramExecutorConfig executorConfig) {
     this.vajramKryonGraph = vajramKryonGraph;
-    executorConfig
-        .kryonExecutorConfigBuilder()
-        .configureWith(kryonInputInjector(vajramKryonGraph, executorConfig))
-        .configureWith(vajramKryonGraph.inputBatchingConfig());
     this.krystalExecutor =
         new KryonExecutor(
             vajramKryonGraph.kryonDefinitionRegistry(),
-            executorConfig.kryonExecutorConfigBuilder().build(),
+            executorConfig.kryonExecutorConfig(),
             executorConfig.requestId());
   }
 
@@ -59,31 +50,5 @@ public class KrystexVajramExecutor implements VajramExecutor {
   @Override
   public void shutdownNow() {
     krystalExecutor.shutdownNow();
-  }
-
-  private static KryonExecutorConfigurator kryonInputInjector(
-      VajramKryonGraph vajramKryonGraph, KrystexVajramExecutorConfig executorConfig) {
-    VajramInjectionProvider injectionProvider = executorConfig.inputInjectionProvider();
-    if (injectionProvider == null) {
-      return KryonExecutorConfigurator.NO_OP;
-    }
-    return configBuilder ->
-        configBuilder.kryonDecoratorConfig(
-            KryonInputInjector.DECORATOR_TYPE,
-            new KryonDecoratorConfig(
-                KryonInputInjector.DECORATOR_TYPE,
-                /* shouldDecorate= */ executorContext ->
-                    isInjectionNeeded(vajramKryonGraph, executorContext),
-                /* instanceIdGenerator= */ executionContext -> KryonInputInjector.DECORATOR_TYPE,
-                /* factory= */ decoratorContext ->
-                    new KryonInputInjector(vajramKryonGraph, injectionProvider)));
-  }
-
-  private static boolean isInjectionNeeded(
-      VajramKryonGraph vajramKryonGraph, KryonExecutionContext executionContext) {
-    return vajramKryonGraph
-        .getVajramDefinition(executionContext.vajramID())
-        .metadata()
-        .isInputInjectionNeeded();
   }
 }

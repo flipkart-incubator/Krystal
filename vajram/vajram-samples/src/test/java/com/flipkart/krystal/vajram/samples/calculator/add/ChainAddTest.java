@@ -85,11 +85,13 @@ class ChainAddTest {
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
+                .vajramKryonGraph(graph)
                 .requestId("chainAdderTest")
-                .kryonExecutorConfigBuilder(
+                .kryonExecutorConfig(
                     KryonExecutorConfig.builder()
                         .singleThreadExecutor(executorLease.get())
-                        .configureWith(new MainLogicExecReporter(kryonExecutionReport)))
+                        .configureWith(new MainLogicExecReporter(kryonExecutionReport))
+                        .build())
                 .build())) {
 
       future = executeVajram(krystexVajramExecutor, 0);
@@ -250,9 +252,10 @@ class ChainAddTest {
 
   private KrystexVajramExecutorConfigBuilder configBuilder() {
     return KrystexVajramExecutorConfig.builder()
+        .vajramKryonGraph(graph)
         .requestId("chainAdderTest")
-        .kryonExecutorConfigBuilder(
-            KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()));
+        .kryonExecutorConfig(
+            KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()).build());
   }
 
   private CompletableFuture<Integer> executeVajram(
