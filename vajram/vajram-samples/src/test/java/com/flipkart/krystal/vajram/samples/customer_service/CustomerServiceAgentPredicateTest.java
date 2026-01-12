@@ -220,8 +220,9 @@ class CustomerServiceAgentPredicateTest {
 
   private KrystexVajramExecutorConfig getExecutorConfig() {
     return KrystexVajramExecutorConfig.builder()
-        .kryonExecutorConfigBuilder(
-            KryonExecutorConfig.builder().executorService(executorLease.get()))
+        .vajramKryonGraph(graph)
+        .kryonExecutorConfig(
+            KryonExecutorConfig.builder().executorService(executorLease.get()).build())
         .build();
   }
 }

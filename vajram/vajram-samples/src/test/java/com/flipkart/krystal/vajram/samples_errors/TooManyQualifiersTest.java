@@ -76,8 +76,9 @@ class TooManyQualifiersTest {
                 })));
     return vajramKryonGraph.createExecutor(
         KrystexVajramExecutorConfig.builder()
-            .kryonExecutorConfigBuilder(
-                KryonExecutorConfig.builder().executorService(executorLease.get()))
+            .vajramKryonGraph(vajramKryonGraph)
+            .kryonExecutorConfig(
+                KryonExecutorConfig.builder().executorService(executorLease.get()).build())
             .build());
   }
 }

@@ -98,10 +98,12 @@ class Proto3LatticeSampleTest {
     try (KrystexVajramExecutor executor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
+                .vajramKryonGraph(graph)
+                .kryonExecutorConfig(
                     KryonExecutorConfig.builder()
                         .executorId(REQUEST_ID)
-                        .executorService(executorLease.get()))
+                        .executorService(executorLease.get())
+                        .build())
                 .build())) {
       result =
           executor.execute(
@@ -139,10 +141,12 @@ class Proto3LatticeSampleTest {
     try (KrystexVajramExecutor executor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
+                .vajramKryonGraph(graph)
+                .kryonExecutorConfig(
                     KryonExecutorConfig.builder()
                         .executorId(REQUEST_ID)
-                        .executorService(executorLease.get()))
+                        .executorService(executorLease.get())
+                        .build())
                 .build())) {
       result =
           executor.execute(
@@ -178,10 +182,12 @@ class Proto3LatticeSampleTest {
     try (KrystexVajramExecutor executor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
+                .vajramKryonGraph(graph)
+                .kryonExecutorConfig(
                     KryonExecutorConfig.builder()
                         .executorId(REQUEST_ID)
-                        .executorService(executorLease.get()))
+                        .executorService(executorLease.get())
+                        .build())
                 .build())) {
       result =
           executor.execute(
@@ -212,10 +218,12 @@ class Proto3LatticeSampleTest {
     try (KrystexVajramExecutor executor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
+                .vajramKryonGraph(graph)
+                .kryonExecutorConfig(
                     KryonExecutorConfig.builder()
                         .executorId(REQUEST_ID)
-                        .executorService(executorLease.get()))
+                        .executorService(executorLease.get())
+                        .build())
                 .build())) {
       result =
           executor.execute(
@@ -245,10 +253,12 @@ class Proto3LatticeSampleTest {
     try (KrystexVajramExecutor executor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
+                .vajramKryonGraph(graph)
+                .kryonExecutorConfig(
                     KryonExecutorConfig.builder()
                         .executorId(REQUEST_ID)
-                        .executorService(executorLease.get()))
+                        .executorService(executorLease.get())
+                        .build())
                 .build())) {
       result =
           executor.execute(
@@ -283,10 +293,12 @@ class Proto3LatticeSampleTest {
         graph.createExecutor(
             VajramTestHarness.prepareForTest(
                     KrystexVajramExecutorConfig.builder()
-                        .kryonExecutorConfigBuilder(
+                        .vajramKryonGraph(graph)
+                        .kryonExecutorConfig(
                             KryonExecutorConfig.builder()
                                 .executorId(REQUEST_ID)
-                                .executorService(executorLease.get()))
+                                .executorService(executorLease.get())
+                                .build())
                         .build(),
                     requestLevelCache)
                 .withMock(
@@ -323,10 +335,12 @@ class Proto3LatticeSampleTest {
     try (KrystexVajramExecutor executor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
+                .vajramKryonGraph(graph)
+                .kryonExecutorConfig(
                     KryonExecutorConfig.builder()
                         .executorId(REQUEST_ID)
-                        .executorService(executorLease.get()))
+                        .executorService(executorLease.get())
+                        .build())
                 .build())) {
       result =
           executor.execute(

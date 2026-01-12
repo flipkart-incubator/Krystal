@@ -50,10 +50,12 @@ class A2MinusB2Test {
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
+                .vajramKryonGraph(graph)
+                .kryonExecutorConfig(
                     KryonExecutorConfig.builder()
                         .executorId(REQUEST_ID)
-                        .executorService(executorLease.get()))
+                        .executorService(executorLease.get())
+                        .build())
                 .build())) {
       future =
           executeVajram(

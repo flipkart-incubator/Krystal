@@ -64,10 +64,12 @@ class GetUserProfilesFromUserIdsTest {
     try (KrystexVajramExecutor executor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
+                .vajramKryonGraph(graph)
+                .kryonExecutorConfig(
                     KryonExecutorConfig.builder()
                         .executorId("error-contaminated-test")
-                        .executorService(executorLease.get()))
+                        .executorService(executorLease.get())
+                        .build())
                 .build())) {
 
       List<String> userIds = Arrays.asList("Incorrect_User_Id", "Correct_User_Id");
@@ -89,10 +91,12 @@ class GetUserProfilesFromUserIdsTest {
     try (KrystexVajramExecutor executor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
+                .vajramKryonGraph(graph)
+                .kryonExecutorConfig(
                     KryonExecutorConfig.builder()
                         .executorId("all-correct-inputs-test")
-                        .executorService(executorLease.get()))
+                        .executorService(executorLease.get())
+                        .build())
                 .build())) {
 
       List<String> userIds =
@@ -115,10 +119,12 @@ class GetUserProfilesFromUserIdsTest {
     try (KrystexVajramExecutor executor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
+                .vajramKryonGraph(graph)
+                .kryonExecutorConfig(
                     KryonExecutorConfig.builder()
                         .executorId("all-fail-test")
-                        .executorService(executorLease.get()))
+                        .executorService(executorLease.get())
+                        .build())
                 .build())) {
 
       List<String> userIds = Arrays.asList("Incorrect_User_Id", "Incorrect_User_Id");

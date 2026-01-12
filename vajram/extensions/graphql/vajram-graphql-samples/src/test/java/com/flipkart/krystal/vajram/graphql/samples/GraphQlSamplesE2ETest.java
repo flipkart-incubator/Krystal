@@ -142,8 +142,9 @@ public class GraphQlSamplesE2ETest {
   private KrystexVajramExecutor createExecutor() {
     return graph.createExecutor(
         KrystexVajramExecutorConfig.builder()
-            .kryonExecutorConfigBuilder(
-                KryonExecutorConfig.builder().executorService(executorLease.get()))
+            .vajramKryonGraph(graph)
+            .kryonExecutorConfig(
+                KryonExecutorConfig.builder().executorService(executorLease.get()).build())
             .build());
   }
 }
