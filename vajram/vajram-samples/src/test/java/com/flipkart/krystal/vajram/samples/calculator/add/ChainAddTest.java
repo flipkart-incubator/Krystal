@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
-import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.DIRECT;
 import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
@@ -87,11 +86,13 @@ class ChainAddTest {
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
+                .vajramKryonGraph(graph)
+                .kryonExecutorConfig(
                     KryonExecutorConfig.builder()
                         .executorId("chainAdderTest")
                         .executorService(executorLease.get())
-                        .configureWith(new MainLogicExecReporter(kryonExecutionReport)))
+                        .configureWith(new MainLogicExecReporter(kryonExecutionReport))
+                        .build())
                 .build())) {
 
       future = executeVajram(krystexVajramExecutor, 0);
@@ -252,11 +253,12 @@ class ChainAddTest {
 
   private KrystexVajramExecutorConfigBuilder configBuilder() {
     return KrystexVajramExecutorConfig.builder()
-        .kryonExecutorConfigBuilder(
+        .vajramKryonGraph(graph)
+        .kryonExecutorConfig(
             KryonExecutorConfig.builder()
                 .executorId("chainAdderTest")
                 .executorService(executorLease.get())
-                .kryonExecStrategy(DIRECT));
+                .build());
   }
 
   private CompletableFuture<Integer> executeVajram(

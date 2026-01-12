@@ -130,14 +130,13 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
 
   @Override
   public KrystexVajramExecutor createExecutor(KrystexVajramExecutorConfig vajramExecConfig) {
-    vajramExecConfig.kryonExecutorConfigBuilder().traitDispatchDecorator(traitDispatchDecorator());
     return KrystexVajramExecutor.builder()
         .vajramKryonGraph(this)
         .executorConfig(vajramExecConfig)
         .build();
   }
 
-  private TraitDispatchDecorator traitDispatchDecorator() {
+  public TraitDispatchDecorator traitDispatchDecorator() {
     if (traitDispatchDecorator == null) {
       traitDispatchDecorator = new DefaultTraitDispatcher(this, traitDispatchPolicies);
     }

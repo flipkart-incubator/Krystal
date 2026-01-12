@@ -48,10 +48,13 @@ class AddTest {
     VajramKryonGraph graph = VajramKryonGraph.builder().loadClasses(Add.class).build();
     KrystexVajramExecutorConfig config =
         KrystexVajramExecutorConfig.builder()
-            .kryonExecutorConfigBuilder(
+            .vajramKryonGraph(graph)
+            .requestId("adderTest")
+            .kryonExecutorConfig(
                 KryonExecutorConfig.builder()
                     .executorId("adderTest")
-                    .executorService(new SingleThreadExecutor("adderTest")))
+                    .executorService(new SingleThreadExecutor("adderTest"))
+                    .build())
             .build();
     CompletableFuture<Integer> future;
     try (KrystexVajramExecutor executor = graph.createExecutor(config)) {
@@ -74,10 +77,12 @@ class AddTest {
     CompletableFuture<@Nullable Integer> result;
     KrystexVajramExecutorConfig config =
         KrystexVajramExecutorConfig.builder()
-            .kryonExecutorConfigBuilder(
+            .vajramKryonGraph(graph)
+            .kryonExecutorConfig(
                 KryonExecutorConfig.builder()
                     .executorId("subtract")
-                    .executorService(executorService))
+                    .executorService(executorService)
+                    .build())
             .build();
     CompletableFuture<Thread> resultThreadFuture = new CompletableFuture<>();
     try (KrystexVajramExecutor krystexVajramExecutor = graph.createExecutor(config)) {

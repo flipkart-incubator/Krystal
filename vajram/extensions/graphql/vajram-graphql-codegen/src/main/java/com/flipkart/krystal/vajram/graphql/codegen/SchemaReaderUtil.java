@@ -474,9 +474,7 @@ public class SchemaReaderUtil {
             .map(GraphQLTypeName::of);
   }
 
-  /**
-   * Extracts ClassName from a @javaType directive's packageName and className arguments.
-   */
+  /** Extracts ClassName from a @javaType directive's packageName and className arguments. */
   static ClassName extractClassNameFromJavaTypeDirective(
       DirectivesContainer<?> directivesContainer, String contextDescription) {
     List<Directive> javaTypeDirectives = directivesContainer.getDirectives(JAVA_TYPE_DIRECTIVE);
@@ -484,7 +482,7 @@ public class SchemaReaderUtil {
       return null;
     }
 
-    Directive directive = javaTypeDirectives.getFirst();
+    Directive directive = javaTypeDirectives.get(0);
     Argument packageNameArg = directive.getArgument(PACKAGE_NAME_DIR_ARG);
     Argument classNameArg = directive.getArgument(CLASS_NAME_DIR_ARG);
 

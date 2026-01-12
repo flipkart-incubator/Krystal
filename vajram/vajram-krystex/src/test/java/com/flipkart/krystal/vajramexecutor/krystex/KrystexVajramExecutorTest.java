@@ -372,12 +372,14 @@ class KrystexVajramExecutorTest {
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
+                .vajramKryonGraph(graph)
+                .kryonExecutorConfig(
                     KryonExecutorConfig.builder()
                         .executorService(executorLease.get())
                         .kryonExecStrategy(kryonExecStrategy)
                         .graphTraversalStrategy(graphTraversalStrategy)
-                        .configureWith(new MainLogicExecReporter(kryonExecutionReport)))
+                        .configureWith(new MainLogicExecReporter(kryonExecutionReport))
+                        .build())
                 .build())) {
       multiHellos =
           krystexVajramExecutor.execute(
@@ -495,8 +497,9 @@ class KrystexVajramExecutorTest {
         .configureWith(Resilience4JCircuitBreaker.onePerIOVajram());
 
     return KrystexVajramExecutorConfig.builder()
-        .kryonExecutorConfigBuilder(
-            kryonExecutorConfigBuilder.executorService(executorLease.get()));
+        .vajramKryonGraph(graph)
+        .kryonExecutorConfig(
+            kryonExecutorConfigBuilder.executorService(executorLease.get()).build());
   }
 
   @Test
