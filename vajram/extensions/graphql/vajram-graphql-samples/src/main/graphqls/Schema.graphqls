@@ -1,5 +1,49 @@
 #TODO: validation: rootPackage is mandatory
 
+# Sample input types demonstrating GraphQL input type generation
+input DummyFilterInput {
+    """Filter by name"""
+    name: String
+    """Minimum age"""
+    minAge: Int
+    """Maximum age"""
+    maxAge: Int
+    """Preferred types"""
+    preferredTypes: [String!]
+    """Include inactive dummies"""
+    includeInactive: Boolean
+}
+
+input OrderFilterInput {
+    """Filter by order status"""
+    status: String
+    """Filter by minimum amount"""
+    minAmount: Float
+    """Date range filter"""
+    dateRange: DateRangeInput
+}
+
+input DateRangeInput {
+    """Start date"""
+    from: String
+    """End date"""
+    to: String
+}
+
+"""Custom input type for seller queries"""
+input SellerInput {
+    """Seller ID to fetch details for"""
+    sellerId: String!
+    
+    """Start date for metrics calculation (ISO 8601 format: YYYY-MM-DD)"""
+    startDate: String
+    
+    """End date for metrics calculation (ISO 8601 format: YYYY-MM-DD)"""
+    endDate: String
+    
+    """Request ID for tracking and debugging"""
+    requestId: String
+}
 """
 ISO-8601 compliant date-time with timezone (e.g., "2023-12-25T10:30:00+00:00")
 """
@@ -23,5 +67,5 @@ scalar Long
   @javaType(packageName: "java.lang", className: "Long")
 
 schema @rootPackage(name: "com.flipkart.krystal.vajram.graphql.samples") {
-    query: QueryType
+    query: Query
 }

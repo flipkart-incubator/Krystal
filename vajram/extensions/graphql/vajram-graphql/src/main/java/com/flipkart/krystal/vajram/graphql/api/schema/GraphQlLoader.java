@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.reflections.Reflections;
 import org.reflections.scanners.Scanners;
 import org.reflections.util.ClasspathHelper;
@@ -47,6 +48,9 @@ public final class GraphQlLoader {
     runtimeWiring.scalar(ExtendedScalars.DateTime);
     runtimeWiring.scalar(ExtendedScalars.Date);
     runtimeWiring.scalar(ExtendedScalars.GraphQLLong);
+
+    // Note: Input type coercion is handled at execution time via GraphQlInputTypeWiringFactory
+    // The factory is available for use in execution context if needed
 
     GraphQLSchema graphQLSchema =
         new SchemaGenerator().makeExecutableSchema(typeDefinitionRegistry, runtimeWiring.build());
@@ -81,7 +85,7 @@ public final class GraphQlLoader {
     builder.addUrls(resource);
     builder.addScanners(Scanners.Resources);
     Reflections reflections = new Reflections(builder);
-    Set<String> files = reflections.getResources(Pattern.compile("(.*).graphqls"));
+    Set<String> files = reflections.getResources(Pattern.compile("(.*)\\.graphqls"));
 
     for (String file : files) {
       InputStream content = null;
@@ -94,10 +98,45 @@ public final class GraphQlLoader {
       if (content != null) {
         fileToContentMap.put(file, content);
       } else {
-        log.error("Could not read graphqls file {}", file);
+        log.error("Could not read GraphQL schema file {}", file);
       }
     }
     log.info("GraphQl Files loaded: {}", fileToContentMap.keySet());
     return fileToContentMap;
+  }
+
+  /**
+   * Extracts the root package name from the GraphQL schema definition.
+   *
+   * <p>The root package is specified using the {@code @rootPackage(name: "...")} directive on the
+   * schema.
+   *
+   * @param typeDefinitionRegistry The GraphQL schema type registry
+   * @return The root package name, or null if not found
+   */
+  @Nullable
+  private String extractRootPackageName(TypeDefinitionRegistry typeDefinitionRegistry) {
+    return typeDefinitionRegistry
+        .schemaDefinition()
+        .flatMap(
+            schemaDef ->
+                schemaDef.getDirectives().stream()
+                    .filter(
+                        directive ->
+                            directive.getName().equals("rootPackage")
+                                || directive.getName().equalsIgnoreCase("rootpackage"))
+                    .findFirst()
+                    .flatMap(
+                        directive ->
+                            directive.getArguments().stream()
+                                .filter(arg -> arg.getName().equals("name"))
+                                .findFirst()
+                                .map(
+                                    arg ->
+                                        arg.getValue() instanceof graphql.language.StringValue
+                                            ? ((graphql.language.StringValue) arg.getValue())
+                                                .getValue()
+                                            : null)))
+        .orElse(null);
   }
 }
