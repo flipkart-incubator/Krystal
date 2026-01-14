@@ -3,7 +3,7 @@ package com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestServ
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.models.ByteArray;
-import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.models.JsonResponse_ImmutJson;
+import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.models.JsonResponse_ImmutJson;
 import com.google.common.base.Charsets;
 import java.util.List;
 import java.util.Map;
