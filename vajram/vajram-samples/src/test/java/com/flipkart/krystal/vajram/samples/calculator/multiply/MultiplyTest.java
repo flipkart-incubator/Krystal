@@ -49,11 +49,11 @@ class MultiplyTest {
             .build()
             .createExecutor(
                 KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfigBuilder(
+                    .kryonExecutorConfig(
                         KryonExecutorConfig.builder()
                             .executorId("multiply")
-                            .executorService(executorLease.get()))
-                    .build())) {
+                            .executorService(executorLease.get())
+                            .build()))) {
       future =
           krystexVajramExecutor.execute(
               Multiply_ReqImmutPojo._builder().numberOne(3).numberTwo(9)._build());

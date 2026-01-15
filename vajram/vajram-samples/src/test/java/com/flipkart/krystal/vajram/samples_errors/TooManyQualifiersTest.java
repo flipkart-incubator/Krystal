@@ -81,8 +81,7 @@ class TooManyQualifiersTest {
         .build()
         .createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder().executorService(executorLease.get()))
-                .build());
+                .kryonExecutorConfig(
+                    KryonExecutorConfig.builder().executorService(executorLease.get()).build()));
   }
 }

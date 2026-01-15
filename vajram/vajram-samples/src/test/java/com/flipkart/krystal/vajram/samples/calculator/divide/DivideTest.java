@@ -58,11 +58,11 @@ class DivideTest {
             .build()
             .createExecutor(
                 KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfigBuilder(
+                    .kryonExecutorConfig(
                         KryonExecutorConfig.builder()
                             .executorId("subtract")
-                            .executorService(executorLease.get()))
-                    .build())) {
+                            .executorService(executorLease.get())
+                            .build()))) {
       assertThatThrownBy(
               () ->
                   krystexVajramExecutor.execute(
@@ -89,11 +89,11 @@ class DivideTest {
             .build()
             .createExecutor(
                 KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfigBuilder(
+                    .kryonExecutorConfig(
                         KryonExecutorConfig.builder()
                             .executorId("subtract")
-                            .executorService(executorService))
-                    .build())) {
+                            .executorService(executorService)
+                            .build()))) {
       result =
           krystexVajramExecutor.execute(
               Divide_ReqImmutPojo._builder().numerator(5).denominator(7)._build());

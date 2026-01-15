@@ -105,7 +105,7 @@ class AddUsingTraitsTest {
     CompletableFuture<ThreeSums> future;
 
     try (KrystexVajramExecutor krystexVajramExecutor =
-        kGraph.build().createExecutor(executorConfig().build())) {
+        kGraph.build().createExecutor(executorConfig())) {
       // Execute the vajram
       future = executeVajram(graph, krystexVajramExecutor, numbers1, numbers2, numbers3);
     }
@@ -129,7 +129,7 @@ class AddUsingTraitsTest {
     CompletableFuture<ThreeSums> future;
 
     try (KrystexVajramExecutor krystexVajramExecutor =
-        kGraph.build().createExecutor(executorConfig().build())) {
+        kGraph.build().createExecutor(executorConfig())) {
 
       // Execute the vajram with empty lists
       future = executeVajram(graph, krystexVajramExecutor, emptyList, emptyList, emptyList);
@@ -148,10 +148,11 @@ class AddUsingTraitsTest {
 
   private KrystexVajramExecutorConfigBuilder executorConfig() {
     return KrystexVajramExecutorConfig.builder()
-        .kryonExecutorConfigBuilder(
+        .kryonExecutorConfig(
             KryonExecutorConfig.builder()
                 .executorId(REQUEST_ID)
-                .executorService(executorLease.get()));
+                .executorService(executorLease.get())
+                .build());
   }
 
   @Test
@@ -169,7 +170,7 @@ class AddUsingTraitsTest {
     CompletableFuture<ThreeSums> future;
 
     try (KrystexVajramExecutor krystexVajramExecutor =
-        kGraph.build().createExecutor(executorConfig().build())) {
+        kGraph.build().createExecutor(executorConfig())) {
 
       // Execute the vajram with different sized lists
       future = executeVajram(graph, krystexVajramExecutor, smallList, mediumList, largeList);

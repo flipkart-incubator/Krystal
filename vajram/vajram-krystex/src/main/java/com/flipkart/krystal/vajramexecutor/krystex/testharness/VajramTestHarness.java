@@ -5,9 +5,9 @@ import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.caching.TestRequestLevelCache;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
+import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
 import jakarta.inject.Inject;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -22,20 +22,20 @@ import java.util.Map;
 public class VajramTestHarness {
 
   private final Map<VajramID, Map<ImmutableFacetValues, Errable<Object>>> vajramIdMockData;
-  private final KrystexVajramExecutorConfig kryonExecutorConfig;
+  private final KrystexVajramExecutorConfigBuilder vajramExecutorConfigBuilder;
   private final TestRequestLevelCache requestLevelCache;
 
   @Inject
   public VajramTestHarness(
-      KrystexVajramExecutorConfig krystexVajramExecutorConfig,
+      KrystexVajramExecutorConfigBuilder krystexVajramExecutorConfig,
       TestRequestLevelCache requestLevelCache) {
-    this.kryonExecutorConfig = krystexVajramExecutorConfig;
+    this.vajramExecutorConfigBuilder = krystexVajramExecutorConfig;
     this.requestLevelCache = requestLevelCache;
     this.vajramIdMockData = new HashMap<>();
   }
 
   public static VajramTestHarness prepareForTest(
-      KrystexVajramExecutorConfig executorConfig, TestRequestLevelCache requestLevelCache) {
+      KrystexVajramExecutorConfigBuilder executorConfig, TestRequestLevelCache requestLevelCache) {
     return new VajramTestHarness(executorConfig, requestLevelCache);
   }
 
@@ -47,26 +47,30 @@ public class VajramTestHarness {
     return this;
   }
 
-  public KrystexVajramExecutorConfig buildConfig() {
+  public KrystexVajramExecutorConfigBuilder buildConfig() {
     vajramIdMockData.forEach(
         (vajramID, vajramRequestErrableMap) ->
             vajramRequestErrableMap.forEach(
                 (objectVajramRequest, objectErrable) ->
                     requestLevelCache.primeCache(objectVajramRequest, objectErrable.toFuture())));
-    KryonExecutorConfigBuilder configBuilder = kryonExecutorConfig.kryonExecutorConfigBuilder();
-    KryonDecoratorConfig kryonDecoratorConfig =
-        configBuilder.build().kryonDecoratorConfigs().get(RequestLevelCache.DECORATOR_TYPE);
-    if (kryonDecoratorConfig == null) {
-      kryonExecutorConfig
-          .kryonExecutorConfigBuilder()
-          .kryonDecoratorConfig(
-              RequestLevelCache.DECORATOR_TYPE,
-              new KryonDecoratorConfig(
-                  RequestLevelCache.DECORATOR_TYPE,
-                  executionContext -> vajramIdMockData.containsKey(executionContext.vajramID()),
-                  executionContext -> RequestLevelCache.DECORATOR_TYPE,
-                  kryonExecutionContext -> requestLevelCache));
+    KryonExecutorConfig kryonExecutorConfig = vajramExecutorConfigBuilder.kryonExecutorConfig();
+    if (kryonExecutorConfig == null) {
+      throw new IllegalArgumentException("KryonExecutorConfig is null");
     }
-    return kryonExecutorConfig;
+    KryonDecoratorConfig kryonDecoratorConfig =
+        kryonExecutorConfig.kryonDecoratorConfigs().get(RequestLevelCache.DECORATOR_TYPE);
+    if (kryonDecoratorConfig == null) {
+      return vajramExecutorConfigBuilder.kryonExecutorConfig(
+          kryonExecutorConfig.toBuilder()
+              .kryonDecoratorConfig(
+                  RequestLevelCache.DECORATOR_TYPE,
+                  new KryonDecoratorConfig(
+                      RequestLevelCache.DECORATOR_TYPE,
+                      executionContext -> vajramIdMockData.containsKey(executionContext.vajramID()),
+                      executionContext -> RequestLevelCache.DECORATOR_TYPE,
+                      kryonExecutionContext -> requestLevelCache))
+              .build());
+    }
+    return vajramExecutorConfigBuilder;
   }
 }

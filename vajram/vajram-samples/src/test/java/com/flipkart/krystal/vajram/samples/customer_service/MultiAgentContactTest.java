@@ -28,6 +28,7 @@ import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
@@ -215,10 +216,9 @@ class MultiAgentContactTest {
         .hasSize(3);
   }
 
-  private KrystexVajramExecutorConfig getExecutorConfig() {
+  private KrystexVajramExecutorConfigBuilder getExecutorConfig() {
     return KrystexVajramExecutorConfig.builder()
-        .kryonExecutorConfigBuilder(
-            KryonExecutorConfig.builder().executorService(executorLease.get()))
-        .build();
+        .kryonExecutorConfig(
+            KryonExecutorConfig.builder().executorService(executorLease.get()).build());
   }
 }

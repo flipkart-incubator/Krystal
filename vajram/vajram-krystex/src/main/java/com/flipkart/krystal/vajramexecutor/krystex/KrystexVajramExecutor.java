@@ -22,11 +22,7 @@ public class KrystexVajramExecutor implements VajramExecutor {
     this.krystalExecutor =
         new KryonExecutor(
             executableGraph.vajramGraph().kryonDefinitionRegistry(),
-            executorConfig
-                .kryonExecutorConfigBuilder()
-                .configureWith(executableGraph.inputInjectionConfig())
-                .configureWith(executableGraph.inputBatchingConfig())
-                .build());
+            executorConfig.kryonExecutorConfig());
   }
 
   @Override
