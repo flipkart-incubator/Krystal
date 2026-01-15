@@ -104,11 +104,11 @@ class Proto3LatticeSampleTest {
             .build()
             .createExecutor(
                 KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfigBuilder(
+                    .kryonExecutorConfig(
                         KryonExecutorConfig.builder()
                             .executorId(REQUEST_ID)
-                            .executorService(executorLease.get()))
-                    .build())) {
+                            .executorService(executorLease.get())
+                            .build()))) {
       result =
           executor.execute(
               request, KryonExecutionConfig.builder().executionId("test_all_inputs").build());
@@ -147,11 +147,11 @@ class Proto3LatticeSampleTest {
             .build()
             .createExecutor(
                 KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfigBuilder(
+                    .kryonExecutorConfig(
                         KryonExecutorConfig.builder()
                             .executorId(REQUEST_ID)
-                            .executorService(executorLease.get()))
-                    .build())) {
+                            .executorService(executorLease.get())
+                            .build()))) {
       result =
           executor.execute(
               request, KryonExecutionConfig.builder().executionId("test_optional_omitted").build());
@@ -188,11 +188,11 @@ class Proto3LatticeSampleTest {
             .build()
             .createExecutor(
                 KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfigBuilder(
+                    .kryonExecutorConfig(
                         KryonExecutorConfig.builder()
                             .executorId(REQUEST_ID)
-                            .executorService(executorLease.get()))
-                    .build())) {
+                            .executorService(executorLease.get())
+                            .build()))) {
       result =
           executor.execute(
               request, KryonExecutionConfig.builder().executionId("test_default_value").build());
@@ -224,11 +224,11 @@ class Proto3LatticeSampleTest {
             .build()
             .createExecutor(
                 KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfigBuilder(
+                    .kryonExecutorConfig(
                         KryonExecutorConfig.builder()
                             .executorId(REQUEST_ID)
-                            .executorService(executorLease.get()))
-                    .build())) {
+                            .executorService(executorLease.get())
+                            .build()))) {
       result =
           executor.execute(
               request,
@@ -259,11 +259,11 @@ class Proto3LatticeSampleTest {
             .build()
             .createExecutor(
                 KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfigBuilder(
+                    .kryonExecutorConfig(
                         KryonExecutorConfig.builder()
                             .executorId(REQUEST_ID)
-                            .executorService(executorLease.get()))
-                    .build())) {
+                            .executorService(executorLease.get())
+                            .build()))) {
       result =
           executor.execute(
               request,
@@ -299,11 +299,11 @@ class Proto3LatticeSampleTest {
             .createExecutor(
                 VajramTestHarness.prepareForTest(
                         KrystexVajramExecutorConfig.builder()
-                            .kryonExecutorConfigBuilder(
+                            .kryonExecutorConfig(
                                 KryonExecutorConfig.builder()
                                     .executorId(REQUEST_ID)
-                                    .executorService(executorLease.get()))
-                            .build(),
+                                    .executorService(executorLease.get())
+                                    .build()),
                         requestLevelCache)
                     .withMock(
                         ((VajramDef<?>)
@@ -341,11 +341,11 @@ class Proto3LatticeSampleTest {
             .build()
             .createExecutor(
                 KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfigBuilder(
+                    .kryonExecutorConfig(
                         KryonExecutorConfig.builder()
                             .executorId(REQUEST_ID)
-                            .executorService(executorLease.get()))
-                    .build())) {
+                            .executorService(executorLease.get())
+                            .build()))) {
       result =
           executor.execute(
               request, KryonExecutionConfig.builder().executionId("test_byte_string").build());

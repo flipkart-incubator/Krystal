@@ -14,6 +14,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import java.util.concurrent.CompletableFuture;
 import org.assertj.core.util.Throwables;
@@ -49,13 +50,14 @@ class AddTest {
   @Test
   void withOutNumberTwo_usesPlatformDefaultValue_success() {
     // Create a VajramKryonGraph and KrystexVajramExecutor
-    KrystexVajramExecutorConfig config =
+    KrystexVajramExecutorConfigBuilder config =
         KrystexVajramExecutorConfig.builder()
-            .kryonExecutorConfigBuilder(
+            .requestId("adderTest")
+            .kryonExecutorConfig(
                 KryonExecutorConfig.builder()
                     .executorId("adderTest")
-                    .executorService(new SingleThreadExecutor("adderTest")))
-            .build();
+                    .executorService(new SingleThreadExecutor("adderTest"))
+                    .build());
     CompletableFuture<Integer> future;
     try (KrystexVajramExecutor executor = kGraph.build().createExecutor(config)) {
       // Execute the Adder Vajram without passing numberTwo
@@ -75,13 +77,13 @@ class AddTest {
     executorService.execute(() -> eventLoopThreadFuture.complete(currentThread()));
     Thread eventLoopThread = eventLoopThreadFuture.join();
     CompletableFuture<@Nullable Integer> result;
-    KrystexVajramExecutorConfig config =
+    KrystexVajramExecutorConfigBuilder config =
         KrystexVajramExecutorConfig.builder()
-            .kryonExecutorConfigBuilder(
+            .kryonExecutorConfig(
                 KryonExecutorConfig.builder()
                     .executorId("subtract")
-                    .executorService(executorService))
-            .build();
+                    .executorService(executorService)
+                    .build());
     CompletableFuture<Thread> resultThreadFuture = new CompletableFuture<>();
     try (KrystexVajramExecutor krystexVajramExecutor = kGraph.build().createExecutor(config)) {
       result =

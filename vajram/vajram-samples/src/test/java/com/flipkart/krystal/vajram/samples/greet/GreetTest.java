@@ -137,13 +137,13 @@ class GreetTest {
             .build()
             .createExecutor(
                 KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfigBuilder(
+                    .kryonExecutorConfig(
                         KryonExecutorConfig.builder()
                             .executorId(REQUEST_ID)
                             .executorService(executorLease.get())
                             .decorationOrdering(decorationOrdering)
-                            .configureWith(new MainLogicExecReporter(kryonExecutionReport)))
-                    .build())) {
+                            .configureWith(new MainLogicExecReporter(kryonExecutionReport))
+                            .build()))) {
       future = executeVajram(krystexVajramExecutor, requestContext);
     }
     assertThat(future)
@@ -184,11 +184,12 @@ class GreetTest {
     CompletableFuture<String> future;
     KrystexVajramExecutorConfigBuilder executorConfig =
         KrystexVajramExecutorConfig.builder()
-            .kryonExecutorConfigBuilder(
+            .kryonExecutorConfig(
                 KryonExecutorConfig.builder()
                     .executorId(REQUEST_ID)
                     .executorService(executorLease.get())
-                    .graphTraversalStrategy(GraphTraversalStrategy.DEPTH));
+                    .graphTraversalStrategy(GraphTraversalStrategy.DEPTH)
+                    .build());
     RequestContext requestContext = new RequestContext(REQUEST_ID, USER_ID);
     VajramGraph vajramGraph = graph.build();
     KrystexGraphBuilder kGraph = KrystexGraph.builder().vajramGraph(vajramGraph);
@@ -197,7 +198,7 @@ class GreetTest {
         kGraph
             .build()
             .createExecutor(
-                VajramTestHarness.prepareForTest(executorConfig.build(), requestLevelCache)
+                VajramTestHarness.prepareForTest(executorConfig, requestLevelCache)
                     .withMock(
                         UserService_FacImmutPojo._builder().userId(USER_ID)._build(),
                         withValue(new UserInfo(USER_ID, USER_NAME)))
@@ -212,11 +213,12 @@ class GreetTest {
     CompletableFuture<String> future;
     KrystexVajramExecutorConfigBuilder executorConfig =
         KrystexVajramExecutorConfig.builder()
-            .kryonExecutorConfigBuilder(
+            .kryonExecutorConfig(
                 KryonExecutorConfig.builder()
                     .executorId(REQUEST_ID)
                     .executorService(executorLease.get())
-                    .graphTraversalStrategy(GraphTraversalStrategy.DEPTH));
+                    .graphTraversalStrategy(GraphTraversalStrategy.DEPTH)
+                    .build());
     RequestContext requestContext = new RequestContext(REQUEST_ID, USER_ID);
     VajramGraph vajramGraph = graph.build();
     KrystexGraphBuilder krystexGraph = KrystexGraph.builder().vajramGraph(vajramGraph);
@@ -225,7 +227,7 @@ class GreetTest {
         krystexGraph
             .build()
             .createExecutor(
-                VajramTestHarness.prepareForTest(executorConfig.build(), requestLevelCache)
+                VajramTestHarness.prepareForTest(executorConfig, requestLevelCache)
                     .withMock(
                         UserService_FacImmutPojo._builder().userId(USER_ID)._build(),
                         Errable.withError(new IOException("Request Timeout")))

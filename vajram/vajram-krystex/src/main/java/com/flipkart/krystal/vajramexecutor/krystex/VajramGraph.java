@@ -64,7 +64,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** The execution graph encompassing all registered vajrams. */
+/** The graph encompassing all registered vajrams along with inter-vajram dependencies. */
 @Slf4j
 public final class VajramGraph {
 

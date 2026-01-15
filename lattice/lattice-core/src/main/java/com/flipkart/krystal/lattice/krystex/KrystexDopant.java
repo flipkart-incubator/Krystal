@@ -122,9 +122,7 @@ public final class KrystexDopant implements SimpleDopant {
     krystexDopantSpec.configureExecutorWith().forEach(kryonConfigBuilder::configureWith);
 
     return executableGraph.createExecutor(
-        KrystexVajramExecutorConfig.builder()
-            .kryonExecutorConfigBuilder(kryonConfigBuilder)
-            .build());
+        KrystexVajramExecutorConfig.builder().kryonExecutorConfig(kryonConfigBuilder.build()));
   }
 
   private static void closeAll(List<AutoCloseable> closeables) {

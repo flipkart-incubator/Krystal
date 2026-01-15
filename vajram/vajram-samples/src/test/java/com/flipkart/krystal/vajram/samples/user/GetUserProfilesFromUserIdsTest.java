@@ -69,11 +69,11 @@ class GetUserProfilesFromUserIdsTest {
             .build()
             .createExecutor(
                 KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfigBuilder(
+                    .kryonExecutorConfig(
                         KryonExecutorConfig.builder()
                             .executorId("error-contaminated-test")
-                            .executorService(executorLease.get()))
-                    .build())) {
+                            .executorService(executorLease.get())
+                            .build()))) {
 
       List<String> userIds = Arrays.asList("Incorrect_User_Id", "Correct_User_Id");
 
@@ -96,11 +96,11 @@ class GetUserProfilesFromUserIdsTest {
             .build()
             .createExecutor(
                 KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfigBuilder(
+                    .kryonExecutorConfig(
                         KryonExecutorConfig.builder()
                             .executorId("all-correct-inputs-test")
-                            .executorService(executorLease.get()))
-                    .build())) {
+                            .executorService(executorLease.get())
+                            .build()))) {
 
       List<String> userIds =
           Arrays.asList("Correct_User_Id_1", "Correct_User_Id_2", "Correct_User_Id_3");
@@ -124,11 +124,11 @@ class GetUserProfilesFromUserIdsTest {
             .build()
             .createExecutor(
                 KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfigBuilder(
+                    .kryonExecutorConfig(
                         KryonExecutorConfig.builder()
                             .executorId("all-fail-test")
-                            .executorService(executorLease.get()))
-                    .build())) {
+                            .executorService(executorLease.get())
+                            .build()))) {
 
       List<String> userIds = Arrays.asList("Incorrect_User_Id", "Incorrect_User_Id");
 

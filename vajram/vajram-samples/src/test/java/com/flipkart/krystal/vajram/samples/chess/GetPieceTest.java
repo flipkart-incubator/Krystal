@@ -18,6 +18,7 @@ import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.AfterEach;
@@ -78,10 +79,9 @@ class GetPieceTest {
     assertThat(result).succeedsWithin(TEST_TIMEOUT).isEqualTo(new Rook());
   }
 
-  private KrystexVajramExecutorConfig getExecutorConfig() {
+  private KrystexVajramExecutorConfigBuilder getExecutorConfig() {
     return KrystexVajramExecutorConfig.builder()
-        .kryonExecutorConfigBuilder(
-            KryonExecutorConfig.builder().executorService(executorLease.get()))
-        .build();
+        .kryonExecutorConfig(
+            KryonExecutorConfig.builder().executorService(executorLease.get()).build());
   }
 }

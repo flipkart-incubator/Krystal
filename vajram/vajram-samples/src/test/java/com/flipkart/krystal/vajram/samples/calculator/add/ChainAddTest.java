@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
-import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.DIRECT;
 import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
@@ -96,12 +95,12 @@ class ChainAddTest {
             .build()
             .createExecutor(
                 KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfigBuilder(
+                    .kryonExecutorConfig(
                         KryonExecutorConfig.builder()
                             .executorId("chainAdderTest")
                             .executorService(executorLease.get())
-                            .configureWith(new MainLogicExecReporter(kryonExecutionReport)))
-                    .build())) {
+                            .configureWith(new MainLogicExecReporter(kryonExecutionReport))
+                            .build()))) {
 
       future = executeVajram(krystexVajramExecutor, 0);
     }
@@ -115,7 +114,7 @@ class ChainAddTest {
   void emptyNumbers_returnsZero_success() {
     CompletableFuture<Integer> future;
     try (KrystexVajramExecutor krystexVajramExecutor =
-        kGraph.build().createExecutor(configBuilder().build())) {
+        kGraph.build().createExecutor(configBuilder())) {
       future =
           krystexVajramExecutor.execute(
               ChainAdd_ReqImmutPojo._builder().numbers(List.of())._build(),
@@ -144,7 +143,7 @@ class ChainAddTest {
     for (int value = 0; value < loopCount; value++) {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor krystexVajramExecutor =
-          kGraph.build().createExecutor(configBuilder().build())) {
+          kGraph.build().createExecutor(configBuilder())) {
         metrics[value] =
             ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
@@ -212,7 +211,7 @@ class ChainAddTest {
     for (int outer_i = 0; outer_i < outerLoopCount; outer_i++) {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor krystexVajramExecutor =
-          kGraph.build().createExecutor(configBuilder().build())) {
+          kGraph.build().createExecutor(configBuilder())) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         metrics[outer_i] =
             ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
@@ -265,11 +264,11 @@ class ChainAddTest {
 
   private KrystexVajramExecutorConfigBuilder configBuilder() {
     return KrystexVajramExecutorConfig.builder()
-        .kryonExecutorConfigBuilder(
+        .kryonExecutorConfig(
             KryonExecutorConfig.builder()
                 .executorId("chainAdderTest")
                 .executorService(executorLease.get())
-                .kryonExecStrategy(DIRECT));
+                .build());
   }
 
   private CompletableFuture<Integer> executeVajram(

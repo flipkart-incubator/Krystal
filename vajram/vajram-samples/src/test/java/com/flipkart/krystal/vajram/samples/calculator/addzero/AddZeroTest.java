@@ -69,11 +69,11 @@ class AddZeroTest {
             .build()
             .createExecutor(
                 KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfigBuilder(
+                    .kryonExecutorConfig(
                         KryonExecutorConfig.builder()
                             .executorId(REQUEST_ID)
-                            .executorService(executorLease.get()))
-                    .build())) {
+                            .executorService(executorLease.get())
+                            .build()))) {
       future =
           krystexVajramExecutor.execute(
               AddZero_ReqImmutPojo._builder().number(5)._build(),

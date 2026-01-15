@@ -54,11 +54,11 @@ class A2MinusB2Test {
             .build()
             .createExecutor(
                 KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfigBuilder(
+                    .kryonExecutorConfig(
                         KryonExecutorConfig.builder()
                             .executorId(REQUEST_ID)
-                            .executorService(executorLease.get()))
-                    .build())) {
+                            .executorService(executorLease.get())
+                            .build()))) {
       future =
           executeVajram(
               krystexVajramExecutor, A2MinusB2_ReqImmutPojo._builder().a(3).b(2)._build());

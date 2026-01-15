@@ -50,11 +50,11 @@ class SubtractTest {
             .build()
             .createExecutor(
                 KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfigBuilder(
+                    .kryonExecutorConfig(
                         KryonExecutorConfig.builder()
                             .executorId("subtract")
-                            .executorService(executorLease.get()))
-                    .build())) {
+                            .executorService(executorLease.get())
+                            .build()))) {
       future =
           krystexVajramExecutor.execute(
               Subtract_ReqImmutPojo._builder().numberOne(5).numberTwo(7)._build());

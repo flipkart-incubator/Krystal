@@ -15,6 +15,7 @@ import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.batching.DepChainBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.batching.InputBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.batching.InputBatchingDecorator;
@@ -29,13 +30,17 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+/**
+ * A directed acyclic graph which encapsulates a {@link VajramGraph} and adds the ability to create
+ * executors which can execute vajrams in the graph.
+ */
 @Slf4j
 public final class KrystexGraph {
 
   @Getter private final VajramGraph vajramGraph;
   private final TraitDispatchPolicies traitDispatchPolicies;
 
-  private final @Nullable TraitDispatchDecorator traitDispatchDecorator;
+  @Getter private final @Nullable TraitDispatchDecorator traitDispatchDecorator;
 
   @Getter(PACKAGE)
   private final KryonExecutorConfigurator inputBatchingConfig;
@@ -58,11 +63,10 @@ public final class KrystexGraph {
     this.inputBatchingConfig = create(inputBatcherConfig, vajramGraph);
   }
 
-  public KrystexVajramExecutor createExecutor(KrystexVajramExecutorConfig vajramExecConfig) {
-    vajramExecConfig.kryonExecutorConfigBuilder().traitDispatchDecorator(traitDispatchDecorator);
+  public KrystexVajramExecutor createExecutor(KrystexVajramExecutorConfigBuilder vajramExecConfig) {
     return KrystexVajramExecutor.builder()
         .executableGraph(this)
-        .executorConfig(vajramExecConfig)
+        .executorConfig(vajramExecConfig.graph(this).build())
         .build();
   }
 

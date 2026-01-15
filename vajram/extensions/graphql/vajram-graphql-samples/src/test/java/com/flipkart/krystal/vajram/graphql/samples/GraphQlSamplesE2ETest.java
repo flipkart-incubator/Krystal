@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajram.graphql.samples;
 
+import static com.flipkart.krystal.vajram.graphql.samples.order.GetOrderSummary.UNIX_EPOCH_DATE;
+import static com.flipkart.krystal.vajram.graphql.samples.order.GetOrderSummary.UNIX_EPOCH_DATE_TIME;
 import static com.flipkart.krystal.vajramexecutor.krystex.traits.PredicateDispatchUtil.dispatchTrait;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -98,6 +100,9 @@ public class GraphQlSamplesE2ETest {
                         order(id: "order1") {
                           orderItemNames
                           state
+                          orderPlacedAt
+                          orderItemsCount
+                          orderAcceptDate
                           __typename
                         }
                         dummy(dummyId: "dummy1") {
@@ -126,6 +131,9 @@ public class GraphQlSamplesE2ETest {
     assertThat(order.orderItemNames()).isEqualTo(List.of("order1_1", "order1_2"));
     assertThat(order.nameString()).isEqualTo("testOrderName");
     assertThat(order.__typename()).isEqualTo("Order");
+    assertThat(order.orderItemsCount()).isEqualTo(Long.MAX_VALUE);
+    assertThat(order.orderPlacedAt()).isEqualTo(UNIX_EPOCH_DATE_TIME);
+    assertThat(order.orderAcceptDate()).isEqualTo(UNIX_EPOCH_DATE);
     assertThat(dummy.__typename()).isEqualTo("Dummy");
     assertThat(mostRecentOrder.orderItemNames())
         .isEqualTo(List.of("MostRecentOrderOf_user1_1", "MostRecentOrderOf_user1_2"));
@@ -141,8 +149,7 @@ public class GraphQlSamplesE2ETest {
         .build()
         .createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder().executorService(executorLease.get()))
-                .build());
+                .kryonExecutorConfig(
+                    KryonExecutorConfig.builder().executorService(executorLease.get()).build()));
   }
 }

@@ -49,11 +49,11 @@ class DoubleMinusOneTest {
             .build()
             .createExecutor(
                 KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfigBuilder(
+                    .kryonExecutorConfig(
                         KryonExecutorConfig.builder()
                             .executorId("doubleMinusOne")
-                            .executorService(executorLease.get()))
-                    .build())) {
+                            .executorService(executorLease.get())
+                            .build()))) {
       future =
           krystexVajramExecutor.execute(
               DoubleMinusOne_ReqImmutPojo._builder().numbers(List.of(1, 2, 3))._build());
@@ -70,11 +70,11 @@ class DoubleMinusOneTest {
             .build()
             .createExecutor(
                 KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfigBuilder(
+                    .kryonExecutorConfig(
                         KryonExecutorConfig.builder()
                             .executorId("doubleMinusOne")
-                            .executorService(executorLease.get()))
-                    .build())) {
+                            .executorService(executorLease.get())
+                            .build()))) {
       future =
           krystexVajramExecutor.execute(
               DoubleMinusOne_ReqImmutPojo._builder().numbers(List.of(1, 1, 3))._build());
@@ -91,11 +91,11 @@ class DoubleMinusOneTest {
             .build()
             .createExecutor(
                 KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfigBuilder(
+                    .kryonExecutorConfig(
                         KryonExecutorConfig.builder()
                             .executorId("doubleMinusOne")
-                            .executorService(executorLease.get()))
-                    .build())) {
+                            .executorService(executorLease.get())
+                            .build()))) {
       future =
           krystexVajramExecutor.execute(
               DoubleMinusOne_ReqImmutPojo._builder().numbers(List.of())._build());
