@@ -29,7 +29,7 @@ dependencies {
     krystalModelsGenProcessor 'com.flipkart.krystal:lattice-json-codegen'
     krystalModelsGenProcessor 'com.flipkart.krystal:lattice-rest-codegen'
     krystalModelsGenProcessor 'com.flipkart.krystal:lattice-rest-quarkus-codegen'
-    krystalModelsGenProcessor 'com.flipkart.krystal:lattice-quarkus-arc-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:lattice-quarkus-codegen'
     krystalModelsGenProcessor 'com.flipkart.krystal:vajram-graphql-codegen'
     krystalModelsGenProcessor 'com.flipkart.krystal:lattice-graphql-codegen'
 
