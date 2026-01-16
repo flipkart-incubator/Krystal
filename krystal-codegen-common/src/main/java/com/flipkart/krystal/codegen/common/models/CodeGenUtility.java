@@ -331,13 +331,20 @@ public class CodeGenUtility {
       String canonicalClassName, String code, @Nullable TypeElement originatingElement) {
 
     ByteArrayOutputStream formattedCodeOutput = new ByteArrayOutputStream();
-    codeFormatter.run(
-        new ByteArrayInputStream(code.getBytes(UTF_8)),
-        formattedCodeOutput,
-        System.err,
-        // "-" arg means format input from input stream provided above. See
-        // com.google.googlejavaformat.java.CommandLineOptions for reference
-        "-");
+    byte[] codeBytes = code.getBytes(UTF_8);
+    int exitCode =
+        codeFormatter.run(
+            new ByteArrayInputStream(codeBytes),
+            formattedCodeOutput,
+            System.err,
+            // "-" arg means format input from input stream provided above. See
+            // com.google.googlejavaformat.java.CommandLineOptions for reference
+            "-");
+    if (exitCode != 0) {
+      note("Could not format code for class " + canonicalClassName, originatingElement);
+      formattedCodeOutput = new ByteArrayOutputStream(codeBytes.length);
+      formattedCodeOutput.writeBytes(codeBytes);
+    }
     try {
       JavaFileObject requestFile =
           processingEnv

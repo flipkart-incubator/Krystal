@@ -2745,6 +2745,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                       : ParameterizedTypeName.get(
                           specType, boxedFacetType.typeName(), vajramReqClass),
                   facet.name() + FACET_SPEC_SUFFIX)
+              .addJavadoc(facetDoc != null ? CodeBlock.of(facetDoc) : EMPTY_CODE_BLOCK)
               .addModifiers(PUBLIC, STATIC, FINAL)
               .addAnnotation(
                   AnnotationSpec.builder(FacetIdNameMapping.class)

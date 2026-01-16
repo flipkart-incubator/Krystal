@@ -86,5 +86,8 @@ public record VajramInfoLite(
       String name,
       CodeGenType dataType,
       FacetType facetType,
-      @Nullable String documentation) {}
+      @Nullable String documentation) {
+
+    public FacetDetail {}
+  }
 }

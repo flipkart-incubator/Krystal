@@ -184,6 +184,14 @@ public class VajramCodeGenUtility {
         .toList();
   }
 
+  public VajramInfo computeVajramInfo(TypeMirror vajramClassMirror) {
+    TypeElement vajramClass =
+        requireNonNull(
+            (TypeElement) processingEnv().getTypeUtils().asElement(vajramClassMirror),
+            "Could not find vajram class for vajram type " + vajramClassMirror);
+    return computeVajramInfo(vajramClass);
+  }
+
   public VajramInfo computeVajramInfo(TypeElement vajramClass) {
     VajramInfoLite vajramInfoLite = computeVajramInfoLite(vajramClass.asType());
     VajramInfoLite conformsToTraitInfo = getConformToTraitInfoFromVajram(vajramClass);

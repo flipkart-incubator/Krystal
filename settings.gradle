@@ -75,7 +75,7 @@ include 'lattice:extensions:rest:lattice-rest-api'
 include 'lattice:extensions:rest:lattice-rest-codegen'
 
 include 'lattice:extensions:quarkus:lattice-quarkus'
-include 'lattice:extensions:quarkus:lattice-quarkus-arc-codegen'
+include 'lattice:extensions:quarkus:lattice-quarkus-codegen'
 
 include 'lattice:extensions:rest:dropwizard:lattice-rest-dropwizard'
 include 'lattice:extensions:rest:dropwizard:lattice-rest-dropwizard-codegen'
@@ -86,6 +86,9 @@ include 'lattice:extensions:rest:quarkus:lattice-rest-quarkus-codegen'
 include 'lattice:extensions:graphql:lattice-graphql-codegen'
 include 'lattice:extensions:graphql:rest:lattice-graphql-rest'
 
+include 'lattice:extensions:mcp:lattice-mcp'
+include 'lattice:extensions:mcp:quarkus:lattice-mcp-quarkus-codegen'
+
 /* ******** LATTICE EXTENSIONS : END *********** */
 
 /* ******** SAMPLE PROJECTS : START *********** */
@@ -95,6 +98,7 @@ include 'lattice:samples:rest:json:quarkus:rest-json-quarkus-lattice-sample'
 include 'lattice:samples:rest:json:dropwizard:rest-json-dropwizard-lattice-sample'
 include 'lattice:samples:grpc-proto3-lattice-sample'
 include 'lattice:samples:graphql-rest-json-lattice-sample'
+include 'lattice:samples:mcp:quarkus:mcp-quarkus-lattice-sample'
 /* ******** SAMPLE PROJECTS : END *********** */
 
 
