@@ -1,0 +1,14 @@
+dependencies {
+    api platform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
+
+    implementation project(':lattice:extensions:cdi:lattice-cdi-codegen')
+    implementation project(':lattice:lattice-codegen')
+
+    implementation 'io.quarkus.arc:arc'
+    implementation 'io.quarkus:quarkus-core'
+    implementation 'com.squareup:javapoet'
+}
+
+extraJavaModuleInfo {
+    failOnMissingModuleInfo = false
+}

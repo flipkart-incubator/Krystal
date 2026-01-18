@@ -5,6 +5,7 @@ module flipkart.krystal.lattice.core {
   exports com.flipkart.krystal.lattice.core.headers;
   exports com.flipkart.krystal.lattice.core;
   exports com.flipkart.krystal.lattice.vajram;
+  exports com.flipkart.krystal.lattice.krystex;
 
   requires org.slf4j;
   requires com.fasterxml.jackson.databind;

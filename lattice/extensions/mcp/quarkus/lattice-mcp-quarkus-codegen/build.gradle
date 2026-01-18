@@ -1,0 +1,13 @@
+dependencies {
+    implementation project(':krystal-codegen-common')
+    implementation project(':lattice:lattice-core')
+    implementation project(':lattice:lattice-codegen')
+    implementation project(':lattice:extensions:mcp:lattice-mcp')
+    implementation 'com.squareup:javapoet'
+    implementation 'io.quarkiverse.mcp:quarkus-mcp-server-core:1.8.1'
+    implementation 'io.smallrye.reactive:mutiny'
+}
+
+extraJavaModuleInfo {
+    failOnMissingModuleInfo = false
+}
