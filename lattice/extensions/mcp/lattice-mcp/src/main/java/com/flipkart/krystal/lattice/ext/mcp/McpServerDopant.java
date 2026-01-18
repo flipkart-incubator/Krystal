@@ -1,5 +1,7 @@
 package com.flipkart.krystal.lattice.ext.mcp;
 
+import static java.util.concurrent.CompletableFuture.failedFuture;
+
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.lattice.core.doping.Dopant;
 import com.flipkart.krystal.lattice.core.doping.DopantConfig.NoConfiguration;
@@ -10,6 +12,7 @@ import com.flipkart.krystal.lattice.vajram.VajramRequestExecutionContext;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 @Singleton
@@ -29,8 +32,8 @@ public final class McpServerDopant implements Dopant<McpServer, NoConfiguration>
     try {
       return krystexDopant.executeRequest(
           VajramRequestExecutionContext.<T>builder().vajramRequest(vajramRequest).build());
-    } catch (LeaseUnavailableException e) {
-      throw new RuntimeException(e);
+    } catch (Exception e) {
+      return failedFuture(e);
     }
   }
 }

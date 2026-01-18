@@ -20,7 +20,7 @@ public abstract class AddSecretNumber extends ComputeVajramDef<Integer> {
   }
 
   @Output
-  static int capitalize(int input) {
+  static int add(int input) {
     return input + 23445;
   }
 }

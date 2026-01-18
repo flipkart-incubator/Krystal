@@ -85,7 +85,10 @@ public class QuarkusMcpCodegenProvider implements LatticeCodeGeneratorProvider {
             MethodSpec.methodBuilder(lowerCaseFirstChar(vajramInfo.vajramName()))
                 .addAnnotation(
                     AnnotationSpec.builder(Tool.class)
-                        .addMember("description", "$S", vajramInfo.lite().docString())
+                        .addMember(
+                            "description",
+                            "$S",
+                            requireNonNullElse(vajramInfo.lite().docString(), ""))
                         .build())
                 .returns(
                     ParameterizedTypeName.get(
