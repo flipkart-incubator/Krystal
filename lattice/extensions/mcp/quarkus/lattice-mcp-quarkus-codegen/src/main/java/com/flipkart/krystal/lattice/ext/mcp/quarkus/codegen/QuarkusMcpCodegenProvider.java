@@ -61,7 +61,7 @@ public class QuarkusMcpCodegenProvider implements LatticeCodeGeneratorProvider {
       ClassName mcpToolsClassName =
           ClassName.get(
               util.getPackageName(latticeAppTypeElement),
-              latticeAppTypeElement.getSimpleName().toString() + "_McpTools");
+              latticeAppTypeElement.getSimpleName().toString() + "_QuarkusMcpTools");
 
       TypeSpec.Builder mcpToolsClassBuilder =
           util.classBuilder(

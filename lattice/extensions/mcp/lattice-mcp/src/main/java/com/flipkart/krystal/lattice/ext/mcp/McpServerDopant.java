@@ -9,10 +9,8 @@ import com.flipkart.krystal.lattice.core.doping.DopantType;
 import com.flipkart.krystal.lattice.ext.mcp.api.McpServer;
 import com.flipkart.krystal.lattice.krystex.KrystexDopant;
 import com.flipkart.krystal.lattice.vajram.VajramRequestExecutionContext;
-import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 @Singleton
