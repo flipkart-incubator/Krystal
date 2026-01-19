@@ -27,7 +27,7 @@ public abstract class HelloUserWithUri extends ComputeVajramDef<String> {
   static String echo(URI uri, @Nullable String name) {
     return "Hello "
         + requireNonNullElse(name, "User")
-        + "! Received URI with path: "
+        + "! Received URI with uri: "
         + uri.toString();
   }
 }

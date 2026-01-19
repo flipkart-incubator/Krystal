@@ -53,6 +53,9 @@ import lombok.extern.slf4j.Slf4j;
  *   <li>$LatticeAppName$_QuarkusMcpResources - this contains adapter methods - one for each vajram
  *       which has been configured as a resourceVajram in the {@link McpServer} annotation placed on
  *       the Lattice Application class.
+ *   <li>$LatticeAppName$_QuarkusMcpResourceTemplates - this contains adapter methods - one for each
+ *       annotation placed on the Lattice Application class. vajram which has been configured as a
+ *       resourceTemplateVajram in the {@link McpServer}
  * </ul>
  */
 @Slf4j
