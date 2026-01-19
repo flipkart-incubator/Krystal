@@ -30,6 +30,8 @@ dependencies {
     implementation 'jakarta.inject:jakarta.inject-api'
     implementation 'io.quarkus:quarkus-arc'
     implementation 'io.quarkiverse.mcp:quarkus-mcp-server-http:1.8.1'
+    implementation 'jakarta.ws.rs:jakarta.ws.rs-api'
+    implementation 'io.quarkus:quarkus-rest'
 
     compileOnly "org.projectlombok:lombok:$lombok_version"
     implementation 'org.slf4j:slf4j-api'

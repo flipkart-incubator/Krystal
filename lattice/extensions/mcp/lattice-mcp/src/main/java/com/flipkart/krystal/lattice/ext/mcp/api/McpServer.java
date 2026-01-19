@@ -27,4 +27,11 @@ public @interface McpServer {
    * Resources</a>
    */
   Class<? extends VajramDefRoot<?>>[] resourceVajrams() default {};
+
+  /**
+   * Classes of vajrams which act as <a
+   * href="https://modelcontextprotocol.io/specification/2025-11-25/server/resources#resource-templates">MCP
+   * Resource Templates</a>
+   */
+  Class<? extends VajramDefRoot<?>>[] resourceTemplateVajrams() default {};
 }

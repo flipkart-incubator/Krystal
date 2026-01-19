@@ -18,6 +18,7 @@ import com.flipkart.krystal.lattice.krystex.KrystexDopantSpec.KrystexDopantSpecB
 import com.flipkart.krystal.lattice.samples.mcp.quarkus.logic.AddSecretNumber;
 import com.flipkart.krystal.lattice.samples.mcp.quarkus.logic.CapitalizeString;
 import com.flipkart.krystal.lattice.samples.mcp.quarkus.logic.GetPreambleOfIndia;
+import com.flipkart.krystal.lattice.samples.mcp.quarkus.logic.HelloUserWithUri;
 import com.flipkart.krystal.lattice.vajram.VajramDopantSpec;
 import com.flipkart.krystal.lattice.vajram.VajramDopantSpec.VajramDopantSpecBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
@@ -27,7 +28,8 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
     dependencyInjectionFramework = CdiFramework.class)
 @McpServer(
     toolVajrams = {CapitalizeString.class, AddSecretNumber.class},
-    resourceVajrams = GetPreambleOfIndia.class)
+    resourceVajrams = GetPreambleOfIndia.class,
+    resourceTemplateVajrams = HelloUserWithUri.class)
 public abstract class QuarkusMcpServer extends LatticeApplication {
   @DopeWith
   public static ThreadingStrategySpecBuilder threading() {
@@ -40,7 +42,10 @@ public abstract class QuarkusMcpServer extends LatticeApplication {
         .vajramGraphBuilder(
             VajramGraph.builder()
                 .loadClasses(
-                    CapitalizeString.class, AddSecretNumber.class, GetPreambleOfIndia.class));
+                    CapitalizeString.class,
+                    AddSecretNumber.class,
+                    GetPreambleOfIndia.class,
+                    HelloUserWithUri.class));
   }
 
   @DopeWith

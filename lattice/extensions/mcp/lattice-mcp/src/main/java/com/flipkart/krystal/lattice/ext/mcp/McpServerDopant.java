@@ -43,4 +43,8 @@ public final class McpServerDopant implements Dopant<McpServer, NoConfiguration>
   public <T> CompletionStage<T> executeMcpResource(ImmutableRequest<T> vajramRequest) {
     return executeVajram(vajramRequest);
   }
+
+  public <T> CompletionStage<T> executeMcpResourceTemplate(ImmutableRequest<T> vajramRequest) {
+    return executeVajram(vajramRequest);
+  }
 }

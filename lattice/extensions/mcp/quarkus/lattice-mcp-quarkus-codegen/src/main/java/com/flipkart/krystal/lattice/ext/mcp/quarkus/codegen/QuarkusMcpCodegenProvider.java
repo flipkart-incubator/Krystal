@@ -26,12 +26,16 @@ import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
+import io.quarkiverse.mcp.server.RequestUri;
 import io.quarkiverse.mcp.server.Resource;
+import io.quarkiverse.mcp.server.ResourceTemplate;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolArg;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
+import jakarta.ws.rs.core.UriBuilder;
+import java.net.URI;
 import java.util.List;
 import java.util.Map.Entry;
 import javax.lang.model.element.Modifier;
@@ -71,7 +75,100 @@ public class QuarkusMcpCodegenProvider implements LatticeCodeGeneratorProvider {
       CodeGenUtility util = latticeCodegenContext.codeGenUtility().codegenUtil();
       generateMcpTools(latticeCodegenContext, util, latticeAppTypeElement, mcpServer);
       generateMcpResources(latticeCodegenContext, util, latticeAppTypeElement, mcpServer);
+      generateMcpResourceTemplates(latticeCodegenContext, util, latticeAppTypeElement, mcpServer);
     };
+  }
+
+  private void generateMcpResourceTemplates(
+      LatticeCodegenContext latticeCodegenContext,
+      CodeGenUtility util,
+      TypeElement latticeAppTypeElement,
+      McpServer mcpServer) {
+    List<? extends TypeMirror> resourceTemplateVajrams =
+        util.getTypesFromAnnotationMember(mcpServer::resourceTemplateVajrams).stream().toList();
+    ClassName resourceTemplatesClassName =
+        ClassName.get(
+            util.getPackageName(latticeAppTypeElement),
+            latticeAppTypeElement.getSimpleName().toString() + "_QuarkusMcpResourceTemplates");
+
+    TypeSpec.Builder resourceTemplatesClassBuilder =
+        util.classBuilder(
+                resourceTemplatesClassName.simpleName(),
+                latticeAppTypeElement.getQualifiedName().toString())
+            .addModifiers(PUBLIC)
+            .addAnnotation(Singleton.class);
+    addCommonMembers(resourceTemplatesClassBuilder);
+
+    for (TypeMirror resourceTemplateVajram : resourceTemplateVajrams) {
+      VajramInfo vajramInfo =
+          latticeCodegenContext.codeGenUtility().computeVajramInfo(resourceTemplateVajram);
+      MethodSpec.Builder methodBuilder = createUniMethodBuilder(vajramInfo, util);
+
+      StringBuilder uriTemplate = new StringBuilder("vajram://").append(vajramInfo.vajramName());
+      CodeBlock.Builder requestBuilder =
+          CodeBlock.builder()
+              .add(
+                  "$T._builder()",
+                  ClassName.get(
+                      vajramInfo.lite().packageName(),
+                      vajramInfo.vajramName() + IMMUT_REQUEST_POJO_SUFFIX));
+
+      for (Entry<String, FacetDetail> entry : vajramInfo.lite().facetDetails().entrySet()) {
+        String facetName = entry.getKey();
+        FacetDetail facetDetail = entry.getValue();
+        if (facetDetail.facetType() != FacetType.INPUT) {
+          continue;
+        }
+
+        TypeName typeName =
+            TypeName.get(facetDetail.dataType().javaModelType(util.processingEnv()));
+
+        if (typeName.equals(ClassName.get(String.class))) {
+          methodBuilder.addParameter(ParameterSpec.builder(typeName, facetName).build());
+          uriTemplate.append("/{").append(facetName).append("}");
+          requestBuilder.add(".$L($L)", facetName, facetName);
+        } else if (typeName.equals(ClassName.get(URI.class))) {
+          methodBuilder.addParameter(
+              ParameterSpec.builder(ClassName.get(RequestUri.class), facetName).build());
+          requestBuilder.add(
+              ".$L($T.fromUri($L.value()).build())", facetName, UriBuilder.class, facetName);
+        } else {
+          util.error(
+              "Resource Template vajrams can only accept String or URI parameters. Found: "
+                  + typeName
+                  + " for facet "
+                  + facetName
+                  + " in vajram "
+                  + vajramInfo.vajramName());
+        }
+      }
+
+      methodBuilder.addAnnotation(
+          AnnotationSpec.builder(ResourceTemplate.class)
+              .addMember("uriTemplate", "$S", uriTemplate.toString())
+              .addMember("description", "$S", getDocString(vajramInfo))
+              .build());
+
+      methodBuilder.addCode(
+          """
+          return $T.createFrom()
+              .completionStage(
+                  mcpServerDopant.executeMcpResourceTemplate(
+                    $L
+                    ._build()));
+          """,
+          Uni.class,
+          requestBuilder.build());
+
+      resourceTemplatesClassBuilder.addMethod(methodBuilder.build());
+    }
+
+    util.generateSourceFile(
+        resourceTemplatesClassName.canonicalName(),
+        JavaFile.builder(
+                resourceTemplatesClassName.packageName(), resourceTemplatesClassBuilder.build())
+            .build(),
+        latticeAppTypeElement);
   }
 
   private void generateMcpTools(
