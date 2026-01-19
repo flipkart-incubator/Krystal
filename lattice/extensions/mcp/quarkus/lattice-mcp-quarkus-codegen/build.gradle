@@ -6,6 +6,7 @@ dependencies {
     implementation 'com.squareup:javapoet'
     implementation 'io.quarkiverse.mcp:quarkus-mcp-server-core:1.8.1'
     implementation 'io.smallrye.reactive:mutiny'
+    implementation 'jakarta.ws.rs:jakarta.ws.rs-api'
 }
 
 extraJavaModuleInfo {

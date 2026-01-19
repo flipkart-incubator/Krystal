@@ -29,11 +29,12 @@ public @interface MutatesState {
    *   <li>TRUE - This vajram has logic which can mutate the state of the system.
    *   <li>FALSE - This vajram can never mutate state of the system.
    *   <li>UNKNOWN - It is unknown whether this vajram mutates state of the system or not. This is
-   *       the default value. The interpretation of this depends on the application. Depending on
-   *       the application's use case, it might choose to interpret this as TRUE or FALSE. In
-   *       general, it considered safer to interpret this as TRUE since vajrams which mutate state
-   *       can have side effects which can impact the correctness of the overall computation (for
-   *       example race conditions, etc).
+   *       the default value if this annotation is absent or not inferrable from dependencies. The
+   *       interpretation of this depends on the application. Depending on the application's use
+   *       case, it might choose to interpret this as TRUE or FALSE. In general, it is considered
+   *       safer to interpret this as TRUE since vajrams which mutate state can have side effects
+   *       which can impact the correctness of the overall computation (for example race conditions,
+   *       etc).
    * </ul>
    */
   Trilean value();
