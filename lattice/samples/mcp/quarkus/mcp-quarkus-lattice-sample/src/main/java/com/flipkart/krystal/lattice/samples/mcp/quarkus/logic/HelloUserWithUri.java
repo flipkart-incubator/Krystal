@@ -16,6 +16,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @Vajram
 public abstract class HelloUserWithUri extends ComputeVajramDef<String> {
 
+  @SuppressWarnings("initialization.field.uninitialized")
   static class _Inputs {
     @IfAbsent(FAIL)
     URI uri;

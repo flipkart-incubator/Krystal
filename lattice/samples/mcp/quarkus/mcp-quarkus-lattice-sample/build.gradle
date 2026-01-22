@@ -20,12 +20,15 @@ dependencies {
     implementation 'com.flipkart.krystal:vajram-java-sdk'
     implementation 'com.flipkart.krystal:lattice-mcp'
     implementation 'com.flipkart.krystal:lattice-quarkus'
+    implementation 'com.flipkart.krystal:vajram-json'
 
     krystalModelsGenProcessor 'com.flipkart.krystal:vajram-codegen'
     krystalModelsGenProcessor 'com.flipkart.krystal:lattice-codegen'
     krystalModelsGenProcessor 'com.flipkart.krystal:lattice-cdi-codegen'
     krystalModelsGenProcessor 'com.flipkart.krystal:lattice-quarkus-codegen'
     krystalModelsGenProcessor 'com.flipkart.krystal:lattice-mcp-quarkus-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-json-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:lattice-json-codegen'
 
     implementation 'jakarta.inject:jakarta.inject-api'
     implementation 'io.quarkus:quarkus-arc'

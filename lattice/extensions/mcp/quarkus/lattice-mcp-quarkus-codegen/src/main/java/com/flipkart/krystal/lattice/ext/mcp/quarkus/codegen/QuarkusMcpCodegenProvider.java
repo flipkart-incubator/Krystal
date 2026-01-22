@@ -2,6 +2,7 @@ package com.flipkart.krystal.lattice.ext.mcp.quarkus.codegen;
 
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.lowerCaseFirstChar;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.IMMUT_REQUEST_POJO_SUFFIX;
+import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -14,8 +15,11 @@ import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.codegen.spi.LatticeCodeGeneratorProvider;
 import com.flipkart.krystal.lattice.ext.mcp.McpServerDopant;
 import com.flipkart.krystal.lattice.ext.mcp.api.McpServer;
+import com.flipkart.krystal.model.Model;
+import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfoLite.FacetDetail;
+import com.flipkart.krystal.vajram.json.Json;
 import com.google.auto.service.AutoService;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
@@ -39,8 +43,11 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map.Entry;
 import javax.lang.model.element.Modifier;
+import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.Elements;
+import javax.lang.model.util.Types;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -195,10 +202,13 @@ public class QuarkusMcpCodegenProvider implements LatticeCodeGeneratorProvider {
     for (TypeMirror toolVajram : toolVajrams) {
       VajramInfo vajramInfo = latticeCodegenContext.codeGenUtility().computeVajramInfo(toolVajram);
       MethodSpec.Builder methodBuilder = createUniMethodBuilder(vajramInfo, util);
-      methodBuilder.addAnnotation(
+      AnnotationSpec.Builder toolAnnotation =
           AnnotationSpec.builder(Tool.class)
-              .addMember("description", "$S", getDocString(vajramInfo))
-              .build());
+              .addMember("description", "$S", getDocString(vajramInfo));
+      if (supportsStructuredContent(vajramInfo, util)) {
+        toolAnnotation.addMember("structuredContent", "$L", true);
+      }
+      methodBuilder.addAnnotation(toolAnnotation.build());
       for (Entry<String, FacetDetail> entry : vajramInfo.lite().facetDetails().entrySet()) {
         String facetName = entry.getKey();
         FacetDetail facetDetail = entry.getValue();
@@ -319,5 +329,35 @@ return $T.createFrom()
             .addParameter(McpServerDopant.class, "mcpServerDopant")
             .addCode("this.mcpServerDopant = mcpServerDopant;")
             .build());
+  }
+
+  private boolean supportsStructuredContent(VajramInfo vajramInfo, CodeGenUtility util) {
+    TypeMirror responseType = vajramInfo.lite().responseType().javaModelType(util.processingEnv());
+    Types typeUtils = util.processingEnv().getTypeUtils();
+    Elements elementUtils = util.processingEnv().getElementUtils();
+
+    TypeElement modelElement =
+        elementUtils.getTypeElement(requireNonNull(Model.class.getCanonicalName()));
+    if (modelElement == null || !typeUtils.isSubtype(responseType, modelElement.asType())) {
+      return false;
+    }
+
+    TypeElement responseTypeElement = (TypeElement) typeUtils.asElement(responseType);
+    if (responseTypeElement == null) {
+      return false;
+    }
+
+    SupportedModelProtocols supportedModelProtocols =
+        responseTypeElement.getAnnotation(SupportedModelProtocols.class);
+
+    if (supportedModelProtocols == null) {
+      return false;
+    }
+
+    return util.getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
+        .map(typeUtils::asElement)
+        .filter(elem -> elem instanceof QualifiedNameable)
+        .map(element -> requireNonNull((QualifiedNameable) element).getQualifiedName().toString())
+        .anyMatch(Json.class.getCanonicalName()::equals);
   }
 }
