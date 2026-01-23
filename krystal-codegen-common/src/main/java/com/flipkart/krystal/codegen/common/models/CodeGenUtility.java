@@ -137,7 +137,7 @@ public class CodeGenUtility {
   public void addImmutableModelObjectMethods(
       ClassName immutInterfaceName,
       Set<? extends CharSequence> modelFieldNames,
-      Builder classBuilder) {
+      TypeSpec.Builder classBuilder) {
     addCommonObjectMethods(classBuilder);
 
     classBuilder.addMethod(
@@ -332,14 +332,20 @@ public class CodeGenUtility {
 
     ByteArrayOutputStream formattedCodeOutput = new ByteArrayOutputStream();
     byte[] codeBytes = code.getBytes(UTF_8);
-    int exitCode =
-        codeFormatter.run(
-            new ByteArrayInputStream(codeBytes),
-            formattedCodeOutput,
-            System.err,
-            // "-" arg means format input from input stream provided above. See
-            // com.google.googlejavaformat.java.CommandLineOptions for reference
-            "-");
+    int exitCode;
+
+    try {
+      exitCode =
+          codeFormatter.run(
+              new ByteArrayInputStream(codeBytes),
+              formattedCodeOutput,
+              System.err,
+              // "-" arg means format input from input stream provided above. See
+              // com.google.googlejavaformat.java.CommandLineOptions for reference
+              "-");
+    } catch (Throwable e) {
+      exitCode = -1;
+    }
     if (exitCode != 0) {
       note("Could not format code for class " + canonicalClassName, originatingElement);
       formattedCodeOutput = new ByteArrayOutputStream(codeBytes.length);

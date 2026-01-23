@@ -11,7 +11,7 @@
 
 # Features
 
-* Instantly turn a vajram into a service API just using annotation.
+* Instantly turn a vajram into a service API just using annotations.
 * Pluggable support for standard wire protocols like json and protobuf (and more can be added
   independently)
 * All wire protocol schemas are auto-generated from Vajram definitions and/or standard java
@@ -92,6 +92,7 @@ introduces the following new concepts:
 ## Application spec definition
 
 ```java
+
 @LatticeApp(
     description = "My Useful Service",
     dependencyInjectionFramework = CdiFramework.class) // Guice is also supported
@@ -100,13 +101,14 @@ introduces the following new concepts:
 // can be used to build web-services, cron jobs, as well as command-line terminals
 @RestService( // grpc and GraphQl are also supported
     resourceVajrams = {
-      // List the vajrams which need to treated as REST APIs
-      // The serialization protocols of the request and response of each is controlled at the vajram
-      // definition
-      API_1.class,
-      API_2.class
+        // List the vajrams which need to treated as REST APIs
+        // The serialization protocols of the request and response of each is controlled at the vajram
+        // definition
+        API_1.class,
+        API_2.class
     })
 public abstract class MyUsefulService extends LatticeApplication {
+
   // Specifies that this application should create a pool of threads and dedicate one thread to each
   // incoming request
   @DopeWith
@@ -158,29 +160,36 @@ public abstract class MyUsefulService extends LatticeApplication {
 
 ```
 
-## Remote Vajram
+## Invoking Vajram from outside the process
 
-A `RemoteVajram` is a vajramDef which can be invoked remotely from another process over the network
+A vajram annotated as `InvocableOutsideProcess`  can be invoked remotely from another process over
+the network or from the command line (depending on how the lattice application is configured). Vajrams which are invocable outside process should make sure their request and response types are serializable with an appropriate `SerdeProtocol` so that the request can be deserialized and the response can be serialized. 
 
 ```java
 
-@RemotelyInvocable // This tells Lattice that this vajramDef can be bound to a service API.
-@VajramDef
-abstract class GetUsefulData extends ComputeVajram<MyResponse> {
+@InvocableOutsideProcess // This tells Lattice that this vajram can be bound to a service API.
+@Vajram
+abstract class GetUsefulData extends ComputeVajramDef<MyResponse> {
 
   private static final int DEFAULT_DATA_COUNT = 10;
+  
+  static class _Inputs {
 
-  @Input(idx = 1) // Every facet must have a unique idx
-  // Input indexes are used when needed for wire formats like protobuf
-  // (These might also be used for optimal switch cases in auto-generated data classes as well)
-  // Backward compatibility checkers will make sure idxes are unique and do not change for RemoteVajrams
-  String userId;
+    @SerialId(1) // Every facet must have a unique idx
+    // Input indexes are used when needed for wire formats like protobuf
+    // (These might also be used for optimal switch cases in auto-generated data classes as well)
+    // Backward compatibility checkers will make sure idxes are unique and do not change for RemoteVajrams
+    @IfAbsent(FAIL)
+    String userId;
+  
+    @SerialId(2)
+    int dataCount;
+  }
 
-  @Input(idx = 2)
-  Optional<Integer> dataCount;
-
-  @Dependency(idx = 3, value = "GetUsefulDataFromDB")
-  UsefulDataDAO usefulData;
+  static class _InternalFacets {
+    @Dependency(onVajram = GetUsefulDataFromDB.class)
+    UsefulDataDAO usefulData;
+  }
 
   @Resolve(depName = "usefulData", depInputs = "queryInputs")
   static UsefulDataQuery computeQuery(@Using("userId") String userId,
@@ -192,9 +201,8 @@ abstract class GetUsefulData extends ComputeVajram<MyResponse> {
   }
 
   @Output
-  static MyResponse computeResponse(@Using("usefulData") UsefulDataDAO usefulData) {
+  static MyResponse computeResponse(UsefulDataDAO usefulData) {
     return transform(usefulData);
   }
-
 }
 ```
