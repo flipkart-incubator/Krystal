@@ -344,6 +344,7 @@ public class CodeGenUtility {
               // com.google.googlejavaformat.java.CommandLineOptions for reference
               "-");
     } catch (Throwable e) {
+      log.warn("Encountered exception while formatting generated code.", e);
       exitCode = -1;
     }
     if (exitCode != 0) {
