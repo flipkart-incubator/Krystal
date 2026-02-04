@@ -49,8 +49,8 @@ public final class GraphQlLoader {
     runtimeWiring.scalar(ExtendedScalars.Date);
     runtimeWiring.scalar(ExtendedScalars.GraphQLLong);
 
-    // Note: Input type coercion is handled at execution time via GraphQlInputTypeWiringFactory
-    // The factory is available for use in execution context if needed
+    // Note: Input type coercion is handled at execution time in generated Vajram code
+    // using GraphQlInputTypeCoercing.coerceInputType() with compile-time known classes
 
     GraphQLSchema graphQLSchema =
         new SchemaGenerator().makeExecutableSchema(typeDefinitionRegistry, runtimeWiring.build());

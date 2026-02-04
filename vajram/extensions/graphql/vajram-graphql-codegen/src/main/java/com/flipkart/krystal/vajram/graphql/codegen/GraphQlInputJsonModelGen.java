@@ -7,11 +7,7 @@ import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectReader;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
@@ -21,22 +17,15 @@ import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.SupportedModelProtocols;
-import com.flipkart.krystal.serial.SerdeProtocol;
-import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlInputJson;
-import com.flipkart.krystal.vajram.json.Json;
-import com.google.common.base.Suppliers;
 import com.squareup.javapoet.AnnotationSpec;
-import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.QualifiedNameable;
@@ -46,7 +35,7 @@ import javax.lang.model.element.TypeElement;
  * Generates GraphQL input model implementations (e.g., SellerInput_ImmutGQlInputJson) for input
  * types annotated with @SupportedModelProtocols(GraphQlInputJson.class).
  *
- * <p>These models provide JSON serialization/deserialization support for GraphQL input types.
+ * <p>These models provide JSON deserialization support for GraphQL input types used in coercion.
  */
 final class GraphQlInputJsonModelGen implements CodeGenerator {
   private final ModelsCodeGenContext codeGenContext;
@@ -111,52 +100,7 @@ final class GraphQlInputJsonModelGen implements CodeGenerator {
     ClassName immutablePojoName =
         ClassName.get(packageName, immutableModelName.simpleName() + POJO.modelClassesSuffix());
 
-    TypeName byteArrayType = ArrayTypeName.of(TypeName.BYTE);
-
-    classBuilder.addField(
-        FieldSpec.builder(
-                ParameterizedTypeName.get(Supplier.class, ObjectReader.class),
-                "_READER",
-                PRIVATE,
-                STATIC,
-                FINAL)
-            .initializer(
-                "$T.memoize(() -> $T.OBJECT_READER.forType($T.class))",
-                Suppliers.class,
-                Json.class,
-                immutableJsonModelName)
-            .build());
-    classBuilder.addField(
-        FieldSpec.builder(
-                ParameterizedTypeName.get(Supplier.class, ObjectWriter.class),
-                "_WRITER",
-                PRIVATE,
-                STATIC,
-                FINAL)
-            .initializer(
-                "$T.memoize(() ->$T.OBJECT_WRITER.forType($T.class))",
-                Suppliers.class,
-                Json.class,
-                immutableJsonModelName)
-            .build());
-    classBuilder.addField(FieldSpec.builder(immutablePojoName, "_pojo", PRIVATE).build());
-    classBuilder.addField(
-        FieldSpec.builder(byteArrayType, "_serializedPayload", PRIVATE)
-            .addAnnotation(JsonIgnore.class)
-            .build());
-
-    // Add _serialize method from Serializable interface with lazy initialization
-    classBuilder.addMethod(
-        MethodSpec.overriding(util.getMethod(SerializableModel.class, "_serialize", 0))
-            .addException(JsonProcessingException.class)
-            .addCode(
-                """
-                if (_serializedPayload == null) {
-                  this._serializedPayload = _WRITER.get().writeValueAsBytes(this);
-                }
-                return _serializedPayload;
-                """)
-            .build());
+    classBuilder.addField(FieldSpec.builder(immutablePojoName, "_pojo", PRIVATE, FINAL).build());
 
     // Create getter methods
     List<MethodSpec> methods = new ArrayList<>();
@@ -173,25 +117,12 @@ final class GraphQlInputJsonModelGen implements CodeGenerator {
 
     methods.addAll(commonMethods(immutableJsonModelName));
 
-    // Add method to lazily deserialize the json
+    // Add method to get the pojo
     classBuilder.addMethod(
         MethodSpec.methodBuilder("_pojo")
             .addModifiers(PRIVATE)
             .returns(immutablePojoName)
-            .addCode(
-                """
-                if (_pojo == null && _serializedPayload != null) {
-                  try{
-                    _pojo = _READER.get().readValue(_serializedPayload, $T.class)._pojo();
-                  } catch (Exception e) {
-                    throw new RuntimeException("Failed to deserialize json bytes", e);
-                  }
-                } else if (_pojo == null) {
-                  throw new IllegalStateException("Both _pojo and _serializedPayload are null");
-                }
-                return _pojo;
-                """,
-                immutableJsonModelName)
+            .addStatement("return _pojo")
             .build());
 
     // Create builder class
@@ -207,36 +138,11 @@ final class GraphQlInputJsonModelGen implements CodeGenerator {
     return classBuilder
         .addModifiers(PUBLIC, FINAL)
         .addSuperinterface(immutableModelName)
-        .addSuperinterface(SerializableModel.class)
-        .addMethod(
-            MethodSpec.methodBuilder("_serdeProtocol")
-                .addAnnotation(Override.class)
-                .addModifiers(PUBLIC)
-                .returns(SerdeProtocol.class)
-                .addStatement("return $T.INSTANCE", GraphQlInputJson.class)
-                .build())
         .addMethod(
             // Add constructor accepting pojo
             MethodSpec.constructorBuilder()
                 .addModifiers(PRIVATE)
                 .addParameter(immutablePojoName, "_pojo")
-                .addStatement("this._pojo = _pojo")
-                .build())
-        .addMethod(
-            // Add constructor for serialized payload
-            MethodSpec.constructorBuilder()
-                .addModifiers(PUBLIC)
-                .addParameter(byteArrayType, "_serializedPayload")
-                .addStatement("this._serializedPayload = _serializedPayload")
-                .addStatement("this._pojo = null")
-                .build())
-        .addMethod(
-            // Add constructor for serialized payload and pojo
-            MethodSpec.constructorBuilder()
-                .addModifiers(PUBLIC)
-                .addParameter(byteArrayType, "_serializedPayload")
-                .addParameter(immutablePojoName, "_pojo")
-                .addStatement("this._serializedPayload = _serializedPayload")
                 .addStatement("this._pojo = _pojo")
                 .build())
         .addMethods(methods)
@@ -270,22 +176,7 @@ final class GraphQlInputJsonModelGen implements CodeGenerator {
             .addAnnotation(Override.class)
             .addModifiers(PUBLIC)
             .returns(immutableJsonModelName)
-            .addCode(
-                """
-                if(_serializedPayload != null && _pojo != null ) {
-                  return new $T(_serializedPayload, _pojo);
-                } else if(_serializedPayload != null) {
-                  return new $T(_serializedPayload);
-                } else if(_pojo != null){
-                  return new $T(_pojo);
-                } else {
-                  throw new $T("Both _pojo and _serializedPayload are null");
-                }
-                """,
-                immutableJsonModelName,
-                immutableJsonModelName,
-                immutableJsonModelName,
-                IllegalStateException.class)
+            .addStatement("return new $T(_pojo._newCopy())", immutableJsonModelName)
             .build());
   }
 

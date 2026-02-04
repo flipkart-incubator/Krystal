@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.graphql.api.schema;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import static com.flipkart.krystal.vajram.json.Json.convertValue;
+
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlInputJson;
 import graphql.schema.Coercing;
 import graphql.schema.CoercingParseLiteralException;
@@ -16,12 +17,16 @@ import lombok.extern.slf4j.Slf4j;
  * <p>This coercing handles the conversion of GraphQL variables (which come as JSON maps) to the
  * generated immutable input type classes that support {@link GraphQlInputJson} serialization.
  *
+ * <p>Uses {@link com.flipkart.krystal.vajram.json.Json#convertValue(Object, Class)} which uses the
+ * configured ObjectMapper with proper modules and settings, and respects {@code @JsonDeserialize}
+ * annotations and the builder pattern configured on the generated models. This ensures consistent
+ * and efficient deserialization behavior.
+ *
  * <p>Each instance is bound to a specific GraphQL input type name and Java class.
  */
 @Slf4j
 public class GraphQlInputTypeCoercing implements Coercing<Object, Object> {
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private final String graphQlTypeName;
   private final Class<?> inputTypeClass;
 
@@ -44,7 +49,7 @@ public class GraphQlInputTypeCoercing implements Coercing<Object, Object> {
       return null;
     }
     try {
-      return OBJECT_MAPPER.convertValue(dataFetcherResult, Map.class);
+      return convertValue(dataFetcherResult, Map.class);
     } catch (Exception e) {
       throw new CoercingSerializeException(
           "Failed to serialize input type: " + dataFetcherResult.getClass().getName(), e);
@@ -62,10 +67,11 @@ public class GraphQlInputTypeCoercing implements Coercing<Object, Object> {
       return input;
     }
 
-    // If input is a Map, deserialize it to the input type class
+    // If input is a Map, deserialize it using the configured ObjectMapper
+    // This respects @JsonDeserialize annotations and uses the builder pattern
     if (input instanceof Map<?, ?> map) {
       try {
-        return OBJECT_MAPPER.convertValue(map, inputTypeClass);
+        return convertValue(map, inputTypeClass);
       } catch (Exception e) {
         throw new CoercingParseValueException(
             "Failed to deserialize map to " + inputTypeClass.getName() + ": " + e.getMessage(), e);
@@ -84,10 +90,10 @@ public class GraphQlInputTypeCoercing implements Coercing<Object, Object> {
       return null;
     }
 
-    // Convert GraphQL literal to a Map and then deserialize
+    // Convert GraphQL literal to a Map and then deserialize using the configured ObjectMapper
     if (input instanceof Map<?, ?> map) {
       try {
-        return OBJECT_MAPPER.convertValue(map, inputTypeClass);
+        return convertValue(map, inputTypeClass);
       } catch (Exception e) {
         throw new CoercingParseLiteralException(
             "Failed to deserialize literal to " + inputTypeClass.getName() + ": " + e.getMessage(),
@@ -102,6 +108,11 @@ public class GraphQlInputTypeCoercing implements Coercing<Object, Object> {
   /**
    * Static helper method to coerce an input type argument from GraphQL. This is used by generated
    * code to convert Map arguments to input type instances.
+   *
+   * <p>Uses {@link com.flipkart.krystal.vajram.json.Json#convertValue(Object, Class)} which uses
+   * the configured ObjectMapper with proper modules and settings, and respects {@code
+   * @JsonDeserialize} annotations and the builder pattern configured on the generated models. This
+   * ensures consistent and efficient deserialization behavior.
    *
    * @param argumentValue The raw argument value from GraphQL (typically a Map)
    * @param inputTypeClass The Java class to deserialize to (e.g., SellerInput_ImmutGQlInputJson)
@@ -118,10 +129,11 @@ public class GraphQlInputTypeCoercing implements Coercing<Object, Object> {
       return argumentValue;
     }
 
-    // If it's a Map, deserialize it
+    // If it's a Map, deserialize it using the configured ObjectMapper
+    // This respects @JsonDeserialize annotations and uses the builder pattern
     if (argumentValue instanceof Map<?, ?> map) {
       try {
-        return OBJECT_MAPPER.convertValue(map, inputTypeClass);
+        return convertValue(map, inputTypeClass);
       } catch (Exception e) {
         throw new RuntimeException(
             "Failed to coerce input type " + inputTypeClass.getName() + ": " + e.getMessage(), e);

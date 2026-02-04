@@ -336,6 +336,95 @@ public class GraphQlSamplesE2ETest {
   }
 
   @Test
+  void graphqlQueryWithSellerInputJson_validatesAndReturnsSeller() throws JsonProcessingException {
+    // Prepare input
+    Map<String, Object> inputVariables =
+        Map.of(
+            "input",
+"""
+{
+    "sellerId": "test-seller-789",
+    "startDate": "2024-01-01",
+    "endDate": "2024-12-31",
+    "requestId": "test-request-789"
+}
+""");
+
+    // Print input
+    System.out.println("=== INPUT (SellerInput) ===");
+    System.out.println(
+        Json.OBJECT_WRITER.withDefaultPrettyPrinter().writeValueAsString(inputVariables));
+    System.out.println();
+
+    CompletableFuture<ExecutionResult> result;
+    try (KrystexVajramExecutor executor = createExecutor()) {
+      // Test query with SellerInput - validates input acceptance and response structure
+      result =
+          new GraphQlExecutionFacade(GRAPHQL)
+              .executeGraphQl(
+                  executor,
+                  KryonExecutionConfig.builder(),
+                  new GraphQLQuery(
+                      """
+                      query($input: SellerInput!) {
+                        sellerDetails(input: $input) {
+                          id
+                          name
+                          rating
+                          totalSales
+                          activeOrders
+                          status
+                          createdDate
+                          __typename
+                        }
+                      }
+                      """,
+                      inputVariables));
+    }
+    assertThat(result).succeedsWithin(TEST_TIMEOUT);
+    ExecutionResult executionResult = result.join();
+
+    // Print errors if any for debugging
+    if (executionResult.getErrors() != null && !executionResult.getErrors().isEmpty()) {
+      System.err.println("GraphQL Errors:");
+      executionResult.getErrors().forEach(error -> System.err.println("  - " + error.getMessage()));
+    }
+
+    // Verify no errors
+    assertThat(executionResult.getErrors() == null || executionResult.getErrors().isEmpty())
+        .isTrue();
+
+    // Verify data is present
+    Object data = executionResult.getData();
+    assertThat(data).isInstanceOf(Query.class);
+    Query query = (Query) data;
+
+    // Print output
+    System.out.println("=== OUTPUT (GraphQL Response) ===");
+    System.out.println(
+        Json.OBJECT_WRITER
+            .withDefaultPrettyPrinter()
+            .writeValueAsString(executionResult.toSpecification()));
+    System.out.println();
+
+    // Verify seller response structure
+    Seller seller = query.sellerDetails();
+    assertThat(seller).isNotNull();
+    assertThat(seller.__typename()).isEqualTo("Seller");
+    assertThat(seller.id()).isNotNull();
+    assertThat(seller.name()).isNotNull();
+    assertThat(seller.rating()).isNotNull();
+    assertThat(seller.totalSales()).isNotNull();
+    assertThat(seller.activeOrders()).isNotNull();
+    assertThat(seller.status()).isNotNull();
+    assertThat(seller.createdDate()).isNotNull();
+    // If data is in a different format or null, at least verify SellerInput was accepted (no
+    // errors)
+    // The important part is that the query executed without errors, meaning SellerInput was
+    // accepted
+  }
+
+  @Test
   void graphqlQueryWithSellerInput_returnsCompleteSellerData() throws JsonProcessingException {
     // Prepare input with all fields
     Map<String, Object> inputVariables =
