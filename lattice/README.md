@@ -92,21 +92,23 @@ introduces the following new concepts:
 ## Application spec definition
 
 ```java
-
 @LatticeApp(
-    description = "My Useful Service",
-    dependencyInjectionFramework = CdiFramework.class) // Guice is also supported
+    description =
+        "My useful service makes my useful vajrams usefully available to all my awesome clients!",
+    dependencyInjectionFramework = CdiFramework.class // Guice is also supported
+    )
 
 // This dopant annotation makes this application into a restful web-service. Lattice applications
 // can be used to build web-services, cron jobs, as well as command-line terminals
 @RestService( // grpc and GraphQl are also supported
     resourceVajrams = {
-        // List the vajrams which need to treated as REST APIs
-        // The serialization protocols of the request and response of each is controlled at the vajram
-        // definition
-        API_1.class,
-        API_2.class
+      // List the vajrams which need to treated as REST APIs
+      // The serialization protocols of the request and response of each is controlled at the vajram
+      // definition
+      API_1.class,
+      API_2.class
     })
+@ServiceOwner("my-awesome-team@flipkart.com")
 public abstract class MyUsefulService extends LatticeApplication {
 
   // Specifies that this application should create a pool of threads and dedicate one thread to each
@@ -117,44 +119,17 @@ public abstract class MyUsefulService extends LatticeApplication {
   }
 
   @DopeWith
-  public LatticeService<MyUsefulApplicationContext> buildServiceSpec() {
-    return LatticeService.builder()
-        .serviceName(
-            "myusefulservice") // Globally unique service name - all apis in this service have the
-        // following format
-        // <protocol><hostname>/<servicename>/<vajramId>
-        .doc(
-            "My useful service makes my useful vajrams usefully available to all my awesome clients!")
-        .withVajramGraph(buildVajramGraph()) // The DAG containing all the registered vajrams.
-        // All Remote Vajrams are auto registered as individual APIs
-        // The api names are same as the vajramIds.
-        // Batching is enabled by default for all of these APIs - this is invisible to the vajrams
-        .networkProtocol(HTTP_2) // or HTTP_1_1, HTTP_3, TCP, FTP etc...
-        .serviceProtocol(GRPC) // or REST, GRAPHQL etc...
-        .defaultWireProtocol(
-            PROTOBUF_3) // or JSON, PROTOBUF_2, THRIFT etc... Individual vajrams may override this
-        // if they choose.
-        .serviceOwner("my-awesome-team@flipkart.com")
-        .build();
+  public static VajramDopantSpecBuilder vajramGraph() {
+    return VajramDopantSpec.builder()
+        .vajramGraphBuilder(
+            VajramGraph.builder()
+                .loadFromPackage("com.flipkart.myusefulvajrams")
+                .loadFromPackage("com.flipkart.myotherusefulvajrams"));
   }
 
-  private VajramKryonGraph buildVajramGraph() {
-    VajramKryonGraph graph =
-        VajramKryonGraph
-            // Load all vajrams from java classes with these package prefixes.
-            // These vajrams include `RemoteVajram`s which are external facing, as they are bound to
-            // remotely callable APIs (maybe `ComputeVajram`s or `IOVajrams`),
-            // and internal `ComputeVajram`s or `IOVajram`s which are direct/indirect dependencies
-            // of the above `RemoteVajram`s.
-            .loadFromClasspath("com.flipkart.myusefulvajrams", "com.flipkart.myotherusefulvajrams")
-            .build();
-    // `putUsefulInfo` is an IO vajramDef with maxBatchSize 20
-    graph.registerInputBatchers(
-        vajramID("putUsefulInfo", InputBatcherConfig.simple(() -> new Batcher<>(20))));
-    // `getUsefulInfo` is an IO vajramDef with maxBatchSize 100
-    graph.registerInputBatchers(
-        vajramID("getUsefulInfo", InputBatcherConfig.shared(() -> new Batcher<>(100))));
-    return graph;
+  @DopeWith
+  public static KrystexDopantSpecBuilder krystex() {
+    return KrystexDopantSpec.builder();
   }
 }
 
@@ -167,7 +142,7 @@ the network or from the command line (depending on how the lattice application i
 
 ```java
 
-@InvocableOutsideProcess // This tells Lattice that this vajram can be bound to a service API.
+@InvocableOutsideProcess // This tells Lattice that this vajram can be exposed as a service API.
 @Vajram
 abstract class GetUsefulData extends ComputeVajramDef<MyResponse> {
 
@@ -176,9 +151,9 @@ abstract class GetUsefulData extends ComputeVajramDef<MyResponse> {
   static class _Inputs {
 
     @SerialId(1) // Every facet must have a unique idx
-    // Input indexes are used when needed for wire formats like protobuf
+    // SerialIds are used when needed for wire formats like protobuf
     // (These might also be used for optimal switch cases in auto-generated data classes as well)
-    // Backward compatibility checkers will make sure idxes are unique and do not change for RemoteVajrams
+    // Backward compatibility checkers can make sure serialIds are unique and do not change for Vajrams which are invocable outside process
     @IfAbsent(FAIL)
     String userId;
   
