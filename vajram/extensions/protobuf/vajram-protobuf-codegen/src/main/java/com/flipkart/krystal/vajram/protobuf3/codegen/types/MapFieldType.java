@@ -21,7 +21,7 @@ public record MapFieldType(
 
   @Override
   public String typeInProtoFile() {
-    return "map <" + keyType.typeInProtoFile() + ", " + valueType.typeInProtoFile() + ">";
+    return "map<" + keyType.typeInProtoFile() + ", " + valueType.typeInProtoFile() + ">";
   }
 
   @Override

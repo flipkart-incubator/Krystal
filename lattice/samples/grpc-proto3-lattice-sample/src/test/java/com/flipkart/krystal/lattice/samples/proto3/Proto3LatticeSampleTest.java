@@ -3,6 +3,7 @@ package com.flipkart.krystal.lattice.samples.proto3;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
+import static org.assertj.core.api.InstanceOfAssertFactories.type;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
@@ -18,6 +19,8 @@ import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3
 import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSample_Req;
 import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSample_ReqImmut;
 import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSample_ReqImmutProto;
+import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.ProtoMessage_ImmutProto;
+import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.ProtoMessage_Proto;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -127,6 +130,12 @@ class Proto3LatticeSampleTest {
             "$$ mandatoryLongInput: 20 $$",
             "$$ optionalByteString: test $$",
             "$$ defaultByteString: hello $$");
+    assertThat(result)
+        .succeedsWithin(1, SECONDS)
+        .extracting(Proto3LatticeSampleResponse::protoMessage)
+        .asInstanceOf(type(ProtoMessage_ImmutProto.class))
+        .extracting(ProtoMessage_ImmutProto::_proto)
+        .isEqualTo(ProtoMessage_Proto.newBuilder().setCount(100).build());
   }
 
   @Test

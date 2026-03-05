@@ -21,11 +21,11 @@ import java.util.Set;
  * setter and getter calls are delegated to this.
  */
 @AutoService(ModelsCodeGeneratorProvider.class)
-public class ModelsProto3GenProvider implements ModelsCodeGeneratorProvider {
+public class Proto3ModelsGenProvider implements ModelsCodeGeneratorProvider {
 
   @Override
   public CodeGenerator create(ModelsCodeGenContext codeGenContext) {
-    return new ModelsProto3Gen(codeGenContext);
+    return new Proto3ModelsGen(codeGenContext);
   }
 
   @Override

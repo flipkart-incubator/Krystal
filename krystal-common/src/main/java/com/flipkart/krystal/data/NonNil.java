@@ -28,13 +28,18 @@ public record NonNil<T>(@NonNull T value) implements Success<T> {
   }
 
   @Override
-  public void handle(Consumer<Failure<T>> ifFailure, Runnable ifNil, Consumer<NonNil<T>> ifNonNil) {
-    ifNonNil.accept(this);
+  public void handle(Consumer<Failure<T>> ifFailure, Runnable ifNil, Consumer<T> ifNonNil) {
+    ifNonNil.accept(value);
   }
 
   @Override
-  public <U> U map(
-      Function<Failure<T>, U> ifFailure, Supplier<U> ifNil, Function<NonNil<T>, U> ifNonNil) {
-    return ifNonNil.apply(this);
+  public <U> U mapToValue(
+      Function<Failure<T>, U> ifFailure, Supplier<U> ifNil, Function<T, U> ifNonNil) {
+    return ifNonNil.apply(value);
+  }
+
+  @Override
+  public <U> Errable<U> map(Function<T, U> ifNonNil) {
+    return Errable.withValue(ifNonNil.apply(value));
   }
 }

@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen.types;
 
+import java.util.List;
+
 public interface ProtoFieldType {
   String typeInProtoFile();
 
@@ -17,5 +19,9 @@ public interface ProtoFieldType {
 
   default boolean canBeOptional() {
     return false;
+  }
+
+  default List<String> imports() {
+    return List.of();
   }
 }

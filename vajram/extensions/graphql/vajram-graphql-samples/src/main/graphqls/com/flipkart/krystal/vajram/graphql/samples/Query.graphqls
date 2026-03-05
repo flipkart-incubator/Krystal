@@ -1,4 +1,4 @@
-type QueryType {
+type Query {
     """will return order using id, using OrderGraphQLAggregator"""
     order(id: ID): Order @inferIdFromArgs
     dummy(dummyId: ID): Dummy @inferIdFromArgs

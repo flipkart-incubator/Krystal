@@ -44,14 +44,19 @@ public final class Failure<T> implements Errable<T> {
   }
 
   @Override
-  public void handle(Consumer<Failure<T>> ifFailure, Runnable ifNil, Consumer<NonNil<T>> ifNonNil) {
+  public void handle(Consumer<Failure<T>> ifFailure, Runnable ifNil, Consumer<T> ifNonNil) {
     ifFailure.accept(this);
   }
 
   @Override
-  public <U> U map(
-      Function<Failure<T>, U> ifFailure, Supplier<U> ifNil, Function<NonNil<T>, U> ifNonNil) {
+  public <U> U mapToValue(
+      Function<Failure<T>, U> ifFailure, Supplier<U> ifNil, Function<T, U> ifNonNil) {
     return ifFailure.apply(this);
+  }
+
+  @Override
+  public <U> Errable<U> map(Function<T, U> ifNonNil) {
+    return cast();
   }
 
   @Override

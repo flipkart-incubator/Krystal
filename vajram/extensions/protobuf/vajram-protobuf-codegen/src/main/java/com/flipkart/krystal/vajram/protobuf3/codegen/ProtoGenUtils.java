@@ -6,6 +6,7 @@ import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.FLO
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.INT;
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.LONG;
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.STRING;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_MSG_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.types.ProtoScalarType.BOOL_P;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.types.ProtoScalarType.BYTES_P;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.types.ProtoScalarType.DOUBLE_P;
@@ -27,12 +28,15 @@ import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
 import com.flipkart.krystal.vajram.protobuf3.codegen.types.MapFieldType;
+import com.flipkart.krystal.vajram.protobuf3.codegen.types.MessageFieldType;
 import com.flipkart.krystal.vajram.protobuf3.codegen.types.OptionalFieldType;
 import com.flipkart.krystal.vajram.protobuf3.codegen.types.ProtoFieldType;
 import com.flipkart.krystal.vajram.protobuf3.codegen.types.ProtoScalarType;
 import com.flipkart.krystal.vajram.protobuf3.codegen.types.RepeatedFieldType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.TypeName;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -204,7 +208,8 @@ public class ProtoGenUtils {
       CodeGenType dataType, CodeGenUtility util, Element element) {
     // Check if the type is an Optional
     ImmutableList<CodeGenType> typeParameters = dataType.typeParameters();
-    if (util.isOptional(dataType.javaModelType(util.processingEnv()))) {
+    TypeMirror javaModelType = dataType.javaModelType(util.processingEnv());
+    if (util.isOptional(javaModelType)) {
       // Extract the inner type parameter from Optional
       // Get the protobuf type for the inner type
       return new OptionalFieldType(
@@ -229,6 +234,16 @@ public class ProtoGenUtils {
     } else if (JAVA_TO_PROTO_SCALAR_TYPES.containsKey(dataType)) {
       return JAVA_TO_PROTO_SCALAR_TYPES.get(dataType);
     } else {
+      Element javaElement = util.processingEnv().getTypeUtils().asElement(javaModelType);
+      if (javaElement != null
+          && util.typeExplicitlySupportsProtocol(javaElement, Protobuf3.class)
+          && TypeName.get(dataType.javaModelType(util.processingEnv()))
+              instanceof ClassName modelRootName) {
+        return new MessageFieldType(
+            modelRootName.packageName(),
+            modelRootName.simpleName() + MODELS_PROTO_MSG_SUFFIX,
+            modelRootName.simpleName());
+      }
       // Throw an error for unsupported types
       throw util.errorAndThrow(
           String.format(

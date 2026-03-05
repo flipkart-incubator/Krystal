@@ -12,6 +12,7 @@ import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.valida
 import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.VAJRAM_REQ_PROTO_FILE_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.VAJRAM_REQ_PROTO_MSG_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.VAJRAM_REQ_PROTO_OUTER_CLASS_SUFFIX;
+import static com.google.common.base.Throwables.getStackTraceAsString;
 
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.model.IfAbsent;
@@ -37,6 +38,7 @@ import lombok.extern.slf4j.Slf4j;
  * Code generator which generates protobuf schema for a request proto containing the input facets of
  * a vajram
  */
+@Deprecated(forRemoval = true)
 @Slf4j
 class VajramModelsProto3SchemaGen implements CodeGenerator {
 
@@ -90,7 +92,8 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
 
     } catch (IOException e) {
       String message =
-          String.format("Error generating protobuf schema for %s: %s", vajramName, e.getMessage());
+          String.format(
+              "Error generating protobuf schema for %s: %s", vajramName, getStackTraceAsString(e));
       util.codegenUtil().error(message, vajramInfo.vajramClassElem());
     }
   }

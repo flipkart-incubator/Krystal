@@ -367,7 +367,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
             """
             $facetName:L.handle(
                 _failure -> entity.$fieldName:L(_failure.cast()),
-                _nonNil -> entity.$fieldName:L(_nonNil.value()$fieldExtractor:L));
+                _nonNil -> entity.$fieldName:L(_nonNil$fieldExtractor:L));
 
             """,
             Map.ofEntries(
@@ -681,7 +681,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
           case ID_FETCHER ->
               canFanout
                   ? CodeBlock.of("$L.valueOpt().get()", entityIdFacetName)
-                  : CodeBlock.of("_nonNil.value()");
+                  : CodeBlock.of("_nonNil");
           case INHERIT_ID_FROM_ARGS ->
               CodeBlock.of(
                   "new $T($L.getExecutionStepInfo().getArgument($S))",
@@ -791,7 +791,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
 """
                     :
 """
-    return $fetcherFacetName:L.map(
+    return $fetcherFacetName:L.mapToValue(
           _failure -> $skip:L("'$fetcherFacetName:L' failed with error.", _failure.error()),
           () -> $skip:L("'$fetcherFacetName:L' returned null"),
           _nonNil -> {

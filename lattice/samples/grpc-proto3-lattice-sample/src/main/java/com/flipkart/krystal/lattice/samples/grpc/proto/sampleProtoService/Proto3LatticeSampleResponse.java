@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+/** Response model for {@link Proto3LatticeSample} */
 @ModelRoot(type = RESPONSE)
 @SupportedModelProtocols({PlainJavaObject.class, Protobuf3.class})
 public interface Proto3LatticeSampleResponse extends Model {
@@ -48,10 +49,12 @@ public interface Proto3LatticeSampleResponse extends Model {
   int defaultInt();
 
   @SerialId(9)
-  @IfAbsent(FAIL)
   @Nullable String mandatoryStringPartialConstruction();
 
   @SerialId(10)
   @IfAbsent(ASSUME_DEFAULT_VALUE)
   @Nullable Map<String, String> mapTypedField();
+
+  @SerialId(11)
+  @Nullable ProtoMessage protoMessage();
 }

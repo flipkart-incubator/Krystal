@@ -2184,7 +2184,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
     MethodSpec.Builder method;
     FacetJavaType fieldType = util.getFacetFieldType(facet);
     FacetJavaType returnType = util.getFacetReturnType(facet, codeGenParams);
-    // Non-dependency facet (Example: GivenFacet)
+    // Non-dependency facet (Example: Injection)
     method =
         methodBuilder(facet.name())
             .addModifiers(PUBLIC)

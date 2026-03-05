@@ -1,6 +1,7 @@
 package com.flipkart.krystal.lattice.ext.grpc.codegen;
 
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.createOutputDirectory;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.getPackageName;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.getSimpleClassName;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_FILE_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_MSG_SUFFIX;
@@ -235,10 +236,19 @@ class Proto3ServiceSchemaGen implements CodeGenerator {
                   // Get the response type name (without package) to use in the service definition
                   String responseTypeName =
                       getSimpleClassName(vajramInfo.responseType().canonicalClassName());
-
                   // Add imports for the request and response messages
-                  imports.add(vajramInfo.vajramId().id() + VAJRAM_REQ_PROTO_FILE_SUFFIX);
-                  imports.add(responseTypeName + MODELS_PROTO_FILE_SUFFIX);
+                  imports.add(
+                      vajramInfo.packageName().replace('.', '/')
+                          + "/"
+                          + vajramInfo.vajramId().id()
+                          + VAJRAM_REQ_PROTO_FILE_SUFFIX);
+                  imports.add(
+                      String.join(
+                          "/",
+                          getPackageName(vajramInfo.responseType().canonicalClassName())
+                              .orElse("")
+                              .replace('.', '/'),
+                          responseTypeName + MODELS_PROTO_FILE_SUFFIX));
                 }
               });
       for (String anImport : imports) {
