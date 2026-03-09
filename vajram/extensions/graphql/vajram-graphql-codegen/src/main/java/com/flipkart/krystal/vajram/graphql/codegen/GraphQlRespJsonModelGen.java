@@ -151,9 +151,6 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
                 .addAnnotation(JsonIgnore.class)
                 .build());
 
-    // Add GraphQL execution context fields
-    addGraphQLExecutionContextFields(classBuilder);
-
     // Add Errable-wrapped fields for all model methods
     addErrableFields(classBuilder, modelMethods, util);
 
@@ -183,34 +180,12 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
     return classBuilder.build();
   }
 
-  private void addGraphQLExecutionContextFields(TypeSpec.Builder classBuilder) {
-    classBuilder.addField(
-        FieldSpec.builder(ExecutionContext.class, "graphql_executionContext", PRIVATE, FINAL)
-            .build());
-    classBuilder.addField(
-        FieldSpec.builder(
-                VajramExecutionStrategy.class, "graphql_executionStrategy", PRIVATE, FINAL)
-            .build());
-    classBuilder.addField(
-        FieldSpec.builder(
-                ExecutionStrategyParameters.class,
-                "graphql_executionStrategyParams",
-                PRIVATE,
-                FINAL)
-            .build());
-  }
-
   private void addErrableFields(
       TypeSpec.Builder classBuilder, List<ExecutableElement> modelMethods, CodeGenUtility util) {
     for (ExecutableElement method : modelMethods) {
       String methodName = method.getSimpleName().toString();
 
-      // Skip GraphQL execution context methods - they have dedicated final fields
-      if (methodName.equals("graphql_executionContext")
-          || methodName.equals("graphql_executionStrategy")
-          || methodName.equals("graphql_executionStrategyParams")) {
-        continue;
-      }
+      boolean isGraphQLField = methodName.startsWith("graphql_");
 
       TypeMirror returnType = method.getReturnType();
       TypeName fieldType;
@@ -264,7 +239,9 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
           ParameterizedTypeName.get(ClassName.get(Errable.class), fieldType);
 
       classBuilder.addField(
-          FieldSpec.builder(errableFieldType, methodName, PRIVATE, FINAL).build());
+          FieldSpec.builder(
+                  isGraphQLField ? fieldType : errableFieldType, methodName, PRIVATE, FINAL)
+              .build());
     }
   }
 
@@ -277,27 +254,16 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
 
     MethodSpec.Builder constructor = MethodSpec.constructorBuilder().addModifiers(PUBLIC);
 
-    // Add GraphQL context parameters
-    constructor.addParameter(ExecutionContext.class, "graphql_executionContext");
-    constructor.addParameter(VajramExecutionStrategy.class, "graphql_executionStrategy");
-    constructor.addParameter(ExecutionStrategyParameters.class, "graphql_executionStrategyParams");
-
-    // Add parameters for each field (Errable wrapped), except GraphQL context methods
+    // Add parameters for each field (Errable wrapped, except GraphQL context methods)
     for (ExecutableElement method : modelMethods) {
       String fieldName = method.getSimpleName().toString();
-
-      // Skip GraphQL execution context methods - they're handled above
-      if (fieldName.equals("graphql_executionContext")
-          || fieldName.equals("graphql_executionStrategy")
-          || fieldName.equals("graphql_executionStrategyParams")) {
-        continue;
-      }
+      boolean isGraphQlField = fieldName.startsWith("graphql_");
 
       TypeMirror returnType = method.getReturnType();
-      TypeName paramInnerType;
 
-      // For ALL lists, parameter type is: Errable<List<Errable<ElementType>>>
+      TypeName paramInnerType;
       if (isListType(returnType)) {
+        // For ALL lists, parameter type is: Errable<List<Errable<ElementType>>>
         TypeMirror elementType = getListElementType(returnType);
         if (elementType != null) {
           TypeName elementTypeName;
@@ -330,7 +296,9 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
 
       // Determine if we should use wildcards for the Errable wrapper
       TypeName paramType;
-      if (isListType(returnType)) {
+      if (isGraphQlField) {
+        paramType = paramInnerType;
+      } else if (isListType(returnType)) {
         TypeMirror elementType = getListElementType(returnType);
         boolean isEntityList =
             isCustomModelType(elementType, util) && !isEntityIdType(elementType, util);
@@ -362,32 +330,24 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
       constructor.addParameter(paramType, fieldName);
     }
 
-    // Initialize GraphQL context fields
-    constructor.addStatement("this.graphql_executionContext = graphql_executionContext");
-    constructor.addStatement("this.graphql_executionStrategy = graphql_executionStrategy");
-    constructor.addStatement(
-        "this.graphql_executionStrategyParams = graphql_executionStrategyParams");
-
-    // Add null check for GraphQL context
-    constructor.beginControlFlow(
-        "if (graphql_executionContext == null || graphql_executionStrategy == null || graphql_executionStrategyParams == null)");
-    constructor.addStatement(
-        "throw new $T($S)",
-        IllegalArgumentException.class,
-        "graphql_executionContext, graphql_executionStrategy or graphql_executionStrategyParams cannot be null");
-    constructor.endControlFlow();
-
     // Initialize fields with special handling for nested entities and lists
     // Note: Simple fields are NOT initialized here - they remain as constructor parameters
     for (ExecutableElement method : modelMethods) {
       String fieldName = method.getSimpleName().toString();
       TypeMirror returnType = method.getReturnType();
 
-      // Skip GraphQL execution context methods - already initialized above
-      if (fieldName.equals("graphql_executionContext")
-          || fieldName.equals("graphql_executionStrategy")
-          || fieldName.equals("graphql_executionStrategyParams")) {
-        continue;
+      boolean isGraphQlField = fieldName.startsWith("graphql_");
+
+      if (isGraphQlField) {
+        constructor.addCode(
+"""
+    if ($L == null){
+      throw new $T("'$L' cannot be null");
+    }
+""",
+            fieldName,
+            IllegalArgumentException.class,
+            fieldName);
       }
 
       if (isListType(returnType) && containsGraphQlModel(getListElementType(returnType), util)) {
@@ -396,18 +356,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
             constructor, fieldName, returnType, util, failureClassName, errableClassName);
       } else if (containsGraphQlModel(returnType, util) && !isEntityIdType(returnType, util)) {
         // Handle single Entity with nested conversion (but not entity IDs)
-        addEntityFieldInitialization(
-            constructor, fieldName, returnType, util, failureClassName, errableClassName);
-      } else if (isCustomModelType(returnType, util)) {
-        // Handle entity IDs and other custom types with wildcards - use .mapToValue() with method
-        // references
-        constructor.addCode(
-            "this.$L = $L.mapToValue($T::cast, $T::nil, _v -> $T.withValue(_v));\n",
-            fieldName,
-            fieldName,
-            failureClassName,
-            errableClassName,
-            errableClassName);
+        addEntityFieldInitialization(constructor, fieldName, returnType, util);
       } else {
         // Standard types (String, primitives, List<String>) - ensure non-null initialization
         constructor.addStatement("this.$L = $L", fieldName, fieldName);
@@ -492,9 +441,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
       MethodSpec.Builder constructor,
       String fieldName,
       TypeMirror entityType,
-      CodeGenUtility util,
-      ClassName failureClassName,
-      ClassName errableClassName) {
+      CodeGenUtility util) {
 
     // Single entity fields use .mapToValue() with method references
     // Get the raw type name without annotations by extracting the TypeElement
@@ -503,24 +450,26 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
       throw new IllegalStateException("Cannot get TypeElement for entity type: " + entityType);
     }
 
-    // Build the .mapToValue() initialization with method references (matches reference pattern)
     constructor.addCode(
-        "this.$L = $L.mapToValue($T::cast,\n", fieldName, fieldName, failureClassName);
-    constructor.addCode("    $T::nil,\n", errableClassName);
-    constructor.addCode("    _nonNil -> $T.withValue(\n", errableClassName);
-    constructor.addCode("        _nonNil\n");
-    constructor.addCode("            ._asBuilder()\n");
-    constructor.addCode("            .graphql_executionContext(graphql_executionContext)\n");
-    constructor.addCode("            .graphql_executionStrategy(graphql_executionStrategy)\n");
-    constructor.addCode("            .graphql_executionStrategyParams(\n");
-    constructor.addCode(
-        "                graphql_executionStrategy.newParametersForFieldExecution(\n");
-    constructor.addCode("                    graphql_executionContext,\n");
-    constructor.addCode("                    graphql_executionStrategyParams,\n");
-    constructor.addCode("                    graphql_executionStrategyParams\n");
-    constructor.addCode("                        .getFields()\n");
-    constructor.addCode("                        .getSubField($S)))\n", fieldName);
-    constructor.addCode("            ._build()));\n");
+"""
+    this.$L = $L.map(
+      _nonNil ->
+          _nonNil
+            ._asBuilder()
+            .graphql_executionContext(graphql_executionContext)
+            .graphql_executionStrategy(graphql_executionStrategy)
+            .graphql_executionStrategyParams(
+              graphql_executionStrategy.newParametersForFieldExecution(
+                graphql_executionContext,
+                graphql_executionStrategyParams,
+                graphql_executionStrategyParams
+                  .getFields()
+                  .getSubField($S)))
+            ._build());
+""",
+        fieldName,
+        fieldName,
+        fieldName);
   }
 
   private void addInterfaceMethodOverrides(
