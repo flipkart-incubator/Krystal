@@ -21,8 +21,8 @@ import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate_Req;
 import com.flipkart.krystal.vajram.graphql.samples.dummy.Dummy;
 import com.flipkart.krystal.vajram.graphql.samples.order.Order;
-import com.flipkart.krystal.vajram.graphql.samples.querytype.QueryType;
-import com.flipkart.krystal.vajram.graphql.samples.querytype.QueryType_GQlAggr_Req;
+import com.flipkart.krystal.vajram.graphql.samples.query.Query;
+import com.flipkart.krystal.vajram.graphql.samples.query.Query_GQlAggr_Req;
 import com.flipkart.krystal.vajram.json.Json;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
@@ -77,7 +77,7 @@ public class GraphQlSamplesE2ETest {
     kGraph.traitDispatchPolicies(
         new TraitDispatchPolicies(
             dispatchTrait(GraphQlOperationAggregate_Req.class, vGraph)
-                .alwaysTo(QueryType_GQlAggr_Req.class)));
+                .alwaysTo(Query_GQlAggr_Req.class)));
   }
 
   @AfterEach
@@ -122,8 +122,8 @@ public class GraphQlSamplesE2ETest {
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
     ExecutionResult executionResult = result.join();
     Object data = executionResult.getData();
-    assertThat(data).isInstanceOf(QueryType.class);
-    QueryType queryType = (QueryType) data;
+    assertThat(data).isInstanceOf(Query.class);
+    Query queryType = (Query) data;
 
     Order order = requireNonNull(queryType.order());
     Dummy dummy = requireNonNull(queryType.dummy());

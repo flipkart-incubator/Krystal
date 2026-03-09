@@ -18,6 +18,7 @@ import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.IfAbsent.Creator;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
+import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.SupportedModelProtocols;
@@ -802,7 +803,7 @@ public class CodeGenUtility {
     return ParameterizedTypeName.get(ClassName.get(Optional.class), box(javaType).typeName());
   }
 
-  public ClassName getImmutClassName(TypeElement modelRootType) {
+  public ClassName getImmutClassName(Element modelRootType) {
     ModelRoot modelRoot = modelRootType.getAnnotation(ModelRoot.class);
     if (modelRoot == null) {
       throw new IllegalArgumentException(
@@ -841,14 +842,18 @@ public class CodeGenUtility {
   /**
    * Determines the parameter type for a method return type, handling Optional types.
    *
-   * @param method The method
-   * @param isBuilder is this a builder?
+   * @param method The model method for whose return type we need to compute the corresponding
+   *     parameter type
+   * @param isBuilder is for a parameter or field in a builder class? Or a parameter/field of the
+   *     immut class?
    * @return The appropriate parameter type
    */
-  public TypeName getParameterType(ExecutableElement method, boolean isBuilder) {
+  public TypeName getVariableType(ExecutableElement method, boolean isBuilder) {
     final TypeMirror specifiedType = method.getReturnType();
+    boolean isNullable = isAnyNullable(specifiedType, method);
     TypeMirror inferredType = specifiedType;
-    if (isOptional(specifiedType)) {
+    boolean isOptional = isOptional(specifiedType);
+    if (isOptional) {
       // For Optional<T>, use T as the parameter type
       inferredType = getOptionalInnerType(specifiedType);
     }
@@ -856,17 +861,39 @@ public class CodeGenUtility {
       inferredType = typeUtils.boxedClass(primitiveType).asType();
     }
     TypeName typeName = inferredType.accept(new TypeNameVisitor(), null);
+
+    Optional<TypeElement> modelRoot = asModelRoot(inferredType);
+
+    if (isBuilder && modelRoot.isPresent()) {
+      typeName = getImmutClassName(modelRoot.get()).nestedClass("Builder");
+    }
+
     // Add @Nullable annotation for Optional types or methods with @Nullable annotation
-    if (isOptional(specifiedType)) {
-      // Add @Nullable as a type annotation
-      typeName = typeName.annotated(AnnotationSpec.builder(ClassName.get(Nullable.class)).build());
+    if (isOptional || isNullable || isBuilder) {
+      if (!hasNullableAnnotation(typeName)) {
+        // Add @Nullable as a type annotation
+        typeName =
+            typeName.annotated(AnnotationSpec.builder(ClassName.get(Nullable.class)).build());
+      }
     }
     return typeName;
   }
 
+  private static boolean hasNullableAnnotation(TypeName typeName) {
+    AnnotationSpec nullableAnnoSpec = AnnotationSpec.builder(ClassName.get(Nullable.class)).build();
+    boolean hasNullable = typeName.annotations.contains(nullableAnnoSpec);
+    if (hasNullable) {
+      return true;
+    }
+    if (typeName instanceof ParameterizedTypeName parameterizedTypeName) {
+      return hasNullableAnnotation(parameterizedTypeName.rawType);
+    }
+    return false;
+  }
+
   /** Returns true if the model root type supports the given model protocol. */
   public boolean typeExplicitlySupportsProtocol(
-      TypeElement modelRootType, Class<? extends ModelProtocol> modelProtocol) {
+      Element modelRootType, Class<? extends ModelProtocol> modelProtocol) {
     SupportedModelProtocols supportedModelProtocols =
         modelRootType.getAnnotation(SupportedModelProtocols.class);
     if (supportedModelProtocols == null) {
@@ -929,6 +956,25 @@ public class CodeGenUtility {
       return new AnnotationInfo<>(annotation, mirror.get());
     }
     return null;
+  }
+
+  public boolean isModelRoot(TypeMirror javaModelType) {
+    return asModelRoot(javaModelType).isPresent();
+  }
+
+  public Optional<TypeElement> asModelRoot(TypeMirror javaModelType) {
+    boolean isOptional = isOptional(javaModelType);
+    if (isOptional) {
+      javaModelType = getOptionalInnerType(javaModelType);
+    }
+    if (!isRawAssignable(javaModelType, Model.class)) {
+      return Optional.empty();
+    }
+    if (typeUtils.asElement(javaModelType) instanceof TypeElement typeElement
+        && typeElement.getAnnotation(ModelRoot.class) != null) {
+      return Optional.of(typeElement);
+    }
+    return Optional.empty();
   }
 
   public record AnnotationInfo<T>(T annotation, AnnotationMirror mirror) {}

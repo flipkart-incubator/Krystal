@@ -48,11 +48,6 @@ dependencies {
     /** END: Test dependencies **/
 }
 
-test {
-    minHeapSize = "128m" // initial heap size
-    maxHeapSize = "4g" // maximum heap size
-}
-
 checkerFramework {
     excludeTests = true
 }

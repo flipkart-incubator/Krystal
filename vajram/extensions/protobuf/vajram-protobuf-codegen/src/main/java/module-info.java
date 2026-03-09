@@ -1,6 +1,6 @@
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGeneratorProvider;
-import com.flipkart.krystal.vajram.protobuf3.codegen.ModelsProto3GenProvider;
-import com.flipkart.krystal.vajram.protobuf3.codegen.ModelsProto3SchemaGenProvider;
+import com.flipkart.krystal.vajram.protobuf3.codegen.Proto3ModelsGenProvider;
+import com.flipkart.krystal.vajram.protobuf3.codegen.Proto3SchemaGenProvider;
 
 module flipkart.krystal.vajram.ext.protobuf.codegen {
   exports com.flipkart.krystal.vajram.protobuf3.codegen;
@@ -19,6 +19,6 @@ module flipkart.krystal.vajram.ext.protobuf.codegen {
   requires flipkart.krystal.lattice.vajram.sdk;
 
   provides ModelsCodeGeneratorProvider with
-      ModelsProto3GenProvider,
-      ModelsProto3SchemaGenProvider;
+      Proto3ModelsGenProvider,
+      Proto3SchemaGenProvider;
 }

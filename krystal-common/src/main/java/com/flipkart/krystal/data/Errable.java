@@ -58,13 +58,15 @@ public sealed interface Errable<T> permits Success, Failure {
    */
   T valueOrThrow();
 
-  default void handle(Consumer<Failure<T>> ifFailure, Consumer<NonNil<T>> ifNonNil) {
+  default void handle(Consumer<Failure<T>> ifFailure, Consumer<T> ifNonNil) {
     handle(ifFailure, () -> {}, ifNonNil);
   }
 
-  void handle(Consumer<Failure<T>> ifFailure, Runnable ifNil, Consumer<NonNil<T>> ifNonNil);
+  void handle(Consumer<Failure<T>> ifFailure, Runnable ifNil, Consumer<T> ifNonNil);
 
-  <U> U map(Function<Failure<T>, U> ifFailure, Supplier<U> ifNil, Function<NonNil<T>, U> ifNonNil);
+  <U> U mapToValue(Function<Failure<T>, U> ifFailure, Supplier<U> ifNil, Function<T, U> ifNonNil);
+
+  <U> Errable<U> map(Function<T, U> ifNonNil);
 
   /* ***********************************************************************************************/
   /* ************************************** Static utilities ***************************************/

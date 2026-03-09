@@ -107,6 +107,7 @@ public abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3Lattice
                     optionalByteString == null ? null : optionalByteString.toString(UTF_8),
                     defaultByteString.toString(UTF_8)))
         .mandatoryInt(1)
+        .protoMessage(ProtoMessage_ImmutProto._builder().count(100))
         ._build();
   }
 }

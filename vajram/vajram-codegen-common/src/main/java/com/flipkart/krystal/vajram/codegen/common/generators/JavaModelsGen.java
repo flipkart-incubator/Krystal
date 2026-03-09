@@ -4,7 +4,6 @@ import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.asClassN
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.asTypeNameWithElements;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.asTypeNameWithTypes;
 import static com.flipkart.krystal.codegen.common.models.CodegenPhase.MODELS;
-import static com.flipkart.krystal.codegen.common.models.Constants.IMMUT_SUFFIX;
 import static com.flipkart.krystal.model.PlainJavaObject.POJO;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
@@ -36,6 +35,7 @@ import com.flipkart.krystal.vajram.Trait;
 import com.google.common.collect.ImmutableList;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
@@ -127,12 +127,12 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *   <li>It is RECOMMENDED that methods returns types be Immutable
  * </ul>
  */
-public final class JavaModelsGenerator implements CodeGenerator {
+public final class JavaModelsGen implements CodeGenerator {
 
   private final ModelsCodeGenContext codeGenContext;
   private final CodeGenUtility util;
 
-  public JavaModelsGenerator(ModelsCodeGenContext codeGenContext) {
+  public JavaModelsGen(ModelsCodeGenContext codeGenContext) {
     this.codeGenContext = codeGenContext;
     util = codeGenContext.util();
   }
@@ -297,22 +297,12 @@ public final class JavaModelsGenerator implements CodeGenerator {
                   } else {
                     typeArguments = List.of();
                   }
-                  Element element =
-                      util.processingEnv().getTypeUtils().asElement(parentModelRootType);
                   return parentModelRootAnno.map(
                       annotationMirror -> {
-                        ClassName className =
-                            ClassName.get(
-                                util.processingEnv()
-                                    .getElementUtils()
-                                    .getPackageOf(element)
-                                    .getQualifiedName()
-                                    .toString(),
-                                element.getSimpleName()
-                                    + util.getAnnotationElement(
-                                        annotationMirror, "suffixSeparator", String.class)
-                                    + IMMUT_SUFFIX);
-                        return asTypeNameWithTypes(className, typeArguments);
+                        Element modelRootElement =
+                            util.processingEnv().getTypeUtils().asElement(parentModelRootType);
+                        return asTypeNameWithTypes(
+                            util.getImmutClassName(modelRootElement), typeArguments);
                       });
                 })
             .or(
@@ -337,19 +327,9 @@ public final class JavaModelsGenerator implements CodeGenerator {
                       annotationMirror -> {
                         Element parentModelRoot =
                             util.processingEnv().getTypeUtils().asElement(parentModelRootType);
-                        ClassName className =
-                            ClassName.get(
-                                util.processingEnv()
-                                    .getElementUtils()
-                                    .getPackageOf(parentModelRoot)
-                                    .getQualifiedName()
-                                    .toString(),
-                                parentModelRoot.getSimpleName()
-                                    + util.getAnnotationElement(
-                                        annotationMirror, "suffixSeparator", String.class)
-                                    + IMMUT_SUFFIX,
-                                "Builder");
-                        return asTypeNameWithTypes(className, typeArguments);
+                        return asTypeNameWithTypes(
+                            util.getImmutClassName(parentModelRoot).nestedClass("Builder"),
+                            typeArguments);
                       });
                 })
             .or(
@@ -488,15 +468,27 @@ public final class JavaModelsGenerator implements CodeGenerator {
       validateOptionalField(method);
       String methodName = method.getSimpleName().toString();
 
-      MethodSpec.Builder methodBuilder =
+      MethodSpec.Builder setter =
           MethodSpec.methodBuilder(methodName)
               .addModifiers(PUBLIC, ABSTRACT)
-              .addParameter(util.getParameterType(method, true), methodName)
+              .addParameter(util.getVariableType(method, true), methodName)
               .returns(builderType);
       if (hasParentModelRoot) {
-        methodBuilder.addAnnotation(Override.class);
+        setter.addAnnotation(Override.class);
       }
-      methods.add(methodBuilder.build());
+      methods.add(setter.build());
+
+      if (util.isModelRoot(method.getReturnType())) {
+        MethodSpec.Builder methodBuilder =
+            MethodSpec.methodBuilder(methodName)
+                .addModifiers(PUBLIC, ABSTRACT)
+                .addParameter(util.getVariableType(method, false), methodName)
+                .returns(builderType);
+        if (hasParentModelRoot) {
+          methodBuilder.addAnnotation(Override.class);
+        }
+        methods.add(methodBuilder.build());
+      }
     }
 
     methods.addAll(
@@ -572,23 +564,10 @@ public final class JavaModelsGenerator implements CodeGenerator {
       fields.add(FieldSpec.builder(fieldType, fieldName, PRIVATE, FINAL).build());
     }
 
-    // Create constructor for the POJO class
-    MethodSpec.Builder constructorBuilder = MethodSpec.constructorBuilder().addModifiers(PRIVATE);
-
-    for (ExecutableElement method : modelMethods) {
-      String fieldName = method.getSimpleName().toString();
-
-      constructorBuilder.addParameter(
-          ParameterSpec.builder(util.getParameterType(method, false), fieldName).build());
-
-      // For all field types, just assign the parameter directly
-      constructorBuilder.addStatement("this.$N = $N", fieldName, fieldName);
-    }
-
     // Create getter methods for the POJO class
     List<MethodSpec> methods = new ArrayList<>();
     for (ExecutableElement method : modelMethods) {
-      methods.add(getterMethod(method).build());
+      methods.add(getterMethod(method, false).build());
     }
 
     // Create _asBuilder method to return a new Builder instance with all fields
@@ -602,7 +581,17 @@ public final class JavaModelsGenerator implements CodeGenerator {
     asBuilderMethodBuilder.addCode("return new $T()", builderType);
     for (ExecutableElement method : modelMethods) {
       String fieldName = method.getSimpleName().toString();
-      asBuilderMethodBuilder.addCode(".$L($L)", fieldName, fieldName);
+      Optional<TypeElement> fieldModelRoot = util.asModelRoot(method.getReturnType());
+      if (fieldModelRoot.isPresent()) {
+        asBuilderMethodBuilder.addCode(
+            ".$L($L == null ? null :($T)$L._asBuilder())",
+            fieldName,
+            fieldName,
+            util.getImmutClassName(fieldModelRoot.get()).nestedClass("Builder"),
+            fieldName);
+      } else {
+        asBuilderMethodBuilder.addCode(".$L($L)", fieldName, fieldName);
+      }
     }
     asBuilderMethodBuilder.addCode(";");
 
@@ -654,18 +643,65 @@ public final class JavaModelsGenerator implements CodeGenerator {
         .addModifiers(PUBLIC, FINAL)
         .addSuperinterface(immutableModelName)
         .addFields(fields)
-        .addMethod(constructorBuilder.build())
+        .addMethod(allArgCtor(modelMethods))
+        .addMethod(copyCtor(modelMethods))
         .addMethods(methods)
         .addMethod(builderMethod)
         .addType(builderClass)
         .build();
   }
 
-  private MethodSpec.Builder getterMethod(ExecutableElement method) {
+  private MethodSpec allArgCtor(List<ExecutableElement> modelMethods) {
+    MethodSpec.Builder constructorBuilder = MethodSpec.constructorBuilder().addModifiers(PRIVATE);
+
+    for (ExecutableElement method : modelMethods) {
+      String fieldName = method.getSimpleName().toString();
+
+      TypeName variableType = util.getVariableType(method, false);
+      constructorBuilder.addParameter(ParameterSpec.builder(variableType, fieldName).build());
+
+      if (util.isModelRoot(method.getReturnType())) {
+        constructorBuilder.addStatement(
+            "this.$L = $L == null ? null : ($T)$L._build()",
+            fieldName,
+            fieldName,
+            variableType,
+            fieldName);
+      } else {
+        // For other field types, just assign the parameter directly
+        constructorBuilder.addStatement("this.$L = $L", fieldName, fieldName);
+      }
+    }
+    return constructorBuilder.build();
+  }
+
+  private MethodSpec copyCtor(List<ExecutableElement> modelMethods) {
+    MethodSpec.Builder ctorBuilder = MethodSpec.constructorBuilder().addModifiers(PUBLIC);
+
+    ctorBuilder.addParameter(
+        ParameterSpec.builder(TypeName.get(codeGenContext.modelRootType().asType()), "_from")
+            .build());
+
+    ctorBuilder.addCode("this(");
+    ctorBuilder.addCode(
+        modelMethods.stream()
+            .map(
+                method -> {
+                  boolean isOptional = util.isOptional(method.getReturnType());
+                  return CodeBlock.of(
+                      "_from.$L()" + (isOptional ? ".orElse(null)" : ""),
+                      method.getSimpleName().toString());
+                })
+            .collect(CodeBlock.joining(",")));
+    ctorBuilder.addCode(");");
+    return ctorBuilder.build();
+  }
+
+  private MethodSpec.Builder getterMethod(ExecutableElement method, boolean isBuilder) {
     TypeMirror returnType = method.getReturnType();
-    String methodName = method.getSimpleName().toString();
+    String fieldName = method.getSimpleName().toString();
     MethodSpec.Builder methodBuilder =
-        MethodSpec.methodBuilder(methodName)
+        MethodSpec.methodBuilder(fieldName)
             .addModifiers(PUBLIC)
             .addAnnotation(Override.class)
             .returns(
@@ -674,9 +710,27 @@ public final class JavaModelsGenerator implements CodeGenerator {
                         returnType.getAnnotationMirrors().stream()
                             .map(AnnotationSpec::get)
                             .toList()));
+
+    CodeBlock fieldAccessorCode = CodeBlock.of("$L", fieldName);
+
+    if (isBuilder && util.isModelRoot(returnType)) {
+      boolean nestedBuilderExtendsModelRoot =
+          util.asModelRoot(returnType)
+              .map(typeElement -> typeElement.getAnnotation(ModelRoot.class))
+              .map(ModelRoot::builderExtendsModelRoot)
+              .orElse(false);
+      fieldAccessorCode =
+          nestedBuilderExtendsModelRoot
+              // Since builder extends model root, we can return the builder as is.
+              ? CodeBlock.of("$L", fieldName)
+              // Since builder does not extend model root, we can have to convert it into the model
+              // root by calling build.
+              : CodeBlock.of("$L == null ? null : $L._build()", fieldName, fieldName);
+    }
+
     // If the return type is Optional<T>, wrap the field in Optional.ofNullable()
     if (util.isOptional(returnType)) {
-      methodBuilder.addStatement("return $T.ofNullable($N)", Optional.class, methodName);
+      methodBuilder.addStatement("return $T.ofNullable($L)", Optional.class, fieldAccessorCode);
     } else {
       if (util.getIfAbsent(method).value().usePlatformDefault()
           && !returnType.getKind().isPrimitive()) {
@@ -687,7 +741,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
                 return $L;
               }
               """,
-              methodName,
+              fieldName,
               new DeclaredTypeVisitor(util, method)
                   .visit(returnType)
                   .defaultValueExpr(util.processingEnv()));
@@ -696,11 +750,12 @@ public final class JavaModelsGenerator implements CodeGenerator {
               """
                   Could not find default value expression for specified type %s. \
                   Either the relevant type was not configured properly in a DataTypeFactory \
-                  or the @IfAbsent() annotation is incorrectly specified.""",
+                  or the @IfAbsent() annotation is incorrectly specified."""
+                  .formatted(returnType),
               method);
         }
       }
-      methodBuilder.addStatement("return $N", methodName);
+      methodBuilder.addStatement("return $L", fieldAccessorCode);
     }
     return methodBuilder;
   }
@@ -726,37 +781,8 @@ public final class JavaModelsGenerator implements CodeGenerator {
     List<FieldSpec> fields = new ArrayList<>();
     for (ExecutableElement method : modelMethods) {
       String fieldName = method.getSimpleName().toString();
-      TypeName fieldType;
-
-      // If the return type is Optional<T>, use T as the field type
-      if (util.isOptional(method.getReturnType())) {
-        TypeMirror innerType = util.getOptionalInnerType(method.getReturnType());
-        // Box primitive types
-        if (innerType.getKind().isPrimitive()) {
-          fieldType = TypeName.get(innerType).box();
-        } else {
-          fieldType = TypeName.get(innerType);
-        }
-      } else {
-        // Box primitive types for methods with @IfAbsent(FAIL) or with platform defaults
-        if (method.getReturnType().getKind().isPrimitive()) {
-          // Box primitive types for methods with @IfAbsent(FAIL) or platform defaults
-          fieldType = TypeName.get(method.getReturnType()).box();
-        } else {
-          fieldType = TypeName.get(method.getReturnType());
-        }
-      }
-
-      // Add @Nullable annotation for Optional types or methods with @Nullable annotation
-      if (util.isOptional(method.getReturnType())
-          || util.isAnyNullable(method.getReturnType(), method)) {
-        // Add @Nullable as a type annotation
-        TypeName annotatedType =
-            fieldType.annotated(AnnotationSpec.builder(ClassName.get(Nullable.class)).build());
-        fields.add(FieldSpec.builder(annotatedType, fieldName, PRIVATE).build());
-      } else {
-        fields.add(FieldSpec.builder(fieldType, fieldName, PRIVATE).build());
-      }
+      TypeName fieldType = util.getVariableType(method, true);
+      fields.add(FieldSpec.builder(fieldType, fieldName, PRIVATE).build());
     }
 
     // Create no-arg constructor
@@ -770,14 +796,32 @@ public final class JavaModelsGenerator implements CodeGenerator {
       dataAccessMethods.add(
           MethodSpec.methodBuilder(methodName)
               .addModifiers(PUBLIC)
-              .addParameter(util.getParameterType(method, true), methodName)
+              .addParameter(util.getVariableType(method, true), methodName)
+              .addAnnotation(Override.class)
               .returns(builderType)
               .addStatement("this.$L = $L", methodName, methodName)
               .addStatement("return this")
-              .addAnnotation(Override.class)
               .build());
+
+      Optional<TypeElement> fieldModelRoot = util.asModelRoot(method.getReturnType());
+      if (fieldModelRoot.isPresent()) {
+        dataAccessMethods.add(
+            MethodSpec.methodBuilder(methodName)
+                .addModifiers(PUBLIC)
+                .addParameter(util.getVariableType(method, false), methodName)
+                .addAnnotation(Override.class)
+                .returns(builderType)
+                .addStatement(
+                    "return $L( $L == null ? null : ($T) $L._asBuilder())",
+                    methodName,
+                    methodName,
+                    util.getImmutClassName(fieldModelRoot.get()).nestedClass("Builder"),
+                    methodName)
+                .build());
+      }
+
       if (modelRoot.builderExtendsModelRoot()) {
-        dataAccessMethods.add(getterMethod(method).build());
+        dataAccessMethods.add(getterMethod(method, true).build());
       }
     }
 
@@ -815,7 +859,8 @@ public final class JavaModelsGenerator implements CodeGenerator {
                   "this.$N = $L", fieldName, dataType.defaultValueExpr(util.processingEnv()));
             } catch (CodeGenerationException e) {
               throw util.errorAndThrow(
-                  "Could not find default value expression for type '%s'".formatted(dataType),
+                  "Could not find default value expression for type '%s'. Please check if @IfAbsent(ASSUME_DEFAULT_VALUE) is appropriate for this type."
+                      .formatted(dataType),
                   method);
             }
           }
@@ -826,13 +871,18 @@ public final class JavaModelsGenerator implements CodeGenerator {
 
     // Build the POJO with all fields
     buildMethodBuilder.addCode("return new $T(", immutablePojoName);
-    for (int i = 0; i < modelMethods.size(); i++) {
-      String fieldName = modelMethods.get(i).getSimpleName().toString();
-      buildMethodBuilder.addCode("$N", fieldName);
-      if (i < modelMethods.size() - 1) {
-        buildMethodBuilder.addCode(", ");
-      }
-    }
+    buildMethodBuilder.addCode(
+        modelMethods.stream()
+            .map(
+                modelMethod -> {
+                  String fieldName = modelMethod.getSimpleName().toString();
+                  if (util.isModelRoot(modelMethod.getReturnType())) {
+                    return CodeBlock.of("$L == null ? null : $L._build()", fieldName, fieldName);
+                  } else {
+                    return CodeBlock.of("$L", fieldName);
+                  }
+                })
+            .collect(CodeBlock.joining(",")));
     buildMethodBuilder.addCode(");");
 
     // Create _newCopy method for the Builder

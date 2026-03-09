@@ -52,7 +52,6 @@ class GraphQLEntityGen implements CodeGenerator {
   @Override
   public void generate() {
     TypeDefinitionRegistry typeDefinitionRegistry = schemaReaderUtil.typeDefinitionRegistry();
-    String rootPackageName = schemaReaderUtil.rootPackageName();
     Optional<SchemaDefinition> schemaDefinition = typeDefinitionRegistry.schemaDefinition();
     if (schemaDefinition.isEmpty()) {
       util.note("No schema definition found - skipping entity generation");
@@ -138,6 +137,12 @@ class GraphQLEntityGen implements CodeGenerator {
           methodSpecs.add(
               MethodSpec.overriding(util.getMethod(() -> Model.class.getMethod("_asBuilder")))
                   .returns(immutableClassName.nestedClass("Builder"))
+                  .addModifiers(PUBLIC, ABSTRACT)
+                  .build());
+
+          methodSpecs.add(
+              MethodSpec.overriding(util.getMethod(() -> Model.class.getMethod("_build")))
+                  .returns(immutableClassName)
                   .addModifiers(PUBLIC, ABSTRACT)
                   .build());
 

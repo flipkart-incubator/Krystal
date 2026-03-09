@@ -8,6 +8,8 @@ import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProt
 import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_FILE_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_MSG_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_OUTER_CLASS_SUFFIX;
+import static com.google.common.base.Throwables.getStackTraceAsString;
+import static java.util.Objects.requireNonNullElse;
 import static javax.lang.model.element.ElementKind.INTERFACE;
 
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
@@ -22,11 +24,11 @@ import com.flipkart.krystal.serial.SerialId;
 import com.flipkart.krystal.vajram.protobuf3.codegen.types.OptionalFieldType;
 import com.flipkart.krystal.vajram.protobuf3.codegen.types.ProtoFieldType;
 import com.google.common.base.Splitter;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import javax.lang.model.element.ExecutableElement;
@@ -35,12 +37,12 @@ import lombok.extern.slf4j.Slf4j;
 
 /** Code generator which generates protobuf schema for models derived from a ModelRoot interface. */
 @Slf4j
-final class ModelsProto3SchemaGen implements CodeGenerator {
+final class Proto3SchemaGen implements CodeGenerator {
 
   private final ModelsCodeGenContext codeGenContext;
   private final CodeGenUtility util;
 
-  public ModelsProto3SchemaGen(ModelsCodeGenContext codeGenContext) {
+  public Proto3SchemaGen(ModelsCodeGenContext codeGenContext) {
     this.codeGenContext = codeGenContext;
     this.util = codeGenContext.util();
   }
@@ -107,17 +109,26 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
       // Generate proto file content
       String protoContent = generateProtoFileContent(modelRootType, packageName);
 
+      Path packageDir = outputDir;
+
+      for (String packageElem : Splitter.on('.').omitEmptyStrings().split(packageName)) {
+        packageDir = packageDir.resolve(packageElem);
+      }
+
+      //noinspection ResultOfMethodCallIgnored
+      Files.createDirectories(packageDir);
       // Write proto file
-      Path protoFilePath = outputDir.resolve(protoFileName);
+      Path protoFilePath = packageDir.resolve(protoFileName);
       try (PrintWriter out = new PrintWriter(Files.newBufferedWriter(protoFilePath))) {
         out.println(protoContent);
       }
 
       log.info("Generated protobuf schema file: {}", protoFilePath);
-    } catch (IOException e) {
+    } catch (Exception e) {
       util.error(
           String.format(
-              "Error generating protobuf schema for %s: %s", modelRootName, e.getMessage()),
+              "Error generating protobuf schema for %s: %s",
+              modelRootName, getStackTraceAsString(e)),
           modelRootType);
     }
   }
@@ -151,14 +162,41 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
         .append(modelRootName)
         .append(MODELS_PROTO_OUTER_CLASS_SUFFIX + "\";\n\n");
 
-    // Add message definition
-    protoBuilder.append("message ").append(modelRootName).append(MODELS_PROTO_MSG_SUFFIX + " {\n");
+    Set<String> imports = new LinkedHashSet<>();
 
+    StringBuilder protoMessageBody = generateMessageBodyAndCollectImports(modelRootType, imports);
+
+    for (String anImport : imports) {
+      protoBuilder.append("import ").append('"').append(anImport).append('"').append(";\n");
+    }
+
+    // Add documentation as comments if available
+    String messageDoc =
+        requireNonNullElse(util.processingEnv().getElementUtils().getDocComment(modelRootType), "");
+    if (!messageDoc.trim().isEmpty()) {
+      // Format the documentation as a proto comment
+      // Split by newlines and add proper indentation and comment markers
+      Iterable<String> docLines = Splitter.on('\n').split(messageDoc);
+      for (String line : docLines) {
+        protoBuilder.append("// ").append(line.trim()).append("\n");
+      }
+    }
+    protoBuilder.append("message ").append(modelRootName).append(MODELS_PROTO_MSG_SUFFIX + " {\n");
+    protoBuilder.append(protoMessageBody);
+    protoBuilder.append("}\n");
+
+    return protoBuilder.toString();
+  }
+
+  private StringBuilder generateMessageBodyAndCollectImports(
+      TypeElement modelRootType, Set<String> imports) {
+    String modelRootName = modelRootType.getSimpleName().toString();
     // Extract methods from the model root interface
     List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
 
     // Add fields from model methods using SerialId annotation for field numbers
     Set<Integer> usedFieldNumbers = new HashSet<>();
+    StringBuilder protoMessageBody = new StringBuilder();
 
     for (ExecutableElement method : modelMethods) {
       // Get the SerialId annotation from the method
@@ -229,13 +267,15 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
         // Split by newlines and add proper indentation and comment markers
         Iterable<String> docLines = Splitter.on('\n').split(documentation);
         for (String line : docLines) {
-          protoBuilder.append("  // ").append(line.trim()).append("\n");
+          protoMessageBody.append("  // ").append(line.trim()).append("\n");
         }
       }
 
-      protoBuilder.append("  ");
+      protoMessageBody.append("  ");
 
       ProtoFieldType protobufType = getProtobufType(dataType, util, method);
+
+      imports.addAll(protobufType.imports());
 
       // Add 'optional' keyword if needed
       // Note: repeated and map fields don't need the optional keyword
@@ -244,7 +284,7 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
       }
       // For repeated and map fields, the 'repeated' or 'map<>' prefix is already included in
       // fieldType
-      protoBuilder
+      protoMessageBody
           .append(protobufType.typeInProtoFile())
           .append(" ")
           .append(method.getSimpleName().toString())
@@ -252,9 +292,6 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
           .append(fieldNumber)
           .append(";\n");
     }
-
-    protoBuilder.append("}\n");
-
-    return protoBuilder.toString();
+    return protoMessageBody;
   }
 }

@@ -40,14 +40,19 @@ public final class Nil<T> implements Success<T> {
   }
 
   @Override
-  public void handle(Consumer<Failure<T>> ifFailure, Runnable ifNil, Consumer<NonNil<T>> ifNonNil) {
+  public void handle(Consumer<Failure<T>> ifFailure, Runnable ifNil, Consumer<T> ifNonNil) {
     ifNil.run();
   }
 
   @Override
-  public <U> U map(
-      Function<Failure<T>, U> ifFailure, Supplier<U> ifNil, Function<NonNil<T>, U> ifNonNil) {
+  public <U> U mapToValue(
+      Function<Failure<T>, U> ifFailure, Supplier<U> ifNil, Function<T, U> ifNonNil) {
     return ifNil.get();
+  }
+
+  @Override
+  public <U> Nil<U> map(Function<T, U> ifNonNil) {
+    return nil();
   }
 
   @SuppressWarnings("unchecked")

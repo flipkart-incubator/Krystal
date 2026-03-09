@@ -25,7 +25,7 @@ public final class InputMirrorSpec<T, CV extends Request> implements InputMirror
   @Getter private final String name;
   @Getter private final String documentation;
   private @MonotonicNonNull ElementTags tags;
-  private final Function<Request<?>, @Nullable T> getFromRequest;
+  private final Function<CV, @Nullable T> getFromRequest;
   private final BiConsumer<ImmutableRequest.Builder<?>, @Nullable T> setToRequest;
   private final Callable<ElementTags> tagsParser;
 
@@ -37,7 +37,7 @@ public final class InputMirrorSpec<T, CV extends Request> implements InputMirror
       Class<? extends CV> ofVajram,
       String documentation,
       Callable<ElementTags> tagsParser,
-      Function<Request<?>, @Nullable T> getFromRequest,
+      Function<CV, @Nullable T> getFromRequest,
       BiConsumer<ImmutableRequest.Builder<?>, @Nullable T> setToRequest) {
     this.id = id;
     this.name = name;
@@ -50,9 +50,10 @@ public final class InputMirrorSpec<T, CV extends Request> implements InputMirror
     this.setToRequest = setToRequest;
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public @Nullable T getFromRequest(Request<?> request) {
-    return getFromRequest.apply(request);
+    return getFromRequest.apply((CV) request);
   }
 
   @Override

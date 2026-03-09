@@ -23,5 +23,5 @@ scalar Long
   @javaType(packageName: "java.lang", className: "Long")
 
 schema @rootPackage(name: "com.flipkart.krystal.vajram.graphql.samples") {
-    query: QueryType
+    query: Query
 }
