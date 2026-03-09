@@ -864,11 +864,8 @@ public class CodeGenUtility {
 
     Optional<TypeElement> modelRoot = asModelRoot(inferredType);
 
-    if (modelRoot.isPresent()) {
-      if (isBuilder) {
-        ClassName immutClassName = getImmutClassName(modelRoot.get());
-        typeName = immutClassName.nestedClass("Builder");
-      }
+    if (isBuilder && modelRoot.isPresent()) {
+      typeName = getImmutClassName(modelRoot.get()).nestedClass("Builder");
     }
 
     // Add @Nullable annotation for Optional types or methods with @Nullable annotation

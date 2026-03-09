@@ -116,10 +116,7 @@ final class Proto3SchemaGen implements CodeGenerator {
       }
 
       //noinspection ResultOfMethodCallIgnored
-      packageDir.toFile().mkdirs();
-      if (!packageDir.toFile().isDirectory()) {
-        throw new RuntimeException("Could not create dir " + packageDir);
-      }
+      Files.createDirectories(packageDir);
       // Write proto file
       Path protoFilePath = packageDir.resolve(protoFileName);
       try (PrintWriter out = new PrintWriter(Files.newBufferedWriter(protoFilePath))) {

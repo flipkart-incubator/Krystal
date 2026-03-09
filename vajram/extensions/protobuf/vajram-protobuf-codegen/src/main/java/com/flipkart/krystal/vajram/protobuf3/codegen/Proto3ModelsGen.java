@@ -603,9 +603,6 @@ return _serializedPayload;
               fieldName,
               fieldProtoClassName.nestedClass("Builder"),
               capitalizeFirstChar(fieldName),
-              //              fieldName,
-              //              fieldProtoClassName,
-              //              capitalizeFirstChar(fieldName),
               capitalizeFirstChar(fieldName),
               fieldProtoClassName,
               fieldName);

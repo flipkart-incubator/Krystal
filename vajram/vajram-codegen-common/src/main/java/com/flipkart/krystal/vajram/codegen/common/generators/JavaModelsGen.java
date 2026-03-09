@@ -714,7 +714,18 @@ public final class JavaModelsGen implements CodeGenerator {
     CodeBlock fieldAccessorCode = CodeBlock.of("$L", fieldName);
 
     if (isBuilder && util.isModelRoot(returnType)) {
-      fieldAccessorCode = CodeBlock.of("$L == null ? null : $L._build()", fieldName, fieldName);
+      boolean nestedBuilderExtendsModelRoot =
+          util.asModelRoot(returnType)
+              .map(typeElement -> typeElement.getAnnotation(ModelRoot.class))
+              .map(ModelRoot::builderExtendsModelRoot)
+              .orElse(false);
+      fieldAccessorCode =
+          nestedBuilderExtendsModelRoot
+              // Since builder extends model root, we can return the builder as is.
+              ? CodeBlock.of("$L", fieldName)
+              // Since builder does not extend model root, we can have to convert it into the model
+              // root by calling build.
+              : CodeBlock.of("$L == null ? null : $L._build()", fieldName, fieldName);
     }
 
     // If the return type is Optional<T>, wrap the field in Optional.ofNullable()
