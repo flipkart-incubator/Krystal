@@ -161,8 +161,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
     addConstructor(classBuilder, modelMethods, util);
 
     // Add interface method overrides
-    addInterfaceMethodOverrides(
-        classBuilder, gqlRespJsonClassName, immutClassName, modelMethods, util);
+    addInterfaceMethodOverrides(classBuilder, gqlRespJsonClassName, modelMethods, util);
 
     // Add __typename method
     addTypenameMethod(classBuilder, modelRootType);
@@ -527,7 +526,6 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
   private void addInterfaceMethodOverrides(
       TypeSpec.Builder classBuilder,
       ClassName gqlRespJsonClassName,
-      ClassName immutClassName,
       List<ExecutableElement> modelMethods,
       CodeGenUtility util) {
 
@@ -1195,16 +1193,9 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
     CodeBlock.Builder constructorCall =
         CodeBlock.builder().add("return new $T", gqlRespJsonClassName);
 
-    // Add model fields (skip GraphQL context methods to avoid duplicates)
     constructorCall.add(
         modelMethods.stream()
-            .map(
-                method -> {
-                  String fieldName = method.getSimpleName().toString();
-                  boolean isModelRoot = codeGenContext.util().isModelRoot(method.getReturnType());
-                  return CodeBlock.of(
-                      "$L" + (isModelRoot ? ".map(_nonNil -> _nonNil._build())" : ""), fieldName);
-                })
+            .map(method -> CodeBlock.of("$L", method.getSimpleName().toString()))
             .collect(CodeBlock.joining(",", "(", ")")));
 
     buildMethod.addStatement("$L", constructorCall.build()); // addStatement adds semicolon
@@ -1428,8 +1419,8 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
   }
 
   /**
-   * Checks if the given type is a custom model type (not String, primitives, or java.* types).
-   * Custom model types are user-defined types in the current package or related packages.
+   * Checks if the given type is a custom model type (not String, primitives, or java types). Custom
+   * model types are user-defined types in the current package or related packages.
    */
   private boolean isCustomModelType(TypeMirror type, CodeGenUtility util) {
     if (!(type instanceof DeclaredType)) {

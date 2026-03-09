@@ -50,6 +50,7 @@ public final class InputMirrorSpec<T, CV extends Request> implements InputMirror
     this.setToRequest = setToRequest;
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public @Nullable T getFromRequest(Request<?> request) {
     return getFromRequest.apply((CV) request);

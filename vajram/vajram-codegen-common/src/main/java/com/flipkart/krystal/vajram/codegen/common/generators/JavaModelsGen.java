@@ -584,7 +584,8 @@ public final class JavaModelsGen implements CodeGenerator {
       Optional<TypeElement> fieldModelRoot = util.asModelRoot(method.getReturnType());
       if (fieldModelRoot.isPresent()) {
         asBuilderMethodBuilder.addCode(
-            ".$L(($T)$L._asBuilder())",
+            ".$L($L == null ? null :($T)$L._asBuilder())",
+            fieldName,
             fieldName,
             util.getImmutClassName(fieldModelRoot.get()).nestedClass("Builder"),
             fieldName);

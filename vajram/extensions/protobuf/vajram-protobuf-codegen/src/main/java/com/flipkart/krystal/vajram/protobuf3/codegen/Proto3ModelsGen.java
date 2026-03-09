@@ -103,9 +103,9 @@ public class Proto3ModelsGen implements CodeGenerator {
   }
 
   /**
-   * Checks if the model root supports JSON serialization.
+   * Checks if the model root supports Proto3 serialization.
    *
-   * @return true if JSON is supported, false otherwise
+   * @return true if Proto3 is supported, false otherwise
    */
   private boolean isProto3SerdeSupported() {
     return util.typeExplicitlySupportsProtocol(codeGenContext.modelRootType(), Protobuf3.class);
@@ -348,14 +348,8 @@ return _serializedPayload;
                     }
                   } else {
                     accessor =
-                        isNullable
-                            ? CodeBlock.of(
-                                "$T.ofNullable(_from.$L()).map($T::_asBuilder).orElse(null)",
-                                Optional.class,
-                                methodName,
-                                Model.class)
-                            : CodeBlock.of(
-                                "_from.$L()" + (isOptional ? ".orElse(null)" : ""), methodName);
+                        CodeBlock.of(
+                            "_from.$L()" + (isOptional ? ".orElse(null)" : ""), methodName);
                   }
                   return CodeBlock.of(".$L($L)", methodName, accessor);
                 })

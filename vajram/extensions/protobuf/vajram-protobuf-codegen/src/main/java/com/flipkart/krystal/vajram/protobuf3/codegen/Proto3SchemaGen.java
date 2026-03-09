@@ -34,7 +34,6 @@ import java.util.Set;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
 
 /** Code generator which generates protobuf schema for models derived from a ModelRoot interface. */
 @Slf4j
@@ -192,7 +191,7 @@ final class Proto3SchemaGen implements CodeGenerator {
     return protoBuilder.toString();
   }
 
-  private @NonNull StringBuilder generateMessageBodyAndCollectImports(
+  private StringBuilder generateMessageBodyAndCollectImports(
       TypeElement modelRootType, Set<String> imports) {
     String modelRootName = modelRootType.getSimpleName().toString();
     // Extract methods from the model root interface

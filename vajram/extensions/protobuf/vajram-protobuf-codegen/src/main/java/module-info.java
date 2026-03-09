@@ -17,8 +17,6 @@ module flipkart.krystal.vajram.ext.protobuf.codegen {
   requires flipkart.krystal.lattice.core;
   requires flipkart.krystal.vajram.codegen.common;
   requires flipkart.krystal.lattice.vajram.sdk;
-  requires jdk.unsupported;
-  requires org.jspecify;
 
   provides ModelsCodeGeneratorProvider with
       Proto3ModelsGenProvider,
