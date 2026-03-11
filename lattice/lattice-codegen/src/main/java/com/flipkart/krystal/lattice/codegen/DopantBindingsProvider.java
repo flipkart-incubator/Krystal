@@ -448,6 +448,7 @@ public class DopantBindingsProvider implements BindingsProvider {
                                         .getAnnotation(Qualifier.class)
                                     != null)
                         .collect(Collectors.toList());
+                boolean isStatic = element.getModifiers().contains(STATIC);
                 String dopantVarName = lowerCaseFirstChar(dopantElem.getSimpleName().toString());
                 List<ParameterSpec> additionalParams =
                     element.getParameters().stream()
@@ -460,10 +461,12 @@ public class DopantBindingsProvider implements BindingsProvider {
                         .toList();
                 List<ParameterSpec> bindingParams =
                     Stream.concat(
-                            Stream.of(
-                                ParameterSpec.builder(
-                                        TypeName.get(dopantElem.asType()), dopantVarName)
-                                    .build()),
+                            isStatic
+                                ? Stream.of()
+                                : Stream.of(
+                                    ParameterSpec.builder(
+                                            TypeName.get(dopantElem.asType()), dopantVarName)
+                                        .build()),
                             additionalParams.stream())
                         .toList();
 
@@ -494,7 +497,8 @@ public class DopantBindingsProvider implements BindingsProvider {
                       .error(
                           "@Produces(scope=) class must have be scope (must have @jakarta.inject.Scope or @NormalScope annotation)");
                 }
-
+                CodeBlock producerContainer =
+                    isStatic ? CodeBlock.of("$T", dopantElem) : CodeBlock.of("$L", dopantVarName);
                 bindings.add(
                     new ProviderMethod(
                         variableName(returnType, context.codeGenUtility().processingEnv()),
@@ -502,7 +506,7 @@ public class DopantBindingsProvider implements BindingsProvider {
                         bindingParams,
                         CodeBlock.of(
                             "return $L.$L($L);",
-                            dopantVarName,
+                            producerContainer,
                             element.getSimpleName(),
                             additionalParams.stream()
                                 .map(p -> CodeBlock.of("$L", p.name))
