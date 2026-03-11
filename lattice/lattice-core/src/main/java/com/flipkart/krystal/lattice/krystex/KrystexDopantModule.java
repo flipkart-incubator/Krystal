@@ -18,7 +18,7 @@ public class KrystexDopantModule {
       KrystexDopantSpec krystexDopantSpec) {
     return asOptional(traitDispatchPoliciesBuilder)
         .orElseGet(TraitDispatchPolicies::builder)
-        .traitDispatchPolicies(krystexDopantSpec.traitDispatchPolicies())
+        .addTraitDispatchPolicies(krystexDopantSpec.traitDispatchPolicies())
         .build();
   }
 }
