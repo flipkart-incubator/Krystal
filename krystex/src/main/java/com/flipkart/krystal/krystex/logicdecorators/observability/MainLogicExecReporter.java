@@ -18,8 +18,8 @@ import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
+import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator.KryonExecutorConfiguratorProvider;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
@@ -37,7 +37,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public final class MainLogicExecReporter
-    implements OutputLogicDecorator, KryonExecutorConfigurator {
+    implements OutputLogicDecorator, KryonExecutorConfiguratorProvider {
 
   public static final String DECORATOR_TYPE = MainLogicExecReporter.class.getName();
 
@@ -58,15 +58,16 @@ public final class MainLogicExecReporter
   }
 
   @Override
-  public void addToConfig(KryonExecutorConfigBuilder configBuilder) {
-    configBuilder.outputLogicDecoratorConfig(
-        decoratorType(),
-        new OutputLogicDecoratorConfig(
+  public KryonExecutorConfigurator asKryonExecutorConfigurator() {
+    return configBuilder ->
+        configBuilder.outputLogicDecoratorConfig(
             decoratorType(),
-            logicExecutionContext -> true, // apply to all vajrams
-            logicExecutionContext -> decoratorType(), // Only one instance across the graph
-            decoratorContext -> this // Reuse this one instance across the graph,
-            ));
+            new OutputLogicDecoratorConfig(
+                decoratorType(),
+                logicExecutionContext -> true, // apply to all vajrams
+                logicExecutionContext -> decoratorType(), // Only one instance across the graph
+                decoratorContext -> this // Reuse this one instance across the graph,
+                ));
   }
 
   @Override

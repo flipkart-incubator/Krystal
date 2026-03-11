@@ -99,7 +99,9 @@ class ChainAddTest {
                         KryonExecutorConfig.builder()
                             .executorId("chainAdderTest")
                             .executorService(executorLease.get())
-                            .configureWith(new MainLogicExecReporter(kryonExecutionReport))
+                            .configureWith(
+                                new MainLogicExecReporter(kryonExecutionReport)
+                                    .asKryonExecutorConfigurator())
                             .build()))) {
 
       future = executeVajram(krystexVajramExecutor, 0);

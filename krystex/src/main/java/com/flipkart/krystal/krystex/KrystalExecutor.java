@@ -18,6 +18,9 @@ public interface KrystalExecutor extends AutoCloseable {
       RequestResponseFuture<? extends Request<T>, T> requestResponseFuture,
       KryonExecutionConfig executionConfig);
 
+  /** Returns the identifier of this executor. */
+  String executorId();
+
   /**
    * This method starts execution of all submitted requests. No new kryon execution requests will be
    * accepted after this method is called. All requests submitted before calling this method will

@@ -12,6 +12,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.Sets.union;
 import static java.util.Collections.unmodifiableSet;
+import static java.util.Objects.requireNonNullElseGet;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
@@ -75,6 +76,7 @@ import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -95,6 +97,8 @@ public final class KryonExecutor implements KrystalExecutor {
     BREADTH
   }
 
+  private static final AtomicLong EXEC_COUNT = new AtomicLong();
+
   private final KryonDefinitionRegistry kryonDefinitionRegistry;
   private final KryonExecutorConfig executorConfig;
 
@@ -103,7 +107,7 @@ public final class KryonExecutor implements KrystalExecutor {
   @Getter(PACKAGE)
   private final SingleThreadExecutor singleThreadExecutor;
 
-  private final String executorId;
+  @Getter private final String executorId;
 
   /**
    * We need to have a list of request scope global decorators corresponding to each type, in case
@@ -154,7 +158,9 @@ public final class KryonExecutor implements KrystalExecutor {
     this.kryonDefinitionRegistry = kryonDefinitionRegistry;
     this.executorConfig = executorConfig;
     this.singleThreadExecutor = executorConfig.executorService();
-    this.executorId = executorConfig.executorId();
+    this.executorId =
+        requireNonNullElseGet(
+            executorConfig.executorId(), () -> "KrystalExecutor-" + EXEC_COUNT.getAndIncrement());
     this.outputLogicDecoratorConfigs = executorConfig.outputLogicDecoratorConfigs();
     this.dependencyDecoratorConfigs = makeDependencyDecorConfigs(executorConfig);
     this.kryonDecoratorConfigs = executorConfig.kryonDecoratorConfigs();

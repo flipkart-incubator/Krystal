@@ -93,7 +93,9 @@ class SplitAddTest {
                         KryonExecutorConfig.builder()
                             .executorId("chainAdderTest")
                             .executorService(executorLease.get())
-                            .configureWith(new MainLogicExecReporter(kryonExecutionReport))
+                            .configureWith(
+                                new MainLogicExecReporter(kryonExecutionReport)
+                                    .asKryonExecutorConfigurator())
                             // Tests whether executor level disabled dependant chains is working
                             .disabledDependentChains(disabledDepChains(graph))
                             .build()))) {

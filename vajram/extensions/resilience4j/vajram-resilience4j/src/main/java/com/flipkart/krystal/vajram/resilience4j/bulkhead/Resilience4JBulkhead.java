@@ -41,13 +41,13 @@ public final class Resilience4JBulkhead implements OutputLogicDecorator {
     this.instanceId = instanceId;
   }
 
-  public static Resilience4JBulkheadManager onePerIOVajram() {
+  public static Resilience4JBulkheadConfigurator onePerIOVajram() {
     return onePerInstanceId(logicExecutionContext -> logicExecutionContext.vajramID().id());
   }
 
-  public static Resilience4JBulkheadManager onePerInstanceId(
+  public static Resilience4JBulkheadConfigurator onePerInstanceId(
       Function<LogicExecutionContext, String> instanceIdGenerator) {
-    return new Resilience4JBulkheadManager(instanceIdGenerator);
+    return new Resilience4JBulkheadConfigurator(instanceIdGenerator);
   }
 
   @Override

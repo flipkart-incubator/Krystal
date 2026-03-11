@@ -16,11 +16,11 @@ import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import lombok.Builder;
 import lombok.NonNull;
 import lombok.Singular;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.common.returnsreceiver.qual.This;
 
 /**
@@ -46,7 +46,7 @@ import org.checkerframework.common.returnsreceiver.qual.This;
  *     - might have a performance impact.
  */
 public record KryonExecutorConfig(
-    String executorId,
+    @Nullable String executorId,
     DecorationOrdering decorationOrdering,
     ImmutableSet<DependentChain> disabledDependentChains,
     KryonExecStrategy kryonExecStrategy,
@@ -58,13 +58,9 @@ public record KryonExecutorConfig(
     Function<ExecutorService, ExecutorService> executorServiceTransformer,
     TraitDispatchDecorator traitDispatchDecorator,
     boolean debug) {
-  private static final AtomicLong EXEC_COUNT = new AtomicLong();
 
   @Builder(toBuilder = true)
   public KryonExecutorConfig {
-    if (executorId == null) {
-      executorId = "KrystalExecutor-" + EXEC_COUNT.getAndIncrement();
-    }
     if (kryonExecStrategy == null) {
       kryonExecStrategy = DIRECT;
     }

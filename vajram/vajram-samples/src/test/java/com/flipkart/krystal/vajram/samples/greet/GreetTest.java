@@ -142,7 +142,9 @@ class GreetTest {
                             .executorId(REQUEST_ID)
                             .executorService(executorLease.get())
                             .decorationOrdering(decorationOrdering)
-                            .configureWith(new MainLogicExecReporter(kryonExecutionReport))
+                            .configureWith(
+                                new MainLogicExecReporter(kryonExecutionReport)
+                                    .asKryonExecutorConfigurator())
                             .build()))) {
       future = executeVajram(krystexVajramExecutor, requestContext);
     }
