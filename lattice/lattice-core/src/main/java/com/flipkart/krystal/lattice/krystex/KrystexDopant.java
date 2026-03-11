@@ -19,6 +19,7 @@ import com.flipkart.krystal.lattice.vajram.VajramRequestExecutionContext;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.traits.TraitDispatchPolicies;
+import com.flipkart.krystal.traits.TraitDispatchPolicies.TraitDispatchPoliciesBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
@@ -75,6 +76,16 @@ public final class KrystexDopant implements SimpleDopant {
           krystexDopantSpec.configureExecutorWith().forEach(configBuilder::configureWith);
         };
     this.krystexGraph = krystexGraphBuilder.build();
+  }
+
+  @Produces(inScope = Singleton.class)
+  public static TraitDispatchPolicies traitDispatchPolicies(
+      Provider<TraitDispatchPoliciesBuilder> traitDispatchPoliciesBuilder,
+      KrystexDopantSpec krystexDopantSpec) {
+    return asOptional(traitDispatchPoliciesBuilder)
+        .orElseGet(TraitDispatchPolicies::builder)
+        .addTraitDispatchPolicies(krystexDopantSpec.traitDispatchPolicies())
+        .build();
   }
 
   public <RespT extends @Nullable Object> CompletionStage<RespT> executeRequest(

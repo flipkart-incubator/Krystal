@@ -13,7 +13,8 @@ public class Util {
       return Optional.ofNullable(provider.get());
     } catch (Exception e) {
       log.info(
-          "jakarta.inject.Provider.get() threw an exception. Converting it to Optional.empty()", e);
+          "jakarta.inject.Provider.get() threw an exception. Converting it to Optional.empty(). Reason: {}",
+          e.getMessage());
       return Optional.empty();
     }
   }
