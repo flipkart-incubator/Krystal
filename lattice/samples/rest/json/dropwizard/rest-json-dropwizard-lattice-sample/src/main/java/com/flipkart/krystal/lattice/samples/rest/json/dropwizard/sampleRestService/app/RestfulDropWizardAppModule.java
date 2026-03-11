@@ -1,13 +1,11 @@
-package com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.app;
+package com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.app;
 
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
 import com.google.inject.AbstractModule;
 
-class CustomGuiceModule extends AbstractModule {
-
+public class RestfulDropWizardAppModule extends AbstractModule {
   @Override
   protected void configure() {
-    bind(CustomInjectionSample.class).toInstance(new CustomInjectionSample() {});
     bind(KryonExecutorConfigurator.class).toInstance(KryonExecutorConfigurator.NO_OP);
   }
 }

@@ -24,11 +24,12 @@ public record GraphQlOverRestSpec(
   }
 
   public void _configure(
-      @AutoConfigure KrystexDopantSpecBuilder vajramDopantSpecBuilder,
+      @AutoConfigure KrystexDopantSpecBuilder krystexDopantSpecBuilder,
       GraphQlOperationExecutor graphQlOperationExecutor,
       GraphQlOperationDispatch graphQlOperationDispatch) {
-    vajramDopantSpecBuilder.configureExecutorWith(graphQlOperationExecutor);
-    vajramDopantSpecBuilder.addTraitDispatchPolicies(graphQlOperationDispatch);
+    krystexDopantSpecBuilder.configureExecutorWith(
+        graphQlOperationExecutor.asKryonExecutorConfigurator());
+    krystexDopantSpecBuilder.addTraitDispatchPolicies(graphQlOperationDispatch);
   }
 
   @Override

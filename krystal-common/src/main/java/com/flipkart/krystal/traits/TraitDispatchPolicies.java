@@ -5,7 +5,9 @@ import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.core.VajramID;
 import com.google.common.collect.ImmutableMap;
+import java.util.ArrayList;
 import java.util.List;
+import lombok.Builder;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class TraitDispatchPolicies {
@@ -19,6 +21,7 @@ public class TraitDispatchPolicies {
     this(List.of(traitDispatchPolicies));
   }
 
+  @Builder
   public TraitDispatchPolicies(List<TraitDispatchPolicy> traitDispatchPolicies) {
     this.traitDispatchPolicies =
         traitDispatchPolicies.stream()
@@ -27,5 +30,21 @@ public class TraitDispatchPolicies {
 
   public @Nullable TraitDispatchPolicy get(VajramID traitId) {
     return traitDispatchPolicies.get(traitId);
+  }
+
+  public List<TraitDispatchPolicy> traitDispatchPolicies() {
+    return traitDispatchPolicies.values().asList();
+  }
+
+  public static class TraitDispatchPoliciesBuilder {
+
+    public TraitDispatchPolicies.TraitDispatchPoliciesBuilder addTraitDispatchPolicies(
+        List<TraitDispatchPolicy> traitDispatchPolicies) {
+      if (this.traitDispatchPolicies == null) {
+        this.traitDispatchPolicies = new ArrayList<>();
+      }
+      this.traitDispatchPolicies.addAll(traitDispatchPolicies);
+      return this;
+    }
   }
 }

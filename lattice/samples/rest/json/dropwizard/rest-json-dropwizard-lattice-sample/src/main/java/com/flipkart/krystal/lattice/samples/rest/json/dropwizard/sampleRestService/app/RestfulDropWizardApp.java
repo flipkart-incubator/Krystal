@@ -76,6 +76,6 @@ public abstract class RestfulDropWizardApp extends LatticeApplication {
 
   @Override
   public GuiceFramework getDependencyInjector() {
-    return new GuiceFramework(this);
+    return new GuiceFramework(this, new RestfulDropWizardAppModule());
   }
 }

@@ -742,7 +742,7 @@ class KryonExecutorTest {
             .executorService(executorLease.get())
             .kryonExecStrategy(kryonExecStrategy)
             .graphTraversalStrategy(graphTraversalStrategy)
-            .configureWith(requestLevelCache)
+            .configureWith(requestLevelCache.asKryonExecutorConfigurator())
             .executorId("test")
             .build();
     return new KryonExecutor(kryonDefinitionRegistry, config);

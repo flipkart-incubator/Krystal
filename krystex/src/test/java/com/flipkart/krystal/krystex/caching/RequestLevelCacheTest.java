@@ -183,7 +183,7 @@ class RequestLevelCacheTest {
             .kryonExecStrategy(kryonExecStrategy)
             .graphTraversalStrategy(graphTraversalStrategy);
     if (withCache) {
-      configBuilder.configureWith(requestLevelCache).build();
+      configBuilder.configureWith(requestLevelCache.asKryonExecutorConfigurator()).build();
     }
     return new KryonExecutor(kryonDefinitionRegistry, configBuilder.executorId("test").build());
   }

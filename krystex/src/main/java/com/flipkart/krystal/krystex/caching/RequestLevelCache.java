@@ -15,8 +15,8 @@ import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.kryon.BatchResponse;
 import com.flipkart.krystal.krystex.kryon.Kryon;
 import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
+import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator.KryonExecutorConfiguratorProvider;
 import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorationInput;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorator;
@@ -33,7 +33,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
-public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorConfigurator
+public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorConfiguratorProvider
     permits TestRequestLevelCache {
 
   public static final String DECORATOR_TYPE = RequestLevelCache.class.getName();
@@ -44,15 +44,16 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
   private final Map<CacheKey, CompletableFuture<@Nullable Object>> cache = new LinkedHashMap<>();
 
   @Override
-  public void addToConfig(KryonExecutorConfigBuilder configBuilder) {
-    configBuilder.kryonDecoratorConfig(
-        DECORATOR_TYPE,
-        new KryonDecoratorConfig(
+  public KryonExecutorConfigurator asKryonExecutorConfigurator() {
+    return configBuilder ->
+        configBuilder.kryonDecoratorConfig(
             DECORATOR_TYPE,
-            _c -> true, // Apply cache to all vajrams
-            _c -> DECORATOR_TYPE, // Only one RequestLevelCache across the vajram graph
-            _c -> this // Reuse this instance across the graph
-            ));
+            new KryonDecoratorConfig(
+                DECORATOR_TYPE,
+                _c -> true, // Apply cache to all vajrams
+                _c -> DECORATOR_TYPE, // Only one RequestLevelCache across the vajram graph
+                _c -> this // Reuse this instance across the graph
+                ));
   }
 
   @Override

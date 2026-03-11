@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-public class Resilience4JBulkheadManager implements KryonExecutorConfigurator {
+public class Resilience4JBulkheadConfigurator implements KryonExecutorConfigurator {
 
   private final ConcurrentHashMap<String, Resilience4JBulkhead> bulkheads =
       new ConcurrentHashMap<>();
@@ -26,7 +26,7 @@ public class Resilience4JBulkheadManager implements KryonExecutorConfigurator {
   private final List<Consumer<Resilience4JBulkhead>> listeners =
       synchronizedList(new ArrayList<>());
 
-  Resilience4JBulkheadManager(Function<LogicExecutionContext, String> instanceIdGenerator) {
+  Resilience4JBulkheadConfigurator(Function<LogicExecutionContext, String> instanceIdGenerator) {
     this.instanceIdGenerator = instanceIdGenerator;
   }
 

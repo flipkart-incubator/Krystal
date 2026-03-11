@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-public class Resilience4JCircuitBreakerManager implements KryonExecutorConfigurator {
+public class Resilience4JCircuitBreakerConfigurator implements KryonExecutorConfigurator {
 
   private final ConcurrentHashMap<String, Resilience4JCircuitBreaker> circuitBreakers =
       new ConcurrentHashMap<>();
@@ -25,7 +25,8 @@ public class Resilience4JCircuitBreakerManager implements KryonExecutorConfigura
   private final List<Consumer<Resilience4JCircuitBreaker>> listeners =
       synchronizedList(new ArrayList<>());
 
-  Resilience4JCircuitBreakerManager(Function<LogicExecutionContext, String> instanceIdGenerator) {
+  Resilience4JCircuitBreakerConfigurator(
+      Function<LogicExecutionContext, String> instanceIdGenerator) {
     this.instanceIdGenerator = instanceIdGenerator;
   }
 

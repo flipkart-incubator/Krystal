@@ -28,13 +28,13 @@ public final class Resilience4JCircuitBreaker implements OutputLogicDecorator {
     this.instanceId = instanceId;
   }
 
-  public static Resilience4JCircuitBreakerManager onePerIOVajram() {
+  public static Resilience4JCircuitBreakerConfigurator onePerIOVajram() {
     return onePerInstanceId(logicExecutionContext -> logicExecutionContext.vajramID().id());
   }
 
-  public static Resilience4JCircuitBreakerManager onePerInstanceId(
+  public static Resilience4JCircuitBreakerConfigurator onePerInstanceId(
       Function<LogicExecutionContext, String> instanceIdGenerator) {
-    return new Resilience4JCircuitBreakerManager(instanceIdGenerator);
+    return new Resilience4JCircuitBreakerConfigurator(instanceIdGenerator);
   }
 
   @Override

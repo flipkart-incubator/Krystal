@@ -13,8 +13,8 @@ import com.flipkart.krystal.krystex.dependencydecoration.DependencyInvocation;
 import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
 import com.flipkart.krystal.krystex.kryon.DirectResponse;
 import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
+import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator.KryonExecutorConfiguratorProvider;
 import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationError;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject;
@@ -45,7 +45,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Singleton
 public final class GraphQlOperationExecutor
-    implements DependencyDecorator, KryonExecutorConfigurator {
+    implements DependencyDecorator, KryonExecutorConfiguratorProvider {
 
   public static final String DECORATOR_TYPE = GraphQlOperationExecutor.class.getName();
 
@@ -148,18 +148,19 @@ public final class GraphQlOperationExecutor
   }
 
   @Override
-  public void addToConfig(KryonExecutorConfigBuilder configBuilder) {
-    configBuilder.dependencyDecoratorConfig(
-        DECORATOR_TYPE,
-        new DependencyDecoratorConfig(
+  public KryonExecutorConfigurator asKryonExecutorConfigurator() {
+    return configBuilder ->
+        configBuilder.dependencyDecoratorConfig(
             DECORATOR_TYPE,
-            dependencyExecutionContext -> {
-              Optional<Class<? extends Request<?>>> depVajramReq =
-                  graph.getVajramReqByVajramId(dependencyExecutionContext.depVajramId());
-              return depVajramReq.isPresent()
-                  && GraphQlOperationAggregate_Req.class.isAssignableFrom(depVajramReq.get());
-            },
-            _c -> DECORATOR_TYPE,
-            _c -> this));
+            new DependencyDecoratorConfig(
+                DECORATOR_TYPE,
+                dependencyExecutionContext -> {
+                  Optional<Class<? extends Request<?>>> depVajramReq =
+                      graph.getVajramReqByVajramId(dependencyExecutionContext.depVajramId());
+                  return depVajramReq.isPresent()
+                      && GraphQlOperationAggregate_Req.class.isAssignableFrom(depVajramReq.get());
+                },
+                _c -> DECORATOR_TYPE,
+                _c -> this));
   }
 }

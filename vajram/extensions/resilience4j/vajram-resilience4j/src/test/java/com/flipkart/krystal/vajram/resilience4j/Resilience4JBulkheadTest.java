@@ -38,7 +38,7 @@ import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.tags.ElementTags;
 import com.flipkart.krystal.vajram.resilience4j.bulkhead.Resilience4JBulkhead;
-import com.flipkart.krystal.vajram.resilience4j.bulkhead.Resilience4JBulkheadManager;
+import com.flipkart.krystal.vajram.resilience4j.bulkhead.Resilience4JBulkheadConfigurator;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.github.resilience4j.bulkhead.BulkheadFullException;
@@ -114,7 +114,7 @@ class Resilience4JBulkheadTest {
             ElementTags.of(
                 InvocableOutsideGraph.Creator.create(),
                 OutputLogicDelegationMode.Creator.create(SYNC)));
-    Resilience4JBulkheadManager singleBulkhead =
+    Resilience4JBulkheadConfigurator singleBulkhead =
         Resilience4JBulkhead.onePerInstanceId(
             logicExecutionContext -> "bulkhead_restrictsConcurrency");
     singleBulkhead.onCreate(
@@ -201,7 +201,7 @@ class Resilience4JBulkheadTest {
               }
               executionItem.response().complete("computed_value");
             });
-    Resilience4JBulkheadManager resilience4JBulkhead =
+    Resilience4JBulkheadConfigurator resilience4JBulkhead =
         Resilience4JBulkhead.onePerInstanceId(_l -> "threadpoolBulkhead_restrictsConcurrency");
     resilience4JBulkhead.onCreate(
         bulkhead ->

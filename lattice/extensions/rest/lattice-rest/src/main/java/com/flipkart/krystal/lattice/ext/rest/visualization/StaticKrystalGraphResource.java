@@ -24,7 +24,7 @@ public class StaticKrystalGraphResource {
   @GET
   @Produces(MediaType.TEXT_HTML)
   public Response getStaticGraph() {
-    return Response.ok(generateStaticCallGraphContent(krystexDopant.executableGraph(), null).html())
+    return Response.ok(generateStaticCallGraphContent(krystexDopant.krystexGraph(), null).html())
         .build();
   }
 }
