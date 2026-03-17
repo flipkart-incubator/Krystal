@@ -25,6 +25,9 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonComma
    */
   static final int INITIAL_CAPACITY = 64;
 
+  /** Cache key for dependency decorator lookup: (depVajramId, dependentChain). */
+  private record DepDecoratorCacheKey(VajramID depVajramId, DependentChain dependentChain) {}
+
   protected final VajramKryonDefinition kryonDefinition;
   protected final VajramID vajramID;
   protected final KryonExecutor kryonExecutor;
@@ -38,6 +41,9 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonComma
 
   private final Map<DependentChain, NavigableSet<OutputLogicDecorator>>
       requestScopedDecoratorsByDepChain = new HashMap<>(INITIAL_CAPACITY);
+
+  private final Map<DepDecoratorCacheKey, NavigableSet<DependencyDecorator>>
+      depDecoratorsByKey = new HashMap<>(INITIAL_CAPACITY);
 
   protected final DecorationOrdering decorationOrdering;
 
@@ -92,22 +98,30 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonComma
 
   protected NavigableSet<DependencyDecorator> getSortedDependencyDecorators(
       VajramID depVajramId, DependentChain dependentChain) {
-    TreeSet<DependencyDecorator> sortedDecorators =
-        new TreeSet<>(
-            decorationOrdering
-                .encounterOrder()
-                // Reverse the ordering so that the ones with the highest index are applied first.
-                .reversed());
     Dependency dependency = dependentChain.latestDependency();
     if (dependency == null) {
-      return sortedDecorators;
+      // Rare path — empty set, no need to cache
+      return new TreeSet<>(decorationOrdering.encounterOrder().reversed());
     }
-    sortedDecorators.addAll(
-        depDecoratorSuppliers
-            .apply(
-                new DependencyExecutionContext(vajramID, dependency, depVajramId, dependentChain))
-            .values());
-    return sortedDecorators;
+    // Cache by (depVajramId, dependentChain): the decorator set is the same for the same
+    // dependency edge in the graph. Avoids creating a new TreeSet on every dependency dispatch.
+    return depDecoratorsByKey.computeIfAbsent(
+        new DepDecoratorCacheKey(depVajramId, dependentChain),
+        key -> {
+          TreeSet<DependencyDecorator> sortedDecorators =
+              new TreeSet<>(
+                  decorationOrdering
+                      .encounterOrder()
+                      // Reverse the ordering so that the ones with the highest index are applied first.
+                      .reversed());
+          sortedDecorators.addAll(
+              depDecoratorSuppliers
+                  .apply(
+                      new DependencyExecutionContext(
+                          vajramID, dependency, depVajramId, dependentChain))
+                  .values());
+          return sortedDecorators;
+        });
   }
 
   @Override

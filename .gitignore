@@ -42,6 +42,7 @@
 .idea/modules.xml
 .idea/*.iml
 .idea/modules
+.idea/*.xml
 *.iml
 *.ipr
 .idea/inspectionProfiles/Project_Default.xml

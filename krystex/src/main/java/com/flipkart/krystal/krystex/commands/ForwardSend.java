@@ -1,12 +1,11 @@
 package com.flipkart.krystal.krystex.commands;
 
-import static java.util.Collections.unmodifiableMap;
-
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.krystex.kryon.BatchResponse;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.request.InvocationId;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import java.util.Map;
 import java.util.Set;
@@ -22,9 +21,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public record ForwardSend(
     VajramID vajramID,
-    Map<InvocationId, Request<@Nullable Object>> executableRequests,
+    ImmutableMap<InvocationId, Request<@Nullable Object>> executableRequests,
     DependentChain dependentChain,
-    Map<InvocationId, String> skippedInvocations)
+    ImmutableMap<InvocationId, String> skippedInvocations)
     implements MultiRequestCommand<BatchResponse>, ClientSideCommand<BatchResponse> {
 
   /**
@@ -34,8 +33,20 @@ public record ForwardSend(
    * @param skippedInvocations Must not be mutated after passing to this constructor
    */
   public ForwardSend {
-    executableRequests = unmodifiableMap(executableRequests);
-    skippedInvocations = unmodifiableMap(skippedInvocations);
+    executableRequests = ImmutableMap.copyOf(executableRequests);
+    skippedInvocations = ImmutableMap.copyOf(skippedInvocations);
+  }
+
+  public ForwardSend(
+      VajramID vajramID,
+      Map<InvocationId, Request<@Nullable Object>> executableRequests,
+      DependentChain dependentChain,
+      Map<InvocationId, String> skippedInvocations) {
+    this(
+        vajramID,
+        ImmutableMap.copyOf(executableRequests),
+        dependentChain,
+        ImmutableMap.copyOf(skippedInvocations));
   }
 
   @Override
