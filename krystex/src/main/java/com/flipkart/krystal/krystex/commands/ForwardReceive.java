@@ -28,6 +28,17 @@ public record ForwardReceive(
     invocationsToSkip = ImmutableMap.copyOf(invocationsToSkip);
   }
 
+  public ForwardReceive (VajramID vajramID,
+      Map<InvocationId,FacetValues> executableRequests,
+      DependentChain dependentChain,
+      Map<InvocationId, String> skippedInvocations) {
+    this(
+        vajramID,
+        ImmutableMap.copyOf(executableRequests),
+        dependentChain,
+        ImmutableMap.copyOf(skippedInvocations));
+  }
+
   @Override
   public Set<InvocationId> invocationIds() {
     return Sets.union(executableInvocations().keySet(), invocationsToSkip().keySet());

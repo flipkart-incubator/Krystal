@@ -18,4 +18,8 @@ public record BatchResponse(ImmutableMap<InvocationId, Errable<@Nullable Object>
   public BatchResponse {
     responses = ImmutableMap.copyOf(responses);
   }
+
+  public BatchResponse(Map<InvocationId, Errable<@Nullable Object>> responses) {
+    this(ImmutableMap.copyOf(responses));
+  }
 }
