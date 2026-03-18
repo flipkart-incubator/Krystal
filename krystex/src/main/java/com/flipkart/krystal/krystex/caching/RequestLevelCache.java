@@ -90,10 +90,43 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
     private CompletableFuture<KryonCommandResponse> readFromCache(
         Kryon<KryonCommand, KryonCommandResponse> kryon, ForwardReceive forwardBatch) {
       var executableRequests = forwardBatch.executableInvocations();
+      Map<InvocationId, CompletableFuture<@Nullable Object>> newCacheEntries =
+          new LinkedHashMap<>(executableRequests.size());
+
+      boolean allMisses = true;
+      for (var entry : executableRequests.entrySet()) {
+        var cacheKey = new CacheKey(entry.getValue()._build());
+        var cachedFuture = getCachedValue(cacheKey);
+        if (cachedFuture != null) {
+          allMisses = false;
+          break;
+        }
+        var placeholder = new CompletableFuture<@Nullable Object>();
+        newCacheEntries.put(entry.getKey(), placeholder);
+        cache.put(cacheKey, placeholder);
+      }
+
+      // Fast path: no cache hits — skip map copies, new ForwardReceive, and allOf wrapper
+      if (allMisses && forwardBatch.invocationsToSkip().isEmpty()) {
+        CompletableFuture<KryonCommandResponse> response = kryon.executeCommand(forwardBatch);
+        response.whenComplete((kryonResponse, throwable) -> {
+          if (kryonResponse instanceof BatchResponse batchResponse) {
+            batchResponse.responses().forEach(
+                (id, errable) -> {
+                  var dest = newCacheEntries.get(id);
+                  if (dest != null) linkFutures(errable.toFuture(), dest);
+                });
+          } else if (throwable != null) {
+            newCacheEntries.values().forEach(f -> f.completeExceptionally(stackTracelessWrap(throwable)));
+          }
+        });
+        return response;
+      }
+
+      // Slow path: existing cache hits or skips
       Map<InvocationId, FacetValues> cacheMisses = new LinkedHashMap<>();
       Map<InvocationId, CompletableFuture<@Nullable Object>> cacheHits = new LinkedHashMap<>();
-      Map<InvocationId, CompletableFuture<@Nullable Object>> newCacheEntries =
-          new LinkedHashMap<>();
+
       executableRequests.forEach(
           (requestId, facets) -> {
             var cacheKey = new CacheKey(facets._build());

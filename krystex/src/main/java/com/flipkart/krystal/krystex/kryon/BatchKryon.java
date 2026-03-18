@@ -1,7 +1,6 @@
 package com.flipkart.krystal.krystex.kryon;
 
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
-import static com.flipkart.krystal.concurrent.Futures.propagateCompletion;
 import static com.flipkart.krystal.data.Errable.nil;
 import static com.flipkart.krystal.data.Errable.withError;
 import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
@@ -207,8 +206,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
     int invCount = executableRequests.size() + skippedRequests.size();
     Map<Dependency, Map<Set<InvocationId>, ResolverCommand>> commandsByDependency =
         new LinkedHashMap<>(depCount);
-    Map<Dependency, Set<InvocationId>> requestIdsByDependency =
-        new LinkedHashMap<>(depCount);
+    Map<Dependency, Set<InvocationId>> requestIdsByDependency = new LinkedHashMap<>(depCount);
     if (!skippedRequests.isEmpty()) {
       SkipDependency skip = skip(String.join(", ", skippedRequests.values()));
       for (Dependency depName : triggerableDependencies) {
@@ -391,8 +389,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
     Map<InvocationId, Request<@Nullable Object>> depRequestsByDepInvocationId =
         new LinkedHashMap<>(allInvSize);
     Map<InvocationId, String> skipReasonsByReq = new LinkedHashMap<>(allInvSize);
-    Map<InvocationId, Set<InvocationId>> depReqsByIncomingReq =
-        new LinkedHashMap<>(allInvSize);
+    Map<InvocationId, Set<InvocationId>> depReqsByIncomingReq = new LinkedHashMap<>(allInvSize);
     for (var entry : resolverCommandsByReq.entrySet()) {
       Set<InvocationId> incomingReqIds = entry.getKey();
       ResolverCommand resolverCommand = entry.getValue();
@@ -448,7 +445,8 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
 
     CompletableFuture<BatchResponse> depResponse =
         kryonResponseVajramInvocation.invokeDependency(
-            new ForwardSend(depVajramID,
+            new ForwardSend(
+                depVajramID,
                 depRequestsByDepInvocationId,
                 extendedDependentChain,
                 skipReasonsByReq));
@@ -701,13 +699,13 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
         dependentChain,
         new HashSet<>(kryonDefinition.getOutputLogicDefinition().usedComputedFacets()));
 
-    forwardBatch
-        .executableInvocations()
-        .forEach(
-            (requestId, container) ->
-                facetsCollector
-                    .computeIfAbsent(dependentChain, _d -> new LinkedHashMap<>(INITIAL_CAPACITY))
-                    .put(requestId, container._asBuilder()));
+    var executableInvocations = forwardBatch.executableInvocations();
+    Map<InvocationId, FacetValuesBuilder> invocationFacets =
+        facetsCollector.computeIfAbsent(
+            dependentChain,
+            _d -> new LinkedHashMap<>(executableInvocations.size() * 4 / 3 + 1));
+    executableInvocations.forEach(
+        (requestId, container) -> invocationFacets.put(requestId, container._asBuilder()));
 
     ImmutableSet<Dependency> dependencyNames = kryonDefinition.dependencyKryons().keySet();
 
@@ -732,16 +730,18 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
 
   private Set<Dependency> collectDependencyValues(CallbackCommand callbackBatch) {
     Dependency incomingFacet = callbackBatch.dependency();
+    // facetsCollector entry for this dependentChain is always present: collectInputValues
+    // is guaranteed to run before any CallbackCommand for the same dependentChain.
+    Map<InvocationId, FacetValuesBuilder> depChainFacets =
+        facetsCollector.get(callbackBatch.dependentChain());
     callbackBatch
         .resultsByRequest()
         .forEach(
             (requestId, depResponse) -> {
-              FacetValuesBuilder facetsBuilder =
-                  facetsCollector
-                      .computeIfAbsent(
-                          callbackBatch.dependentChain(),
-                          _d -> new LinkedHashMap<>(INITIAL_CAPACITY))
-                      .get(requestId);
+              if (depChainFacets == null) {
+                return;
+              }
+              FacetValuesBuilder facetsBuilder = depChainFacets.get(requestId);
               if (facetsBuilder == null) {
                 // This means this request was skipped. Hence, no facet builder is present for this
                 // request.
@@ -749,10 +749,11 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
               }
               incomingFacet.setFacetValue(facetsBuilder, depResponse);
             });
-    outputLogicPendingFacets
-        .computeIfAbsent(
-            callbackBatch.dependentChain(), _k -> new HashSet<>(kryonDefinition.facets().size()))
-        .remove(incomingFacet);
+    // outputLogicPendingFacets entry is always present: set by collectInputValues above.
+    Set<Facet> pendingFacets = outputLogicPendingFacets.get(callbackBatch.dependentChain());
+    if (pendingFacets != null) {
+      pendingFacets.remove(incomingFacet);
+    }
     return getTriggerableDependencies(callbackBatch.dependentChain(), incomingFacet);
   }
 
@@ -762,12 +763,11 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
         kryonDefinition.dependenciesByBoundFacet().getOrDefault(incomingFacet, ImmutableSet.of());
     Set<Dependency> triggerableDependencies =
         new HashSet<>(kryonDefinition.dependencyKryons().size());
+    // dependencyToPendingFacets has no entry when all dependencies were immediately triggerable
+    // (no bound facets). A null entry means every dep in depsByBoundFacet is triggerable.
+    Map<Dependency, Set<Facet>> pendingByDep = dependencyToPendingFacets.get(dependantChain);
     for (Dependency depName : depsByBoundFacet) {
-      Set<Facet> pendingFacets =
-          dependencyToPendingFacets
-              .computeIfAbsent(
-                  dependantChain, _k -> new HashMap<>(kryonDefinition.dependencyKryons().size()))
-              .get(depName);
+      Set<Facet> pendingFacets = pendingByDep != null ? pendingByDep.get(depName) : null;
       if (pendingFacets != null) {
         pendingFacets.remove(incomingFacet);
       }

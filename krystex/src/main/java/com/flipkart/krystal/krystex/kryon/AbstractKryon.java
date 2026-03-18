@@ -42,8 +42,8 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonComma
   private final Map<DependentChain, NavigableSet<OutputLogicDecorator>>
       requestScopedDecoratorsByDepChain = new HashMap<>(INITIAL_CAPACITY);
 
-  private final Map<DepDecoratorCacheKey, NavigableSet<DependencyDecorator>>
-      depDecoratorsByKey = new HashMap<>(INITIAL_CAPACITY);
+  private final Map<DepDecoratorCacheKey, NavigableSet<DependencyDecorator>> depDecoratorsByKey =
+      new HashMap<>(INITIAL_CAPACITY);
 
   protected final DecorationOrdering decorationOrdering;
 
@@ -112,7 +112,8 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonComma
               new TreeSet<>(
                   decorationOrdering
                       .encounterOrder()
-                      // Reverse the ordering so that the ones with the highest index are applied first.
+                      // Reverse the ordering so that the ones with the highest index are applied
+                      // first.
                       .reversed());
           sortedDecorators.addAll(
               depDecoratorSuppliers

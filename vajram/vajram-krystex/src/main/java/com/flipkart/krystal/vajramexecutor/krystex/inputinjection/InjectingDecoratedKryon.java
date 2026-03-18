@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajramexecutor.krystex.inputinjection;
 
 import static com.flipkart.krystal.core.VajramID.vajramID;
 import static com.flipkart.krystal.facets.FacetType.INJECTION;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
@@ -26,10 +27,9 @@ import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.google.common.collect.ImmutableMap;
-import java.util.LinkedHashSet;
+import com.google.common.collect.ImmutableSet;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -38,16 +38,35 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandResponse> {
 
   private final Kryon<KryonCommand, KryonCommandResponse> kryon;
-  private final VajramKryonGraph vajramKryonGraph;
   private final @Nullable VajramInjectionProvider injectionProvider;
+  private final boolean inputInjectionNeeded;
+  private final @Nullable VajramDefinition vajramDefinition;
+  private final @Nullable VajramDef<?> vajramDef;
+  private final ImmutableSet<FacetSpec<?, ?>> injectableFacets;
 
   InjectingDecoratedKryon(
       Kryon<KryonCommand, KryonCommandResponse> kryon,
       VajramKryonGraph vajramKryonGraph,
       @Nullable VajramInjectionProvider injectionProvider) {
     this.kryon = kryon;
-    this.vajramKryonGraph = vajramKryonGraph;
     this.injectionProvider = injectionProvider;
+    VajramDefinition def =
+        vajramKryonGraph.getVajramDefinition(vajramID(kryon.getKryonDefinition().vajramID().id()));
+    if (def.metadata().isInputInjectionNeeded() && def.def() instanceof VajramDef<?> vd) {
+      this.inputInjectionNeeded = true;
+      this.vajramDefinition = def;
+      this.vajramDef = vd;
+      this.injectableFacets =
+          def.facetSpecs().stream()
+              .filter(facetSpec -> INJECTION.equals(facetSpec.facetType()))
+              .map(facetSpec -> (FacetSpec<?, ?>) facetSpec)
+              .collect(toImmutableSet());
+    } else {
+      this.inputInjectionNeeded = false;
+      this.vajramDefinition = null;
+      this.vajramDef = null;
+      this.injectableFacets = ImmutableSet.of();
+    }
   }
 
   @Override
@@ -62,33 +81,18 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandRespons
 
   @Override
   public CompletableFuture<KryonCommandResponse> executeCommand(KryonCommand kryonCommand) {
-    VajramDefinition vajramDefinition =
-        vajramKryonGraph.getVajramDefinition(vajramID(kryonCommand.vajramID().id()));
-    if (vajramDefinition.metadata().isInputInjectionNeeded()
-        && vajramDefinition.def() instanceof VajramDef<?> vajramDef) {
-      if (kryonCommand instanceof ForwardReceive forwardBatch) {
-        return injectFacets(forwardBatch, vajramDefinition, vajramDef);
-      }
+    if (inputInjectionNeeded && kryonCommand instanceof ForwardReceive forwardBatch) {
+      return injectFacets(forwardBatch);
     }
     return kryon.executeCommand(kryonCommand);
   }
 
-  private CompletableFuture<KryonCommandResponse> injectFacets(
-      ForwardReceive forwardBatch, VajramDefinition vajramDefinition, VajramDef<?> vajramDef) {
+  private CompletableFuture<KryonCommandResponse> injectFacets(ForwardReceive forwardBatch) {
     Map<InvocationId, ? extends FacetValuesContainer> requestIdToFacets =
         forwardBatch.executableInvocations();
 
-    ImmutableMap.Builder<InvocationId, FacetValues> newRequests = ImmutableMap.builder();
-    Set<FacetSpec<?, ?>> injectableFacets = new LinkedHashSet<>();
-    vajramDefinition
-        .facetSpecs()
-        .forEach(
-            facetSpec -> {
-              if (INJECTION.equals(facetSpec.facetType())) {
-                injectableFacets.add(facetSpec);
-              }
-            });
-
+    ImmutableMap.Builder<InvocationId, FacetValues> newRequests =
+        ImmutableMap.builderWithExpectedSize(requestIdToFacets.size());
     for (Entry<InvocationId, ? extends FacetValuesContainer> entry : requestIdToFacets.entrySet()) {
       InvocationId invocationId = entry.getKey();
       FacetValuesContainer container = entry.getValue();
@@ -114,9 +118,9 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandRespons
 
   private FacetValuesBuilder injectFacetsOfVajram(
       VajramDefinition vajramDefinition,
-      Set<FacetSpec<?, ?>> injectableFacets,
+      ImmutableSet<FacetSpec<?, ?>> injectableFacets,
       FacetValuesBuilder facetsBuilder) {
-    for (FacetSpec facetSpec : injectableFacets) {
+    for (FacetSpec<?, ?> facetSpec : injectableFacets) {
       if (!(facetSpec instanceof DefaultFacetSpec defaultFacetSpec)) {
         continue;
       }

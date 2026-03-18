@@ -61,7 +61,6 @@ import com.flipkart.krystal.vajramexecutor.krystex.batching.DepChainBatcherConfi
 import com.flipkart.krystal.vajramexecutor.krystex.batching.InputBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.batching.InputBatchingDecorator;
 import com.flipkart.krystal.vajramexecutor.krystex.traits.TraitDispatchDecoratorImpl;
-import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -367,8 +366,18 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
           String depName = dependency.name();
 
           ImmutableSet<? extends Facet> sources = inputResolver.definition().sources();
-          ImmutableCollection<FacetSpec> requiredInputs =
+          ImmutableList<FacetSpec> requiredInputs =
               facetDefinitions.stream().filter(sources::contains).collect(toImmutableList());
+          ImmutableList<FacetSpec> mandatoryInputs =
+              requiredInputs.stream()
+                  .filter(
+                      facetSpec ->
+                          facetSpec
+                              .tags()
+                              .getAnnotationByType(IfAbsent.class)
+                              .map(ifAbsent -> IfAbsentThen.FAIL.equals(ifAbsent.value()))
+                              .orElse(false))
+                  .collect(toImmutableList());
           LogicDefinition<ResolverLogic> inputResolverLogic =
               logicRegistryDecorator.newResolverLogic(
                   vajramId.id(),
@@ -385,7 +394,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                   (depRequests, facets) -> {
                     ResolverCommand resolverCommand;
                     try {
-                      validateMandatory(vajramId, facets, requiredInputs);
+                      validateMandatory(vajramId, facets, mandatoryInputs);
                       if (inputResolver instanceof One2OneInputResolver singleInputResolver) {
                         resolverCommand = singleInputResolver.resolve(depRequests, facets);
                       } else if (inputResolver instanceof FanoutInputResolver fanoutInputResolver) {
@@ -417,18 +426,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
   }
 
   private void validateMandatory(
-      VajramID vajramID, FacetValues facetValues, ImmutableCollection<FacetSpec> requiredInputs) {
-    @SuppressWarnings("StreamToIterable")
-    Iterable<FacetSpec> mandatoryFacets =
-        requiredInputs.stream()
-                .filter(
-                    facetSpec ->
-                        facetSpec
-                            .tags()
-                            .getAnnotationByType(IfAbsent.class)
-                            .map(ifAbsent -> IfAbsentThen.FAIL.equals(ifAbsent.value()))
-                            .orElse(false))
-            ::iterator;
+      VajramID vajramID, FacetValues facetValues, ImmutableList<FacetSpec> mandatoryFacets) {
     Map<String, Throwable> missingMandatoryValues = new HashMap<>();
     for (Facet mandatoryFacet : mandatoryFacets) {
       FacetValue facetValue = mandatoryFacet.getFacetValue(facetValues);
@@ -475,6 +473,16 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
         facetSpecs.stream()
             .filter(vajramDefinition.outputLogicSources()::contains)
             .collect(toImmutableSet());
+    ImmutableList<FacetSpec> mandatoryFacetSpecs =
+        facetSpecs.stream()
+            .filter(
+                facetSpec ->
+                    facetSpec
+                        .tags()
+                        .getAnnotationByType(IfAbsent.class)
+                        .map(ifAbsent -> IfAbsentThen.FAIL.equals(ifAbsent.value()))
+                        .orElse(false))
+            .collect(toImmutableList());
     KryonLogicId outputLogicName = new KryonLogicId(vajramID, "%s:outputLogic".formatted(vajramId));
 
     // Step 4: Create and register Kryon for the output logic
@@ -487,7 +495,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
           inputsList.forEach(
               inputs -> {
                 try {
-                  validateMandatory(vajramId, inputs, facetSpecs);
+                  validateMandatory(vajramId, inputs, mandatoryFacetSpecs);
                   validInputs.add(inputs);
                 } catch (Throwable e) {
                   failedValidations.put(inputs, failedFuture(e));
