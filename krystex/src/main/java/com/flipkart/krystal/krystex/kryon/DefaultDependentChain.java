@@ -9,13 +9,14 @@ public final class DefaultDependentChain extends AbstractDependentChain {
   private final VajramID vajramID;
   @Getter private final Dependency latestDependency;
   @Getter private final DependentChain incomingDependentChain;
-  private int _hashCodeCache;
+  private final int _hash;
 
   DefaultDependentChain(
       VajramID vajramID, Dependency latestDependency, DependentChain incomingDependentChain) {
     this.vajramID = vajramID;
     this.latestDependency = latestDependency;
     this.incomingDependentChain = incomingDependentChain;
+    this._hash = System.identityHashCode(this);
   }
 
   public VajramID kryonId() {
@@ -23,16 +24,8 @@ public final class DefaultDependentChain extends AbstractDependentChain {
   }
 
   @Override
-  public boolean equals(@Nullable Object obj) {
-    return super.equals(obj);
-  }
-
-  @Override
   public int hashCode() {
-    if (this._hashCodeCache == 0) {
-      this._hashCodeCache = System.identityHashCode(this);
-    }
-    return this._hashCodeCache;
+    return this._hash;
   }
 
   @Override
