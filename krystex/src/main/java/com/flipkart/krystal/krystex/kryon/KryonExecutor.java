@@ -415,8 +415,7 @@ public final class KryonExecutor implements KrystalExecutor {
                                     .facetsFromRequest()
                                     .logic()
                                     .facetsFromRequest(e.getValue()))),
-                forwardSend.dependentChain(),
-                forwardSend.skippedInvocations()));
+                forwardSend.dependentChain()));
       }
       try {
         validate(kryonCommand);
@@ -567,10 +566,7 @@ public final class KryonExecutor implements KrystalExecutor {
                     .<BatchResponse>decorateDependency(this::executeCommand)
                     .invokeDependency(
                         new ForwardSend(
-                            kryonId,
-                            requests,
-                            kryonDefinitionRegistry.getDependentChainsStart(),
-                            ImmutableMap.of()));
+                            kryonId, requests, kryonDefinitionRegistry.getDependentChainsStart()));
           } catch (Throwable throwable) {
             batchResponseFuture =
                 completedFuture(
