@@ -3,7 +3,6 @@ package com.flipkart.krystal.facets;
 import com.flipkart.krystal.core.VajramID;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Getter
 @AllArgsConstructor
@@ -13,16 +12,6 @@ public abstract class AbstractFacet implements Facet {
   private final VajramID ofVajramID;
   private final FacetType facetType;
   private final String documentation;
-
-  @Override
-  public final boolean equals(@Nullable Object obj) {
-    return obj instanceof Facet f && f.id() == id && ofVajramID.equals(f.ofVajramID());
-  }
-
-  @Override
-  public final int hashCode() {
-    return id;
-  }
 
   @Override
   public String toString() {

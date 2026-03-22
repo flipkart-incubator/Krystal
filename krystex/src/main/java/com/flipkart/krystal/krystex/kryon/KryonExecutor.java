@@ -423,8 +423,6 @@ public final class KryonExecutor implements KrystalExecutor {
         return failedFuture(e);
       }
       VajramID vajramID = kryonCommand.vajramID();
-      VajramKryonDefinition kryonDefinition =
-          KryonUtils.validateAsVajram(kryonDefinitionRegistry.getOrThrow(vajramID));
       @SuppressWarnings("unchecked")
       Kryon<KryonCommand, R> kryon = getDecoratedKryon(kryonCommand, vajramID);
       if (kryonCommand instanceof Flush flush) {
