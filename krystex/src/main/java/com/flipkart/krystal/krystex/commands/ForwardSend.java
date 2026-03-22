@@ -7,9 +7,9 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.krystex.kryon.BatchResponse;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.request.InvocationId;
-import com.google.common.collect.Sets;
 import java.util.Map;
 import java.util.Set;
+import org.checkerframework.checker.nullness.qual.KeyFor;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -23,8 +23,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public record ForwardSend(
     VajramID vajramID,
     Map<InvocationId, Request<@Nullable Object>> executableRequests,
-    DependentChain dependentChain,
-    Map<InvocationId, String> skippedInvocations)
+    DependentChain dependentChain)
     implements MultiRequestCommand<BatchResponse>, ClientSideCommand<BatchResponse> {
 
   /**
@@ -35,12 +34,11 @@ public record ForwardSend(
    */
   public ForwardSend {
     executableRequests = unmodifiableMap(executableRequests);
-    skippedInvocations = unmodifiableMap(skippedInvocations);
   }
 
   @Override
-  public Set<InvocationId> invocationIds() {
-    return Sets.union(executableRequests().keySet(), skippedInvocations().keySet());
+  public Set<@KeyFor("this.executableRequests()") InvocationId> invocationIds() {
+    return executableRequests().keySet();
   }
 
   public boolean shouldSkip() {

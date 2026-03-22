@@ -15,7 +15,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 public record KrystexVajramExecutorConfig(
     String requestId,
-    @NonNull @CalledMethods("singleThreadExecutor") KryonExecutorConfig kryonExecutorConfig,
+    @NonNull KryonExecutorConfig kryonExecutorConfig,
     @NonNull VajramKryonGraph vajramKryonGraph,
     @Nullable VajramInjectionProvider inputInjectionProvider) {
 
@@ -25,7 +25,8 @@ public record KrystexVajramExecutorConfig(
         primeConfig(kryonExecutorConfig, inputInjectionProvider, vajramKryonGraph);
   }
 
-  public KryonExecutorConfigBuilder kryonExecutorConfigBuilder() {
+  public @CalledMethods("singleThreadExecutor") KryonExecutorConfigBuilder
+      kryonExecutorConfigBuilder() {
     return kryonExecutorConfig.toBuilder();
   }
 
