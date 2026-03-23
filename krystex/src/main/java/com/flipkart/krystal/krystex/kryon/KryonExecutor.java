@@ -176,10 +176,10 @@ public final class KryonExecutor implements KrystalExecutor {
     return builder.build();
   }
 
-  private Map<String, OutputLogicDecorator> getOutputLogicDecorators(
+  private List<OutputLogicDecorator> getOutputLogicDecorators(
       LogicExecutionContext logicExecutionContext) {
     VajramID vajramID = logicExecutionContext.vajramID();
-    Map<String, OutputLogicDecorator> decorators = new LinkedHashMap<>();
+    List<OutputLogicDecorator> decorators = new ArrayList<>(outputLogicDecoratorConfigs.size());
     outputLogicDecoratorConfigs.forEach(
         (decoratorType, decoratorConfig) -> {
           if (decoratorConfig.shouldDecorate().test(logicExecutionContext)) {
@@ -204,7 +204,7 @@ public final class KryonExecutor implements KrystalExecutor {
                                           vajramID, ImmutableSet.of()))));
                           return logicDecorator;
                         });
-            decorators.put(decoratorType, outputLogicDecorator);
+            decorators.add(outputLogicDecorator);
           }
         });
     return decorators;
