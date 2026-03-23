@@ -124,7 +124,8 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
   BatchKryon(
       VajramKryonDefinition kryonDefinition,
       KryonExecutor kryonExecutor,
-      Function<LogicExecutionContext, Collection<OutputLogicDecorator>> outputLogicDecoratorsSupplier,
+      Function<LogicExecutionContext, Collection<OutputLogicDecorator>>
+          outputLogicDecoratorsSupplier,
       Function<DependencyExecutionContext, ImmutableMap<String, DependencyDecorator>>
           depDecoratorSuppliers,
       DecorationOrdering decorationOrdering,

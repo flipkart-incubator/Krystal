@@ -3,7 +3,6 @@ package com.flipkart.krystal.krystex.kryon;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.Dependency;
 import lombok.Getter;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class DefaultDependentChain extends AbstractDependentChain {
   private final VajramID vajramID;
