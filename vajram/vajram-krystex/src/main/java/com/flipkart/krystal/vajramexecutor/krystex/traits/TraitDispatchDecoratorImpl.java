@@ -74,7 +74,6 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
       } else if (traitDispatchPolicy instanceof DynamicDispatchPolicy dynamicPolicy) {
         if (kryonCommand instanceof ForwardSend forwardSend) {
           var originalExecutableRequests = forwardSend.executableRequests();
-          Map<InvocationId, String> originalSkippedInvocations = ImmutableMap.of();
           Map<VajramID, Map<InvocationId, Request<@Nullable Object>>> dispatchRequests =
               new LinkedHashMap<>();
           Map<VajramID, CompletableFuture<BatchResponse>> dispatchResponses = new LinkedHashMap<>();

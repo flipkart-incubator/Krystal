@@ -17,7 +17,6 @@ import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.facets.InputMirror;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
-import lombok.EqualsAndHashCode.Include;
 import lombok.Value;
 import lombok.experimental.NonFinal;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -37,7 +36,7 @@ public @NonFinal sealed class SimpleFacet implements Facet, InputMirror permits 
 
   private static int count;
 
-  @Include int id;
+  @EqualsAndHashCode.Include int id;
   String name;
 
   FacetType facetType;

@@ -3,7 +3,9 @@ package com.flipkart.krystal.vajram.samples.calculator.add;
 import static com.flipkart.krystal.annos.ComputeDelegationMode.SYNC;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 
+import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.model.IfAbsent;
+import com.flipkart.krystal.traits.UseForPredicateDispatch;
 import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.TraitRoot;
 import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
@@ -19,9 +21,11 @@ import lombok.experimental.UtilityClass;
 /** Adds all the {@code numbers} and returns the result */
 @Trait
 @CallGraphDelegationMode(SYNC)
+@ExternallyInvocable
 public interface MultiAdd extends TraitRoot<Integer> {
   @SuppressWarnings("initialization.field.uninitialized")
   class _Inputs {
+    @UseForPredicateDispatch
     @IfAbsent(FAIL)
     List<Integer> numbers;
   }

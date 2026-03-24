@@ -53,6 +53,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Sets.SetView;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -123,8 +124,8 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
   BatchKryon(
       VajramKryonDefinition kryonDefinition,
       KryonExecutor kryonExecutor,
-      Function<LogicExecutionContext, Map<String, OutputLogicDecorator>>
-          outputLogicDecoratorSuppliers,
+      Function<LogicExecutionContext, Collection<OutputLogicDecorator>>
+          outputLogicDecoratorsSupplier,
       Function<DependencyExecutionContext, ImmutableMap<String, DependencyDecorator>>
           depDecoratorSuppliers,
       DecorationOrdering decorationOrdering,
@@ -132,7 +133,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
     super(
         kryonDefinition,
         kryonExecutor,
-        outputLogicDecoratorSuppliers,
+        outputLogicDecoratorsSupplier,
         depDecoratorSuppliers,
         decorationOrdering,
         requestIdGenerator);
@@ -651,6 +652,12 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
               // TODO: Use input names instead of input ids
               .formatted(inputsValueCollector.get(dependentChain), vajramID, dependentChain));
     }
+    ImmutableSet<Dependency> dependencyNames = kryonDefinition.dependencyKryons().keySet();
+
+    if (forwardBatch.executableInvocations().isEmpty()) {
+      return dependencyNames;
+    }
+
     outputLogicPendingFacets.put(
         dependentChain,
         new HashSet<>(kryonDefinition.getOutputLogicDefinition().usedComputedFacets()));
@@ -662,12 +669,6 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
                 facetsCollector
                     .computeIfAbsent(dependentChain, _d -> new LinkedHashMap<>(INITIAL_CAPACITY))
                     .put(requestId, container._asBuilder()));
-
-    ImmutableSet<Dependency> dependencyNames = kryonDefinition.dependencyKryons().keySet();
-
-    if (forwardBatch.executableInvocations().isEmpty()) {
-      return dependencyNames;
-    }
 
     Set<Dependency> triggerableDependencies = new HashSet<>(dependencyNames.size());
     for (Dependency depName : dependencyNames) {

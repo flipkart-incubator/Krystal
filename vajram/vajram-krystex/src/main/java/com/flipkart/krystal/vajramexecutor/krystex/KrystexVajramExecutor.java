@@ -28,12 +28,12 @@ public class KrystexVajramExecutor implements VajramExecutor {
   }
 
   @Override
-  public <T> CompletableFuture<@Nullable T> execute(ImmutableRequest request) {
+  public <T> CompletableFuture<@Nullable T> execute(ImmutableRequest<T> request) {
     return execute(request, KryonExecutionConfig.builder().executionId("defaultExecution").build());
   }
 
   public <T> CompletableFuture<@Nullable T> execute(
-      ImmutableRequest vajramRequest, KryonExecutionConfig executionConfig) {
+      ImmutableRequest<T> vajramRequest, KryonExecutionConfig executionConfig) {
     vajramKryonGraph.loadKryonSubGraphIfNeeded(vajramRequest._vajramID());
     return krystalExecutor.executeKryon(vajramRequest, executionConfig);
   }
