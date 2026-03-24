@@ -76,26 +76,25 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-@Slf4j
 /** The execution graph encompassing all registered vajrams. */
+@Slf4j
 public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajramExecutorConfig> {
 
   @Getter private final KryonDefinitionRegistry kryonDefinitionRegistry;
 
   private final LogicDefRegistryDecorator logicRegistryDecorator;
 
-  private final Map<VajramID, VajramDefinition> vajramDefinitions = new ConcurrentHashMap<>();
+  private final Map<VajramID, VajramDefinition> vajramDefinitions = new HashMap<>();
   private final Map<Class<? extends VajramDefRoot<?>>, VajramDefinition> definitionByDefType =
-      new ConcurrentHashMap<>();
+      new HashMap<>();
   private final Map<Class<? extends Request<?>>, VajramDefinition> definitionByReqType =
-      new ConcurrentHashMap<>();
+      new HashMap<>();
 
   /**
    * Maps every vajramId to its corresponding kryonId all of whose dependencies have also been
@@ -148,8 +147,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
       throw new IllegalArgumentException(
           "Re-registering input batcher config in not currently allowed.");
     }
-    ConcurrentHashMap<DependentChain, DepChainBatcherConfig> batcherConfigByDepChain =
-        new ConcurrentHashMap<>();
+    Map<DependentChain, DepChainBatcherConfig> batcherConfigByDepChain = new HashMap<>();
 
     Function<LogicExecutionContext, DepChainBatcherConfig> inputBatcherForLogicExecContext =
         logicExecutionContext ->

@@ -2,29 +2,21 @@ package com.flipkart.krystal.krystex.kryon;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.Dependency;
+import lombok.EqualsAndHashCode;
+import lombok.EqualsAndHashCode.CacheStrategy;
 import lombok.Getter;
 
+@EqualsAndHashCode(callSuper = false, cacheStrategy = CacheStrategy.LAZY)
 public final class DefaultDependentChain extends AbstractDependentChain {
-  private final VajramID vajramID;
+  @Getter private final VajramID vajramID;
   @Getter private final Dependency latestDependency;
   @Getter private final DependentChain incomingDependentChain;
-  private final int _hash;
 
   DefaultDependentChain(
       VajramID vajramID, Dependency latestDependency, DependentChain incomingDependentChain) {
     this.vajramID = vajramID;
     this.latestDependency = latestDependency;
     this.incomingDependentChain = incomingDependentChain;
-    this._hash = System.identityHashCode(this);
-  }
-
-  public VajramID kryonId() {
-    return vajramID;
-  }
-
-  @Override
-  public int hashCode() {
-    return this._hash;
   }
 
   @Override

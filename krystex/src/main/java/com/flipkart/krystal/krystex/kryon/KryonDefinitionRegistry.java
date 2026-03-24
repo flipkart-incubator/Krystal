@@ -11,15 +11,15 @@ import com.flipkart.krystal.krystex.resolution.FacetsFromRequest;
 import com.flipkart.krystal.krystex.resolution.Resolver;
 import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableMap;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class KryonDefinitionRegistry {
 
   private final LogicDefinitionRegistry logicDefinitionRegistry;
-  private final Map<VajramID, KryonDefinition> kryonDefinitions = new ConcurrentHashMap<>();
+  private final Map<String, KryonDefinition> kryonDefinitions = new HashMap<>();
   private final DependentChainStart dependentChainStart = new DependentChainStart();
 
   public KryonDefinitionRegistry(LogicDefinitionRegistry logicDefinitionRegistry) {
@@ -31,7 +31,7 @@ public final class KryonDefinitionRegistry {
   }
 
   public @Nullable KryonDefinition get(VajramID vajramID) {
-    return kryonDefinitions.get(vajramID);
+    return kryonDefinitions.get(vajramID.id());
   }
 
   public KryonDefinition getOrThrow(VajramID vajramID) {
@@ -62,7 +62,7 @@ public final class KryonDefinitionRegistry {
             facetsFromRequest,
             this,
             tags);
-    kryonDefinitions.put(kryonDefinition.vajramID(), kryonDefinition);
+    kryonDefinitions.put(kryonDefinition.vajramID().id(), kryonDefinition);
     return kryonDefinition;
   }
 
@@ -73,7 +73,7 @@ public final class KryonDefinitionRegistry {
       ElementTags tags) {
     TraitKryonDefinition kryonDefinition =
         new TraitKryonDefinition(new VajramID(kryonId), facets, createNewRequest, this, tags);
-    kryonDefinitions.put(kryonDefinition.vajramID(), kryonDefinition);
+    kryonDefinitions.put(kryonDefinition.vajramID().id(), kryonDefinition);
     return kryonDefinition;
   }
 

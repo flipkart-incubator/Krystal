@@ -9,7 +9,7 @@ plugins {
     id 'java-gradle-plugin'
 }
 
-version = '9.8.2'//inherited from root
+//version = //inherited from root
 
 description = '''Gradle plugin for projects using the Krystal framework. 
 Includes Vajram code generator and validator. 
