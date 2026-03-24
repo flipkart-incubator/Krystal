@@ -67,7 +67,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import javax.annotation.Nonnull;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -317,7 +316,6 @@ public final class KryonExecutor implements KrystalExecutor {
     return resolvedVajramId;
   }
 
-  @Nonnull
   private TraitDispatchPolicy getTraitDispatchPolicyForTrait(VajramID vajramID) {
     @Nullable TraitDispatchPolicy traitDispatchPolicy =
         executorConfig.traitDispatchDecorator().traitDispatchPolicies().get(vajramID);
