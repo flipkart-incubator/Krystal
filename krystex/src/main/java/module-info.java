@@ -32,5 +32,4 @@ module flipkart.krystal.krystex {
   requires com.fasterxml.jackson.databind;
   requires com.fasterxml.jackson.datatype.jsr310;
   requires com.fasterxml.jackson.datatype.jdk8;
-  requires com.google.code.findbugs.jsr305;
 }
