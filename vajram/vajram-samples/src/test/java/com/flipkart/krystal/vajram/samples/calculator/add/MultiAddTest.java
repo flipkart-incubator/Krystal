@@ -367,7 +367,7 @@ class MultiAddTest {
         .withThrowableOfType(ExecutionException.class)
         .havingCause()
         .isInstanceOf(StackTracelessException.class)
-        .withMessageContaining(" resolved vajramID 'null; for Trait Id v<MultiAdd>");
+        .withMessageContaining(" resolved vajramID 'null' for Trait Id v<MultiAdd>");
   }
 
   private void registerStaticDispatchPolicy() {
