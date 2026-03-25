@@ -27,6 +27,7 @@
 .idea/**/uiDesigner.xml
 .idea/**/dbnavigator.xml
 .idea/inspectionProfiles/Project_Default.xml
+.idea/material_theme_project_new.xml
 
 # Gradle
 .idea/**/gradle.xml
