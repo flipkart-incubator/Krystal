@@ -399,12 +399,12 @@ public final class KryonExecutor implements KrystalExecutor {
         createKryonIfAbsent(finalVajramId, vajramKryonDefinition);
         dependencyKryons = vajramKryonDefinition.dependencies();
       }
-      dependencyKryons.forEach(
-          dependency ->
-              createDependencyKryons(
-                  dependency.onVajramID(),
-                  dependentChain.extend(finalVajramId, dependency),
-                  executionConfig));
+      for (Dependency dependency : dependencyKryons) {
+        createDependencyKryons(
+            dependency.onVajramID(),
+            dependentChain.extend(finalVajramId, dependency),
+            executionConfig);
+      }
       dependentChainsPerKryon
           .computeIfAbsent(finalVajramId.id(), _n -> new LinkedHashSet<>())
           .add(dependentChain);
