@@ -24,7 +24,8 @@ public sealed interface TraitDispatchPolicy permits StaticDispatchPolicy, Dynami
   /**
    * Returns the concrete {@link VajramID} bound to the trait for the given dependency.
    *
-   * @param dependency The dependency facet by which a vajram has added a dependency on the trait
+   * @param dependency The dependency facet by which a vajram has added a dependency on the trait.
+   *     Can be null if the trait has been invoked directly from outside the graph
    * @param request the trait request that needs to be dispatched
    */
   @Nullable VajramID getDispatchTargetID(@Nullable Dependency dependency, Request<?> request);

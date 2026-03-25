@@ -91,10 +91,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand<?>, KryonCommandResp
     }
     return kryon.executeCommand(
         new ForwardReceiveBatch(
-            forwardBatch.vajramID(),
-            newRequests.build(),
-            forwardBatch.dependentChain(),
-            forwardBatch.invocationsToSkip()));
+            forwardBatch.vajramID(), newRequests.build(), forwardBatch.dependentChain()));
   }
 
   private FacetValuesBuilder injectFacetsOfVajram(

@@ -6,11 +6,10 @@ import com.flipkart.krystal.vajramexecutor.krystex.batching.InputBatchingDecorat
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.KryonInputInjector;
 import lombok.Builder;
 import lombok.NonNull;
-import org.checkerframework.checker.calledmethods.qual.CalledMethods;
 
 public record KrystexVajramExecutorConfig(
     String requestId,
-    @NonNull @CalledMethods("executorService") KryonExecutorConfig kryonExecutorConfig,
+    @NonNull KryonExecutorConfig kryonExecutorConfig,
     @NonNull VajramKryonGraph vajramKryonGraph) {
 
   @Builder(toBuilder = true)
