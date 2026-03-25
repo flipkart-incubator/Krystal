@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public abstract sealed class AbstractDependentChain implements DependentChain
     permits DefaultDependentChain, DependentChainStart {
@@ -28,9 +29,7 @@ public abstract sealed class AbstractDependentChain implements DependentChain
     return dependentChain;
   }
 
-  /**
-   * Optimized key class for ConcurrentHashMap
-   */
+  /** Optimized key class for ConcurrentHashMap */
   private static class DependentChainKey {
     private final String vajramId;
     private final Dependency dependency;
@@ -40,7 +39,7 @@ public abstract sealed class AbstractDependentChain implements DependentChain
       this.dependency = dependency;
       this.vajramId = vajramId;
       //  Manually inline the hash calculation to avoid Objects.hash array allocation
-      this.hash =  31 * vajramId.hashCode() + (dependency == null ? 0 : dependency.hashCode());
+      this.hash = 31 * vajramId.hashCode() + (dependency == null ? 0 : dependency.hashCode());
     }
 
     @Override
@@ -49,10 +48,12 @@ public abstract sealed class AbstractDependentChain implements DependentChain
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
       if (this == o) return true;
       if (!(o instanceof DependentChainKey that)) return false;
-      return hash == that.hash && vajramId.equals(that.vajramId) && Objects.equals(dependency, that.dependency);
+      return hash == that.hash
+          && vajramId.equals(that.vajramId)
+          && Objects.equals(dependency, that.dependency);
     }
   }
 }
