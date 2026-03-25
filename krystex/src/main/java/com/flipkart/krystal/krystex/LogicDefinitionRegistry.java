@@ -3,17 +3,17 @@ package com.flipkart.krystal.krystex;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.resolution.MultiResolver;
 import com.flipkart.krystal.krystex.resolution.ResolverLogic;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.concurrent.ConcurrentHashMap;
 
 public final class LogicDefinitionRegistry {
   private final Map<KryonLogicId, OutputLogicDefinition<?>> outputLogicDefinitions =
-      new ConcurrentHashMap<>();
+      new HashMap<>();
   private final Map<KryonLogicId, LogicDefinition<ResolverLogic>> resolverLogicDefinitions =
-      new ConcurrentHashMap<>();
+      new HashMap<>();
   private final Map<KryonLogicId, LogicDefinition<MultiResolver>> multiResolverDefinitions =
-      new ConcurrentHashMap<>();
+      new HashMap<>();
 
   @SuppressWarnings("unchecked")
   public <T> OutputLogicDefinition<T> getOutputLogic(KryonLogicId kryonLogicId) {
