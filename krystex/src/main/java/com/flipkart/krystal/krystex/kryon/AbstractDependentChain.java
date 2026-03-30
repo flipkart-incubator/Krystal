@@ -1,12 +1,12 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import static lombok.EqualsAndHashCode.CacheStrategy.LAZY;
+
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.Dependency;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 public abstract sealed class AbstractDependentChain implements DependentChain
     permits DefaultDependentChain, DependentChainStart {
@@ -29,31 +29,18 @@ public abstract sealed class AbstractDependentChain implements DependentChain
     return dependentChain;
   }
 
-  /** Optimized key class for ConcurrentHashMap */
+  /** Key class for ConcurrentHashMap */
+  // We want to cache the hashcode, but @EqualsAndHashCode doesn't support
+  // records (see: https://github.com/projectlombok/lombok/issues/3246)
+  @SuppressWarnings("ClassCanBeRecord")
+  @EqualsAndHashCode(cacheStrategy = LAZY)
   private static class DependentChainKey {
     private final String vajramId;
     private final Dependency dependency;
-    private final int hash;
 
     public DependentChainKey(String vajramId, Dependency dependency) {
       this.dependency = dependency;
       this.vajramId = vajramId;
-      //  Manually inline the hash calculation to avoid Objects.hash array allocation
-      this.hash = 31 * vajramId.hashCode() + (dependency == null ? 0 : dependency.hashCode());
-    }
-
-    @Override
-    public int hashCode() {
-      return hash; // Instant return
-    }
-
-    @Override
-    public boolean equals(@Nullable Object o) {
-      if (this == o) return true;
-      if (!(o instanceof DependentChainKey that)) return false;
-      return hash == that.hash
-          && vajramId.equals(that.vajramId)
-          && Objects.equals(dependency, that.dependency);
     }
   }
 }
