@@ -486,6 +486,7 @@
           <option value="SameParameterValue" />
           <option value="BooleanMethodIsAlwaysInverted" />
           <option value="ConstantValue" />
+          <option value="ClassCanBeRecord" />
         </list>
       </option>
     </inspection_tool>
