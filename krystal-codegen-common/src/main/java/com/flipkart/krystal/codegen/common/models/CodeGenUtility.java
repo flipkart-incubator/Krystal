@@ -839,6 +839,44 @@ public class CodeGenUtility {
     }
   }
 
+  public TypeName getModelFieldType(ExecutableElement method, boolean isBuilder) {
+    final TypeMirror specifiedType = method.getReturnType();
+    boolean isNullable = isAnyNullable(specifiedType, method);
+    TypeMirror inferredType = specifiedType;
+    boolean isOptional = isOptional(specifiedType);
+    if (isOptional) {
+      // For Optional<T>, use T as the parameter type
+      inferredType = getOptionalInnerType(specifiedType);
+    }
+    if (isBuilder && inferredType instanceof PrimitiveType primitiveType) {
+      inferredType = typeUtils.boxedClass(primitiveType).asType();
+    }
+    TypeName typeName = inferredType.accept(new TypeNameVisitor(), null);
+
+    Optional<ModelRootInfo> modelRoot = asModelRoot(inferredType);
+
+    if (modelRoot.isPresent()) {
+      if (isBuilder) {
+        boolean builderExtendsModelRoot = modelRoot.get().annotation().builderExtendsModelRoot();
+        if (!builderExtendsModelRoot) {
+          typeName = ClassName.get(Object.class);
+        }
+      } else {
+        typeName = getImmutClassName(modelRoot.get().element());
+      }
+    }
+
+    // Add @Nullable annotation for Optional types or methods with @Nullable annotation
+    if (isOptional || isNullable || isBuilder) {
+      if (!hasNullableAnnotation(typeName)) {
+        // Add @Nullable as a type annotation
+        typeName =
+            typeName.annotated(AnnotationSpec.builder(ClassName.get(Nullable.class)).build());
+      }
+    }
+    return typeName;
+  }
+
   /**
    * Determines the parameter type for a method return type, handling Optional types.
    *
@@ -861,12 +899,6 @@ public class CodeGenUtility {
       inferredType = typeUtils.boxedClass(primitiveType).asType();
     }
     TypeName typeName = inferredType.accept(new TypeNameVisitor(), null);
-
-    Optional<TypeElement> modelRoot = asModelRoot(inferredType);
-
-    if (isBuilder && modelRoot.isPresent()) {
-      typeName = getImmutClassName(modelRoot.get()).nestedClass("Builder");
-    }
 
     // Add @Nullable annotation for Optional types or methods with @Nullable annotation
     if (isOptional || isNullable || isBuilder) {
@@ -899,7 +931,7 @@ public class CodeGenUtility {
     if (supportedModelProtocols == null) {
       return false;
     }
-    // Check if Json is mentioned in the annotation value
+    // Check if JSON is mentioned in the annotation value
     return getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
         .map(typeMirror -> processingEnv().getTypeUtils().asElement(typeMirror))
         .filter(elem -> elem instanceof QualifiedNameable)
@@ -950,7 +982,8 @@ public class CodeGenUtility {
             .filter(
                 annotationMirror ->
                     annotationMirror.getAnnotationType().asElement() instanceof QualifiedNameable q
-                        && q.getQualifiedName().contentEquals(annoClass.getCanonicalName()))
+                        && q.getQualifiedName()
+                            .contentEquals(requireNonNull(annoClass.getCanonicalName())))
             .findAny();
     if (annotation != null && mirror.isPresent()) {
       return new AnnotationInfo<>(annotation, mirror.get());
@@ -962,7 +995,7 @@ public class CodeGenUtility {
     return asModelRoot(javaModelType).isPresent();
   }
 
-  public Optional<TypeElement> asModelRoot(TypeMirror javaModelType) {
+  public Optional<ModelRootInfo> asModelRoot(TypeMirror javaModelType) {
     boolean isOptional = isOptional(javaModelType);
     if (isOptional) {
       javaModelType = getOptionalInnerType(javaModelType);
@@ -970,12 +1003,16 @@ public class CodeGenUtility {
     if (!isRawAssignable(javaModelType, Model.class)) {
       return Optional.empty();
     }
-    if (typeUtils.asElement(javaModelType) instanceof TypeElement typeElement
-        && typeElement.getAnnotation(ModelRoot.class) != null) {
-      return Optional.of(typeElement);
+    if (typeUtils.asElement(javaModelType) instanceof TypeElement typeElement) {
+      ModelRoot annotation = typeElement.getAnnotation(ModelRoot.class);
+      if (annotation != null) {
+        return Optional.of(new ModelRootInfo(typeElement, annotation));
+      }
     }
     return Optional.empty();
   }
+
+  public record ModelRootInfo(TypeElement element, ModelRoot annotation) {}
 
   public record AnnotationInfo<T>(T annotation, AnnotationMirror mirror) {}
 }

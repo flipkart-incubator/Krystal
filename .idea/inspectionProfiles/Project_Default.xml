@@ -489,6 +489,7 @@
           <option value="ConstantValue" />
           <option value="argument" />
           <option value="BusyWait" />
+          <option value="ClassCanBeRecord" />
         </list>
       </option>
     </inspection_tool>

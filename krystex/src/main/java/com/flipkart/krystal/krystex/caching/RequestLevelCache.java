@@ -127,17 +127,10 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
               cacheHits.put(requestId, cachedFuture);
             }
           });
-      Map<InvocationId, String> skippedRequests =
-          new LinkedHashMap<>(forwardBatch.invocationsToSkip());
-      cacheHits.forEach(
-          (requestId, _f) -> skippedRequests.put(requestId, "Skipping due to cache hit!"));
       CompletableFuture<KryonCommandResponse> cacheMissesResponse =
           kryon.executeCommand(
               new ForwardReceiveBatch(
-                  forwardBatch.vajramID(),
-                  cacheMisses,
-                  forwardBatch.dependentChain(),
-                  skippedRequests));
+                  forwardBatch.vajramID(), cacheMisses, forwardBatch.dependentChain()));
 
       cacheMissesResponse.whenComplete(
           (kryonResponse, throwable) -> {

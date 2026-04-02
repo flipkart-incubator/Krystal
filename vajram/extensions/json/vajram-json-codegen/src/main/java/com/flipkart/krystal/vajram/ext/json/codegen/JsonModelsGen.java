@@ -10,12 +10,14 @@ import static javax.lang.model.element.Modifier.STATIC;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
+import com.flipkart.krystal.codegen.common.models.CodeGenUtility.ModelRootInfo;
 import com.flipkart.krystal.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
@@ -36,6 +38,7 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.lang.model.element.ExecutableElement;
@@ -296,7 +299,7 @@ return _serializedPayload;
                     .addMember("buildMethodName", "$S", "_build")
                     .addMember("withPrefix", "$S", "")
                     .build());
-    ModelRoot modelRoot = modelRootType.getAnnotation(ModelRoot.class);
+    ModelRoot modelRoot = requireNonNull(modelRootType.getAnnotation(ModelRoot.class));
     ClassName immutablePojoName =
         ClassName.get(
             immutableJsonName.packageName(),
@@ -323,18 +326,36 @@ return _serializedPayload;
 
     // Create setter methods
     List<MethodSpec> dataAccessMethods = new ArrayList<>();
+    ClassName builderType = immutableJsonName.nestedClass("Builder");
     for (ExecutableElement method : modelMethods) {
       String methodName = method.getSimpleName().toString();
 
+      TypeName variableType = util.getVariableType(method, true);
       dataAccessMethods.add(
           MethodSpec.methodBuilder(methodName)
               .addModifiers(PUBLIC)
-              .addParameter(util.getVariableType(method, true), methodName)
-              .returns(immutableJsonName.nestedClass("Builder"))
+              .addParameter(variableType, methodName)
+              .returns(builderType)
               .addStatement("this._pojo.$L($L)", methodName, methodName)
               .addStatement("return this")
               .addAnnotation(Override.class)
+              .addAnnotation(JsonSetter.class)
               .build());
+      Optional<ModelRootInfo> modelRootInfo = util.asModelRoot(method.getReturnType());
+      if (modelRootInfo.isPresent()
+          && !modelRootInfo.get().annotation().builderExtendsModelRoot()) {
+        dataAccessMethods.add(
+            MethodSpec.methodBuilder(methodName)
+                .addModifiers(PUBLIC)
+                .addParameter(
+                    util.getImmutClassName(modelRootInfo.get().element()).nestedClass("Builder"),
+                    methodName)
+                .returns(builderType)
+                .addStatement("this._pojo.$L($L)", methodName, methodName)
+                .addStatement("return this")
+                .addAnnotation(Override.class)
+                .build());
+      }
       if (modelRoot.builderExtendsModelRoot()) {
         dataAccessMethods.add(
             MethodSpec.methodBuilder(methodName)
@@ -358,9 +379,8 @@ return _serializedPayload;
         MethodSpec.methodBuilder("_newCopy")
             .addModifiers(PUBLIC)
             .addAnnotation(Override.class)
-            .returns(immutableJsonName.nestedClass("Builder"))
-            .addStatement(
-                "return new $T(_pojo._newCopy())", immutableJsonName.nestedClass("Builder"));
+            .returns(builderType)
+            .addStatement("return new $T(_pojo._newCopy())", builderType);
 
     // Create the builder class
     return builderSpec
@@ -371,7 +391,7 @@ return _serializedPayload;
         .addMethod(
             MethodSpec.overriding(util.getMethod(Model.class, "_asBuilder", 0))
                 .addModifiers(PUBLIC)
-                .returns(immutableJsonName.nestedClass("Builder"))
+                .returns(builderType)
                 .addStatement("return this")
                 .build())
         .addMethod(builderCopyMethodBuilder.build())

@@ -55,4 +55,6 @@ public interface JsonResponse extends Model {
   @Nullable Map<String, String> mapTypedField();
 
   @Nullable ByteArray byteArray();
+
+  InnerJson nestedData();
 }
