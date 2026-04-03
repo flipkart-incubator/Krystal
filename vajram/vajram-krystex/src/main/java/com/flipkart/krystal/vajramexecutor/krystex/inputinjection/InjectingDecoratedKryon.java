@@ -105,18 +105,28 @@ class InjectingDecoratedKryon
 
     ImmutableMap.Builder<InvocationId, FacetValues> newRequests = ImmutableMap.builder();
 
+    List<AutoCloseable> closeables = new ArrayList<>();
     for (Entry<InvocationId, ? extends FacetValues> entry : requestIdToFacets.entrySet()) {
       InvocationId invocationId = entry.getKey();
       FacetValuesBuilder facetsBuilder;
       facetsBuilder = entry.getValue()._asBuilder();
-      injectFacetsOfVajram(vajramDefinition, facetsBuilder);
+      closeables.addAll(injectFacetsOfVajram(vajramDefinition, facetsBuilder));
       newRequests.put(invocationId, facetsBuilder);
     }
     KryonCommand<BatchResponse> kryonCommand =
         new ForwardReceiveBatch(
             forwardBatch.vajramID(), newRequests.build(), forwardBatch.dependentChain());
     CompletableFuture<KryonCommandResponse> resp = kryon.executeCommand(kryonCommand);
-    resp.whenComplete((kryonCommandResponse, throwable) -> {});
+    resp.whenComplete(
+        (o, throwable) -> {
+          for (var closeable : closeables) {
+            try {
+              closeable.close();
+            } catch (Exception e) {
+              log.error("Failed to close injected closeable", e);
+            }
+          }
+        });
     return resp;
   }
 

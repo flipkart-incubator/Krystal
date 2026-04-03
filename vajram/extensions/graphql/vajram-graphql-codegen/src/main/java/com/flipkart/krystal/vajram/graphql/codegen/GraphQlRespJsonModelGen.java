@@ -18,6 +18,7 @@ import com.flipkart.krystal.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.Failure;
 import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.vajram.graphql.api.errors.DefaultGraphQLErrorInfo;
@@ -67,9 +68,11 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 final class GraphQlRespJsonModelGen implements CodeGenerator {
 
   private final ModelsCodeGenContext codeGenContext;
+  private final CodeGenUtility util;
 
   GraphQlRespJsonModelGen(ModelsCodeGenContext codeGenContext) {
     this.codeGenContext = codeGenContext;
+    this.util = codeGenContext.util();
   }
 
   @Override
@@ -82,21 +85,23 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
 
     ClassName immutClassName = util.getImmutClassName(modelRootType);
     String packageName = immutClassName.packageName();
-    ClassName gqlRespJsonClassName =
-        ClassName.get(
-            packageName,
-            immutClassName.simpleName() + GraphQlResponseJson.INSTANCE.modelClassesSuffix());
 
     // Extract and validate model methods
     List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
 
     // Generate the GQlRespJson model class
     TypeSpec gqlRespJsonClass =
-        generateGQlRespJsonModel(
-            modelRootType, immutClassName, gqlRespJsonClassName, modelMethods, util);
+        generateGQlRespJsonModel(modelRootType, immutClassName, modelMethods);
 
     // Write the generated class
     util.writeJavaFile(packageName, gqlRespJsonClass, modelRootType);
+  }
+
+  private ClassName getGqlRespJsonClassName(TypeElement modelRootType) {
+    return ClassName.get(
+        util.getImmutClassName(modelRootType).packageName(),
+        util.getImmutClassName(modelRootType).simpleName()
+            + GraphQlResponseJson.INSTANCE.modelClassesSuffix());
   }
 
   /**
@@ -105,12 +110,8 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
    * Builder pattern - Interface method overrides
    */
   private TypeSpec generateGQlRespJsonModel(
-      TypeElement modelRootType,
-      ClassName immutClassName,
-      ClassName gqlRespJsonClassName,
-      List<ExecutableElement> modelMethods,
-      CodeGenUtility util) {
-
+      TypeElement modelRootType, ClassName immutClassName, List<ExecutableElement> modelMethods) {
+    ClassName gqlRespJsonClassName = getGqlRespJsonClassName(modelRootType);
     boolean isOpType = isGraphQlOpType(modelRootType, util);
 
     Builder classBuilder =
@@ -153,19 +154,21 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
                 .build());
 
     // Add Errable-wrapped fields for all model methods
-    addErrableFields(classBuilder, modelMethods, util);
+    addErrableFields(classBuilder, modelMethods);
 
     // Add constructor
-    addConstructor(classBuilder, modelMethods, util);
+    addConstructor(classBuilder, modelMethods);
+
+    copyCtor(classBuilder, modelRootType, modelMethods);
 
     // Add interface method overrides
-    addInterfaceMethodOverrides(classBuilder, gqlRespJsonClassName, modelMethods, util);
+    addInterfaceMethodOverrides(classBuilder, gqlRespJsonClassName, modelMethods);
 
     // Add __typename method
     addTypenameMethod(classBuilder, modelRootType);
 
     // Add GraphQL response methods (_data, _collectErrors, _extensions)
-    addGraphQLResponseMethods(classBuilder, modelMethods, util, isOpType);
+    addGraphQLResponseMethods(classBuilder, modelMethods, isOpType);
 
     // Add static builder method
     classBuilder.addMethod(
@@ -176,13 +179,12 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
             .build());
 
     // Add Builder class
-    addBuilderClass(classBuilder, gqlRespJsonClassName, immutClassName, modelMethods, util);
+    addBuilderClass(classBuilder, gqlRespJsonClassName, immutClassName, modelMethods);
 
     return classBuilder.build();
   }
 
-  private void addErrableFields(
-      Builder classBuilder, List<ExecutableElement> modelMethods, CodeGenUtility util) {
+  private void addErrableFields(Builder classBuilder, List<ExecutableElement> modelMethods) {
     for (ExecutableElement method : modelMethods) {
       String methodName = method.getSimpleName().toString();
 
@@ -243,51 +245,13 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
     }
   }
 
-  private void addConstructor(
-      Builder classBuilder, List<ExecutableElement> modelMethods, CodeGenUtility util) {
-
-    // Create ClassName constants for frequently used classes
-    ClassName failureClassName = ClassName.get("com.flipkart.krystal.data", "Failure");
+  private void addConstructor(Builder classBuilder, List<ExecutableElement> modelMethods) {
 
     MethodSpec.Builder constructor = MethodSpec.constructorBuilder().addModifiers(PUBLIC);
 
     // Add parameters for each field (Errable wrapped, except GraphQL context methods)
     for (ExecutableElement method : modelMethods) {
-      String fieldName = method.getSimpleName().toString();
-      boolean isGraphQlField = fieldName.startsWith(RESERVED_GRAPHQL_FIELDS_PREFIX);
-
-      TypeMirror returnType = method.getReturnType();
-
-      TypeName paramInnerType;
-      if (isListType(returnType)) {
-        // For ALL lists, parameter type is: Errable<? extends List<Errable<? extends ElementType>>>
-        TypeMirror elementType = getListElementType(returnType);
-        if (elementType != null) {
-          TypeName elementTypeName = TypeName.get(elementType);
-          TypeName innerErrable =
-              ParameterizedTypeName.get(
-                  ClassName.get(Errable.class), WildcardTypeName.subtypeOf(elementTypeName));
-          // For standard types (String, etc.), use List<Errable<String>> directly (no wildcards)
-          paramInnerType =
-              ParameterizedTypeName.get(
-                  ClassName.get(List.class), WildcardTypeName.subtypeOf(innerErrable));
-        } else {
-          paramInnerType = TypeName.get(returnType);
-        }
-      } else {
-        paramInnerType = TypeName.get(returnType);
-      }
-
-      // Determine if we should use wildcards for the Errable wrapper
-      TypeName paramType;
-      if (isGraphQlField) {
-        paramType = paramInnerType;
-      } else {
-        paramType =
-            ParameterizedTypeName.get(
-                ClassName.get(Errable.class), WildcardTypeName.subtypeOf(paramInnerType));
-      }
-      constructor.addParameter(paramType, fieldName);
+      constructor.addParameter(getConstructorParamType(method), method.getSimpleName().toString());
     }
 
     // Initialize fields with special handling for nested entities and lists
@@ -313,12 +277,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
       if (isListType(returnType) && containsGraphQlModel(getListElementType(returnType), util)) {
         // Handle List<Entity> with complex nested conversion
         addListFieldInitialization(
-            constructor,
-            fieldName,
-            returnType,
-            util,
-            failureClassName,
-            ClassName.get(Errable.class));
+            constructor, fieldName, returnType, util, ClassName.get(Errable.class));
       } else if (containsGraphQlModel(returnType, util) && !isEntityIdType(returnType, util)) {
         // Handle single Entity with nested conversion (but not entity IDs)
         addEntityFieldInitialization(constructor, fieldName, returnType, util);
@@ -331,12 +290,64 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
     classBuilder.addMethod(constructor.build());
   }
 
+  private TypeName getConstructorParamType(ExecutableElement method) {
+    String fieldName = method.getSimpleName().toString();
+    boolean isGraphQlField = fieldName.startsWith(RESERVED_GRAPHQL_FIELDS_PREFIX);
+
+    TypeMirror returnType = method.getReturnType();
+
+    TypeName paramInnerType;
+    if (isListType(returnType)) {
+      // For ALL lists, parameter type is: Errable<? extends List<Errable<? extends ElementType>>>
+      TypeMirror elementType = getListElementType(returnType);
+      if (elementType != null) {
+        TypeName elementTypeName = TypeName.get(elementType);
+        TypeName innerErrable =
+            ParameterizedTypeName.get(
+                ClassName.get(Errable.class), WildcardTypeName.subtypeOf(elementTypeName));
+        // For standard types (String, etc.), use List<Errable<String>> directly (no wildcards)
+        paramInnerType =
+            ParameterizedTypeName.get(
+                ClassName.get(List.class), WildcardTypeName.subtypeOf(innerErrable));
+      } else {
+        paramInnerType = TypeName.get(returnType);
+      }
+    } else {
+      paramInnerType = TypeName.get(returnType);
+    }
+
+    // Determine if we should use wildcards for the Errable wrapper
+    TypeName paramType;
+    if (isGraphQlField) {
+      paramType = paramInnerType;
+    } else {
+      paramType =
+          ParameterizedTypeName.get(
+              ClassName.get(Errable.class), WildcardTypeName.subtypeOf(paramInnerType));
+    }
+    return paramType;
+  }
+
+  private void copyCtor(
+      Builder classBuilder, TypeElement modelRootType, List<ExecutableElement> modelMethods) {
+
+    MethodSpec.Builder constructor =
+        MethodSpec.constructorBuilder()
+            .addModifiers(PUBLIC)
+            .addParameter(getGqlRespJsonClassName(modelRootType), "_from");
+    // Add parameters for each field (Errable wrapped, except GraphQL context methods)
+    constructor.addStatement(
+        modelMethods.stream()
+            .map(method -> CodeBlock.of("_from.$L", method.getSimpleName().toString()))
+            .collect(CodeBlock.joining(",", "this(", ")")));
+    classBuilder.addMethod(constructor.build());
+  }
+
   private void addListFieldInitialization(
       MethodSpec.Builder constructor,
       String fieldName,
       TypeMirror listType,
       CodeGenUtility util,
-      ClassName failureClassName,
       ClassName errableClassName) {
 
     // Get the element type from List<T>
@@ -388,7 +399,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
             });""",
         fieldName,
         fieldName,
-        failureClassName,
+        Failure.class,
         errableClassName,
         List.class,
         Errable.class,
@@ -396,7 +407,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
         ArrayList.class,
         Errable.class,
         elementTypeName,
-        failureClassName,
+        Failure.class,
         errableClassName,
         Errable.class,
         fieldName,
@@ -439,10 +450,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
   }
 
   private void addInterfaceMethodOverrides(
-      Builder classBuilder,
-      ClassName gqlRespJsonClassName,
-      List<ExecutableElement> modelMethods,
-      CodeGenUtility util) {
+      Builder classBuilder, ClassName gqlRespJsonClassName, List<ExecutableElement> modelMethods) {
 
     // Add _newCopy() method - create new instance with same values
     CodeBlock.Builder newCopyCode =
@@ -603,10 +611,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
   }
 
   private void addGraphQLResponseMethods(
-      Builder classBuilder,
-      List<ExecutableElement> modelMethods,
-      CodeGenUtility util,
-      boolean isOpType) {
+      Builder classBuilder, List<ExecutableElement> modelMethods, boolean isOpType) {
 
     // Add _collectErrors() method using ErrorCollector pattern
     addCollectErrorsMethod(classBuilder, modelMethods, util);
@@ -647,10 +652,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
       String fieldName = method.getSimpleName().toString();
 
       // Skip GraphQL context methods and __typename
-      if (fieldName.equals("graphql_executionContext")
-          || fieldName.equals("graphql_executionStrategy")
-          || fieldName.equals("graphql_executionStrategyParams")
-          || fieldName.equals("__typename")) {
+      if (fieldName.startsWith(RESERVED_GRAPHQL_FIELDS_PREFIX) || fieldName.equals("__typename")) {
         continue;
       }
 
@@ -791,8 +793,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
       Builder parentClassBuilder,
       ClassName gqlRespJsonClassName,
       ClassName immutClassName,
-      List<ExecutableElement> modelMethods,
-      CodeGenUtility util) {
+      List<ExecutableElement> modelMethods) {
 
     // Create ClassName constants for frequently used classes
     ClassName failureClassName = ClassName.get("com.flipkart.krystal.data", "Failure");
@@ -886,9 +887,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
       String methodName = method.getSimpleName().toString();
 
       // Skip GraphQL execution context methods - they have dedicated setters above
-      if (methodName.equals("graphql_executionContext")
-          || methodName.equals("graphql_executionStrategy")
-          || methodName.equals("graphql_executionStrategyParams")) {
+      if (methodName.startsWith(RESERVED_GRAPHQL_FIELDS_PREFIX)) {
         continue;
       }
 
@@ -952,23 +951,23 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
 
     ClassName builderType = gqlRespJsonClassName.nestedClass("Builder");
     // Direct value setter (from interface)
-    MethodSpec.Builder directSetter =
+    MethodSpec.Builder directSetterBuilder =
         MethodSpec.methodBuilder(fieldName)
             .addAnnotation(Override.class)
             .addModifiers(PUBLIC)
             .returns(builderType);
-
+    Optional<ModelRootInfo> fieldModelRoot = util.asModelRoot(returnType);
     if (isListType) {
       // For ALL lists (entities OR standard types), use complex wrapping logic
-      directSetter.addParameter(fieldType, fieldName);
+      directSetterBuilder.addParameter(fieldType, fieldName);
 
       // Generate the complex wrapping logic
-      directSetter.beginControlFlow("if ($L == null)", fieldName);
-      directSetter.addStatement("this.$L = $T.nil()", fieldName, Errable.class);
-      directSetter.addStatement("return this");
-      directSetter.endControlFlow();
+      directSetterBuilder.beginControlFlow("if ($L == null)", fieldName);
+      directSetterBuilder.addStatement("this.$L = $T.nil()", fieldName, Errable.class);
+      directSetterBuilder.addStatement("return this");
+      directSetterBuilder.endControlFlow();
 
-      directSetter.addStatement(
+      directSetterBuilder.addStatement(
           "$T<$T<$T>> _result = new $T<>($L.size())",
           List.class,
           Errable.class,
@@ -980,24 +979,49 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
       TypeMirror elementType = getListElementType(returnType);
       String singularName = "_item";
 
-      directSetter.beginControlFlow("for ($T $L : $L)", elementType, singularName, fieldName);
-      directSetter.addStatement("_result.add($T.withValue($L))", Errable.class, singularName);
-      directSetter.endControlFlow();
+      directSetterBuilder.beginControlFlow(
+          "for ($T $L : $L)", elementType, singularName, fieldName);
+      directSetterBuilder.addStatement(
+          "_result.add($T.withValue($L))", Errable.class, singularName);
+      directSetterBuilder.endControlFlow();
 
-      directSetter.addStatement("this.$L = $T.withValue(_result)", fieldName, Errable.class);
-      directSetter.addStatement("return this");
+      directSetterBuilder.addStatement("this.$L = $T.withValue(_result)", fieldName, Errable.class);
+      directSetterBuilder.addStatement("return this");
+    } else if (fieldModelRoot.isPresent()) {
+      // Standard scalar: simple wrap
+      // For single entity setters, wrap in Errable.withValue()
+      ClassName fieldGQlClassName = getGqlRespJsonClassName(fieldModelRoot.get().element());
+      directSetterBuilder
+          .addParameter(fieldType, fieldName)
+          .addCode(
+              """
+                    if($L instanceof $T || $L instanceof $T){
+                      this.$L = $T.withValue($L);
+                    } else {
+                      throw new $T("Only GQlRespJson or its Builders are supported.");
+                    }
+              """,
+              fieldName,
+              fieldGQlClassName.nestedClass("Builder"),
+              fieldName,
+              fieldGQlClassName,
+              fieldName,
+              Errable.class,
+              fieldName,
+              UnsupportedOperationException.class)
+          .addStatement("return this");
     } else {
       // Standard scalar: simple wrap
       // For single entity setters, wrap in Errable.withValue()
-      directSetter
+      directSetterBuilder
           .addParameter(fieldType, fieldName)
           .addStatement("this.$L = $T.withValue($L)", fieldName, Errable.class, fieldName)
           .addStatement("return this");
     }
 
-    builderClass.addMethod(directSetter.build());
+    MethodSpec directSetter = directSetterBuilder.build();
+    builderClass.addMethod(directSetter);
 
-    Optional<ModelRootInfo> fieldModelRoot = util.asModelRoot(returnType);
     if (fieldModelRoot.isPresent()
         && !fieldModelRoot.get().annotation().builderExtendsModelRoot()) {
 
@@ -1009,12 +1033,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
                   fieldName)
               .addAnnotation(Override.class)
               .returns(builderType)
-              .addStatement(
-                  "return $L( $L == null ? null : ($T) $L._asBuilder())",
-                  fieldName,
-                  fieldName,
-                  util.getImmutClassName(fieldModelRoot.get().element()).nestedClass("Builder"),
-                  fieldName)
+              .addCode(directSetter.code)
               .build());
     }
 
@@ -1203,7 +1222,6 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
 
     // Add getters for ALL fields in the Builder (required by the Builder interface)
     // The Builder interface extends the model interface, so it must implement all getter methods
-    CodeGenUtility util = codeGenContext.util();
     for (ExecutableElement method : modelMethods) {
       String methodName = method.getSimpleName().toString();
       TypeMirror returnType = method.getReturnType();
@@ -1356,21 +1374,6 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
     String simpleName = element.getSimpleName().toString();
     // Entity ID types typically end with "Id"
     return simpleName.endsWith("Id");
-  }
-
-  /** Checks if the given type is String. */
-  private boolean isStringType(TypeMirror type, CodeGenUtility util) {
-    if (type == null || type.getKind() != TypeKind.DECLARED) {
-      return false;
-    }
-
-    Element element = util.processingEnv().getTypeUtils().asElement(type);
-    if (!(element instanceof TypeElement typeElement)) {
-      return false;
-    }
-
-    String qualifiedName = typeElement.getQualifiedName().toString();
-    return qualifiedName.equals("java.lang.String");
   }
 
   private boolean containsGraphQlModel(TypeMirror type, CodeGenUtility util) {

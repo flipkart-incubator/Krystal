@@ -184,7 +184,7 @@ public final class KryonExecutor implements KrystalExecutor {
   private static ImmutableMap<String, DependencyDecoratorConfig> makeDependencyDecorConfigs(
       KryonExecutorConfig executorConfig) {
     TraitDispatchDecorator traitDispatchDecorator = executorConfig.traitDispatchDecorator();
-    if (traitDispatchDecorator == null) {
+    if (traitDispatchDecorator == DependencyDecorator.NO_OP) {
       return executorConfig.dependencyDecoratorConfigs();
     }
     String decoratorType = traitDispatchDecorator.decoratorType();

@@ -34,7 +34,6 @@ import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
@@ -312,9 +311,7 @@ return _serializedPayload;
   private MethodSpec copyCtor(List<ExecutableElement> modelMethods) {
     MethodSpec.Builder ctorBuilder = MethodSpec.constructorBuilder().addModifiers(PUBLIC);
 
-    ctorBuilder.addParameter(
-        ParameterSpec.builder(TypeName.get(codeGenContext.modelRootType().asType()), "_from")
-            .build());
+    ctorBuilder.addParameter(TypeName.get(codeGenContext.modelRootType().asType()), "_from");
 
     ctorBuilder.addCode("this._proto = _builder()");
     ctorBuilder.addCode(

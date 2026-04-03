@@ -1,8 +1,6 @@
 package com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
-import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
-import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
 import static com.flipkart.krystal.model.ModelRoot.ModelType.RESPONSE;
 
 import com.flipkart.krystal.model.IfAbsent;
@@ -28,13 +26,10 @@ public interface JsonResponse extends Model {
 
   @Nullable String uriInfo();
 
-  @IfAbsent(FAIL)
   String string();
 
-  @IfAbsent(MAY_FAIL_CONDITIONALLY)
   Optional<Integer> optionalInteger();
 
-  @IfAbsent(MAY_FAIL_CONDITIONALLY)
   @Nullable Integer nullableIntegerMayFailConditionally();
 
   @Nullable Integer nullableInteger();
@@ -42,17 +37,15 @@ public interface JsonResponse extends Model {
   @IfAbsent(ASSUME_DEFAULT_VALUE)
   List<Integer> optionalIntArray();
 
-  @IfAbsent(FAIL)
   int mandatoryInt();
 
   @IfAbsent(ASSUME_DEFAULT_VALUE)
   int defaultInt();
 
-  @IfAbsent(FAIL)
   @Nullable String mandatoryStringPartialConstruction();
 
   @IfAbsent(ASSUME_DEFAULT_VALUE)
-  @Nullable Map<String, String> mapTypedField();
+  Map<String, String> mapTypedField();
 
   @Nullable ByteArray byteArray();
 

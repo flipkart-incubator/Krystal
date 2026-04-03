@@ -917,15 +917,34 @@ $L instanceof $T _builder
             .returns(builderType);
 
     // Initialize code to create a new Builder and set all fields
-    builderCopyMethodBuilder.addCode("return new $T()", builderType);
+    builderCopyMethodBuilder.addStatement("$T _copy = new $T()", builderType, builderType);
     for (ExecutableElement method : modelMethods) {
       String fieldName = method.getSimpleName().toString();
-      builderCopyMethodBuilder.addCode(
-          ".$L(this.$L)",
-          fieldName,
-          getFieldAccessorExpression(true, fieldName, method.getReturnType()));
+      Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
+      if (fieldModelRootInfo.isPresent()
+          && !fieldModelRootInfo.get().annotation().builderExtendsModelRoot()) {
+        builderCopyMethodBuilder.addCode(
+"""
+    if($L instanceof $T _builder) {
+      _copy.$L(_builder);
+    } else if($L instanceof $T _immut) {
+      _copy.$L(_immut);
     }
-    builderCopyMethodBuilder.addCode(";");
+""",
+            fieldName,
+            util.getImmutClassName(fieldModelRootInfo.get().element()).nestedClass("Builder"),
+            fieldName,
+            fieldName,
+            util.getImmutClassName(fieldModelRootInfo.get().element()),
+            fieldName);
+      } else {
+        builderCopyMethodBuilder.addStatement(
+            "_copy.$L(this.$L)",
+            fieldName,
+            getFieldAccessorExpression(true, fieldName, method.getReturnType()));
+      }
+    }
+    builderCopyMethodBuilder.addStatement("return _copy");
 
     // Create the builder class
     ClassName builderClassName = asClassName(immutableModelName).nestedClass("Builder");
