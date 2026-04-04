@@ -803,7 +803,7 @@ public class CodeGenUtility {
     return ParameterizedTypeName.get(ClassName.get(Optional.class), box(javaType).typeName());
   }
 
-  public ClassName getImmutClassName(Element modelRootType) {
+  public ClassName getImmutInterfaceName(Element modelRootType) {
     ModelRoot modelRoot = modelRootType.getAnnotation(ModelRoot.class);
     if (modelRoot == null) {
       throw new IllegalArgumentException(
@@ -816,7 +816,7 @@ public class CodeGenUtility {
   }
 
   public ClassName getImmutSerdeClassName(TypeElement modelRootType, SerdeProtocol serdeProtocol) {
-    ClassName immutClassName = getImmutClassName(modelRootType);
+    ClassName immutClassName = getImmutInterfaceName(modelRootType);
     return ClassName.get(
         immutClassName.packageName(),
         immutClassName.simpleName() + serdeProtocol.modelClassesSuffix());
@@ -862,7 +862,7 @@ public class CodeGenUtility {
           typeName = ClassName.get(Object.class);
         }
       } else {
-        typeName = getImmutClassName(modelRoot.get().element());
+        typeName = getImmutInterfaceName(modelRoot.get().element());
       }
     }
 

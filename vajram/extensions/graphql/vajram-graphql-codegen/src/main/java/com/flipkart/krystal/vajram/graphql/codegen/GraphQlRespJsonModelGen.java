@@ -83,7 +83,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
     TypeElement modelRootType = codeGenContext.modelRootType();
     CodeGenUtility util = codeGenContext.util();
 
-    ClassName immutClassName = util.getImmutClassName(modelRootType);
+    ClassName immutClassName = util.getImmutInterfaceName(modelRootType);
     String packageName = immutClassName.packageName();
 
     // Extract and validate model methods
@@ -99,8 +99,8 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
 
   private ClassName getGqlRespJsonClassName(TypeElement modelRootType) {
     return ClassName.get(
-        util.getImmutClassName(modelRootType).packageName(),
-        util.getImmutClassName(modelRootType).simpleName()
+        util.getImmutInterfaceName(modelRootType).packageName(),
+        util.getImmutInterfaceName(modelRootType).simpleName()
             + GraphQlResponseJson.INSTANCE.modelClassesSuffix());
   }
 
@@ -229,7 +229,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
         // For single custom model types (but NOT entity IDs), use _Immut suffix
         TypeElement typeElement =
             (TypeElement) util.processingEnv().getTypeUtils().asElement(returnType);
-        fieldType = util.getImmutClassName(typeElement);
+        fieldType = util.getImmutInterfaceName(typeElement);
       } else {
         fieldType = TypeName.get(returnType);
       }
@@ -487,7 +487,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
             fieldName,
             fieldName,
             fieldName,
-            util.getImmutClassName(fieldModelRoot.get().element()));
+            util.getImmutInterfaceName(fieldModelRoot.get().element()));
       } else {
         asBuilderMethodBuilder.addCode(".$L($L)", fieldName, fieldName);
       }
@@ -1029,7 +1029,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
           MethodSpec.methodBuilder(fieldName)
               .addModifiers(PUBLIC)
               .addParameter(
-                  util.getImmutClassName(fieldModelRoot.get().element()).nestedClass("Builder"),
+                  util.getImmutInterfaceName(fieldModelRoot.get().element()).nestedClass("Builder"),
                   fieldName)
               .addAnnotation(Override.class)
               .returns(builderType)

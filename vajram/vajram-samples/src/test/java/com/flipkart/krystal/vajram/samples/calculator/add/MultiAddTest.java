@@ -1,5 +1,9 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
+import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
+import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
+import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
+import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.DIRECT;
 import static com.flipkart.krystal.traits.matchers.InputValueMatcher.isAnyValue;
 import static com.flipkart.krystal.vajram.samples.Util.TEST_TIMEOUT;
 import static com.flipkart.krystal.vajram.samples.calculator.add.ChainAdd_Fac.chainSum_s;
@@ -19,6 +23,8 @@ import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.except.KrystalCompletionException;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
+import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
+import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
@@ -38,11 +44,17 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
+@ParameterizedClass
+@MethodSource("executorConfigsToTest")
 class MultiAddTest {
 
   private static final String REQUEST_ID = "addUsingTraitsTest";
@@ -50,10 +62,6 @@ class MultiAddTest {
 
   @SuppressWarnings("unchecked")
   private static final Lease<SingleThreadExecutor>[] EXECUTOR_LEASES = new Lease[MAX_THREADS];
-
-  private VajramGraph vGraph;
-  private KrystexGraphBuilder kGraph;
-  private Lease<SingleThreadExecutor> executorLease;
 
   @BeforeAll
   static void beforeAll() throws LeaseUnavailableException {
@@ -68,6 +76,19 @@ class MultiAddTest {
     for (Lease<SingleThreadExecutor> lease : EXECUTOR_LEASES) {
       lease.close();
     }
+  }
+
+  private final KryonExecStrategy kryonExecStrategy;
+  private final GraphTraversalStrategy graphTraversalStrategy;
+
+  private VajramGraph vGraph;
+  private KrystexGraphBuilder kGraph;
+  private Lease<SingleThreadExecutor> executorLease;
+
+  public MultiAddTest(
+      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
+    this.kryonExecStrategy = kryonExecStrategy;
+    this.graphTraversalStrategy = graphTraversalStrategy;
   }
 
   @BeforeEach
@@ -408,7 +429,11 @@ class MultiAddTest {
         .graph(kGraph.build())
         .requestId(REQUEST_ID)
         .kryonExecutorConfig(
-            KryonExecutorConfig.builder().executorService(executorLease.get()).build());
+            KryonExecutorConfig.builder()
+                .executorService(executorLease.get())
+                .kryonExecStrategy(kryonExecStrategy)
+                .graphTraversalStrategy(graphTraversalStrategy)
+                .build());
   }
 
   private static ImmutableSet<DependentChain> getDisabledDependentChains(VajramGraph graph) {
@@ -424,5 +449,10 @@ class MultiAddTest {
         graph.computeDependentChain(splitAdd, splitSum2_s, splitSum1_s, splitSum2_s),
         graph.computeDependentChain(splitAdd, splitSum2_s, splitSum2_s, splitSum1_s),
         graph.computeDependentChain(splitAdd, splitSum2_s, splitSum2_s, splitSum2_s));
+  }
+
+  public static Stream<Arguments> executorConfigsToTest() {
+    return Stream.of(
+        Arguments.of(BATCH, DEPTH), Arguments.of(BATCH, BREADTH), Arguments.of(DIRECT, DEPTH));
   }
 }

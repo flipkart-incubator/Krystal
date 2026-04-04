@@ -3,6 +3,7 @@ package com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.ByteArray;
+import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.InnerJson_ImmutPojo;
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.JsonResponse_ImmutJson;
 import com.google.common.base.Charsets;
 import java.util.List;
@@ -25,6 +26,7 @@ class JsonResponseTest {
             .mandatoryStringPartialConstruction("hihihi")
             .mapTypedField(Map.of("X", "A", "Y", "B", "Z", "C"))
             .byteArray(new ByteArray(new byte[] {23, 45, 23, 56, 67, 64, 45, 45, 3, 45, 56}))
+            .nestedData(InnerJson_ImmutPojo._builder().value("Hello").count(11)._build())
             ._build();
     byte[] serializedPayload = immutJson._serialize();
     System.out.println(new String(serializedPayload, Charsets.UTF_8));

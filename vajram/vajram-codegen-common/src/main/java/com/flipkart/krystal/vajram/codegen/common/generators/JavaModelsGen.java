@@ -165,7 +165,7 @@ public final class JavaModelsGen implements CodeGenerator {
     List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
 
     // Get package and class names
-    ClassName immutModelNameRaw = util.getImmutClassName(modelRootType);
+    ClassName immutModelNameRaw = util.getImmutInterfaceName(modelRootType);
     String packageName = immutModelNameRaw.packageName();
 
     TypeName immutModelName =
@@ -304,7 +304,7 @@ public final class JavaModelsGen implements CodeGenerator {
                         Element modelRootElement =
                             util.processingEnv().getTypeUtils().asElement(parentModelRootType);
                         return asTypeNameWithTypes(
-                            util.getImmutClassName(modelRootElement), typeArguments);
+                            util.getImmutInterfaceName(modelRootElement), typeArguments);
                       });
                 })
             .or(
@@ -330,7 +330,7 @@ public final class JavaModelsGen implements CodeGenerator {
                         Element parentModelRoot =
                             util.processingEnv().getTypeUtils().asElement(parentModelRootType);
                         return asTypeNameWithTypes(
-                            util.getImmutClassName(parentModelRoot).nestedClass("Builder"),
+                            util.getImmutInterfaceName(parentModelRoot).nestedClass("Builder"),
                             typeArguments);
                       });
                 })
@@ -488,7 +488,8 @@ public final class JavaModelsGen implements CodeGenerator {
             MethodSpec.methodBuilder(methodName)
                 .addModifiers(PUBLIC, ABSTRACT)
                 .addParameter(
-                    util.getImmutClassName(modelRootInfo.get().element()).nestedClass("Builder"),
+                    util.getImmutInterfaceName(modelRootInfo.get().element())
+                        .nestedClass("Builder"),
                     methodName)
                 .returns(builderType);
         if (hasParentModelRoot) {
@@ -594,7 +595,7 @@ public final class JavaModelsGen implements CodeGenerator {
             ".$L($L == null ? null :($T)$L._asBuilder())",
             fieldName,
             fieldName,
-            util.getImmutClassName(fieldModelRoot.get().element()).nestedClass("Builder"),
+            util.getImmutInterfaceName(fieldModelRoot.get().element()).nestedClass("Builder"),
             fieldName);
       } else {
         asBuilderMethodBuilder.addCode(".$L($L)", fieldName, fieldName);
@@ -778,9 +779,9 @@ $L instanceof $T _builder
   : $L instanceof $T _immutModel ? _immutModel : null
 """,
                   fieldName,
-                  util.getImmutClassName(modelRoot.get().element()).nestedClass("Builder"),
+                  util.getImmutInterfaceName(modelRoot.get().element()).nestedClass("Builder"),
                   fieldName,
-                  util.getImmutClassName(modelRoot.get().element()));
+                  util.getImmutInterfaceName(modelRoot.get().element()));
     }
     return fieldAccessorCode;
   }
@@ -836,16 +837,13 @@ $L instanceof $T _builder
             MethodSpec.methodBuilder(methodName)
                 .addModifiers(PUBLIC)
                 .addParameter(
-                    util.getImmutClassName(fieldModelRoot.get().element()).nestedClass("Builder"),
+                    util.getImmutInterfaceName(fieldModelRoot.get().element())
+                        .nestedClass("Builder"),
                     methodName)
                 .addAnnotation(Override.class)
                 .returns(builderType)
-                .addStatement(
-                    "return $L( $L == null ? null : ($T) $L._asBuilder())",
-                    methodName,
-                    methodName,
-                    util.getImmutClassName(fieldModelRoot.get().element()).nestedClass("Builder"),
-                    methodName)
+                .addStatement("this.$L = $L", methodName, methodName)
+                .addStatement("return this")
                 .build());
       }
 
@@ -932,10 +930,10 @@ $L instanceof $T _builder
     }
 """,
             fieldName,
-            util.getImmutClassName(fieldModelRootInfo.get().element()).nestedClass("Builder"),
+            util.getImmutInterfaceName(fieldModelRootInfo.get().element()).nestedClass("Builder"),
             fieldName,
             fieldName,
-            util.getImmutClassName(fieldModelRootInfo.get().element()),
+            util.getImmutInterfaceName(fieldModelRootInfo.get().element()),
             fieldName);
       } else {
         builderCopyMethodBuilder.addStatement(

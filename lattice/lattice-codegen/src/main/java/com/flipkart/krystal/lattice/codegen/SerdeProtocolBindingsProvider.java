@@ -103,7 +103,7 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
       if (supportedModelProtocolElems.isEmpty()) {
         continue;
       }
-      ClassName immutClassName = util.codegenUtil().getImmutClassName(responseElement);
+      ClassName immutClassName = util.codegenUtil().getImmutInterfaceName(responseElement);
       ClassName immutBuilderClassName =
           ClassName.get(immutClassName.packageName(), immutClassName.simpleName(), "Builder");
       TypeElement defaultSerializationProtocol = getDefaultSerializationProtocol(context);

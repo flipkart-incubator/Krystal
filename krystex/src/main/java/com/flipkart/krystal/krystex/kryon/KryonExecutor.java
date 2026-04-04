@@ -662,14 +662,11 @@ public final class KryonExecutor implements KrystalExecutor {
         (vajramID, kryonExecutions) -> {
           try {
             CompletableFuture<DirectResponse> submissionResponse =
-                executorConfig
-                    .traitDispatchDecorator()
-                    .<DirectResponse>decorateDependency(this::executeCommand)
-                    .invokeDependency(
-                        new DirectForwardSend(
-                            vajramID,
-                            asRequestResponseFutures(kryonExecutions),
-                            kryonDefinitionRegistry.getDependentChainsStart()));
+                this.executeCommand(
+                    new DirectForwardSend(
+                        vajramID,
+                        asRequestResponseFutures(kryonExecutions),
+                        kryonDefinitionRegistry.getDependentChainsStart()));
             submissionResponse.whenComplete(
                 (response, throwable) -> {
                   if (throwable != null) {

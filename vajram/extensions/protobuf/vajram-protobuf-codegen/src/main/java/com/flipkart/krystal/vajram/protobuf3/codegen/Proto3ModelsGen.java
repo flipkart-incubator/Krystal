@@ -120,7 +120,7 @@ public class Proto3ModelsGen implements CodeGenerator {
 
   private void generateProtoImplementation() {
     TypeElement modelRootType = codeGenContext.modelRootType();
-    ClassName immutClassName = util.getImmutClassName(modelRootType);
+    ClassName immutClassName = util.getImmutInterfaceName(modelRootType);
 
     String protoClassName = getProtoClassName(codeGenContext.modelRootType());
     String packageName = immutClassName.packageName();
@@ -137,7 +137,7 @@ public class Proto3ModelsGen implements CodeGenerator {
   }
 
   private String getProtoClassName(TypeElement modelRootType) {
-    return util.getImmutClassName(modelRootType).simpleName()
+    return util.getImmutInterfaceName(modelRootType).simpleName()
         + Protobuf3.PROTOBUF_3.modelClassesSuffix();
   }
 
@@ -145,7 +145,7 @@ public class Proto3ModelsGen implements CodeGenerator {
       TypeElement modelRootType, String packageName, String protoClassName) {
     ClassName immutableProtoType = ClassName.get(packageName, protoClassName);
     String modelRootName = modelRootType.getSimpleName().toString();
-    ClassName immutModelName = util.getImmutClassName(modelRootType);
+    ClassName immutModelName = util.getImmutInterfaceName(modelRootType);
     String protoMsgClassName = modelRootName + MODELS_PROTO_MSG_SUFFIX;
 
     // Extract model methods
@@ -328,7 +328,7 @@ return _serializedPayload;
                       accessor =
                           CodeBlock.of(
                               "($T) _from.$L().map($T::_asBuilder).orElse(null)",
-                              util.getImmutClassName(modelRoot.get().element())
+                              util.getImmutInterfaceName(modelRoot.get().element())
                                   .nestedClass("Builder"),
                               methodName,
                               Model.class);
@@ -336,7 +336,7 @@ return _serializedPayload;
                       accessor =
                           CodeBlock.of(
                               "($T) $T.ofNullable(_from.$L()).map($T::_asBuilder).orElse(null)",
-                              util.getImmutClassName(modelRoot.get().element())
+                              util.getImmutInterfaceName(modelRoot.get().element())
                                   .nestedClass("Builder"),
                               Optional.class,
                               methodName,
@@ -345,7 +345,7 @@ return _serializedPayload;
                       accessor =
                           CodeBlock.of(
                               "($T) _from.$L()._asBuilder()",
-                              util.getImmutClassName(modelRoot.get().element())
+                              util.getImmutInterfaceName(modelRoot.get().element())
                                   .nestedClass("Builder"),
                               methodName);
                     }
@@ -590,8 +590,7 @@ return _serializedPayload;
             fieldName,
             capitalizeFirstChar(fieldName));
 
-        TypeMirror javaModelType = dataType.javaModelType(util.processingEnv());
-        Optional<ModelRootInfo> fieldTypeModelRoot = util.asModelRoot(javaModelType);
+        Optional<ModelRootInfo> fieldTypeModelRoot = util.asModelRoot(method.getReturnType());
         if (fieldTypeModelRoot.isPresent()) {
           ClassName fieldProtoClassName =
               ClassName.get(
@@ -642,7 +641,8 @@ return _serializedPayload;
             methodBuilder(fieldName)
                 .addModifiers(PUBLIC)
                 .addParameter(
-                    util.getImmutClassName(fieldModelRoot.get().element()).nestedClass("Builder"),
+                    util.getImmutInterfaceName(fieldModelRoot.get().element())
+                        .nestedClass("Builder"),
                     fieldName)
                 .addAnnotation(Override.class)
                 .returns(builderType)
