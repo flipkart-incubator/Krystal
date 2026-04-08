@@ -97,13 +97,6 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
     util.writeJavaFile(packageName, gqlRespJsonClass, modelRootType);
   }
 
-  private ClassName getGqlRespJsonClassName(TypeElement modelRootType) {
-    return ClassName.get(
-        util.getImmutInterfaceName(modelRootType).packageName(),
-        util.getImmutInterfaceName(modelRootType).simpleName()
-            + GraphQlResponseJson.INSTANCE.modelClassesSuffix());
-  }
-
   /**
    * Generates the complete GQlRespJson model class with: - GraphQL execution context fields -
    * Errable-wrapped fields for all model properties - Constructor with nested entity handling -
@@ -111,7 +104,8 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
    */
   private TypeSpec generateGQlRespJsonModel(
       TypeElement modelRootType, ClassName immutClassName, List<ExecutableElement> modelMethods) {
-    ClassName gqlRespJsonClassName = getGqlRespJsonClassName(modelRootType);
+    ClassName gqlRespJsonClassName =
+        util.getImmutModelClassName(modelRootType, GraphQlResponseJson.INSTANCE);
     boolean isOpType = isGraphQlOpType(modelRootType, util);
 
     Builder classBuilder =
@@ -334,7 +328,8 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
     MethodSpec.Builder constructor =
         MethodSpec.constructorBuilder()
             .addModifiers(PUBLIC)
-            .addParameter(getGqlRespJsonClassName(modelRootType), "_from");
+            .addParameter(
+                util.getImmutModelClassName(modelRootType, GraphQlResponseJson.INSTANCE), "_from");
     // Add parameters for each field (Errable wrapped, except GraphQL context methods)
     constructor.addStatement(
         modelMethods.stream()
@@ -824,7 +819,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
       }
 
       TypeMirror returnType = method.getReturnType();
-      TypeName fieldType = util.getModelFieldType(method, true);
+      TypeName fieldType = util.getModelFieldType(method, true, GraphQlResponseJson.INSTANCE);
 
       // For ALL lists, use nested Errable: Errable<List<Errable<Entity>>>
       // Note: Builder uses non-_Immut types (e.g., Dummy not Dummy_Immut)
@@ -990,7 +985,9 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
     } else if (fieldModelRoot.isPresent()) {
       // Standard scalar: simple wrap
       // For single entity setters, wrap in Errable.withValue()
-      ClassName fieldGQlClassName = getGqlRespJsonClassName(fieldModelRoot.get().element());
+      ClassName fieldGQlClassName =
+          this.util.getImmutModelClassName(
+              fieldModelRoot.get().element(), GraphQlResponseJson.INSTANCE);
       directSetterBuilder
           .addParameter(fieldType, fieldName)
           .addCode(

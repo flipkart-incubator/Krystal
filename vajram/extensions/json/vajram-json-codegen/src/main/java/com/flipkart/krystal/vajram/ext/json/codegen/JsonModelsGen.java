@@ -1,6 +1,12 @@
 package com.flipkart.krystal.vajram.ext.json.codegen;
 
-import static com.flipkart.krystal.model.PlainJavaObject.POJO;
+import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.asBuilder;
+import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.buildForBuilder;
+import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.builderGettersAndSetters;
+import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.copyCtor;
+import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.getterMethod;
+import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.newCopyForBuilder;
+import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.newCopyForImmut;
 import static com.flipkart.krystal.vajram.json.Json.JSON;
 import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.Modifier.FINAL;
@@ -8,14 +14,13 @@ import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility.ModelRootInfo;
 import com.flipkart.krystal.codegen.common.models.CodegenPhase;
@@ -34,6 +39,7 @@ import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
@@ -44,8 +50,10 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
+import org.jspecify.annotations.NonNull;
 
 final class JsonModelsGen implements CodeGenerator {
   private final ModelsCodeGenContext codeGenContext;
@@ -70,51 +78,39 @@ final class JsonModelsGen implements CodeGenerator {
     // Extract and validate model methods
     List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
 
-    TypeSpec immutablePojo =
-        generateJsonModel(packageName, modelRootType, modelMethods, immutClassName);
+    TypeSpec immutablePojo = generateJsonModel(modelRootType, modelMethods, immutClassName);
 
     util.writeJavaFile(packageName, immutablePojo, modelRootType);
   }
 
-  private ClassName getImmutableJsonName(TypeElement modelRootType) {
-    ClassName immutClassName = util.getImmutInterfaceName(modelRootType);
-    return ClassName.get(
-        immutClassName.packageName(), immutClassName.simpleName() + JSON.modelClassesSuffix());
-  }
-
   /**
-   * Generates the immutable Json model class that implements the immutable interface.
+   * Generates the immutable JSON model class that implements the immutable interface.
    *
-   * @param packageName The package name of the model root type
    * @param modelRootType The model root type
    * @param modelMethods The methods from the model root
    * @param immutableModelName The name of the immutable interface
    * @return TypeSpec for the immutable POJO
    */
   private TypeSpec generateJsonModel(
-      String packageName,
       TypeElement modelRootType,
       List<ExecutableElement> modelMethods,
       ClassName immutableModelName) {
-    ClassName immutableJsonModelName = getImmutableJsonName(modelRootType);
+    ClassName immutableJsonModelName = util.getImmutModelClassName(modelRootType, Json.JSON);
+    ClassName builderType = immutableJsonModelName.nestedClass("Builder");
     TypeSpec.Builder classBuilder =
         util.classBuilder(
-                immutableJsonModelName.simpleName(), modelRootType.getQualifiedName().toString())
-            .addAnnotation(
-                AnnotationSpec.builder(JsonDeserialize.class)
-                    .addMember("builder", "$T.class", immutableJsonModelName.nestedClass("Builder"))
-                    .build());
-
-    // Create constructor for the class
-    ClassName immutablePojoName =
-        ClassName.get(packageName, immutableModelName.simpleName() + POJO.modelClassesSuffix());
+            immutableJsonModelName.simpleName(), modelRootType.getQualifiedName().toString());
 
     TypeName byteArrayType = ArrayTypeName.of(TypeName.BYTE);
 
     jacksonToolFields(classBuilder, immutableJsonModelName);
-    classBuilder.addField(FieldSpec.builder(immutablePojoName, "_pojo", PRIVATE).build());
+
     classBuilder.addField(
         FieldSpec.builder(byteArrayType, "_serializedPayload", PRIVATE)
+            .addAnnotation(JsonIgnore.class)
+            .build());
+    classBuilder.addField(
+        FieldSpec.builder(boolean.class, "_deserializationPending", PRIVATE)
             .addAnnotation(JsonIgnore.class)
             .build());
 
@@ -131,43 +127,58 @@ return _serializedPayload;
 """)
             .build());
 
-    // Create getter methods
-    List<MethodSpec> methods = new ArrayList<>();
-    for (ExecutableElement method : modelMethods) {
-      String methodName = method.getSimpleName().toString();
-      methods.add(
-          MethodSpec.methodBuilder(methodName)
-              .addAnnotation(JsonProperty.class)
-              .addModifiers(PUBLIC)
-              .returns(TypeName.get(method.getReturnType()))
-              .addStatement("return _pojo().$L()", methodName)
-              .build());
-    }
-
-    methods.addAll(commonMethods(immutableJsonModelName));
-
-    // Add method to lazily deserialize the JSON
     classBuilder.addMethod(
-        MethodSpec.methodBuilder("_pojo")
+        MethodSpec.methodBuilder("_deserialize")
             .addModifiers(PRIVATE)
-            .returns(immutablePojoName)
             .addCode(
-"""
-        if (_pojo == null && _serializedPayload != null) {
-          try{
-            _pojo = _READER.get().readValue(_serializedPayload, $T.class)._pojo();
-          } catch (Exception e) {
-            throw new RuntimeException("Failed to deserialize json bytes", e);
-          }
-        } else if (_pojo == null) {
-          throw new IllegalStateException("Both _pojo and _serializedPayload are null");
-        }
-        return _pojo;
-""",
-                immutableJsonModelName)
+                """
+                try{
+                  if (_deserializationPending) {
+                    _READER.get().withValueToUpdate(this).readValue(_serializedPayload);
+                    this._deserializationPending = false;
+                  }
+                } catch ($T e) {
+                  throw new $T(e);
+                }
+                """,
+                Exception.class,
+                RuntimeException.class)
             .build());
 
-    copyCtor(modelRootType, classBuilder, immutablePojoName);
+    List<MethodSpec> methods = new ArrayList<>();
+
+    for (ExecutableElement method : modelMethods) {
+      Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
+      MethodSpec pojoGetterMethod = getterMethod(method, false, util).build();
+      MethodSpec.Builder getterBuilder =
+          MethodSpec.methodBuilder(pojoGetterMethod.name)
+              .returns(pojoGetterMethod.returnType)
+              .addParameters(pojoGetterMethod.parameters)
+              .addModifiers(pojoGetterMethod.modifiers)
+              .addAnnotations(pojoGetterMethod.annotations)
+              .addStatement("_deserialize()")
+              .addCode(pojoGetterMethod.code)
+              .addAnnotation(JsonProperty.class);
+      if (fieldModelRootInfo.isPresent()) {
+        getterBuilder.addAnnotation(
+            AnnotationSpec.builder(JsonDeserialize.class)
+                .addMember(
+                    "as",
+                    "$T.class",
+                    util.getImmutModelClassName(fieldModelRootInfo.get().element(), JSON))
+                .build());
+      }
+      methods.add(getterBuilder.build());
+    }
+    methods.addAll(
+        List.of(
+            newCopyForImmut(modelMethods, immutableJsonModelName).build(),
+            asBuilder(modelMethods, builderType, util).build(),
+            MethodSpec.methodBuilder("_builder")
+                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+                .returns(builderType)
+                .addStatement("return new $T()", builderType)
+                .build()));
 
     // Create builder class
     TypeSpec builderClass = generateBuilderClass(modelRootType, modelMethods, immutableModelName);
@@ -181,56 +192,78 @@ return _serializedPayload;
         .addModifiers(PUBLIC, FINAL)
         .addSuperinterface(immutableModelName)
         .addSuperinterface(SerializableJsonModel.class)
-        .addMethod(
-            // Add constructor accepting pojo
-            MethodSpec.constructorBuilder()
-                .addModifiers(PRIVATE)
-                .addParameter(immutablePojoName, "_pojo")
-                .addStatement("this._pojo = _pojo")
-                .build())
+        .addFields(fields(modelMethods, false))
         .addMethod(
             // Add constructor for serialized payload
             MethodSpec.constructorBuilder()
                 .addModifiers(PUBLIC)
                 .addParameter(byteArrayType, "_serializedPayload")
                 .addStatement("this._serializedPayload = _serializedPayload")
-                .addStatement("this._pojo = null")
+                .addStatement("this._deserializationPending = true")
                 .build())
-        .addMethod(
-            // Add constructor for serialized payload and pojo
-            MethodSpec.constructorBuilder()
-                .addModifiers(PUBLIC)
-                .addParameter(byteArrayType, "_serializedPayload")
-                .addParameter(immutablePojoName, "_pojo")
-                .addStatement("this._serializedPayload = _serializedPayload")
-                .addStatement("this._pojo = _pojo")
-                .build())
+        .addMethod(allArgCtor(modelMethods, util).build())
+        .addMethod(copyCtor(modelRootType, util))
         .addMethods(methods)
         .addType(builderClass)
         .build();
   }
 
-  private void copyCtor(
-      TypeElement modelRootType, Builder classBuilder, ClassName immutablePojoName) {
-    ModelRootInfo modelRootInfo = util.asModelRoot(modelRootType.asType()).orElseThrow();
+  public static MethodSpec.Builder allArgCtor(
+      List<ExecutableElement> modelMethods, CodeGenUtility util) {
+    MethodSpec.Builder constructorBuilder = MethodSpec.constructorBuilder().addModifiers(PUBLIC);
 
-    classBuilder.addMethod(
-        MethodSpec.constructorBuilder()
-            .addModifiers(PUBLIC)
-            .addParameter(TypeName.get(modelRootType.asType()), "_from")
-            .addCode(
+    for (ExecutableElement method : modelMethods) {
+      String fieldName = method.getSimpleName().toString();
+
+      constructorBuilder.addParameter(
+          ParameterSpec.builder(util.getVariableType(method, false), fieldName).build());
+      Optional<ModelRootInfo> modelRootInfo = util.asModelRoot(method.getReturnType());
+      if (modelRootInfo.isPresent()) {
+        ClassName immutJsonClassName =
+            util.getImmutModelClassName(modelRootInfo.get().element(), JSON);
+        constructorBuilder.addStatement(
 """
-    this._pojo =
-      _from instanceof $T _pojo ? _pojo : $L new $T(_from);
+    this.$L =
+      $L == null
+        ? null
+        $L
+        : $L instanceof $T _immutJson
+          ? _immutJson
+          : new $T($L);
 """,
-                immutablePojoName,
-                modelRootInfo.annotation().builderExtendsModelRoot()
-                    ? CodeBlock.of(
-                        "_from instanceof $T.Builder _builder ? _builder._build() : ",
-                        immutablePojoName)
-                    : CodeBlock.of(""),
-                immutablePojoName)
-            .build());
+            fieldName,
+            fieldName,
+            modelRootInfo.get().annotation().builderExtendsModelRoot()
+                ? CodeBlock.of(
+                    ": $L instanceof $T _jsonBuilder ? _jsonBuilder._build() ",
+                    fieldName,
+                    immutJsonClassName.nestedClass("Builder"))
+                : CodeBlock.of(""),
+            fieldName,
+            immutJsonClassName,
+            immutJsonClassName,
+            fieldName);
+      } else {
+        // For other field types, just assign the parameter directly
+        constructorBuilder.addStatement("this.$L = $L", fieldName, fieldName);
+      }
+    }
+    return constructorBuilder
+        .addAnnotation(JsonCreator.class)
+        .addStatement("this._deserializationPending = false");
+  }
+
+  private @NonNull List<FieldSpec> fields(List<ExecutableElement> modelMethods, boolean isBuilder) {
+    List<FieldSpec> fields = new ArrayList<>();
+    for (ExecutableElement method : modelMethods) {
+      FieldSpec.Builder fieldBuilder =
+          FieldSpec.builder(
+              util.getModelFieldType(method, isBuilder, JSON),
+              method.getSimpleName().toString(),
+              PRIVATE);
+      fields.add(fieldBuilder.build());
+    }
+    return fields;
   }
 
   private static void jacksonToolFields(Builder classBuilder, ClassName immutableJsonModelName) {
@@ -262,53 +295,8 @@ return _serializedPayload;
             .build());
   }
 
-  private static List<MethodSpec> commonMethods(ClassName immutableJsonModelName) {
-    // Create _asBuilder method to return a new Builder instance with all fields
-    MethodSpec.Builder asBuilderMethodBuilder =
-        MethodSpec.methodBuilder("_asBuilder")
-            .addModifiers(PUBLIC)
-            .addAnnotation(Override.class)
-            .returns(immutableJsonModelName.nestedClass("Builder"))
-            .addStatement(
-                "return new $T(_pojo()._asBuilder())",
-                immutableJsonModelName.nestedClass("Builder"));
-
-    MethodSpec builderMethod =
-        MethodSpec.methodBuilder("_builder")
-            .addModifiers(PUBLIC, STATIC)
-            .returns(immutableJsonModelName.nestedClass("Builder"))
-            .addStatement("return new $T()", immutableJsonModelName.nestedClass("Builder"))
-            .build();
-    // Add methods to the list
-    return List.of(
-        asBuilderMethodBuilder.build(),
-        builderMethod,
-        // Add _newCopy method from ImmutableModel interface
-        MethodSpec.methodBuilder("_newCopy")
-            .addAnnotation(Override.class)
-            .addModifiers(PUBLIC)
-            .returns(immutableJsonModelName)
-            .addCode(
-                """
-                    if(_serializedPayload != null && _pojo != null ) {
-                      return new $T(_serializedPayload, _pojo);
-                    } else if(_serializedPayload != null) {
-                      return new $T(_serializedPayload);
-                    } else if(_pojo != null){
-                      return new $T(_pojo);
-                    } else {
-                      throw new $T("Both _pojo and _serializedPayload are null");
-                    }
-                    """,
-                immutableJsonModelName,
-                immutableJsonModelName,
-                immutableJsonModelName,
-                IllegalStateException.class)
-            .build());
-  }
-
   /**
-   * Generates the builder class for the immutable Json model.
+   * Generates the builder class for the immutable JSON model.
    *
    * @param modelRootType The model Root type
    * @param modelMethods The methods from the model root
@@ -319,153 +307,32 @@ return _serializedPayload;
       TypeElement modelRootType,
       List<ExecutableElement> modelMethods,
       ClassName immutableModelName) {
-    ClassName immutableJsonName = getImmutableJsonName(modelRootType);
-    var builderSpec =
-        util.classBuilder("Builder", modelRootType.getQualifiedName().toString())
-            .addAnnotation(
-                AnnotationSpec.builder(JsonPOJOBuilder.class)
-                    .addMember("buildMethodName", "$S", "_build")
-                    .addMember("withPrefix", "$S", "")
-                    .build());
+    ClassName immutableJsonName = util.getImmutModelClassName(modelRootType, Json.JSON);
+    var builderSpec = util.classBuilder("Builder", modelRootType.getQualifiedName().toString());
     ModelRoot modelRoot = requireNonNull(modelRootType.getAnnotation(ModelRoot.class));
-    ClassName immutablePojoName =
-        ClassName.get(
-            immutableJsonName.packageName(),
-            immutableModelName.simpleName() + POJO.modelClassesSuffix());
-
-    builderSpec.addField(
-        FieldSpec.builder(immutablePojoName.nestedClass("Builder"), "_pojo", PRIVATE, FINAL)
-            .build());
 
     // Create no-arg constructor
-    builderSpec.addMethod(
-        MethodSpec.constructorBuilder()
-            .addModifiers(PRIVATE)
-            .addStatement("this._pojo = $T._builder()", immutablePojoName)
-            .build());
+    builderSpec.addMethod(MethodSpec.constructorBuilder().addModifiers(PRIVATE).build());
 
-    // Create builder copy constructor
-    builderSpec.addMethod(
-        MethodSpec.constructorBuilder()
-            .addModifiers(PRIVATE)
-            .addParameter(immutablePojoName.nestedClass("Builder"), "_pojo")
-            .addStatement("this._pojo = _pojo")
-            .build());
-
-    // Create setter methods
-    List<MethodSpec> dataAccessMethods = new ArrayList<>();
     ClassName builderType = immutableJsonName.nestedClass("Builder");
-    for (ExecutableElement method : modelMethods) {
-      String fieldName = method.getSimpleName().toString();
-
-      TypeName variableType = util.getVariableType(method, true);
-      MethodSpec.Builder setterBuilder =
-          MethodSpec.methodBuilder(fieldName)
-              .addModifiers(PUBLIC)
-              .addParameter(variableType, fieldName)
-              .returns(builderType)
-              .addAnnotation(Override.class)
-              .addAnnotation(JsonSetter.class);
-      Optional<ModelRootInfo> modelRootInfo = util.asModelRoot(method.getReturnType());
-      if (modelRootInfo.isPresent()) {
-        ClassName nestedImmutableJsonName = getImmutableJsonName(modelRootInfo.get().element());
-        setterBuilder.addCode(
-"""
-      if($L){
-        this._pojo.$L($L);
-      } else {
-        this._pojo.$L(new $T($L));
-      }
-""",
-            !modelRootInfo.get().annotation().builderExtendsModelRoot()
-                ? CodeBlock.of("$L instanceof $T", fieldName, nestedImmutableJsonName)
-                : CodeBlock.of(
-                    "$L instanceof $T || $L instanceof $T",
-                    fieldName,
-                    nestedImmutableJsonName,
-                    fieldName,
-                    nestedImmutableJsonName.nestedClass("Builder")),
-            fieldName,
-            fieldName,
-            fieldName,
-            nestedImmutableJsonName,
-            fieldName);
-      } else {
-        setterBuilder.addStatement("this._pojo.$L($L)", fieldName, fieldName);
-      }
-
-      MethodSpec setter = setterBuilder.addStatement("return this").build();
-      dataAccessMethods.add(setter);
-
-      if (modelRootInfo.isPresent()
-          && !modelRootInfo.get().annotation().builderExtendsModelRoot()) {
-        ClassName nestedImmutableJsonName = getImmutableJsonName(modelRootInfo.get().element());
-        dataAccessMethods.add(
-            MethodSpec.methodBuilder(fieldName)
-                .addModifiers(PUBLIC)
-                .addParameter(
-                    util.getImmutInterfaceName(modelRootInfo.get().element())
-                        .nestedClass("Builder"),
-                    fieldName)
-                .returns(builderType)
-                .addAnnotation(Override.class)
-                .addCode(
-"""
-      if($L instanceof $T.Builder){
-        this._pojo.$L($L);
-      } else {
-        this._pojo.$L(new $T($L._build()));
-      }
-      return this;
-""",
-                    fieldName,
-                    nestedImmutableJsonName,
-                    fieldName,
-                    fieldName,
-                    fieldName,
-                    nestedImmutableJsonName,
-                    fieldName)
-                .build());
-      }
-      if (modelRoot.builderExtendsModelRoot()) {
-        dataAccessMethods.add(
-            MethodSpec.methodBuilder(fieldName)
-                .addModifiers(PUBLIC)
-                .returns(TypeName.get(method.getReturnType()))
-                .addStatement("return _pojo.$L()", fieldName)
-                .build());
-      }
-    }
-
-    // Create _build method
-    MethodSpec.Builder buildMethodBuilder =
-        MethodSpec.methodBuilder("_build")
-            .addModifiers(PUBLIC)
-            .returns(immutableJsonName)
-            .addStatement("return new $T(_pojo._build())", immutableJsonName)
-            .addAnnotation(Override.class);
-
-    // Create _newCopy method for the Builder
-    MethodSpec.Builder builderCopyMethodBuilder =
-        MethodSpec.methodBuilder("_newCopy")
-            .addModifiers(PUBLIC)
-            .addAnnotation(Override.class)
-            .returns(builderType)
-            .addStatement("return new $T(_pojo._newCopy())", builderType);
+    List<MethodSpec> dataAccessMethods =
+        builderGettersAndSetters(modelMethods, builderType, modelRoot, util);
 
     // Create the builder class
     return builderSpec
         .addModifiers(PUBLIC, STATIC, FINAL)
         .addSuperinterface(immutableModelName.nestedClass("Builder"))
+        .addFields(fields(modelMethods, true))
         .addMethods(dataAccessMethods)
-        .addMethod(buildMethodBuilder.build())
+        .addMethod(
+            buildForBuilder(modelMethods, immutableModelName, immutableJsonName, util).build())
+        .addMethod(newCopyForBuilder(modelMethods, builderType, util).build())
         .addMethod(
             MethodSpec.overriding(util.getMethod(Model.class, "_asBuilder", 0))
                 .addModifiers(PUBLIC)
                 .returns(builderType)
                 .addStatement("return this")
                 .build())
-        .addMethod(builderCopyMethodBuilder.build())
         .build();
   }
 
@@ -474,9 +341,9 @@ return _serializedPayload;
   }
 
   /**
-   * Checks if the model root supports Json serialization.
+   * Checks if the model root supports JSON serialization.
    *
-   * @return true if Json is supported, false otherwise
+   * @return true if JSON is supported, false otherwise
    */
   private boolean isJsonSerdeSupported() {
     TypeElement modelRootType = codeGenContext.modelRootType();
@@ -485,7 +352,7 @@ return _serializedPayload;
     if (supportedModelProtocols == null) {
       return false;
     }
-    // Check if Json is mentioned in the annotation value
+    // Check if JSON is mentioned in the annotation value
     return util.getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
         .map(typeMirror -> util.processingEnv().getTypeUtils().asElement(typeMirror))
         .filter(elem -> elem instanceof QualifiedNameable)

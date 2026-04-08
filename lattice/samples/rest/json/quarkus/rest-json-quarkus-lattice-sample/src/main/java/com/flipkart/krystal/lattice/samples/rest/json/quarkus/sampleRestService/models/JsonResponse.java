@@ -49,5 +49,5 @@ public interface JsonResponse extends Model {
 
   @Nullable ByteArray byteArray();
 
-  InnerJson nestedData();
+  InnerData nestedData();
 }

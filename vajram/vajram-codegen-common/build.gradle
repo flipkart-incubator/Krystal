@@ -7,7 +7,6 @@ dependencies {
     implementation 'com.squareup:javapoet'
 }
 
-
 checkerFramework {
     extraJavacArgs += ['-AresolveReflection',]
 }

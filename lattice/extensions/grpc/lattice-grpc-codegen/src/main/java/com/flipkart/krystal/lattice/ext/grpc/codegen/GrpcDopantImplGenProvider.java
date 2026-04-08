@@ -2,7 +2,6 @@ package com.flipkart.krystal.lattice.ext.grpc.codegen;
 
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.lowerCaseFirstChar;
 import static com.flipkart.krystal.codegen.common.models.CodegenPhase.FINAL;
-import static com.flipkart.krystal.codegen.common.models.Constants.IMMUT_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.Protobuf3.PROTOBUF_3;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_MSG_SUFFIX;
 import static java.util.Map.entry;
@@ -117,9 +116,14 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
                       requireNonNull(util.processingEnv().getTypeUtils().asElement(vajram)));
           ClassName requestType = vajramInfoLite.requestInterfaceClassName();
           ClassName reqProtoModelType =
-              ClassName.get(
-                  vajramInfoLite.packageName(),
-                  requestType.simpleName() + IMMUT_SUFFIX + PROTOBUF_3.modelClassesSuffix());
+              util.codegenUtil()
+                  .getImmutModelClassName(
+                      requireNonNull(
+                          util.codegenUtil()
+                              .processingEnv()
+                              .getElementUtils()
+                              .getTypeElement(requestType.canonicalName())),
+                      PROTOBUF_3);
 
           ClassName protoReqMsgType =
               ClassName.get(

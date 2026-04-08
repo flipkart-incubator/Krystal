@@ -22,7 +22,6 @@ import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.SupportedModelProtocols;
-import com.flipkart.krystal.serial.SerdeProtocol;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.googlejavaformat.java.GoogleJavaFormatTool;
@@ -815,7 +814,7 @@ public class CodeGenUtility {
     return ClassName.get(packageName, modelRootName + modelRoot.suffixSeparator() + IMMUT_SUFFIX);
   }
 
-  public ClassName getImmutSerdeClassName(TypeElement modelRootType, SerdeProtocol serdeProtocol) {
+  public ClassName getImmutModelClassName(TypeElement modelRootType, ModelProtocol serdeProtocol) {
     ClassName immutClassName = getImmutInterfaceName(modelRootType);
     return ClassName.get(
         immutClassName.packageName(),
@@ -839,7 +838,17 @@ public class CodeGenUtility {
     }
   }
 
-  public TypeName getModelFieldType(ExecutableElement method, boolean isBuilder) {
+  /**
+   * Returns the TypeName to be used as the type of the field in a model.
+   *
+   * @param method the method in the model root corresponding to the model field.
+   * @param isBuilder true of field is in a builder class. false if it's in an immutable class.
+   * @param modelProtocol the model protocol to be used for the field. null means don't use any
+   *     specific model
+   * @return
+   */
+  public TypeName getModelFieldType(
+      ExecutableElement method, boolean isBuilder, @Nullable ModelProtocol modelProtocol) {
     final TypeMirror specifiedType = method.getReturnType();
     boolean isNullable = isAnyNullable(specifiedType, method);
     TypeMirror inferredType = specifiedType;
@@ -862,7 +871,10 @@ public class CodeGenUtility {
           typeName = ClassName.get(Object.class);
         }
       } else {
-        typeName = getImmutInterfaceName(modelRoot.get().element());
+        typeName =
+            modelProtocol != null
+                ? getImmutModelClassName(modelRoot.get().element, modelProtocol)
+                : getImmutInterfaceName(modelRoot.get().element());
       }
     }
 
@@ -949,7 +961,7 @@ public class CodeGenUtility {
     }
   }
 
-  public static TypeName asTypeNameWithElements(
+  public static TypeName withTypeParams(
       ClassName className, List<? extends TypeParameterElement> typeParameterElements) {
     return asTypeNameWithTypes(
         className, typeParameterElements.stream().map(TypeParameterElement::asType).toList());

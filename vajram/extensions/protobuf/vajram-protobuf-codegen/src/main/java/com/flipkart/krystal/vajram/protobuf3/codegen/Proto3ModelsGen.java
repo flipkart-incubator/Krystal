@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.protobuf3.codegen;
 
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.BYTE;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.capitalizeFirstChar;
+import static com.flipkart.krystal.vajram.protobuf3.Protobuf3.PROTOBUF_3;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.Proto3SchemaGen.validateModelType;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeMap;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeRepeated;
@@ -122,7 +123,8 @@ public class Proto3ModelsGen implements CodeGenerator {
     TypeElement modelRootType = codeGenContext.modelRootType();
     ClassName immutClassName = util.getImmutInterfaceName(modelRootType);
 
-    String protoClassName = getProtoClassName(codeGenContext.modelRootType());
+    String protoClassName =
+        util.getImmutModelClassName(codeGenContext.modelRootType(), PROTOBUF_3).simpleName();
     String packageName = immutClassName.packageName();
 
     // Generate the implementation class using JavaPoet
@@ -134,11 +136,6 @@ public class Proto3ModelsGen implements CodeGenerator {
     util.generateSourceFile(packageName + "." + protoClassName, javaFile.toString(), modelRootType);
 
     log.info("Generated protobuf implementation class: {}", protoClassName);
-  }
-
-  private String getProtoClassName(TypeElement modelRootType) {
-    return util.getImmutInterfaceName(modelRootType).simpleName()
-        + Protobuf3.PROTOBUF_3.modelClassesSuffix();
   }
 
   private TypeSpec generateImplementationTypeSpec(
@@ -423,7 +420,8 @@ return _serializedPayload;
               }
               """,
                 MandatoryFieldMissingException.class,
-                getProtoClassName(codeGenContext.modelRootType()),
+                util.getImmutModelClassName(codeGenContext.modelRootType(), Protobuf3.PROTOBUF_3)
+                    .simpleName(),
                 methodName);
       } else if (isOptionalReturnType) {
         getterBuilder
@@ -449,9 +447,7 @@ return _serializedPayload;
                 modelRootInfo ->
                     CodeBlock.of(
                         "new $T(_proto().get$L())",
-                        ClassName.get(
-                            util.getPackageName(modelRootInfo.element()),
-                            getProtoClassName(modelRootInfo.element())),
+                        util.getImmutModelClassName(modelRootInfo.element(), PROTOBUF_3),
                         capitalizeFirstChar(methodName)))
             .orElseGet(() -> CodeBlock.of("_proto().get$L()", capitalizeFirstChar(methodName)));
 
@@ -593,9 +589,7 @@ return _serializedPayload;
         Optional<ModelRootInfo> fieldTypeModelRoot = util.asModelRoot(method.getReturnType());
         if (fieldTypeModelRoot.isPresent()) {
           ClassName fieldProtoClassName =
-              ClassName.get(
-                  util.getPackageName(fieldTypeModelRoot.get().element()),
-                  getProtoClassName(fieldTypeModelRoot.get().element()));
+              util.getImmutModelClassName(fieldTypeModelRoot.get().element(), PROTOBUF_3);
           setterBuilder.addCode(
 """
       if($L instanceof $T _builder){

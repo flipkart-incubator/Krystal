@@ -10,7 +10,7 @@ import com.flipkart.krystal.vajram.json.Json;
 
 @ModelRoot(type = RESPONSE)
 @SupportedModelProtocols({PlainJavaObject.class, Json.class})
-public interface InnerJson extends Model {
+public interface InnerData extends Model {
   String value();
 
   int count();
