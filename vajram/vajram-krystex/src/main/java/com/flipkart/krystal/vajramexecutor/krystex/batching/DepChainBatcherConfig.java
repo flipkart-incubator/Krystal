@@ -129,7 +129,7 @@ public record DepChainBatcherConfig(
       if (defaultDependantChain.incomingDependentChain() instanceof DependentChainStart) {
         return generateInstanceId(defaultDependantChain.incomingDependentChain())
             .append('>')
-            .append(defaultDependantChain.kryonId().id())
+            .append(defaultDependantChain.vajramID().id())
             .append(':')
             .append(defaultDependantChain.latestDependency());
       } else {

@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import com.flipkart.krystal.serial.SerdeProtocol;
 
 public final class Json implements SerdeProtocol {
@@ -25,7 +26,8 @@ public final class Json implements SerdeProtocol {
           .disable(WRITE_DATES_AS_TIMESTAMPS)
           .registerModule(new GuavaModule())
           .registerModule(new JavaTimeModule())
-          .registerModule(new Jdk8Module());
+          .registerModule(new Jdk8Module())
+          .registerModule(new ParameterNamesModule());
 
   public static final ObjectReader OBJECT_READER = OBJECT_MAPPER.reader();
   public static final ObjectWriter OBJECT_WRITER = OBJECT_MAPPER.writer();

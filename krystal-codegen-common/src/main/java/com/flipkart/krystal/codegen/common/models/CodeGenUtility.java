@@ -22,7 +22,6 @@ import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.SupportedModelProtocols;
-import com.flipkart.krystal.serial.SerdeProtocol;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.googlejavaformat.java.GoogleJavaFormatTool;
@@ -803,7 +802,7 @@ public class CodeGenUtility {
     return ParameterizedTypeName.get(ClassName.get(Optional.class), box(javaType).typeName());
   }
 
-  public ClassName getImmutClassName(Element modelRootType) {
+  public ClassName getImmutInterfaceName(Element modelRootType) {
     ModelRoot modelRoot = modelRootType.getAnnotation(ModelRoot.class);
     if (modelRoot == null) {
       throw new IllegalArgumentException(
@@ -815,8 +814,8 @@ public class CodeGenUtility {
     return ClassName.get(packageName, modelRootName + modelRoot.suffixSeparator() + IMMUT_SUFFIX);
   }
 
-  public ClassName getImmutSerdeClassName(TypeElement modelRootType, SerdeProtocol serdeProtocol) {
-    ClassName immutClassName = getImmutClassName(modelRootType);
+  public ClassName getImmutModelClassName(TypeElement modelRootType, ModelProtocol serdeProtocol) {
+    ClassName immutClassName = getImmutInterfaceName(modelRootType);
     return ClassName.get(
         immutClassName.packageName(),
         immutClassName.simpleName() + serdeProtocol.modelClassesSuffix());
@@ -837,6 +836,57 @@ public class CodeGenUtility {
     } catch (Exception e) {
       error("Error generating Java file: " + e.getMessage(), originatingElement);
     }
+  }
+
+  /**
+   * Returns the TypeName to be used as the type of the field in a model.
+   *
+   * @param method the method in the model root corresponding to the model field.
+   * @param isBuilder true of field is in a builder class. false if it's in an immutable class.
+   * @param modelProtocol the model protocol to be used for the field. null means don't use any
+   *     specific model
+   * @return
+   */
+  public TypeName getModelFieldType(
+      ExecutableElement method, boolean isBuilder, @Nullable ModelProtocol modelProtocol) {
+    final TypeMirror specifiedType = method.getReturnType();
+    boolean isNullable = isAnyNullable(specifiedType, method);
+    TypeMirror inferredType = specifiedType;
+    boolean isOptional = isOptional(specifiedType);
+    if (isOptional) {
+      // For Optional<T>, use T as the parameter type
+      inferredType = getOptionalInnerType(specifiedType);
+    }
+    if (isBuilder && inferredType instanceof PrimitiveType primitiveType) {
+      inferredType = typeUtils.boxedClass(primitiveType).asType();
+    }
+    TypeName typeName = inferredType.accept(new TypeNameVisitor(), null);
+
+    Optional<ModelRootInfo> modelRoot = asModelRoot(inferredType);
+
+    if (modelRoot.isPresent()) {
+      if (isBuilder) {
+        boolean builderExtendsModelRoot = modelRoot.get().annotation().builderExtendsModelRoot();
+        if (!builderExtendsModelRoot) {
+          typeName = ClassName.get(Object.class);
+        }
+      } else {
+        typeName =
+            modelProtocol != null
+                ? getImmutModelClassName(modelRoot.get().element(), modelProtocol)
+                : getImmutInterfaceName(modelRoot.get().element());
+      }
+    }
+
+    // Add @Nullable annotation for Optional types or methods with @Nullable annotation
+    if (isOptional || isNullable || isBuilder) {
+      if (!hasNullableAnnotation(typeName)) {
+        // Add @Nullable as a type annotation
+        typeName =
+            typeName.annotated(AnnotationSpec.builder(ClassName.get(Nullable.class)).build());
+      }
+    }
+    return typeName;
   }
 
   /**
@@ -861,12 +911,6 @@ public class CodeGenUtility {
       inferredType = typeUtils.boxedClass(primitiveType).asType();
     }
     TypeName typeName = inferredType.accept(new TypeNameVisitor(), null);
-
-    Optional<TypeElement> modelRoot = asModelRoot(inferredType);
-
-    if (isBuilder && modelRoot.isPresent()) {
-      typeName = getImmutClassName(modelRoot.get()).nestedClass("Builder");
-    }
 
     // Add @Nullable annotation for Optional types or methods with @Nullable annotation
     if (isOptional || isNullable || isBuilder) {
@@ -899,7 +943,7 @@ public class CodeGenUtility {
     if (supportedModelProtocols == null) {
       return false;
     }
-    // Check if Json is mentioned in the annotation value
+    // Check if JSON is mentioned in the annotation value
     return getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
         .map(typeMirror -> processingEnv().getTypeUtils().asElement(typeMirror))
         .filter(elem -> elem instanceof QualifiedNameable)
@@ -917,7 +961,7 @@ public class CodeGenUtility {
     }
   }
 
-  public static TypeName asTypeNameWithElements(
+  public static TypeName withTypeParams(
       ClassName className, List<? extends TypeParameterElement> typeParameterElements) {
     return asTypeNameWithTypes(
         className, typeParameterElements.stream().map(TypeParameterElement::asType).toList());
@@ -950,7 +994,8 @@ public class CodeGenUtility {
             .filter(
                 annotationMirror ->
                     annotationMirror.getAnnotationType().asElement() instanceof QualifiedNameable q
-                        && q.getQualifiedName().contentEquals(annoClass.getCanonicalName()))
+                        && q.getQualifiedName()
+                            .contentEquals(requireNonNull(annoClass.getCanonicalName())))
             .findAny();
     if (annotation != null && mirror.isPresent()) {
       return new AnnotationInfo<>(annotation, mirror.get());
@@ -962,7 +1007,7 @@ public class CodeGenUtility {
     return asModelRoot(javaModelType).isPresent();
   }
 
-  public Optional<TypeElement> asModelRoot(TypeMirror javaModelType) {
+  public Optional<ModelRootInfo> asModelRoot(TypeMirror javaModelType) {
     boolean isOptional = isOptional(javaModelType);
     if (isOptional) {
       javaModelType = getOptionalInnerType(javaModelType);
@@ -970,12 +1015,16 @@ public class CodeGenUtility {
     if (!isRawAssignable(javaModelType, Model.class)) {
       return Optional.empty();
     }
-    if (typeUtils.asElement(javaModelType) instanceof TypeElement typeElement
-        && typeElement.getAnnotation(ModelRoot.class) != null) {
-      return Optional.of(typeElement);
+    if (typeUtils.asElement(javaModelType) instanceof TypeElement typeElement) {
+      ModelRoot annotation = typeElement.getAnnotation(ModelRoot.class);
+      if (annotation != null) {
+        return Optional.of(new ModelRootInfo(typeElement, annotation));
+      }
     }
     return Optional.empty();
   }
+
+  public record ModelRootInfo(TypeElement element, ModelRoot annotation) {}
 
   public record AnnotationInfo<T>(T annotation, AnnotationMirror mirror) {}
 }

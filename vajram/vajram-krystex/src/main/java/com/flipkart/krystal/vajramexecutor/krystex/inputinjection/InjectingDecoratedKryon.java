@@ -29,11 +29,9 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.google.common.collect.ImmutableMap;
 import jakarta.inject.Provider;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -78,21 +76,9 @@ class InjectingDecoratedKryon
 
   private CompletableFuture<KryonCommandResponse> injectFacets(
       DirectForwardReceive forwardReceive, VajramDefinition vajramDefinition) {
-
-    Set<FacetSpec<?, ?>> injectableFacets = new LinkedHashSet<>();
-    vajramDefinition
-        .facetSpecs()
-        .forEach(
-            facetSpec -> {
-              if (INJECTION.equals(facetSpec.facetType())) {
-                injectableFacets.add(facetSpec);
-              }
-            });
-
     for (ExecutionItem executionItem : forwardReceive.executionItems()) {
       FacetValuesBuilder facetsBuilder = executionItem.facetValues();
-      List<AutoCloseable> closeables =
-          injectFacetsOfVajram(vajramDefinition, injectableFacets, facetsBuilder);
+      List<AutoCloseable> closeables = injectFacetsOfVajram(vajramDefinition, facetsBuilder);
       // For DI frameworks which support manual lifecycle management, call close so that any
       // instance with custom lifecycle can be destroyed. Here we call close when the response is
       // received.
@@ -118,40 +104,39 @@ class InjectingDecoratedKryon
         forwardBatch.executableInvocations();
 
     ImmutableMap.Builder<InvocationId, FacetValues> newRequests = ImmutableMap.builder();
-    Set<FacetSpec<?, ?>> injectableFacets = new LinkedHashSet<>();
-    vajramDefinition
-        .facetSpecs()
-        .forEach(
-            facetSpec -> {
-              if (INJECTION.equals(facetSpec.facetType())) {
-                injectableFacets.add(facetSpec);
-              }
-            });
 
+    List<AutoCloseable> closeables = new ArrayList<>();
     for (Entry<InvocationId, ? extends FacetValues> entry : requestIdToFacets.entrySet()) {
       InvocationId invocationId = entry.getKey();
       FacetValuesBuilder facetsBuilder;
       facetsBuilder = entry.getValue()._asBuilder();
-      injectFacetsOfVajram(vajramDefinition, injectableFacets, facetsBuilder);
+      closeables.addAll(injectFacetsOfVajram(vajramDefinition, facetsBuilder));
       newRequests.put(invocationId, facetsBuilder);
     }
     KryonCommand<BatchResponse> kryonCommand =
         new ForwardReceiveBatch(
-            forwardBatch.vajramID(),
-            newRequests.build(),
-            forwardBatch.dependentChain(),
-            forwardBatch.invocationsToSkip());
+            forwardBatch.vajramID(), newRequests.build(), forwardBatch.dependentChain());
     CompletableFuture<KryonCommandResponse> resp = kryon.executeCommand(kryonCommand);
-    resp.whenComplete((kryonCommandResponse, throwable) -> {});
+    resp.whenComplete(
+        (o, throwable) -> {
+          for (var closeable : closeables) {
+            try {
+              closeable.close();
+            } catch (Exception e) {
+              log.error("Failed to close injected closeable", e);
+            }
+          }
+        });
     return resp;
   }
 
   private List<AutoCloseable> injectFacetsOfVajram(
-      VajramDefinition vajramDefinition,
-      Set<FacetSpec<?, ?>> injectableFacets,
-      FacetValuesBuilder facetsBuilder) {
+      VajramDefinition vajramDefinition, FacetValuesBuilder facetsBuilder) {
     List<AutoCloseable> closeables = new ArrayList<>();
-    for (var facetSpec : injectableFacets) {
+    for (var facetSpec : vajramDefinition.facetSpecs()) {
+      if (!INJECTION.equals(facetSpec.facetType())) {
+        continue;
+      }
       if (!(facetSpec instanceof DefaultFacetSpec<?, ?> defaultFacetSpec)) {
         continue;
       }

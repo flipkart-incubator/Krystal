@@ -7,4 +7,6 @@ module flipkart.krystal.vajram.ext.json.codegen {
   requires org.checkerframework.checker.qual;
   requires com.google.auto.service;
   requires com.google.common;
+  requires org.jspecify;
+  requires flipkart.krystal.vajram.codegen.common;
 }

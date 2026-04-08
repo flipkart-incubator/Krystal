@@ -32,4 +32,13 @@ public interface GraphQlObject extends Model {
    * @param path The current path in the GraphQL response tree
    */
   void _collectErrors(ErrorCollector errorCollector, List<Object> path);
+
+  @Override
+  GraphQlObject _newCopy();
+
+  @Override
+  GraphQlObject_Immut.Builder _asBuilder();
+
+  @Override
+  GraphQlObject_Immut _build();
 }

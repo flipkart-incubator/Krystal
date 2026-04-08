@@ -6,6 +6,15 @@ import graphql.execution.ExecutionContext;
 import graphql.execution.ExecutionStrategyParameters;
 
 public interface GraphQlObject_Immut extends GraphQlObject, ImmutableModel {
+  @Override
+  GraphQlObject _newCopy();
+
+  @Override
+  GraphQlObject_Immut.Builder _asBuilder();
+
+  @Override
+  GraphQlObject_Immut _build();
+
   interface Builder extends ImmutableModel.Builder {
 
     Builder graphql_executionContext(ExecutionContext graphql_executionContext);

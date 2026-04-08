@@ -146,6 +146,12 @@ class GraphQLEntityGen implements CodeGenerator {
                   .addModifiers(PUBLIC, ABSTRACT)
                   .build());
 
+          methodSpecs.add(
+              MethodSpec.overriding(util.getMethod(() -> Model.class.getMethod("_newCopy")))
+                  .returns(entityClassName)
+                  .addModifiers(PUBLIC, ABSTRACT)
+                  .build());
+
           typeSpec =
               util.interfaceBuilder(entityClassName.simpleName(), "")
                   .addAnnotation(

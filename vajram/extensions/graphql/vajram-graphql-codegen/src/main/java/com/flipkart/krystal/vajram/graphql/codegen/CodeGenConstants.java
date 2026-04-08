@@ -8,6 +8,7 @@ import java.nio.file.Path;
 public class CodeGenConstants {
 
   public static final Path GRAPHQL_SRC_DIR = Path.of("src", "main", "graphqls");
+  public static final String RESERVED_GRAPHQL_FIELDS_PREFIX = "graphql_";
 
   static final AnnotationSpec IF_ABSENT_FAIL =
       AnnotationSpec.builder(IfAbsent.class)
