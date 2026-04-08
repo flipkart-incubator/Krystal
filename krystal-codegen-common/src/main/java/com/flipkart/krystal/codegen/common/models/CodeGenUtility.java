@@ -873,7 +873,7 @@ public class CodeGenUtility {
       } else {
         typeName =
             modelProtocol != null
-                ? getImmutModelClassName(modelRoot.get().element, modelProtocol)
+                ? getImmutModelClassName(modelRoot.get().element(), modelProtocol)
                 : getImmutInterfaceName(modelRoot.get().element());
       }
     }
