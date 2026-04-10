@@ -490,6 +490,7 @@
           <option value="argument" />
           <option value="BusyWait" />
           <option value="ClassCanBeRecord" />
+          <option value="EqualsDoesntCheckParameterClass" />
         </list>
       </option>
     </inspection_tool>
@@ -543,6 +544,7 @@
     <inspection_tool class="UnsupportedChronoFieldUnitCall" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="UnusedReturnValue" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="IGNORE_BUILDER_PATTERN" value="true" />
+      <option name="highestModifier" value="protected" />
     </inspection_tool>
     <inspection_tool class="UnusedVersionCatalogEntry" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="UsagesOfObsoleteApi" enabled="false" level="TEXT ATTRIBUTES" enabled_by_default="false" />

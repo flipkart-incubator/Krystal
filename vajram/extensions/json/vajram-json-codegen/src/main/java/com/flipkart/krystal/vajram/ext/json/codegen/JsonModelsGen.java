@@ -17,22 +17,29 @@ import static javax.lang.model.element.Modifier.STATIC;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
+import com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility.ModelRootInfo;
 import com.flipkart.krystal.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
 import com.flipkart.krystal.model.Model;
+import com.flipkart.krystal.model.ModelListBuilder;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.vajram.json.Json;
 import com.flipkart.krystal.vajram.json.SerializableJsonModel;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ClassName;
@@ -95,7 +102,7 @@ final class JsonModelsGen implements CodeGenerator {
       TypeElement modelRootType,
       List<ExecutableElement> modelMethods,
       ClassName immutableModelName) {
-    ClassName immutableJsonModelName = util.getImmutModelClassName(modelRootType, Json.JSON);
+    ClassName immutableJsonModelName = util.getImmutClassName(modelRootType, Json.JSON);
     ClassName builderType = immutableJsonModelName.nestedClass("Builder");
     TypeSpec.Builder classBuilder =
         util.classBuilder(
@@ -149,7 +156,8 @@ return _serializedPayload;
 
     for (ExecutableElement method : modelMethods) {
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
-      MethodSpec pojoGetterMethod = getterMethod(method, false, util).build();
+      MethodSpec pojoGetterMethod =
+          getterMethod(method, false, JSON, util).addAnnotation(Override.class).build();
       MethodSpec.Builder getterBuilder =
           MethodSpec.methodBuilder(pojoGetterMethod.name)
               .returns(pojoGetterMethod.returnType)
@@ -163,12 +171,24 @@ return _serializedPayload;
         getterBuilder.addAnnotation(
             AnnotationSpec.builder(JsonDeserialize.class)
                 .addMember(
-                    "as",
+                    switch (fieldModelRootInfo.get().containerType()) {
+                      case LIST -> "contentAs";
+                      default -> "as";
+                    },
                     "$T.class",
-                    util.getImmutModelClassName(fieldModelRootInfo.get().element(), JSON))
+                    util.getImmutClassName(fieldModelRootInfo.get().element(), JSON))
                 .build());
       }
       methods.add(getterBuilder.build());
+
+      String fieldName = method.getSimpleName().toString();
+      MethodSpec.Builder setter =
+          MethodSpec.methodBuilder(fieldName)
+              .addModifiers(PRIVATE)
+              .addParameter(util.getVariableType(method, false), fieldName)
+              .addAnnotation(JsonSetter.class);
+      setter.addCode(setterCode(method));
+      methods.add(setter.build());
     }
     methods.addAll(
         List.of(
@@ -201,56 +221,90 @@ return _serializedPayload;
                 .addStatement("this._serializedPayload = _serializedPayload")
                 .addStatement("this._deserializationPending = true")
                 .build())
-        .addMethod(allArgCtor(modelMethods, util).build())
+        .addMethod(allArgCtor(modelMethods).build())
         .addMethod(copyCtor(modelRootType, util))
         .addMethods(methods)
         .addType(builderClass)
         .build();
   }
 
-  public static MethodSpec.Builder allArgCtor(
-      List<ExecutableElement> modelMethods, CodeGenUtility util) {
+  public MethodSpec.Builder allArgCtor(List<ExecutableElement> modelMethods) {
     MethodSpec.Builder constructorBuilder = MethodSpec.constructorBuilder().addModifiers(PUBLIC);
 
     for (ExecutableElement method : modelMethods) {
       String fieldName = method.getSimpleName().toString();
-
       constructorBuilder.addParameter(
           ParameterSpec.builder(util.getVariableType(method, false), fieldName).build());
-      Optional<ModelRootInfo> modelRootInfo = util.asModelRoot(method.getReturnType());
-      if (modelRootInfo.isPresent()) {
-        ClassName immutJsonClassName =
-            util.getImmutModelClassName(modelRootInfo.get().element(), JSON);
-        constructorBuilder.addStatement(
-"""
-    this.$L =
-      $L == null
-        ? null
-        $L
-        : $L instanceof $T _immutJson
-          ? _immutJson
-          : new $T($L);
-""",
-            fieldName,
-            fieldName,
-            modelRootInfo.get().annotation().builderExtendsModelRoot()
-                ? CodeBlock.of(
-                    ": $L instanceof $T _jsonBuilder ? _jsonBuilder._build() ",
-                    fieldName,
-                    immutJsonClassName.nestedClass("Builder"))
-                : CodeBlock.of(""),
-            fieldName,
-            immutJsonClassName,
-            immutJsonClassName,
-            fieldName);
-      } else {
-        // For other field types, just assign the parameter directly
-        constructorBuilder.addStatement("this.$L = $L", fieldName, fieldName);
-      }
+      constructorBuilder.addStatement("this.$L($L)", fieldName, fieldName);
     }
     return constructorBuilder
         .addAnnotation(JsonCreator.class)
         .addStatement("this._deserializationPending = false");
+  }
+
+  private CodeBlock setterCode(ExecutableElement method) {
+    String fieldName = method.getSimpleName().toString();
+    Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
+    if (fieldModelRootInfo.isPresent()) {
+      ClassName immutJsonClassName =
+          util.getImmutClassName(fieldModelRootInfo.get().element(), JSON);
+      return switch (fieldModelRootInfo.get().containerType()) {
+        case NO_CONTAINER ->
+            CodeBlock.of(
+"""
+  this.$L =
+    $L == null
+      ? null
+      $L
+      : $L instanceof $T _immutJson
+        ? _immutJson
+        : new $T($L);
+""",
+                fieldName,
+                fieldName,
+                fieldModelRootInfo.get().annotation().builderExtendsModelRoot()
+                    ? CodeBlock.of(
+                        ": $L instanceof $T _jsonBuilder ? _jsonBuilder._build();",
+                        fieldName,
+                        immutJsonClassName.nestedClass("Builder"))
+                    : CodeBlock.of(""),
+                fieldName,
+                immutJsonClassName,
+                immutJsonClassName,
+                fieldName);
+        case LIST ->
+            CodeBlock.of(
+"""
+  this.$L = $L == null
+    ? null
+    : $T.copyOf(
+        $T.transform($L, _e -> ($T) _e._build()));
+""",
+                fieldName,
+                fieldName,
+                ImmutableList.class,
+                Lists.class,
+                fieldName,
+                util.getModelFieldType(method, false, null).elementType());
+        case MAP ->
+            CodeBlock.of(
+"""
+  this.$L = $L == null
+      ? null
+      : $T.copyOf(
+          $T.transformValues($L, _e -> ($T) _e._build()));
+""",
+                fieldName,
+                fieldName,
+                ImmutableMap.class,
+                Maps.class,
+                fieldName,
+                util.getModelFieldType(method, false, null).elementType());
+      };
+    } else {
+      // For other field types, just assign the parameter directly
+      return CodeBlock.of("this.$L = $L;", fieldName, fieldName);
+    }
   }
 
   private @NonNull List<FieldSpec> fields(List<ExecutableElement> modelMethods, boolean isBuilder) {
@@ -258,9 +312,17 @@ return _serializedPayload;
     for (ExecutableElement method : modelMethods) {
       FieldSpec.Builder fieldBuilder =
           FieldSpec.builder(
-              util.getModelFieldType(method, isBuilder, JSON),
+              util.getModelFieldType(method, isBuilder, Json.JSON).fieldType(),
               method.getSimpleName().toString(),
               PRIVATE);
+      Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
+      if (isBuilder
+          && fieldModelRootInfo.isPresent()
+          && ContainerType.LIST.equals(fieldModelRootInfo.get().containerType())) {
+        fieldBuilder.initializer(
+            "$T.ofModels($T.of())", ModelListBuilder.class, ImmutableList.class);
+      }
+
       fields.add(fieldBuilder.build());
     }
     return fields;
@@ -307,7 +369,7 @@ return _serializedPayload;
       TypeElement modelRootType,
       List<ExecutableElement> modelMethods,
       ClassName immutableModelName) {
-    ClassName immutableJsonName = util.getImmutModelClassName(modelRootType, Json.JSON);
+    ClassName immutableJsonName = util.getImmutClassName(modelRootType, Json.JSON);
     var builderSpec = util.classBuilder("Builder", modelRootType.getQualifiedName().toString());
     ModelRoot modelRoot = requireNonNull(modelRootType.getAnnotation(ModelRoot.class));
 
@@ -316,7 +378,7 @@ return _serializedPayload;
 
     ClassName builderType = immutableJsonName.nestedClass("Builder");
     List<MethodSpec> dataAccessMethods =
-        builderGettersAndSetters(modelMethods, builderType, modelRoot, util);
+        builderGettersAndSetters(modelMethods, builderType, modelRoot, JSON, util);
 
     // Create the builder class
     return builderSpec

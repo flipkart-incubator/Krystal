@@ -53,4 +53,25 @@ class JsonResponseTest {
             .nestedData(InnerData_ImmutPojo._builder().value("Hello").count(11));
     assertThat(immutJsonBuilder._build()).isEqualTo(immutJsonBuilder._newCopy()._build());
   }
+
+  @Test
+  void nestedPojoList_build_success() {
+    JsonResponse_ImmutPojo.Builder immutJsonBuilder =
+        JsonResponse_ImmutPojo._builder()
+            .string("Hello")
+            .optionalInteger(42)
+            .nullableIntegerMayFailConditionally(30)
+            .nullableInteger(43)
+            .optionalIntArray(List.of(1, 4, 5, 2))
+            .mandatoryInt(5)
+            .defaultInt(89)
+            .mandatoryStringPartialConstruction("hihihi")
+            .mapTypedField(Map.of("X", "A", "Y", "B", "Z", "C"))
+            .byteArray(new ByteArray(new byte[] {23, 45, 23, 56, 67, 64, 45, 45, 3, 45, 56}))
+            .nestedDataList(
+                List.of(
+                    InnerData_ImmutPojo._builder().value("Hello").count(11)._build(),
+                    InnerData_ImmutPojo._builder().value("Hello Again").count(34)._build()));
+    assertThat(immutJsonBuilder._build()).isEqualTo(immutJsonBuilder._newCopy()._build());
+  }
 }

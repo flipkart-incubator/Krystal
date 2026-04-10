@@ -140,8 +140,7 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
         }
 
         ClassName defaultModelBuilderName =
-            util.codegenUtil()
-                .getImmutModelClassName(responseElement, defaultConfig.serdeProtocol());
+            util.codegenUtil().getImmutClassName(responseElement, defaultConfig.serdeProtocol());
         providingLogics.add(
             CodeBlock.of(
                 """
@@ -176,8 +175,7 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
                   return $T._builder();
                 }""",
                 config.serdeProtocol().defaultContentType(),
-                util.codegenUtil()
-                    .getImmutModelClassName(responseElement, config.serdeProtocol())));
+                util.codegenUtil().getImmutClassName(responseElement, config.serdeProtocol())));
       }
       providingLogics.add(
           CodeBlock.of(

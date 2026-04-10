@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.codegen.common.generators;
 
+import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType.NO_CONTAINER;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.asClassName;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.asTypeNameWithTypes;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.withTypeParams;
@@ -16,6 +17,8 @@ import static javax.lang.model.element.Modifier.STATIC;
 
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
+import com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType;
+import com.flipkart.krystal.codegen.common.models.CodeGenUtility.ModelFieldTypeInfo;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility.ModelRootInfo;
 import com.flipkart.krystal.codegen.common.models.CodeGenerationException;
 import com.flipkart.krystal.codegen.common.models.DeclaredTypeVisitor;
@@ -28,18 +31,26 @@ import com.flipkart.krystal.model.ImmutableModel.Builder;
 import com.flipkart.krystal.model.MandatoryFieldMissingException;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelClusterRoot;
+import com.flipkart.krystal.model.ModelListBuilder;
+import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.ModelRoot.ModelType;
 import com.flipkart.krystal.model.PlainJavaObject;
+import com.flipkart.krystal.model.SimpleModelList;
 import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.model.UnmodifiableModelList;
 import com.flipkart.krystal.vajram.Trait;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
+import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeVariableName;
@@ -471,7 +482,8 @@ public final class JavaModelsGen implements CodeGenerator {
 
       Optional<ModelRootInfo> modelRootInfo = util.asModelRoot(method.getReturnType());
       if (modelRootInfo.isPresent()
-          && !modelRootInfo.get().annotation().builderExtendsModelRoot()) {
+          && !modelRootInfo.get().annotation().builderExtendsModelRoot()
+          && NO_CONTAINER.equals(modelRootInfo.get().containerType())) {
         MethodSpec.Builder methodBuilder =
             MethodSpec.methodBuilder(methodName)
                 .addModifiers(PUBLIC, ABSTRACT)
@@ -516,7 +528,7 @@ public final class JavaModelsGen implements CodeGenerator {
   private TypeSpec generateImmutablePojo(
       TypeElement modelRootType, List<ExecutableElement> modelMethods) {
     ClassName immutInterfaceNameRaw = util.getImmutInterfaceName(modelRootType);
-    ClassName immutablePojoNameRaw = util.getImmutModelClassName(modelRootType, POJO);
+    ClassName immutablePojoNameRaw = util.getImmutClassName(modelRootType, POJO);
     TypeName immutIfaceType =
         withTypeParams(immutInterfaceNameRaw, modelRootType.getTypeParameters());
     TypeName immutPojoType =
@@ -565,7 +577,7 @@ public final class JavaModelsGen implements CodeGenerator {
     // Create getter methods for the POJO class
     List<MethodSpec> methods = new ArrayList<>();
     for (ExecutableElement method : modelMethods) {
-      methods.add(getterMethod(method, false, util).build());
+      methods.add(getterMethod(method, false, null, util).addAnnotation(Override.class).build());
     }
 
     MethodSpec.Builder asBuilderMethodBuilder = asBuilder(modelMethods, builderType, util);
@@ -645,17 +657,7 @@ public final class JavaModelsGen implements CodeGenerator {
     asBuilderMethodBuilder.addCode("return new $T()", builderType);
     for (ExecutableElement method : modelMethods) {
       String fieldName = method.getSimpleName().toString();
-      Optional<ModelRootInfo> fieldModelRoot = util.asModelRoot(method.getReturnType());
-      if (fieldModelRoot.isPresent()) {
-        asBuilderMethodBuilder.addCode(
-            ".$L($L == null ? null :($T)$L._asBuilder())",
-            fieldName,
-            fieldName,
-            util.getImmutInterfaceName(fieldModelRoot.get().element()).nestedClass("Builder"),
-            fieldName);
-      } else {
-        asBuilderMethodBuilder.addCode(".$L($L)", fieldName, fieldName);
-      }
+      asBuilderMethodBuilder.addCode(".$L($L)", fieldName, fieldName);
     }
     asBuilderMethodBuilder.addCode(";");
     return asBuilderMethodBuilder;
@@ -671,13 +673,45 @@ public final class JavaModelsGen implements CodeGenerator {
       constructorBuilder.addParameter(
           ParameterSpec.builder(util.getVariableType(method, false), fieldName).build());
 
-      if (util.isModelRoot(method.getReturnType())) {
-        constructorBuilder.addStatement(
-            "this.$L = $L == null ? null : ($T)$L._build()",
-            fieldName,
-            fieldName,
-            util.getModelFieldType(method, false, null),
-            fieldName);
+      Optional<ModelRootInfo> modelRootInfo = util.asModelRoot(method.getReturnType());
+      if (modelRootInfo.isPresent()) {
+        switch (modelRootInfo.get().containerType()) {
+          case NO_CONTAINER ->
+              constructorBuilder.addStatement(
+                  "this.$L = $L == null ? null : ($T)$L._build()",
+                  fieldName,
+                  fieldName,
+                  util.getModelFieldType(method, false, null).fieldType(),
+                  fieldName);
+          case LIST ->
+              constructorBuilder.addStatement(
+"""
+    this.$L = $L == null
+        ? null
+        : $T.copyOf(
+            $T.transform($L, _e -> ($T) _e._build()))
+""",
+                  fieldName,
+                  fieldName,
+                  ImmutableList.class,
+                  Lists.class,
+                  fieldName,
+                  util.getModelFieldType(method, false, null).elementType());
+          case MAP ->
+              constructorBuilder.addStatement(
+"""
+this.$L = $L == null
+        ? null
+        : $T.copyOf(
+            $T.transformValues($L, _e -> ($T) _e._build()))
+""",
+                  fieldName,
+                  fieldName,
+                  ImmutableMap.class,
+                  Maps.class,
+                  fieldName,
+                  util.getModelFieldType(method, false, null).elementType());
+        }
       } else {
         // For other field types, just assign the parameter directly
         constructorBuilder.addStatement("this.$L = $L", fieldName, fieldName);
@@ -709,29 +743,41 @@ public final class JavaModelsGen implements CodeGenerator {
   }
 
   public static MethodSpec.Builder getterMethod(
-      ExecutableElement method, boolean isBuilder, CodeGenUtility util) {
-    TypeMirror returnType = method.getReturnType();
+      ExecutableElement method,
+      boolean isBuilder,
+      @Nullable ModelProtocol modelProtocol,
+      CodeGenUtility util) {
+    TypeMirror specifiedReturnType = method.getReturnType();
+    ModelFieldTypeInfo modelFieldType = util.getModelFieldType(method, true, null);
+    Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(specifiedReturnType);
     String fieldName = method.getSimpleName().toString();
+    TypeName actualReturnType =
+        isBuilder && fieldModelRootInfo.isPresent()
+            ? switch (modelFieldType.containerType()) {
+              case NO_CONTAINER -> TypeName.get(specifiedReturnType);
+              case LIST ->
+                  ParameterizedTypeName.get(
+                      ClassName.get(UnmodifiableModelList.class),
+                      TypeName.get(fieldModelRootInfo.get().type()),
+                      util.getImmutTypeName(fieldModelRootInfo.get().type(), modelProtocol));
+              case MAP -> throw new UnsupportedOperationException("Not supported yet.");
+            }
+            : TypeName.get(specifiedReturnType)
+                .annotated(
+                    specifiedReturnType.getAnnotationMirrors().stream()
+                        .map(AnnotationSpec::get)
+                        .toList());
     MethodSpec.Builder methodBuilder =
-        MethodSpec.methodBuilder(fieldName)
-            .addModifiers(PUBLIC)
-            .addAnnotation(Override.class)
-            .returns(
-                TypeName.get(returnType)
-                    .annotated(
-                        returnType.getAnnotationMirrors().stream()
-                            .map(AnnotationSpec::get)
-                            .toList()));
-
+        MethodSpec.methodBuilder(fieldName).addModifiers(PUBLIC).returns(actualReturnType);
     // If the return type is Optional<T>, wrap the field in Optional.ofNullable()
-    if (util.isOptional(returnType)) {
+    if (util.isOptional(specifiedReturnType)) {
       methodBuilder.addStatement(
           "return $T.ofNullable($L)",
           Optional.class,
-          getFieldAccessorExpression(isBuilder, fieldName, returnType, util));
+          getFieldAccessorExpression(isBuilder, fieldName, specifiedReturnType, util));
     } else {
       if (util.getIfAbsent(method).value().usePlatformDefault()
-          && !returnType.getKind().isPrimitive()) {
+          && !specifiedReturnType.getKind().isPrimitive()) {
         try {
           methodBuilder.addCode(
               """
@@ -740,21 +786,25 @@ public final class JavaModelsGen implements CodeGenerator {
               }
               """,
               fieldName,
-              new DeclaredTypeVisitor(util, method)
-                  .visit(returnType)
-                  .defaultValueExpr(util.processingEnv()));
+              asClassName(actualReturnType)
+                      .canonicalName()
+                      .equals(UnmodifiableModelList.class.getCanonicalName())
+                  ? CodeBlock.of("new $T()", SimpleModelList.class)
+                  : new DeclaredTypeVisitor(util, method)
+                      .visit(specifiedReturnType)
+                      .defaultValueExpr(util.processingEnv()));
         } catch (CodeGenerationException e) {
           throw util.errorAndThrow(
               """
                   Could not find default value expression for specified type %s. \
                   Either the relevant type was not configured properly in a DataTypeFactory \
                   or the @IfAbsent() annotation is incorrectly specified."""
-                  .formatted(returnType),
+                  .formatted(specifiedReturnType),
               method);
         }
       }
       methodBuilder.addStatement(
-          "return $L", getFieldAccessorExpression(isBuilder, fieldName, returnType, util));
+          "return $L", getFieldAccessorExpression(isBuilder, fieldName, specifiedReturnType, util));
     }
     return methodBuilder;
   }
@@ -765,27 +815,29 @@ public final class JavaModelsGen implements CodeGenerator {
 
     Optional<ModelRootInfo> modelRoot = util.asModelRoot(returnType);
     if (isBuilder && modelRoot.isPresent()) {
-      boolean builderExtendsModelRoot =
-          modelRoot
-              .map(ModelRootInfo::annotation)
-              .map(ModelRoot::builderExtendsModelRoot)
-              .orElse(false);
+      boolean builderExtendsModelRoot = modelRoot.get().annotation().builderExtendsModelRoot();
+      // Since builder extends model root, we can return the builder as is.
+      // Since builder does not extend model root, we can have to convert it into the model
+      // root by calling build.
       fieldAccessorCode =
-          builderExtendsModelRoot
-              // Since builder extends model root, we can return the builder as is.
-              ? CodeBlock.of("$L", fieldName)
-              // Since builder does not extend model root, we can have to convert it into the model
-              // root by calling build.
-              : CodeBlock.of(
-"""
-$L instanceof $T _builder
-  ? _builder._build()
-  : $L instanceof $T _immutModel ? _immutModel : null
-""",
-                  fieldName,
-                  util.getImmutInterfaceName(modelRoot.get().element()).nestedClass("Builder"),
-                  fieldName,
-                  util.getImmutInterfaceName(modelRoot.get().element()));
+          !builderExtendsModelRoot
+              ? switch (modelRoot.get().containerType()) {
+                case NO_CONTAINER ->
+                    CodeBlock.of(
+                        """
+                    $L instanceof $T _builder
+                      ? _builder._build()
+                      : $L instanceof $T _immutModel ? _immutModel : null
+                    """,
+                        fieldName,
+                        util.getImmutInterfaceName(modelRoot.get().element())
+                            .nestedClass("Builder"),
+                        fieldName,
+                        util.getImmutInterfaceName(modelRoot.get().element()));
+                case LIST -> CodeBlock.of("$L.asImmutModelList()", fieldName);
+                case MAP -> CodeBlock.of("$L.asModelMap()", fieldName);
+              }
+              : CodeBlock.of("$L", fieldName);
     }
     return fieldAccessorCode;
   }
@@ -811,15 +863,22 @@ $L instanceof $T _builder
     List<FieldSpec> fields = new ArrayList<>();
     for (ExecutableElement method : modelMethods) {
       String fieldName = method.getSimpleName().toString();
-      TypeName fieldType = util.getModelFieldType(method, true, null);
-      fields.add(FieldSpec.builder(fieldType, fieldName, PRIVATE).build());
+      TypeName fieldType = util.getModelFieldType(method, true, null).fieldType();
+      FieldSpec.Builder fieldBuilder = FieldSpec.builder(fieldType, fieldName, PRIVATE);
+      Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
+      if (fieldModelRootInfo.isPresent()
+          && ContainerType.LIST.equals(fieldModelRootInfo.get().containerType())) {
+        fieldBuilder.initializer(
+            "$T.ofModels($T.of())", ModelListBuilder.class, ImmutableList.class);
+      }
+      fields.add(fieldBuilder.build());
     }
 
     // Create no-arg constructor
     MethodSpec noArgConstructor = MethodSpec.constructorBuilder().addModifiers(PRIVATE).build();
 
     List<MethodSpec> dataAccessMethods =
-        builderGettersAndSetters(modelMethods, builderType, modelRoot, util);
+        builderGettersAndSetters(modelMethods, builderType, modelRoot, null, util);
 
     MethodSpec.Builder buildMethodBuilder =
         buildForBuilder(modelMethods, immutableModelName, immutablePojoName, util);
@@ -863,6 +922,7 @@ $L instanceof $T _builder
 
     // Validate fields based on IfAbsent annotation strategies
     for (ExecutableElement method : modelMethods) {
+      Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
       String fieldName = method.getSimpleName().toString();
       TypeMirror returnType = method.getReturnType();
       TypeMirror actualType = util.getOptionalInnerType(returnType);
@@ -884,8 +944,14 @@ $L instanceof $T _builder
                   fieldName);
           case ASSUME_DEFAULT_VALUE -> {
             try {
+              CodeBlock defaultValueExpr = dataType.defaultValueExpr(util.processingEnv());
               buildMethodBuilder.addStatement(
-                  "this.$N = $L", fieldName, dataType.defaultValueExpr(util.processingEnv()));
+                  "this.$N = $L",
+                  fieldName,
+                  fieldModelRootInfo.isPresent()
+                          && ContainerType.LIST.equals(fieldModelRootInfo.get().containerType())
+                      ? CodeBlock.of("$T.ofModels($L)", ModelListBuilder.class, defaultValueExpr)
+                      : defaultValueExpr);
             } catch (CodeGenerationException e) {
               throw util.errorAndThrow(
                   "Could not find default value expression for type '%s'. Please check if @IfAbsent(ASSUME_DEFAULT_VALUE) is appropriate for this type."
@@ -929,7 +995,8 @@ $L instanceof $T _builder
       String fieldName = method.getSimpleName().toString();
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
       if (fieldModelRootInfo.isPresent()
-          && !fieldModelRootInfo.get().annotation().builderExtendsModelRoot()) {
+          && !fieldModelRootInfo.get().annotation().builderExtendsModelRoot()
+          && NO_CONTAINER.equals(fieldModelRootInfo.get().containerType())) {
         builderCopyMethodBuilder.addCode(
 """
     if($L instanceof $T _builder) {
@@ -959,32 +1026,44 @@ $L instanceof $T _builder
       List<ExecutableElement> modelMethods,
       TypeName builderType,
       ModelRoot modelRoot,
+      @Nullable ModelProtocol modelProtocol,
       CodeGenUtility util) {
     // Create setter methods
     List<MethodSpec> dataAccessMethods = new ArrayList<>();
     for (ExecutableElement method : modelMethods) {
       String methodName = method.getSimpleName().toString();
-
+      Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
       dataAccessMethods.add(
           MethodSpec.methodBuilder(methodName)
               .addModifiers(PUBLIC)
               .addParameter(util.getVariableType(method, true), methodName)
               .addAnnotation(Override.class)
               .returns(builderType)
-              .addStatement("this.$L = $L", methodName, methodName)
+              .addCode(
+                  fieldModelRootInfo.isPresent()
+                          && ContainerType.LIST.equals(fieldModelRootInfo.get().containerType())
+                      ? CodeBlock.of(
+"""
+    this.$L.clear();
+    this.$L.addAllModels($L);
+""",
+                          methodName,
+                          methodName,
+                          methodName)
+                      : CodeBlock.of("this.$L = $L;", methodName, methodName))
               .addStatement("return this")
               .build());
 
       Optional<ModelRootInfo> fieldModelRoot = util.asModelRoot(method.getReturnType());
       if (fieldModelRoot.isPresent()
-          && !fieldModelRoot.get().annotation().builderExtendsModelRoot()) {
+          && !fieldModelRoot.get().annotation().builderExtendsModelRoot()
+          && NO_CONTAINER.equals(fieldModelRoot.get().containerType())) {
+        ClassName fieldBuilderType =
+            util.getImmutInterfaceName(fieldModelRoot.get().element()).nestedClass("Builder");
         dataAccessMethods.add(
             MethodSpec.methodBuilder(methodName)
                 .addModifiers(PUBLIC)
-                .addParameter(
-                    util.getImmutInterfaceName(fieldModelRoot.get().element())
-                        .nestedClass("Builder"),
-                    methodName)
+                .addParameter(fieldBuilderType, methodName)
                 .addAnnotation(Override.class)
                 .returns(builderType)
                 .addStatement("this.$L = $L", methodName, methodName)
@@ -992,8 +1071,14 @@ $L instanceof $T _builder
                 .build());
       }
 
-      if (modelRoot.builderExtendsModelRoot()) {
-        dataAccessMethods.add(getterMethod(method, true, util).build());
+      if (modelRoot.builderExtendsModelRoot()
+          || (fieldModelRoot.isPresent()
+              && !NO_CONTAINER.equals(fieldModelRoot.get().containerType()))) {
+        MethodSpec.Builder getterMethod = getterMethod(method, true, modelProtocol, util);
+        if (modelRoot.builderExtendsModelRoot()) {
+          getterMethod.addAnnotation(Override.class);
+        }
+        dataAccessMethods.add(getterMethod.build());
       }
     }
     return dataAccessMethods;
