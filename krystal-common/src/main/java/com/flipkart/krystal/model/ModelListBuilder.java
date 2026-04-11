@@ -141,6 +141,7 @@ public final class ModelListBuilder<
   private B ensureBuilderAtIndex(int i) {
     Model elementAtIndex = models().get(i);
     if (elementAtIndex instanceof ImmutableModel _immut) {
+      ensureMutable();
       ImmutableModel.Builder builder = _immut._asBuilder();
       models().set(i, builder);
       return (B) builder;
