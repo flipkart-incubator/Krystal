@@ -61,4 +61,11 @@ public interface Proto3LatticeSampleResponse extends Model {
   @SerialId(12)
   @IfAbsent(ASSUME_DEFAULT_VALUE)
   List<ProtoMessage> protoMessages();
+
+  @SerialId(13)
+  @Nullable SubMessage subMessage();
+
+  @SerialId(14)
+  @IfAbsent(ASSUME_DEFAULT_VALUE)
+  List<SubMessage> subMessages();
 }

@@ -9,20 +9,20 @@ import java.util.List;
 import java.util.RandomAccess;
 import lombok.Getter;
 
-public class SimpleModelList<M extends Model, I extends ImmutableModel> extends AbstractList<M>
+public class ModelsListView<M extends Model, I extends ImmutableModel> extends AbstractList<M>
     implements RandomAccess, UnmodifiableModelList<M, I> {
 
   private final List<M> delegate;
 
   @Getter(PACKAGE)
-  private final ModelListBuilder<?, ?, ?> source;
+  private final ModelListBuilder<M, I, ?> source;
 
-  public SimpleModelList() {
-    this(ModelListBuilder.ofModels(List.of()));
+  public ModelsListView() {
+    this(ModelListBuilder.empty());
   }
 
   @SuppressWarnings("unchecked")
-  public SimpleModelList(ModelListBuilder<?, ?, ?> modelListBuilder) {
+  public ModelsListView(ModelListBuilder<M, I, ?> modelListBuilder) {
     this.source = modelListBuilder;
     this.delegate =
         Lists.transform(
@@ -44,7 +44,7 @@ public class SimpleModelList<M extends Model, I extends ImmutableModel> extends 
   }
 
   @SuppressWarnings("unchecked")
-  public SimpleModelList<I, I> asImmutableModelsList() {
-    return (SimpleModelList<I, I>) this;
+  public ModelsListView<I, I> asImmutableModelsList() {
+    return (ModelsListView<I, I>) this;
   }
 }

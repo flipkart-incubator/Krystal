@@ -51,5 +51,9 @@ public interface JsonResponse extends Model {
 
   InnerData nestedData();
 
+  InnerDataV2 nestedDataV2();
+
   List<InnerData> nestedDataList();
+
+  List<InnerDataV2> nestedDataListV2();
 }

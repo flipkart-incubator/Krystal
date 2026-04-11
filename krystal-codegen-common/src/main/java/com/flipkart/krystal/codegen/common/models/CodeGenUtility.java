@@ -919,17 +919,18 @@ public class CodeGenUtility {
       }
     }
     TypeName finalTypeName;
-    Optional<ModelRootInfo> modelRootInfo = asModelRoot(inferredType);
+    Optional<ModelRootInfo> fieldModelRootInfo = asModelRoot(inferredType);
     ContainerType containerType = isList ? ContainerType.LIST : ContainerType.NO_CONTAINER;
 
-    if (modelRootInfo.isPresent()) {
-      final ClassName immutType = getImmutClassName(modelRootInfo.get().element(), modelProtocol);
-      containerType = modelRootInfo.get().containerType();
+    if (fieldModelRootInfo.isPresent()) {
+      final ClassName immutType =
+          getImmutClassName(fieldModelRootInfo.get().element(), modelProtocol);
+      containerType = fieldModelRootInfo.get().containerType();
       finalTypeName =
-          switch (modelRootInfo.get().containerType()) {
+          switch (fieldModelRootInfo.get().containerType()) {
             case NO_CONTAINER -> {
               if (isBuilder) {
-                if (!modelRootInfo.get().annotation().builderExtendsModelRoot()) {
+                if (!fieldModelRootInfo.get().annotation().builderExtendsModelRoot()) {
                   yield ClassName.get(Object.class);
                 }
               } else {
@@ -947,7 +948,7 @@ public class CodeGenUtility {
               } else {
                 yield ParameterizedTypeName.get(
                     ClassName.get(ImmutableList.class),
-                    TypeName.get(modelRootInfo.get().element().asType()));
+                    TypeName.get(fieldModelRootInfo.get().element().asType()));
               }
             }
             case MAP -> throw new UnsupportedOperationException();
@@ -1090,7 +1091,8 @@ public class CodeGenUtility {
             "Optional of Optional (Optional<Optional<..>>) is not supported by Krystal Modelling protocol",
             typeUtils.asElement(javaModelType));
       }
-    } else if (isListType(javaModelType)) {
+    }
+    if (isListType(javaModelType)) {
       javaModelType = getContentType(javaModelType);
       if (isListType(javaModelType)) {
         error(
@@ -1124,5 +1126,10 @@ public class CodeGenUtility {
     NO_CONTAINER,
     LIST,
     MAP,
+    ;
+
+    public boolean isContainer() {
+      return NO_CONTAINER != this;
+    }
   }
 }

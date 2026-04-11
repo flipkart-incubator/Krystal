@@ -385,14 +385,16 @@ return _serializedPayload;
       String methodName,
       boolean isBuilder) {
 
-    Optional<ModelRootInfo> modelRootInfo = util.asModelRoot(method.getReturnType());
+    Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
     if (isProtoTypeRepeated(dataType)) {
-      if (modelRootInfo.isPresent() && !isBuilder) {
+      if (fieldModelRootInfo.isPresent()) {
+        ClassName immutClassName =
+            util.getImmutClassName(fieldModelRootInfo.get().element(), PROTOBUF_3);
         getterBuilder.addStatement(
             "return $T.transform(_proto().get$LList(), $T::new)",
             Lists.class,
             capitalizeFirstChar(methodName),
-            util.getImmutTypeName(modelRootInfo.get().type(), PROTOBUF_3));
+            immutClassName);
       } else {
         // For repeated fields, use getXList() method
         getterBuilder.addStatement("return _proto().get$LList()", capitalizeFirstChar(methodName));
@@ -448,7 +450,7 @@ return _serializedPayload;
       }
     }
     CodeBlock creatorCode =
-        modelRootInfo
+        fieldModelRootInfo
             .map(
                 _m ->
                     CodeBlock.of(

@@ -193,7 +193,7 @@ return _serializedPayload;
     methods.addAll(
         List.of(
             newCopyForImmut(modelMethods, immutableJsonModelName).build(),
-            asBuilder(modelMethods, builderType, util).build(),
+            asBuilder(modelMethods, builderType).build(),
             MethodSpec.methodBuilder("_builder")
                 .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
                 .returns(builderType)
@@ -248,63 +248,73 @@ return _serializedPayload;
     if (fieldModelRootInfo.isPresent()) {
       ClassName immutJsonClassName =
           util.getImmutClassName(fieldModelRootInfo.get().element(), JSON);
+
       return switch (fieldModelRootInfo.get().containerType()) {
         case NO_CONTAINER ->
             CodeBlock.of(
-"""
-  this.$L =
-    $L == null
-      ? null
-      $L
-      : $L instanceof $T _immutJson
-        ? _immutJson
-        : new $T($L);
-""",
+                "this.$L = $L;",
                 fieldName,
-                fieldName,
-                fieldModelRootInfo.get().annotation().builderExtendsModelRoot()
-                    ? CodeBlock.of(
-                        ": $L instanceof $T _jsonBuilder ? _jsonBuilder._build();",
-                        fieldName,
-                        immutJsonClassName.nestedClass("Builder"))
-                    : CodeBlock.of(""),
-                fieldName,
-                immutJsonClassName,
-                immutJsonClassName,
-                fieldName);
+                convertToImmutJson(fieldName, fieldModelRootInfo, immutJsonClassName));
         case LIST ->
             CodeBlock.of(
 """
   this.$L = $L == null
     ? null
     : $T.copyOf(
-        $T.transform($L, _e -> ($T) _e._build()));
+        $T.transform($L, _e -> $L));
 """,
                 fieldName,
                 fieldName,
                 ImmutableList.class,
                 Lists.class,
                 fieldName,
-                util.getModelFieldType(method, false, null).elementType());
+                convertToImmutJson("_e", fieldModelRootInfo, immutJsonClassName));
         case MAP ->
             CodeBlock.of(
 """
   this.$L = $L == null
       ? null
       : $T.copyOf(
-          $T.transformValues($L, _e -> ($T) _e._build()));
+          $T.transformValues($L, _e -> $L));
 """,
                 fieldName,
                 fieldName,
                 ImmutableMap.class,
                 Maps.class,
                 fieldName,
-                util.getModelFieldType(method, false, null).elementType());
+                convertToImmutJson("_e", fieldModelRootInfo, immutJsonClassName));
       };
     } else {
       // For other field types, just assign the parameter directly
       return CodeBlock.of("this.$L = $L;", fieldName, fieldName);
     }
+  }
+
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+  private static CodeBlock convertToImmutJson(
+      String fieldName, Optional<ModelRootInfo> fieldModelRootInfo, ClassName immutJsonClassName) {
+    CodeBlock convertToImmutJson =
+        CodeBlock.of(
+            """
+                $L == null
+                  ? null
+                  $L
+                  : $L instanceof $T _immutJson
+                    ? _immutJson
+                    : new $T($L)
+            """,
+            fieldName,
+            fieldModelRootInfo.get().annotation().builderExtendsModelRoot()
+                ? CodeBlock.of(
+                    ": $L instanceof $T _jsonBuilder ? _jsonBuilder._build()",
+                    fieldName,
+                    immutJsonClassName.nestedClass("Builder"))
+                : CodeBlock.of(""),
+            fieldName,
+            immutJsonClassName,
+            immutJsonClassName,
+            fieldName);
+    return convertToImmutJson;
   }
 
   private @NonNull List<FieldSpec> fields(List<ExecutableElement> modelMethods, boolean isBuilder) {
@@ -319,8 +329,7 @@ return _serializedPayload;
       if (isBuilder
           && fieldModelRootInfo.isPresent()
           && ContainerType.LIST.equals(fieldModelRootInfo.get().containerType())) {
-        fieldBuilder.initializer(
-            "$T.ofModels($T.of())", ModelListBuilder.class, ImmutableList.class);
+        fieldBuilder.initializer("$T.empty()", ModelListBuilder.class);
       }
 
       fields.add(fieldBuilder.build());

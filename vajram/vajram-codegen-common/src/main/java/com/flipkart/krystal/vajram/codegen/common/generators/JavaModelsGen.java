@@ -35,8 +35,8 @@ import com.flipkart.krystal.model.ModelListBuilder;
 import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.ModelRoot.ModelType;
+import com.flipkart.krystal.model.ModelsListView;
 import com.flipkart.krystal.model.PlainJavaObject;
-import com.flipkart.krystal.model.SimpleModelList;
 import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.model.UnmodifiableModelList;
 import com.flipkart.krystal.vajram.Trait;
@@ -580,7 +580,7 @@ public final class JavaModelsGen implements CodeGenerator {
       methods.add(getterMethod(method, false, null, util).addAnnotation(Override.class).build());
     }
 
-    MethodSpec.Builder asBuilderMethodBuilder = asBuilder(modelMethods, builderType, util);
+    MethodSpec.Builder asBuilderMethodBuilder = asBuilder(modelMethods, builderType);
 
     MethodSpec.Builder newCopyMethodBuilder = newCopyForImmut(modelMethods, immutPojoType);
 
@@ -645,7 +645,7 @@ public final class JavaModelsGen implements CodeGenerator {
   }
 
   public static MethodSpec.Builder asBuilder(
-      List<ExecutableElement> modelMethods, TypeName builderType, CodeGenUtility util) {
+      List<ExecutableElement> modelMethods, TypeName builderType) {
     // Create _asBuilder method to return a new Builder instance with all fields
     MethodSpec.Builder asBuilderMethodBuilder =
         MethodSpec.methodBuilder("_asBuilder")
@@ -789,7 +789,7 @@ this.$L = $L == null
               asClassName(actualReturnType)
                       .canonicalName()
                       .equals(UnmodifiableModelList.class.getCanonicalName())
-                  ? CodeBlock.of("new $T()", SimpleModelList.class)
+                  ? CodeBlock.of("new $T()", ModelsListView.class)
                   : new DeclaredTypeVisitor(util, method)
                       .visit(specifiedReturnType)
                       .defaultValueExpr(util.processingEnv()));
@@ -813,31 +813,30 @@ this.$L = $L == null
       boolean isBuilder, String fieldName, TypeMirror returnType, CodeGenUtility util) {
     CodeBlock fieldAccessorCode = CodeBlock.of("$L", fieldName);
 
-    Optional<ModelRootInfo> modelRoot = util.asModelRoot(returnType);
-    if (isBuilder && modelRoot.isPresent()) {
-      boolean builderExtendsModelRoot = modelRoot.get().annotation().builderExtendsModelRoot();
-      // Since builder extends model root, we can return the builder as is.
-      // Since builder does not extend model root, we can have to convert it into the model
-      // root by calling build.
+    Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(returnType);
+    if (isBuilder && fieldModelRootInfo.isPresent()) {
       fieldAccessorCode =
-          !builderExtendsModelRoot
-              ? switch (modelRoot.get().containerType()) {
-                case NO_CONTAINER ->
-                    CodeBlock.of(
+          switch (fieldModelRootInfo.get().containerType()) {
+            case NO_CONTAINER ->
+                // If field builder extends model root, we can return the builder as is.
+                // If field builder does not extend model root, we have to convert it into the model
+                // root by calling build.
+                fieldModelRootInfo.get().annotation().builderExtendsModelRoot()
+                    ? CodeBlock.of("$L", fieldName)
+                    : CodeBlock.of(
                         """
-                    $L instanceof $T _builder
-                      ? _builder._build()
-                      : $L instanceof $T _immutModel ? _immutModel : null
-                    """,
+                        $L instanceof $T _builder
+                          ? _builder._build()
+                          : $L instanceof $T _immutModel ? _immutModel : null
+                        """,
                         fieldName,
-                        util.getImmutInterfaceName(modelRoot.get().element())
+                        util.getImmutInterfaceName(fieldModelRootInfo.get().element())
                             .nestedClass("Builder"),
                         fieldName,
-                        util.getImmutInterfaceName(modelRoot.get().element()));
-                case LIST -> CodeBlock.of("$L.asImmutModelList()", fieldName);
-                case MAP -> CodeBlock.of("$L.asModelMap()", fieldName);
-              }
-              : CodeBlock.of("$L", fieldName);
+                        util.getImmutInterfaceName(fieldModelRootInfo.get().element()));
+            case LIST -> CodeBlock.of("$L.modelsListView()", fieldName);
+            case MAP -> CodeBlock.of("$L.modelsMapView()", fieldName);
+          };
     }
     return fieldAccessorCode;
   }
@@ -868,8 +867,7 @@ this.$L = $L == null
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
       if (fieldModelRootInfo.isPresent()
           && ContainerType.LIST.equals(fieldModelRootInfo.get().containerType())) {
-        fieldBuilder.initializer(
-            "$T.ofModels($T.of())", ModelListBuilder.class, ImmutableList.class);
+        fieldBuilder.initializer("$T.empty()", ModelListBuilder.class);
       }
       fields.add(fieldBuilder.build());
     }
@@ -944,14 +942,13 @@ this.$L = $L == null
                   fieldName);
           case ASSUME_DEFAULT_VALUE -> {
             try {
-              CodeBlock defaultValueExpr = dataType.defaultValueExpr(util.processingEnv());
               buildMethodBuilder.addStatement(
                   "this.$N = $L",
                   fieldName,
                   fieldModelRootInfo.isPresent()
                           && ContainerType.LIST.equals(fieldModelRootInfo.get().containerType())
-                      ? CodeBlock.of("$T.ofModels($L)", ModelListBuilder.class, defaultValueExpr)
-                      : defaultValueExpr);
+                      ? CodeBlock.of("$T.empty()", ModelListBuilder.class)
+                      : dataType.defaultValueExpr(util.processingEnv()));
             } catch (CodeGenerationException e) {
               throw util.errorAndThrow(
                   "Could not find default value expression for type '%s'. Please check if @IfAbsent(ASSUME_DEFAULT_VALUE) is appropriate for this type."
@@ -1072,8 +1069,7 @@ this.$L = $L == null
       }
 
       if (modelRoot.builderExtendsModelRoot()
-          || (fieldModelRoot.isPresent()
-              && !NO_CONTAINER.equals(fieldModelRoot.get().containerType()))) {
+          || (fieldModelRoot.isPresent() && fieldModelRoot.get().containerType().isContainer())) {
         MethodSpec.Builder getterMethod = getterMethod(method, true, modelProtocol, util);
         if (modelRoot.builderExtendsModelRoot()) {
           getterMethod.addAnnotation(Override.class);

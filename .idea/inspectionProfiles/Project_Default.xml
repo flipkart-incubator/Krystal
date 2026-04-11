@@ -491,6 +491,7 @@
           <option value="BusyWait" />
           <option value="ClassCanBeRecord" />
           <option value="EqualsDoesntCheckParameterClass" />
+          <option value="SlowListContainsAll" />
         </list>
       </option>
     </inspection_tool>

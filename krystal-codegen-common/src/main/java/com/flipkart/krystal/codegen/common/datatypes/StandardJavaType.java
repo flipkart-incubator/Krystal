@@ -2,7 +2,6 @@ package com.flipkart.krystal.codegen.common.datatypes;
 
 import static java.util.Objects.requireNonNull;
 
-import com.flipkart.krystal.model.ModelListBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.squareup.javapoet.CodeBlock;
@@ -65,10 +64,6 @@ public enum StandardJavaType implements CodeGenType {
   STRING(TypeKind.DECLARED, CodeBlock.of("$S", ""), String.class.getCanonicalName()),
   LIST_RAW(TypeKind.DECLARED, CodeBlock.of("$T.of()", List.class), List.class.getCanonicalName()),
   MAP_RAW(TypeKind.DECLARED, CodeBlock.of("$T.of()", Map.class), Map.class.getCanonicalName()),
-  MODEL_LIST_BUILDER(
-      TypeKind.DECLARED,
-      CodeBlock.of("new $T()", ModelListBuilder.class),
-      ModelListBuilder.class.getCanonicalName()),
   ;
 
   static final ImmutableMap<String, StandardJavaType> standardTypesByCanonicalName;
