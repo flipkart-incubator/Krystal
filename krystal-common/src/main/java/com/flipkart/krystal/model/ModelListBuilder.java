@@ -223,48 +223,52 @@ public final class ModelListBuilder<
 
     @Override
     public boolean addAll(int index, @NonNull Collection<? extends T> c) {
-      return false;
+      return delegate.addAll(index, c);
     }
 
     @Override
     public boolean removeAll(@NonNull Collection<?> c) {
-      return false;
+      return delegate.removeAll(c);
     }
 
     @Override
     public boolean retainAll(@NonNull Collection<?> c) {
-      return false;
+      return delegate.retainAll(c);
     }
 
     @Override
-    public void clear() {}
+    public void clear() {
+      delegate.clear();
+    }
 
     @Override
     public T get(int index) {
-      return null;
+      return delegate.get(index);
     }
 
     @Override
     public T set(int index, T element) {
-      return null;
+      return delegate.set(index, element);
     }
 
     @Override
-    public void add(int index, T element) {}
+    public void add(int index, T element) {
+      delegate.add(index, element);
+    }
 
     @Override
     public T remove(int index) {
-      return null;
+      return delegate.remove(index);
     }
 
     @Override
     public int indexOf(Object o) {
-      return 0;
+      return delegate.indexOf(o);
     }
 
     @Override
     public int lastIndexOf(Object o) {
-      return 0;
+      return delegate.lastIndexOf(o);
     }
 
     @Override
