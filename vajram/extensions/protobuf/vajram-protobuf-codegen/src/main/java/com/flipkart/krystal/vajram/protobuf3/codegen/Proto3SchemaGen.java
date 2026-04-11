@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen;
 
 import static com.flipkart.krystal.codegen.common.models.CodegenPhase.MODELS;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.createOutputDirectory;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.getProtobufType;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeMap;
@@ -249,11 +250,12 @@ final class Proto3SchemaGen implements CodeGenerator {
         util.error(
             String.format(
                 "Method '%s' in Model Root '%s' is a %s field, and has @IfAbsent(%s) which is not supported in protobuf3. "
-                    + "Use a different IfAbsent strategy.",
+                    + "Please use a @IfAbsent(%s) as that is the only strategy supported for repeated and map fields in protobuf3.",
                 method.getSimpleName(),
                 modelRootName,
                 isRepeated ? "repeated" : "map",
-                ifAbsentThen),
+                ifAbsentThen,
+                ASSUME_DEFAULT_VALUE),
             method);
       } else if (ifAbsentThen.usePlatformDefault()) {
         // If the strategy allows defaulting, we can make it a required field in proto3

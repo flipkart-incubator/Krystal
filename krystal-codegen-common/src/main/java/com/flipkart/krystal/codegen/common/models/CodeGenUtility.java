@@ -19,6 +19,7 @@ import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.IfAbsent.Creator;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.model.Model;
+import com.flipkart.krystal.model.ModelListBuilder;
 import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.SupportedModelProtocols;
@@ -127,6 +128,10 @@ public class CodeGenUtility {
     return str.isEmpty() ? str : Character.toLowerCase(str.charAt(0)) + str.substring(1);
   }
 
+  public boolean isListType(TypeMirror type) {
+    return isRawAssignable(type, List.class);
+  }
+
   public String getPackageName(Element element) {
     return requireNonNull(processingEnv().getElementUtils().getPackageOf(element))
         .getQualifiedName()
@@ -137,7 +142,7 @@ public class CodeGenUtility {
   public void addImmutableModelObjectMethods(
       ClassName immutInterfaceName,
       Set<? extends CharSequence> modelFieldNames,
-      TypeSpec.Builder classBuilder) {
+      Builder classBuilder) {
     addCommonObjectMethods(classBuilder);
 
     classBuilder.addMethod(
@@ -176,7 +181,7 @@ public class CodeGenUtility {
                     .map(Object::toString)
                     .sorted()
                     .map(name -> CodeBlock.of("this.$L()", name))
-                    .collect(CodeBlock.joining(",\n")))
+                    .collect(joining(",\n")))
             .addStatement("return _memoizedHashCode")
             .build());
   }
@@ -263,17 +268,27 @@ public class CodeGenUtility {
     return isRawAssignable(returnType, Optional.class);
   }
 
-  public TypeMirror getOptionalInnerType(TypeMirror optionalType) {
-    if (!isOptional(optionalType)) {
-      return optionalType;
+  public TypeMirror getOptionalInnerType(TypeMirror typeMirror) {
+    if (!isOptional(typeMirror)) {
+      return typeMirror;
     }
-
-    if (optionalType instanceof DeclaredType declaredType) {
-      if (!declaredType.getTypeArguments().isEmpty()) {
-        return declaredType.getTypeArguments().get(0);
-      }
+    if (typeMirror instanceof DeclaredType declaredType
+        && !declaredType.getTypeArguments().isEmpty()) {
+      return declaredType.getTypeArguments().get(0);
     }
+    return requireNonNull(
+            processingEnv().getElementUtils().getTypeElement(Object.class.getCanonicalName()))
+        .asType();
+  }
 
+  public TypeMirror getContentType(TypeMirror typeMirror) {
+    if (!isListType(typeMirror)) {
+      return typeMirror;
+    }
+    if (typeMirror instanceof DeclaredType declaredType
+        && !declaredType.getTypeArguments().isEmpty()) {
+      return declaredType.getTypeArguments().get(0);
+    }
     return requireNonNull(
             processingEnv().getElementUtils().getTypeElement(Object.class.getCanonicalName()))
         .asType();
@@ -585,7 +600,7 @@ public class CodeGenUtility {
                 .build());
   }
 
-  public TypeSpec.Builder classBuilder(String simpleName, String generatedForCanonicalName) {
+  public Builder classBuilder(String simpleName, String generatedForCanonicalName) {
     return classBuilder(simpleName, List.of(), generatedForCanonicalName);
   }
 
@@ -600,11 +615,11 @@ public class CodeGenUtility {
    * @return a class builder with the given class name, with the {@link Generated} annotation
    *     applied on the class
    */
-  public TypeSpec.Builder classBuilder(
+  public Builder classBuilder(
       String simpleName,
       List<TypeVariableName> typeVariableNames,
       String generatedForCanonicalName) {
-    TypeSpec.Builder classBuilder;
+    Builder classBuilder;
     if (simpleName.isBlank()) {
       classBuilder = TypeSpec.anonymousClassBuilder("");
     } else {
@@ -619,7 +634,7 @@ public class CodeGenUtility {
     return classBuilder;
   }
 
-  public TypeSpec.Builder interfaceBuilder(String interfaceName, String generatedForCanonicalName) {
+  public Builder interfaceBuilder(String interfaceName, String generatedForCanonicalName) {
     return interfaceBuilder(interfaceName, List.of(), generatedForCanonicalName);
   }
 
@@ -634,11 +649,11 @@ public class CodeGenUtility {
    * @return a class builder with the given class name, with the {@link Generated} annotation
    *     applied on the class
    */
-  public TypeSpec.Builder interfaceBuilder(
+  public Builder interfaceBuilder(
       String interfaceName,
       List<TypeVariableName> typeVariableNames,
       String generatedForCanonicalName) {
-    TypeSpec.Builder interfaceBuilder;
+    Builder interfaceBuilder;
     if (interfaceName.isBlank()) {
       throw new RuntimeException("interface name cannot be blank");
     } else {
@@ -814,11 +829,34 @@ public class CodeGenUtility {
     return ClassName.get(packageName, modelRootName + modelRoot.suffixSeparator() + IMMUT_SUFFIX);
   }
 
-  public ClassName getImmutModelClassName(TypeElement modelRootType, ModelProtocol serdeProtocol) {
-    ClassName immutClassName = getImmutInterfaceName(modelRootType);
+  public TypeName getImmutTypeName(
+      TypeMirror modelRootType, @Nullable ModelProtocol modelProtocol) {
+    Optional<ModelRootInfo> modelRootInfo = asModelRoot(modelRootType);
+    if (modelRootInfo.isEmpty()) {
+      throw new IllegalArgumentException(
+          "Cannot fetch Immut class name for class which does not have @ModelRoot annotation");
+    }
+    TypeMirror type = modelRootInfo.get().type();
+    List<? extends TypeMirror> typeArguments = List.of();
+    if (type instanceof DeclaredType declaredType) {
+      typeArguments = declaredType.getTypeArguments();
+    }
+    ClassName immutClassName = getImmutClassName(modelRootInfo.get().element(), modelProtocol);
+    return typeArguments.isEmpty()
+        ? immutClassName
+        : ParameterizedTypeName.get(
+            immutClassName, typeArguments.stream().map(TypeName::get).toArray(TypeName[]::new));
+  }
+
+  public ClassName getImmutClassName(
+      TypeElement modelRootElem, @Nullable ModelProtocol modelProtocol) {
+    ClassName immutInterfaceName = getImmutInterfaceName(modelRootElem);
+    if (modelProtocol == null) {
+      return immutInterfaceName;
+    }
     return ClassName.get(
-        immutClassName.packageName(),
-        immutClassName.simpleName() + serdeProtocol.modelClassesSuffix());
+        immutInterfaceName.packageName(),
+        immutInterfaceName.simpleName() + modelProtocol.modelClassesSuffix());
   }
 
   /**
@@ -838,6 +876,9 @@ public class CodeGenUtility {
     }
   }
 
+  public record ModelFieldTypeInfo(
+      TypeName fieldType, ContainerType containerType, TypeName elementType) {}
+
   /**
    * Returns the TypeName to be used as the type of the field in a model.
    *
@@ -847,46 +888,80 @@ public class CodeGenUtility {
    *     specific model
    * @return
    */
-  public TypeName getModelFieldType(
+  public ModelFieldTypeInfo getModelFieldType(
       ExecutableElement method, boolean isBuilder, @Nullable ModelProtocol modelProtocol) {
     final TypeMirror specifiedType = method.getReturnType();
     boolean isNullable = isAnyNullable(specifiedType, method);
     TypeMirror inferredType = specifiedType;
-    boolean isOptional = isOptional(specifiedType);
+    boolean isOptional = isOptional(inferredType);
     if (isOptional) {
       // For Optional<T>, use T as the parameter type
-      inferredType = getOptionalInnerType(specifiedType);
+      inferredType = getOptionalInnerType(inferredType);
     }
     if (isBuilder && inferredType instanceof PrimitiveType primitiveType) {
       inferredType = typeUtils.boxedClass(primitiveType).asType();
     }
-    TypeName typeName = inferredType.accept(new TypeNameVisitor(), null);
+    boolean isList = isListType(inferredType);
+    TypeMirror contentType = inferredType;
+    if (isList) {
+      contentType = getContentType(inferredType);
+    }
+    TypeName typeName = contentType.accept(new TypeNameVisitor(), null);
 
-    Optional<ModelRootInfo> modelRoot = asModelRoot(inferredType);
-
-    if (modelRoot.isPresent()) {
-      if (isBuilder) {
-        boolean builderExtendsModelRoot = modelRoot.get().annotation().builderExtendsModelRoot();
-        if (!builderExtendsModelRoot) {
-          typeName = ClassName.get(Object.class);
+    if (!isList) {
+      // Add @Nullable annotation for Optional types or methods with @Nullable annotation
+      if (isOptional || isNullable || isBuilder) {
+        if (!hasNullableAnnotation(typeName)) {
+          // Add @Nullable as a type annotation
+          typeName =
+              typeName.annotated(AnnotationSpec.builder(ClassName.get(Nullable.class)).build());
         }
-      } else {
-        typeName =
-            modelProtocol != null
-                ? getImmutModelClassName(modelRoot.get().element(), modelProtocol)
-                : getImmutInterfaceName(modelRoot.get().element());
       }
     }
+    TypeName finalTypeName;
+    Optional<ModelRootInfo> fieldModelRootInfo = asModelRoot(inferredType);
+    ContainerType containerType = isList ? ContainerType.LIST : ContainerType.NO_CONTAINER;
 
-    // Add @Nullable annotation for Optional types or methods with @Nullable annotation
-    if (isOptional || isNullable || isBuilder) {
-      if (!hasNullableAnnotation(typeName)) {
-        // Add @Nullable as a type annotation
-        typeName =
-            typeName.annotated(AnnotationSpec.builder(ClassName.get(Nullable.class)).build());
-      }
+    if (fieldModelRootInfo.isPresent()) {
+      final ClassName immutType =
+          getImmutClassName(fieldModelRootInfo.get().element(), modelProtocol);
+      containerType = fieldModelRootInfo.get().containerType();
+      finalTypeName =
+          switch (fieldModelRootInfo.get().containerType()) {
+            case NO_CONTAINER -> {
+              if (isBuilder) {
+                if (!fieldModelRootInfo.get().annotation().builderExtendsModelRoot()) {
+                  yield ClassName.get(Object.class);
+                }
+              } else {
+                yield immutType;
+              }
+              yield typeName;
+            }
+            case LIST -> {
+              if (isBuilder) {
+                yield ParameterizedTypeName.get(
+                    ClassName.get(ModelListBuilder.class),
+                    typeName,
+                    immutType,
+                    immutType.nestedClass("Builder"));
+              } else {
+                yield ParameterizedTypeName.get(
+                    ClassName.get(ImmutableList.class),
+                    TypeName.get(fieldModelRootInfo.get().element().asType()));
+              }
+            }
+            case MAP -> throw new UnsupportedOperationException();
+          };
+    } else {
+      finalTypeName =
+          switch (containerType) {
+            case NO_CONTAINER -> typeName;
+            case LIST -> ParameterizedTypeName.get(ClassName.get(List.class), typeName);
+            case MAP -> throw new UnsupportedOperationException();
+          };
     }
-    return typeName;
+    return new ModelFieldTypeInfo(finalTypeName, containerType, typeName);
   }
 
   /**
@@ -1008,9 +1083,23 @@ public class CodeGenUtility {
   }
 
   public Optional<ModelRootInfo> asModelRoot(TypeMirror javaModelType) {
-    boolean isOptional = isOptional(javaModelType);
-    if (isOptional) {
+    ContainerType containerType = ContainerType.NO_CONTAINER;
+    if (isOptional(javaModelType)) {
       javaModelType = getOptionalInnerType(javaModelType);
+      if (isOptional(javaModelType)) {
+        error(
+            "Optional of Optional (Optional<Optional<..>>) is not supported by Krystal Modelling protocol",
+            typeUtils.asElement(javaModelType));
+      }
+    }
+    if (isListType(javaModelType)) {
+      javaModelType = getContentType(javaModelType);
+      if (isListType(javaModelType)) {
+        error(
+            "List of Lists (List<List<..>>) is not supported by Krystal Modelling protocol",
+            typeUtils.asElement(javaModelType));
+      }
+      containerType = ContainerType.LIST;
     }
     if (!isRawAssignable(javaModelType, Model.class)) {
       return Optional.empty();
@@ -1018,13 +1107,29 @@ public class CodeGenUtility {
     if (typeUtils.asElement(javaModelType) instanceof TypeElement typeElement) {
       ModelRoot annotation = typeElement.getAnnotation(ModelRoot.class);
       if (annotation != null) {
-        return Optional.of(new ModelRootInfo(typeElement, annotation));
+        return Optional.of(
+            new ModelRootInfo(typeElement, javaModelType, annotation, containerType));
       }
     }
     return Optional.empty();
   }
 
-  public record ModelRootInfo(TypeElement element, ModelRoot annotation) {}
+  public record ModelRootInfo(
+      TypeElement element, TypeMirror type, ModelRoot annotation, ContainerType containerType) {
+
+    public ModelRootInfo {}
+  }
 
   public record AnnotationInfo<T>(T annotation, AnnotationMirror mirror) {}
+
+  public enum ContainerType {
+    NO_CONTAINER,
+    LIST,
+    MAP,
+    ;
+
+    public boolean isContainer() {
+      return NO_CONTAINER != this;
+    }
+  }
 }

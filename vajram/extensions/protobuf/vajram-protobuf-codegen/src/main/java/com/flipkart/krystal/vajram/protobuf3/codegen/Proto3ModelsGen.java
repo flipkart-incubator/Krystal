@@ -15,6 +15,7 @@ import static javax.lang.model.element.Modifier.STATIC;
 
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
+import com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility.ModelRootInfo;
 import com.flipkart.krystal.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.codegen.common.models.DeclaredTypeVisitor;
@@ -27,6 +28,7 @@ import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
 import com.flipkart.krystal.vajram.protobuf3.SerializableProtoModel;
+import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ArrayTypeName;
@@ -124,7 +126,7 @@ public class Proto3ModelsGen implements CodeGenerator {
     ClassName immutClassName = util.getImmutInterfaceName(modelRootType);
 
     String protoClassName =
-        util.getImmutModelClassName(codeGenContext.modelRootType(), PROTOBUF_3).simpleName();
+        util.getImmutClassName(codeGenContext.modelRootType(), PROTOBUF_3).simpleName();
     String packageName = immutClassName.packageName();
 
     // Generate the implementation class using JavaPoet
@@ -276,7 +278,7 @@ return _serializedPayload;
       TypeMirror returnType = method.getReturnType();
       CodeGenType dataType = new DeclaredTypeVisitor(util, method).visit(returnType);
 
-      classBuilder.addMethod(getterMethod(method, returnType, dataType).build());
+      classBuilder.addMethod(getterMethod(method, returnType, dataType, false).build());
     }
 
     // Add equals method that delegates to the proto object
@@ -339,12 +341,7 @@ return _serializedPayload;
                               methodName,
                               Model.class);
                     } else {
-                      accessor =
-                          CodeBlock.of(
-                              "($T) _from.$L()._asBuilder()",
-                              util.getImmutInterfaceName(modelRoot.get().element())
-                                  .nestedClass("Builder"),
-                              methodName);
+                      accessor = CodeBlock.of("_from.$L()", methodName);
                     }
                   } else {
                     accessor =
@@ -359,7 +356,7 @@ return _serializedPayload;
   }
 
   private MethodSpec.Builder getterMethod(
-      ExecutableElement method, TypeMirror returnType, CodeGenType dataType) {
+      ExecutableElement method, TypeMirror returnType, CodeGenType dataType, boolean isBuilder) {
     TypeName typeName = TypeName.get(returnType);
 
     String methodName = method.getSimpleName().toString();
@@ -377,7 +374,7 @@ return _serializedPayload;
       getterBuilder.returns(typeName);
     }
 
-    addGetterCode(getterBuilder, method, dataType, methodName);
+    addGetterCode(getterBuilder, method, dataType, methodName, isBuilder);
     return getterBuilder;
   }
 
@@ -385,11 +382,23 @@ return _serializedPayload;
       MethodSpec.Builder getterBuilder,
       ExecutableElement method,
       CodeGenType dataType,
-      String methodName) {
+      String methodName,
+      boolean isBuilder) {
 
+    Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
     if (isProtoTypeRepeated(dataType)) {
-      // For repeated fields, use getXList() method
-      getterBuilder.addStatement("return _proto().get$LList()", capitalizeFirstChar(methodName));
+      if (fieldModelRootInfo.isPresent()) {
+        ClassName immutClassName =
+            util.getImmutClassName(fieldModelRootInfo.get().element(), PROTOBUF_3);
+        getterBuilder.addStatement(
+            "return $T.transform(_proto().get$LList(), $T::new)",
+            Lists.class,
+            capitalizeFirstChar(methodName),
+            immutClassName);
+      } else {
+        // For repeated fields, use getXList() method
+        getterBuilder.addStatement("return _proto().get$LList()", capitalizeFirstChar(methodName));
+      }
       return;
     }
 
@@ -420,8 +429,7 @@ return _serializedPayload;
               }
               """,
                 MandatoryFieldMissingException.class,
-                util.getImmutModelClassName(codeGenContext.modelRootType(), Protobuf3.PROTOBUF_3)
-                    .simpleName(),
+                util.getImmutClassName(codeGenContext.modelRootType(), PROTOBUF_3).simpleName(),
                 methodName);
       } else if (isOptionalReturnType) {
         getterBuilder
@@ -442,12 +450,12 @@ return _serializedPayload;
       }
     }
     CodeBlock creatorCode =
-        util.asModelRoot(methodReturnType)
+        fieldModelRootInfo
             .map(
-                modelRootInfo ->
+                _m ->
                     CodeBlock.of(
                         "new $T(_proto().get$L())",
-                        util.getImmutModelClassName(modelRootInfo.element(), PROTOBUF_3),
+                        util.getImmutClassName(_m.element(), PROTOBUF_3),
                         capitalizeFirstChar(methodName)))
             .orElseGet(() -> CodeBlock.of("_proto().get$L()", capitalizeFirstChar(methodName)));
 
@@ -535,8 +543,9 @@ return _serializedPayload;
       TypeMirror returnType = method.getReturnType();
       CodeGenType dataType = new DeclaredTypeVisitor(util, method).visit(returnType);
 
+      Optional<ModelRootInfo> fieldModelRoot = util.asModelRoot(method.getReturnType());
       if (modelRoot.builderExtendsModelRoot()) {
-        builderClassBuilder.addMethod(getterMethod(method, returnType, dataType).build());
+        builderClassBuilder.addMethod(getterMethod(method, returnType, dataType, true).build());
       }
       // Add setter method
       MethodSpec.Builder setterBuilder =
@@ -550,16 +559,35 @@ return _serializedPayload;
         // For repeated fields, use clear and addAll pattern
         setterBuilder.addCode(
             """
-                  _proto.clear$L();
-                  if ($L == null){
-                    return this;
-                  }
-                  _proto.addAll$L($L);
-                """,
+                _proto.clear$L();
+                if ($L == null){
+                  return this;
+                }
+                _proto.addAll$L($L);
+              """,
             capitalizeFirstChar(fieldName),
             fieldName,
             capitalizeFirstChar(fieldName),
-            fieldName);
+            fieldModelRoot.isPresent()
+                    && ContainerType.LIST.equals(fieldModelRoot.get().containerType())
+                ? CodeBlock.of(
+"""
+
+          $T.transform(
+              $L,
+              _element ->
+                  _element instanceof $T _proto
+                      ? _proto._proto()
+                      : _element instanceof $T.Builder _proto
+                          ? _proto._proto().build()
+                          : new $T(_element)._proto())
+""",
+                    Lists.class,
+                    fieldName,
+                    util.getImmutClassName(fieldModelRoot.get().element(), PROTOBUF_3),
+                    util.getImmutClassName(fieldModelRoot.get().element(), PROTOBUF_3),
+                    util.getImmutClassName(fieldModelRoot.get().element(), PROTOBUF_3))
+                : fieldName);
       } else if (isProtoTypeMap(dataType)) {
         // For map fields, use clear and putAll pattern
         setterBuilder.addCode(
@@ -586,10 +614,9 @@ return _serializedPayload;
             fieldName,
             capitalizeFirstChar(fieldName));
 
-        Optional<ModelRootInfo> fieldTypeModelRoot = util.asModelRoot(method.getReturnType());
-        if (fieldTypeModelRoot.isPresent()) {
+        if (fieldModelRoot.isPresent()) {
           ClassName fieldProtoClassName =
-              util.getImmutModelClassName(fieldTypeModelRoot.get().element(), PROTOBUF_3);
+              util.getImmutClassName(fieldModelRoot.get().element(), PROTOBUF_3);
           setterBuilder.addCode(
 """
       if($L instanceof $T _builder){
@@ -608,7 +635,7 @@ return _serializedPayload;
               capitalizeFirstChar(fieldName),
               capitalizeFirstChar(fieldName),
               fieldProtoClassName,
-              fieldTypeModelRoot.get().element(),
+              fieldModelRoot.get().element(),
               fieldName);
         } else {
           setterBuilder.addStatement(
@@ -628,9 +655,9 @@ return _serializedPayload;
       MethodSpec setter = setterBuilder.addParameter(variableType, fieldName).build();
       builderClassBuilder.addMethod(setter);
 
-      Optional<ModelRootInfo> fieldModelRoot = util.asModelRoot(method.getReturnType());
       if (fieldModelRoot.isPresent()
-          && !fieldModelRoot.get().annotation().builderExtendsModelRoot()) {
+          && !fieldModelRoot.get().annotation().builderExtendsModelRoot()
+          && ContainerType.NO_CONTAINER.equals(fieldModelRoot.get().containerType())) {
         builderClassBuilder.addMethod(
             methodBuilder(fieldName)
                 .addModifiers(PUBLIC)

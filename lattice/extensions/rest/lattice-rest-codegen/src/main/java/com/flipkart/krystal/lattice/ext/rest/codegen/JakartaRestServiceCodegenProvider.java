@@ -479,13 +479,13 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
                 CodeBlock.of(
                     "_vajramRequest.$L(new $T($L))",
                     bodyFacet.name(),
-                    util.getImmutModelClassName(bodyFacetModelType, serdeProtocol),
+                    util.getImmutClassName(bodyFacetModelType, serdeProtocol),
                     bodyFacet.name()));
           } else {
             serdeSpecificMethodBuilder.addStatement(
                 CodeBlock.of(
                     "var _vajramRequest = new $T(_body)",
-                    util.getImmutModelClassName(
+                    util.getImmutClassName(
                         requireNonNull(
                             util.processingEnv()
                                 .getElementUtils()

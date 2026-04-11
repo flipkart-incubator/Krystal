@@ -105,7 +105,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
   private TypeSpec generateGQlRespJsonModel(
       TypeElement modelRootType, ClassName immutClassName, List<ExecutableElement> modelMethods) {
     ClassName gqlRespJsonClassName =
-        util.getImmutModelClassName(modelRootType, GraphQlResponseJson.INSTANCE);
+        util.getImmutClassName(modelRootType, GraphQlResponseJson.INSTANCE);
     boolean isOpType = isGraphQlOpType(modelRootType, util);
 
     Builder classBuilder =
@@ -188,7 +188,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
       TypeName fieldType;
 
       // For ALL lists, use nested Errable: Errable<List<Errable<ElementType>>>
-      if (isListType(returnType)) {
+      if (util.isListType(returnType)) {
         TypeMirror elementType = getListElementType(returnType);
         if (elementType != null) {
           TypeName elementTypeName;
@@ -268,7 +268,8 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
             fieldName);
       }
 
-      if (isListType(returnType) && containsGraphQlModel(getListElementType(returnType), util)) {
+      if (util.isListType(returnType)
+          && containsGraphQlModel(getListElementType(returnType), util)) {
         // Handle List<Entity> with complex nested conversion
         addListFieldInitialization(
             constructor, fieldName, returnType, util, ClassName.get(Errable.class));
@@ -291,7 +292,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
     TypeMirror returnType = method.getReturnType();
 
     TypeName paramInnerType;
-    if (isListType(returnType)) {
+    if (util.isListType(returnType)) {
       // For ALL lists, parameter type is: Errable<? extends List<Errable<? extends ElementType>>>
       TypeMirror elementType = getListElementType(returnType);
       if (elementType != null) {
@@ -329,7 +330,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
         MethodSpec.constructorBuilder()
             .addModifiers(PUBLIC)
             .addParameter(
-                util.getImmutModelClassName(modelRootType, GraphQlResponseJson.INSTANCE), "_from");
+                util.getImmutClassName(modelRootType, GraphQlResponseJson.INSTANCE), "_from");
     // Add parameters for each field (Errable wrapped, except GraphQL context methods)
     constructor.addStatement(
         modelMethods.stream()
@@ -478,7 +479,18 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
       Optional<ModelRootInfo> fieldModelRoot = util.asModelRoot(method.getReturnType());
       if (fieldModelRoot.isPresent()) {
         asBuilderMethodBuilder.addCode(
-            ".$L($L == null ? null : $L.map($T::_asBuilder))",
+            switch (fieldModelRoot.get().containerType()) {
+              case LIST ->
+                  """
+        .$L($L == null
+          ? null
+          : $L.map(_list ->
+            _list.stream().map(_e ->
+              _e == null
+                ? null
+                : _e.map($T::_asBuilder)).toList()))""";
+              default -> ".$L($L == null ? null : $L.map($T::_asBuilder))";
+            },
             fieldName,
             fieldName,
             fieldName,
@@ -509,7 +521,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
       getter.addAnnotation(JsonProperty.class);
 
       // Extract actual values from Errable fields (fields are always non-null and final)
-      if (isListType(method.getReturnType())) {
+      if (util.isListType(method.getReturnType())) {
         // For lists with nested Errable, unwrap both levels using for loop
         // Field is Errable<List<Errable<T_Immut>>>, getter returns List<T>
         TypeMirror elementType = getListElementType(method.getReturnType());
@@ -653,7 +665,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
 
       TypeMirror returnType = method.getReturnType();
 
-      if (isListType(returnType)) {
+      if (util.isListType(returnType)) {
         TypeMirror elementType = getListElementType(returnType);
         boolean listOfGraphQlModels = containsGraphQlModel(elementType, util);
 
@@ -819,11 +831,12 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
       }
 
       TypeMirror returnType = method.getReturnType();
-      TypeName fieldType = util.getModelFieldType(method, true, GraphQlResponseJson.INSTANCE);
+      TypeName fieldType =
+          util.getModelFieldType(method, true, GraphQlResponseJson.INSTANCE).fieldType();
 
       // For ALL lists, use nested Errable: Errable<List<Errable<Entity>>>
       // Note: Builder uses non-_Immut types (e.g., Dummy not Dummy_Immut)
-      if (isListType(returnType)) {
+      if (util.isListType(returnType)) {
         TypeMirror elementType = getListElementType(returnType);
         if (elementType != null) {
           // Use the raw element type (no _Immut suffix for builder)
@@ -909,7 +922,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
     TypeMirror returnType = method.getReturnType();
     TypeName fieldType = util.getVariableType(method, true);
 
-    boolean isListType = isListType(returnType);
+    boolean isListType = util.isListType(returnType);
     boolean isListOfEntities = false;
 
     if (isListType) {
@@ -986,8 +999,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
       // Standard scalar: simple wrap
       // For single entity setters, wrap in Errable.withValue()
       ClassName fieldGQlClassName =
-          this.util.getImmutModelClassName(
-              fieldModelRoot.get().element(), GraphQlResponseJson.INSTANCE);
+          this.util.getImmutClassName(fieldModelRoot.get().element(), GraphQlResponseJson.INSTANCE);
       directSetterBuilder
           .addParameter(fieldType, fieldName)
           .addCode(
@@ -1239,7 +1251,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
 
       // Extract value from Errable field (fields are @NonNull, no null check needed)
       // For lists with nested Errable, unwrap both levels using for loop (same as main class)
-      if (isListType(returnType)) {
+      if (util.isListType(returnType)) {
         TypeMirror elementType = getListElementType(returnType);
         TypeName elementTypeName = TypeName.get(elementType);
 
@@ -1332,15 +1344,6 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
       }
     }
     return false;
-  }
-
-  private boolean isListType(TypeMirror type) {
-    if (type.getKind() != TypeKind.DECLARED) {
-      return false;
-    }
-    DeclaredType declaredType = (DeclaredType) type;
-    TypeElement typeElement = (TypeElement) declaredType.asElement();
-    return typeElement.getQualifiedName().toString().equals(List.class.getCanonicalName());
   }
 
   private TypeMirror getListElementType(TypeMirror listType) {
