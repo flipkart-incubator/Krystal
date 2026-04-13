@@ -1,11 +1,9 @@
 package com.flipkart.krystal.model;
 
 import static java.util.Collections.unmodifiableList;
-import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.model.ImmutableModel.Builder;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterators;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -70,36 +68,31 @@ final class BasicModelListBuilder<M extends Model, I extends ImmutableModel, B e
 
   @Override
   public boolean addModel(M model) {
-    ensureMutable();
     return models.add(model);
   }
 
   @Override
   public void addModel(int index, M element) {
-    ensureMutable();
     models.add(index, element);
   }
 
   @Override
   public boolean addBuilder(B b) {
-    ensureMutable();
     return models.add(b);
   }
 
   @Override
   public void addBuilder(int index, B element) {
-    ensureMutable();
     models.add(index, element);
   }
 
   @Override
   public boolean addAllModels(Iterable<? extends M> iterable) {
-    if (!iterable.iterator().hasNext()) {
-      return false;
-    }
-    ensureMutable();
     if (iterable instanceof Collection<? extends M> c) {
       return models.addAll(c);
+    }
+    if (!iterable.iterator().hasNext()) {
+      return false;
     }
     for (M m : iterable) {
       models.add(m);
@@ -109,12 +102,11 @@ final class BasicModelListBuilder<M extends Model, I extends ImmutableModel, B e
 
   @Override
   public boolean addAllModels(int index, Iterable<? extends M> iterable) {
-    if (!iterable.iterator().hasNext()) {
-      return false;
-    }
-    ensureMutable();
     if (iterable instanceof Collection<? extends M> c) {
       return models.addAll(index, c);
+    }
+    if (!iterable.iterator().hasNext()) {
+      return false;
     }
     int i = index;
     for (M m : iterable) {
@@ -125,12 +117,11 @@ final class BasicModelListBuilder<M extends Model, I extends ImmutableModel, B e
 
   @Override
   public boolean addAllBuilders(Iterable<? extends B> iterable) {
-    if (!iterable.iterator().hasNext()) {
-      return false;
-    }
-    ensureMutable();
     if (iterable instanceof Collection<? extends B> c) {
       return models.addAll(c);
+    }
+    if (!iterable.iterator().hasNext()) {
+      return false;
     }
     for (B b : iterable) {
       models.add(b);
@@ -140,12 +131,11 @@ final class BasicModelListBuilder<M extends Model, I extends ImmutableModel, B e
 
   @Override
   public boolean addAllBuilders(int index, Iterable<? extends B> iterable) {
-    if (!iterable.iterator().hasNext()) {
-      return false;
-    }
-    ensureMutable();
     if (iterable instanceof Collection<? extends B> c) {
       return models.addAll(index, c);
+    }
+    if (!iterable.iterator().hasNext()) {
+      return false;
     }
     int i = index;
     for (B b : iterable) {
@@ -156,7 +146,6 @@ final class BasicModelListBuilder<M extends Model, I extends ImmutableModel, B e
 
   @Override
   public void clear() {
-    ensureMutable();
     models.clear();
   }
 
@@ -178,34 +167,17 @@ final class BasicModelListBuilder<M extends Model, I extends ImmutableModel, B e
 
   @Override
   public void setModel(int index, M element) {
-    ensureMutable();
     models.set(index, element);
   }
 
   @Override
   public void setBuilder(int index, B element) {
-    ensureMutable();
     models.set(index, element);
   }
 
   @Override
   public Model remove(int index) {
-    ensureMutable();
     return models.remove(index);
-  }
-
-  @Override
-  public Iterator<M> modelsIterator() {
-    return null;
-  }
-
-  @SuppressWarnings("unchecked")
-  @Override
-  public Iterator<B> buildersIterator() {
-    for (int i = 0; i < models.size(); i++) {
-      ensureBuilderAtIndex(i);
-    }
-    return Iterators.transform(models.iterator(), model -> (B) requireNonNull(model)._asBuilder());
   }
 
   private void ensureMutable() {
@@ -240,7 +212,6 @@ final class BasicModelListBuilder<M extends Model, I extends ImmutableModel, B e
     }
 
     private void ensureMutable() {
-      List<T> delegate = delegate();
       if (delegate instanceof ImmutableList<?>) {
         delegate(new ArrayList<>(delegate));
       }
@@ -263,6 +234,9 @@ final class BasicModelListBuilder<M extends Model, I extends ImmutableModel, B e
 
     @Override
     public @NonNull Iterator<T> iterator() {
+      if (!delegate.isEmpty()) {
+        ensureMutable();
+      }
       return delegate.iterator();
     }
 
@@ -278,6 +252,7 @@ final class BasicModelListBuilder<M extends Model, I extends ImmutableModel, B e
 
     @Override
     public boolean add(T t) {
+      ensureMutable();
       return delegate.add(t);
     }
 
@@ -294,27 +269,38 @@ final class BasicModelListBuilder<M extends Model, I extends ImmutableModel, B e
 
     @Override
     public boolean addAll(@NonNull Collection<? extends T> c) {
+      ensureMutable();
       return delegate.addAll(c);
     }
 
     @Override
-    public boolean addAll(int index, @NonNull Collection<? extends T> c) {
+    public boolean addAll(int index, Collection<? extends T> c) {
+      if (!c.isEmpty()) {
+        ensureMutable();
+      }
       return delegate.addAll(index, c);
     }
 
     @Override
     public boolean removeAll(@NonNull Collection<?> c) {
+      if (!c.isEmpty()) {
+        ensureMutable();
+      }
       return delegate.removeAll(c);
     }
 
     @Override
     public boolean retainAll(@NonNull Collection<?> c) {
+      ensureMutable();
       return delegate.retainAll(c);
     }
 
     @Override
     public void clear() {
-      delegate.clear();
+      if (!delegate.isEmpty()) {
+        ensureMutable();
+        delegate.clear();
+      }
     }
 
     @Override
@@ -324,16 +310,19 @@ final class BasicModelListBuilder<M extends Model, I extends ImmutableModel, B e
 
     @Override
     public T set(int index, T element) {
+      ensureMutable();
       return delegate.set(index, element);
     }
 
     @Override
     public void add(int index, T element) {
+      ensureMutable();
       delegate.add(index, element);
     }
 
     @Override
     public T remove(int index) {
+      ensureMutable();
       return delegate.remove(index);
     }
 
@@ -349,11 +338,17 @@ final class BasicModelListBuilder<M extends Model, I extends ImmutableModel, B e
 
     @Override
     public @NonNull ListIterator<T> listIterator() {
+      if (!delegate.isEmpty()) {
+        ensureMutable();
+      }
       return delegate.listIterator();
     }
 
     @Override
     public @NonNull ListIterator<T> listIterator(int index) {
+      if (!delegate.isEmpty()) {
+        ensureMutable();
+      }
       return delegate.listIterator(index);
     }
 

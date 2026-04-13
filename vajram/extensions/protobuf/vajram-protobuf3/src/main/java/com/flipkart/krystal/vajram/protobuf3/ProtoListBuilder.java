@@ -4,7 +4,6 @@ import com.flipkart.krystal.model.ImmutableModel;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelListBuilder;
 import com.flipkart.krystal.model.UnmodifiableModelList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -113,8 +112,9 @@ public class ProtoListBuilder<
   @Override
   public boolean addAllModels(int index, Iterable<? extends M> c) {
     boolean result = false;
+    int i = index;
     for (M m : c) {
-      addModel(m);
+      addModel(i++, m);
       result = true;
     }
     return result;
@@ -173,15 +173,5 @@ public class ProtoListBuilder<
   @Override
   public Model remove(int index) {
     return remove.apply(index);
-  }
-
-  @Override
-  public Iterator<M> modelsIterator() {
-    return modelsDelegate.iterator();
-  }
-
-  @Override
-  public Iterator<B> buildersIterator() {
-    return buildersDelegate.iterator();
   }
 }

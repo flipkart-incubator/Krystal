@@ -1,7 +1,5 @@
 package com.flipkart.krystal.model;
 
-import java.util.Iterator;
-
 public interface ModelListBuilder<
     M extends Model, I extends ImmutableModel, B extends ImmutableModel.Builder> {
   static <M extends Model, I extends ImmutableModel, B extends ImmutableModel.Builder>
@@ -44,8 +42,4 @@ public interface ModelListBuilder<
   void setBuilder(int index, B element);
 
   Model remove(int index);
-
-  Iterator<M> modelsIterator();
-
-  Iterator<B> buildersIterator();
 }
