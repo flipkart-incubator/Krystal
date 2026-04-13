@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen;
 
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.BYTE;
+import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType.LIST;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.capitalizeFirstChar;
 import static com.flipkart.krystal.vajram.protobuf3.Protobuf3.PROTOBUF_3;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.Proto3SchemaGen.validateModelType;
@@ -8,6 +9,8 @@ import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProt
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeRepeated;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_MSG_SUFFIX;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
+import static java.util.Map.entry;
+import static java.util.Map.ofEntries;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -25,9 +28,12 @@ import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.model.MandatoryFieldMissingException;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
+import com.flipkart.krystal.model.UnmodifiableModelList;
 import com.flipkart.krystal.serial.SerializableModel;
+import com.flipkart.krystal.vajram.protobuf3.ProtoListBuilder;
 import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
 import com.flipkart.krystal.vajram.protobuf3.SerializableProtoModel;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 import com.squareup.javapoet.AnnotationSpec;
@@ -143,22 +149,24 @@ public class Proto3ModelsGen implements CodeGenerator {
   private TypeSpec generateImplementationTypeSpec(
       TypeElement modelRootType, String packageName, String protoClassName) {
     ClassName immutableProtoType = ClassName.get(packageName, protoClassName);
-    String modelRootName = modelRootType.getSimpleName().toString();
-    ClassName immutModelName = util.getImmutInterfaceName(modelRootType);
-    String protoMsgClassName = modelRootName + MODELS_PROTO_MSG_SUFFIX;
+    ClassName immutInterfaceName = util.getImmutInterfaceName(modelRootType);
+    ClassName immutModelName = immutInterfaceName;
+    ClassName protoMsgType =
+        ClassName.get(
+            packageName, modelRootType.getSimpleName().toString() + MODELS_PROTO_MSG_SUFFIX);
+
+    ClassName protoMsgOrBuilderType =
+        ClassName.get(protoMsgType.packageName(), protoMsgType.simpleName() + "OrBuilder");
 
     // Extract model methods
     List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
 
     // Create class interfaces
     TypeName serializableTypeName =
-        ParameterizedTypeName.get(
-            ClassName.get(SerializableProtoModel.class),
-            ClassName.get(packageName, protoMsgClassName));
+        ParameterizedTypeName.get(ClassName.get(SerializableProtoModel.class), protoMsgType);
 
     // Create field types
     TypeName byteArrayType = ArrayTypeName.of(TypeName.BYTE);
-    ClassName protoMsgType = ClassName.get(packageName, protoMsgClassName);
 
     // Create class builder
     Builder classBuilder =
@@ -194,8 +202,16 @@ public class Proto3ModelsGen implements CodeGenerator {
     classBuilder.addMethod(
         MethodSpec.constructorBuilder()
             .addModifiers(PUBLIC)
-            .addParameter(protoMsgType, "_proto")
-            .addStatement("this._proto = _proto")
+            .addParameter(protoMsgOrBuilderType, "_proto")
+            .addCode(
+"""
+    this._proto =
+        _proto instanceof $T _message
+            ? _message
+            : _proto instanceof $T.Builder _builder ? _builder.build() : /* Impossible */ null;
+""",
+                protoMsgType,
+                protoMsgType)
             .addStatement("this._serializedPayload = null")
             .build());
 
@@ -278,7 +294,7 @@ return _serializedPayload;
       TypeMirror returnType = method.getReturnType();
       CodeGenType dataType = new DeclaredTypeVisitor(util, method).visit(returnType);
 
-      classBuilder.addMethod(getterMethod(method, returnType, dataType, false).build());
+      classBuilder.addMethod(getterMethod(method, dataType, false).build());
     }
 
     // Add equals method that delegates to the proto object
@@ -291,18 +307,42 @@ return _serializedPayload;
     // Add Builder inner class
     TypeSpec builderTypeSpec =
         generateBuilderTypeSpec(
-            modelRootType,
-            packageName,
-            protoClassName,
-            protoMsgClassName,
-            immutModelName,
-            modelMethods);
+            modelRootType, packageName, protoClassName, protoMsgType, immutModelName, modelMethods);
     classBuilder.addType(builderTypeSpec);
+    ClassName immutProtoBuilderClass = immutableProtoType.nestedClass("Builder");
     classBuilder.addMethod(
         methodBuilder("_builder")
             .addModifiers(PUBLIC, STATIC)
-            .returns(immutableProtoType.nestedClass("Builder"))
-            .addStatement("return new $T()", immutableProtoType.nestedClass("Builder"))
+            .returns(immutProtoBuilderClass)
+            .addStatement("return new $T()", immutProtoBuilderClass)
+            .build());
+    classBuilder.addMethod(
+        methodBuilder("_proto")
+            .addModifiers(PUBLIC, STATIC)
+            .returns(protoMsgType)
+            .addParameter(TypeName.get(modelRootType.asType()), "_model")
+            .addCode(
+"""
+    return _model instanceof $T _immut
+        ? _immut._proto()
+        : new $T(_model)._proto();
+""",
+                immutableProtoType,
+                immutableProtoType)
+            .build());
+    classBuilder.addMethod(
+        methodBuilder("_proto")
+            .addModifiers(PUBLIC, STATIC)
+            .returns(protoMsgType.nestedClass("Builder"))
+            .addParameter(immutInterfaceName.nestedClass("Builder"), "_builder")
+            .addCode(
+"""
+    return _builder instanceof $T _protoBuilder
+        ? _protoBuilder._proto()
+        : new $T(_builder._build())._asBuilder()._proto();
+""",
+                immutProtoBuilderClass,
+                immutableProtoType)
             .build());
     return classBuilder.build();
   }
@@ -356,23 +396,36 @@ return _serializedPayload;
   }
 
   private MethodSpec.Builder getterMethod(
-      ExecutableElement method, TypeMirror returnType, CodeGenType dataType, boolean isBuilder) {
-    TypeName typeName = TypeName.get(returnType);
+      ExecutableElement method, CodeGenType dataType, boolean isBuilder) {
+    final TypeMirror specifiedType = method.getReturnType();
+    TypeName typeName = TypeName.get(specifiedType);
 
     String methodName = method.getSimpleName().toString();
 
     MethodSpec.Builder getterBuilder =
         methodBuilder(methodName).addAnnotation(Override.class).addModifiers(PUBLIC);
 
+    Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(specifiedType);
+    if (isBuilder
+        && fieldModelRootInfo.isPresent()
+        && LIST.equals(fieldModelRootInfo.get().containerType())) {
+      ClassName immutInterfaceName = util.getImmutInterfaceName(fieldModelRootInfo.get().element());
+      typeName =
+          ParameterizedTypeName.get(
+              ClassName.get(UnmodifiableModelList.class),
+              TypeName.get(fieldModelRootInfo.get().type()),
+              immutInterfaceName);
+    }
+
     // Only add @Nullable annotation if the field needs presence check, is not FAIL,
     // and the return type is not Optional
     if (needsPresenceCheckInModels(method)
         && !isMandatoryField(method)
-        && !util.isOptional(returnType)) {
-      getterBuilder.returns(typeName.annotated(AnnotationSpec.builder(Nullable.class).build()));
-    } else {
-      getterBuilder.returns(typeName);
+        && !util.isOptional(specifiedType)) {
+      typeName = typeName.annotated(AnnotationSpec.builder(Nullable.class).build());
     }
+
+    getterBuilder.returns(typeName);
 
     addGetterCode(getterBuilder, method, dataType, methodName, isBuilder);
     return getterBuilder;
@@ -382,29 +435,85 @@ return _serializedPayload;
       MethodSpec.Builder getterBuilder,
       ExecutableElement method,
       CodeGenType dataType,
-      String methodName,
+      String fieldName,
       boolean isBuilder) {
 
     Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
     if (isProtoTypeRepeated(dataType)) {
       if (fieldModelRootInfo.isPresent()) {
-        ClassName immutClassName =
+        ClassName immutProtoClass =
             util.getImmutClassName(fieldModelRootInfo.get().element(), PROTOBUF_3);
-        getterBuilder.addStatement(
-            "return $T.transform(_proto().get$LList(), $T::new)",
-            Lists.class,
-            capitalizeFirstChar(methodName),
-            immutClassName);
+        if (isBuilder) {
+          ClassName protoMsgOrBuilderType =
+              ClassName.get(
+                  immutProtoClass.packageName(),
+                  fieldModelRootInfo.get().element().getSimpleName().toString()
+                      + MODELS_PROTO_MSG_SUFFIX
+                      + "OrBuilder");
+          getterBuilder.addStatement(
+              CodeBlock.builder()
+                  .addNamed(
+"""
+      return new $protoListBuilder:T<>(
+              $modelRoot:T.class,
+              $immutIface:T.class,
+              $immutIface:T.Builder.class,
+              $lists:T.transform(_proto().get$fieldNameCap:LList(), $immutProto:T::new),
+              $lists:T.transform(
+                  _proto().get$fieldNameCap:LBuilderList(), $immutProto:T.Builder::new),
+              _m -> _proto().add$fieldNameCap:L($immutProto:T._proto(_m)),
+              _b -> _proto().add$fieldNameCap:L($immutProto:T._proto(_b)),
+              (index, _model) ->
+                  _proto().add$fieldNameCap:L(index, $immutProto:T._proto(_model)),
+              (index, _builder) ->
+                  _proto().add$fieldNameCap:L(index, $immutProto:T._proto(_builder)),
+              _models -> {
+                _proto()
+                    .addAll$fieldNameCap:L(
+                        $iterables:T.transform(_models, $immutProto:T::_proto));
+                return _models.iterator().hasNext();
+              },
+              _proto()::clear$fieldNameCap:L,
+              (index, _model) ->
+                  _proto().add$fieldNameCap:L(index, $immutProto:T._proto(_model)),
+              (index, _builder) ->
+                  _proto().add$fieldNameCap:L(index, $immutProto:T._proto(_builder)),
+              index -> {
+                $protoMsgOrBuilder:T ret = _proto().get$fieldNameCap:LOrBuilder(index);
+                _proto().remove$fieldNameCap:L(index);
+                return new $immutProto:T(ret);
+              })
+          .unmodifiableModelsView()
+""",
+                      ofEntries(
+                          entry("protoListBuilder", ProtoListBuilder.class),
+                          entry("modelRoot", fieldModelRootInfo.get().type()),
+                          entry(
+                              "immutIface",
+                              util.getImmutInterfaceName(fieldModelRootInfo.get().element())),
+                          entry("immutProto", immutProtoClass),
+                          entry("lists", Lists.class),
+                          entry("fieldNameCap", capitalizeFirstChar(fieldName)),
+                          entry("iterables", Iterables.class),
+                          entry("protoMsgOrBuilder", protoMsgOrBuilderType)))
+                  .build());
+        } else {
+          getterBuilder.addStatement(
+              "return $T.transform(_proto().get$LList(), $T::new)",
+              Lists.class,
+              capitalizeFirstChar(fieldName),
+              immutProtoClass);
+        }
       } else {
         // For repeated fields, use getXList() method
-        getterBuilder.addStatement("return _proto().get$LList()", capitalizeFirstChar(methodName));
+        getterBuilder.addStatement("return _proto().get$LList()", capitalizeFirstChar(fieldName));
       }
       return;
     }
 
     if (isProtoTypeMap(dataType)) {
       // For map fields, use getXMap() method
-      getterBuilder.addStatement("return _proto().get$LMap()", capitalizeFirstChar(methodName));
+      getterBuilder.addStatement("return _proto().get$LMap()", capitalizeFirstChar(fieldName));
       return;
     }
     TypeMirror methodReturnType = method.getReturnType();
@@ -417,7 +526,7 @@ return _serializedPayload;
               """
               if (!_proto().has$L()){
               """,
-              capitalizeFirstChar(methodName));
+              capitalizeFirstChar(fieldName));
 
       // Add validation for mandatory fields
       if (isMandatoryField(method)) {
@@ -430,7 +539,7 @@ return _serializedPayload;
               """,
                 MandatoryFieldMissingException.class,
                 util.getImmutClassName(codeGenContext.modelRootType(), PROTOBUF_3).simpleName(),
-                methodName);
+                fieldName);
       } else if (isOptionalReturnType) {
         getterBuilder
             .addCode(protoPresenceCheck)
@@ -456,8 +565,8 @@ return _serializedPayload;
                     CodeBlock.of(
                         "new $T(_proto().get$L())",
                         util.getImmutClassName(_m.element(), PROTOBUF_3),
-                        capitalizeFirstChar(methodName)))
-            .orElseGet(() -> CodeBlock.of("_proto().get$L()", capitalizeFirstChar(methodName)));
+                        capitalizeFirstChar(fieldName)))
+            .orElseGet(() -> CodeBlock.of("_proto().get$L()", capitalizeFirstChar(fieldName)));
 
     // Get the value from the proto message
     if (isOptionalReturnType) {
@@ -471,7 +580,7 @@ return _serializedPayload;
       TypeElement modelRootType,
       String packageName,
       String protoClassName,
-      String protoMsgClassName,
+      ClassName protoMsgClassName,
       ClassName immutInterfaceName,
       List<ExecutableElement> modelMethods) {
     ModelRoot modelRoot = modelRootType.getAnnotation(ModelRoot.class);
@@ -481,9 +590,7 @@ return _serializedPayload;
     // Create class interfaces
     ClassName builderInterfaceClassName = immutInterfaceName.nestedClass("Builder");
 
-    ClassName protoBuilderClassName =
-        ClassName.get(packageName, protoMsgClassName).nestedClass("Builder");
-    ClassName protoMsgClassNameObj = ClassName.get(packageName, protoMsgClassName);
+    ClassName protoMsgBuilderClassName = protoMsgClassName.nestedClass("Builder");
 
     // Create Builder class
     Builder builderClassBuilder =
@@ -493,12 +600,12 @@ return _serializedPayload;
 
     // Add Builder field
     builderClassBuilder.addField(
-        FieldSpec.builder(protoBuilderClassName, "_proto", PRIVATE, FINAL).build());
+        FieldSpec.builder(protoMsgBuilderClassName, "_proto", PRIVATE, FINAL).build());
 
     // Add Builder constructor with _proto parameter
     builderClassBuilder.addMethod(
         MethodSpec.constructorBuilder()
-            .addParameter(protoBuilderClassName, "_proto")
+            .addParameter(protoMsgBuilderClassName, "_proto")
             .addStatement("this._proto = _proto")
             .build());
 
@@ -506,7 +613,7 @@ return _serializedPayload;
     builderClassBuilder.addMethod(
         MethodSpec.constructorBuilder()
             .addModifiers(PUBLIC)
-            .addStatement("this._proto = $T.newBuilder()", protoMsgClassNameObj)
+            .addStatement("this._proto = $T.newBuilder()", protoMsgClassName)
             .build());
 
     // Add _build method
@@ -545,7 +652,7 @@ return _serializedPayload;
 
       Optional<ModelRootInfo> fieldModelRoot = util.asModelRoot(method.getReturnType());
       if (modelRoot.builderExtendsModelRoot()) {
-        builderClassBuilder.addMethod(getterMethod(method, returnType, dataType, true).build());
+        builderClassBuilder.addMethod(getterMethod(method, dataType, true).build());
       }
       // Add setter method
       MethodSpec.Builder setterBuilder =
@@ -568,8 +675,7 @@ return _serializedPayload;
             capitalizeFirstChar(fieldName),
             fieldName,
             capitalizeFirstChar(fieldName),
-            fieldModelRoot.isPresent()
-                    && ContainerType.LIST.equals(fieldModelRoot.get().containerType())
+            fieldModelRoot.isPresent() && LIST.equals(fieldModelRoot.get().containerType())
                 ? CodeBlock.of(
 """
 
@@ -677,7 +783,7 @@ return _serializedPayload;
         .addMethod(
             methodBuilder("_proto")
                 .addModifiers(PUBLIC)
-                .returns(protoBuilderClassName)
+                .returns(protoMsgBuilderClassName)
                 .addStatement("return _proto")
                 .build())
         .build();

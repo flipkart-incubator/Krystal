@@ -1,50 +1,49 @@
 package com.flipkart.krystal.model;
 
 import static java.util.Objects.requireNonNull;
-import static lombok.AccessLevel.PACKAGE;
 
 import com.google.common.collect.Lists;
 import java.util.AbstractList;
 import java.util.List;
 import java.util.RandomAccess;
-import lombok.Getter;
 
-public class ModelsListView<M extends Model, I extends ImmutableModel> extends AbstractList<M>
-    implements RandomAccess, UnmodifiableModelList<M, I> {
+public class ModelsListView<M extends Model, I extends ImmutableModel> extends AbstractList<I>
+    implements RandomAccess, ImmutableModelList<M, I> {
 
-  private final List<M> delegate;
-
-  @Getter(PACKAGE)
-  private final ModelListBuilder<M, I, ?> source;
-
-  public ModelsListView() {
-    this(ModelListBuilder.empty());
+  public static <M extends Model, I extends ImmutableModel> ModelsListView<M, I> empty() {
+    return BasicModelListBuilder.<M, I, ImmutableModel.Builder>empty().immutModelsView();
   }
 
+  private final List<I> delegate;
+
+  private final ModelListBuilder<M, I, ?> modelsBuilder;
+
   @SuppressWarnings("unchecked")
-  public ModelsListView(ModelListBuilder<M, I, ?> modelListBuilder) {
-    this.source = modelListBuilder;
+  ModelsListView(ModelListBuilder<M, I, ?> modelListBuilder, List<M> models) {
+    this.modelsBuilder = modelListBuilder;
     this.delegate =
         Lists.transform(
-            modelListBuilder.models(),
+            models,
             model ->
                 model instanceof ImmutableModel immut
-                    ? (M) immut
-                    : (M) requireNonNull(model)._asBuilder()._build());
+                    ? (I) immut
+                    : (I) requireNonNull(model)._asBuilder()._build());
   }
 
   @Override
-  public M get(int index) {
+  @SuppressWarnings("unchecked")
+  public <B extends ImmutableModel.Builder> ModelListBuilder<M, I, B> modelsBuilder() {
+    return (ModelListBuilder<M, I, B>) modelsBuilder;
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public I get(int index) {
     return delegate.get(index);
   }
 
   @Override
   public int size() {
     return delegate.size();
-  }
-
-  @SuppressWarnings("unchecked")
-  public ModelsListView<I, I> asImmutableModelsList() {
-    return (ModelsListView<I, I>) this;
   }
 }

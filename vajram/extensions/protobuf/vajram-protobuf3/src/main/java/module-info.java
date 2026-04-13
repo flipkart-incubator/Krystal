@@ -3,4 +3,5 @@ module flipkart.krystal.vajram.ext.protobuf {
 
   requires com.google.protobuf;
   requires transitive flipkart.krystal.common;
+  requires static lombok;
 }

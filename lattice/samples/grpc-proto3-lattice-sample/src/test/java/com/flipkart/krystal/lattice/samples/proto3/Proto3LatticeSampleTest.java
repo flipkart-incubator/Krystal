@@ -26,6 +26,7 @@ import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.exception.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajram.guice.injection.VajramGuiceInputInjector;
+import com.flipkart.krystal.vajram.protobuf3.SerializableProtoModel;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
@@ -134,7 +135,7 @@ class Proto3LatticeSampleTest {
         .succeedsWithin(1, SECONDS)
         .extracting(Proto3LatticeSampleResponse::protoMessage)
         .asInstanceOf(type(ProtoMessage_ImmutProto.class))
-        .extracting(ProtoMessage_ImmutProto::_proto)
+        .extracting(SerializableProtoModel::_proto)
         .isEqualTo(ProtoMessage_Proto.newBuilder().setCount(100).build());
   }
 

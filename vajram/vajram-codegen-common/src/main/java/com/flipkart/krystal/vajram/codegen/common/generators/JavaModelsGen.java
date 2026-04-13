@@ -780,25 +780,28 @@ this.$L = $L == null
           && !specifiedReturnType.getKind().isPrimitive()) {
         try {
           methodBuilder.addCode(
-              """
-              if($N == null){
-                return $L;
-              }
-              """,
+"""
+    if($N == null){
+      return $L;
+    }
+""",
               fieldName,
-              asClassName(actualReturnType)
-                      .canonicalName()
-                      .equals(UnmodifiableModelList.class.getCanonicalName())
-                  ? CodeBlock.of("new $T()", ModelsListView.class)
+              fieldModelRootInfo.isPresent()
+                      && fieldModelRootInfo.get().containerType().isContainer()
+                  ? CodeBlock.of(
+                      "$T.<$T, $T>empty().asModelsView()",
+                      ModelsListView.class,
+                      TypeName.get(fieldModelRootInfo.get().type()),
+                      util.getImmutInterfaceName(fieldModelRootInfo.get().element()))
                   : new DeclaredTypeVisitor(util, method)
                       .visit(specifiedReturnType)
                       .defaultValueExpr(util.processingEnv()));
         } catch (CodeGenerationException e) {
           throw util.errorAndThrow(
               """
-                  Could not find default value expression for specified type %s. \
-                  Either the relevant type was not configured properly in a DataTypeFactory \
-                  or the @IfAbsent() annotation is incorrectly specified."""
+                Could not find default value expression for specified type %s. \
+                Either the relevant type was not configured properly in a DataTypeFactory \
+                or the @IfAbsent() annotation is incorrectly specified."""
                   .formatted(specifiedReturnType),
               method);
         }
@@ -834,8 +837,7 @@ this.$L = $L == null
                             .nestedClass("Builder"),
                         fieldName,
                         util.getImmutInterfaceName(fieldModelRootInfo.get().element()));
-            case LIST -> CodeBlock.of("$L.modelsListView()", fieldName);
-            case MAP -> CodeBlock.of("$L.modelsMapView()", fieldName);
+            case LIST, MAP -> CodeBlock.of("$L.unmodifiableModelsView()", fieldName);
           };
     }
     return fieldAccessorCode;
