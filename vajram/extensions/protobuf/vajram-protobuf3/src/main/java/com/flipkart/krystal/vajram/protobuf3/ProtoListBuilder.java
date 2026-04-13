@@ -68,6 +68,7 @@ public class ProtoListBuilder<
     return modelsView;
   }
 
+  @Override
   public UnmodifiableModelList<M, I> unmodifiableModelsView() {
     return new UnmodifiableModelList<>(immutModelsView());
   }

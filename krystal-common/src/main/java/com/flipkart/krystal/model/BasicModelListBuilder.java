@@ -233,7 +233,7 @@ final class BasicModelListBuilder<M extends Model, I extends ImmutableModel, B e
     }
 
     @Override
-    public @NonNull Iterator<T> iterator() {
+    public Iterator<T> iterator() {
       if (!delegate.isEmpty()) {
         ensureMutable();
       }
@@ -241,12 +241,12 @@ final class BasicModelListBuilder<M extends Model, I extends ImmutableModel, B e
     }
 
     @Override
-    public @NonNull Object[] toArray() {
+    public Object[] toArray() {
       return delegate.toArray();
     }
 
     @Override
-    public @NonNull <T1> T1[] toArray(@NonNull T1[] a) {
+    public <T1> T1[] toArray(T1[] a) {
       return delegate.toArray(a);
     }
 
@@ -258,39 +258,42 @@ final class BasicModelListBuilder<M extends Model, I extends ImmutableModel, B e
 
     @Override
     public boolean remove(Object o) {
+      ensureMutable();
       return delegate.remove(o);
     }
 
     @SuppressWarnings("SlowListContainsAll")
     @Override
-    public boolean containsAll(@NonNull Collection<?> c) {
+    public boolean containsAll(Collection<?> c) {
       return delegate.containsAll(c);
     }
 
     @Override
-    public boolean addAll(@NonNull Collection<? extends T> c) {
+    public boolean addAll(Collection<? extends T> c) {
       ensureMutable();
       return delegate.addAll(c);
     }
 
     @Override
     public boolean addAll(int index, Collection<? extends T> c) {
-      if (!c.isEmpty()) {
-        ensureMutable();
+      if (c.isEmpty()) {
+        return false;
       }
+      ensureMutable();
       return delegate.addAll(index, c);
     }
 
     @Override
-    public boolean removeAll(@NonNull Collection<?> c) {
-      if (!c.isEmpty()) {
-        ensureMutable();
+    public boolean removeAll(Collection<?> c) {
+      if (c.isEmpty()) {
+        return false;
       }
+      ensureMutable();
       return delegate.removeAll(c);
     }
 
     @Override
-    public boolean retainAll(@NonNull Collection<?> c) {
+    public boolean retainAll(Collection<?> c) {
       ensureMutable();
       return delegate.retainAll(c);
     }
@@ -337,23 +340,19 @@ final class BasicModelListBuilder<M extends Model, I extends ImmutableModel, B e
     }
 
     @Override
-    public @NonNull ListIterator<T> listIterator() {
-      if (!delegate.isEmpty()) {
-        ensureMutable();
-      }
+    public ListIterator<T> listIterator() {
+      ensureMutable();
       return delegate.listIterator();
     }
 
     @Override
-    public @NonNull ListIterator<T> listIterator(int index) {
-      if (!delegate.isEmpty()) {
-        ensureMutable();
-      }
+    public ListIterator<T> listIterator(int index) {
+      ensureMutable();
       return delegate.listIterator(index);
     }
 
     @Override
-    public @NonNull List<T> subList(int fromIndex, int toIndex) {
+    public List<T> subList(int fromIndex, int toIndex) {
       return delegate.subList(fromIndex, toIndex);
     }
   }
