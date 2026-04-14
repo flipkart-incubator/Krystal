@@ -44,7 +44,7 @@ subprojects {
                 url = "https://central.sonatype.com/api/v1/publisher/deployments/maven"
                 credentials {
                     username = System.getenv("CENTRAL_USERNAME")
-                    password = System.getenv("CENTRAL_PASSWORD")
+                    password = System.getenv("CENTRAL_TOKEN")
                 }
             }
         }
@@ -84,7 +84,7 @@ subprojects {
         def signingKey = System.getenv("GPG_PRIVATE_KEY")
         def signingPassword = System.getenv("GPG_PASSPHRASE")
         useInMemoryPgpKeys(signingKey, signingPassword)
-        sign publishing.publications.matching { it.name == "mavenJava" }
+        sign publishing.publications.withType(MavenPublication)
         required { System.getenv("CI") != null }
     }
 

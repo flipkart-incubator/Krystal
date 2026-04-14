@@ -17,6 +17,7 @@ jobs:
       CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
       CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
       GPG_PASSPHRASE: ${{ secrets.FOSS_GPG_PASSPHRASE }}
+      GPG_PRIVATE_KEY: ${{ secrets.FOSS_GPG_KEY }}
 
     steps:
       - uses: actions/checkout@v4
