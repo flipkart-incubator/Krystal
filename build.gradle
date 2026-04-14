@@ -41,7 +41,9 @@ subprojects {
         repositories {
             maven {
                 name = "MavenCentral"
-                url = "https://central.sonatype.com/api/v1/publisher/deployments/maven"
+                url = version.endsWith('SNAPSHOT')
+                        ? "https://central.sonatype.com/repository/maven-snapshots/"
+                        : "https://central.sonatype.com/api/v1/publisher/deployments/maven"
                 credentials {
                     username = System.getenv("CENTRAL_USERNAME")
                     password = System.getenv("CENTRAL_TOKEN")
@@ -215,6 +217,7 @@ configure(subprojects.findAll {
 
     java {
         withSourcesJar()
+        withJavadocJar()
     }
 
     compileJava {
