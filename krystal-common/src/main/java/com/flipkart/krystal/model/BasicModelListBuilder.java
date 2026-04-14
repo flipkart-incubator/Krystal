@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.ListIterator;
 import lombok.Getter;
 import lombok.Setter;
-import org.jspecify.annotations.NonNull;
 
 final class BasicModelListBuilder<M extends Model, I extends ImmutableModel, B extends Builder>
     implements ModelListBuilder<M, I, B> {
