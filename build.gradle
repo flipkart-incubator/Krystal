@@ -1,8 +1,12 @@
+import com.vanniktech.maven.publish.JavaLibrary
+import com.vanniktech.maven.publish.JavadocJar
+
 //file:noinspection SpellCheckingInspection
 plugins {
     id 'com.flipkart.java.code.standard' version '5.6'
     id 'org.gradlex.extra-java-module-info' version '1.11'
     id 'java-test-fixtures'
+    id 'com.vanniktech.maven.publish' version "0.35.0" // Check for latest
 
     // Needed as a workaround for gradle bug:
     // https://github.com/gradle/gradle/issues/17559
@@ -25,10 +29,13 @@ ext {
     kordamp_jandex_version = '2.3.0'
 }
 
+group = 'com.flipkart.krystal'
+
 subprojects {
     apply plugin: 'maven-publish'
     apply plugin: 'signing'
     apply plugin: 'idea'
+    apply plugin: 'com.vanniktech.maven.publish'
 
     group = 'com.flipkart.krystal'
     if (project.path.startsWith(':lattice:')) {
@@ -38,18 +45,6 @@ subprojects {
     }
 
     publishing {
-        repositories {
-            maven {
-                name = "MavenCentral"
-                url = version.endsWith('SNAPSHOT')
-                        ? "https://central.sonatype.com/repository/maven-snapshots/"
-                        : "https://central.sonatype.com/api/v1/publisher/deployments/maven"
-                credentials {
-                    username = System.getenv("CENTRAL_USERNAME")
-                    password = System.getenv("CENTRAL_TOKEN")
-                }
-            }
-        }
         publications.withType(MavenPublication).configureEach {
             pom {
                 name = project.name
@@ -89,6 +84,8 @@ subprojects {
         sign publishing.publications.withType(MavenPublication)
         required { System.getenv("CI") != null }
     }
+
+    tasks.matching { it.name == 'sourcesJar' }.configureEach { mustRunAfter('compileJava') }
 
     idea {
         module {
@@ -211,13 +208,20 @@ configure(subprojects.findAll {
         }
     }
 
+    mavenPublishing {
+        publishToMavenCentral()
+        configure(
+                new JavaLibrary(
+                        new JavadocJar.Empty(),//Javadoc is not being generated on delombok-ed code - need to fix
+                        true))
+    }
+
     checkerFramework {
         excludeTests = true
     }
 
     java {
         withSourcesJar()
-        withJavadocJar()
     }
 
     compileJava {
@@ -225,7 +229,14 @@ configure(subprojects.findAll {
         options.deprecation = true
     }
 
-    tasks.named('sourcesJar').configure { mustRunAfter('compileJava') }
+    javadoc {
+        javadoc {
+            options {
+                tags('implNote:a:Implementation Note:')
+            }
+        }
+    }
+
 
     //We need to dynamically add module info to old jars which have not yet modularized and do not have "Automatic-Module-Name" in their MANIFEST.MF
     extraJavaModuleInfo {
