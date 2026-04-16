@@ -15,8 +15,8 @@ plugins {
 }
 
 ext {
-    krystal_version = '11.0.0.0-SNAPSHOT'
-    lattice_version = '0.2.0'
+    krystal_version = '11.0.0-SNAPSHOT'
+    lattice_version = '0.2.1-SNAPSHOT'
 
     java_code_std_version = '5.6'
 
