@@ -35,7 +35,7 @@ jobs:
 
       - name: Build and publish to Maven Central (with GPG signing)
         run: |
-          chmod +x ./scripts/deploy.sh
+          chmod +x ./publishToMavenCentral.linux.sh
           ./publishToMavenCentral.linux.sh
         env:
           GPG_PASSPHRASE: ${{ secrets.FOSS_GPG_PASSPHRASE }}
