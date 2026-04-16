@@ -27,6 +27,7 @@ ext {
 
 subprojects {
     apply plugin: 'maven-publish'
+    apply plugin: 'signing'
     apply plugin: 'idea'
 
     group = 'com.flipkart.krystal'
@@ -39,23 +40,54 @@ subprojects {
     publishing {
         repositories {
             maven {
-                url = "https://clojars.org/repo"
+                name = "MavenCentral"
+                url = version.endsWith('SNAPSHOT')
+                        ? "https://central.sonatype.com/repository/maven-snapshots/"
+                        : "https://central.sonatype.com/api/v1/publisher/deployments/maven"
                 credentials {
-                    username = rootProject.ext.clojarsusername
-                    password = rootProject.ext.clojarspassword
+                    username = System.getenv("CENTRAL_USERNAME")
+                    password = System.getenv("CENTRAL_TOKEN")
                 }
             }
         }
         publications.withType(MavenPublication).configureEach {
             pom {
+                name = project.name
+                description = project.description
+                url = 'https://github.com/flipkart-incubator/Krystal'
                 licenses {
                     license {
                         name = 'The Apache License, Version 2.0'
                         url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
                     }
                 }
+                developers {
+                    developer {
+                        id = 'RamAnvesh'
+                        name = 'Ram Anvesh Reddy'
+                        email = '2082745+RamAnvesh@users.noreply.github.com'
+                        organization = 'Flipkart'
+                        organizationUrl = 'https://www.flipkart.com'
+                        roles = ['Developer', 'Maintainer', 'Architect']
+                        timezone = 'Asia/Kolkata'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git://github.com/flipkart-incubator/Krystal'
+                    developerConnection = 'scm:git:ssh://github.com/flipkart-incubator/Krystal'
+                    url = 'https://github.com/flipkart-incubator/Krystal'
+                }
+
             }
         }
+    }
+
+    signing {
+        def signingKey = System.getenv("GPG_PRIVATE_KEY")
+        def signingPassword = System.getenv("GPG_PASSPHRASE")
+        useInMemoryPgpKeys(signingKey, signingPassword)
+        sign publishing.publications.withType(MavenPublication)
+        required { System.getenv("CI") != null }
     }
 
     idea {
@@ -169,7 +201,7 @@ configure(subprojects.findAll {
     if (project.name !in ['vajram-lang', 'vajram-codegen'] && project.subprojects.isEmpty()) {
         publishing {
             publications {
-                maven(MavenPublication) {
+                mavenJava(MavenPublication) {
                     groupId = project.group
                     artifactId = project.name
                     version = project.version
@@ -185,6 +217,7 @@ configure(subprojects.findAll {
 
     java {
         withSourcesJar()
+        withJavadocJar()
     }
 
     compileJava {
