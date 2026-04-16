@@ -26,8 +26,8 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: '17'
-          distribution: 'adopt'
-          cache: 'maven'
+          distribution: 'temurin'
+          cache: 'gradle'
           server-id: central
           server-username: CENTRAL_USERNAME
           server-password: CENTRAL_TOKEN
