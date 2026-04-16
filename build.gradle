@@ -15,9 +15,7 @@ plugins {
 }
 
 ext {
-    clojarsusername = project.properties['clojarsusername'] ?: ""
-    clojarspassword = project.properties['clojarspassword'] ?: ""
-    krystal_version = '11.0.0.0-ALPHA'
+    krystal_version = '11.0.0.0-SNAPSHOT'
     lattice_version = '0.2.0'
 
     java_code_std_version = '5.6'
@@ -83,6 +81,10 @@ subprojects {
         useInMemoryPgpKeys(signingKey, signingPassword)
         sign publishing.publications.withType(MavenPublication)
         required { System.getenv("CI") != null }
+    }
+
+    mavenPublishing {
+        publishToMavenCentral()
     }
 
     tasks.matching { it.name == 'sourcesJar' }.configureEach { mustRunAfter('compileJava') }
@@ -209,7 +211,6 @@ configure(subprojects.findAll {
     }
 
     mavenPublishing {
-        publishToMavenCentral()
         configure(
                 new JavaLibrary(
                         new JavadocJar.Empty(),//Javadoc is not being generated on delombok-ed code - need to fix
