@@ -115,6 +115,14 @@ configure(subprojects.findAll {
     tasks.matching { it.name == 'publishMavenPublicationToMavenLocal' }.configureEach {
         mustRunAfter 'signMavenPublication'
     }
+
+    publishToMavenLocal {
+        configurations.forEach { config ->
+            config.dependencies.withType(ProjectDependency).forEach { dep ->
+                dependsOn dep.dependencyProject.path + ':publishToMavenLocal'
+            }
+        }
+    }
 }
 
 configure(subprojects.findAll {
