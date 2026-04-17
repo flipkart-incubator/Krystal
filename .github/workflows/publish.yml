@@ -48,6 +48,7 @@ jobs:
         run: ./gradlew publishToMavenCentral -PunsafeCompile=true --no-build-cache #Unsafe compile temporarily needed due to a checker-framework issue
         env:
           GPG_PASSPHRASE: ${{ secrets.FOSS_GPG_PASSPHRASE }}
+          GPG_PRIVATE_KEY: ${{ secrets.FOSS_GPG_KEY }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.FOSS_GPG_PASSPHRASE }}
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
