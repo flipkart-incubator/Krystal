@@ -1,3 +1,5 @@
+import com.vanniktech.maven.publish.JavaPlatform
+
 plugins {
     id 'java-platform'
 }
@@ -32,4 +34,8 @@ publishing {
             from components.javaPlatform
         }
     }
+}
+
+mavenPublishing {
+    configure(new JavaPlatform())
 }

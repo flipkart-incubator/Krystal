@@ -1,3 +1,5 @@
+import com.vanniktech.maven.publish.JavaPlatform
+
 plugins {
     id 'java-platform'
 }
@@ -7,7 +9,7 @@ javaPlatform.allowDependencies()
 dependencies {
     api platform(project(':krystal-bom'))
 
-    constraints { c->
+    constraints { c ->
         c.api 'com.flipkart.krystal:lattice-codegen:' + project.lattice_version
         c.api 'com.flipkart.krystal:lattice-core:' + project.lattice_version
         c.api 'com.flipkart.krystal:lattice-grpc-codegen:' + project.lattice_version
@@ -46,4 +48,8 @@ publishing {
             from components.javaPlatform
         }
     }
+}
+
+mavenPublishing {
+    configure(new JavaPlatform())
 }
