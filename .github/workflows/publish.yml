@@ -40,7 +40,7 @@ jobs:
         run: ./gradlew publishToMavenLocal -PunsafeCompile=true --no-build-cache #Unsafe compile temporarily needed due to a checker-framework issue
         env:
           GPG_PASSPHRASE: ${{ secrets.FOSS_GPG_PASSPHRASE }}
-          MAVEN_GPG_PASSPHRASE: ${{ secrets.FOSS_GPG_PASSPHRASE }} # Setting both as of now.
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.FOSS_GPG_PASSPHRASE }}
 
       - name: Set Krystal version back to bew version
         run: sed -i 's/com.flipkart.krystal.previousVersion/com.flipkart.krystal.currentVersion/g' build.gradle
@@ -49,4 +49,4 @@ jobs:
         run: ./gradlew publishToMavenCentral -PunsafeCompile=true --no-build-cache #Unsafe compile temporarily needed due to a checker-framework issue
         env:
           GPG_PASSPHRASE: ${{ secrets.FOSS_GPG_PASSPHRASE }}
-          MAVEN_GPG_PASSPHRASE: ${{ secrets.FOSS_GPG_PASSPHRASE }} # Setting both as of now.
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.FOSS_GPG_PASSPHRASE }}
