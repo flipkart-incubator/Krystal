@@ -33,7 +33,7 @@ jobs:
           server-password: CENTRAL_TOKEN
           settings-path: ${{ github.workspace }}
 
-      - name: Set Krystal version to old version temporarily
+      - name: Set Krystal version to previous version temporarily
         run: sed -i 's/com.flipkart.krystal.currentVersion/com.flipkart.krystal.previousVersion/g' build.gradle
 
       - name: Partial Publish to Maven Local
@@ -42,7 +42,7 @@ jobs:
           GPG_PASSPHRASE: ${{ secrets.FOSS_GPG_PASSPHRASE }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.FOSS_GPG_PASSPHRASE }}
 
-      - name: Set Krystal version back to bew version
+      - name: Set Krystal version back to current version
         run: sed -i 's/com.flipkart.krystal.previousVersion/com.flipkart.krystal.currentVersion/g' build.gradle
 
       - name: Build and publish to Maven Central (with GPG signing)
