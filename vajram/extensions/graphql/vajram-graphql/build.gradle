@@ -7,7 +7,7 @@ sourceSets {
     main {
         resources {
             // Add the custom directory to the resource source path
-            srcDirs 'src/main/graphqls'
+            srcDir 'src/main/graphqls'
         }
     }
 }
@@ -17,8 +17,8 @@ dependencies {
     api project(':vajram:vajram-java-sdk')
     implementation project(':vajram:vajram-krystex')
     implementation project(':vajram:extensions:json:vajram-json')
-    krystalModelsGenProcessor project(':vajram:vajram-codegen')
 
+    krystalModelsGenProcessor "com.flipkart.krystal:vajram-codegen:${krystal_version}"
     api 'com.graphql-java:graphql-java'
     api 'com.graphql-java:graphql-java-extended-scalars'
     implementation 'org.reflections:reflections'
