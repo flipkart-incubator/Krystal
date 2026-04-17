@@ -93,7 +93,7 @@ subprojects {
         }
     }
 
-    tasks.matching { it.name == 'publishMavenJavaPublicationToMavenLocal' }.configureEach {
+    tasks.matching { it.name.startsWith('publishMaven') }.configureEach {
         mustRunAfter 'signMavenPublication', 'signMavenJavaPublication'
     }
 }
