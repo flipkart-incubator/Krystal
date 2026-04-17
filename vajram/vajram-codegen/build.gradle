@@ -1,3 +1,7 @@
+import com.vanniktech.maven.publish.GradlePlugin
+import com.vanniktech.maven.publish.JavadocJar
+
+
 buildscript {
     repositories {
         mavenLocal()
@@ -24,6 +28,12 @@ gradlePlugin {
     }
 }
 
+mavenPublishing {
+    configure(
+            new GradlePlugin(
+                    new JavadocJar.Empty(),//Javadoc is not being generated on delombok-ed code - need to fix
+                    true))
+}
 
 dependencies {
     api project(':vajram:vajram-java-sdk')

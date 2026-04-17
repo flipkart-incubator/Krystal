@@ -27,12 +27,12 @@ dependencies {
 
 publishing {
     publications {
-        mavenJava(MavenPublication) {
-            groupId = project.group
-            artifactId = project.name
-            version = project.version
-            from components.javaPlatform
-        }
+//        maven(MavenPublication) {
+//            groupId = project.group
+//            artifactId = project.name
+//            version = project.version
+//            from components.javaPlatform
+//        }
     }
 }
 

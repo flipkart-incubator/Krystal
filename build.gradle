@@ -29,7 +29,10 @@ ext {
 
 group = 'com.flipkart.krystal'
 
-subprojects {
+configure(subprojects.findAll {
+    //Only leaf projects are of interest to us
+    it.subprojects.isEmpty()
+}) {
     apply plugin: 'maven-publish'
     apply plugin: 'signing'
     apply plugin: 'idea'
@@ -93,14 +96,13 @@ subprojects {
         }
     }
 
-    tasks.matching { it.name.startsWith('publishMaven') }.configureEach {
-        mustRunAfter 'signMavenPublication', 'signMavenJavaPublication'
-    }
 }
 
 configure(subprojects.findAll {
-    //Exclude non java projects
-    it.name != 'code-coverage-report'
+    //Only leaf projects need publishing
+    it.subprojects.isEmpty()
+            //Exclude non java projects
+            && it.name != 'code-coverage-report'
             // Exclude sample projects so that they are configured independently making
             // them a better representation of how clients should use krystal
             && !it.name.contains('sample')
@@ -109,11 +111,17 @@ configure(subprojects.findAll {
     mavenPublishing {
         publishToMavenCentral()
     }
+
+    tasks.matching { it.name == 'publishMavenPublicationToMavenLocal' }.configureEach {
+        mustRunAfter 'signMavenPublication'
+    }
 }
 
 configure(subprojects.findAll {
-    //Exclude non java projects
-    it.name !in (['krystal-bom', 'lattice-bom', 'code-coverage-report'] as Set)
+    //Only leaf projects are of interest to us
+    it.subprojects.isEmpty()
+            //Exclude non java projects
+            && it.name !in (['krystal-bom', 'lattice-bom', 'code-coverage-report'] as Set)
             // Exclude sample projects so that they are configured independently making
             // them a better representation of how clients should use krystal
             && !it.name.contains('sample')
@@ -210,24 +218,12 @@ configure(subprojects.findAll {
     // vajram-codegen has the 'java-gradle-plugin'  applied - which itself publishes to maven.
     // So we need to disable it here - else it will lead to duplicate publishing
     if (project.name !in ['vajram-lang', 'vajram-codegen'] && project.subprojects.isEmpty()) {
-        publishing {
-            publications {
-                mavenJava(MavenPublication) {
-                    groupId = project.group
-                    artifactId = project.name
-                    version = project.version
-                    from components.java
-                }
-            }
+        mavenPublishing {
+            configure(new JavaLibrary(new JavadocJar.Empty(),//Javadoc is not being generated on delombok-ed code - need to fix
+                    true))
         }
     }
 
-    mavenPublishing {
-        configure(
-                new JavaLibrary(
-                        new JavadocJar.Empty(),//Javadoc is not being generated on delombok-ed code - need to fix
-                        true))
-    }
 
     checkerFramework {
         excludeTests = true
