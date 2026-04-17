@@ -92,6 +92,10 @@ subprojects {
             downloadJavadoc = false
         }
     }
+
+    tasks.matching { it.name == 'publishMavenJavaPublicationToMavenLocal' }.configureEach {
+        mustRunAfter 'signMavenPublication'
+    }
 }
 
 configure(subprojects.findAll {
