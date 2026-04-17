@@ -9,8 +9,8 @@ pluginManagement {
 
 dependencyResolutionManagement {
     repositories {
-        mavenCentral()
         mavenLocal()
+        mavenCentral()
         maven { url = 'https://clojars.org/repo' }
         gradlePluginPortal()
     }
