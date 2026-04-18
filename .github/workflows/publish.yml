@@ -31,14 +31,20 @@ jobs:
           server-password: CENTRAL_TOKEN
           settings-path: ${{ github.workspace }}
 
-      - name: Publish Gradle Plugin to Maven Local
+      - name: Set Krystal version to previous version temporarily
+        run: sed -i 's/com.flipkart.krystal.currentVersion/com.flipkart.krystal.previousVersion/g' build.gradle
+
+      - name: Partial Publish to Maven Local
         run: ./gradlew :vajram:vajram-codegen:publishToMavenLocal -PunsafeCompile=true --no-build-cache #Unsafe compile temporarily needed due to a checker-framework issue
         env:
           GPG_PASSPHRASE: ${{ secrets.FOSS_GPG_PASSPHRASE }}
           GPG_PRIVATE_KEY: ${{ secrets.FOSS_GPG_KEY }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.FOSS_GPG_PASSPHRASE }}
 
-      - name: Publish And Release to Maven Central
+      - name: Set Krystal version back to current version
+        run: sed -i 's/com.flipkart.krystal.previousVersion/com.flipkart.krystal.currentVersion/g' build.gradle
+
+      - name: Build and publish to Maven Central (with GPG signing)
         run: ./gradlew publishToMavenCentral -PunsafeCompile=true --no-build-cache #Unsafe compile temporarily needed due to a checker-framework issue
         env:
           GPG_PASSPHRASE: ${{ secrets.FOSS_GPG_PASSPHRASE }}
