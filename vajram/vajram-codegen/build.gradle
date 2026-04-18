@@ -13,8 +13,6 @@ plugins {
     id 'java-gradle-plugin'
 }
 
-version = project['com.flipkart.krystal.currentVersion']
-
 description = '''Gradle plugin for projects using the Krystal framework. 
 Includes Vajram code generator and validator. 
 Tasks from this plugin are added under the group "Krystal"'''
