@@ -3,8 +3,13 @@ description =
 
 dependencies {
     api project(':vajram:vajram-java-sdk')
-    implementation project(':krystal-codegen-common')
+    api project(':krystal-codegen-common')
     implementation 'com.squareup:javapoet'
+}
+
+publishToMavenLocal {
+    dependsOn ':krystal-codegen-common:publishToMavenLocal'
+    dependsOn ':vajram:vajram-java-sdk:publishToMavenLocal'
 }
 
 checkerFramework {
