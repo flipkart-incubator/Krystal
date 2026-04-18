@@ -5,3 +5,7 @@ dependencies {
 
     implementation 'org.reflections:reflections'
 }
+
+publishToMavenLocal {
+    dependsOn ':krystal-common:publishToMavenLocal'
+}

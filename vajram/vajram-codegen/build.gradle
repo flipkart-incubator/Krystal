@@ -36,11 +36,13 @@ mavenPublishing {
 }
 
 dependencies {
-    api project(':vajram:vajram-java-sdk')
-    implementation project(':krystal-codegen-common')
     implementation project(':vajram:vajram-codegen-common')
     implementation 'com.squareup:javapoet'
     implementation 'org.projectlombok:lombok'
+}
+
+publishToMavenLocal {
+    dependsOn ':vajram:vajram-codegen-common:publishToMavenLocal'
 }
 
 checkerFramework {
