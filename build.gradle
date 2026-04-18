@@ -109,7 +109,7 @@ configure(subprojects.findAll {
 }) {
     apply plugin: 'com.vanniktech.maven.publish'
     mavenPublishing {
-        publishToMavenCentral()
+        publishToMavenCentral(true)
     }
 
     tasks.matching { it.name == 'publishMavenPublicationToMavenLocal' }.configureEach {
