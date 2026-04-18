@@ -3,7 +3,6 @@ plugins {
 }
 
 dependencies {
-    api project(':lattice:lattice-vajram-sdk')
     api project(':vajram:vajram-java-sdk')
     api project(':vajram:vajram-krystex')
     implementation project(':krystal-common')

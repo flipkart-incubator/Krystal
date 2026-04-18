@@ -51,7 +51,6 @@ include 'vajram:extensions:graphql:vajram-graphql-codegen'
 include 'lattice:lattice-bom'
 include 'lattice:lattice-codegen'
 include 'lattice:lattice-core'
-include 'lattice:lattice-vajram-sdk'
 /* ******** LATTICE CORE : END *********** */
 
 /* ******** LATTICE EXTENSIONS : START *********** */

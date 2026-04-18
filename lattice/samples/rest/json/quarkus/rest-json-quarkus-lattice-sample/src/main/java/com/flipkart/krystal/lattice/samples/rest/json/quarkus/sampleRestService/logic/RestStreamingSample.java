@@ -3,7 +3,7 @@ package com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService
 import static io.vertx.core.buffer.Buffer.buffer;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
-import com.flipkart.krystal.lattice.vajram.sdk.InvocableOutsideProcess;
+import com.flipkart.krystal.annos.InvocableOutsideProcess;
 import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.vajram.ComputeVajramDef;

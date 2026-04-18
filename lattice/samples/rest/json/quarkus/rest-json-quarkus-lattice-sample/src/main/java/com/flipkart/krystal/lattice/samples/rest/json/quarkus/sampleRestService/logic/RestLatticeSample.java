@@ -6,10 +6,10 @@ import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIO
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
+import com.flipkart.krystal.annos.InvocableOutsideProcess;
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.ByteArray;
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.JsonResponse;
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.JsonResponse_Immut;
-import com.flipkart.krystal.lattice.vajram.sdk.InvocableOutsideProcess;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocols;

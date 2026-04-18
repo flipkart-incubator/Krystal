@@ -3,6 +3,8 @@ plugins {
     id 'org.kordamp.gradle.jandex' version "${kordamp_jandex_version}"
 }
 
+description = "Provides capabilities that facilitate executing vajrams by invoking a GraphQl Query"
+
 sourceSets {
     main {
         resources {

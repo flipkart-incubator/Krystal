@@ -95,7 +95,7 @@ public final class ModelGenProcessor extends AbstractKrystalAnnoProcessor {
     if (supportedModelProtocols == null) {
       return Set.of(PlainJavaObject.class);
     }
-    // Check if Json is mentioned in the annotation value
+    // Check if JSON is mentioned in the annotation value
     return util.getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
         .map(typeMirror -> util.processingEnv().getTypeUtils().asElement(typeMirror))
         .filter(elem -> elem instanceof QualifiedNameable)

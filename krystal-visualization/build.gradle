@@ -1,5 +1,7 @@
 description = 'Plugin for the visualization layer for Krystal. Includes static call graph visualizations.'
 
+description = "Generates visualizations of the krystal graph - for example as an HTML"
+
 dependencies {
     api project(':vajram:vajram-java-sdk')
     api project(':vajram:vajram-krystex')
