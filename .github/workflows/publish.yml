@@ -35,7 +35,7 @@ jobs:
         run: sed -i 's/com.flipkart.krystal.currentVersion/com.flipkart.krystal.previousVersion/g' build.gradle
 
       - name: Partial Publish to Maven Local
-        run: ./gradlew publishToMavenLocal -PunsafeCompile=true --no-build-cache #Unsafe compile temporarily needed due to a checker-framework issue
+        run: ./gradlew :vajram:vajram-codegen:publishToMavenLocal -PunsafeCompile=true --no-build-cache #Unsafe compile temporarily needed due to a checker-framework issue
         env:
           GPG_PASSPHRASE: ${{ secrets.FOSS_GPG_PASSPHRASE }}
           GPG_PRIVATE_KEY: ${{ secrets.FOSS_GPG_KEY }}
