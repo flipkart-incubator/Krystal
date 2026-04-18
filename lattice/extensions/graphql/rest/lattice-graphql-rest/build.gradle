@@ -3,6 +3,8 @@ plugins {
     id 'org.kordamp.gradle.jandex' version "${kordamp_jandex_version}"
 }
 
+description = "Adds GraphQL over REST support to Lattice Apps"
+
 dependencies {
     implementation project(':vajram:vajram-java-sdk')
     implementation project(':krystex')

@@ -1,3 +1,5 @@
+description = "Dropwizard REST extension for Lattice - Facilitates using Dropwizard to power REST services in Lattice Apps"
+
 dependencies {
     api project(':lattice:extensions:rest:lattice-rest')
     api project(':lattice:extensions:rest:lattice-rest-api')

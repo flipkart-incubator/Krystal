@@ -2,6 +2,8 @@ plugins {
     id 'org.kordamp.gradle.jandex' version "${kordamp_jandex_version}"
 }
 
+description = "Core module for Lattice - Provides the core functionality for Lattice Apps"
+
 dependencies {
     api project(':vajram:vajram-java-sdk')
     api project(':vajram:vajram-krystex')

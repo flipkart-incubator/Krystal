@@ -1,3 +1,5 @@
+description = "Code generator for generating JSON specific code for JSON backed Lattice Apps"
+
 dependencies {
     api project(':vajram:extensions:json:vajram-json-codegen')
     api project(':krystal-codegen-common')

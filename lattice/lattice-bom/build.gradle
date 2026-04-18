@@ -4,6 +4,8 @@ plugins {
     id 'java-platform'
 }
 
+description = "BOM for all standard Lattice modules and extensions"
+
 javaPlatform.allowDependencies()
 
 dependencies {

@@ -1,3 +1,5 @@
+description = "Code generator for generating GraphQL specific code for Lattice GraphQL Service Apps"
+
 dependencies {
     implementation project(':lattice:lattice-codegen')
     implementation project(':vajram:extensions:graphql:vajram-graphql')

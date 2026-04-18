@@ -1,3 +1,5 @@
+description = "Code generator for generating Guice specific code Lattice Apps"
+
 dependencies {
     implementation project(':lattice:lattice-codegen')
     implementation project(':lattice:extensions:guice:lattice-guice-servlet')

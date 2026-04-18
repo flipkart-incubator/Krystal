@@ -1,3 +1,6 @@
+
+description = "REST dropwizard codegen extension for Lattice - Generates Dropwizard specific code that can power Lattice Apps"
+
 dependencies {
     implementation platform('ru.vyarus.guicey:guicey-bom:8.0.0')
 

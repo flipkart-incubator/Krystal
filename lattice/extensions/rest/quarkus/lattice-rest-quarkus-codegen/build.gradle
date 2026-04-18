@@ -1,3 +1,5 @@
+description = "REST quarkus codegen extension for Lattice - Generates Quarkus specific code for REST services in Lattice Apps"
+
 dependencies {
     implementation project(':krystal-codegen-common')
     implementation project(':lattice:extensions:rest:lattice-rest-codegen')

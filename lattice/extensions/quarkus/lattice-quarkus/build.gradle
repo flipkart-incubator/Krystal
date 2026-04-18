@@ -1,6 +1,9 @@
 plugins {
     id 'org.kordamp.gradle.jandex' version "${kordamp_jandex_version}"
 }
+
+description = "Quarkus extension for Lattice - Facilitates using Quarkus to power Lattice Apps"
+
 dependencies {
     api platform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
 
