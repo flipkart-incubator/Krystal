@@ -16,7 +16,7 @@ plugins {
 
 ext {
     krystal_version = project['com.flipkart.krystal.currentVersion']
-    lattice_version = '0.2.1-SNAPSHOT'
+    lattice_version = '0.2.1.1-alpha'
 
     java_code_std_version = '5.6'
 
@@ -28,73 +28,11 @@ ext {
 }
 
 group = 'com.flipkart.krystal'
-
 configure(subprojects.findAll {
     //Only leaf projects are of interest to us
     it.subprojects.isEmpty()
 }) {
-    apply plugin: 'maven-publish'
-    apply plugin: 'signing'
-    apply plugin: 'idea'
 
-    group = 'com.flipkart.krystal'
-    if (project.path.startsWith(':lattice:')) {
-        version = project.lattice_version
-    } else {
-        version = project.krystal_version
-    }
-
-    publishing {
-        publications.withType(MavenPublication).configureEach {
-            pom {
-                name = project.name
-                description = project.description
-                url = 'https://github.com/flipkart-incubator/Krystal'
-                licenses {
-                    license {
-                        name = 'The Apache License, Version 2.0'
-                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
-                    }
-                }
-                developers {
-                    developer {
-                        id = 'RamAnvesh'
-                        name = 'Ram Anvesh Reddy'
-                        email = '2082745+RamAnvesh@users.noreply.github.com'
-                        organization = 'Flipkart'
-                        organizationUrl = 'https://www.flipkart.com'
-                        roles = ['Developer', 'Maintainer', 'Architect']
-                        timezone = 'Asia/Kolkata'
-                    }
-                }
-                scm {
-                    connection = 'scm:git:git://github.com/flipkart-incubator/Krystal'
-                    developerConnection = 'scm:git:ssh://github.com/flipkart-incubator/Krystal'
-                    url = 'https://github.com/flipkart-incubator/Krystal'
-                }
-
-            }
-        }
-    }
-
-    signing {
-        def signingKey = System.getenv("GPG_PRIVATE_KEY")
-        def signingPassword = System.getenv("GPG_PASSPHRASE")
-        useInMemoryPgpKeys(signingKey, signingPassword)
-        sign publishing.publications.withType(MavenPublication)
-        required { System.getenv("CI") != null }
-    }
-
-    tasks.matching { it.name == 'sourcesJar' }.configureEach { mustRunAfter('compileJava') }
-
-    idea {
-        module {
-            // Disables the download of source JARs
-            downloadSources = false
-            // Optionally, disable Javadocs too
-            downloadJavadoc = false
-        }
-    }
 
 }
 
@@ -107,13 +45,76 @@ configure(subprojects.findAll {
             // them a better representation of how clients should use krystal
             && !it.name.contains('sample')
 }) {
+    apply plugin: 'idea'
+    apply plugin: 'maven-publish'
+    apply plugin: 'signing'
     apply plugin: 'com.vanniktech.maven.publish'
-    mavenPublishing {
-        publishToMavenCentral()
+
+    group = 'com.flipkart.krystal'
+    if (project.path.startsWith(':lattice:')) {
+        version = project.lattice_version
+    } else {
+        version = project.krystal_version
     }
+    idea {
+        module {
+            // Disables the download of source JARs
+            downloadSources = false
+            // Optionally, disable Javadocs too
+            downloadJavadoc = false
+        }
+    }
+
+    mavenPublishing {
+        publishToMavenCentral(true)
+    }
+
+    tasks.matching { it.name == 'sourcesJar' }.configureEach { mustRunAfter('compileJava') }
 
     tasks.matching { it.name == 'publishMavenPublicationToMavenLocal' }.configureEach {
         mustRunAfter 'signMavenPublication'
+    }
+
+    afterEvaluate {
+        publishing {
+            publications.withType(MavenPublication).configureEach {
+                pom {
+                    name = project.name
+                    description = project.description
+                    url = 'https://github.com/flipkart-incubator/Krystal'
+                    licenses {
+                        license {
+                            name = 'The Apache License, Version 2.0'
+                            url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                        }
+                    }
+                    developers {
+                        developer {
+                            id = 'RamAnvesh'
+                            name = 'Ram Anvesh Reddy'
+                            email = '2082745+RamAnvesh@users.noreply.github.com'
+                            organization = 'Flipkart'
+                            organizationUrl = 'https://www.flipkart.com'
+                            roles = ['Developer', 'Maintainer', 'Architect']
+                            timezone = 'Asia/Kolkata'
+                        }
+                    }
+                    scm {
+                        connection = 'scm:git:git://github.com/flipkart-incubator/Krystal'
+                        developerConnection = 'scm:git:ssh://github.com/flipkart-incubator/Krystal'
+                        url = 'https://github.com/flipkart-incubator/Krystal'
+                    }
+                }
+            }
+        }
+
+        signing {
+            def signingKey = System.getenv("GPG_PRIVATE_KEY")
+            def signingPassword = System.getenv("GPG_PASSPHRASE")
+            useInMemoryPgpKeys(signingKey, signingPassword)
+            sign publishing.publications.withType(MavenPublication)
+            required { System.getenv("CI") != null }
+        }
     }
 }
 

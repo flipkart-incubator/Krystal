@@ -1,3 +1,5 @@
+description = "Code generator for generating CDI specific code for Lattice Apps"
+
 dependencies {
     implementation project(':lattice:lattice-codegen')
     implementation project(':lattice:extensions:cdi:lattice-cdi')

@@ -3,6 +3,8 @@ description =
 
 version = project['com.flipkart.krystal.currentVersion']
 
+description = "Common utility code for Krystal code generation modules"
+
 dependencies {
     api project(':krystal-common')
     implementation 'com.squareup:javapoet'

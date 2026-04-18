@@ -1,3 +1,6 @@
+
+description = "CDI extension for Krystal - Facilitates using Jakarta CDI to @Inject inputs into vajrams"
+
 dependencies {
     api project(':vajram:vajram-java-sdk')
     api project(':vajram:vajram-krystex')

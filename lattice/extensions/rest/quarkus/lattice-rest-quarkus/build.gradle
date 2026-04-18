@@ -1,3 +1,5 @@
+description = "Quarkus REST extension for Lattice - Facilitates using Quarkus to power REST services in Lattice Apps"
+
 dependencies {
     api platform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
 

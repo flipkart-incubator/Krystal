@@ -1,3 +1,5 @@
+description = "Code Generator for generating MCP specific code for Quarkus-MCP backed Lattice Apps"
+
 dependencies {
     implementation project(':krystal-codegen-common')
     implementation project(':lattice:lattice-core')

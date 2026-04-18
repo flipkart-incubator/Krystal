@@ -4,6 +4,8 @@ plugins {
     id 'java-platform'
 }
 
+description = "BOM for all Krystal modules excluding those related to lattice"
+
 dependencies {
     constraints {
         api 'com.flipkart.krystal:com.flipkart.krystal.gradle.plugin:' + project.krystal_version

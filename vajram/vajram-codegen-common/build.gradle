@@ -1,5 +1,5 @@
 description =
-        '''Common utility code for Krystal code generation.'''
+        '''Common utility code for Vajram code generation.'''
 
 dependencies {
     api project(':vajram:vajram-java-sdk')

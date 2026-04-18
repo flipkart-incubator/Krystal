@@ -1,3 +1,5 @@
+description = "Code generator for generating gRPC specific code for Grpc powered Lattice Apps"
+
 dependencies {
     implementation project(':krystal-codegen-common')
     implementation project(':lattice:extensions:grpc:lattice-grpc')

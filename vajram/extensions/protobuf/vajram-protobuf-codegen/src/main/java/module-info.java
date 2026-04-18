@@ -14,9 +14,7 @@ module flipkart.krystal.vajram.ext.protobuf.codegen {
   requires com.squareup.javapoet;
   requires static lombok;
   requires com.google.protobuf;
-  requires flipkart.krystal.lattice.core;
   requires flipkart.krystal.vajram.codegen.common;
-  requires flipkart.krystal.lattice.vajram.sdk;
 
   provides ModelsCodeGeneratorProvider with
       Proto3ModelsGenProvider,

@@ -1,3 +1,5 @@
+description = "Code generator for generating Protobuf specific code for Protobuf backed Lattice Apps"
+
 dependencies {
     implementation project(':krystal-codegen-common')
     implementation project(':lattice:extensions:protobuf:lattice-protobuf')

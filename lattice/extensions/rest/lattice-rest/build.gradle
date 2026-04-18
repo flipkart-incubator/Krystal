@@ -2,6 +2,8 @@ plugins {
     id 'org.kordamp.gradle.jandex' version "${kordamp_jandex_version}"
 }
 
+description = "Adds REST Service capabilities to Lattice Apps"
+
 dependencies {
     implementation project(':lattice:extensions:rest:lattice-rest-api')
     api project(':lattice:lattice-core')

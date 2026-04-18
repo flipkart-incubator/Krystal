@@ -3,13 +3,13 @@ package com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestServ
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
+import com.flipkart.krystal.annos.InvocableOutsideProcess;
 import com.flipkart.krystal.lattice.ext.rest.api.Path;
 import com.flipkart.krystal.lattice.ext.rest.api.PathParam;
 import com.flipkart.krystal.lattice.ext.rest.api.QueryParam;
 import com.flipkart.krystal.lattice.ext.rest.api.methods.HEAD;
 import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.models.JsonResponse;
 import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.models.JsonResponse_Immut;
-import com.flipkart.krystal.lattice.vajram.sdk.InvocableOutsideProcess;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
