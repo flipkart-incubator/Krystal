@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Ensure SNAPSHOT revision for workflow_dispatch
+      - name: Ensure SNAPSHOT versions for workflow_dispatch
         if: github.event_name == 'workflow_dispatch'
         run: |
           krystalVersion=$(grep '^com\.flipkart\.krystal\.currentVersion=.*$' gradle.properties)
