@@ -27,7 +27,7 @@ jobs:
           if [[ $krystalVersion == *"-SNAPSHOT" && $latticeVersion == *"-SNAPSHOT" ]]; then
             echo "Both Krystal and Lattice have SNAPSHOT versions. Going ahead with manual workflow dispatch"
           else
-            echo "Manual workflow dispatch not allowed for release versions"
+            echo "Manual workflow dispatch not allowed for non-SNAPSHOT versions" >&2
             exit 1
           fi
       - name: Set up JDK 17
