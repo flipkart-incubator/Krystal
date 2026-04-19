@@ -17,6 +17,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Ensure SNAPSHOT versions for workflow_dispatch
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          krystalVersion=$(grep '^com\.flipkart\.krystal\.currentVersion=.*$' gradle.properties)
+          latticeVersion=$(grep '^com\.flipkart\.krystal\.lattice\.currentVersion=.*$' gradle.properties)
+          echo "Krystal version: $krystalVersion"
+          echo "Lattice version: $latticeVersion"
+          if [[ $krystalVersion == *"-SNAPSHOT" && $latticeVersion == *"-SNAPSHOT" ]]; then
+            echo "Both Krystal and Lattice have SNAPSHOT versions. Going ahead with manual workflow dispatch"
+          else
+            echo "Manual workflow dispatch not allowed for non-SNAPSHOT versions" >&2
+            exit 1
+          fi
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         env:
