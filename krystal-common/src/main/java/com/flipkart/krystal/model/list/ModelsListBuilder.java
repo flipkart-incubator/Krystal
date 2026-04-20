@@ -1,15 +1,18 @@
-package com.flipkart.krystal.model;
+package com.flipkart.krystal.model.list;
 
-public interface ModelListBuilder<
+import com.flipkart.krystal.model.ImmutableModel;
+import com.flipkart.krystal.model.Model;
+
+public interface ModelsListBuilder<
     M extends Model, I extends ImmutableModel, B extends ImmutableModel.Builder> {
   static <M extends Model, I extends ImmutableModel, B extends ImmutableModel.Builder>
-      ModelListBuilder<M, I, B> empty() {
-    return BasicModelListBuilder.empty();
+      ModelsListBuilder<M, I, B> empty() {
+    return BasicModelsListBuilder.empty();
   }
 
-  ImmutableModelList<M, I> immutModelsView();
+  ImmutModelsListView<M, I> immutModelsView();
 
-  UnmodifiableModelList<M, I> unmodifiableModelsView();
+  UnmodifiableModelsList<M, I> unmodifiableModelsView();
 
   int size();
 

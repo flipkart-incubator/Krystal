@@ -2,8 +2,8 @@ package com.flipkart.krystal.vajram.protobuf3;
 
 import com.flipkart.krystal.model.ImmutableModel;
 import com.flipkart.krystal.model.Model;
-import com.flipkart.krystal.model.ModelListBuilder;
-import com.flipkart.krystal.model.UnmodifiableModelList;
+import com.flipkart.krystal.model.list.ModelsListBuilder;
+import com.flipkart.krystal.model.list.UnmodifiableModelsList;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -12,7 +12,7 @@ import java.util.function.Predicate;
 
 public class ProtoListBuilder<
         M extends Model, I extends ImmutableModel, B extends ImmutableModel.Builder>
-    implements ModelListBuilder<M, I, B> {
+    implements ModelsListBuilder<M, I, B> {
 
   private final List<M> modelsDelegate;
   private final List<B> buildersDelegate;
@@ -69,8 +69,8 @@ public class ProtoListBuilder<
   }
 
   @Override
-  public UnmodifiableModelList<M, I> unmodifiableModelsView() {
-    return new UnmodifiableModelList<>(immutModelsView());
+  public UnmodifiableModelsList<M, I> unmodifiableModelsView() {
+    return new UnmodifiableModelsList<>(immutModelsView());
   }
 
   @Override

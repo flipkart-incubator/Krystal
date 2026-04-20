@@ -2,14 +2,14 @@ package com.flipkart.krystal.vajram.protobuf3;
 
 import com.flipkart.krystal.model.ImmutableModel;
 import com.flipkart.krystal.model.ImmutableModel.Builder;
-import com.flipkart.krystal.model.ImmutableModelList;
 import com.flipkart.krystal.model.Model;
+import com.flipkart.krystal.model.list.ImmutModelsListView;
 import java.util.AbstractList;
 import java.util.List;
 import java.util.RandomAccess;
 
 public final class ProtoListView<M extends Model, I extends ImmutableModel> extends AbstractList<I>
-    implements RandomAccess, ImmutableModelList<M, I> {
+    implements RandomAccess, ImmutModelsListView<M, I> {
 
   private final ProtoListBuilder<M, I, ?> builder;
   private final List<M> delegate;

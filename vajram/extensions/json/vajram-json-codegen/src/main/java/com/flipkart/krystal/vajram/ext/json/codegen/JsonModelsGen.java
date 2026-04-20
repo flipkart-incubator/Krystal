@@ -29,9 +29,9 @@ import com.flipkart.krystal.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
 import com.flipkart.krystal.model.Model;
-import com.flipkart.krystal.model.ModelListBuilder;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.model.list.ModelsListBuilder;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.vajram.json.Json;
 import com.flipkart.krystal.vajram.json.SerializableJsonModel;
@@ -329,7 +329,7 @@ return _serializedPayload;
       if (isBuilder
           && fieldModelRootInfo.isPresent()
           && ContainerType.LIST.equals(fieldModelRootInfo.get().containerType())) {
-        fieldBuilder.initializer("$T.empty()", ModelListBuilder.class);
+        fieldBuilder.initializer("$T.empty()", ModelsListBuilder.class);
       }
 
       fields.add(fieldBuilder.build());

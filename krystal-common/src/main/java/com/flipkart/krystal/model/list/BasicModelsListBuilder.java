@@ -1,8 +1,10 @@
-package com.flipkart.krystal.model;
+package com.flipkart.krystal.model.list;
 
 import static java.util.Collections.unmodifiableList;
 
+import com.flipkart.krystal.model.ImmutableModel;
 import com.flipkart.krystal.model.ImmutableModel.Builder;
+import com.flipkart.krystal.model.Model;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -12,12 +14,12 @@ import java.util.ListIterator;
 import lombok.Getter;
 import lombok.Setter;
 
-final class BasicModelListBuilder<M extends Model, I extends ImmutableModel, B extends Builder>
-    implements ModelListBuilder<M, I, B> {
+final class BasicModelsListBuilder<M extends Model, I extends ImmutableModel, B extends Builder>
+    implements ModelsListBuilder<M, I, B> {
 
   public static <M extends Model, I extends ImmutableModel, B extends Builder>
-      BasicModelListBuilder<M, I, B> empty() {
-    return new BasicModelListBuilder<>(ImmutableList.of());
+      BasicModelsListBuilder<M, I, B> empty() {
+    return new BasicModelsListBuilder<>(ImmutableList.of());
   }
 
   /**
@@ -28,10 +30,10 @@ final class BasicModelListBuilder<M extends Model, I extends ImmutableModel, B e
   private final ListHolder<Model> models;
 
   private final ModelsListView<M, I> immutModelsView;
-  private final UnmodifiableModelList<M, I> unmodifiableModelsView;
+  private final UnmodifiableModelsList<M, I> unmodifiableModelsView;
 
   @SuppressWarnings("unchecked")
-  private BasicModelListBuilder(List<M> models) {
+  private BasicModelsListBuilder(List<M> models) {
     ListHolder<M> listHolder;
     if (models instanceof ImmutableList) {
       listHolder = new ListHolder<>(models);
@@ -40,7 +42,7 @@ final class BasicModelListBuilder<M extends Model, I extends ImmutableModel, B e
     }
     this.models = (ListHolder<Model>) listHolder;
     this.immutModelsView = new ModelsListView<>(this, unmodifiableList(listHolder));
-    this.unmodifiableModelsView = new UnmodifiableModelList<>(immutModelsView);
+    this.unmodifiableModelsView = new UnmodifiableModelsList<>(immutModelsView);
   }
 
   @SuppressWarnings("unchecked")
@@ -51,7 +53,7 @@ final class BasicModelListBuilder<M extends Model, I extends ImmutableModel, B e
 
   @SuppressWarnings("unchecked")
   @Override
-  public UnmodifiableModelList<M, I> unmodifiableModelsView() {
+  public UnmodifiableModelsList<M, I> unmodifiableModelsView() {
     return unmodifiableModelsView;
   }
 
@@ -77,7 +79,7 @@ final class BasicModelListBuilder<M extends Model, I extends ImmutableModel, B e
 
   @Override
   public boolean addBuilder(B b) {
-    return models.add(b);
+    return models.add(b._build());
   }
 
   @Override

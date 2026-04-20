@@ -492,6 +492,7 @@
           <option value="ClassCanBeRecord" />
           <option value="EqualsDoesntCheckParameterClass" />
           <option value="SlowListContainsAll" />
+          <option value="SuspiciousMethodCalls" />
         </list>
       </option>
     </inspection_tool>

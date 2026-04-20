@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.protobuf3.codegen;
 
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.BYTE;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType.LIST;
+import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType.MAP;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.capitalizeFirstChar;
 import static com.flipkart.krystal.vajram.protobuf3.Protobuf3.PROTOBUF_3;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.Proto3SchemaGen.validateModelType;
@@ -28,13 +29,16 @@ import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.model.MandatoryFieldMissingException;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
-import com.flipkart.krystal.model.UnmodifiableModelList;
+import com.flipkart.krystal.model.list.UnmodifiableModelsList;
+import com.flipkart.krystal.model.map.UnmodifiableModelsMap;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.vajram.protobuf3.ProtoListBuilder;
+import com.flipkart.krystal.vajram.protobuf3.ProtoMapBuilder;
 import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
 import com.flipkart.krystal.vajram.protobuf3.SerializableProtoModel;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ArrayTypeName;
@@ -406,15 +410,23 @@ return _serializedPayload;
         methodBuilder(methodName).addAnnotation(Override.class).addModifiers(PUBLIC);
 
     Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(specifiedType);
-    if (isBuilder
-        && fieldModelRootInfo.isPresent()
-        && LIST.equals(fieldModelRootInfo.get().containerType())) {
+    if (isBuilder && fieldModelRootInfo.isPresent()) {
       ClassName immutInterfaceName = util.getImmutInterfaceName(fieldModelRootInfo.get().element());
-      typeName =
-          ParameterizedTypeName.get(
-              ClassName.get(UnmodifiableModelList.class),
-              TypeName.get(fieldModelRootInfo.get().type()),
-              immutInterfaceName);
+      if (LIST.equals(fieldModelRootInfo.get().containerType())) {
+        typeName =
+            ParameterizedTypeName.get(
+                ClassName.get(UnmodifiableModelsList.class),
+                TypeName.get(fieldModelRootInfo.get().type()),
+                immutInterfaceName);
+      } else if (MAP.equals(fieldModelRootInfo.get().containerType())) {
+        TypeName mapKeyTypeName = TypeName.get(util.getMapKeyType(specifiedType));
+        typeName =
+            ParameterizedTypeName.get(
+                ClassName.get(UnmodifiableModelsMap.class),
+                mapKeyTypeName,
+                TypeName.get(fieldModelRootInfo.get().type()),
+                immutInterfaceName);
+      }
     }
 
     // Only add @Nullable annotation if the field needs presence check, is not FAIL,
@@ -512,8 +524,59 @@ return _serializedPayload;
     }
 
     if (isProtoTypeMap(dataType)) {
-      // For map fields, use getXMap() method
-      getterBuilder.addStatement("return _proto().get$LMap()", capitalizeFirstChar(fieldName));
+      if (fieldModelRootInfo.isPresent()) {
+        ClassName immutProtoClass =
+            util.getImmutClassName(fieldModelRootInfo.get().element(), PROTOBUF_3);
+        if (isBuilder) {
+          ClassName protoMsgOrBuilderType =
+              ClassName.get(
+                  immutProtoClass.packageName(),
+                  fieldModelRootInfo.get().element().getSimpleName().toString()
+                      + MODELS_PROTO_MSG_SUFFIX
+                      + "OrBuilder");
+          getterBuilder.addStatement(
+              CodeBlock.builder()
+                  .addNamed(
+"""
+      return new $protoMapBuilder:T<>(
+              $modelRoot:T.class,
+              $immutIface:T.class,
+              $immutIface:T.Builder.class,
+              () -> $maps:T.transformValues(_proto().get$fieldNameCap:LMap(), $immutProto:T::new),
+              () -> $maps:T.transformValues(
+                  _proto().get$fieldNameCap:LMap(), _v -> ($immutIface:T.Builder) new $immutProto:T(_v)._asBuilder()),
+              (_k, _m) -> _proto().put$fieldNameCap:L(_k, $immutProto:T._proto(_m)),
+              (_k, _b) -> _proto().put$fieldNameCap:L(_k, $immutProto:T._proto(_b).build()),
+              _proto()::clear$fieldNameCap:L,
+              _k -> {
+                $protoMsgOrBuilder:T ret = _proto().get$fieldNameCap:LOrThrow(_k);
+                _proto().remove$fieldNameCap:L(_k);
+                return new $immutProto:T(ret);
+              })
+          .unmodifiableModelsView()
+""",
+                      ofEntries(
+                          entry("protoMapBuilder", ProtoMapBuilder.class),
+                          entry("modelRoot", fieldModelRootInfo.get().type()),
+                          entry(
+                              "immutIface",
+                              util.getImmutInterfaceName(fieldModelRootInfo.get().element())),
+                          entry("immutProto", immutProtoClass),
+                          entry("maps", Maps.class),
+                          entry("fieldNameCap", capitalizeFirstChar(fieldName)),
+                          entry("protoMsgOrBuilder", protoMsgOrBuilderType)))
+                  .build());
+        } else {
+          getterBuilder.addStatement(
+              "return $T.transformValues(_proto().get$LMap(), $T::new)",
+              Maps.class,
+              capitalizeFirstChar(fieldName),
+              immutProtoClass);
+        }
+      } else {
+        // For map fields without model values, use getXMap() method
+        getterBuilder.addStatement("return _proto().get$LMap()", capitalizeFirstChar(fieldName));
+      }
       return;
     }
     TypeMirror methodReturnType = method.getReturnType();
@@ -651,7 +714,8 @@ return _serializedPayload;
       CodeGenType dataType = new DeclaredTypeVisitor(util, method).visit(returnType);
 
       Optional<ModelRootInfo> fieldModelRoot = util.asModelRoot(method.getReturnType());
-      if (modelRoot.builderExtendsModelRoot()) {
+      if (modelRoot.builderExtendsModelRoot()
+          || (fieldModelRoot.isPresent() && fieldModelRoot.get().containerType().isContainer())) {
         builderClassBuilder.addMethod(getterMethod(method, dataType, true).build());
       }
       // Add setter method
@@ -707,7 +771,26 @@ return _serializedPayload;
             capitalizeFirstChar(fieldName),
             fieldName,
             capitalizeFirstChar(fieldName),
-            fieldName);
+            fieldModelRoot.isPresent()
+                    && ContainerType.MAP.equals(fieldModelRoot.get().containerType())
+                ? CodeBlock.of(
+"""
+
+          $T.transformValues(
+              $L,
+              _value ->
+                  _value instanceof $T _proto
+                      ? _proto._proto()
+                      : _value instanceof $T.Builder _proto
+                          ? _proto._proto().build()
+                          : new $T(_value)._proto())
+""",
+                    Maps.class,
+                    fieldName,
+                    util.getImmutClassName(fieldModelRoot.get().element(), PROTOBUF_3),
+                    util.getImmutClassName(fieldModelRoot.get().element(), PROTOBUF_3),
+                    util.getImmutClassName(fieldModelRoot.get().element(), PROTOBUF_3))
+                : fieldName);
       } else {
         // For regular fields
         setterBuilder.addCode(
