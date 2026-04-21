@@ -23,6 +23,7 @@ import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.model.list.ModelsListBuilder;
+import com.flipkart.krystal.model.map.ModelsMapBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.googlejavaformat.java.GoogleJavaFormatTool;
@@ -988,19 +989,21 @@ public class CodeGenUtility {
               TypeName mapValueTypeName =
                   getMapValueType(inferredType).accept(new TypeNameVisitor(), null);
               elementType = mapValueTypeName;
-              TypeName mapType =
-                  ParameterizedTypeName.get(
-                      ClassName.get(java.util.Map.class),
-                      mapKeyTypeName,
-                      isBuilder
-                          ? mapValueTypeName
-                          : TypeName.get(fieldModelRootInfo.get().element().asType()));
-              if (isBuilder || isNullable) {
-                mapType =
-                    mapType.annotated(
-                        AnnotationSpec.builder(ClassName.get(Nullable.class)).build());
+              if (isBuilder) {
+                yield ParameterizedTypeName.get(
+                    ClassName.get(ModelsMapBuilder.class),
+                    mapKeyTypeName,
+                    mapValueTypeName,
+                    immutType,
+                    immutType.nestedClass("Builder"));
+              } else {
+                TypeName mapType =
+                    ParameterizedTypeName.get(
+                        ClassName.get(ImmutableMap.class),
+                        mapKeyTypeName,
+                        TypeName.get(fieldModelRootInfo.get().element().asType()));
+                yield mapType;
               }
-              yield mapType;
             }
           };
     } else {
@@ -1150,8 +1153,7 @@ public class CodeGenUtility {
             typeUtils.asElement(javaModelType));
       }
       containerType = ContainerType.LIST;
-    }
-    if (isMapType(javaModelType)) {
+    } else if (isMapType(javaModelType)) {
       javaModelType = getMapValueType(javaModelType);
       if (isMapType(javaModelType)) {
         error(
