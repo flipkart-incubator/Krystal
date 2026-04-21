@@ -32,6 +32,7 @@ import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.model.list.ModelsListBuilder;
+import com.flipkart.krystal.model.map.ModelsMapBuilder;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.vajram.json.Json;
 import com.flipkart.krystal.vajram.json.SerializableJsonModel;
@@ -172,7 +173,7 @@ return _serializedPayload;
             AnnotationSpec.builder(JsonDeserialize.class)
                 .addMember(
                     switch (fieldModelRootInfo.get().containerType()) {
-                      case LIST -> "contentAs";
+                      case LIST, MAP -> "contentAs";
                       default -> "as";
                     },
                     "$T.class",
@@ -326,10 +327,12 @@ return _serializedPayload;
               method.getSimpleName().toString(),
               PRIVATE);
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
-      if (isBuilder
-          && fieldModelRootInfo.isPresent()
-          && ContainerType.LIST.equals(fieldModelRootInfo.get().containerType())) {
-        fieldBuilder.initializer("$T.empty()", ModelsListBuilder.class);
+      if (isBuilder && fieldModelRootInfo.isPresent()) {
+        if (ContainerType.LIST.equals(fieldModelRootInfo.get().containerType())) {
+          fieldBuilder.initializer("$T.empty()", ModelsListBuilder.class);
+        } else if (ContainerType.MAP.equals(fieldModelRootInfo.get().containerType())) {
+          fieldBuilder.initializer("$T.empty()", ModelsMapBuilder.class);
+        }
       }
 
       fields.add(fieldBuilder.build());

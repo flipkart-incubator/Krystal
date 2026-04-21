@@ -39,6 +39,9 @@ import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.model.list.ModelsListBuilder;
 import com.flipkart.krystal.model.list.ModelsListView;
 import com.flipkart.krystal.model.list.UnmodifiableModelsList;
+import com.flipkart.krystal.model.map.ModelsMapBuilder;
+import com.flipkart.krystal.model.map.ModelsMapView;
+import com.flipkart.krystal.model.map.UnmodifiableModelsMap;
 import com.flipkart.krystal.vajram.Trait;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -480,15 +483,15 @@ public final class JavaModelsGen implements CodeGenerator {
       }
       methods.add(setter.build());
 
-      Optional<ModelRootInfo> modelRootInfo = util.asModelRoot(method.getReturnType());
-      if (modelRootInfo.isPresent()
-          && !modelRootInfo.get().annotation().builderExtendsModelRoot()
-          && NO_CONTAINER.equals(modelRootInfo.get().containerType())) {
+      Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
+      if (fieldModelRootInfo.isPresent()
+          && !fieldModelRootInfo.get().annotation().builderExtendsModelRoot()
+          && NO_CONTAINER.equals(fieldModelRootInfo.get().containerType())) {
         MethodSpec.Builder methodBuilder =
             MethodSpec.methodBuilder(methodName)
                 .addModifiers(PUBLIC, ABSTRACT)
                 .addParameter(
-                    util.getImmutInterfaceName(modelRootInfo.get().element())
+                    util.getImmutInterfaceName(fieldModelRootInfo.get().element())
                         .nestedClass("Builder"),
                     methodName)
                 .returns(builderType);
@@ -497,7 +500,7 @@ public final class JavaModelsGen implements CodeGenerator {
         }
         methods.add(methodBuilder.build());
       }
-      if (modelRootInfo.isPresent() && modelRootInfo.get().containerType().isContainer()) {
+      if (fieldModelRootInfo.isPresent() && fieldModelRootInfo.get().containerType().isContainer()) {
         methods.add(
             MethodSpec.methodBuilder(methodName)
                 .addModifiers(PUBLIC, ABSTRACT)
@@ -767,7 +770,14 @@ this.$L = $L == null
                       ClassName.get(UnmodifiableModelsList.class),
                       TypeName.get(fieldModelRootInfo.get().type()),
                       util.getImmutTypeName(fieldModelRootInfo.get().type(), modelProtocol));
-              case MAP -> TypeName.get(specifiedReturnType);
+              case MAP -> {
+                TypeMirror mapKeyType = util.getMapKeyType(specifiedReturnType);
+                yield ParameterizedTypeName.get(
+                    ClassName.get(UnmodifiableModelsMap.class),
+                    TypeName.get(mapKeyType),
+                    TypeName.get(fieldModelRootInfo.get().type()),
+                    util.getImmutTypeName(fieldModelRootInfo.get().type(), modelProtocol));
+              }
             }
             : TypeName.get(specifiedReturnType)
                 .annotated(
@@ -802,7 +812,12 @@ this.$L = $L == null
                       util.getImmutInterfaceName(fieldModelRootInfo.get().element()))
                   : fieldModelRootInfo.isPresent()
                           && ContainerType.MAP.equals(fieldModelRootInfo.get().containerType())
-                      ? CodeBlock.of("$T.of()", java.util.Map.class)
+                      ? CodeBlock.of(
+                          "$T.<$T, $T, $T>empty().asModelsView()",
+                          ModelsMapView.class,
+                          TypeName.get(util.getMapKeyType(specifiedReturnType)),
+                          TypeName.get(fieldModelRootInfo.get().type()),
+                          util.getImmutInterfaceName(fieldModelRootInfo.get().element()))
                       : new DeclaredTypeVisitor(util, method)
                           .visit(specifiedReturnType)
                           .defaultValueExpr(util.processingEnv()));
@@ -848,7 +863,7 @@ this.$L = $L == null
                         fieldName,
                         util.getImmutInterfaceName(fieldModelRootInfo.get().element()));
             case LIST -> CodeBlock.of("$L.unmodifiableModelsView()", fieldName);
-            case MAP -> CodeBlock.of("$L", fieldName);
+            case MAP -> CodeBlock.of("$L.unmodifiableModelsView()", fieldName);
           };
     }
     return fieldAccessorCode;
@@ -878,9 +893,12 @@ this.$L = $L == null
       TypeName fieldType = util.getModelFieldType(method, true, null).fieldType();
       FieldSpec.Builder fieldBuilder = FieldSpec.builder(fieldType, fieldName, PRIVATE);
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
-      if (fieldModelRootInfo.isPresent()
-          && ContainerType.LIST.equals(fieldModelRootInfo.get().containerType())) {
-        fieldBuilder.initializer("$T.empty()", ModelsListBuilder.class);
+      if (fieldModelRootInfo.isPresent()) {
+        if (ContainerType.LIST.equals(fieldModelRootInfo.get().containerType())) {
+          fieldBuilder.initializer("$T.empty()", ModelsListBuilder.class);
+        } else if (ContainerType.MAP.equals(fieldModelRootInfo.get().containerType())) {
+          fieldBuilder.initializer("$T.empty()", ModelsMapBuilder.class);
+        }
       }
       fields.add(fieldBuilder.build());
     }
@@ -963,7 +981,7 @@ this.$L = $L == null
                       ? CodeBlock.of("$T.empty()", ModelsListBuilder.class)
                       : fieldModelRootInfo.isPresent()
                               && ContainerType.MAP.equals(fieldModelRootInfo.get().containerType())
-                          ? CodeBlock.of("$T.of()", java.util.Map.class)
+                          ? CodeBlock.of("$T.empty()", ModelsMapBuilder.class)
                           : dataType.defaultValueExpr(util.processingEnv()));
             } catch (CodeGenerationException e) {
               throw util.errorAndThrow(
@@ -1063,7 +1081,17 @@ this.$L = $L == null
                           methodName,
                           methodName,
                           methodName)
-                      : CodeBlock.of("this.$L = $L;", methodName, methodName))
+                      : fieldModelRootInfo.isPresent()
+                              && ContainerType.MAP.equals(fieldModelRootInfo.get().containerType())
+                          ? CodeBlock.of(
+"""
+    this.$L.clear();
+    this.$L.putAllModels($L);
+""",
+                              methodName,
+                              methodName,
+                              methodName)
+                          : CodeBlock.of("this.$L = $L;", methodName, methodName))
               .addStatement("return this")
               .build());
 
