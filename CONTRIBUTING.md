@@ -7,12 +7,12 @@
   designed to give immediate feedback for locally testable features. Not all features - especially
   ones which are implemented across modules are testable in local unit tests.
 - End2End unit tests are present in sample projects.
-    - These tests are designed to tests complex features whose implementation spans multiple modules
+    - These tests are designed to test complex features whose implementation spans multiple modules
     - All sample projects' names end with the "-sample" suffix (and all projects whose names end
       in "-sample" are sample projects).
     - These sample projects contain various krystal graphs which are tested in end to end fashion in
       the src/test of that sample project.
-    - These sample projects also act as documentation for how use krystal and its various modules
+    - These sample projects also act as documentation for how to use krystal and its various modules
       and extensions.
 - All features implemented should preferably have test cases in both module specific unit tests and
   End2End unit tests.
@@ -22,4 +22,5 @@
 1. After making changes to the framework,
    run [upgradeVersionAndPublishToLocal.macOS.sh](upgradeVersionAndPublishToLocal.macOS.sh) to
    publish the framework changes locally such that the new changes are available to the sample projects
-2. Run `./gradlew test` to run all tests.
+2. Run `./gradlew test --rerun-tasks` to run all tests.
+3. Run `./gradlew build` to run all tests and all code analysis checks.

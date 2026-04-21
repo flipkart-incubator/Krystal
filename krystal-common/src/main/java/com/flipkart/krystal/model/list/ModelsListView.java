@@ -8,9 +8,11 @@ import com.google.common.collect.Lists;
 import java.util.AbstractList;
 import java.util.List;
 import java.util.RandomAccess;
+import org.checkerframework.checker.initialization.qual.NotOnlyInitialized;
+import org.checkerframework.checker.initialization.qual.UnderInitialization;
 
 public class ModelsListView<M extends Model, I extends ImmutableModel> extends AbstractList<I>
-    implements RandomAccess, ImmutModelsListView<M, I> {
+    implements RandomAccess, UnmodifiableImmutModelsList<M, I> {
 
   public static <M extends Model, I extends ImmutableModel> ModelsListView<M, I> empty() {
     return BasicModelsListBuilder.<M, I, ImmutableModel.Builder>empty().immutModelsView();
@@ -18,10 +20,11 @@ public class ModelsListView<M extends Model, I extends ImmutableModel> extends A
 
   private final List<I> delegate;
 
-  private final ModelsListBuilder<M, I, ?> modelsBuilder;
+  @NotOnlyInitialized private final ModelsListBuilder<M, I, ?> modelsBuilder;
 
   @SuppressWarnings("unchecked")
-  ModelsListView(ModelsListBuilder<M, I, ?> modelsListBuilder, List<M> models) {
+  ModelsListView(
+      @UnderInitialization ModelsListBuilder<M, I, ?> modelsListBuilder, List<M> models) {
     this.modelsBuilder = modelsListBuilder;
     this.delegate =
         Lists.transform(

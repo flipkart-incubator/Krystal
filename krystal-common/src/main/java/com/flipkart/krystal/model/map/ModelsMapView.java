@@ -1,5 +1,6 @@
 package com.flipkart.krystal.model.map;
 
+import static java.util.Collections.unmodifiableSet;
 import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.model.ImmutableModel;
@@ -8,9 +9,12 @@ import com.google.common.collect.Maps;
 import java.util.AbstractMap;
 import java.util.Map;
 import java.util.Set;
+import org.checkerframework.checker.initialization.qual.NotOnlyInitialized;
+import org.checkerframework.checker.initialization.qual.UnderInitialization;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
-public class ModelsMapView<K, M extends Model, I extends ImmutableModel> extends AbstractMap<K, I>
-    implements ImmutModelsMapView<K, M, I> {
+public final class ModelsMapView<K, M extends Model, I extends ImmutableModel>
+    extends AbstractMap<K, I> implements UnmodifiableImmutModelsMap<K, M, I> {
 
   public static <K, M extends Model, I extends ImmutableModel> ModelsMapView<K, M, I> empty() {
     return BasicModelsMapBuilder.<K, M, I, ImmutableModel.Builder>empty().immutModelsView();
@@ -18,10 +22,11 @@ public class ModelsMapView<K, M extends Model, I extends ImmutableModel> extends
 
   private final Map<K, I> delegate;
 
-  private final ModelsMapBuilder<K, M, I, ?> modelsBuilder;
+  @NotOnlyInitialized private final ModelsMapBuilder<K, M, I, ?> modelsBuilder;
 
   @SuppressWarnings("unchecked")
-  ModelsMapView(ModelsMapBuilder<K, M, I, ?> modelListBuilder, Map<K, M> models) {
+  ModelsMapView(
+      @UnderInitialization ModelsMapBuilder<K, M, I, ?> modelListBuilder, Map<K, M> models) {
     this.modelsBuilder = modelListBuilder;
     this.delegate =
         Maps.transformValues(
@@ -40,13 +45,14 @@ public class ModelsMapView<K, M extends Model, I extends ImmutableModel> extends
 
   @SuppressWarnings("unchecked")
   @Override
-  public I get(Object key) {
+  public @Nullable I get(Object key) {
     return delegate.get(key);
   }
 
+  @SuppressWarnings("keyfor")
   @Override
   public Set<Entry<K, I>> entrySet() {
-    return delegate.entrySet();
+    return unmodifiableSet(delegate.entrySet());
   }
 
   @Override

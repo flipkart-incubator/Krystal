@@ -1,18 +1,22 @@
 package com.flipkart.krystal.model.map;
 
 import static java.util.Collections.unmodifiableMap;
+import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.model.ImmutableModel;
 import com.flipkart.krystal.model.ImmutableModel.Builder;
 import com.flipkart.krystal.model.Model;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.Setter;
+import org.checkerframework.checker.initialization.qual.NotOnlyInitialized;
+import org.checkerframework.checker.nullness.qual.KeyFor;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 final class BasicModelsMapBuilder<K, M extends Model, I extends ImmutableModel, B extends Builder>
@@ -24,26 +28,27 @@ final class BasicModelsMapBuilder<K, M extends Model, I extends ImmutableModel, 
   }
 
   /**
-   * A list which can contain either an immutable model or it's builder. Immutable models are
-   * replaced with Builders on-demand when the value needs to be mutated. This strategy allows us to
-   * prevent unnecessary object creation unless actually needed.
+   * A map which can contain values each of which is either an immutable model or it's builder.
+   * Immutable models are replaced with Builders on-demand when the value needs to be mutated. This
+   * strategy allows us to prevent unnecessary object creation unless actually needed.
    */
   private final MapHolder<K, Model> models;
 
-  private final ModelsMapView<K, M, I> immutModelsView;
-  private final UnmodifiableModelsMap<K, M, I> unmodifiableModelsView;
+  @NotOnlyInitialized private final ModelsMapView<K, M, I> immutModelsView;
+  @NotOnlyInitialized private final UnmodifiableModelsMap<K, M, I> unmodifiableModelsView;
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "initialization"})
   private BasicModelsMapBuilder(Map<K, M> models) {
     MapHolder<K, M> mapHolder;
-    if (models instanceof ImmutableList) {
+    if (models instanceof ImmutableMap<K, M>) {
       mapHolder = new MapHolder<>(models);
     } else {
       mapHolder = new MapHolder<>(new LinkedHashMap<>(models));
     }
     this.models = (MapHolder<K, Model>) mapHolder;
-    this.immutModelsView = new ModelsMapView<>(this, unmodifiableMap(mapHolder));
-    this.unmodifiableModelsView = new UnmodifiableModelsMap<>(immutModelsView);
+    ModelsMapView<K, M, I> immutModelsView = new ModelsMapView<>(this, unmodifiableMap(mapHolder));
+    this.immutModelsView = immutModelsView;
+    this.unmodifiableModelsView = new UnmodifiableModelsMap<>(this.immutModelsView);
   }
 
   @SuppressWarnings("unchecked")
@@ -68,6 +73,32 @@ final class BasicModelsMapBuilder<K, M extends Model, I extends ImmutableModel, 
     return models.isEmpty();
   }
 
+  @SuppressWarnings("RedundantCast") // For checkerframework
+  @Override
+  public boolean containsKey(@NonNull K key) {
+    return models.containsKey((@KeyFor("this.models") K) key);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public @Nullable M getModel(@NonNull K key) {
+    Model existingValue = models.get(key);
+    if (existingValue == null) {
+      return null;
+    }
+    return (M) existingValue;
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public @Nullable B getBuilder(@NonNull K key) {
+    Model existingValue = models.get(key);
+    if (existingValue == null) {
+      return null;
+    }
+    return (B) existingValue._asBuilder();
+  }
+
   @Override
   public void putAllModels(Map<K, ? extends M> map) {
     models.putAll(map);
@@ -83,34 +114,45 @@ final class BasicModelsMapBuilder<K, M extends Model, I extends ImmutableModel, 
     models.clear();
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({
+    "unchecked",
+    // For CheckerFramework
+    "RedundantCast"
+  })
   @Override
-  public M getModel(K key) {
-    Model model = models.get(key);
-    if (model instanceof ImmutableModel) {
-      return (M) model;
+  public M putModelIfAbsent(@NonNull K key, Supplier<I> defaultValueSupplier) {
+    Model existingValue = models.get((@KeyFor("this.models") K) key);
+    if (existingValue instanceof ImmutableModel) {
+      return (M) existingValue;
+    } else if (existingValue != null) {
+      return (M) existingValue._build();
     } else {
-      return (M) model._build();
+      ensureMutable();
+      I value = defaultValueSupplier.get();
+      models.put((@KeyFor("this.models") K) key, value);
+      return (M) value;
     }
   }
 
   @Override
-  public B getBuilder(K key) {
-    return ensureBuilderForKey(key);
+  public B putBuilderIfAbsent(@NonNull K key, Supplier<B> defaultValueSupplier) {
+    return ensureBuilderForKey(key, defaultValueSupplier);
+  }
+
+  @SuppressWarnings("RedundantCast") // For CheckerFramework
+  @Override
+  public void putModel(@NonNull K key, M value) {
+    models.put((@KeyFor("this.models") K) key, value);
+  }
+
+  @SuppressWarnings("RedundantCast") // For CheckerFramework
+  @Override
+  public void putBuilder(@NonNull K key, B value) {
+    models.put((@KeyFor("this.models") K) key, value);
   }
 
   @Override
-  public void putModel(K key, M element) {
-    models.put(key, element);
-  }
-
-  @Override
-  public void putBuilder(K key, B element) {
-    models.put(key, element);
-  }
-
-  @Override
-  public Model remove(K key) {
+  public @Nullable Model remove(@NonNull K key) {
     return models.remove(key);
   }
 
@@ -118,16 +160,26 @@ final class BasicModelsMapBuilder<K, M extends Model, I extends ImmutableModel, 
     models.ensureMutable();
   }
 
-  @SuppressWarnings("unchecked")
-  private B ensureBuilderForKey(K key) {
-    Model elementAtIndex = models.get(key);
-    if (elementAtIndex instanceof ImmutableModel _immut) {
+  @SuppressWarnings({
+    "unchecked",
+    // For CheckerFramework
+    "RedundantCast"
+  })
+  private B ensureBuilderForKey(@NonNull K key, Supplier<? extends Model> defaultValueSupplier) {
+    Model existingValue = models.get((@KeyFor("this.models") K) key);
+    if (existingValue instanceof ImmutableModel _immut) {
       ensureMutable();
       Builder builder = _immut._asBuilder();
-      models.put(key, builder);
+      models.put((@KeyFor("this.models") K) key, builder);
       return (B) builder;
+    } else if (existingValue != null) {
+      return (B) existingValue._asBuilder();
     } else {
-      return (B) elementAtIndex._asBuilder();
+      ensureMutable();
+      Model defaultValue = defaultValueSupplier.get();
+      B returnValue = (B) defaultValue._asBuilder();
+      models.put((@KeyFor("this.models") K) key, returnValue);
+      return returnValue;
     }
   }
 
@@ -161,8 +213,9 @@ final class BasicModelsMapBuilder<K, M extends Model, I extends ImmutableModel, 
       return delegate.isEmpty();
     }
 
+    @SuppressWarnings("contracts.conditional.postcondition") // For CheckerFramework
     @Override
-    public boolean containsKey(Object key) {
+    public boolean containsKey(@NonNull Object key) {
       return delegate.containsKey(key);
     }
 
@@ -171,15 +224,17 @@ final class BasicModelsMapBuilder<K, M extends Model, I extends ImmutableModel, 
       return delegate.containsValue(value);
     }
 
+    @SuppressWarnings("return")
     @Override
-    public T get(Object key) {
+    public T get(@NonNull Object key) {
       return delegate.get(key);
     }
 
+    @SuppressWarnings({"RedundantCast", "contracts.postcondition"}) // For checker framework
     @Override
-    public @Nullable T put(K key, T value) {
+    public @Nullable T put(@Nullable K key, T value) {
       ensureMutable();
-      return delegate.put(key, value);
+      return delegate.put((@KeyFor("this.delegate") K) requireNonNull(key), value);
     }
 
     @SuppressWarnings("SuspiciousMethodCalls")
@@ -209,9 +264,10 @@ final class BasicModelsMapBuilder<K, M extends Model, I extends ImmutableModel, 
       }
     }
 
+    @SuppressWarnings("RedundantCast") // For NullChecker
     @Override
-    public Set<K> keySet() {
-      return delegate.keySet();
+    public Set<@KeyFor("this") K> keySet() {
+      return (Set<@KeyFor("this") K>) delegate.keySet();
     }
 
     @Override
@@ -220,6 +276,7 @@ final class BasicModelsMapBuilder<K, M extends Model, I extends ImmutableModel, 
     }
 
     @Override
+    @SuppressWarnings("keyfor")
     public Set<Entry<K, T>> entrySet() {
       return delegate.entrySet();
     }

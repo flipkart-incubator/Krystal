@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.ListIterator;
 import lombok.Getter;
 import lombok.Setter;
+import org.checkerframework.checker.initialization.qual.NotOnlyInitialized;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 final class BasicModelsListBuilder<M extends Model, I extends ImmutableModel, B extends Builder>
     implements ModelsListBuilder<M, I, B> {
@@ -29,8 +31,8 @@ final class BasicModelsListBuilder<M extends Model, I extends ImmutableModel, B 
    */
   private final ListHolder<Model> models;
 
-  private final ModelsListView<M, I> immutModelsView;
-  private final UnmodifiableModelsList<M, I> unmodifiableModelsView;
+  @NotOnlyInitialized private final ModelsListView<M, I> immutModelsView;
+  @NotOnlyInitialized private final UnmodifiableModelsList<M, I> unmodifiableModelsView;
 
   @SuppressWarnings("unchecked")
   private BasicModelsListBuilder(List<M> models) {
@@ -41,7 +43,8 @@ final class BasicModelsListBuilder<M extends Model, I extends ImmutableModel, B 
       listHolder = new ListHolder<>(new ArrayList<>(models));
     }
     this.models = (ListHolder<Model>) listHolder;
-    this.immutModelsView = new ModelsListView<>(this, unmodifiableList(listHolder));
+    ModelsListView<M, I> immutModelsView = new ModelsListView<>(this, unmodifiableList(listHolder));
+    this.immutModelsView = immutModelsView;
     this.unmodifiableModelsView = new UnmodifiableModelsList<>(immutModelsView);
   }
 
@@ -241,11 +244,13 @@ final class BasicModelsListBuilder<M extends Model, I extends ImmutableModel, B 
       return delegate.iterator();
     }
 
+    @SuppressWarnings("RedundantCast") // For CheckerFramework
     @Override
-    public Object[] toArray() {
-      return delegate.toArray();
+    public @NonNull Object[] toArray() {
+      return (@NonNull Object[]) delegate.toArray();
     }
 
+    @SuppressWarnings({"nullness", "override.return"})
     @Override
     public <T1> T1[] toArray(T1[] a) {
       return delegate.toArray(a);

@@ -4,7 +4,7 @@ import com.flipkart.krystal.model.ImmutableModel;
 import com.flipkart.krystal.model.Model;
 import java.util.Map;
 
-public interface ImmutModelsMapView<K, M extends Model, I extends ImmutableModel>
+public interface UnmodifiableImmutModelsMap<K, M extends Model, I extends ImmutableModel>
     extends Map<K, I> {
   <B extends ImmutableModel.Builder> ModelsMapBuilder<K, M, I, B> modelsBuilder();
 

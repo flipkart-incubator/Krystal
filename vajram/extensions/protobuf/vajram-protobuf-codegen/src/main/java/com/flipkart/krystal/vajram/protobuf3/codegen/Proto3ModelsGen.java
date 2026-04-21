@@ -528,12 +528,6 @@ return _serializedPayload;
         ClassName immutProtoClass =
             util.getImmutClassName(fieldModelRootInfo.get().element(), PROTOBUF_3);
         if (isBuilder) {
-          ClassName protoMsgOrBuilderType =
-              ClassName.get(
-                  immutProtoClass.packageName(),
-                  fieldModelRootInfo.get().element().getSimpleName().toString()
-                      + MODELS_PROTO_MSG_SUFFIX
-                      + "OrBuilder");
           getterBuilder.addStatement(
               CodeBlock.builder()
                   .addNamed(
@@ -543,16 +537,17 @@ return _serializedPayload;
               $immutIface:T.class,
               $immutIface:T.Builder.class,
               () -> $maps:T.transformValues(_proto().get$fieldNameCap:LMap(), $immutProto:T::new),
-              () -> $maps:T.transformValues(
-                  _proto().get$fieldNameCap:LMap(), _v -> ($immutIface:T.Builder) new $immutProto:T(_v)._asBuilder()),
-              (_k, _m) -> _proto().put$fieldNameCap:L(_k, $immutProto:T._proto(_m)),
-              (_k, _b) -> _proto().put$fieldNameCap:L(_k, $immutProto:T._proto(_b).build()),
+              _proto()::get$fieldNameCap:LCount,
+              _proto()::contains$fieldNameCap:L,
+              (_k, _d) -> {
+                var _v = _proto().get$fieldNameCap:LOrDefault(_k, _d == null ? null : $immutProto:T._proto(($modelRoot:T) _d));
+                return _v == null ? null : new $immutProto:T(_v);
+              },
+              _k -> new $immutProto:T.Builder(_proto().put$fieldNameCap:LBuilderIfAbsent(_k)),
+              _map -> _proto().putAll$fieldNameCap:L($maps:T.transformValues(_map, _v -> $immutProto:T._proto(($modelRoot:T) _v))),
+              (_k, _i) -> _proto().put$fieldNameCap:L(_k, $immutProto:T._proto(($modelRoot:T) _i)),
               _proto()::clear$fieldNameCap:L,
-              _k -> {
-                $protoMsgOrBuilder:T ret = _proto().get$fieldNameCap:LOrThrow(_k);
-                _proto().remove$fieldNameCap:L(_k);
-                return new $immutProto:T(ret);
-              })
+              _k -> _proto().remove$fieldNameCap:L(_k))
           .unmodifiableModelsView()
 """,
                       ofEntries(
@@ -563,8 +558,7 @@ return _serializedPayload;
                               util.getImmutInterfaceName(fieldModelRootInfo.get().element())),
                           entry("immutProto", immutProtoClass),
                           entry("maps", Maps.class),
-                          entry("fieldNameCap", capitalizeFirstChar(fieldName)),
-                          entry("protoMsgOrBuilder", protoMsgOrBuilderType)))
+                          entry("fieldNameCap", capitalizeFirstChar(fieldName))))
                   .build());
         } else {
           getterBuilder.addStatement(

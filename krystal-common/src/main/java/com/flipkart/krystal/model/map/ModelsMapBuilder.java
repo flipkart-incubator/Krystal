@@ -3,6 +3,9 @@ package com.flipkart.krystal.model.map;
 import com.flipkart.krystal.model.ImmutableModel;
 import com.flipkart.krystal.model.Model;
 import java.util.Map;
+import java.util.function.Supplier;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public interface ModelsMapBuilder<
     K, M extends Model, I extends ImmutableModel, B extends ImmutableModel.Builder> {
@@ -11,7 +14,7 @@ public interface ModelsMapBuilder<
     return BasicModelsMapBuilder.empty();
   }
 
-  ImmutModelsMapView<K, M, I> immutModelsView();
+  UnmodifiableImmutModelsMap<K, M, I> immutModelsView();
 
   UnmodifiableModelsMap<K, M, I> unmodifiableModelsView();
 
@@ -19,19 +22,25 @@ public interface ModelsMapBuilder<
 
   boolean isEmpty();
 
+  boolean containsKey(@NonNull K key);
+
+  @Nullable M getModel(@NonNull K key);
+
+  @Nullable B getBuilder(@NonNull K key);
+
+  M putModelIfAbsent(@NonNull K key, Supplier<I> modelSupplier);
+
+  B putBuilderIfAbsent(@NonNull K key, Supplier<B> defaultValueSupplier);
+
   void putAllModels(Map<K, ? extends M> map);
 
   void putAllBuilders(Map<K, ? extends B> map);
 
   void clear();
 
-  M getModel(K key);
+  void putModel(@NonNull K key, M value);
 
-  B getBuilder(K key);
+  void putBuilder(@NonNull K key, B value);
 
-  void putModel(K key, M element);
-
-  void putBuilder(K key, B element);
-
-  Model remove(K key);
+  @Nullable Model remove(@NonNull K key);
 }

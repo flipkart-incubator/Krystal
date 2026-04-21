@@ -10,7 +10,7 @@ public interface ModelsListBuilder<
     return BasicModelsListBuilder.empty();
   }
 
-  ImmutModelsListView<M, I> immutModelsView();
+  UnmodifiableImmutModelsList<M, I> immutModelsView();
 
   UnmodifiableModelsList<M, I> unmodifiableModelsView();
 

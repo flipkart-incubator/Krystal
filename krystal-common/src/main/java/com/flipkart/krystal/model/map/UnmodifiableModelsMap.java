@@ -5,13 +5,17 @@ import com.flipkart.krystal.model.Model;
 import com.google.common.collect.Maps;
 import java.util.AbstractMap;
 import java.util.Set;
+import org.checkerframework.checker.initialization.qual.NotOnlyInitialized;
+import org.checkerframework.checker.initialization.qual.UnknownInitialization;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class UnmodifiableModelsMap<K, M extends Model, I extends ImmutableModel>
     extends AbstractMap<K, M> {
 
-  private final ImmutModelsMapView<K, M, I> delegate;
+  @NotOnlyInitialized private final UnmodifiableImmutModelsMap<K, M, I> delegate;
 
-  public UnmodifiableModelsMap(ImmutModelsMapView<K, M, I> delegate) {
+  public UnmodifiableModelsMap(
+      @UnknownInitialization UnmodifiableImmutModelsMap<K, M, I> delegate) {
     this.delegate = delegate;
   }
 
@@ -21,11 +25,11 @@ public final class UnmodifiableModelsMap<K, M extends Model, I extends Immutable
 
   @SuppressWarnings("unchecked")
   @Override
-  public M get(Object key) {
+  public @Nullable M get(Object key) {
     return (M) delegate.get(key);
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "keyfor"})
   @Override
   public Set<Entry<K, M>> entrySet() {
     return Maps.transformValues(delegate, model -> (M) model).entrySet();

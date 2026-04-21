@@ -3,13 +3,15 @@ package com.flipkart.krystal.model.list;
 import com.flipkart.krystal.model.ImmutableModel;
 import com.flipkart.krystal.model.Model;
 import java.util.AbstractList;
+import org.checkerframework.checker.initialization.qual.NotOnlyInitialized;
+import org.checkerframework.checker.initialization.qual.UnknownInitialization;
 
 public final class UnmodifiableModelsList<M extends Model, I extends ImmutableModel>
     extends AbstractList<M> {
 
-  private final ImmutModelsListView<M, I> delegate;
+  @NotOnlyInitialized private final UnmodifiableImmutModelsList<M, I> delegate;
 
-  public UnmodifiableModelsList(ImmutModelsListView<M, I> delegate) {
+  public UnmodifiableModelsList(@UnknownInitialization UnmodifiableImmutModelsList<M, I> delegate) {
     this.delegate = delegate;
   }
 

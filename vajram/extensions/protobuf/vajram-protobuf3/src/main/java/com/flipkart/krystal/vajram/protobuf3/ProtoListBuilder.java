@@ -9,6 +9,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import org.checkerframework.checker.initialization.qual.NotOnlyInitialized;
 
 public class ProtoListBuilder<
         M extends Model, I extends ImmutableModel, B extends ImmutableModel.Builder>
@@ -26,7 +27,7 @@ public class ProtoListBuilder<
   private final BiConsumer<Integer, B> setBuilder;
   private final Function<Integer, Model> remove;
   private final boolean builderExtendsModelRoot;
-  private final ProtoListView<M, I> modelsView;
+  @NotOnlyInitialized private final ProtoListView<M, I> modelsView;
 
   public ProtoListBuilder(
       Class<M> modelType,
