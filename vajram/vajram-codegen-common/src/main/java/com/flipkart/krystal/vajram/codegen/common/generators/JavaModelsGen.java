@@ -31,14 +31,14 @@ import com.flipkart.krystal.model.ImmutableModel.Builder;
 import com.flipkart.krystal.model.MandatoryFieldMissingException;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelClusterRoot;
-import com.flipkart.krystal.model.ModelListBuilder;
 import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.ModelRoot.ModelType;
-import com.flipkart.krystal.model.ModelsListView;
 import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocols;
-import com.flipkart.krystal.model.UnmodifiableModelList;
+import com.flipkart.krystal.model.list.ModelsListBuilder;
+import com.flipkart.krystal.model.list.ModelsListView;
+import com.flipkart.krystal.model.list.UnmodifiableModelsList;
 import com.flipkart.krystal.vajram.Trait;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -497,6 +497,13 @@ public final class JavaModelsGen implements CodeGenerator {
         }
         methods.add(methodBuilder.build());
       }
+      if (modelRootInfo.isPresent() && modelRootInfo.get().containerType().isContainer()) {
+        methods.add(
+            MethodSpec.methodBuilder(methodName)
+                .addModifiers(PUBLIC, ABSTRACT)
+                .returns(TypeName.get(method.getReturnType()))
+                .build());
+      }
     }
 
     methods.addAll(
@@ -757,10 +764,10 @@ this.$L = $L == null
               case NO_CONTAINER -> TypeName.get(specifiedReturnType);
               case LIST ->
                   ParameterizedTypeName.get(
-                      ClassName.get(UnmodifiableModelList.class),
+                      ClassName.get(UnmodifiableModelsList.class),
                       TypeName.get(fieldModelRootInfo.get().type()),
                       util.getImmutTypeName(fieldModelRootInfo.get().type(), modelProtocol));
-              case MAP -> throw new UnsupportedOperationException("Not supported yet.");
+              case MAP -> TypeName.get(specifiedReturnType);
             }
             : TypeName.get(specifiedReturnType)
                 .annotated(
@@ -787,15 +794,18 @@ this.$L = $L == null
 """,
               fieldName,
               fieldModelRootInfo.isPresent()
-                      && fieldModelRootInfo.get().containerType().isContainer()
+                      && ContainerType.LIST.equals(fieldModelRootInfo.get().containerType())
                   ? CodeBlock.of(
                       "$T.<$T, $T>empty().asModelsView()",
                       ModelsListView.class,
                       TypeName.get(fieldModelRootInfo.get().type()),
                       util.getImmutInterfaceName(fieldModelRootInfo.get().element()))
-                  : new DeclaredTypeVisitor(util, method)
-                      .visit(specifiedReturnType)
-                      .defaultValueExpr(util.processingEnv()));
+                  : fieldModelRootInfo.isPresent()
+                          && ContainerType.MAP.equals(fieldModelRootInfo.get().containerType())
+                      ? CodeBlock.of("$T.of()", java.util.Map.class)
+                      : new DeclaredTypeVisitor(util, method)
+                          .visit(specifiedReturnType)
+                          .defaultValueExpr(util.processingEnv()));
         } catch (CodeGenerationException e) {
           throw util.errorAndThrow(
               """
@@ -837,7 +847,8 @@ this.$L = $L == null
                             .nestedClass("Builder"),
                         fieldName,
                         util.getImmutInterfaceName(fieldModelRootInfo.get().element()));
-            case LIST, MAP -> CodeBlock.of("$L.unmodifiableModelsView()", fieldName);
+            case LIST -> CodeBlock.of("$L.unmodifiableModelsView()", fieldName);
+            case MAP -> CodeBlock.of("$L", fieldName);
           };
     }
     return fieldAccessorCode;
@@ -869,7 +880,7 @@ this.$L = $L == null
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
       if (fieldModelRootInfo.isPresent()
           && ContainerType.LIST.equals(fieldModelRootInfo.get().containerType())) {
-        fieldBuilder.initializer("$T.empty()", ModelListBuilder.class);
+        fieldBuilder.initializer("$T.empty()", ModelsListBuilder.class);
       }
       fields.add(fieldBuilder.build());
     }
@@ -949,8 +960,11 @@ this.$L = $L == null
                   fieldName,
                   fieldModelRootInfo.isPresent()
                           && ContainerType.LIST.equals(fieldModelRootInfo.get().containerType())
-                      ? CodeBlock.of("$T.empty()", ModelListBuilder.class)
-                      : dataType.defaultValueExpr(util.processingEnv()));
+                      ? CodeBlock.of("$T.empty()", ModelsListBuilder.class)
+                      : fieldModelRootInfo.isPresent()
+                              && ContainerType.MAP.equals(fieldModelRootInfo.get().containerType())
+                          ? CodeBlock.of("$T.of()", java.util.Map.class)
+                          : dataType.defaultValueExpr(util.processingEnv()));
             } catch (CodeGenerationException e) {
               throw util.errorAndThrow(
                   "Could not find default value expression for type '%s'. Please check if @IfAbsent(ASSUME_DEFAULT_VALUE) is appropriate for this type."

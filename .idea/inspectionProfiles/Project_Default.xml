@@ -348,6 +348,9 @@
     <inspection_tool class="ReadObjectAndWriteObjectPrivate" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="ReadOrWriteActionInServiceInitialization" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="ReassignedToPlainText" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RedundantCast" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="IGNORE_SUSPICIOUS_METHOD_CALLS" value="false" />
+    </inspection_tool>
     <inspection_tool class="RedundantCollectionConversion" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="RedundantComparatorComparing" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="RedundantCompareCall" enabled="false" level="WARNING" enabled_by_default="false" />
@@ -492,6 +495,12 @@
           <option value="ClassCanBeRecord" />
           <option value="EqualsDoesntCheckParameterClass" />
           <option value="SlowListContainsAll" />
+          <option value="SuspiciousMethodCalls" />
+          <option value="keyfor" />
+          <option value="initialization" />
+          <option value="contracts.conditional.postcondition" />
+          <option value="contracts.postcondition" />
+          <option value="type.argument" />
         </list>
       </option>
     </inspection_tool>

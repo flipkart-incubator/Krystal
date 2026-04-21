@@ -19,10 +19,10 @@ import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.IfAbsent.Creator;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.model.Model;
-import com.flipkart.krystal.model.ModelListBuilder;
 import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.model.list.ModelsListBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.googlejavaformat.java.GoogleJavaFormatTool;
@@ -130,6 +130,36 @@ public class CodeGenUtility {
 
   public boolean isListType(TypeMirror type) {
     return isRawAssignable(type, List.class);
+  }
+
+  public boolean isMapType(TypeMirror type) {
+    return isRawAssignable(type, java.util.Map.class);
+  }
+
+  public TypeMirror getMapValueType(TypeMirror typeMirror) {
+    if (!isMapType(typeMirror)) {
+      return typeMirror;
+    }
+    if (typeMirror instanceof DeclaredType declaredType
+        && declaredType.getTypeArguments().size() >= 2) {
+      return declaredType.getTypeArguments().get(1);
+    }
+    return requireNonNull(
+            processingEnv().getElementUtils().getTypeElement(Object.class.getCanonicalName()))
+        .asType();
+  }
+
+  public TypeMirror getMapKeyType(TypeMirror typeMirror) {
+    if (!isMapType(typeMirror)) {
+      return typeMirror;
+    }
+    if (typeMirror instanceof DeclaredType declaredType
+        && declaredType.getTypeArguments().size() >= 2) {
+      return declaredType.getTypeArguments().get(0);
+    }
+    return requireNonNull(
+            processingEnv().getElementUtils().getTypeElement(Object.class.getCanonicalName()))
+        .asType();
   }
 
   public String getPackageName(Element element) {
@@ -919,6 +949,7 @@ public class CodeGenUtility {
       }
     }
     TypeName finalTypeName;
+    TypeName elementType = typeName;
     Optional<ModelRootInfo> fieldModelRootInfo = asModelRoot(inferredType);
     ContainerType containerType = isList ? ContainerType.LIST : ContainerType.NO_CONTAINER;
 
@@ -941,7 +972,7 @@ public class CodeGenUtility {
             case LIST -> {
               if (isBuilder) {
                 yield ParameterizedTypeName.get(
-                    ClassName.get(ModelListBuilder.class),
+                    ClassName.get(ModelsListBuilder.class),
                     typeName,
                     immutType,
                     immutType.nestedClass("Builder"));
@@ -951,17 +982,36 @@ public class CodeGenUtility {
                     TypeName.get(fieldModelRootInfo.get().element().asType()));
               }
             }
-            case MAP -> throw new UnsupportedOperationException();
+            case MAP -> {
+              TypeName mapKeyTypeName =
+                  getMapKeyType(inferredType).accept(new TypeNameVisitor(), null);
+              TypeName mapValueTypeName =
+                  getMapValueType(inferredType).accept(new TypeNameVisitor(), null);
+              elementType = mapValueTypeName;
+              TypeName mapType =
+                  ParameterizedTypeName.get(
+                      ClassName.get(java.util.Map.class),
+                      mapKeyTypeName,
+                      isBuilder
+                          ? mapValueTypeName
+                          : TypeName.get(fieldModelRootInfo.get().element().asType()));
+              if (isBuilder || isNullable) {
+                mapType =
+                    mapType.annotated(
+                        AnnotationSpec.builder(ClassName.get(Nullable.class)).build());
+              }
+              yield mapType;
+            }
           };
     } else {
       finalTypeName =
           switch (containerType) {
             case NO_CONTAINER -> typeName;
             case LIST -> ParameterizedTypeName.get(ClassName.get(List.class), typeName);
-            case MAP -> throw new UnsupportedOperationException();
+            case MAP -> typeName;
           };
     }
-    return new ModelFieldTypeInfo(finalTypeName, containerType, typeName);
+    return new ModelFieldTypeInfo(finalTypeName, containerType, elementType);
   }
 
   /**
@@ -1100,6 +1150,15 @@ public class CodeGenUtility {
             typeUtils.asElement(javaModelType));
       }
       containerType = ContainerType.LIST;
+    }
+    if (isMapType(javaModelType)) {
+      javaModelType = getMapValueType(javaModelType);
+      if (isMapType(javaModelType)) {
+        error(
+            "Map of Maps (Map<K, Map<..>>) is not supported by Krystal Modelling protocol",
+            typeUtils.asElement(javaModelType));
+      }
+      containerType = ContainerType.MAP;
     }
     if (!isRawAssignable(javaModelType, Model.class)) {
       return Optional.empty();

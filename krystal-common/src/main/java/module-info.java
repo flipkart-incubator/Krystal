@@ -14,6 +14,8 @@ module flipkart.krystal.common {
   exports com.flipkart.krystal.traits.matchers;
   exports com.flipkart.krystal.serial;
   exports com.flipkart.krystal.model;
+  exports com.flipkart.krystal.model.list;
+  exports com.flipkart.krystal.model.map;
 
   requires com.google.common;
   requires org.checkerframework.checker.qual;

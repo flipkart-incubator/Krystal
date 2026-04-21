@@ -2,11 +2,12 @@ package com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.flipkart.krystal.model.ModelListBuilder;
-import com.flipkart.krystal.model.ModelsListView;
+import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSampleResponse_Immut.Builder;
+import com.flipkart.krystal.model.list.ModelsListBuilder;
+import com.flipkart.krystal.model.list.ModelsListView;
 import org.junit.jupiter.api.Test;
 
-class ModelListBuilderTest {
+class ModelsListBuilderTest {
   @Test
   void test() {
 
@@ -16,10 +17,7 @@ class ModelListBuilderTest {
     var modelListView = og.modelsBuilder().immutModelsView();
     assertThat(modelListView).size().isZero();
 
-    ModelListBuilder<
-            Proto3LatticeSampleResponse,
-            Proto3LatticeSampleResponse_Immut,
-            Proto3LatticeSampleResponse_Immut.Builder>
+    ModelsListBuilder<Proto3LatticeSampleResponse, Proto3LatticeSampleResponse_Immut, Builder>
         newBuilder = modelListView.modelsBuilder();
     newBuilder.addModel(Proto3LatticeSampleResponse_ImmutProto._builder()._build());
 
