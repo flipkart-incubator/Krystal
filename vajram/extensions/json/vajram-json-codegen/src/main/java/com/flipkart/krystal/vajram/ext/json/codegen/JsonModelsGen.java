@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajram.ext.json.codegen;
 
+import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType.LIST;
+import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType.MAP;
 import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.asBuilder;
 import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.buildForBuilder;
 import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.builderGettersAndSetters;
@@ -32,6 +34,7 @@ import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.model.list.ModelsListBuilder;
+import com.flipkart.krystal.model.map.ModelsMapBuilder;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.vajram.json.Json;
 import com.flipkart.krystal.vajram.json.SerializableJsonModel;
@@ -172,7 +175,7 @@ return _serializedPayload;
             AnnotationSpec.builder(JsonDeserialize.class)
                 .addMember(
                     switch (fieldModelRootInfo.get().containerType()) {
-                      case LIST -> "contentAs";
+                      case LIST, MAP -> "contentAs";
                       default -> "as";
                     },
                     "$T.class",
@@ -326,10 +329,12 @@ return _serializedPayload;
               method.getSimpleName().toString(),
               PRIVATE);
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
-      if (isBuilder
-          && fieldModelRootInfo.isPresent()
-          && ContainerType.LIST.equals(fieldModelRootInfo.get().containerType())) {
-        fieldBuilder.initializer("$T.empty()", ModelsListBuilder.class);
+      if (isBuilder && fieldModelRootInfo.isPresent()) {
+        if (LIST.equals(fieldModelRootInfo.get().containerType())) {
+          fieldBuilder.initializer("$T.empty()", ModelsListBuilder.class);
+        } else if (MAP.equals(fieldModelRootInfo.get().containerType())) {
+          fieldBuilder.initializer("$T.empty()", ModelsMapBuilder.class);
+        }
       }
 
       fields.add(fieldBuilder.build());
