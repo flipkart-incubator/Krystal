@@ -298,7 +298,7 @@ return _serializedPayload;
       TypeMirror returnType = method.getReturnType();
       CodeGenType dataType = new DeclaredTypeVisitor(util, method).visit(returnType);
 
-      classBuilder.addMethod(getterMethod(method, dataType, false).build());
+      classBuilder.addMethod(getterMethod(method, dataType, false, null, null).build());
     }
 
     // Add equals method that delegates to the proto object
@@ -400,7 +400,11 @@ return _serializedPayload;
   }
 
   private MethodSpec.Builder getterMethod(
-      ExecutableElement method, CodeGenType dataType, boolean isBuilder) {
+      ExecutableElement method,
+      CodeGenType dataType,
+      boolean isBuilder,
+      @Nullable ModelRoot modelRoot,
+      @Nullable ClassName immutableProtoTypeName) {
     final TypeMirror specifiedType = method.getReturnType();
     TypeName typeName = TypeName.get(specifiedType);
 
@@ -439,7 +443,8 @@ return _serializedPayload;
 
     getterBuilder.returns(typeName);
 
-    addGetterCode(getterBuilder, method, dataType, methodName, isBuilder);
+    addGetterCode(
+        getterBuilder, method, dataType, methodName, isBuilder, modelRoot, immutableProtoTypeName);
     return getterBuilder;
   }
 
@@ -448,7 +453,9 @@ return _serializedPayload;
       ExecutableElement method,
       CodeGenType dataType,
       String fieldName,
-      boolean isBuilder) {
+      boolean isBuilder,
+      @Nullable ModelRoot modelRoot,
+      @Nullable ClassName immutableProtoTypeName) {
 
     Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
     if (isProtoTypeRepeated(dataType)) {
@@ -586,7 +593,17 @@ return _serializedPayload;
               capitalizeFirstChar(fieldName));
 
       // Add validation for mandatory fields
-      if (isMandatoryField(method)) {
+      // For builders with builderExtendsModelRoot=true, NonNull fields are also mandatory
+      // Exclude Lists/Maps of Models (they can be empty collections)
+      boolean isMandatory =
+          isMandatoryField(method)
+              || (isBuilder
+                  && modelRoot != null
+                  && modelRoot.builderExtendsModelRoot()
+                  && !typeSupportsAbsentValues(method)
+                  && !(fieldModelRootInfo.isPresent()
+                      && fieldModelRootInfo.get().containerType().isContainer()));
+      if (isMandatory) {
         getterBuilder
             .addCode(protoPresenceCheck)
             .addCode(
@@ -595,7 +612,10 @@ return _serializedPayload;
               }
               """,
                 MandatoryFieldMissingException.class,
-                util.getImmutClassName(codeGenContext.modelRootType(), PROTOBUF_3).simpleName(),
+                immutableProtoTypeName != null
+                    ? immutableProtoTypeName.simpleName()
+                    : util.getImmutClassName(codeGenContext.modelRootType(), PROTOBUF_3)
+                        .simpleName(),
                 fieldName);
       } else if (isOptionalReturnType) {
         getterBuilder
@@ -710,7 +730,8 @@ return _serializedPayload;
       Optional<ModelRootInfo> fieldModelRoot = util.asModelRoot(method.getReturnType());
       if (modelRoot.builderExtendsModelRoot()
           || (fieldModelRoot.isPresent() && fieldModelRoot.get().containerType().isContainer())) {
-        builderClassBuilder.addMethod(getterMethod(method, dataType, true).build());
+        builderClassBuilder.addMethod(
+            getterMethod(method, dataType, true, modelRoot, immutableProtoType).build());
       }
       // Add setter method
       MethodSpec.Builder setterBuilder =
@@ -884,5 +905,15 @@ return _serializedPayload;
    */
   private boolean isMandatoryField(ExecutableElement method) {
     return util.getIfAbsent(method).value() == IfAbsentThen.FAIL;
+  }
+
+  /**
+   * Checks if a type supports absent/null values. Returns true if the type is Optional or annotated
+   * with @Nullable.
+   */
+  private boolean typeSupportsAbsentValues(ExecutableElement method) {
+    TypeMirror returnType = method.getReturnType();
+    return !returnType.getKind().isPrimitive()
+        && (util.isOptional(returnType) || util.isAnyNullable(returnType, method));
   }
 }

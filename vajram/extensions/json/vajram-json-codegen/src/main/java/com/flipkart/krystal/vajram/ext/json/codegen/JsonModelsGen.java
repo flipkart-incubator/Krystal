@@ -159,7 +159,9 @@ return _serializedPayload;
     for (ExecutableElement method : modelMethods) {
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
       MethodSpec pojoGetterMethod =
-          getterMethod(method, false, JSON, util).addAnnotation(Override.class).build();
+          getterMethod(method, false, JSON, util, null, false)
+              .addAnnotation(Override.class)
+              .build();
       MethodSpec.Builder getterBuilder =
           MethodSpec.methodBuilder(pojoGetterMethod.name)
               .returns(pojoGetterMethod.returnType)
@@ -391,7 +393,8 @@ return _serializedPayload;
 
     ClassName builderType = immutableJsonName.nestedClass("Builder");
     List<MethodSpec> dataAccessMethods =
-        builderGettersAndSetters(modelMethods, builderType, modelRoot, JSON, util);
+        builderGettersAndSetters(
+            modelMethods, builderType, modelRoot, JSON, util, immutableModelName);
 
     // Create the builder class
     return builderSpec

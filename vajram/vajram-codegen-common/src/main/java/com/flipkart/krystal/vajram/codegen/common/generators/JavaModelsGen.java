@@ -589,7 +589,10 @@ public final class JavaModelsGen implements CodeGenerator {
     // Create getter methods for the POJO class
     List<MethodSpec> methods = new ArrayList<>();
     for (ExecutableElement method : modelMethods) {
-      methods.add(getterMethod(method, false, null, util).addAnnotation(Override.class).build());
+      methods.add(
+          getterMethod(method, false, null, util, null, false)
+              .addAnnotation(Override.class)
+              .build());
     }
 
     MethodSpec.Builder asBuilderMethodBuilder = asBuilder(modelMethods, builderType);
@@ -758,7 +761,9 @@ this.$L = $L == null
       ExecutableElement method,
       boolean isBuilder,
       @Nullable ModelProtocol modelProtocol,
-      CodeGenUtility util) {
+      CodeGenUtility util,
+      @Nullable TypeName modelTypeName,
+      boolean builderExtendsModelRoot) {
     TypeMirror specifiedReturnType = method.getReturnType();
     ModelFieldTypeInfo modelFieldType = util.getModelFieldType(method, true, null);
     Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(specifiedReturnType);
@@ -832,6 +837,23 @@ this.$L = $L == null
                   .formatted(specifiedReturnType),
               method);
         }
+      }
+      // For builders with builderExtendsModelRoot=true, check if field is NonNull
+      // If so, throw MandatoryFieldMissingException instead of returning null
+      // Exclude Lists/Maps of Models (they can be empty collections)
+      if (isBuilder
+          && builderExtendsModelRoot
+          && !typeSupportsAbsentValues(method, util)
+          && !(fieldModelRootInfo.isPresent()
+              && fieldModelRootInfo.get().containerType().isContainer())
+          && modelTypeName != null) {
+        methodBuilder.beginControlFlow("if ($N == null)", fieldName);
+        methodBuilder.addStatement(
+            "throw new $T($S, $S)",
+            MandatoryFieldMissingException.class,
+            modelTypeName.toString(),
+            fieldName);
+        methodBuilder.endControlFlow();
       }
       methodBuilder.addStatement(
           "return $L", getFieldAccessorExpression(isBuilder, fieldName, specifiedReturnType, util));
@@ -909,7 +931,8 @@ this.$L = $L == null
     MethodSpec noArgConstructor = MethodSpec.constructorBuilder().addModifiers(PRIVATE).build();
 
     List<MethodSpec> dataAccessMethods =
-        builderGettersAndSetters(modelMethods, builderType, modelRoot, null, util);
+        builderGettersAndSetters(
+            modelMethods, builderType, modelRoot, null, util, immutableModelName);
 
     MethodSpec.Builder buildMethodBuilder =
         buildForBuilder(modelMethods, immutableModelName, immutablePojoName, util);
@@ -1060,7 +1083,8 @@ this.$L = $L == null
       TypeName builderType,
       ModelRoot modelRoot,
       @Nullable ModelProtocol modelProtocol,
-      CodeGenUtility util) {
+      CodeGenUtility util,
+      @Nullable TypeName modelTypeName) {
     // Create setter methods
     List<MethodSpec> dataAccessMethods = new ArrayList<>();
     for (ExecutableElement method : modelMethods) {
@@ -1118,10 +1142,15 @@ this.$L = $L == null
 
       if (modelRoot.builderExtendsModelRoot()
           || (fieldModelRoot.isPresent() && fieldModelRoot.get().containerType().isContainer())) {
-        MethodSpec.Builder getterMethod = getterMethod(method, true, modelProtocol, util);
-        if (modelRoot.builderExtendsModelRoot()) {
-          getterMethod.addAnnotation(Override.class);
-        }
+        MethodSpec.Builder getterMethod =
+            getterMethod(
+                    method,
+                    true,
+                    modelProtocol,
+                    util,
+                    modelTypeName,
+                    modelRoot.builderExtendsModelRoot())
+                .addAnnotation(Override.class);
         dataAccessMethods.add(getterMethod.build());
       }
     }
@@ -1166,7 +1195,7 @@ this.$L = $L == null
   }
 
   @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-  private static boolean typeSupportsAbsentValues(ExecutableElement method, CodeGenUtility util) {
+  public static boolean typeSupportsAbsentValues(ExecutableElement method, CodeGenUtility util) {
     TypeMirror returnType = method.getReturnType();
     return !returnType.getKind().isPrimitive()
         && (util.isOptional(returnType) || util.isAnyNullable(returnType, method));
