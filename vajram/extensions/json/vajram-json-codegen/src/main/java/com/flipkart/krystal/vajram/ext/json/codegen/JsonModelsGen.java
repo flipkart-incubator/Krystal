@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajram.ext.json.codegen;
 
+import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType.LIST;
+import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType.MAP;
 import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.asBuilder;
 import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.buildForBuilder;
 import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.builderGettersAndSetters;
@@ -328,9 +330,9 @@ return _serializedPayload;
               PRIVATE);
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
       if (isBuilder && fieldModelRootInfo.isPresent()) {
-        if (ContainerType.LIST.equals(fieldModelRootInfo.get().containerType())) {
+        if (LIST.equals(fieldModelRootInfo.get().containerType())) {
           fieldBuilder.initializer("$T.empty()", ModelsListBuilder.class);
-        } else if (ContainerType.MAP.equals(fieldModelRootInfo.get().containerType())) {
+        } else if (MAP.equals(fieldModelRootInfo.get().containerType())) {
           fieldBuilder.initializer("$T.empty()", ModelsMapBuilder.class);
         }
       }
