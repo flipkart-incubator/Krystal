@@ -1129,18 +1129,37 @@ this.$L = $L == null
   }
 
   /**
-   * Validates that fields not mandatory on server are not primitive types and are of Optional type
-   * or are properly annotated as Nullable.
+   * Validates that REQUEST model fields with @IfAbsent(WILL_NEVER_FAIL) or no @IfAbsent annotation
+   * must be marked @Nullable or Optional (excluding lists and maps). For primitive types, they must
+   * use @IfAbsent(ASSUME_DEFAULT_VALUE) or be converted to boxed types.
    */
   private void validateOptionalField(ExecutableElement method) {
     IfAbsentThen ifAbsentThen = util.getIfAbsent(method).value();
     ModelRoot modelRoot =
         requireNonNull(codeGenContext.modelRootType().getAnnotation(ModelRoot.class));
-    if (modelRoot.type() == ModelType.REQUEST && !ifAbsentThen.isMandatoryOnServer()) {
+    TypeMirror returnType = method.getReturnType();
+
+    // Only validate REQUEST models with WILL_NEVER_FAIL behavior
+    if (modelRoot.type() == ModelType.REQUEST && ifAbsentThen == IfAbsentThen.WILL_NEVER_FAIL) {
+
+      // Exclude lists and maps from this validation
+      if (util.isListType(returnType) || util.isMapType(returnType)) {
+        return;
+      }
+
+      // Special validation for primitive types
+      if (returnType.getKind().isPrimitive()) {
+        util.error(
+            "Field '%s' is a primitive type in REQUEST model with @IfAbsent(WILL_NEVER_FAIL) or no @IfAbsent annotation. Primitive types must either use @IfAbsent(ASSUME_DEFAULT_VALUE) or be changed to their boxed type (e.g., int -> Integer) with @Nullable or Optional."
+                .formatted(method.getSimpleName()),
+            method);
+        return;
+      }
+
       if (!typeSupportsAbsentValues(method, util)) {
         util.error(
-            "Field '%s' with @IfAbsent(%s) must be an Optional or annotated with %s: "
-                .formatted(method.getSimpleName(), ifAbsentThen, Nullable.class.getCanonicalName()),
+            "Field '%s' in REQUEST model with @IfAbsent(WILL_NEVER_FAIL) or no @IfAbsent annotation must be Optional or annotated with %s. This ensures application developers handle the null case gracefully."
+                .formatted(method.getSimpleName(), Nullable.class.getCanonicalName()),
             method);
       }
     }
