@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.codegen.common.generators;
 
+import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType.LIST;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType.NO_CONTAINER;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.asClassName;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.asTypeNameWithTypes;
@@ -500,7 +501,8 @@ public final class JavaModelsGen implements CodeGenerator {
         }
         methods.add(methodBuilder.build());
       }
-      if (fieldModelRootInfo.isPresent() && fieldModelRootInfo.get().containerType().isContainer()) {
+      if (fieldModelRootInfo.isPresent()
+          && fieldModelRootInfo.get().containerType().isContainer()) {
         methods.add(
             MethodSpec.methodBuilder(methodName)
                 .addModifiers(PUBLIC, ABSTRACT)
@@ -804,7 +806,7 @@ this.$L = $L == null
 """,
               fieldName,
               fieldModelRootInfo.isPresent()
-                      && ContainerType.LIST.equals(fieldModelRootInfo.get().containerType())
+                      && LIST.equals(fieldModelRootInfo.get().containerType())
                   ? CodeBlock.of(
                       "$T.<$T, $T>empty().asModelsView()",
                       ModelsListView.class,
@@ -894,7 +896,7 @@ this.$L = $L == null
       FieldSpec.Builder fieldBuilder = FieldSpec.builder(fieldType, fieldName, PRIVATE);
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
       if (fieldModelRootInfo.isPresent()) {
-        if (ContainerType.LIST.equals(fieldModelRootInfo.get().containerType())) {
+        if (LIST.equals(fieldModelRootInfo.get().containerType())) {
           fieldBuilder.initializer("$T.empty()", ModelsListBuilder.class);
         } else if (ContainerType.MAP.equals(fieldModelRootInfo.get().containerType())) {
           fieldBuilder.initializer("$T.empty()", ModelsMapBuilder.class);
@@ -977,7 +979,7 @@ this.$L = $L == null
                   "this.$N = $L",
                   fieldName,
                   fieldModelRootInfo.isPresent()
-                          && ContainerType.LIST.equals(fieldModelRootInfo.get().containerType())
+                          && LIST.equals(fieldModelRootInfo.get().containerType())
                       ? CodeBlock.of("$T.empty()", ModelsListBuilder.class)
                       : fieldModelRootInfo.isPresent()
                               && ContainerType.MAP.equals(fieldModelRootInfo.get().containerType())
@@ -1071,27 +1073,29 @@ this.$L = $L == null
               .addAnnotation(Override.class)
               .returns(builderType)
               .addCode(
-                  fieldModelRootInfo.isPresent()
-                          && ContainerType.LIST.equals(fieldModelRootInfo.get().containerType())
-                      ? CodeBlock.of(
-"""
-    this.$L.clear();
-    this.$L.addAllModels($L);
-""",
-                          methodName,
-                          methodName,
-                          methodName)
-                      : fieldModelRootInfo.isPresent()
-                              && ContainerType.MAP.equals(fieldModelRootInfo.get().containerType())
-                          ? CodeBlock.of(
-"""
-    this.$L.clear();
-    this.$L.putAllModels($L);
-""",
-                              methodName,
-                              methodName,
-                              methodName)
-                          : CodeBlock.of("this.$L = $L;", methodName, methodName))
+                  fieldModelRootInfo
+                      .map(ModelRootInfo::containerType)
+                      .map(
+                          containerType ->
+                              switch (containerType) {
+                                case NO_CONTAINER ->
+                                    CodeBlock.of("this.$L = $L;", methodName, methodName);
+                                case LIST, MAP ->
+                                    CodeBlock.of(
+                                        """
+                                            this.$L.clear();
+                                            if ($L == null) {
+                                                return this;
+                                            }
+                                            this.$L.$LAllModels($L);
+                                        """,
+                                        methodName,
+                                        methodName,
+                                        methodName,
+                                        LIST.equals(containerType) ? "add" : "put",
+                                        methodName);
+                              })
+                      .orElse(CodeBlock.of("this.$L = $L;", methodName, methodName)))
               .addStatement("return this")
               .build());
 
