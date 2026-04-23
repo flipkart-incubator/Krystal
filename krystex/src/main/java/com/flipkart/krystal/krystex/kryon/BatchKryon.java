@@ -5,10 +5,10 @@ import static com.flipkart.krystal.data.Errable.nil;
 import static com.flipkart.krystal.data.Errable.withError;
 import static com.flipkart.krystal.except.KrystalCompletionException.wrapAsCompletionException;
 import static com.flipkart.krystal.facets.resolution.ResolverCommand.executeWithRequests;
-import static com.flipkart.krystal.facets.resolution.ResolverCommand.skip;
 import static com.flipkart.krystal.krystex.kryon.KryonUtils.enqueueOrExecuteCommand;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Collections.unmodifiableSet;
+import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -94,8 +94,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @Slf4j
 final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>, BatchResponse> {
 
-  public static final SkipDependency FORWARD_SKIP =
-      skip("Skipping dependency since this vajram was skipped");
+  private static final ResolverCommandRequests FORWARD_SKIP =
+      new ResolverCommandRequests(ImmutableList.of());
   private final Map<DependentChain, Map<InvocationId, FacetValuesBuilder>> facetsCollector =
       new HashMap<>(INITIAL_CAPACITY);
 
@@ -194,7 +194,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
           forwardBatch.dependentChain());
     }
     Set<InvocationId> executableRequests = forwardBatch.executableInvocations().keySet();
-    Map<Dependency, Map<Set<InvocationId>, ResolverCommand>> commandsByDependency =
+    Map<Dependency, Map<Set<InvocationId>, ResolverCommandRequests>> commandsByDependency =
         new LinkedHashMap<>(kryonDefinition.dependencies().size());
     Map<Dependency, Set<InvocationId>> requestIdsByDependency =
         new LinkedHashMap<>(kryonDefinition.dependencies().size());
@@ -215,7 +215,9 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
             // For such dependencies, trigger them with empty inputs
             commandsByDependency
                 .computeIfAbsent(depName, _k -> new LinkedHashMap<>(INITIAL_CAPACITY))
-                .put(Set.of(invocationId), executeWithRequests(ImmutableList.of(emptyRequest())));
+                .put(
+                    Set.of(invocationId),
+                    ResolverCommandRequests.fromRequestBuilders(ImmutableList.of(emptyRequest())));
             requestIdsByDependency
                 .computeIfAbsent(depName, _k -> new LinkedHashSet<>(INITIAL_CAPACITY))
                 .add(invocationId);
@@ -230,11 +232,14 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
             KryonDefinition depKryonDefinition =
                 kryonDefinition.kryonDefinitionRegistry().get(checkNotNull(dep.onVajramID()));
             if (depKryonDefinition == null) {
+              log.error(
+                  "{} could not find the dependency '{}' on vajram ID {}",
+                  kryonDefinition.vajramID(),
+                  dep.name(),
+                  dep.onVajramID());
               commandsByDependency
                   .computeIfAbsent(dep, _k -> new LinkedHashMap<>(INITIAL_CAPACITY))
-                  .put(
-                      Set.of(invocationId),
-                      skip("Could not find dependency with vajram ID " + dep.onVajramID()));
+                  .put(Set.of(invocationId), new ResolverCommandRequests(List.of()));
               return;
             }
             Resolver fanoutResolver = null;
@@ -308,7 +313,9 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
             }
             commandsByDependency
                 .computeIfAbsent(dep, _k -> new LinkedHashMap<>(INITIAL_CAPACITY))
-                .put(Set.of(invocationId), resolverCommand);
+                .put(
+                    Set.of(invocationId),
+                    ResolverCommandRequests.fromRequestBuilders(resolverCommand.getRequests()));
             requestIdsByDependency
                 .computeIfAbsent(dep, _k -> new LinkedHashSet<>(INITIAL_CAPACITY))
                 .add(invocationId);
@@ -335,17 +342,6 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
         kryonDefinition.createNewRequest().logic().newRequestBuilder();
   }
 
-  @SuppressWarnings("unchecked")
-  private ImmutableRequest.Builder<Object> emptyRequestForVajram(VajramID depVajramID) {
-    return (ImmutableRequest.Builder<Object>)
-        kryonDefinition
-            .kryonDefinitionRegistry()
-            .getOrThrow(depVajramID)
-            .createNewRequest()
-            .logic()
-            .newRequestBuilder();
-  }
-
   private ForwardReceiveBatch getForwardCommand(DependentChain dependentChain) {
     ForwardReceiveBatch forwardBatch = inputsValueCollector.get(dependentChain);
     if (forwardBatch == null) {
@@ -358,7 +354,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
   private void triggerDependency(
       Dependency dependency,
       DependentChain dependentChain,
-      Map<Set<InvocationId>, ResolverCommand> resolverCommandsByReq,
+      Map<Set<InvocationId>, ResolverCommandRequests> resolverCommandsByReq,
       Set<InvocationId> allInvocationIds) {
     if (executedDependencies.getOrDefault(dependentChain, Set.of()).contains(dependency)) {
       return;
@@ -378,10 +374,10 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
         new LinkedHashMap<>(INITIAL_CAPACITY);
     for (var entry : resolverCommandsByReq.entrySet()) {
       Set<InvocationId> incomingReqIds = entry.getKey();
-      ResolverCommand resolverCommand = entry.getValue();
+      ResolverCommandRequests resolverCommand = entry.getValue();
       int count = 0;
       for (InvocationId incomingReqId : incomingReqIds) {
-        for (Request request : resolverCommand.getRequests()) {
+        for (Request request : resolverCommand.requests()) {
           int currentCount = count++;
           InvocationId depReqId =
               requestIdGenerator.newSubRequest(
@@ -389,7 +385,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
           depReqsByIncomingReq
               .computeIfAbsent(incomingReqId, _k -> new LinkedHashSet<>(INITIAL_CAPACITY))
               .add(depReqId);
-          depRequestsByDepInvocationId.put(depReqId, request._build());
+          depRequestsByDepInvocationId.put(depReqId, request);
         }
       }
     }
@@ -415,43 +411,31 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
               new LinkedHashMap<>(INITIAL_CAPACITY);
           for (InvocationId invocationId : allInvocationIds) {
             DepResponse<Request<Object>, Object> result;
-            if (throwable != null) {
-              RequestResponse<Request<Object>, Object> fail =
+            Set<InvocationId> depReqIds = depReqsByIncomingReq.getOrDefault(invocationId, Set.of());
+            List<RequestResponse<Request<Object>, Object>> collect =
+                new ArrayList<>(depReqIds.size());
+            for (InvocationId depReqId : depReqIds) {
+              Request<Object> requestForInvocation =
+                  requireNonNull(
+                      depRequestsByDepInvocationId.get(depReqId),
+                      "Unknown invocation id! This should not happen :" + invocationId);
+              collect.add(
                   new RequestResponse<>(
-                      depRequestsByDepInvocationId.getOrDefault(
-                          invocationId, emptyRequestForVajram(depVajramID)._build()),
-                      withError(throwable));
-              if (dependency.canFanout()) {
-                result = new FanoutDepResponses<>(ImmutableList.of(fail));
-              } else {
-                result = fail;
-              }
+                      requestForInvocation,
+                      throwable != null
+                          ? withError(throwable)
+                          : batchResponse.responses().getOrDefault(depReqId, nil())));
+            }
+            if (dependency.canFanout()) {
+              result = new FanoutDepResponses<>(collect);
+            } else if (collect.size() == 1) {
+              result = collect.get(0);
             } else {
-              Set<InvocationId> depReqIds =
-                  depReqsByIncomingReq.getOrDefault(invocationId, Set.of());
-              List<RequestResponse<Request<Object>, Object>> collect =
-                  new ArrayList<>(depReqIds.size());
-              for (InvocationId depReqId : depReqIds) {
-                Request<Object> orDefault =
-                    depRequestsByDepInvocationId.getOrDefault(
-                        depReqId, emptyRequestForVajram(depVajramID)._build());
-                collect.add(
-                    new RequestResponse<>(
-                        orDefault, batchResponse.responses().getOrDefault(depReqId, nil())));
-              }
-
-              if (dependency.canFanout()) {
-                result = new FanoutDepResponses<>(collect);
-              } else if (collect.size() == 1) {
-                result = collect.get(0);
-              } else {
-                // This means this non-fanout dependency was skipped
-                result = One2OneDepResponse.noRequest();
-              }
+              // This means this non-fanout dependency was skipped
+              result = One2OneDepResponse.noRequest();
             }
             results.put(invocationId, result);
           }
-
           enqueueOrExecuteCommand(
               () -> new CallbackBatch(vajramID, dependency, results, dependentChain),
               kryonExecutor);
@@ -689,5 +673,25 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
       }
     }
     return unmodifiableSet(triggerableDependencies);
+  }
+
+  private record ResolverCommandRequests(List<? extends ImmutableRequest<?>> requests) {
+
+    static ResolverCommandRequests fromRequestBuilders(
+        List<? extends ImmutableRequest.Builder<?>> builders) {
+      List<ImmutableRequest<?>> list = new ArrayList<>();
+      for (ImmutableRequest.Builder<?> builder : builders) {
+        try {
+          ImmutableRequest<?> build = builder._build();
+          list.add(build);
+        } catch (Exception e) {
+          // This might happen if a mandatory field was not set, for example.
+          log.error(
+              "The request builder could not be built due to an exception. Skipping this request.",
+              e);
+        }
+      }
+      return new ResolverCommandRequests(list);
+    }
   }
 }

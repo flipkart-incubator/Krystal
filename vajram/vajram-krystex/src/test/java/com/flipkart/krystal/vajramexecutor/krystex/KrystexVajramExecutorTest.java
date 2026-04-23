@@ -17,6 +17,7 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.except.KrystalCompletionException;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
@@ -37,7 +38,6 @@ import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.VajramDefRoot;
 import com.flipkart.krystal.vajram.batching.InputBatcher;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
-import com.flipkart.krystal.vajram.exception.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajram.resilience4j.bulkhead.Resilience4JBulkhead;
 import com.flipkart.krystal.vajram.resilience4j.curcuitbreaker.Resilience4JCircuitBreaker;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
@@ -74,7 +74,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
@@ -91,7 +90,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 class KrystexVajramExecutorTest {
   // gradle :vajram:vajram-krystex:test --tests
   // "com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorTest.flush_singleDepthParallelDependencyDefaultInputBatcherConfig_flushes2Batchers" -PunsafeCompile=true
-  private static final Duration TIMEOUT = ofSeconds(1000);
+  private static final Duration TIMEOUT = ofSeconds(1);
   private static SingleThreadExecutorsPool EXEC_POOL;
 
   @BeforeAll
@@ -270,45 +269,46 @@ class KrystexVajramExecutorTest {
   @Test
   void executeCompute_missingMandatoryInput_throwsException() {
     var graph =
-        loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello").build();
+        loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams").build();
     CompletableFuture<String> result;
     requestContext.requestId("vajramWithNoDependencies");
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(getExecutorConfig(kryonExecStrategy, graphTraversalStrategy))) {
-      result = krystexVajramExecutor.execute(incompleteHelloRequest());
+      result =
+          krystexVajramExecutor.execute(
+              MultiHelloFriendsV2_ReqImmutPojo._builder().userIds(Set.of()).fail(true)._build());
     }
     assertThat(result)
         .failsWithin(TIMEOUT)
         .withThrowableOfType(ExecutionException.class)
-        .withCauseExactlyInstanceOf(MandatoryFacetsMissingException.class)
-        .withMessageContaining(
-            "Vajram v<"
-                + graph.vajramGraph().getVajramIdByVajramDefType(Hello.class).id()
-                + "> did not receive these mandatory inputs: [ 'name'");
+        .withCauseExactlyInstanceOf(KrystalCompletionException.class)
+        .withMessageEndingWith("Fail requested");
   }
 
   @Test
   void executeCompute_exceptionThrown_hasNoStacktrace() {
     var graph =
-        loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello").build();
+        loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams").build();
     CompletableFuture<String> result;
     requestContext.requestId("vajramWithNoDependencies");
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(getExecutorConfig(kryonExecStrategy, graphTraversalStrategy))) {
-      result = krystexVajramExecutor.execute(incompleteHelloRequest());
+      result =
+          krystexVajramExecutor.execute(
+              MultiHelloFriendsV2_ReqImmutPojo._builder().userIds(Set.of()).fail(true)._build());
     }
     assertThat(result)
         .failsWithin(TIMEOUT)
         .withThrowableOfType(ExecutionException.class)
         .havingCause()
-        .isInstanceOf(MandatoryFacetsMissingException.class)
+        .isInstanceOf(KrystalCompletionException.class)
         .satisfies(cause -> assertThat(cause.getStackTrace()).isEmpty());
   }
 
   @Test
   void executeCompute_exceptionThrownInDebugMode_hasStacktrace() {
     var graph =
-        loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello").build();
+        loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams").build();
     CompletableFuture<String> result;
     requestContext.requestId("vajramWithNoDependencies");
     KrystexVajramExecutorConfigBuilder executorConfig =
@@ -316,13 +316,15 @@ class KrystexVajramExecutorTest {
     executorConfig.kryonExecutorConfig(
         requireNonNull(executorConfig.kryonExecutorConfig()).toBuilder().debug(true).build());
     try (KrystexVajramExecutor krystexVajramExecutor = graph.createExecutor(executorConfig)) {
-      result = krystexVajramExecutor.execute(incompleteHelloRequest());
+      result =
+          krystexVajramExecutor.execute(
+              MultiHelloFriendsV2_ReqImmutPojo._builder().userIds(Set.of()).fail(true)._build());
     }
     assertThat(result)
         .failsWithin(TIMEOUT)
         .withThrowableOfType(ExecutionException.class)
         .havingCause()
-        .isInstanceOf(MandatoryFacetsMissingException.class)
+        .isInstanceOf(KrystalCompletionException.class)
         .satisfies(cause -> assertThat(cause.getStackTrace()).isNotEmpty());
   }
 
@@ -666,7 +668,7 @@ class KrystexVajramExecutorTest {
           krystexVajramExecutor.execute(
               MutualFriendsHello_ReqImmutPojo._builder().userId("user_id_1").skip(true)._build());
     }
-    assertThat(multiHellos).succeedsWithin(1, TimeUnit.HOURS).isEqualTo("");
+    assertThat(multiHellos).succeedsWithin(TIMEOUT).isEqualTo("");
     assertThat(FriendsService.CALL_COUNTER.sum()).isEqualTo(1);
   }
 

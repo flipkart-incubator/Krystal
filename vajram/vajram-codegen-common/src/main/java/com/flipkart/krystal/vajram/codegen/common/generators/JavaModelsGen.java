@@ -6,6 +6,7 @@ import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.asClassN
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.asTypeNameWithTypes;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.withTypeParams;
 import static com.flipkart.krystal.codegen.common.models.CodegenPhase.MODELS;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.model.PlainJavaObject.POJO;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
@@ -359,6 +360,28 @@ public final class JavaModelsGen implements CodeGenerator {
       builderInterface.addSuperinterface(modelRootType.asType());
     }
 
+    // Generate getter overrides for @IfAbsent(FAIL) fields to strip @Nullable in _Immut interface
+    List<MethodSpec> immutGetterOverrides = new ArrayList<>();
+    for (ExecutableElement method : modelMethods) {
+      if (isIfAbsentFail(method, util)
+          && util.isAnyNullable(method.getReturnType(), method)
+          && !util.isOptional(method.getReturnType())) {
+        TypeName returnType =
+            TypeName.get(method.getReturnType())
+                .annotated(
+                    method.getReturnType().getAnnotationMirrors().stream()
+                        .map(AnnotationSpec::get)
+                        .filter(a -> !isNullableAnnotation(a))
+                        .toList());
+        immutGetterOverrides.add(
+            MethodSpec.methodBuilder(method.getSimpleName().toString())
+                .addModifiers(PUBLIC, ABSTRACT)
+                .addAnnotation(Override.class)
+                .returns(returnType)
+                .build());
+      }
+    }
+
     // Create the immutable interface
     TypeName modelRootTypeName =
         withTypeParams(ClassName.get(modelRootType), modelRootType.getTypeParameters());
@@ -386,6 +409,7 @@ public final class JavaModelsGen implements CodeGenerator {
                 .addModifiers(PUBLIC, ABSTRACT)
                 .returns(builderType)
                 .build())
+        .addMethods(immutGetterOverrides)
         .addType(builderInterface.build())
         .build();
   }
@@ -577,8 +601,10 @@ public final class JavaModelsGen implements CodeGenerator {
       }
 
       // Add @Nullable annotation for Optional types or methods with @Nullable annotation
-      if (util.isOptional(method.getReturnType())
-          || util.isAnyNullable(method.getReturnType(), method)) {
+      // Skip @Nullable for @IfAbsent(FAIL) fields since they are guaranteed non-null after build
+      if (!isIfAbsentFail(method, util)
+          && (util.isOptional(method.getReturnType())
+              || util.isAnyNullable(method.getReturnType(), method))) {
         // Add @Nullable as a type annotation
         fieldType =
             fieldType.annotated(AnnotationSpec.builder(ClassName.get(Nullable.class)).build());
@@ -790,6 +816,11 @@ this.$L = $L == null
                 .annotated(
                     specifiedReturnType.getAnnotationMirrors().stream()
                         .map(AnnotationSpec::get)
+                        .filter(
+                            a ->
+                                isBuilder
+                                    || !isIfAbsentFail(method, util)
+                                    || !isNullableAnnotation(a))
                         .toList());
     MethodSpec.Builder methodBuilder =
         MethodSpec.methodBuilder(fieldName).addModifiers(PUBLIC).returns(actualReturnType);
@@ -843,9 +874,11 @@ this.$L = $L == null
       // Exclude Lists/Maps of Models (they can be empty collections)
       if (isBuilder
           && builderExtendsModelRoot
-          && !typeSupportsAbsentValues(method, util)
-          && !(fieldModelRootInfo.isPresent()
-              && fieldModelRootInfo.get().containerType().isContainer())
+          && !isMethodOptionalOrNullable(method, util)
+          && !fieldModelRootInfo
+              .map(ModelRootInfo::containerType)
+              .map(ContainerType::isContainer)
+              .orElse(false)
           && modelTypeName != null) {
         methodBuilder.beginControlFlow("if ($N == null)", fieldName);
         methodBuilder.addStatement(
@@ -984,11 +1017,10 @@ this.$L = $L == null
 
       // If IfAbsent annotation was found, handle according to strategy
       // Only generate null check if validation is needed or error needs to be thrown
-      if (!typeSupportsAbsentValues(method, util)) {
+      if (!immutTypeSupportsNullForField(method, util)
+          || !isMethodOptionalOrNullable(method, util)) {
         buildMethodBuilder.beginControlFlow("if (this.$N == null)", fieldName);
-
-        IfAbsentThen ifAbsentThen = util.getIfAbsent(method).value();
-        switch (ifAbsentThen) {
+        switch (util.getIfAbsent(method).value()) {
           case FAIL ->
               // FAIL strategy - throw exception when value is null
               buildMethodBuilder.addStatement(
@@ -1185,7 +1217,7 @@ this.$L = $L == null
         return;
       }
 
-      if (!typeSupportsAbsentValues(method, util)) {
+      if (!isMethodOptionalOrNullable(method, util)) {
         util.error(
             "Field '%s' in REQUEST model with @IfAbsent(WILL_NEVER_FAIL) or no @IfAbsent annotation must be Optional or annotated with %s. This ensures application developers handle the null case gracefully."
                 .formatted(method.getSimpleName(), Nullable.class.getCanonicalName()),
@@ -1194,10 +1226,36 @@ this.$L = $L == null
     }
   }
 
+  private static boolean immutTypeSupportsNullForField(
+      ExecutableElement method, CodeGenUtility util) {
+    return !FAIL.equals(util.getIfAbsent(method).value());
+  }
+
   @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-  public static boolean typeSupportsAbsentValues(ExecutableElement method, CodeGenUtility util) {
+  public static boolean isMethodOptionalOrNullable(ExecutableElement method, CodeGenUtility util) {
     TypeMirror returnType = method.getReturnType();
     return !returnType.getKind().isPrimitive()
         && (util.isOptional(returnType) || util.isAnyNullable(returnType, method));
+  }
+
+  /** Checks if a field has @IfAbsent(FAIL) annotation, meaning it is strictly mandatory. */
+  public static boolean isIfAbsentFail(ExecutableElement method, CodeGenUtility util) {
+    return util.getIfAbsent(method).value() == FAIL;
+  }
+
+  /** Checks if an AnnotationSpec represents any @Nullable annotation. */
+  @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+  static boolean isNullableAnnotation(AnnotationSpec annotationSpec) {
+    if (annotationSpec.type instanceof ClassName className) {
+      return className.simpleName().equals("Nullable");
+    }
+    return false;
+  }
+
+  /** Strips @Nullable annotations from a TypeName. */
+  public static TypeName stripNullableAnnotation(TypeName typeName) {
+    List<AnnotationSpec> filtered =
+        typeName.annotations.stream().filter(a -> !isNullableAnnotation(a)).toList();
+    return typeName.withoutAnnotations().annotated(filtered);
   }
 }

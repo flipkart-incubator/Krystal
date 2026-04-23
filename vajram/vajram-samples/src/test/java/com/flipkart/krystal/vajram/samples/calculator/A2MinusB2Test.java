@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
+import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
+import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
@@ -56,6 +58,8 @@ class A2MinusB2Test {
                 KrystexVajramExecutorConfig.builder()
                     .kryonExecutorConfig(
                         KryonExecutorConfig.builder()
+                            .kryonExecStrategy(KryonExecStrategy.DIRECT)
+                            .graphTraversalStrategy(GraphTraversalStrategy.DEPTH)
                             .executorId(REQUEST_ID)
                             .executorService(executorLease.get())
                             .build()))) {

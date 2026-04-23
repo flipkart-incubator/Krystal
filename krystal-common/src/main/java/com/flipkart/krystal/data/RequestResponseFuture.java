@@ -1,11 +1,15 @@
 package com.flipkart.krystal.data;
 
+import com.flipkart.krystal.core.VajramID;
+import com.flipkart.krystal.facets.Dependency;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Represents the request and a response placeholder for a vajram invocation. */
+@Slf4j
 public record RequestResponseFuture<R extends Request<T>, T>(
     R request, CompletableFuture<@Nullable T> response) {
   @SuppressWarnings("Convert2Diamond") // Needed to prevent null-checker errors
@@ -13,23 +17,55 @@ public record RequestResponseFuture<R extends Request<T>, T>(
     return new RequestResponseFuture<R, T>(request, new CompletableFuture<@Nullable T>());
   }
 
+  @SuppressWarnings("unchecked")
   public static <R extends Request<T>, T> List<RequestResponseFuture<R, T>> forRequests(
       List<R> requests) {
     List<RequestResponseFuture<R, T>> list = new ArrayList<>();
     for (R r : requests) {
-      list.add(forRequest(r));
+      list.add(forRequest((R) r._build()));
     }
     return list;
+  }
+
+  @SuppressWarnings("unchecked")
+  public static <R extends Request<T>, B extends R, I extends R, T>
+      List<RequestResponseFuture<I, T>> forRequestBuilders(
+          List<B> requests, VajramID ofVajram, Dependency dependency) {
+    List<RequestResponseFuture<I, T>> list = new ArrayList<>();
+    for (R r : requests) {
+      RequestResponseFuture<I, T> rrf = forRequestBuilder(r, ofVajram, dependency);
+      if (rrf != null) {
+        list.add(rrf);
+      }
+    }
+    return list;
+  }
+
+  @SuppressWarnings("unchecked")
+  public static <R extends Request<T>, B extends R, I extends R, T>
+      @Nullable RequestResponseFuture<I, T> forRequestBuilder(
+          B builder, VajramID ofVajram, Dependency dependency) {
+    try {
+      return forRequest((I) builder._build());
+    } catch (Exception e) {
+      // This might happen if a mandatory field was not set, for example.
+      log.error(
+          "The request builder created by vajram {} for dependency {} could not be built due to an exception. Skipping this request.",
+          ofVajram,
+          dependency,
+          e);
+      return null;
+    }
   }
 
   public static <R extends Request<T>, T> CompletableFuture<@Nullable T>[] getFutures(
       List<RequestResponseFuture<R, T>> requestResponseFutures) {
     @SuppressWarnings("unchecked")
-    CompletableFuture<@Nullable T>[] list =
+    CompletableFuture<@Nullable T>[] array =
         (CompletableFuture<@Nullable T>[]) new CompletableFuture[requestResponseFutures.size()];
     for (int i = 0; i < requestResponseFutures.size(); i++) {
-      list[i] = requestResponseFutures.get(i).response();
+      array[i] = requestResponseFutures.get(i).response();
     }
-    return list;
+    return array;
   }
 }

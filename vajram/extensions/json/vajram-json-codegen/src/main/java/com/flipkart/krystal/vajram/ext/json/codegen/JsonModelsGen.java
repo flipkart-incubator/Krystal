@@ -7,8 +7,10 @@ import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGe
 import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.builderGettersAndSetters;
 import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.copyCtor;
 import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.getterMethod;
+import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.isIfAbsentFail;
 import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.newCopyForBuilder;
 import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.newCopyForImmut;
+import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.stripNullableAnnotation;
 import static com.flipkart.krystal.vajram.json.Json.JSON;
 import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.Modifier.FINAL;
@@ -324,11 +326,13 @@ return _serializedPayload;
   private @NonNull List<FieldSpec> fields(List<ExecutableElement> modelMethods, boolean isBuilder) {
     List<FieldSpec> fields = new ArrayList<>();
     for (ExecutableElement method : modelMethods) {
+      TypeName fieldType = util.getModelFieldType(method, isBuilder, Json.JSON).fieldType();
+      // Strip @Nullable for @IfAbsent(FAIL) fields since they are guaranteed non-null after build
+      if (!isBuilder && isIfAbsentFail(method, util)) {
+        fieldType = stripNullableAnnotation(fieldType);
+      }
       FieldSpec.Builder fieldBuilder =
-          FieldSpec.builder(
-              util.getModelFieldType(method, isBuilder, Json.JSON).fieldType(),
-              method.getSimpleName().toString(),
-              PRIVATE);
+          FieldSpec.builder(fieldType, method.getSimpleName().toString(), PRIVATE);
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
       if (isBuilder && fieldModelRootInfo.isPresent()) {
         if (LIST.equals(fieldModelRootInfo.get().containerType())) {

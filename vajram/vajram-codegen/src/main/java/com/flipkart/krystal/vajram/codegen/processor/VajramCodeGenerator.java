@@ -79,6 +79,7 @@ import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.facets.FacetUtils;
 import com.flipkart.krystal.facets.resolution.ResolutionTarget;
 import com.flipkart.krystal.facets.resolution.ResolverCommand;
+import com.flipkart.krystal.facets.resolution.ResolverCommand.ExecuteDependency;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.model.Model;
@@ -166,7 +167,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -533,6 +533,7 @@ public class VajramCodeGenerator implements CodeGenerator {
       if (simpleInputResolversMethodPresent) {
         for (DependencyModel dependency : currentVajramInfo.dependencies()) {
           ParameterizedTypeName depFacetsType = ParameterizedTypeName.get(Set.class, Facet.class);
+          @SuppressWarnings("SpellCheckingInspection")
           String depFacetsName = prependUnderscore(dependency.name() + "_depFacets");
           wrapperClassBuilder.addField(depFacetsType, depFacetsName, FINAL);
           constructorBody.addStatement("this.$L = new $T<>()", depFacetsName, HashSet.class);
@@ -626,15 +627,19 @@ $L
         getResolverMethodsByDependency();
 
     for (DependencyModel dependency : currentVajramInfo.dependencies()) {
+      @SuppressWarnings("SpellCheckingInspection")
       Map<String, Object> commonNamesMap =
           Map.ofEntries(
               entry("list", List.class),
               entry("facetName", dependency.name()),
               entry("facetSpec", dependency.name() + FACET_SPEC_SUFFIX),
-              entry("req", dependency.depVajramInfo().requestInterfaceClassName()),
+              entry("depReq", dependency.depVajramInfo().requestInterfaceClassName()),
               entry("depReqIface", dependency.depVajramInfo().requestInterfaceTypeName()),
-              entry("reqImmutType", dependency.depVajramInfo().reqBuilderInterfaceType()),
+              entry("reqBuilder", dependency.depVajramInfo().reqBuilderInterfaceType()),
+              entry("reqImmutType", dependency.depVajramInfo().reqImmutInterfaceTypeName()),
               entry("facImmutPojo", currentVajramInfo.facetsImmutPojoType()),
+              entry("fac", currentVajramInfo.facetsInterfaceType()),
+              entry("reqType", currentVajramInfo.lite().requestInterfaceTypeName()),
               entry(
                   "depType",
                   util.codegenUtil()
@@ -643,9 +648,7 @@ $L
                               .depVajramInfo()
                               .responseTypeBounds()
                               .javaModelType(util.processingEnv()))),
-              entry("fac", currentVajramInfo.facetsInterfaceType()),
               entry("one2OneInputResolver", One2OneInputResolver.class),
-              entry("reqBuilder", dependency.depVajramInfo().reqBuilderInterfaceType()),
               entry(
                   "respType",
                   util.codegenUtil()
@@ -671,6 +674,7 @@ $L
               .filter(f -> !f.isGiven())
               .collect(toSet());
 
+      //noinspection SpellCheckingInspection
       executionCode.addNamed(
           """
           {
@@ -686,12 +690,12 @@ $L
                       $facImmutPojo:T.Builder _facetValues =
                           ($facImmutPojo:T.Builder) _executionItem.facetValues()._asBuilder();
                       var _$facetName:L_requestBuilder = _$facetName:L_reqBuilderSupplier.get();
-                      $list:T<$reqImmutType:T> _$facetName:L_reqBuilders = $list:T.of(_$facetName:L_requestBuilder);
+                      $list:T<$reqBuilder:T> _$facetName:L_reqBuilders = $list:T.of(_$facetName:L_requestBuilder);
   $executeFanoutResolver:L
                       for ($one2OneInputResolver:T _$facetName:L_inputResolver :
                           _$facetName:L_one2oneInputResolvers) {
                         _$facetName:L_reqBuilders =
-                            ($list:T<$reqImmutType:T>)
+                            ($list:T<$reqBuilder:T>)
                                 _$facetName:L_inputResolver
                                     .resolve(_$facetName:L_reqBuilders, _facetValues)
                                     .getRequests();
@@ -732,7 +736,6 @@ $L
                                         CompletableFuture.class)
                                     : EMPTY_CODE_BLOCK
                               })
-                          .filter(Objects::nonNull)
                           .filter(c -> !c.isEmpty())
                           .collect(CodeBlock.joining(", "))),
                   entry(
@@ -752,17 +755,34 @@ $L
                               .addNamed(
 """
                       if(_$facetName:L_fanoutInputResolver != null){
-                          _$facetName:L_reqBuilders = ($list:T<$reqImmutType:T>) _$facetName:L_fanoutInputResolver
-                              .resolve(_$facetName:L_reqBuilderSupplier.get(), _facetValues)
-                              .getRequests();
+                          var _resolverCommand =
+                              _$facetName:L_fanoutInputResolver
+                                .resolve(_$facetName:L_reqBuilderSupplier.get(), _facetValues);
+                          _$facetName:L_reqBuilders = ($list:T<$reqBuilder:T>) _resolverCommand.getRequests();
+                          if(_resolverCommand instanceof $executeDependency:T
+                             && _$facetName:L_reqBuilders.isEmpty()){
+                            // This means the fanout resolver did not resolve any input. This can occur,
+                            // for example if the fanout resolver returns empty inputs. When a fanout
+                            // resolver returns empty results, we continue to execute the dependency as if
+                            // the fanout resolver returned one null value. This is done so that
+                            // developers don't accidentally end up skipping a dependency by resolving an
+                            // empty list. We interpret such a resolution as the following developer
+                            // intent: "I want to execute the dependency, but I do not know what value to
+                            // resolve - so execute with some default value"
+                            _$facetName:L_reqBuilders = $list:T.of(_$facetName:L_reqBuilderSupplier.get());
+                          }
                       }
 """,
                                   Map.ofEntries(
                                       entry("facetName", dependency.name()),
                                       entry("list", List.class),
                                       entry(
+                                          "reqBuilder",
+                                          dependency.depVajramInfo().reqBuilderInterfaceType()),
+                                      entry(
                                           "reqImmutType",
-                                          dependency.depVajramInfo().reqBuilderInterfaceType())))
+                                          dependency.depVajramInfo().reqImmutInterfaceTypeName()),
+                                      entry("executeDependency", ExecuteDependency.class)))
                               .build()
                           : EMPTY_CODE_BLOCK),
                   entry(
@@ -771,13 +791,13 @@ $L
                           ? CodeBlock.builder()
                               .addNamed(
 """
-$list:T<$reqRespFuture:T<$reqBuilder:T, $respType:T>> _$facetName:L_reqRespFutures =
-    $reqRespFuture:T.forRequests(_$facetName:L_reqBuilders);
+$list:T<$reqRespFuture:T<$reqImmutType:T, $respType:T>> _$facetName:L_reqRespFutures =
+    $reqRespFuture:T.forRequestBuilders(_$facetName:L_reqBuilders, $reqType:T._VAJRAM_ID, $fac:T.$facetSpec:L);
 _$facetName:L_reqs.addAll(_$facetName:L_reqRespFutures);
 _$facetName:L_futures[i] = $completableFuture:T.allOf($reqRespFuture:T.getFutures(_$facetName:L_reqRespFutures))
     .whenComplete(
         (_unused2, _throwable2) -> {
-          $fanoutDepResponses:T<$req:T, $respType:T> _fanoutResponses;
+          $fanoutDepResponses:T<$depReq:T, $respType:T> _fanoutResponses;
           if (_throwable != null) {
             $list:T<$requestResponse:T<$depReqIface:T, $depType:T>> _erroredRequests = new $arrayList:T<>();
             for ($depReqIface:T _$facetName:L_request : _$facetName:L_requestBuilders) {
@@ -786,20 +806,11 @@ _$facetName:L_futures[i] = $completableFuture:T.allOf($reqRespFuture:T.getFuture
             }
             _fanoutResponses = new $fanoutDepResponses:T<>(_erroredRequests);
           } else {
-            $list:T<$requestResponse:T<$req:T, $respType:T>>
-                _requestResponsePairs =
-                    new $arrayList:T<>(_$facetName:L_reqRespFutures.size());
-            for ($reqRespFuture:T<$reqBuilder:T, $respType:T>
-                _$facetName:L_reqRespFuture : _$facetName:L_reqRespFutures) {
-              _requestResponsePairs.add(
-                  new $requestResponse:T<>(
-                      _$facetName:L_reqRespFuture.request(),
-                      _$facetName:L_reqRespFuture
-                          .response()
-                          .handle($errable:T::errableFrom)
-                          .getNow($errable:T.nil())));
-            }
-            _fanoutResponses = new $fanoutDepResponses:T<>(_requestResponsePairs);
+            _fanoutResponses = new $fanoutDepResponses:T<>(
+                                          $requestResponse:T
+                                              .<$depReq:T, $depType:T>
+                                                  fromCompletedReqRespFutures(
+                                                      _$facetName:L_reqRespFutures));
           }
           _facetValues.$facetName:L(_fanoutResponses);
         });
@@ -813,14 +824,22 @@ _$facetName:L_futures[i] = $completableFuture:T.allOf($reqRespFuture:T.getFuture
 if (_$facetName:L_reqBuilders.isEmpty()) {
   _$facetName:L_futures[i] = $completableFuture:T.completedFuture(null);
 } else {
-  var _$facetName:L_future = new $completableFuture:T<$depType:T>();
-  _$facetName:L_futures[i] =
-      _$facetName:L_future.whenComplete(
-          (_unused2, _throwable2) -> {
-            var _errable = $errable:T.errableFrom(_unused2, _throwable2);
-            _facetValues.$facetName:L(new $requestResponse:T<>(_$facetName:L_requestBuilder, _errable));
-          });
-  _$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$facetName:L_future));
+  $reqRespFuture:T<$reqImmutType:T, $depType:T> _rrf = $reqRespFuture:T.forRequestBuilder(
+      _$facetName:L_requestBuilder,
+      $reqType:T._VAJRAM_ID,
+      $fac:T.$facetSpec:L);
+  if(_rrf != null){
+    var _$facetName:L_future = _rrf.response();
+    _$facetName:L_futures[i] =
+        _$facetName:L_future.whenComplete(
+            (_unused2, _throwable2) -> {
+              var _errable = $errable:T.errableFrom(_unused2, _throwable2);
+              _facetValues.$facetName:L(new $requestResponse:T<>(_$facetName:L_requestBuilder, _errable));
+            });
+    _$facetName:L_reqs.add(_rrf);
+  } else {
+    _$facetName:L_futures[i] = $completableFuture:T.completedFuture(null);
+  }
 }
 """,
                                   commonNamesMap)
@@ -1484,7 +1503,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                 elements);
       }
     } else if (param.getSimpleName().contentEquals(BATCHED_OUTPUT_VAR)) {
-      DeclaredType errableOfBatcheOutputType =
+      DeclaredType errableOfBatchedOutputType =
           util.processingEnv()
               .getTypeUtils()
               .getDeclaredType(
@@ -1496,13 +1515,13 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
       if (!typeUtils.isAssignable(batchedOutputActualType, param.asType())
           && !util.processingEnv()
               .getTypeUtils()
-              .isAssignable(errableOfBatcheOutputType, param.asType())) {
+              .isAssignable(errableOfBatchedOutputType, param.asType())) {
         String message =
             "'_batchedOutput' param must be compatible with type parameter of the "
                 + "Future returned by the @Output.Batched method: Expected \n'"
                 + batchedOutputActualType
                 + "'\n or \n'"
-                + errableOfBatcheOutputType
+                + errableOfBatchedOutputType
                 + "'\n Found: \n"
                 + param.asType();
         @Nullable Element[] elements = param.elementArray();
@@ -1538,6 +1557,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
    *
    * @return {@link CodeBlock.Builder} with resolver code
    */
+  @SuppressWarnings("SpellCheckingInspection")
   private CodeBlock.Builder buildInputResolver(ExecutableElement method, boolean fanoutResolver) {
     Resolve resolve =
         checkNotNull(
@@ -1697,6 +1717,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
         }
         if (typeMismatch) {
           // the parameter data type must be RequestResponse<Req, Resp>
+          //noinspection SpellCheckingInspection
           util.codegenUtil()
               .error(
                   """
@@ -1787,6 +1808,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
             returnValue =
                 CodeBlock.of(depValueAccessorCode, variableName, FACET_VALUES_VAR, usingFacetName);
           } else {
+            //noinspection SpellCheckingInspection
             util.codegenUtil()
                 .error(
                     ("A resolver ('%s') must not access an optional dependency ('%s') directly."
