@@ -9,6 +9,7 @@ import static com.flipkart.krystal.vajramexecutor.krystex.batching.DepChainBatch
 import static java.time.Duration.ofSeconds;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,6 +34,7 @@ import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.KryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecReporter;
+import com.flipkart.krystal.model.MandatoryFieldMissingException;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.VajramDefRoot;
@@ -268,21 +270,11 @@ class KrystexVajramExecutorTest {
 
   @Test
   void executeCompute_missingMandatoryInput_throwsException() {
-    var graph =
-        loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams").build();
-    CompletableFuture<String> result;
-    requestContext.requestId("vajramWithNoDependencies");
-    try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(getExecutorConfig(kryonExecStrategy, graphTraversalStrategy))) {
-      result =
-          krystexVajramExecutor.execute(
-              MultiHelloFriendsV2_ReqImmutPojo._builder().userIds(Set.of()).fail(true)._build());
-    }
-    assertThat(result)
-        .failsWithin(TIMEOUT)
-        .withThrowableOfType(ExecutionException.class)
-        .withCauseExactlyInstanceOf(KrystalCompletionException.class)
-        .withMessageEndingWith("Fail requested");
+    assertThatThrownBy(() -> MultiHelloFriendsV2_ReqImmutPojo._builder()._build())
+        .isInstanceOf(MandatoryFieldMissingException.class)
+        .hasMessage(
+            "Mandatory data field 'userIds' of the model "
+                + "'com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2_ReqImmutPojo' does not have a value");
   }
 
   @Test

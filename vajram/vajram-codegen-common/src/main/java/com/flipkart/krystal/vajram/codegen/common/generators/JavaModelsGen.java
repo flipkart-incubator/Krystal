@@ -964,11 +964,9 @@ this.$L = $L == null
     MethodSpec noArgConstructor = MethodSpec.constructorBuilder().addModifiers(PRIVATE).build();
 
     List<MethodSpec> dataAccessMethods =
-        builderGettersAndSetters(
-            modelMethods, builderType, modelRoot, null, util, immutableModelName);
+        builderGettersAndSetters(modelMethods, builderType, modelRoot, null, util);
 
-    MethodSpec.Builder buildMethodBuilder =
-        buildForBuilder(modelMethods, immutableModelName, immutablePojoName, util);
+    MethodSpec.Builder buildMethodBuilder = buildForBuilder(modelMethods, immutablePojoName, util);
 
     MethodSpec.Builder builderCopyMethodBuilder =
         newCopyForBuilder(modelMethods, builderType, util);
@@ -996,10 +994,7 @@ this.$L = $L == null
   }
 
   public static MethodSpec.Builder buildForBuilder(
-      List<ExecutableElement> modelMethods,
-      TypeName immutableModelName,
-      TypeName immutablePojoName,
-      CodeGenUtility util) {
+      List<ExecutableElement> modelMethods, TypeName immutablePojoName, CodeGenUtility util) {
     // Create _build method
     MethodSpec.Builder buildMethodBuilder =
         MethodSpec.methodBuilder("_build")
@@ -1026,7 +1021,7 @@ this.$L = $L == null
               buildMethodBuilder.addStatement(
                   "throw new $T($S, $S)",
                   MandatoryFieldMissingException.class,
-                  immutableModelName,
+                  immutablePojoName,
                   fieldName);
           case ASSUME_DEFAULT_VALUE -> {
             try {
@@ -1115,8 +1110,7 @@ this.$L = $L == null
       TypeName builderType,
       ModelRoot modelRoot,
       @Nullable ModelProtocol modelProtocol,
-      CodeGenUtility util,
-      @Nullable TypeName modelTypeName) {
+      CodeGenUtility util) {
     // Create setter methods
     List<MethodSpec> dataAccessMethods = new ArrayList<>();
     for (ExecutableElement method : modelMethods) {
@@ -1180,7 +1174,7 @@ this.$L = $L == null
                     true,
                     modelProtocol,
                     util,
-                    modelTypeName,
+                    builderType,
                     modelRoot.builderExtendsModelRoot())
                 .addAnnotation(Override.class);
         dataAccessMethods.add(getterMethod.build());

@@ -62,7 +62,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 @MethodSource("executorConfigsToTest")
 class RequestLevelCacheTest {
 
-  private static final Duration TIMEOUT = Duration.ofSeconds(10);
+  private static final Duration TIMEOUT = Duration.ofSeconds(1);
 
   private static SingleThreadExecutorsPool EXEC_POOL;
   private final KryonExecStrategy kryonExecStrategy;

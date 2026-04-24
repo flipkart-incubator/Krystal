@@ -2,9 +2,9 @@
 sed -i '' 's/com.flipkart.krystal.currentVersion/com.flipkart.krystal.previousVersion/g' build.gradle \
 &&
 #Unsafe compile temporarily needed due to a checker-framework issue
-./gradlew :vajram:vajram-codegen:publishToMavenLocal -PunsafeCompile=true \
+./gradlew :vajram:vajram-codegen:compileJava :vajram:vajram-codegen:publishToMavenLocal -PunsafeCompile=true \
 &&
 sed -i '' 's/com.flipkart.krystal.previousVersion/com.flipkart.krystal.currentVersion/g' build.gradle \
 &&
 #Unsafe compile temporarily needed due to a checker-framework issue
-./gradlew compileJava publishToMavenLocal -PunsafeCompile=true
+./gradlew publishToMavenLocal --rerun-tasks -PunsafeCompile=true --no-daemon

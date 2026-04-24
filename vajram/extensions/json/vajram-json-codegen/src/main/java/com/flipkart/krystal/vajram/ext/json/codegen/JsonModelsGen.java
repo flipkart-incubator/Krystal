@@ -397,8 +397,7 @@ return _serializedPayload;
 
     ClassName builderType = immutableJsonName.nestedClass("Builder");
     List<MethodSpec> dataAccessMethods =
-        builderGettersAndSetters(
-            modelMethods, builderType, modelRoot, JSON, util, immutableModelName);
+        builderGettersAndSetters(modelMethods, builderType, modelRoot, JSON, util);
 
     // Create the builder class
     return builderSpec
@@ -406,8 +405,7 @@ return _serializedPayload;
         .addSuperinterface(immutableModelName.nestedClass("Builder"))
         .addFields(fields(modelMethods, true))
         .addMethods(dataAccessMethods)
-        .addMethod(
-            buildForBuilder(modelMethods, immutableModelName, immutableJsonName, util).build())
+        .addMethod(buildForBuilder(modelMethods, immutableJsonName, util).build())
         .addMethod(newCopyForBuilder(modelMethods, builderType, util).build())
         .addMethod(
             MethodSpec.overriding(util.getMethod(Model.class, "_asBuilder", 0))
