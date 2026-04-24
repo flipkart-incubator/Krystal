@@ -180,7 +180,7 @@ export class GraphRenderer {
       .data(this.uniqueEdgePaths)
       .join("path")
       .attr("class", d => {
-        let className = d.edgeData.mandatory ? "link mandatory" : "link optional";
+        let className = d.edgeData.isMandatory ? "link isMandatory" : "link optional";
         if (d.edgeData.canFanout) { className += " canFanout"; }
         return className;
       })
@@ -224,7 +224,7 @@ export class GraphRenderer {
       .on("click", (event, d) => {
         event.stopPropagation();
         if (d.edgeData && d.edgeData.documentation && d.edgeData.documentation.trim() !== "") {
-          let info = `<strong>Dependency: ${d.edgeData.name}</strong><br/><strong>From:</strong> ${d.sourceId}<br/><strong>To:</strong> ${d.targetId}<br/><strong>Mandatory:</strong> ${d.edgeData.mandatory ? "Yes" : "No"}<br/><strong>Can Fanout:</strong> ${d.edgeData.canFanout ? "<span style='color:#3f51b5;font-weight:bold;'>Yes</span>" : "No"}<br/><br/><strong>Documentation:</strong><div class="documentation">${d.edgeData.documentation}</div>`;
+          let info = `<strong>Dependency: ${d.edgeData.name}</strong><br/><strong>From:</strong> ${d.sourceId}<br/><strong>To:</strong> ${d.targetId}<br/><strong>Mandatory:</strong> ${d.edgeData.isMandatory ? "Yes" : "No"}<br/><strong>Can Fanout:</strong> ${d.edgeData.canFanout ? "<span style='color:#3f51b5;font-weight:bold;'>Yes</span>" : "No"}<br/><br/><strong>Documentation:</strong><div class="documentation">${d.edgeData.documentation}</div>`;
           showTooltip(info, event);
         }
       });
@@ -877,7 +877,7 @@ export class GraphRenderer {
           info += d.data.inputs.map(input => {
             let inputInfo = `<div class="input-item">`;
             inputInfo += `<div class="input-name">${input.name}`;
-            if (input.mandatory) { 
+            if (input.isMandatory) { 
               inputInfo += `<span class="input-mandatory">*</span>`; 
             }
             inputInfo += `<span class="input-type">${input.type ? input.type : "N/A"}</span>`;
