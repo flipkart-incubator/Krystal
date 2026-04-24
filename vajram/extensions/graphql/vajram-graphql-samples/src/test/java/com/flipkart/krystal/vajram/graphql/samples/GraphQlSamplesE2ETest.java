@@ -43,7 +43,7 @@ import org.junit.jupiter.api.Test;
 
 public class GraphQlSamplesE2ETest {
 
-  private static final Duration TEST_TIMEOUT = Duration.ofSeconds(1000);
+  private static final Duration TEST_TIMEOUT = Duration.ofSeconds(1);
 
   private static SingleThreadExecutorsPool EXEC_POOL;
   private static GraphQL GRAPHQL;

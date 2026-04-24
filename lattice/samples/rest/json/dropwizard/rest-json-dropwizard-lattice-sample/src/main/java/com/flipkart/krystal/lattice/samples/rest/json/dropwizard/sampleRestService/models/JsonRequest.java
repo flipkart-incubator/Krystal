@@ -34,6 +34,7 @@ public interface JsonRequest extends Model {
   @IfAbsent(FAIL)
   long mandatoryLongInput();
 
+  @IfAbsent(FAIL)
   @Nullable ByteArray optionalByteString();
 
   @IfAbsent(ASSUME_DEFAULT_VALUE)

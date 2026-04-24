@@ -58,7 +58,7 @@ import org.junit.jupiter.api.Test;
 
 class Resilience4JBulkheadTest {
 
-  private static final Duration TIMEOUT = ofSeconds(1000);
+  private static final Duration TIMEOUT = ofSeconds(1);
   private static SingleThreadExecutorsPool EXEC_POOL;
 
   @BeforeAll

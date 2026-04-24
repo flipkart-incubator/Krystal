@@ -17,7 +17,6 @@ import static java.util.Arrays.stream;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.runAsync;
-import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.stream.IntStream.range;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -126,7 +125,7 @@ class FormulaTest {
                             .build()))) {
       future = executeVajram(krystexVajramExecutor, 0, requestContext);
     }
-    assertThat(future).succeedsWithin(1, HOURS).isEqualTo(4);
+    assertThat(future).succeedsWithin(TEST_TIMEOUT).isEqualTo(4);
     assertThat(Add.CALL_COUNTER.sum()).isEqualTo(1);
   }
 
@@ -141,10 +140,8 @@ class FormulaTest {
         KrystexVajramExecutorConfig.builder()
             .kryonExecutorConfig(
                 KryonExecutorConfig.builder()
-                    .kryonExecStrategy(KryonExecStrategy.BATCH)
                     .executorId(REQUEST_ID)
                     .executorService(executorLease.get())
-                    .graphTraversalStrategy(GraphTraversalStrategy.DEPTH)
                     .build());
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 0, 0, REQUEST_ID);
     when(requestLevelCache.getValue(any(Add_FacImmutPojo.class))).thenReturn(0);
@@ -255,7 +252,7 @@ class FormulaTest {
                         assertThat(future.getNow(0)).isEqualTo((100 + i) / (20 + i + 5 + i));
                       }
                     }))
-        .succeedsWithin(ofSeconds(1));
+        .succeedsWithin(TEST_TIMEOUT);
     assertThat(Add.CALL_COUNTER.sum()).isEqualTo(executionsCount);
   }
 
@@ -328,7 +325,7 @@ class FormulaTest {
                         assertThat(future.getNow(0)).isEqualTo((100 + i) / (20 + i + 5 + i));
                       }
                     }))
-        .succeedsWithin(ofSeconds(1));
+        .succeedsWithin(TEST_TIMEOUT);
     assertThat(Add.CALL_COUNTER.sum()).isEqualTo(loopCount);
 
     printStats(
@@ -400,7 +397,7 @@ class FormulaTest {
                         assertThat(future.getNow(0)).isEqualTo((100 + i) / (20 + i + 5 + i));
                       }
                     }))
-        .succeedsWithin(ofSeconds(1));
+        .succeedsWithin(TEST_TIMEOUT);
     assertThat(Add.CALL_COUNTER.sum()).isEqualTo(outerLoopCount);
     /*
        Old code performance:
@@ -524,8 +521,6 @@ class FormulaTest {
                 KryonExecutorConfig.builder()
                     .executorId(REQUEST_ID)
                     .executorService(executorLease.get())
-                    .kryonExecStrategy(KryonExecStrategy.BATCH)
-                    .graphTraversalStrategy(GraphTraversalStrategy.DEPTH)
                     .build());
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, REQUEST_ID);
     try (KrystexVajramExecutor krystexVajramExecutor =
@@ -586,11 +581,7 @@ class FormulaTest {
     KrystexVajramExecutorConfigBuilder executorConfig =
         KrystexVajramExecutorConfig.builder()
             .kryonExecutorConfig(
-                KryonExecutorConfig.builder()
-                    .executorService(executorLease.get())
-                    .kryonExecStrategy(KryonExecStrategy.BATCH)
-                    .graphTraversalStrategy(GraphTraversalStrategy.DEPTH)
-                    .build());
+                KryonExecutorConfig.builder().executorService(executorLease.get()).build());
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 0, 0, REQUEST_ID);
     try (KrystexVajramExecutor krystexVajramExecutor =
         kGraph

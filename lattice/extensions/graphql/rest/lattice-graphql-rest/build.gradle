@@ -17,6 +17,7 @@ dependencies {
     krystalModelsGenProcessor project(':vajram:extensions:graphql:vajram-graphql-codegen')
     krystalModelsGenProcessor project(':vajram:extensions:json:vajram-json-codegen')
 
+    krystalModelsGenProcessor "com.flipkart.krystal:vajram-codegen:${krystal_version}"
     implementation 'jakarta.enterprise:jakarta.enterprise.cdi-api'
 }
 
