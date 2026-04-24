@@ -234,7 +234,7 @@ public class StaticCallGraphGenerator {
                     .source(variantNodeId(vajramId, targetId))
                     .target(targetId.id())
                     .name("<static dispatch>")
-                    .isMandatory(false)
+                    .isMandatory(true)
                     .canFanout(false)
                     .documentation("Trait dispatch")
                     .build());

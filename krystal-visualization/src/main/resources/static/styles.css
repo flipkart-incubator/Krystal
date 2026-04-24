@@ -197,12 +197,12 @@ svg {
   stroke-width: 2.5px;
 }
 
-.link.mandatory {
+.link.isMandatory {
   stroke: var(--color-link-mandatory);
   stroke-width: 3.5px;
 }
 
-.link.mandatory:hover {
+.link.isMandatory:hover {
   stroke-width: 4px;
 }
 
@@ -220,7 +220,7 @@ svg {
   stroke: var(--color-link-fanout);
 }
 
-.link.mandatory.canFanout {
+.link.isMandatory.canFanout {
   stroke: var(--color-link-fanout-mandatory);
 }
 
