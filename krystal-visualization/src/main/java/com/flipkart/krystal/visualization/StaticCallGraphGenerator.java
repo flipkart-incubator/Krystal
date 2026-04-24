@@ -28,6 +28,8 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -97,7 +99,43 @@ public class StaticCallGraphGenerator {
     Map<VajramID, VajramDefinition> vajramDefinitions =
         krystexGraph.vajramGraph().vajramDefinitions();
 
-    // Create nodes
+    // Phase 1: Pre-compute static dispatch resolutions.
+    // For each static dispatch trait, group dependencies by their resolved dispatch target.
+    // traitID -> (targetID -> list of dependency specs resolving to that target)
+    Map<VajramID, Map<VajramID, List<DependencySpec<?, ?, ?>>>> staticDispatchMap = new HashMap<>();
+    // Maps each DependencySpec (on a static dispatch trait) to the variant node ID it should
+    // connect to
+    Map<DependencySpec<?, ?, ?>, String> depSpecToVariantNodeId = new IdentityHashMap<>();
+
+    for (Map.Entry<VajramID, VajramDefinition> entry : vajramDefinitions.entrySet()) {
+      VajramID traitId = entry.getKey();
+      VajramDefinition definition = entry.getValue();
+      if (!definition.isTrait()) {
+        continue;
+      }
+      TraitDispatchPolicy policy = krystexGraph.getTraitDispatchPolicy(traitId);
+      if (!(policy instanceof StaticDispatchPolicy staticPolicy)) {
+        continue;
+      }
+      Map<VajramID, List<DependencySpec<?, ?, ?>>> targetToDepSpecs = new LinkedHashMap<>();
+      for (VajramDefinition depDef : vajramDefinitions.values()) {
+        for (FacetSpec<?, ?> facet : depDef.facetSpecs()) {
+          if (facet instanceof DependencySpec<?, ?, ?> depSpec
+              && depSpec.onVajramID().equals(traitId)) {
+            VajramID target = staticPolicy.getDispatchTargetID(depSpec);
+            if (target != null) {
+              targetToDepSpecs.computeIfAbsent(target, k -> new ArrayList<>()).add(depSpec);
+              depSpecToVariantNodeId.put(depSpec, variantNodeId(traitId, target));
+            }
+          }
+        }
+      }
+      if (!targetToDepSpecs.isEmpty()) {
+        staticDispatchMap.put(traitId, targetToDepSpecs);
+      }
+    }
+
+    // Phase 2: Create nodes
     for (Map.Entry<VajramID, VajramDefinition> entry : vajramDefinitions.entrySet()) {
       VajramID vajramId = entry.getKey();
       VajramDefinition definition = entry.getValue();
@@ -133,19 +171,35 @@ public class StaticCallGraphGenerator {
         throw new IllegalArgumentException("Unknown vajram type for: " + definition.def());
       }
 
-      Node node =
-          Node.builder()
-              .id(vajramId.id())
-              .name(definition.defType().getSimpleName())
-              .vajramType(vajramType)
-              .inputs(inputs)
-              .annotationTags(annotationStringList)
-              .build();
-
-      nodes.add(node);
+      if (staticDispatchMap.containsKey(vajramId)) {
+        // For static dispatch traits, create one node per dispatch target variant
+        String traitName = definition.defType().getSimpleName();
+        for (VajramID targetId : staticDispatchMap.get(vajramId).keySet()) {
+          VajramDefinition targetDef = vajramDefinitions.get(targetId);
+          String targetName =
+              targetDef != null ? targetDef.defType().getSimpleName() : targetId.id();
+          nodes.add(
+              Node.builder()
+                  .id(variantNodeId(vajramId, targetId))
+                  .name(traitName + " \u2192 " + targetName)
+                  .vajramType(vajramType)
+                  .inputs(inputs)
+                  .annotationTags(annotationStringList)
+                  .build());
+        }
+      } else {
+        nodes.add(
+            Node.builder()
+                .id(vajramId.id())
+                .name(definition.defType().getSimpleName())
+                .vajramType(vajramType)
+                .inputs(inputs)
+                .annotationTags(annotationStringList)
+                .build());
+      }
     }
 
-    // Create links for dependencies
+    // Phase 3: Create links
     for (Map.Entry<VajramID, VajramDefinition> entry : vajramDefinitions.entrySet()) {
       VajramID vajramId = entry.getKey();
       VajramDefinition definition = entry.getValue();
@@ -155,44 +209,61 @@ public class StaticCallGraphGenerator {
           VajramID dependencyId = dependencySpec.onVajramID();
           if (vajramDefinitions.containsKey(vajramId)
               && vajramDefinitions.containsKey(dependencyId)) {
-            Link link =
+            // If this dependency is on a static dispatch trait, point to the variant node
+            String targetNodeId =
+                depSpecToVariantNodeId.getOrDefault(dependencySpec, dependencyId.id());
+            links.add(
                 Link.builder()
                     .source(vajramId.id())
-                    .target(dependencyId.id())
+                    .target(targetNodeId)
                     .name(facet.name())
                     .isMandatory(facet.isMandatoryOnServer())
                     .canFanout(facet.canFanout())
                     .documentation(facet.documentation())
-                    .build();
-            links.add(link);
+                    .build());
           }
         }
       }
       // Create links from trait to its conforming dispatch targets
       if (definition.isTrait()) {
-        TraitDispatchPolicy traitDispatchPolicy = krystexGraph.getTraitDispatchPolicy(vajramId);
-        if (traitDispatchPolicy != null) {
-          ImmutableCollection<VajramID> conformingVajrams = traitDispatchPolicy.dispatchTargetIDs();
-          for (VajramID conformant : conformingVajrams) {
-            Link link =
+        if (staticDispatchMap.containsKey(vajramId)) {
+          // For static dispatch, each variant node connects to its specific target
+          for (VajramID targetId : staticDispatchMap.get(vajramId).keySet()) {
+            links.add(
                 Link.builder()
-                    .source(vajramId.id())
-                    .target(conformant.id())
-                    .name(
-                        traitDispatchPolicy instanceof StaticDispatchPolicy
-                            ? "<static dispatch>"
-                            : "<dynamic dispatch>")
+                    .source(variantNodeId(vajramId, targetId))
+                    .target(targetId.id())
+                    .name("<static dispatch>")
                     .isMandatory(false)
                     .canFanout(false)
                     .documentation("Trait dispatch")
-                    .build();
-            links.add(link);
+                    .build());
+          }
+        } else {
+          TraitDispatchPolicy traitDispatchPolicy = krystexGraph.getTraitDispatchPolicy(vajramId);
+          if (traitDispatchPolicy != null) {
+            // For dynamic dispatch, show all possible dispatch targets
+            for (VajramID conformant : traitDispatchPolicy.dispatchTargetIDs()) {
+              links.add(
+                  Link.builder()
+                      .source(vajramId.id())
+                      .target(conformant.id())
+                      .name("<dynamic dispatch>")
+                      .isMandatory(false)
+                      .canFanout(false)
+                      .documentation("Trait dispatch")
+                      .build());
+            }
           }
         }
       }
     }
 
     return Graph.builder().nodes(nodes).links(links).build();
+  }
+
+  private static String variantNodeId(VajramID traitId, VajramID targetId) {
+    return traitId.id() + "__to__" + targetId.id();
   }
 
   private static VajramType getVajramType(VajramDefinition vajramDef) {
