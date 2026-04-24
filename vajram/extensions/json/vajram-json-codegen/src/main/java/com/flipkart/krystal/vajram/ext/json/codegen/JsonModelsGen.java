@@ -106,6 +106,8 @@ final class JsonModelsGen implements CodeGenerator {
       TypeElement modelRootType,
       List<ExecutableElement> modelMethods,
       ClassName immutableModelName) {
+    ModelRoot modelRoot = requireNonNull(modelRootType.getAnnotation(ModelRoot.class));
+
     ClassName immutableJsonModelName = util.getImmutClassName(modelRootType, Json.JSON);
     ClassName builderType = immutableJsonModelName.nestedClass("Builder");
     TypeSpec.Builder classBuilder =
@@ -161,7 +163,13 @@ return _serializedPayload;
     for (ExecutableElement method : modelMethods) {
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
       MethodSpec pojoGetterMethod =
-          getterMethod(method, false, JSON, util, null, false)
+          getterMethod(
+                  method,
+                  false,
+                  JSON,
+                  util,
+                  immutableJsonModelName,
+                  modelRoot.builderExtendsModelRoot())
               .addAnnotation(Override.class)
               .build();
       MethodSpec.Builder getterBuilder =

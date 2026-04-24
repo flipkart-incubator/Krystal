@@ -563,6 +563,8 @@ public final class JavaModelsGen implements CodeGenerator {
    */
   private TypeSpec generateImmutablePojo(
       TypeElement modelRootType, List<ExecutableElement> modelMethods) {
+    ModelRoot modelRoot = requireNonNull(modelRootType.getAnnotation(ModelRoot.class));
+
     ClassName immutInterfaceNameRaw = util.getImmutInterfaceName(modelRootType);
     ClassName immutablePojoNameRaw = util.getImmutClassName(modelRootType, POJO);
     TypeName immutIfaceType =
@@ -616,7 +618,8 @@ public final class JavaModelsGen implements CodeGenerator {
     List<MethodSpec> methods = new ArrayList<>();
     for (ExecutableElement method : modelMethods) {
       methods.add(
-          getterMethod(method, false, null, util, null, false)
+          getterMethod(
+                  method, false, null, util, immutPojoType, modelRoot.builderExtendsModelRoot())
               .addAnnotation(Override.class)
               .build());
     }
@@ -783,12 +786,21 @@ this.$L = $L == null
     return ctorBuilder.build();
   }
 
+  /**
+   * @param method
+   * @param isBuilder
+   * @param modelProtocol
+   * @param util
+   * @param modelTypeName Must be non-null if and only if the field is mandatory
+   * @param builderExtendsModelRoot
+   * @return
+   */
   public static MethodSpec.Builder getterMethod(
       ExecutableElement method,
       boolean isBuilder,
       @Nullable ModelProtocol modelProtocol,
       CodeGenUtility util,
-      @Nullable TypeName modelTypeName,
+      TypeName modelTypeName,
       boolean builderExtendsModelRoot) {
     TypeMirror specifiedReturnType = method.getReturnType();
     ModelFieldTypeInfo modelFieldType = util.getModelFieldType(method, true, null);
@@ -878,15 +890,20 @@ this.$L = $L == null
           && !fieldModelRootInfo
               .map(ModelRootInfo::containerType)
               .map(ContainerType::isContainer)
-              .orElse(false)
-          && modelTypeName != null) {
-        methodBuilder.beginControlFlow("if ($N == null)", fieldName);
-        methodBuilder.addStatement(
-            "throw new $T($S, $S)",
-            MandatoryFieldMissingException.class,
-            modelTypeName.toString(),
-            fieldName);
-        methodBuilder.endControlFlow();
+              .orElse(false)) {
+        methodBuilder.addCode(
+            CodeBlock.builder()
+                .add(
+"""
+    if ($N == null) {
+      throw new $T($S, $S);
+    }
+""",
+                    fieldName,
+                    MandatoryFieldMissingException.class,
+                    modelTypeName,
+                    fieldName)
+                .build());
       }
       methodBuilder.addStatement(
           "return $L", getFieldAccessorExpression(isBuilder, fieldName, specifiedReturnType, util));
