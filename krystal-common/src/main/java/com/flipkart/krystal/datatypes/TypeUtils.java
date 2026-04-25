@@ -13,6 +13,8 @@ import static com.flipkart.krystal.datatypes.JavaTypes.OBJECT;
 import static com.flipkart.krystal.datatypes.JavaTypes.SHORT;
 import static com.flipkart.krystal.datatypes.JavaTypes.STRING;
 import static com.flipkart.krystal.datatypes.JavaTypes.VOID;
+import static java.util.Arrays.stream;
+import static java.util.stream.Collectors.joining;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -91,6 +93,14 @@ public final class TypeUtils {
         @Nullable
         public Type getOwnerType() {
           return null;
+        }
+
+        @Override
+        public String toString() {
+          return rawType.getTypeName()
+              + '<'
+              + stream(typeParameters).map(Type::getTypeName).collect(joining(", "))
+              + '>';
         }
       };
     }

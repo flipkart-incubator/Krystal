@@ -19,11 +19,33 @@ export function showTooltip(content, event, isInputTooltip = false) {
     .style("transform", "translateY(10px)")
     .style("opacity", 0);
 
-  // Set content and position
+  // Set content and initial position off-screen to measure
   tooltip.html(content)
-    .style("left", (event.pageX + 15) + "px")
-    .style("top", (event.pageY + 15) + "px");
-  
+    .style("left", "-9999px")
+    .style("top", "-9999px");
+
+  // Measure tooltip dimensions and clamp to viewport
+  const tooltipNode = tooltip.node();
+  const tooltipRect = tooltipNode.getBoundingClientRect();
+  const tooltipW = tooltipRect.width;
+  const tooltipH = tooltipRect.height;
+  const viewW = window.innerWidth;
+  const viewH = window.innerHeight;
+
+  let left = event.pageX + 15;
+  let top = event.pageY + 15;
+
+  if (left + tooltipW > viewW - 10) {
+    left = Math.max(10, event.pageX - tooltipW - 15);
+  }
+  if (top + tooltipH > viewH + window.scrollY - 10) {
+    top = Math.max(window.scrollY + 10, event.pageY - tooltipH - 15);
+  }
+
+  tooltip
+    .style("left", left + "px")
+    .style("top", top + "px");
+
   // Apply the animation
   setTimeout(() => {
     tooltip.transition()
