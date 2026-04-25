@@ -5,6 +5,16 @@ import * as d3dag from "https://cdn.skypack.dev/d3-dag@1.0.0-1";
 import { showTooltip, hideTooltip } from './tooltip.js';
 import { getIntersectionPoint, createEdgePaths } from './dataProcessor.js';
 
+function escapeHtml(str) {
+  if (!str) return str;
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 /**
  * GraphRenderer class for handling all graph rendering functionality
  */
@@ -92,13 +102,17 @@ export class GraphRenderer {
           
           const bgRect = d3.select(parentNode).select(`rect.link-label-bg[data-edge-id="${edgeId}"][data-link-id="${linkId}"]`);
           if (!bgRect.empty()) {
-            // Get the current text bbox (now that it's not bold anymore)
-            const bbox = textNode.getBBox();
-            
-            // Center the rectangle around the text
-            const newWidth = bbox.width + 12;
-            bgRect.attr("x", bbox.x - 6)
-                 .attr("width", newWidth);
+            try {
+              // Get the current text bbox (now that it's not bold anymore)
+              const bbox = textNode.getBBox();
+              
+              // Center the rectangle around the text
+              const newWidth = bbox.width + 12;
+              bgRect.attr("x", bbox.x - 6)
+                   .attr("width", newWidth);
+            } catch (e) {
+              // getBBox can fail on hidden elements
+            }
           }
         });
       }
@@ -225,7 +239,7 @@ export class GraphRenderer {
       .on("click", (event, d) => {
         event.stopPropagation();
         if (d.edgeData && d.edgeData.documentation && d.edgeData.documentation.trim() !== "") {
-          let info = `<strong>Dependency: ${d.edgeData.name}</strong><br/><strong>From:</strong> ${d.sourceId}<br/><strong>To:</strong> ${d.targetId}<br/><strong>Mandatory:</strong> ${d.edgeData.isMandatory ? "Yes" : "No"}<br/><strong>Can Fanout:</strong> ${d.edgeData.canFanout ? "<span style='color:#3f51b5;font-weight:bold;'>Yes</span>" : "No"}<br/><br/><strong>Documentation:</strong><div class="documentation">${d.edgeData.documentation}</div>`;
+          let info = `<strong>Dependency: ${escapeHtml(d.edgeData.name)}</strong><br/><strong>From:</strong> ${escapeHtml(d.sourceId)}<br/><strong>To:</strong> ${escapeHtml(d.targetId)}<br/><strong>Mandatory:</strong> ${d.edgeData.isMandatory ? "Yes" : "No"}<br/><strong>Can Fanout:</strong> ${d.edgeData.canFanout ? "<span style='color:#3f51b5;font-weight:bold;'>Yes</span>" : "No"}<br/><br/><strong>Documentation:</strong><div class="documentation">${escapeHtml(d.edgeData.documentation)}</div>`;
           showTooltip(info, event);
         }
       });
@@ -302,7 +316,7 @@ export class GraphRenderer {
     // Add hover effects for edges
     this.g.selectAll("path.link")
       .on("mouseenter", (event, d) => {
-        this.g.selectAll(".link, .link-label, .link-label-bg, .node")
+        this.g.selectAll(".link, .link-label, .link-label-bg, .node, .node-toggle-button")
           .classed("faded", true);
         const edgeId = d.edgeData.name;
         const linkId = `${d.sourceId}--${d.targetId}`;
@@ -359,9 +373,11 @@ export class GraphRenderer {
         
         this.g.selectAll(`.node[data-id="${d.sourceId}"], .node[data-id="${d.targetId}"]`)
           .classed("faded", false);
+        this.g.selectAll(`.node-toggle-button[data-node-id="${d.sourceId}"], .node-toggle-button[data-node-id="${d.targetId}"]`)
+          .classed("faded", false);
       })
       .on("mouseleave", () => {
-        this.g.selectAll(".link, .link-label, .link-label-bg, .node")
+        this.g.selectAll(".link, .link-label, .link-label-bg, .node, .node-toggle-button")
           .classed("faded", false)
           .classed("highlighted", false);
         
@@ -373,7 +389,7 @@ export class GraphRenderer {
       });
     
     // Add hover effects for edge labels
-    this.g.selectAll("text.link-label, rect.link-label-bg")
+    this.g.selectAll("text.link-label")
       .on("mouseenter", function(event, d) {
         try {
           const element = this;
@@ -384,21 +400,9 @@ export class GraphRenderer {
             return selector.replace(/[ !"#$%&'()*+,.\/:;<=>?@\[\\\]^`{|}~]/g, '\\$&');
           };
           
-          if (d3.select(element).classed("link-label")) {
-            sourceId = d.sourceId;
-            targetId = d.targetId;
-            edgeName = d.edgeData.name;
-          } else {
-            const linkId = d3.select(element).attr("data-link-id");
-            const edgeId = d3.select(element).attr("data-edge-id");
-            if (!linkId || !edgeId) return;
-            
-            const parts = linkId.split("--");
-            if (parts.length !== 2) return;
-            
-            [sourceId, targetId] = parts;
-            edgeName = edgeId;
-          }
+          sourceId = d.sourceId;
+          targetId = d.targetId;
+          edgeName = d.edgeData.name;
           
           if (!sourceId || !targetId || !edgeName) return;
           
@@ -406,7 +410,7 @@ export class GraphRenderer {
           const safeTargetId = escapeSelector(targetId);
           const safeEdgeName = escapeSelector(edgeName);
           
-          self.g.selectAll(".link, .link-label, .link-label-bg, .node")
+          self.g.selectAll(".link, .link-label, .link-label-bg, .node, .node-toggle-button")
             .classed("faded", true);
           const linkId = `${sourceId}--${targetId}`;
           const safeLinkId = escapeSelector(linkId);
@@ -445,33 +449,20 @@ export class GraphRenderer {
             bgRect.attr("x", originalX - (widthDifference / 2))
                  .attr("width", newWidth);
           });
-            
-          // Store original positions
-          highlightedBg.each(function() {
-            const el = d3.select(this);
-            const parent = this.parentNode;
-            const nextSibling = this.nextSibling;
-            el.attr("data-original-next-sibling-id", nextSibling ? nextSibling.id || "" : "");
-            parent.appendChild(this); // Move background to front
-          });
-          
-          // Move text labels to front AFTER backgrounds to keep them on top
-          highlightedLabel.each(function() {
-            const parent = this.parentNode;
-            parent.appendChild(this); // Move text to very front
-          });
           
           self.g.selectAll(`.node[data-id="${safeSourceId}"], .node[data-id="${safeTargetId}"]`)
             .classed("faded", false);
+          self.g.selectAll(`.node-toggle-button[data-node-id="${safeSourceId}"], .node-toggle-button[data-node-id="${safeTargetId}"]`)
+            .classed("faded", false);
         } catch (error) {
           console.error("Error in edge label hover effect:", error);
-          self.g.selectAll(".link, .link-label, .link-label-bg, .node")
+          self.g.selectAll(".link, .link-label, .link-label-bg, .node, .node-toggle-button")
             .classed("faded", false)
             .classed("highlighted", false);
         }
       })
       .on("mouseleave", () => {
-        this.g.selectAll(".link, .link-label, .link-label-bg, .node")
+        this.g.selectAll(".link, .link-label, .link-label-bg, .node, .node-toggle-button")
           .classed("faded", false)
           .classed("highlighted", false);
         
@@ -525,8 +516,8 @@ export class GraphRenderer {
       .attr("rx", CONFIG.nodeRadius)
       .attr("ry", CONFIG.nodeRadius);
     
-    // Add input badge for nodes with inputs
-    nodeG.each((d) => this.addInputBadge(d));
+    // Add info badge for all nodes
+    nodeG.each((d) => this.addInfoBadge(d));
     
     // Add text labels for nodes with wrapping
     nodeG.append("text")
@@ -650,10 +641,13 @@ export class GraphRenderer {
         }
       });
     
+    // Render persistent toggle buttons for nodes with dependencies
+    this.renderPersistentToggleButtons();
+
     // Add node hover effects
     nodeG.on("mouseenter", (event, d) => {
       const nodeId = d.data.id;
-      this.g.selectAll(".link, .link-label, .link-label-bg, .node")
+      this.g.selectAll(".link, .link-label, .link-label-bg, .node, .node-toggle-button")
         .classed("faded", true);
       d3.select(event.currentTarget)
         .classed("faded", false)
@@ -731,10 +725,12 @@ export class GraphRenderer {
       connectedNodes.forEach(id => {
         this.g.selectAll(`.node[data-id="${id}"]`)
           .classed("faded", false);
+        this.g.selectAll(`.node-toggle-button[data-node-id="${id}"]`)
+          .classed("faded", false);
       });
     })
     .on("mouseleave", () => {
-      this.g.selectAll(".link, .link-label, .link-label-bg, .node")
+      this.g.selectAll(".link, .link-label, .link-label-bg, .node, .node-toggle-button")
         .classed("faded", false)
         .classed("highlighted", false);
       
@@ -774,65 +770,40 @@ export class GraphRenderer {
     // Remove the selection from all nodes and then mark the clicked node as selected
     this.g.selectAll(".node").classed("selected", false);
     d3.select(event ? event.currentTarget : null).classed("selected", true);
-    // Remove any existing action buttons
-    this.g.selectAll(".node-action-button").remove();
-    this.renderActionButtons(d);
   }
   
   /**
-   * Render action buttons for the currently selected node.
-   * This method re-creates the buttons so that their labels reflect the current state.
-   * @param {Object} d - Node data
+   * Render persistent expand/collapse toggle buttons for all nodes with dependencies.
+   * These buttons are always visible (not just on hover/click).
    */
-  renderActionButtons(d) {
-    const buttonRadius = 12;
-    const positions = [];
-    const hasOutgoingLinks = this.nodeController.hasOutgoingLinks(d.data.id);
+  renderPersistentToggleButtons() {
+    // Remove existing persistent toggle buttons
+    this.g.selectAll(".node-toggle-button").remove();
     
-    if (hasOutgoingLinks) {
+    const buttonRadius = 12;
+    
+    this.dag.nodes().forEach(d => {
+      const hasOutgoingLinks = this.nodeController.hasOutgoingLinks(d.data.id);
+      if (!hasOutgoingLinks) return;
+      if (!this.nodeController.visibleNodeIds.has(d.data.id)) return;
+      
       const isExpanded = this.nodeController.expandedNodes.has(d.data.id);
-      // Use "-" for expanded (collapse action) and "+" for collapsed (expand action)
       const label = isExpanded ? "-" : "+";
       const action = isExpanded ? "collapse" : "expand";
-      positions.push({
-        x: d.x,
-        y: d.y - CONFIG.nodeHeight/2 - 25,
-        label: label,
-        action: action
-      });
-    }
-    
-    positions.push({
-      x: d.x,
-      y: d.y + CONFIG.nodeHeight/2 + 25,
-      label: "i",
-      action: "info"
-    });
-    
-    positions.forEach(pos => {
+      
       const buttonG = this.g.append("g")
-        .attr("class", "node-action-button")
-        .attr("transform", `translate(${Math.round(pos.x)},${Math.round(pos.y)})`)
+        .attr("class", "node-toggle-button")
+        .attr("data-node-id", d.data.id)
+        .attr("transform", `translate(${Math.round(d.x)},${Math.round(d.y - CONFIG.nodeHeight/2 - 25)})`)
         .style("cursor", "pointer")
         .on("click", event => {
           event.stopPropagation();
-          if (pos.action === "info") {
-            let info = `<strong>Vajram: ${d.data.name}</strong><br/><br/>`;
-            if (d.data.annotationTags && d.data.annotationTags.length > 0) {
-              info += `<strong>Tags:</strong><br/><ul>`;
-              d.data.annotationTags.forEach(annotation => {
-                info += `<li>${annotation}</li>`;
-              });
-              info += `</ul>`;
-            }
-            showTooltip(info, event);
-          } else if (pos.action === "expand") {
+          if (action === "expand") {
             this.nodeController.expandNode(d.data.id);
-            this.updateGraphVisibility();
-          } else if (pos.action === "collapse") {
+          } else {
             this.nodeController.collapseNode(d.data.id);
-            this.updateGraphVisibility();
           }
+          this.updateGraphVisibility();
         });
       
       buttonG.append("circle")
@@ -853,68 +824,114 @@ export class GraphRenderer {
         .attr("font-weight", "bold")
         .attr("fill", "#333")
         .style("pointer-events", "none")
-        .text(pos.label);
+        .text(label);
     });
   }
   
+  
   /**
-   * Add input badge to nodes with inputs
+   * Add info badge to a node
    * @param {Object} d - Node data
    */
-  addInputBadge(d) {
-    if (d.data.inputs && d.data.inputs.length > 0) {
-      const node = this.g.select(`.node[data-id="${d.data.id}"]`);
-      // Position the badge to just touch the node
-      const badgeX = Math.round(-CONFIG.nodeWidth/2 - CONFIG.inputBadge.xOffset);
-      const badgeY = Math.round(-CONFIG.inputBadge.yOffset);
-      
-      const badgeGroup = node.append("g")
-        .attr("class", "input-badge-container")
-        .attr("transform", `translate(0,0)`)
-        .style("cursor", "pointer")
-        .on("click", (event) => {
-          event.stopPropagation();
-          let info = `<strong>Inputs for ${d.data.name}:</strong><br/><br/>`;
+  addInfoBadge(d) {
+    const node = this.g.select(`.node[data-id="${d.data.id}"]`);
+    // Position the badge to just touch the node
+    const badgeX = Math.round(-CONFIG.nodeWidth/2 - CONFIG.inputBadge.xOffset);
+    const badgeY = Math.round(-CONFIG.inputBadge.yOffset);
+    
+    const badgeGroup = node.append("g")
+      .attr("class", "input-badge-container")
+      .attr("transform", `translate(0,0)`)
+      .style("cursor", "pointer")
+      .on("click", (event) => {
+        event.stopPropagation();
+        const hasInputs = d.data.inputs && d.data.inputs.length > 0;
+        const hasTags = d.data.annotationTags && d.data.annotationTags.length > 0;
+        
+        let info = `<div class="info-tooltip-header"><strong>${escapeHtml(d.data.name)}</strong></div>`;
+        info += `<div class="info-tooltip-tabs">`;
+        if (hasInputs) {
+          info += `<button class="info-tab active" data-tab="inputs">Inputs</button>`;
+        }
+        if (hasTags) {
+          info += `<button class="info-tab${hasInputs ? '' : ' active'}" data-tab="tags">Tags</button>`;
+        }
+        info += `</div>`;
+        
+        if (hasInputs) {
+          info += `<div class="info-tab-content active" data-tab-content="inputs">`;
           info += d.data.inputs.map(input => {
             let inputInfo = `<div class="input-item">`;
-            inputInfo += `<div class="input-name">${input.name}`;
+            inputInfo += `<div class="input-name">${escapeHtml(input.name)}`;
             if (input.isMandatory) { 
               inputInfo += `<span class="input-mandatory">*</span>`; 
             }
-            inputInfo += `<span class="input-type">${input.type ? input.type : "N/A"}</span>`;
+            const fullType = input.type ? input.type : "N/A";
+            const simpleName = fullType !== "N/A" ? fullType.split('.').pop() : fullType;
+            inputInfo += `<span class="input-type" title="${escapeHtml(fullType)}">${escapeHtml(simpleName)}</span>`;
             inputInfo += `</div>`;
             if (input.documentation && input.documentation.trim() !== "") {
-              inputInfo += `<div class="documentation">${input.documentation}</div>`;
+              inputInfo += `<div class="documentation">${escapeHtml(input.documentation)}</div>`;
             }
             inputInfo += "</div>";
             return inputInfo;
           }).join("");
-          showTooltip(info, event, true);
-        });
-  
-      badgeGroup.append("rect")
-        .attr("class", "input-badge")
-        .attr("width", CONFIG.inputBadge.width)
-        .attr("height", CONFIG.inputBadge.height)
-        .attr("x", badgeX)
-        .attr("y", badgeY)
-        .attr("rx", CONFIG.inputBadge.radius)
-        .attr("ry", CONFIG.inputBadge.radius)
-        .attr("fill", "var(--color-secondary)")
-        .attr("stroke", "var(--color-surface)")
-        .attr("stroke-width", CONFIG.inputBadge.strokeWidth);
-  
-      badgeGroup.append("text")
-        .attr("class", "input-badge-arrow")
-        .attr("x", badgeX + CONFIG.inputBadge.width/2)
-        .attr("y", badgeY + CONFIG.inputBadge.height/2)
-        .attr("text-anchor", "middle")
-        .attr("dominant-baseline", "central")
-        .attr("font-size", `${CONFIG.inputBadge.fontSize}px`)
-        .attr("font-weight", CONFIG.inputBadge.fontWeight)
-        .attr("fill", "var(--color-surface)")
-        .text("→");
-    }
+          info += `</div>`;
+        }
+        
+        if (hasTags) {
+          info += `<div class="info-tab-content${hasInputs ? '' : ' active'}" data-tab-content="tags">`;
+          info += d.data.annotationTags.slice().sort((a, b) => a.localeCompare(b)).map(tag => {
+            let displayTag = tag.endsWith('()') ? tag.slice(0, -2) : tag;
+            const simpleName = displayTag.includes('.') ? displayTag.split('.').pop() : displayTag;
+            return `<div class="tag-item"><span class="tag-name" title="${escapeHtml(displayTag)}">${escapeHtml(simpleName)}</span></div>`;
+          }).join("");
+          info += `</div>`;
+        }
+        
+        if (!hasInputs && !hasTags) {
+          info += `<div class="info-tab-content active"><em>No inputs or tags</em></div>`;
+        }
+        
+        showTooltip(info, event, true);
+        
+        // Attach tab switching logic after tooltip is rendered
+        setTimeout(() => {
+          document.querySelectorAll('.info-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+              const targetTab = e.target.getAttribute('data-tab');
+              document.querySelectorAll('.info-tab').forEach(t => t.classList.remove('active'));
+              document.querySelectorAll('.info-tab-content').forEach(c => c.classList.remove('active'));
+              e.target.classList.add('active');
+              const content = document.querySelector(`.info-tab-content[data-tab-content="${targetTab}"]`);
+              if (content) content.classList.add('active');
+            });
+          });
+        }, 10);
+      });
+
+    badgeGroup.append("rect")
+      .attr("class", "input-badge")
+      .attr("width", CONFIG.inputBadge.width)
+      .attr("height", CONFIG.inputBadge.height)
+      .attr("x", badgeX)
+      .attr("y", badgeY)
+      .attr("rx", CONFIG.inputBadge.radius)
+      .attr("ry", CONFIG.inputBadge.radius)
+      .attr("fill", "var(--color-secondary)")
+      .attr("stroke", "var(--color-surface)")
+      .attr("stroke-width", CONFIG.inputBadge.strokeWidth);
+
+    badgeGroup.append("text")
+      .attr("class", "input-badge-arrow")
+      .attr("x", badgeX + CONFIG.inputBadge.width/2)
+      .attr("y", badgeY + CONFIG.inputBadge.height/2)
+      .attr("text-anchor", "middle")
+      .attr("dominant-baseline", "central")
+      .attr("font-size", `${CONFIG.inputBadge.fontSize}px`)
+      .attr("font-weight", CONFIG.inputBadge.fontWeight)
+      .attr("fill", "var(--color-surface)")
+      .text("i");
   }
   
   /**
@@ -974,22 +991,8 @@ export class GraphRenderer {
           CONFIG.display.block : CONFIG.display.none);
     });
     
-    // Remove all node action buttons
-    this.g.selectAll(".node-action-button").remove();
-    
-    // Re-render the action button for the currently selected node (if any)
-    const selectedNodeElem = this.g.select("g.node.selected");
-    if (!selectedNodeElem.empty()) {
-      const selectedData = selectedNodeElem.datum();
-      
-      // Only render action buttons if the node is still visible
-      if (this.nodeController.visibleNodeIds.has(selectedData.data.id)) {
-        this.renderActionButtons(selectedData);
-      } else {
-        // If the selected node is no longer visible, remove the "selected" class
-        selectedNodeElem.classed("selected", false);
-      }
-    }
+    // Refresh persistent toggle buttons
+    this.renderPersistentToggleButtons();
   }
   
   /**
@@ -1107,7 +1110,7 @@ export class GraphRenderer {
       container.appendChild(this.nodeGroup.node());
       
       // 5. Ensure node buttons are at the very top
-      this.g.selectAll(".node-action-button").each(function() {
+      this.g.selectAll(".node-toggle-button").each(function() {
         const parent = this.parentNode;
         parent.appendChild(this);
       });

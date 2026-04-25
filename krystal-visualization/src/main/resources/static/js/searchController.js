@@ -150,6 +150,5 @@ export class SearchController {
           CONFIG.display.block : CONFIG.display.none);
     });
     
-    this.g.selectAll(".node-action-button").remove();
   }
 } 

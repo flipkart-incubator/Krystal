@@ -10,10 +10,9 @@ import { hideTooltip } from './tooltip.js';
  * @param {Object} nodeController - NodeController instance
  */
 export function setupInteractionHandlers(svg, graphRenderer, nodeController) {
-  // Global click handler to close tooltips and remove node action buttons
+  // Global click handler to close tooltips
   svg.on("click", () => {
     hideTooltip();
-    graphRenderer.getContainer().selectAll(".node-action-button").remove();
   });
   
   // Set up control buttons

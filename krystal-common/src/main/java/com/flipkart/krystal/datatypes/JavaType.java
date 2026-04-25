@@ -21,7 +21,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class JavaType<T> implements DataType<T> {
 
   /** the fully qualified name of the class, i.e. pck.outer.inner */
-  @Getter private final @lombok.NonNull String canonicalClassName;
+  @Getter private final String canonicalClassName;
 
   @Getter private final ImmutableList<DataType<?>> typeParameters;
 
@@ -61,7 +61,11 @@ public final class JavaType<T> implements DataType<T> {
 
   private JavaType(
       String canonicalClassName, @Nullable Class<?> clazz, DataType<?>... typeParameters) {
-    this.type = clazz;
+    try {
+      this.type = toJavaType(clazz, ImmutableList.copyOf(typeParameters));
+    } catch (ClassNotFoundException e) {
+      throw new RuntimeException(e);
+    }
     this.typeParameters = ImmutableList.copyOf(typeParameters);
     this.canonicalClassName = canonicalClassName;
     if (canonicalClassName.startsWith("@")) {
@@ -84,18 +88,22 @@ public final class JavaType<T> implements DataType<T> {
   public Type javaReflectType() throws ClassNotFoundException {
     if (type == null) {
       @SuppressWarnings("unchecked")
-      Class<T> type =
+      Class<T> clazz =
           (Class<T>) checkNotNull(this.getClass().getClassLoader()).loadClass(canonicalClassName());
 
-      List<Type> list = new ArrayList<>();
-      for (DataType<?> typeParameter : typeParameters) {
-        Type javaReflectType = typeParameter.javaReflectType();
-        list.add(javaReflectType);
-      }
-      // noinspection ZeroLengthArrayAllocation
-      this.type = getJavaType(type, list.toArray(new Type[0]));
+      this.type = toJavaType(clazz, this.typeParameters);
     }
     return type;
+  }
+
+  private static <T> Type toJavaType(Class<T> type, List<DataType<?>> typeParameters)
+      throws ClassNotFoundException {
+    List<Type> list = new ArrayList<>();
+    for (DataType<?> typeParameter : typeParameters) {
+      Type javaReflectType = typeParameter.javaReflectType();
+      list.add(javaReflectType);
+    }
+    return getJavaType(type, list.toArray(Type[]::new));
   }
 
   @Override
