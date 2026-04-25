@@ -39,9 +39,10 @@ export class GraphRenderer {
       configurable: true
     });
     
-    // Set dimensions
-    this.windowWidth = window.innerWidth;
-    this.windowHeight = window.innerHeight;
+    // Set dimensions (use view pane size, excluding sidebar)
+    const graphContainer = document.getElementById('graph-container');
+    this.windowWidth = graphContainer ? graphContainer.clientWidth : window.innerWidth;
+    this.windowHeight = graphContainer ? graphContainer.clientHeight : window.innerHeight;
     
     // Create the SVG container inside the graph container
     this.svg
@@ -1061,8 +1062,9 @@ export class GraphRenderer {
    * Resize the SVG when window size changes
    */
   resize() {
-    this.windowWidth = window.innerWidth;
-    this.windowHeight = window.innerHeight;
+    const graphContainer = document.getElementById('graph-container');
+    this.windowWidth = graphContainer ? graphContainer.clientWidth : window.innerWidth;
+    this.windowHeight = graphContainer ? graphContainer.clientHeight : window.innerHeight;
     this.svg.attr("width", this.windowWidth).attr("height", this.windowHeight);
   }
   

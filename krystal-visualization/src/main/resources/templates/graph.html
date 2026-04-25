@@ -21,7 +21,7 @@
 <!-- Tooltip container for interactive information display -->
 <div id="tooltip" role="tooltip" aria-hidden="true"></div>
 
-<!-- Controls toolbar for manipulating the graph -->
+<!-- Controls toolbar and legend panel -->
 <header class="controls" role="toolbar" aria-label="Graph controls">
   <button id="expandAll" aria-label="Expand all nodes">Expand All</button>
   <button id="collapseAll" aria-label="Collapse all nodes">Collapse All</button>
@@ -30,95 +30,93 @@
     <input type="text" id="searchInput" placeholder="Search vajrams..."/>
     <button id="clearSearchBtn">Clear</button>
   </div>
+  <div class="legend" role="region" aria-label="Graph legend">
+    <h3>Legend</h3>
+    <ul class="legend-list">
+      <li class="legend-item">
+        <svg class="legend-marker" viewBox="0 0 30 15" aria-hidden="true">
+          <rect x="5" y="2.5" width="20" height="10" rx="3" ry="3" fill="var(--color-compute)"
+                stroke="var(--color-compute-stroke)" stroke-width="1"></rect>
+        </svg>
+        <div class="legend-text">Compute Vajram</div>
+      </li>
+      <li class="legend-item">
+        <svg class="legend-marker" viewBox="0 0 30 15" aria-hidden="true">
+          <rect x="5" y="2.5" width="20" height="10" rx="3" ry="3" fill="var(--color-io)"
+                stroke="var(--color-io-stroke)" stroke-width="1"></rect>
+        </svg>
+        <div class="legend-text">IO Vajram</div>
+      </li>
+      <li class="legend-item">
+        <svg class="legend-marker" viewBox="0 0 30 15" aria-hidden="true">
+          <rect x="5" y="2.5" width="20" height="10" rx="3" ry="3" fill="white"
+                stroke="var(--color-compute-stroke)" stroke-width="2.5" stroke-dasharray="5,3"></rect>
+        </svg>
+        <div class="legend-text">Collapsed Node</div>
+      </li>
+      <li class="legend-item">
+        <svg class="legend-marker" viewBox="0 0 30 20" aria-hidden="true">
+          <rect x="5" y="2.5" width="20" height="10" rx="3" ry="3" fill="var(--color-compute)"
+                stroke="var(--color-compute-stroke)" stroke-width="1" opacity="0.7"></rect>
+          <text x="15" y="17" text-anchor="middle" dominant-baseline="central"
+                fill="var(--color-text-primary)" font-size="5" font-style="italic">(Recursive)
+          </text>
+        </svg>
+        <div class="legend-text">Recursive Node</div>
+      </li>
+      <li class="legend-item">
+        <svg class="legend-marker" viewBox="0 0 30 15" aria-hidden="true">
+          <line x1="5" y1="7.5" x2="25" y2="7.5" stroke="var(--color-link-mandatory)"
+                stroke-width="3.5"></line>
+        </svg>
+        <div class="legend-text">Mandatory Dependency</div>
+      </li>
+      <li class="legend-item">
+        <svg class="legend-marker" viewBox="0 0 30 15" aria-hidden="true">
+          <line x1="5" y1="7.5" x2="25" y2="7.5" stroke="var(--color-link-optional)" stroke-width="2"
+                stroke-dasharray="5,3"></line>
+        </svg>
+        <div class="legend-text">Optional Dependency</div>
+      </li>
+      <li class="legend-item">
+        <svg class="legend-marker" viewBox="0 0 30 15" aria-hidden="true">
+          <line x1="5" y1="7.5" x2="20" y2="7.5" stroke="var(--color-link-fanout-mandatory)"
+                stroke-width="3.5"></line>
+          <path
+              d="M 20 7.5 L 25 7.5 M 20 5.5 L 22 7.5 L 20 9.5 M 22 5.5 L 24 7.5 L 22 9.5 M 24 5.5 L 26 7.5 L 24 9.5"
+              fill="none" stroke="var(--color-link-fanout-mandatory)" stroke-width="1.8"></path>
+        </svg>
+        <div class="legend-text">Fan-out Dependency</div>
+      </li>
+      <li class="legend-item">
+        <svg class="legend-marker" viewBox="0 0 30 15" aria-hidden="true">
+          <rect x="5" y="2.5" width="20" height="10" fill="var(--color-secondary)" rx="2"
+                ry="2"></rect>
+          <text x="15" y="9.5" text-anchor="middle" dominant-baseline="central" fill="white"
+                font-size="8">→
+          </text>
+        </svg>
+        <div class="legend-text">Input Badge (shows inputs)</div>
+      </li>
+      <li class="legend-item">
+        <svg class="legend-marker" viewBox="0 0 30 15" aria-hidden="true">
+          <text x="15" y="9.5" text-anchor="middle" dominant-baseline="central"
+                fill="var(--color-error)" font-size="14" font-weight="bold">*
+          </text>
+        </svg>
+        <div class="legend-text">Mandatory Input</div>
+      </li>
+    </ul>
+  </div>
 </header>
 
-<!-- Empty state message when no vajrams are found -->
-<div id="emptyStateMessage" class="empty-state-message" aria-live="polite">
-  <strong>No Vajrams found in this graph</strong>
-</div>
-
-<!-- Legend explaining visual elements of the graph -->
-<aside class="legend" aria-label="Graph legend">
-  <h3>Legend</h3>
-  <ul class="legend-list">
-    <li class="legend-item">
-      <svg class="legend-marker" viewBox="0 0 30 15" aria-hidden="true">
-        <rect x="5" y="2.5" width="20" height="10" rx="3" ry="3" fill="var(--color-compute)"
-              stroke="var(--color-compute-stroke)" stroke-width="1"></rect>
-      </svg>
-      <div class="legend-text">Compute Vajram</div>
-    </li>
-    <li class="legend-item">
-      <svg class="legend-marker" viewBox="0 0 30 15" aria-hidden="true">
-        <rect x="5" y="2.5" width="20" height="10" rx="3" ry="3" fill="var(--color-io)"
-              stroke="var(--color-io-stroke)" stroke-width="1"></rect>
-      </svg>
-      <div class="legend-text">IO Vajram</div>
-    </li>
-    <li class="legend-item">
-      <svg class="legend-marker" viewBox="0 0 30 15" aria-hidden="true">
-        <rect x="5" y="2.5" width="20" height="10" rx="3" ry="3" fill="white"
-              stroke="var(--color-compute-stroke)" stroke-width="2.5" stroke-dasharray="5,3"></rect>
-      </svg>
-      <div class="legend-text">Collapsed Node</div>
-    </li>
-    <li class="legend-item">
-      <svg class="legend-marker" viewBox="0 0 30 20" aria-hidden="true">
-        <rect x="5" y="2.5" width="20" height="10" rx="3" ry="3" fill="var(--color-compute)"
-              stroke="var(--color-compute-stroke)" stroke-width="1" opacity="0.7"></rect>
-        <text x="15" y="17" text-anchor="middle" dominant-baseline="central"
-              fill="var(--color-text-primary)" font-size="5" font-style="italic">(Recursive)
-        </text>
-      </svg>
-      <div class="legend-text">Recursive Node</div>
-    </li>
-    <li class="legend-item">
-      <svg class="legend-marker" viewBox="0 0 30 15" aria-hidden="true">
-        <line x1="5" y1="7.5" x2="25" y2="7.5" stroke="var(--color-link-mandatory)"
-              stroke-width="3.5"></line>
-      </svg>
-      <div class="legend-text">Mandatory Dependency</div>
-    </li>
-    <li class="legend-item">
-      <svg class="legend-marker" viewBox="0 0 30 15" aria-hidden="true">
-        <line x1="5" y1="7.5" x2="25" y2="7.5" stroke="var(--color-link-optional)" stroke-width="2"
-              stroke-dasharray="5,3"></line>
-      </svg>
-      <div class="legend-text">Optional Dependency</div>
-    </li>
-    <li class="legend-item">
-      <svg class="legend-marker" viewBox="0 0 30 15" aria-hidden="true">
-        <line x1="5" y1="7.5" x2="20" y2="7.5" stroke="var(--color-link-fanout-mandatory)"
-              stroke-width="3.5"></line>
-        <path
-            d="M 20 7.5 L 25 7.5 M 20 5.5 L 22 7.5 L 20 9.5 M 22 5.5 L 24 7.5 L 22 9.5 M 24 5.5 L 26 7.5 L 24 9.5"
-            fill="none" stroke="var(--color-link-fanout-mandatory)" stroke-width="1.8"></path>
-      </svg>
-      <div class="legend-text">Fan-out Dependency</div>
-    </li>
-    <li class="legend-item">
-      <svg class="legend-marker" viewBox="0 0 30 15" aria-hidden="true">
-        <rect x="5" y="2.5" width="20" height="10" fill="var(--color-secondary)" rx="2"
-              ry="2"></rect>
-        <text x="15" y="9.5" text-anchor="middle" dominant-baseline="central" fill="white"
-              font-size="8">→
-        </text>
-      </svg>
-      <div class="legend-text">Input Badge (shows inputs)</div>
-    </li>
-    <li class="legend-item">
-      <svg class="legend-marker" viewBox="0 0 30 15" aria-hidden="true">
-        <text x="15" y="9.5" text-anchor="middle" dominant-baseline="central"
-              fill="var(--color-error)" font-size="14" font-weight="bold">*
-        </text>
-      </svg>
-      <div class="legend-text">Mandatory Input</div>
-    </li>
-  </ul>
-</aside>
-
 <!-- Main graph visualization container -->
-<main id="graph-container" role="main" aria-label="Vajram dependency graph visualization"></main>
+<main id="graph-container" role="main" aria-label="Vajram dependency graph visualization">
+  <!-- Empty state message when no vajrams are found -->
+  <div id="emptyStateMessage" class="empty-state-message" aria-live="polite">
+    <strong>No Vajrams found in this graph</strong>
+  </div>
+</main>
 
 <script>
   window.graphData = __GRAPH_DATA__;

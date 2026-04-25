@@ -27,11 +27,14 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const { width, height } = sugiyama(dag);
   
-  // Create SVG element
+  // Create SVG element (sized to view pane, excluding sidebar)
+  const graphContainer = document.getElementById('graph-container');
+  const viewWidth = graphContainer ? graphContainer.clientWidth : window.innerWidth;
+  const viewHeight = graphContainer ? graphContainer.clientHeight : window.innerHeight;
   const svg = d3.select("#graph-container")
     .append("svg")
-    .attr("width", window.innerWidth)
-    .attr("height", window.innerHeight);
+    .attr("width", viewWidth)
+    .attr("height", viewHeight);
 
   const nodeController = new NodeController(allNodes, filteredLinks);
   
@@ -49,4 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
   );
   
   setupInteractionHandlers(svg, graphRenderer, nodeController);
+  
+  // Fit the entire graph into the view pane on initial load
+  graphRenderer.resetView();
 }); 
