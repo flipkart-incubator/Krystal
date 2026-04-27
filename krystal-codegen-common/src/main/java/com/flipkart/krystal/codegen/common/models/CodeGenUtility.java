@@ -139,6 +139,24 @@ public class CodeGenUtility {
     return isRawAssignable(type, Map.class);
   }
 
+  public boolean isPrimitiveOrBoxed(TypeMirror type) {
+    if (type.getKind().isPrimitive()) {
+      return true;
+    }
+    return isSameRawType(type, Boolean.class)
+        || isSameRawType(type, Byte.class)
+        || isSameRawType(type, Character.class)
+        || isSameRawType(type, Short.class)
+        || isSameRawType(type, Integer.class)
+        || isSameRawType(type, Long.class)
+        || isSameRawType(type, Float.class)
+        || isSameRawType(type, Double.class);
+  }
+
+  public boolean isString(TypeMirror type) {
+    return isSameRawType(type, String.class);
+  }
+
   public TypeMirror getMapValueType(TypeMirror typeMirror) {
     if (!isMapType(typeMirror)) {
       return typeMirror;

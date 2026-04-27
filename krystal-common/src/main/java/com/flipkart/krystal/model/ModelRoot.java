@@ -16,6 +16,13 @@ public @interface ModelRoot {
   /** If true, then the generated Builder Interface will extend the ModelRoot interface. */
   boolean builderExtendsModelRoot() default false;
 
+  /**
+   * If true, all fields in this model must be primitives, boxed primitives, String, a pure Model, a
+   * List of these, or a Map with a primitive/String key and a pure Model value. All Model-typed
+   * fields must themselves be pure.
+   */
+  boolean pure() default true;
+
   enum ModelType {
     /** This model is a neither a request model nor a response model */
     DEFAULT,
