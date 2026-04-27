@@ -313,6 +313,7 @@ public class VajramCodeGenerator implements CodeGenerator {
                         "type", CodeBlock.of("$T.$L", ModelType.class, ModelType.REQUEST.name()))
                     .addMember("suffixSeparator", CodeBlock.of("$S", ""))
                     .addMember("builderExtendsModelRoot", "true")
+                    .addMember("pure", "false")
                     .build())
             .addAnnotations(
                 currentVajramInfo.vajramClassElem().getAnnotationMirrors().stream()
@@ -2554,6 +2555,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                 AnnotationSpec.builder(ModelRoot.class)
                     .addMember("type", "$T.$L", ModelType.class, DEFAULT.name())
                     .addMember("suffixSeparator", "$S", "")
+                    .addMember("pure", "false")
                     .build());
 
     for (FacetGenModel facet : batchedFacets) {
