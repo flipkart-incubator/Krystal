@@ -20,8 +20,9 @@ import lombok.experimental.UtilityClass;
  * This annotation documents the strategy to follow when a data element in a request - like an input
  * facet or field in a request model has no value (i.e. {@code null} or {@link Nil}). If a data
  * element isn't {@link ElementTags tagged} with this annotation, then the platform will infer a
- * default value based on the context. For example, in case of input facets of vajrams, the Krystal
- * platform defaults to {@code @IfAbsent(WILL_NEVER_FAIL)} in case this annotation is not used.
+ * default value based on the context. For example, in case of input facets of vajrams and other
+ * request models, the Krystal platform defaults to {@code @IfAbsent(WILL_NEVER_FAIL)} in case this
+ * annotation is not used.
  *
  * <p>The interpretation of this annotation is context specific. For example, when placed on a field
  * in a request model or an input facet of a vajram, it applies to the cases when the client who
@@ -48,7 +49,7 @@ public @interface IfAbsent {
    */
   String conditionalFailureInfo() default "";
 
-  /** The behavior to follow if the facet value is not set. */
+  /** The behavior to follow on the server if a model field value is not set. */
   enum IfAbsentThen {
 
     /**
