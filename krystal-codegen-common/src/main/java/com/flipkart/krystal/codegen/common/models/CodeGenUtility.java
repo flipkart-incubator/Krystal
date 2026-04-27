@@ -1,6 +1,8 @@
 package com.flipkart.krystal.codegen.common.models;
 
 import static com.flipkart.krystal.codegen.common.models.Constants.IMMUT_SUFFIX;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.WILL_NEVER_FAIL;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.squareup.javapoet.CodeBlock.joining;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -16,11 +18,10 @@ import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.codegen.common.datatypes.DataTypeRegistry;
 import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.model.IfAbsent;
-import com.flipkart.krystal.model.IfAbsent.Creator;
-import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
+import com.flipkart.krystal.model.ModelRoot.ModelType;
 import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.model.list.ModelsListBuilder;
 import com.flipkart.krystal.model.map.ModelsMapBuilder;
@@ -50,6 +51,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
@@ -134,7 +136,7 @@ public class CodeGenUtility {
   }
 
   public boolean isMapType(TypeMirror type) {
-    return isRawAssignable(type, java.util.Map.class);
+    return isRawAssignable(type, Map.class);
   }
 
   public TypeMirror getMapValueType(TypeMirror typeMirror) {
@@ -226,11 +228,17 @@ public class CodeGenUtility {
     return stream(annotations).map(aClass -> AnnotationSpec.builder(aClass).build()).toList();
   }
 
-  public IfAbsent getIfAbsent(Element element) {
+  public IfAbsent getIfAbsent(Element element, @Nullable ModelRoot modelRoot) {
     // Check if the element has the @IfAbsent annotation
     IfAbsent ifAbsent = element.getAnnotation(IfAbsent.class);
     if (ifAbsent == null) {
-      ifAbsent = Creator.create(IfAbsentThen.WILL_NEVER_FAIL, "");
+      ModelType modelType = modelRoot == null ? ModelType.DEFAULT : modelRoot.type();
+      ifAbsent =
+          IfAbsent.Creator.create(
+              switch (modelType) {
+                case REQUEST -> WILL_NEVER_FAIL;
+                default -> FAIL;
+              });
     }
     return ifAbsent;
   }
@@ -313,16 +321,25 @@ public class CodeGenUtility {
   }
 
   public TypeMirror getContentType(TypeMirror typeMirror) {
-    if (!isListType(typeMirror)) {
+    if (isListType(typeMirror)) {
+      if (typeMirror instanceof DeclaredType declaredType
+          && !declaredType.getTypeArguments().isEmpty()) {
+        return declaredType.getTypeArguments().get(0);
+      }
+      return requireNonNull(
+              processingEnv().getElementUtils().getTypeElement(Object.class.getCanonicalName()))
+          .asType();
+    } else if (isMapType(typeMirror)) {
+      if (typeMirror instanceof DeclaredType declaredType
+          && declaredType.getTypeArguments().size() == 2) {
+        return declaredType.getTypeArguments().get(1);
+      }
+      return requireNonNull(
+              processingEnv().getElementUtils().getTypeElement(Object.class.getCanonicalName()))
+          .asType();
+    } else {
       return typeMirror;
     }
-    if (typeMirror instanceof DeclaredType declaredType
-        && !declaredType.getTypeArguments().isEmpty()) {
-      return declaredType.getTypeArguments().get(0);
-    }
-    return requireNonNull(
-            processingEnv().getElementUtils().getTypeElement(Object.class.getCanonicalName()))
-        .asType();
   }
 
   @Nullable String getDisallowedMessage(
@@ -933,13 +950,16 @@ public class CodeGenUtility {
       inferredType = typeUtils.boxedClass(primitiveType).asType();
     }
     boolean isList = isListType(inferredType);
-    TypeMirror contentType = inferredType;
-    if (isList) {
+    boolean isMap = isMapType(inferredType);
+    TypeMirror contentType;
+    if (isList || isMap) {
       contentType = getContentType(inferredType);
+    } else {
+      contentType = inferredType;
     }
     TypeName typeName = contentType.accept(new TypeNameVisitor(), null);
 
-    if (!isList) {
+    if (!isList && !isMap) {
       // Add @Nullable annotation for Optional types or methods with @Nullable annotation
       if (isOptional || isNullable || isBuilder) {
         if (!hasNullableAnnotation(typeName)) {
@@ -952,7 +972,8 @@ public class CodeGenUtility {
     TypeName finalTypeName;
     TypeName elementType = typeName;
     Optional<ModelRootInfo> fieldModelRootInfo = asModelRoot(inferredType);
-    ContainerType containerType = isList ? ContainerType.LIST : ContainerType.NO_CONTAINER;
+    ContainerType containerType =
+        isList ? ContainerType.LIST : isMap ? ContainerType.MAP : ContainerType.NO_CONTAINER;
 
     if (fieldModelRootInfo.isPresent()) {
       final ClassName immutType =
@@ -986,9 +1007,7 @@ public class CodeGenUtility {
             case MAP -> {
               TypeName mapKeyTypeName =
                   getMapKeyType(inferredType).accept(new TypeNameVisitor(), null);
-              TypeName mapValueTypeName =
-                  getMapValueType(inferredType).accept(new TypeNameVisitor(), null);
-              elementType = mapValueTypeName;
+              TypeName mapValueTypeName = typeName;
               if (isBuilder) {
                 yield ParameterizedTypeName.get(
                     ClassName.get(ModelsMapBuilder.class),
@@ -1011,7 +1030,9 @@ public class CodeGenUtility {
           switch (containerType) {
             case NO_CONTAINER -> typeName;
             case LIST -> ParameterizedTypeName.get(ClassName.get(List.class), typeName);
-            case MAP -> typeName;
+            case MAP ->
+                ParameterizedTypeName.get(
+                    ClassName.get(Map.class), TypeName.get(getMapKeyType(inferredType)), typeName);
           };
     }
     return new ModelFieldTypeInfo(finalTypeName, containerType, elementType);

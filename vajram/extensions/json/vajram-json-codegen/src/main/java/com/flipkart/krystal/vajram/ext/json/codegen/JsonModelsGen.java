@@ -1,7 +1,5 @@
 package com.flipkart.krystal.vajram.ext.json.codegen;
 
-import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType.LIST;
-import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType.MAP;
 import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.asBuilder;
 import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.buildForBuilder;
 import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.builderGettersAndSetters;
@@ -64,15 +62,16 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
-import org.jspecify.annotations.NonNull;
 
 final class JsonModelsGen implements CodeGenerator {
   private final ModelsCodeGenContext codeGenContext;
   private final CodeGenUtility util;
+  private final ModelRoot modelRoot;
 
   JsonModelsGen(ModelsCodeGenContext codeGenContext) {
     this.codeGenContext = codeGenContext;
     this.util = codeGenContext.util();
+    this.modelRoot = requireNonNull(codeGenContext.modelRootType().getAnnotation(ModelRoot.class));
   }
 
   @Override
@@ -163,13 +162,7 @@ return _serializedPayload;
     for (ExecutableElement method : modelMethods) {
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
       MethodSpec pojoGetterMethod =
-          getterMethod(
-                  method,
-                  false,
-                  JSON,
-                  util,
-                  immutableJsonModelName,
-                  modelRoot.builderExtendsModelRoot())
+          getterMethod(method, false, JSON, util, immutableJsonModelName, modelRoot)
               .addAnnotation(Override.class)
               .build();
       MethodSpec.Builder getterBuilder =
@@ -331,25 +324,23 @@ return _serializedPayload;
     return convertToImmutJson;
   }
 
-  private @NonNull List<FieldSpec> fields(List<ExecutableElement> modelMethods, boolean isBuilder) {
+  private List<FieldSpec> fields(List<ExecutableElement> modelMethods, boolean isBuilder) {
     List<FieldSpec> fields = new ArrayList<>();
     for (ExecutableElement method : modelMethods) {
       TypeName fieldType = util.getModelFieldType(method, isBuilder, Json.JSON).fieldType();
       // Strip @Nullable for @IfAbsent(FAIL) fields since they are guaranteed non-null after build
-      if (!isBuilder && isIfAbsentFail(method, util)) {
+      if (!isBuilder && isIfAbsentFail(method, util, modelRoot)) {
         fieldType = stripNullableAnnotation(fieldType);
       }
       FieldSpec.Builder fieldBuilder =
           FieldSpec.builder(fieldType, method.getSimpleName().toString(), PRIVATE);
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
       if (isBuilder && fieldModelRootInfo.isPresent()) {
-        if (LIST.equals(fieldModelRootInfo.get().containerType())) {
-          fieldBuilder.initializer("$T.empty()", ModelsListBuilder.class);
-        } else if (MAP.equals(fieldModelRootInfo.get().containerType())) {
-          fieldBuilder.initializer("$T.empty()", ModelsMapBuilder.class);
+        switch (fieldModelRootInfo.get().containerType()) {
+          case LIST -> fieldBuilder.initializer("$T.empty()", ModelsListBuilder.class);
+          case MAP -> fieldBuilder.initializer("$T.empty()", ModelsMapBuilder.class);
         }
       }
-
       fields.add(fieldBuilder.build());
     }
     return fields;
@@ -413,7 +404,7 @@ return _serializedPayload;
         .addSuperinterface(immutableModelName.nestedClass("Builder"))
         .addFields(fields(modelMethods, true))
         .addMethods(dataAccessMethods)
-        .addMethod(buildForBuilder(modelMethods, immutableJsonName, util).build())
+        .addMethod(buildForBuilder(modelMethods, immutableJsonName, util, modelRoot).build())
         .addMethod(newCopyForBuilder(modelMethods, builderType, util).build())
         .addMethod(
             MethodSpec.overriding(util.getMethod(Model.class, "_asBuilder", 0))

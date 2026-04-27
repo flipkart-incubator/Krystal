@@ -1,6 +1,7 @@
 package com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.WILL_NEVER_FAIL;
 import static com.flipkart.krystal.model.ModelRoot.ModelType.RESPONSE;
 
 import com.flipkart.krystal.model.IfAbsent;
@@ -18,12 +19,16 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @SupportedModelProtocols({PlainJavaObject.class, Json.class})
 public interface JsonResponse extends Model {
 
+  @IfAbsent(WILL_NEVER_FAIL)
   @Nullable String path();
 
+  @IfAbsent(WILL_NEVER_FAIL)
   @Nullable String qp_name();
 
+  @IfAbsent(WILL_NEVER_FAIL)
   @Nullable String qp_age();
 
+  @IfAbsent(WILL_NEVER_FAIL)
   @Nullable String uriInfo();
 
   String string();
@@ -49,8 +54,10 @@ public interface JsonResponse extends Model {
 
   @Nullable ByteArray byteArray();
 
+  @IfAbsent(WILL_NEVER_FAIL)
   InnerData nestedData();
 
+  @IfAbsent(WILL_NEVER_FAIL)
   InnerDataV2 nestedDataV2();
 
   List<InnerData> nestedDataList();

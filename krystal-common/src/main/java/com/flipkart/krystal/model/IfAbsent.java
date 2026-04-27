@@ -126,7 +126,15 @@ public @interface IfAbsent {
   final class Creator {
     public static @AutoAnnotation IfAbsent create(
         IfAbsentThen value, String conditionalFailureInfo) {
+      if (IfAbsentThen.MAY_FAIL_CONDITIONALLY.equals(value) && conditionalFailureInfo.isBlank()) {
+        throw new IllegalArgumentException(
+            "Conditional failure info is required for MAY_FAIL_CONDITIONALLY");
+      }
       return new AutoAnnotation_IfAbsent_Creator_create(value, conditionalFailureInfo);
+    }
+
+    public static IfAbsent create(IfAbsentThen value) {
+      return create(value, "");
     }
   }
 }

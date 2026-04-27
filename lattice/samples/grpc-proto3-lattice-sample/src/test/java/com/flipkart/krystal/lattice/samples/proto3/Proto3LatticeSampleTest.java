@@ -300,6 +300,7 @@ class Proto3LatticeSampleTest {
         Proto3LatticeSampleResponse_ImmutPojo._builder()
             .string("$$ This is a mocked response $$")
             .mandatoryInt(1)
+            .mandatoryStringPartialConstruction("hello")
             ._build();
     // Execute the vajram with a mocked response
     CompletableFuture<Proto3LatticeSampleResponse> result;

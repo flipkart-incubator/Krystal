@@ -3,6 +3,7 @@ package com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.WILL_NEVER_FAIL;
 import static com.flipkart.krystal.model.ModelRoot.ModelType.RESPONSE;
 
 import com.flipkart.krystal.model.IfAbsent;
@@ -34,6 +35,7 @@ public interface Proto3LatticeSampleResponse extends Model {
   @Nullable Integer nullableIntegerMayFailConditionally();
 
   @SerialId(4)
+  @IfAbsent(WILL_NEVER_FAIL)
   @Nullable Integer nullableInteger();
 
   @SerialId(6)
@@ -49,6 +51,7 @@ public interface Proto3LatticeSampleResponse extends Model {
   int defaultInt();
 
   @SerialId(9)
+  @IfAbsent(FAIL)
   @Nullable String mandatoryStringPartialConstruction();
 
   @SerialId(10)
@@ -56,6 +59,7 @@ public interface Proto3LatticeSampleResponse extends Model {
   @Nullable Map<String, String> mapTypedField();
 
   @SerialId(11)
+  @IfAbsent(WILL_NEVER_FAIL)
   @Nullable ProtoMessage protoMessage();
 
   @SerialId(12)
@@ -63,6 +67,7 @@ public interface Proto3LatticeSampleResponse extends Model {
   List<ProtoMessage> protoMessages();
 
   @SerialId(13)
+  @IfAbsent(WILL_NEVER_FAIL)
   @Nullable SubMessage subMessage();
 
   @SerialId(14)

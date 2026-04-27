@@ -15,8 +15,11 @@ public record One2OneCommand<T>(
     return Collections.<@Nullable T>singletonList(input);
   }
 
-  public void ifPresent(Consumer<@Nullable T> action) {
-    action.accept(input);
+  public void ifPresent(Consumer<T> action) {
+    T input = this.input;
+    if (input != null) {
+      action.accept(input);
+    }
   }
 
   public static <T> One2OneCommand<T> executeWith(@Nullable T input) {

@@ -10,6 +10,7 @@ import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants
 import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_MSG_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_OUTER_CLASS_SUFFIX;
 import static com.google.common.base.Throwables.getStackTraceAsString;
+import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
 import static javax.lang.model.element.ElementKind.INTERFACE;
 
@@ -42,10 +43,12 @@ final class Proto3SchemaGen implements CodeGenerator {
 
   private final ModelsCodeGenContext codeGenContext;
   private final CodeGenUtility util;
+  private final ModelRoot modelRoot;
 
   public Proto3SchemaGen(ModelsCodeGenContext codeGenContext) {
     this.codeGenContext = codeGenContext;
     this.util = codeGenContext.util();
+    this.modelRoot = requireNonNull(codeGenContext.modelRootType().getAnnotation(ModelRoot.class));
   }
 
   @Override
@@ -241,7 +244,7 @@ final class Proto3SchemaGen implements CodeGenerator {
       // In proto3, the 'optional' keyword is needed for all primitive types to check
       // presence. This includes numeric types, booleans, strings, bytes, and enums.
 
-      IfAbsentThen ifAbsentThen = util.getIfAbsent(method).value();
+      IfAbsentThen ifAbsentThen = util.getIfAbsent(method, modelRoot).value();
 
       boolean isRepeated = isProtoTypeRepeated(dataType);
       boolean isMap = isProtoTypeMap(dataType);

@@ -1,8 +1,8 @@
 package com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.models;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
-import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.WILL_NEVER_FAIL;
 import static com.flipkart.krystal.model.ModelRoot.ModelType.RESPONSE;
 
 import com.flipkart.krystal.model.IfAbsent;
@@ -20,15 +20,18 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @SupportedModelProtocols({PlainJavaObject.class, Json.class})
 public interface JsonResponse extends Model {
 
+  @IfAbsent(WILL_NEVER_FAIL)
   @Nullable String path();
 
+  @IfAbsent(WILL_NEVER_FAIL)
   @Nullable String qp_name();
 
+  @IfAbsent(WILL_NEVER_FAIL)
   @Nullable String qp_age();
 
+  @IfAbsent(WILL_NEVER_FAIL)
   @Nullable String uriInfo();
 
-  @IfAbsent(FAIL)
   String string();
 
   @IfAbsent(MAY_FAIL_CONDITIONALLY)
@@ -42,13 +45,11 @@ public interface JsonResponse extends Model {
   @IfAbsent(ASSUME_DEFAULT_VALUE)
   List<Integer> optionalIntArray();
 
-  @IfAbsent(FAIL)
   int mandatoryInt();
 
   @IfAbsent(ASSUME_DEFAULT_VALUE)
   int defaultInt();
 
-  @IfAbsent(FAIL)
   @Nullable String mandatoryStringPartialConstruction();
 
   @IfAbsent(ASSUME_DEFAULT_VALUE)

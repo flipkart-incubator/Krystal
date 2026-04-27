@@ -12,6 +12,7 @@ import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static java.util.Map.entry;
 import static java.util.Map.ofEntries;
+import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -77,10 +78,12 @@ public class Proto3ModelsGen implements CodeGenerator {
 
   private final ModelsCodeGenContext codeGenContext;
   private final CodeGenUtility util;
+  private final ModelRoot modelRoot;
 
   public Proto3ModelsGen(ModelsCodeGenContext codeGenContext) {
     this.codeGenContext = codeGenContext;
     this.util = codeGenContext.util();
+    this.modelRoot = requireNonNull(codeGenContext.modelRootType().getAnnotation(ModelRoot.class));
   }
 
   @Override
@@ -896,7 +899,7 @@ return _serializedPayload;
     if (isProtoTypeMap(dataType)) {
       return false;
     }
-    return !util.getIfAbsent(method).value().usePlatformDefault();
+    return !util.getIfAbsent(method, modelRoot).value().usePlatformDefault();
   }
 
   /**
@@ -904,7 +907,7 @@ return _serializedPayload;
    * mandatory.
    */
   private boolean isMandatoryField(ExecutableElement method) {
-    return util.getIfAbsent(method).value() == IfAbsentThen.FAIL;
+    return util.getIfAbsent(method, modelRoot).value() == IfAbsentThen.FAIL;
   }
 
   /**
