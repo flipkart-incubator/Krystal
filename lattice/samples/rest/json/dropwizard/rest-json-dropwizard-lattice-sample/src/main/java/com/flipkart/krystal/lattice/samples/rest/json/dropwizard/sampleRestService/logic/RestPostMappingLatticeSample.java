@@ -1,7 +1,6 @@
 package com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.logic;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.annos.InvocableOutsideProcess;
@@ -19,7 +18,6 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.json.Json;
 import jakarta.inject.Inject;
-import java.util.Optional;
 
 /**
  * A sample vajram to demonstrate integration between rest and vajrams. This vajram can be invoked
@@ -65,7 +63,7 @@ public abstract class RestPostMappingLatticeSample extends ComputeVajramDef<Json
               $$ optionalLongInput: %s $$
               $$ mandatoryLongInput: %s $$
               $$ optionalByteString: %s $$
-              $$ defaultByteString: %s ---- $$
+              $$ defaultByteString: %s $$
               """
                 .formatted(
                     fullPath,
@@ -75,9 +73,8 @@ public abstract class RestPostMappingLatticeSample extends ComputeVajramDef<Json
                     jsonRequest.inputWithDefaultValue(),
                     jsonRequest.optionalLongInput(),
                     jsonRequest.mandatoryLongInput(),
-                    Optional.ofNullable(jsonRequest.optionalByteString())
-                        .map(bytes -> bytes.toString(UTF_8)),
-                    jsonRequest.defaultByteString().toString(UTF_8)))
+                    jsonRequest.optionalByteString(),
+                    jsonRequest.defaultByteString()))
         .mandatoryInt(1)
         ._build();
   }

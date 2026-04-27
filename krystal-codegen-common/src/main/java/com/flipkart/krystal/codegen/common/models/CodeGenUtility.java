@@ -25,6 +25,7 @@ import com.flipkart.krystal.model.ModelRoot.ModelType;
 import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.model.list.ModelsListBuilder;
 import com.flipkart.krystal.model.map.ModelsMapBuilder;
+import com.flipkart.krystal.serial.SerdeProtocol;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.googlejavaformat.java.GoogleJavaFormatTool;
@@ -374,6 +375,27 @@ public class CodeGenUtility {
         .filter(Objects::nonNull)
         .findFirst()
         .orElse(null);
+  }
+
+  private static final String PRIMITIVE_ARRAY_QUALIFIED_NAME =
+      "com.flipkart.krystal.model.array.PrimitiveArray";
+
+  /**
+   * Returns true if the given type is a subtype of {@code
+   * com.flipkart.krystal.model.array.PrimitiveArray}. Since PrimitiveArray is package-private, this
+   * uses a qualified-name-based lookup.
+   */
+  public boolean isPrimitiveArrayType(TypeMirror type) {
+    TypeElement primitiveArrayElement =
+        processingEnv.getElementUtils().getTypeElement(PRIMITIVE_ARRAY_QUALIFIED_NAME);
+    if (primitiveArrayElement == null) {
+      return false;
+    }
+    return processingEnv
+        .getTypeUtils()
+        .isAssignable(
+            processingEnv.getTypeUtils().erasure(type),
+            processingEnv.getTypeUtils().erasure(primitiveArrayElement.asType()));
   }
 
   /**
@@ -1112,6 +1134,58 @@ public class CodeGenUtility {
         .filter(elem -> elem instanceof QualifiedNameable)
         .map(element -> requireNonNull((QualifiedNameable) element).getQualifiedName().toString())
         .anyMatch(s -> Objects.equals(s, modelProtocol.getCanonicalName()));
+  }
+
+  /**
+   * Returns the list of SerdeProtocol TypeMirrors from the @SupportedModelProtocols annotation on
+   * the given element. Only protocols that extend SerdeProtocol are included.
+   */
+  public List<? extends TypeMirror> getSerdeProtocols(Element modelRootType) {
+    SupportedModelProtocols supportedModelProtocols =
+        modelRootType.getAnnotation(SupportedModelProtocols.class);
+    if (supportedModelProtocols == null) {
+      return List.of();
+    }
+    return getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
+        .filter(typeMirror -> isRawAssignable(typeMirror, SerdeProtocol.class))
+        .toList();
+  }
+
+  private static final Set<String> PURITY_REQUIRING_PROTOCOLS =
+      Set.of(
+          "com.flipkart.krystal.vajram.json.Json",
+          "com.flipkart.krystal.vajram.protobuf3.Protobuf3");
+
+  /**
+   * Returns the qualified names of purity-requiring serde protocols (Json, Protobuf3) from the
+   * given element's @SupportedModelProtocols annotation.
+   */
+  public List<String> getPurityRequiringProtocolNames(Element modelRootType) {
+    List<? extends TypeMirror> serdeProtocols = getSerdeProtocols(modelRootType);
+    return serdeProtocols.stream()
+        .map(typeMirror -> processingEnv.getTypeUtils().asElement(typeMirror))
+        .filter(elem -> elem instanceof QualifiedNameable)
+        .map(element -> ((QualifiedNameable) element).getQualifiedName().toString())
+        .filter(PURITY_REQUIRING_PROTOCOLS::contains)
+        .toList();
+  }
+
+  /**
+   * Returns true if the given element's @SupportedModelProtocols contains the protocol represented
+   * by the given TypeMirror.
+   */
+  public boolean typeSupportsProtocolByMirror(Element modelRootType, TypeMirror protocolMirror) {
+    SupportedModelProtocols supportedModelProtocols =
+        modelRootType.getAnnotation(SupportedModelProtocols.class);
+    if (supportedModelProtocols == null) {
+      return false;
+    }
+    return getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
+        .anyMatch(
+            typeMirror ->
+                processingEnv
+                    .getTypeUtils()
+                    .isSameType(typeUtils.erasure(typeMirror), typeUtils.erasure(protocolMirror)));
   }
 
   public static ClassName asClassName(TypeName typeName) {

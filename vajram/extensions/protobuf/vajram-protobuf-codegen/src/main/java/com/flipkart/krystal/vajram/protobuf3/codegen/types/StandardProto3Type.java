@@ -3,6 +3,8 @@ package com.flipkart.krystal.vajram.protobuf3.codegen.types;
 import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
+import com.flipkart.krystal.model.array.ByteArray;
+import com.flipkart.krystal.vajram.protobuf3.ProtoByteArray;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.ByteString;
@@ -14,7 +16,9 @@ import javax.lang.model.type.TypeMirror;
 import lombok.Getter;
 
 public enum StandardProto3Type implements CodeGenType {
-  BYTE_STRING(CodeBlock.of("$T.EMPTY", ByteString.class), ByteString.class.getCanonicalName());
+  BYTE_ARRAY(
+      CodeBlock.of("new $T($T.EMPTY)", ProtoByteArray.class, ByteString.class),
+      ByteArray.class.getCanonicalName());
 
   static final ImmutableMap<String, StandardProto3Type> standardProto3TypesByCanonicalName;
 

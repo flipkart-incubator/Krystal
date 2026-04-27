@@ -9,6 +9,7 @@ import static com.flipkart.krystal.vajram.protobuf3.codegen.Proto3SchemaGen.vali
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeMap;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeRepeated;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_MSG_SUFFIX;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.types.StandardProto3Type.BYTE_ARRAY;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static java.util.Map.entry;
 import static java.util.Map.ofEntries;
@@ -33,6 +34,7 @@ import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.list.UnmodifiableModelsList;
 import com.flipkart.krystal.model.map.UnmodifiableModelsMap;
 import com.flipkart.krystal.serial.SerializableModel;
+import com.flipkart.krystal.vajram.protobuf3.ProtoByteArray;
 import com.flipkart.krystal.vajram.protobuf3.ProtoListBuilder;
 import com.flipkart.krystal.vajram.protobuf3.ProtoMapBuilder;
 import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
@@ -646,7 +648,14 @@ return _serializedPayload;
                         "new $T(_proto().get$L())",
                         util.getImmutClassName(_m.element(), PROTOBUF_3),
                         capitalizeFirstChar(fieldName)))
-            .orElseGet(() -> CodeBlock.of("_proto().get$L()", capitalizeFirstChar(fieldName)));
+            .orElseGet(
+                () ->
+                    dataType.equals(BYTE_ARRAY)
+                        ? CodeBlock.of(
+                            "new $T(_proto().get$L())",
+                            ProtoByteArray.class,
+                            capitalizeFirstChar(fieldName))
+                        : CodeBlock.of("_proto().get$L()", capitalizeFirstChar(fieldName)));
 
     // Get the value from the proto message
     if (isOptionalReturnType) {
@@ -852,7 +861,14 @@ return _serializedPayload;
                       capitalizeFirstChar(fieldName),
                       ByteString.class,
                       fieldName)
-                  : CodeBlock.of("_proto.set$L($L)", capitalizeFirstChar(fieldName), fieldName));
+                  : dataType.equals(BYTE_ARRAY)
+                      ? CodeBlock.of(
+                          "_proto.set$L($T.toByteString($L))",
+                          capitalizeFirstChar(fieldName),
+                          ProtoByteArray.class,
+                          fieldName)
+                      : CodeBlock.of(
+                          "_proto.set$L($L)", capitalizeFirstChar(fieldName), fieldName));
         }
       }
 

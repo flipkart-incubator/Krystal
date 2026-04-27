@@ -10,12 +10,13 @@ import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.model.array.ByteArray;
 import com.flipkart.krystal.vajram.json.Json;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @SupportedModelProtocols({Json.class, PlainJavaObject.class})
-@ModelRoot(type = REQUEST, pure = false)
+@ModelRoot(type = REQUEST)
 public interface JsonRequest extends Model {
 
   @Nullable Integer optionalInput();

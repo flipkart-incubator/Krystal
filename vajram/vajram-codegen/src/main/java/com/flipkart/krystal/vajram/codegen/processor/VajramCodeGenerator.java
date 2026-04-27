@@ -307,14 +307,7 @@ public class VajramCodeGenerator implements CodeGenerator {
                 currentVajramInfo.lite().isTrait()
                     ? TraitRequestRoot.class
                     : VajramRequestRoot.class)
-            .addAnnotation(
-                AnnotationSpec.builder(ModelRoot.class)
-                    .addMember(
-                        "type", CodeBlock.of("$T.$L", ModelType.class, ModelType.REQUEST.name()))
-                    .addMember("suffixSeparator", CodeBlock.of("$S", ""))
-                    .addMember("builderExtendsModelRoot", "true")
-                    .addMember("pure", "false")
-                    .build())
+            .addAnnotation(buildReqModelRootAnnotation())
             .addAnnotations(
                 currentVajramInfo.vajramClassElem().getAnnotationMirrors().stream()
                     .filter(
@@ -368,6 +361,16 @@ public class VajramCodeGenerator implements CodeGenerator {
                 .build()
                 .toString(),
             currentVajramInfo.vajramClassElem());
+  }
+
+  private AnnotationSpec buildReqModelRootAnnotation() {
+    AnnotationSpec.Builder builder =
+        AnnotationSpec.builder(ModelRoot.class)
+            .addMember("type", CodeBlock.of("$T.$L", ModelType.class, ModelType.REQUEST.name()))
+            .addMember("suffixSeparator", CodeBlock.of("$S", ""))
+            .addMember("builderExtendsModelRoot", "true");
+    builder.addMember("pure", "false");
+    return builder.build();
   }
 
   public void vajramFacets() {

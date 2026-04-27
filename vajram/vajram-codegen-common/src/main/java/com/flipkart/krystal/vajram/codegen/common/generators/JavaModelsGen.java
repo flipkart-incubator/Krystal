@@ -211,11 +211,36 @@ public final class JavaModelsGen implements CodeGenerator {
   }
 
   /**
-   * Validates that all fields in a pure model conform to the purity constraints. A pure model only
-   * allows fields of type: primitives, boxed primitives, String, pure Models, Lists of these, or
-   * Maps with primitive/String keys and pure Model values.
+   * Validates serde protocol constraints:
+   *
+   * <ul>
+   *   <li>Models with Json or Protobuf3 in @SupportedModelProtocols must be pure.
+   *   <li>All fields in a pure model must conform to the purity constraints: primitives, boxed
+   *       primitives, String, pure Models, Lists of these, or Maps with primitive/String keys and
+   *       primitive/String/pure Model values.
+   *   <li>Each nested Model field must support the same serde protocols as the parent model.
+   * </ul>
    */
   private void validatePureModel(List<ExecutableElement> modelMethods) {
+    TypeElement modelRootType = codeGenContext.modelRootType();
+    List<String> purityRequiringProtocols = util.getPurityRequiringProtocolNames(modelRootType);
+
+    // Validation: models with purity-requiring protocols (Json, Protobuf3) must be pure
+    // Skip this check for REQUEST models (_Req) since they are auto-generated and may
+    // legitimately contain non-pure types (e.g., Map<String, Object> in GraphQL vajrams)
+    if (!purityRequiringProtocols.isEmpty()
+        && !modelRoot.pure()
+        && modelRoot.type() != ModelRoot.ModelType.REQUEST) {
+      String protocolNames =
+          purityRequiringProtocols.stream()
+              .map(name -> name.substring(name.lastIndexOf('.') + 1))
+              .collect(Collectors.joining(", "));
+      util.error(
+          "Model '%s' supports serde protocol(s) [%s] and therefore must be pure (pure = true)."
+              .formatted(modelRootType.getQualifiedName(), protocolNames),
+          modelRootType);
+    }
+
     if (!modelRoot.pure()) {
       return;
     }
@@ -255,7 +280,8 @@ public final class JavaModelsGen implements CodeGenerator {
       return;
     }
 
-    // Map<K, V> is allowed where K is primitive/boxed/String and V is a pure Model
+    // Map<K, V> is allowed where K is primitive/boxed/String and V is primitive/boxed/String/pure
+    // Model
     if (util.isMapType(type)) {
       TypeMirror keyType = util.getMapKeyType(type);
       TypeMirror valueType = util.getMapValueType(type);
@@ -263,11 +289,16 @@ public final class JavaModelsGen implements CodeGenerator {
       return;
     }
 
+    // PrimitiveArray subtypes (ByteArray, IntArray, LongArray, DoubleArray) are allowed
+    if (util.isPrimitiveArrayType(type)) {
+      return;
+    }
+
     // Anything else is disallowed
     util.error(
         "Field '%s' in pure model has disallowed type '%s'. ".formatted(fieldName, type)
-            + "Pure models only allow primitives, boxed primitives, String, pure Models, "
-            + "Lists of these, or Maps with primitive/String keys and pure Model values.",
+            + "Pure models only allow primitives, boxed primitives, String, PrimitiveArray subtypes, pure Models, "
+            + "Lists of these, or Maps with primitive/String keys and primitive/String/pure Model values.",
         method);
   }
 
@@ -285,6 +316,32 @@ public final class JavaModelsGen implements CodeGenerator {
         util.error(
             "Field '%s' in pure model references model '%s' which is not pure (pure = false). All Model fields in a pure model must themselves be pure."
                 .formatted(fieldName, typeElement.getQualifiedName()),
+            method);
+      }
+      // Validate that nested model supports same serde protocols as parent
+      validateFieldModelSerdeProtocols(method, typeElement, fieldName);
+    }
+  }
+
+  private void validateFieldModelSerdeProtocols(
+      ExecutableElement method, TypeElement fieldModelType, String fieldName) {
+    TypeElement parentModelType = codeGenContext.modelRootType();
+    List<? extends TypeMirror> parentSerdeProtocols = util.getSerdeProtocols(parentModelType);
+    for (TypeMirror protocol : parentSerdeProtocols) {
+      if (!util.typeSupportsProtocolByMirror(fieldModelType, protocol)) {
+        Element protocolElement = util.processingEnv().getTypeUtils().asElement(protocol);
+        String protocolName =
+            protocolElement != null
+                ? protocolElement.getSimpleName().toString()
+                : protocol.toString();
+        util.error(
+            "Field '%s' in model '%s' references model '%s' which does not support serde protocol '%s'. "
+                    .formatted(
+                        fieldName,
+                        parentModelType.getQualifiedName(),
+                        fieldModelType.getQualifiedName(),
+                        protocolName)
+                + "All nested Model fields must support the same serde protocols as the parent model.",
             method);
       }
     }
@@ -315,15 +372,18 @@ public final class JavaModelsGen implements CodeGenerator {
               + "Map keys in pure models must be primitives, boxed primitives, or String.",
           method);
     }
-    if (!util.isRawAssignable(valueType, Model.class)) {
-      util.error(
-          "Field '%s' in pure model has Map with disallowed value type '%s'. "
-                  .formatted(fieldName, valueType)
-              + "Map values in pure models must be pure Models.",
-          method);
-    } else {
-      validateFieldModelIsPure(method, valueType, fieldName);
+    if (util.isPrimitiveOrBoxed(valueType) || util.isString(valueType)) {
+      return;
     }
+    if (util.isRawAssignable(valueType, Model.class)) {
+      validateFieldModelIsPure(method, valueType, fieldName);
+      return;
+    }
+    util.error(
+        "Field '%s' in pure model has Map with disallowed value type '%s'. "
+                .formatted(fieldName, valueType)
+            + "Map values in pure models must be primitives, boxed primitives, String, or pure Models.",
+        method);
   }
 
   /**

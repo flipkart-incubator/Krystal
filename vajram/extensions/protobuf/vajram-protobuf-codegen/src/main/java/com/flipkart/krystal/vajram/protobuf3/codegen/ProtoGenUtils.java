@@ -64,7 +64,7 @@ public class ProtoGenUtils {
           .put(FLOAT, FLOAT_P)
           .put(DOUBLE, DOUBLE_P)
           .put(STRING, STRING_P)
-          .put(BYTE_STRING, BYTES_P)
+          .put(BYTE_ARRAY, BYTES_P)
           .build();
 
   public static String getSimpleClassName(String canonicalClassName) {

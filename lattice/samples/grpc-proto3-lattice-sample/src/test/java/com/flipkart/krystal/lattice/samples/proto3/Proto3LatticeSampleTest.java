@@ -26,6 +26,7 @@ import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.exception.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajram.guice.injection.VajramGuiceInputInjector;
+import com.flipkart.krystal.vajram.protobuf3.ProtoByteArray;
 import com.flipkart.krystal.vajram.protobuf3.SerializableProtoModel;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
@@ -97,8 +98,8 @@ class Proto3LatticeSampleTest {
             .inputWithDefaultValue(300)
             .optionalLongInput(10L)
             .mandatoryLongInput(20L)
-            .optionalByteString(ByteString.copyFromUtf8("test"))
-            .defaultByteString(ByteString.copyFromUtf8("hello"))
+            .optionalByteString(new ProtoByteArray(ByteString.copyFromUtf8("test")))
+            .defaultByteString(new ProtoByteArray(ByteString.copyFromUtf8("hello")))
             ._build();
 
     // Execute the vajram
@@ -129,8 +130,8 @@ class Proto3LatticeSampleTest {
             "$$ inputWithDefaultValue: 300 $$",
             "$$ optionalLongInput: 10 $$",
             "$$ mandatoryLongInput: 20 $$",
-            "$$ optionalByteString: test $$",
-            "$$ defaultByteString: hello $$");
+            "$$ optionalByteString: [116, 101, 115, 116] $$",
+            "$$ defaultByteString: [104, 101, 108, 108, 111] $$");
     assertThat(result)
         .succeedsWithin(1, SECONDS)
         .extracting(Proto3LatticeSampleResponse::protoMessage)
@@ -178,7 +179,7 @@ class Proto3LatticeSampleTest {
             "$$ optionalLongInput: null $$",
             "$$ mandatoryLongInput: 20 $$",
             "$$ optionalByteString: null $$",
-            "$$ defaultByteString:  $$");
+            "$$ defaultByteString: [] $$");
   }
 
   @Test
@@ -342,7 +343,7 @@ class Proto3LatticeSampleTest {
             .conditionallyMandatoryInput(200)
             .inputWithDefaultValue(300)
             .mandatoryLongInput(20L)
-            .optionalByteString(byteString)
+            .optionalByteString(new ProtoByteArray(byteString))
             ._build();
 
     // Execute the vajram
@@ -366,6 +367,7 @@ class Proto3LatticeSampleTest {
     assertThat(result)
         .succeedsWithin(100, SECONDS)
         .extracting(Proto3LatticeSampleResponse::string, STRING)
-        .contains("$$ optionalByteString: Hello, World! $$");
+        .contains(
+            "$$ optionalByteString: [72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33] $$");
   }
 }

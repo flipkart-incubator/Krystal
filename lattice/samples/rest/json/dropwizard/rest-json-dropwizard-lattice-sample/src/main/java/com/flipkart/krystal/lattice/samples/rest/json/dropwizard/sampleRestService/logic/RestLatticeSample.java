@@ -3,16 +3,15 @@ package com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestServ
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.annos.InvocableOutsideProcess;
-import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.models.ByteArray;
 import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.models.JsonResponse;
 import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.models.JsonResponse_Immut;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.model.array.ByteArray;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
@@ -86,7 +85,7 @@ public abstract class RestLatticeSample extends ComputeVajramDef<JsonResponse> {
               $$ optionalLongInput: %s $$
               $$ mandatoryLongInput: %s $$
               $$ optionalByteString: %s $$
-              $$ defaultByteString: %s ---- $$
+              $$ defaultByteString: %s $$
               """
                 .formatted(
                     optionalInput,
@@ -95,8 +94,8 @@ public abstract class RestLatticeSample extends ComputeVajramDef<JsonResponse> {
                     inputWithDefaultValue,
                     optionalLongInput,
                     mandatoryLongInput,
-                    optionalByteString == null ? null : optionalByteString.toString(UTF_8),
-                    defaultByteString.toString(UTF_8)))
+                    optionalByteString,
+                    defaultByteString))
         .mandatoryInt(1)
         ._build();
   }

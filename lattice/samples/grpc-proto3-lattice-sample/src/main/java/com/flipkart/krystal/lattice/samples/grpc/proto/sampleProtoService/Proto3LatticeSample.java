@@ -3,20 +3,19 @@ package com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.annos.InvocableOutsideProcess;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.model.array.ByteArray;
 import com.flipkart.krystal.serial.ReservedSerialIds;
 import com.flipkart.krystal.serial.SerialId;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
-import com.google.protobuf.ByteString;
 import jakarta.inject.Inject;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -56,7 +55,7 @@ public abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3Lattice
     long mandatoryLongInput;
 
     @SerialId(7)
-    ByteString optionalByteString;
+    ByteArray optionalByteString;
 
     @IfAbsent(ASSUME_DEFAULT_VALUE)
     @SerialId(9)
@@ -64,7 +63,7 @@ public abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3Lattice
 
     @SerialId(10)
     @IfAbsent(ASSUME_DEFAULT_VALUE)
-    ByteString defaultByteString;
+    ByteArray defaultByteString;
   }
 
   static class _InternalFacets {
@@ -81,8 +80,8 @@ public abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3Lattice
       int inputWithDefaultValue,
       @Nullable Long optionalLongInput,
       Long mandatoryLongInput,
-      @Nullable ByteString optionalByteString,
-      ByteString defaultByteString,
+      @Nullable ByteArray optionalByteString,
+      ByteArray defaultByteString,
       Proto3LatticeSampleResponse_Immut.Builder responseBuilder) {
     return responseBuilder
         .string(
@@ -104,8 +103,8 @@ public abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3Lattice
                     inputWithDefaultValue,
                     optionalLongInput,
                     mandatoryLongInput,
-                    optionalByteString == null ? null : optionalByteString.toString(UTF_8),
-                    defaultByteString.toString(UTF_8)))
+                    optionalByteString,
+                    defaultByteString))
         .mandatoryInt(1)
         .protoMessage(ProtoMessage_ImmutProto._builder().count(100))
         ._build();
