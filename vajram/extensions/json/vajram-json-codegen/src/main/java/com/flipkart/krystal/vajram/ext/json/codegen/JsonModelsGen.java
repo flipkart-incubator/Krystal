@@ -252,49 +252,76 @@ return _serializedPayload;
   private CodeBlock setterCode(ExecutableElement method) {
     String fieldName = method.getSimpleName().toString();
     Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
-    if (fieldModelRootInfo.isPresent()) {
-      ClassName immutJsonClassName =
-          util.getImmutClassName(fieldModelRootInfo.get().element(), JSON);
 
-      return switch (fieldModelRootInfo.get().containerType()) {
-        case NO_CONTAINER ->
-            CodeBlock.of(
-                "this.$L = $L;",
-                fieldName,
-                convertToImmutJson(fieldName, fieldModelRootInfo, immutJsonClassName));
-        case LIST ->
-            CodeBlock.of(
+    return switch (util.getContainerType(method.getReturnType())) {
+      case NO_CONTAINER -> {
+        if (fieldModelRootInfo.isPresent()) {
+          yield CodeBlock.of(
+              "this.$L = $L;",
+              fieldName,
+              convertToImmutJson(
+                  fieldName,
+                  fieldModelRootInfo,
+                  util.getImmutClassName(fieldModelRootInfo.get().element(), JSON)));
+        } else {
+          yield CodeBlock.of("this.$L = $L;", fieldName, fieldName);
+        }
+      }
+      case LIST -> {
+        if (fieldModelRootInfo.isPresent()) {
+          yield CodeBlock.of(
+              """
+              this.$L = $L == null
+                ? null
+                : $T.copyOf(
+                    $T.transform($L, _e -> $L));
+              """,
+              fieldName,
+              fieldName,
+              ImmutableList.class,
+              Lists.class,
+              fieldName,
+              convertToImmutJson(
+                  "_e",
+                  fieldModelRootInfo,
+                  util.getImmutClassName(fieldModelRootInfo.get().element(), JSON)));
+        } else {
+          yield CodeBlock.of(
+              "this.$L = $L == null ? null :$T.copyOf($L);",
+              fieldName,
+              fieldName,
+              ImmutableList.class,
+              fieldName);
+        }
+      }
+      case MAP -> {
+        if (fieldModelRootInfo.isPresent()) {
+          yield CodeBlock.of(
 """
-  this.$L = $L == null
+this.$L = $L == null
     ? null
     : $T.copyOf(
-        $T.transform($L, _e -> $L));
+        $T.transformValues($L, _e -> $L));
 """,
-                fieldName,
-                fieldName,
-                ImmutableList.class,
-                Lists.class,
-                fieldName,
-                convertToImmutJson("_e", fieldModelRootInfo, immutJsonClassName));
-        case MAP ->
-            CodeBlock.of(
-"""
-  this.$L = $L == null
-      ? null
-      : $T.copyOf(
-          $T.transformValues($L, _e -> $L));
-""",
-                fieldName,
-                fieldName,
-                ImmutableMap.class,
-                Maps.class,
-                fieldName,
-                convertToImmutJson("_e", fieldModelRootInfo, immutJsonClassName));
-      };
-    } else {
-      // For other field types, just assign the parameter directly
-      return CodeBlock.of("this.$L = $L;", fieldName, fieldName);
-    }
+              fieldName,
+              fieldName,
+              ImmutableMap.class,
+              Maps.class,
+              fieldName,
+              convertToImmutJson(
+                  "_e",
+                  fieldModelRootInfo,
+                  util.getImmutClassName(fieldModelRootInfo.get().element(), JSON)));
+        } else {
+          yield CodeBlock.of(
+              "this.$L = $L == null ? null : $T.copyOf($L);",
+              fieldName,
+              fieldName,
+              ImmutableMap.class,
+              fieldName);
+        }
+      }
+    };
   }
 
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")

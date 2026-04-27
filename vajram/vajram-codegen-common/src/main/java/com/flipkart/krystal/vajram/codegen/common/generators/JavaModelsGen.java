@@ -691,49 +691,69 @@ public final class JavaModelsGen implements CodeGenerator {
 
       constructorBuilder.addParameter(
           ParameterSpec.builder(util.getVariableType(method, false), fieldName).build());
-
+      ContainerType containerType = util.getContainerType(method.getReturnType());
       Optional<ModelRootInfo> modelRootInfo = util.asModelRoot(method.getReturnType());
-      if (modelRootInfo.isPresent()) {
-        switch (modelRootInfo.get().containerType()) {
-          case NO_CONTAINER ->
-              constructorBuilder.addStatement(
-                  "this.$L = $L == null ? null : ($T)$L._build()",
-                  fieldName,
-                  fieldName,
-                  util.getModelFieldType(method, false, null).fieldType(),
-                  fieldName);
-          case LIST ->
-              constructorBuilder.addStatement(
+      switch (containerType) {
+        case NO_CONTAINER -> {
+          if (modelRootInfo.isPresent()) {
+            constructorBuilder.addStatement(
+                "this.$L = $L == null ? null : ($T)$L._build()",
+                fieldName,
+                fieldName,
+                util.getModelFieldType(method, false, null).fieldType(),
+                fieldName);
+          } else {
+            constructorBuilder.addStatement("this.$L = $L", fieldName, fieldName);
+          }
+        }
+        case LIST -> {
+          if (modelRootInfo.isPresent()) {
+            constructorBuilder.addStatement(
 """
     this.$L = $L == null
         ? null
         : $T.copyOf(
             $T.transform($L, _e -> ($T) _e._build()))
 """,
-                  fieldName,
-                  fieldName,
-                  ImmutableList.class,
-                  Lists.class,
-                  fieldName,
-                  util.getModelFieldType(method, false, null).elementType());
-          case MAP ->
-              constructorBuilder.addStatement(
+                fieldName,
+                fieldName,
+                ImmutableList.class,
+                Lists.class,
+                fieldName,
+                util.getModelFieldType(method, false, null).elementType());
+          } else {
+            constructorBuilder.addStatement(
+                "this.$L = $L == null ? null : $T.copyOf($L)",
+                fieldName,
+                fieldName,
+                ImmutableList.class,
+                fieldName);
+          }
+        }
+        case MAP -> {
+          if (modelRootInfo.isPresent()) {
+            constructorBuilder.addStatement(
 """
 this.$L = $L == null
-        ? null
-        : $T.copyOf(
-            $T.transformValues($L, _e -> ($T) _e._build()))
+    ? null
+    : $T.copyOf(
+        $T.transformValues($L, _e -> ($T) _e._build()))
 """,
-                  fieldName,
-                  fieldName,
-                  ImmutableMap.class,
-                  Maps.class,
-                  fieldName,
-                  util.getModelFieldType(method, false, null).elementType());
+                fieldName,
+                fieldName,
+                ImmutableMap.class,
+                Maps.class,
+                fieldName,
+                util.getModelFieldType(method, false, null).elementType());
+          } else {
+            constructorBuilder.addStatement(
+                "this.$L = $L == null ? null :$T.copyOf($L)",
+                fieldName,
+                fieldName,
+                ImmutableMap.class,
+                fieldName);
+          }
         }
-      } else {
-        // For other field types, just assign the parameter directly
-        constructorBuilder.addStatement("this.$L = $L", fieldName, fieldName);
       }
     }
     return constructorBuilder;

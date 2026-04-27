@@ -972,27 +972,27 @@ public class CodeGenUtility {
     TypeName finalTypeName;
     TypeName elementType = typeName;
     Optional<ModelRootInfo> fieldModelRootInfo = asModelRoot(inferredType);
-    ContainerType containerType =
-        isList ? ContainerType.LIST : isMap ? ContainerType.MAP : ContainerType.NO_CONTAINER;
+    ContainerType containerType = getContainerType(inferredType);
 
-    if (fieldModelRootInfo.isPresent()) {
-      final ClassName immutType =
-          getImmutClassName(fieldModelRootInfo.get().element(), modelProtocol);
-      containerType = fieldModelRootInfo.get().containerType();
-      finalTypeName =
-          switch (fieldModelRootInfo.get().containerType()) {
-            case NO_CONTAINER -> {
+    finalTypeName =
+        switch (containerType) {
+          case NO_CONTAINER -> {
+            if (fieldModelRootInfo.isPresent()) {
               if (isBuilder) {
                 if (!fieldModelRootInfo.get().annotation().builderExtendsModelRoot()) {
                   yield ClassName.get(Object.class);
                 }
               } else {
-                yield immutType;
+                yield getImmutClassName(fieldModelRootInfo.get().element(), modelProtocol);
               }
-              yield typeName;
             }
-            case LIST -> {
-              if (isBuilder) {
+            yield typeName;
+          }
+          case LIST -> {
+            if (isBuilder) {
+              if (fieldModelRootInfo.isPresent()) {
+                ClassName immutType =
+                    getImmutClassName(fieldModelRootInfo.get().element(), modelProtocol);
                 yield ParameterizedTypeName.get(
                     ClassName.get(ModelsListBuilder.class),
                     typeName,
@@ -1000,15 +1000,21 @@ public class CodeGenUtility {
                     immutType.nestedClass("Builder"));
               } else {
                 yield ParameterizedTypeName.get(
-                    ClassName.get(ImmutableList.class),
-                    TypeName.get(fieldModelRootInfo.get().element().asType()));
+                    ClassName.get(List.class), TypeName.get(contentType));
               }
+            } else {
+              yield ParameterizedTypeName.get(
+                  ClassName.get(ImmutableList.class), TypeName.get(contentType));
             }
-            case MAP -> {
-              TypeName mapKeyTypeName =
-                  getMapKeyType(inferredType).accept(new TypeNameVisitor(), null);
-              TypeName mapValueTypeName = typeName;
-              if (isBuilder) {
+          }
+          case MAP -> {
+            TypeName mapKeyTypeName =
+                getMapKeyType(inferredType).accept(new TypeNameVisitor(), null);
+            TypeName mapValueTypeName = typeName;
+            if (isBuilder) {
+              if (fieldModelRootInfo.isPresent()) {
+                ClassName immutType =
+                    getImmutClassName(fieldModelRootInfo.get().element(), modelProtocol);
                 yield ParameterizedTypeName.get(
                     ClassName.get(ModelsMapBuilder.class),
                     mapKeyTypeName,
@@ -1016,25 +1022,15 @@ public class CodeGenUtility {
                     immutType,
                     immutType.nestedClass("Builder"));
               } else {
-                TypeName mapType =
-                    ParameterizedTypeName.get(
-                        ClassName.get(ImmutableMap.class),
-                        mapKeyTypeName,
-                        TypeName.get(fieldModelRootInfo.get().element().asType()));
-                yield mapType;
+                yield ParameterizedTypeName.get(
+                    ClassName.get(Map.class), mapKeyTypeName, TypeName.get(contentType));
               }
+            } else {
+              yield ParameterizedTypeName.get(
+                  ClassName.get(ImmutableMap.class), mapKeyTypeName, TypeName.get(contentType));
             }
-          };
-    } else {
-      finalTypeName =
-          switch (containerType) {
-            case NO_CONTAINER -> typeName;
-            case LIST -> ParameterizedTypeName.get(ClassName.get(List.class), typeName);
-            case MAP ->
-                ParameterizedTypeName.get(
-                    ClassName.get(Map.class), TypeName.get(getMapKeyType(inferredType)), typeName);
-          };
-    }
+          }
+        };
     return new ModelFieldTypeInfo(finalTypeName, containerType, elementType);
   }
 
@@ -1156,6 +1152,12 @@ public class CodeGenUtility {
     return asModelRoot(javaModelType).isPresent();
   }
 
+  public ContainerType getContainerType(TypeMirror javaModelType) {
+    return isListType(javaModelType)
+        ? ContainerType.LIST
+        : isMapType(javaModelType) ? ContainerType.MAP : ContainerType.NO_CONTAINER;
+  }
+
   public Optional<ModelRootInfo> asModelRoot(TypeMirror javaModelType) {
     ContainerType containerType = ContainerType.NO_CONTAINER;
     if (isOptional(javaModelType)) {
@@ -1197,10 +1199,7 @@ public class CodeGenUtility {
   }
 
   public record ModelRootInfo(
-      TypeElement element, TypeMirror type, ModelRoot annotation, ContainerType containerType) {
-
-    public ModelRootInfo {}
-  }
+      TypeElement element, TypeMirror type, ModelRoot annotation, ContainerType containerType) {}
 
   public record AnnotationInfo<T>(T annotation, AnnotationMirror mirror) {}
 
