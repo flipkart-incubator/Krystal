@@ -1,5 +1,6 @@
 package com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
@@ -62,7 +63,7 @@ class Proto3LatticeSampleResponseTest {
 
     // Verify nested model (ProtoMessage)
     assertThat(deserialized.protoMessage()).isNotNull();
-    assertThat(deserialized.protoMessage().count()).isEqualTo(42);
+    assertThat(requireNonNull(deserialized.protoMessage()).count()).isEqualTo(42);
 
     // Verify list of models (ProtoMessage)
     assertThat(deserialized.protoMessages()).hasSize(2);
@@ -71,7 +72,7 @@ class Proto3LatticeSampleResponseTest {
 
     // Verify nested model (SubMessage)
     assertThat(deserialized.subMessage()).isNotNull();
-    assertThat(deserialized.subMessage().count()).isEqualTo(10);
+    assertThat(requireNonNull(deserialized.subMessage()).count()).isEqualTo(10);
 
     // Verify list of models (SubMessage)
     assertThat(deserialized.subMessages()).hasSize(2);
@@ -94,6 +95,7 @@ class Proto3LatticeSampleResponseTest {
         Proto3LatticeSampleResponse_ImmutProto._builder()
             .string("minimal")
             .mandatoryInt(1)
+            .mandatoryStringPartialConstruction("hello")
             ._build();
 
     byte[] serialized = original._serialize();
@@ -142,6 +144,7 @@ class Proto3LatticeSampleResponseTest {
         Proto3LatticeSampleResponse_ImmutProto._builder()
             .string("copy-test")
             .mandatoryInt(1)
+            .mandatoryStringPartialConstruction("")
             .namedSubMessages(Map.of("key", sub))
             ._build();
 
@@ -207,6 +210,7 @@ class Proto3LatticeSampleResponseTest {
             .string("nested-test")
             .mandatoryInt(1)
             .namedSubMessages(Map.of("nested", sub))
+            .mandatoryStringPartialConstruction("hello")
             .subMessages(List.of(sub))
             .subMessage(sub)
             ._build();
@@ -219,7 +223,7 @@ class Proto3LatticeSampleResponseTest {
     SubMessage deserializedSub = deserialized.namedSubMessages().get("nested");
     assertThat(deserializedSub.count()).isEqualTo(99);
     assertThat(deserializedSub.protoMessage()).isNotNull();
-    assertThat(deserializedSub.protoMessage().count()).isEqualTo(11);
+    assertThat(requireNonNull(deserializedSub.protoMessage()).count()).isEqualTo(11);
     assertThat(deserializedSub.protoMessages()).hasSize(2);
     assertThat(deserializedSub.protoMessages().get(0).count()).isEqualTo(11);
     assertThat(deserializedSub.protoMessages().get(1).count()).isEqualTo(22);

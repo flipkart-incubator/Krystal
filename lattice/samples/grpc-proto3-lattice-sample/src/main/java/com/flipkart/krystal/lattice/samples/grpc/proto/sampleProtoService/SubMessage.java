@@ -2,6 +2,7 @@ package com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.WILL_NEVER_FAIL;
 
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.Model;
@@ -21,6 +22,7 @@ public interface SubMessage extends Model {
   int count();
 
   @SerialId(2)
+  @IfAbsent(WILL_NEVER_FAIL)
   @Nullable ProtoMessage protoMessage();
 
   @SerialId(3)

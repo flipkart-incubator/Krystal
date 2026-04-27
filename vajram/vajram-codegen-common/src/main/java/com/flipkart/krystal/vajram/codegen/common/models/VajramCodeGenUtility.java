@@ -139,7 +139,7 @@ public class VajramCodeGenUtility {
     } else {
       boolean localDevAccessible = codeGenParams.isDevAccessible() && codeGenParams.isLocal();
       if (localDevAccessible) {
-        IfAbsent ifAbsent = codegenUtil.getIfAbsent(facet.facetField());
+        IfAbsent ifAbsent = codegenUtil.getIfAbsent(facet.facetField(), null);
         // Developers should not deal with boxed types. So we need to return the actual type or
         // an Optional wrapper as needed
         if (ifAbsent.value().isMandatoryOnServer()) {

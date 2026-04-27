@@ -148,10 +148,12 @@ public final class JavaModelsGen implements CodeGenerator {
 
   private final ModelsCodeGenContext codeGenContext;
   private final CodeGenUtility util;
+  private final ModelRoot modelRoot;
 
   public JavaModelsGen(ModelsCodeGenContext codeGenContext) {
     this.codeGenContext = codeGenContext;
-    util = codeGenContext.util();
+    this.util = codeGenContext.util();
+    this.modelRoot = requireNonNull(codeGenContext.modelRootType().getAnnotation(ModelRoot.class));
   }
 
   /**
@@ -192,8 +194,8 @@ public final class JavaModelsGen implements CodeGenerator {
     if (codeGenContext.modelRootType().getAnnotation(SupportedModelProtocols.class) == null
         || util.typeExplicitlySupportsProtocol(modelRootType, PlainJavaObject.class)) {
       // Generate the POJO class if PlainJavaObject is supported
-      TypeSpec immutablePojo = generateImmutablePojo(modelRootType, modelMethods);
-      util.writeJavaFile(packageName, immutablePojo, modelRootType);
+      util.writeJavaFile(
+          packageName, generateImmutablePojo(modelRootType, modelMethods), modelRootType);
     }
   }
 
@@ -363,7 +365,7 @@ public final class JavaModelsGen implements CodeGenerator {
     // Generate getter overrides for @IfAbsent(FAIL) fields to strip @Nullable in _Immut interface
     List<MethodSpec> immutGetterOverrides = new ArrayList<>();
     for (ExecutableElement method : modelMethods) {
-      if (isIfAbsentFail(method, util)
+      if (isIfAbsentFail(method, util, modelRoot)
           && util.isAnyNullable(method.getReturnType(), method)
           && !util.isOptional(method.getReturnType())) {
         TypeName returnType =
@@ -579,47 +581,20 @@ public final class JavaModelsGen implements CodeGenerator {
     // Create fields for the POJO class
     List<FieldSpec> fields = new ArrayList<>();
     for (ExecutableElement method : modelMethods) {
-      String fieldName = method.getSimpleName().toString();
-      TypeName fieldType;
-
-      // If the return type is Optional<T>, use T as the field type instead of Optional<T>
-      if (util.isOptional(method.getReturnType())) {
-        TypeMirror innerType = util.getOptionalInnerType(method.getReturnType());
-        // Box primitive types
-        if (innerType.getKind().isPrimitive()) {
-          fieldType = TypeName.get(innerType).box();
-        } else {
-          fieldType = TypeName.get(innerType);
-        }
-      } else {
-        // Check if the method has @IfAbsent and is primitive
-        IfAbsent ifAbsent = util.getIfAbsent(method);
-        if (method.getReturnType().getKind().isPrimitive()
-            && !ifAbsent.value().isMandatoryOnServer()) {
-          fieldType = TypeName.get(method.getReturnType()).box();
-        } else {
-          fieldType = TypeName.get(method.getReturnType());
-        }
-      }
-
-      // Add @Nullable annotation for Optional types or methods with @Nullable annotation
-      // Skip @Nullable for @IfAbsent(FAIL) fields since they are guaranteed non-null after build
-      if (!isIfAbsentFail(method, util)
-          && (util.isOptional(method.getReturnType())
-              || util.isAnyNullable(method.getReturnType(), method))) {
-        // Add @Nullable as a type annotation
-        fieldType =
-            fieldType.annotated(AnnotationSpec.builder(ClassName.get(Nullable.class)).build());
-      }
-      fields.add(FieldSpec.builder(fieldType, fieldName, PRIVATE, FINAL).build());
+      fields.add(
+          FieldSpec.builder(
+                  util.getModelFieldType(method, false, null).fieldType(),
+                  method.getSimpleName().toString(),
+                  PRIVATE,
+                  FINAL)
+              .build());
     }
 
     // Create getter methods for the POJO class
     List<MethodSpec> methods = new ArrayList<>();
     for (ExecutableElement method : modelMethods) {
       methods.add(
-          getterMethod(
-                  method, false, null, util, immutPojoType, modelRoot.builderExtendsModelRoot())
+          getterMethod(method, false, null, util, immutPojoType, modelRoot)
               .addAnnotation(Override.class)
               .build());
     }
@@ -792,7 +767,7 @@ this.$L = $L == null
    * @param modelProtocol
    * @param util
    * @param modelTypeName Must be non-null if and only if the field is mandatory
-   * @param builderExtendsModelRoot
+   * @param modelRoot
    * @return
    */
   public static MethodSpec.Builder getterMethod(
@@ -801,7 +776,7 @@ this.$L = $L == null
       @Nullable ModelProtocol modelProtocol,
       CodeGenUtility util,
       TypeName modelTypeName,
-      boolean builderExtendsModelRoot) {
+      ModelRoot modelRoot) {
     TypeMirror specifiedReturnType = method.getReturnType();
     ModelFieldTypeInfo modelFieldType = util.getModelFieldType(method, true, null);
     Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(specifiedReturnType);
@@ -831,7 +806,7 @@ this.$L = $L == null
                         .filter(
                             a ->
                                 isBuilder
-                                    || !isIfAbsentFail(method, util)
+                                    || !isIfAbsentFail(method, util, modelRoot)
                                     || !isNullableAnnotation(a))
                         .toList());
     MethodSpec.Builder methodBuilder =
@@ -843,7 +818,7 @@ this.$L = $L == null
           Optional.class,
           getFieldAccessorExpression(isBuilder, fieldName, specifiedReturnType, util));
     } else {
-      if (util.getIfAbsent(method).value().usePlatformDefault()
+      if (util.getIfAbsent(method, modelRoot).value().usePlatformDefault()
           && !specifiedReturnType.getKind().isPrimitive()) {
         try {
           methodBuilder.addCode(
@@ -885,7 +860,7 @@ this.$L = $L == null
       // If so, throw MandatoryFieldMissingException instead of returning null
       // Exclude Lists/Maps of Models (they can be empty collections)
       if (isBuilder
-          && builderExtendsModelRoot
+          && modelRoot.builderExtendsModelRoot()
           && !isMethodOptionalOrNullable(method, util)
           && !fieldModelRootInfo
               .map(ModelRootInfo::containerType)
@@ -936,8 +911,7 @@ this.$L = $L == null
                             .nestedClass("Builder"),
                         fieldName,
                         util.getImmutInterfaceName(fieldModelRootInfo.get().element()));
-            case LIST -> CodeBlock.of("$L.unmodifiableModelsView()", fieldName);
-            case MAP -> CodeBlock.of("$L.unmodifiableModelsView()", fieldName);
+            case LIST, MAP -> CodeBlock.of("$L.unmodifiableModelsView()", fieldName);
           };
     }
     return fieldAccessorCode;
@@ -983,7 +957,8 @@ this.$L = $L == null
     List<MethodSpec> dataAccessMethods =
         builderGettersAndSetters(modelMethods, builderType, modelRoot, null, util);
 
-    MethodSpec.Builder buildMethodBuilder = buildForBuilder(modelMethods, immutablePojoName, util);
+    MethodSpec.Builder buildMethodBuilder =
+        buildForBuilder(modelMethods, immutablePojoName, util, modelRoot);
 
     MethodSpec.Builder builderCopyMethodBuilder =
         newCopyForBuilder(modelMethods, builderType, util);
@@ -1011,7 +986,10 @@ this.$L = $L == null
   }
 
   public static MethodSpec.Builder buildForBuilder(
-      List<ExecutableElement> modelMethods, TypeName immutablePojoName, CodeGenUtility util) {
+      List<ExecutableElement> modelMethods,
+      TypeName immutablePojoName,
+      CodeGenUtility util,
+      ModelRoot modelRoot) {
     // Create _build method
     MethodSpec.Builder buildMethodBuilder =
         MethodSpec.methodBuilder("_build")
@@ -1029,10 +1007,10 @@ this.$L = $L == null
 
       // If IfAbsent annotation was found, handle according to strategy
       // Only generate null check if validation is needed or error needs to be thrown
-      if (!immutTypeSupportsNullForField(method, util)
+      if (!immutTypeSupportsNullForField(method, util, modelRoot)
           || !isMethodOptionalOrNullable(method, util)) {
         buildMethodBuilder.beginControlFlow("if (this.$N == null)", fieldName);
-        switch (util.getIfAbsent(method).value()) {
+        switch (util.getIfAbsent(method, modelRoot).value()) {
           case FAIL ->
               // FAIL strategy - throw exception when value is null
               buildMethodBuilder.addStatement(
@@ -1186,13 +1164,7 @@ this.$L = $L == null
       if (modelRoot.builderExtendsModelRoot()
           || (fieldModelRoot.isPresent() && fieldModelRoot.get().containerType().isContainer())) {
         MethodSpec.Builder getterMethod =
-            getterMethod(
-                    method,
-                    true,
-                    modelProtocol,
-                    util,
-                    builderType,
-                    modelRoot.builderExtendsModelRoot())
+            getterMethod(method, true, modelProtocol, util, builderType, modelRoot)
                 .addAnnotation(Override.class);
         dataAccessMethods.add(getterMethod.build());
       }
@@ -1206,7 +1178,7 @@ this.$L = $L == null
    * use @IfAbsent(ASSUME_DEFAULT_VALUE) or be converted to boxed types.
    */
   private void validateOptionalField(ExecutableElement method) {
-    IfAbsentThen ifAbsentThen = util.getIfAbsent(method).value();
+    IfAbsentThen ifAbsentThen = util.getIfAbsent(method, modelRoot).value();
     ModelRoot modelRoot =
         requireNonNull(codeGenContext.modelRootType().getAnnotation(ModelRoot.class));
     TypeMirror returnType = method.getReturnType();
@@ -1238,8 +1210,8 @@ this.$L = $L == null
   }
 
   private static boolean immutTypeSupportsNullForField(
-      ExecutableElement method, CodeGenUtility util) {
-    return !FAIL.equals(util.getIfAbsent(method).value());
+      ExecutableElement method, CodeGenUtility util, ModelRoot modelRoot) {
+    return !FAIL.equals(util.getIfAbsent(method, modelRoot).value());
   }
 
   @SuppressWarnings("BooleanMethodIsAlwaysInverted")
@@ -1250,8 +1222,9 @@ this.$L = $L == null
   }
 
   /** Checks if a field has @IfAbsent(FAIL) annotation, meaning it is strictly mandatory. */
-  public static boolean isIfAbsentFail(ExecutableElement method, CodeGenUtility util) {
-    return util.getIfAbsent(method).value() == FAIL;
+  public static boolean isIfAbsentFail(
+      ExecutableElement method, CodeGenUtility util, ModelRoot modelRoot) {
+    return util.getIfAbsent(method, modelRoot).value() == FAIL;
   }
 
   /** Checks if an AnnotationSpec represents any @Nullable annotation. */
