@@ -15,7 +15,7 @@ plugins {
 }
 
 ext {
-    krystal_version = project['com.flipkart.krystal.previousVersion']
+    krystal_version = project['com.flipkart.krystal.currentVersion']
     lattice_version = project['com.flipkart.krystal.lattice.currentVersion']
 
     java_code_std_version = '5.6'

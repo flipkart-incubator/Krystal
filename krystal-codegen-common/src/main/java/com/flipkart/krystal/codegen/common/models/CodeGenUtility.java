@@ -1153,7 +1153,12 @@ public class CodeGenUtility {
   }
 
   public ContainerType getContainerType(TypeMirror javaModelType) {
-    return isListType(javaModelType)
+    boolean isOptional = isOptional(javaModelType);
+    if (isOptional) {
+      javaModelType = getOptionalInnerType(javaModelType);
+    }
+    boolean isListType = isListType(javaModelType);
+    return isListType
         ? ContainerType.LIST
         : isMapType(javaModelType) ? ContainerType.MAP : ContainerType.NO_CONTAINER;
   }
