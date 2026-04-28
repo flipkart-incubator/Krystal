@@ -17,4 +17,9 @@ public final class Protobuf3 implements SerdeProtocol {
   public String defaultContentType() {
     return "application/protobuf";
   }
+
+  @Override
+  public boolean isPurityMandatory() {
+    return true;
+  }
 }

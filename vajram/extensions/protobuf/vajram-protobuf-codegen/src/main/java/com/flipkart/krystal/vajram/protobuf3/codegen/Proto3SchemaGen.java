@@ -23,6 +23,8 @@ import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.serial.SerialId;
+import com.flipkart.krystal.vajram.codegen.common.generators.SerdeModelValidator;
+import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
 import com.flipkart.krystal.vajram.protobuf3.codegen.types.OptionalFieldType;
 import com.flipkart.krystal.vajram.protobuf3.codegen.types.ProtoFieldType;
 import com.google.common.base.Splitter;
@@ -85,7 +87,11 @@ final class Proto3SchemaGen implements CodeGenerator {
   }
 
   private void validate() {
-    validateModelType(codeGenContext.modelRootType(), util);
+    TypeElement modelRootType = codeGenContext.modelRootType();
+    validateModelType(modelRootType, util);
+    // Validate purity (if required by protocol) and nested model protocol support
+    List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
+    new SerdeModelValidator(util, modelRootType, Protobuf3.PROTOBUF_3).validate(modelMethods);
   }
 
   static void validateModelType(TypeElement modelRootType, CodeGenUtility util) {

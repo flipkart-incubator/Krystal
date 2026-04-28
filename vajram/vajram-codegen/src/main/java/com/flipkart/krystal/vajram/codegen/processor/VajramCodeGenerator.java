@@ -368,8 +368,8 @@ public class VajramCodeGenerator implements CodeGenerator {
         AnnotationSpec.builder(ModelRoot.class)
             .addMember("type", CodeBlock.of("$T.$L", ModelType.class, ModelType.REQUEST.name()))
             .addMember("suffixSeparator", CodeBlock.of("$S", ""))
-            .addMember("builderExtendsModelRoot", "true");
-    builder.addMember("pure", "false");
+            .addMember("builderExtendsModelRoot", "true")
+            .addMember("pure", "false");
     return builder.build();
   }
 

@@ -6,7 +6,7 @@ import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.InnerData_ImmutPojo;
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.JsonResponse_ImmutJson;
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.JsonResponse_ImmutPojo;
-import com.flipkart.krystal.vajram.json.JsonByteArray;
+import com.flipkart.krystal.model.array.SimpleByteArray;
 import com.google.common.base.Charsets;
 import java.util.List;
 import java.util.Map;
@@ -27,7 +27,8 @@ class JsonResponseTest {
             .defaultInt(89)
             .mandatoryStringPartialConstruction("hihihi")
             .mapTypedField(Map.of("X", "A", "Y", "B", "Z", "C"))
-            .byteArray(new JsonByteArray(new byte[] {23, 45, 23, 56, 67, 64, 45, 45, 3, 45, 56}))
+            .byteArray(
+                SimpleByteArray.copyOf(new byte[] {23, 45, 23, 56, 67, 64, 45, 45, 3, 45, 56}))
             .nestedData(InnerData_ImmutJson._builder().value("Hello").count(11)._build())
             ._build();
     byte[] serializedPayload = immutJson._serialize();
@@ -49,7 +50,8 @@ class JsonResponseTest {
             .defaultInt(89)
             .mandatoryStringPartialConstruction("hihihi")
             .mapTypedField(Map.of("X", "A", "Y", "B", "Z", "C"))
-            .byteArray(new JsonByteArray(new byte[] {23, 45, 23, 56, 67, 64, 45, 45, 3, 45, 56}))
+            .byteArray(
+                SimpleByteArray.copyOf(new byte[] {23, 45, 23, 56, 67, 64, 45, 45, 3, 45, 56}))
             .nestedData(InnerData_ImmutPojo._builder().value("Hello").count(11));
     assertThat(immutJsonBuilder._build()).isEqualTo(immutJsonBuilder._newCopy()._build());
   }
@@ -67,7 +69,8 @@ class JsonResponseTest {
             .defaultInt(89)
             .mandatoryStringPartialConstruction("hihihi")
             .mapTypedField(Map.of("X", "A", "Y", "B", "Z", "C"))
-            .byteArray(new JsonByteArray(new byte[] {23, 45, 23, 56, 67, 64, 45, 45, 3, 45, 56}))
+            .byteArray(
+                SimpleByteArray.copyOf(new byte[] {23, 45, 23, 56, 67, 64, 45, 45, 3, 45, 56}))
             .nestedDataList(
                 List.of(
                     InnerData_ImmutPojo._builder().value("Hello").count(11)._build(),

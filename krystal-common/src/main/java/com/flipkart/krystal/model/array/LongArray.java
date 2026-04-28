@@ -3,7 +3,7 @@ package com.flipkart.krystal.model.array;
 import java.util.function.LongConsumer;
 import java.util.stream.LongStream;
 
-public non-sealed interface LongArray extends PrimitiveArray<Integer> {
+public non-sealed interface LongArray extends PrimitiveArray<Long> {
   long valueAt(int index);
 
   boolean contains(long target);

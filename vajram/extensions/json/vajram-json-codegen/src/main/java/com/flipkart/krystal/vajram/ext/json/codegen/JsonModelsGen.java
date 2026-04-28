@@ -35,6 +35,7 @@ import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.model.list.ModelsListBuilder;
 import com.flipkart.krystal.model.map.ModelsMapBuilder;
 import com.flipkart.krystal.serial.SerializableModel;
+import com.flipkart.krystal.vajram.codegen.common.generators.SerdeModelValidator;
 import com.flipkart.krystal.vajram.json.Json;
 import com.flipkart.krystal.vajram.json.SerializableJsonModel;
 import com.google.common.base.Suppliers;
@@ -87,6 +88,9 @@ final class JsonModelsGen implements CodeGenerator {
 
     // Extract and validate model methods
     List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
+
+    // Validate serde compatibility (nested Models must support Json; purity not required for Json)
+    new SerdeModelValidator(util, modelRootType, Json.JSON).validate(modelMethods);
 
     TypeSpec immutablePojo = generateJsonModel(modelRootType, modelMethods, immutClassName);
 

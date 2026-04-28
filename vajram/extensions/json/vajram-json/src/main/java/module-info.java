@@ -8,4 +8,5 @@ module flipkart.krystal.vajram.ext.json {
   requires flipkart.krystal.common;
   requires com.fasterxml.jackson.module.paramnames;
   requires org.checkerframework.checker.qual;
+  requires com.google.common;
 }

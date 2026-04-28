@@ -1128,7 +1128,6 @@ public class CodeGenUtility {
     if (supportedModelProtocols == null) {
       return false;
     }
-    // Check if JSON is mentioned in the annotation value
     return getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
         .map(typeMirror -> processingEnv().getTypeUtils().asElement(typeMirror))
         .filter(elem -> elem instanceof QualifiedNameable)
@@ -1148,25 +1147,6 @@ public class CodeGenUtility {
     }
     return getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
         .filter(typeMirror -> isRawAssignable(typeMirror, SerdeProtocol.class))
-        .toList();
-  }
-
-  private static final Set<String> PURITY_REQUIRING_PROTOCOLS =
-      Set.of(
-          "com.flipkart.krystal.vajram.json.Json",
-          "com.flipkart.krystal.vajram.protobuf3.Protobuf3");
-
-  /**
-   * Returns the qualified names of purity-requiring serde protocols (Json, Protobuf3) from the
-   * given element's @SupportedModelProtocols annotation.
-   */
-  public List<String> getPurityRequiringProtocolNames(Element modelRootType) {
-    List<? extends TypeMirror> serdeProtocols = getSerdeProtocols(modelRootType);
-    return serdeProtocols.stream()
-        .map(typeMirror -> processingEnv.getTypeUtils().asElement(typeMirror))
-        .filter(elem -> elem instanceof QualifiedNameable)
-        .map(element -> ((QualifiedNameable) element).getQualifiedName().toString())
-        .filter(PURITY_REQUIRING_PROTOCOLS::contains)
         .toList();
   }
 

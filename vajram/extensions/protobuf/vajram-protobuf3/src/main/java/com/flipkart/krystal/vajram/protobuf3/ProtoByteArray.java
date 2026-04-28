@@ -2,8 +2,8 @@ package com.flipkart.krystal.vajram.protobuf3;
 
 import com.flipkart.krystal.model.array.ByteArray;
 import com.flipkart.krystal.model.array.ByteConsumer;
+import com.google.common.primitives.Bytes;
 import com.google.protobuf.ByteString;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -67,10 +67,9 @@ public final class ProtoByteArray implements ByteArray {
   }
 
   @Override
-  public int indexOf(double target) {
-    byte b = (byte) target;
+  public int indexOf(byte target) {
     for (int i = 0; i < byteString.size(); i++) {
-      if (byteString.byteAt(i) == b) {
+      if (byteString.byteAt(i) == target) {
         return i;
       }
     }
@@ -78,10 +77,9 @@ public final class ProtoByteArray implements ByteArray {
   }
 
   @Override
-  public int lastIndexOf(double target) {
-    byte b = (byte) target;
+  public int lastIndexOf(byte target) {
     for (int i = byteString.size() - 1; i >= 0; i--) {
-      if (byteString.byteAt(i) == b) {
+      if (byteString.byteAt(i) == target) {
         return i;
       }
     }
@@ -99,12 +97,8 @@ public final class ProtoByteArray implements ByteArray {
   }
 
   @Override
-  public List<Integer> asList() {
-    List<Integer> list = new ArrayList<>(byteString.size());
-    for (int i = 0; i < byteString.size(); i++) {
-      list.add((int) byteString.byteAt(i));
-    }
-    return list;
+  public List<Byte> asList() {
+    return Bytes.asList(byteString.toByteArray());
   }
 
   @Override
@@ -119,7 +113,10 @@ public final class ProtoByteArray implements ByteArray {
 
   @Override
   public boolean equals(@Nullable Object obj) {
-    return obj instanceof ProtoByteArray other && this.byteString.equals(other.byteString);
+    if (!(obj instanceof ByteArray other)) {
+      return false;
+    }
+    return ByteArray.areEqual(this, other);
   }
 
   @Override

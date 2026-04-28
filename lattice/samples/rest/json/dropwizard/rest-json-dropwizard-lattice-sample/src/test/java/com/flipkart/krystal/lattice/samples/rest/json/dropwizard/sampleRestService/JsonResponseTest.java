@@ -3,7 +3,7 @@ package com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestServ
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.models.JsonResponse_ImmutJson;
-import com.flipkart.krystal.vajram.json.JsonByteArray;
+import com.flipkart.krystal.model.array.SimpleByteArray;
 import com.google.common.base.Charsets;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +24,8 @@ class JsonResponseTest {
             .defaultInt(89)
             .mandatoryStringPartialConstruction("hihihi")
             .mapTypedField(Map.of("X", "A", "Y", "B", "Z", "C"))
-            .byteArray(new JsonByteArray(new byte[] {23, 45, 23, 56, 67, 64, 45, 45, 3, 45, 56}))
+            .byteArray(
+                SimpleByteArray.copyOf(new byte[] {23, 45, 23, 56, 67, 64, 45, 45, 3, 45, 56}))
             ._build();
     byte[] serializedPayload = immutJson._serialize();
     System.out.println(new String(serializedPayload, Charsets.UTF_8));
