@@ -15,6 +15,7 @@ module flipkart.krystal.common {
   exports com.flipkart.krystal.serial;
   exports com.flipkart.krystal.model;
   exports com.flipkart.krystal.model.list;
+  exports com.flipkart.krystal.model.array;
   exports com.flipkart.krystal.model.map;
 
   requires com.google.common;

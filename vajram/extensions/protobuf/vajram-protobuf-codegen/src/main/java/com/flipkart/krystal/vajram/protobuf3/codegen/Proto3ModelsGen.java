@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen;
 
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.BYTE;
+import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.BYTE_ARRAY;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType.LIST;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType.MAP;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.capitalizeFirstChar;
@@ -33,6 +34,7 @@ import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.list.UnmodifiableModelsList;
 import com.flipkart.krystal.model.map.UnmodifiableModelsMap;
 import com.flipkart.krystal.serial.SerializableModel;
+import com.flipkart.krystal.vajram.protobuf3.ProtoByteArray;
 import com.flipkart.krystal.vajram.protobuf3.ProtoListBuilder;
 import com.flipkart.krystal.vajram.protobuf3.ProtoMapBuilder;
 import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
@@ -130,8 +132,7 @@ public class Proto3ModelsGen implements CodeGenerator {
   }
 
   private void validate() {
-    TypeElement modelRootType = codeGenContext.modelRootType();
-    validateModelType(modelRootType, util);
+    validateModelType(codeGenContext.modelRootType(), util);
   }
 
   private void generateProtoImplementation() {
@@ -646,7 +647,14 @@ return _serializedPayload;
                         "new $T(_proto().get$L())",
                         util.getImmutClassName(_m.element(), PROTOBUF_3),
                         capitalizeFirstChar(fieldName)))
-            .orElseGet(() -> CodeBlock.of("_proto().get$L()", capitalizeFirstChar(fieldName)));
+            .orElseGet(
+                () ->
+                    dataType.equals(BYTE_ARRAY)
+                        ? CodeBlock.of(
+                            "new $T(_proto().get$L())",
+                            ProtoByteArray.class,
+                            capitalizeFirstChar(fieldName))
+                        : CodeBlock.of("_proto().get$L()", capitalizeFirstChar(fieldName)));
 
     // Get the value from the proto message
     if (isOptionalReturnType) {
@@ -852,7 +860,14 @@ return _serializedPayload;
                       capitalizeFirstChar(fieldName),
                       ByteString.class,
                       fieldName)
-                  : CodeBlock.of("_proto.set$L($L)", capitalizeFirstChar(fieldName), fieldName));
+                  : dataType.equals(BYTE_ARRAY)
+                      ? CodeBlock.of(
+                          "_proto.set$L($T.toByteString($L))",
+                          capitalizeFirstChar(fieldName),
+                          ProtoByteArray.class,
+                          fieldName)
+                      : CodeBlock.of(
+                          "_proto.set$L($L)", capitalizeFirstChar(fieldName), fieldName));
         }
       }
 

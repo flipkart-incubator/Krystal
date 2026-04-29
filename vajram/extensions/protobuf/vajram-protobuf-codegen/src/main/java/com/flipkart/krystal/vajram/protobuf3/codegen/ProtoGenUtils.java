@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen;
 
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.BOOLEAN;
+import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.BYTE_ARRAY;
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.DOUBLE;
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.FLOAT;
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.INT;
@@ -64,7 +65,7 @@ public class ProtoGenUtils {
           .put(FLOAT, FLOAT_P)
           .put(DOUBLE, DOUBLE_P)
           .put(STRING, STRING_P)
-          .put(BYTE_STRING, BYTES_P)
+          .put(BYTE_ARRAY, BYTES_P)
           .build();
 
   public static String getSimpleClassName(String canonicalClassName) {

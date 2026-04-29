@@ -24,6 +24,7 @@ import com.flipkart.krystal.lattice.ext.rest.api.Path;
 import com.flipkart.krystal.lattice.ext.rest.api.PathParam;
 import com.flipkart.krystal.lattice.ext.rest.api.QueryParam;
 import com.flipkart.krystal.lattice.ext.rest.api.methods.RestMethod;
+import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.serial.SerdeConfig;
 import com.flipkart.krystal.serial.SerdeProtocol;
@@ -232,12 +233,12 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
         restMethod = RestMethod.POST;
       }
       boolean explicitPath = vajramElem.getAnnotation(Path.class) != null;
-      Map<String, SerdeProtocol> configProviders =
+      Map<String, ModelProtocol> configProviders =
           ServiceLoader.load(ModelProtocolConfigProvider.class, this.getClass().getClassLoader())
               .stream()
               .map(ServiceLoader.Provider::get)
               .map(ModelProtocolConfigProvider::getConfig)
-              .map(ModelProtocolConfig::serdeProtocol)
+              .map(ModelProtocolConfig::modelProtocol)
               .collect(
                   toMap(c -> requireNonNull(c.getClass().getCanonicalName()), Function.identity()));
       CodeGenType vajramResponseType = vajramInfo.lite().responseType();
@@ -431,24 +432,28 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
           }
         }
         for (TypeElement serdeProtocolType : requestSerdeProtocols) {
-          SerdeProtocol serdeProtocol =
+          ModelProtocol modelProtocol =
               configProviders.get(serdeProtocolType.getQualifiedName().toString());
-          if (serdeProtocol == null) {
-            continue;
+          if (modelProtocol == null) {
+            util.note(
+                "Ignoring %s for model %s since model protocol config not found"
+                    .formatted(serdeProtocolType, vajramInfo.vajramName()));
           }
           String[] contentTypes;
           SerdeConfig serdeConfig = serdeConfigsMap.get(serdeProtocolType);
           if (serdeConfig != null) {
             contentTypes = serdeConfig.contentTypes();
-          } else {
+          } else if (modelProtocol instanceof SerdeProtocol serdeProtocol) {
             contentTypes = new String[] {serdeProtocol.defaultContentType()};
+          } else {
+            contentTypes = new String[] {};
           }
           MethodSpec.Builder serdeSpecificMethodBuilder =
               methodBuilder.build().toBuilder()
                   .setName(
                       lowerCaseFirstChar(vajramInfo.vajramName())
                           + "_"
-                          + serdeProtocol.modelClassesSuffix())
+                          + modelProtocol.modelClassesSuffix())
                   .returns( // Need to set this again because setName sets return type to Void
                       jakartaResourceReturnType);
 
@@ -479,7 +484,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
                 CodeBlock.of(
                     "_vajramRequest.$L(new $T($L))",
                     bodyFacet.name(),
-                    util.getImmutClassName(bodyFacetModelType, serdeProtocol),
+                    util.getImmutClassName(bodyFacetModelType, modelProtocol),
                     bodyFacet.name()));
           } else {
             serdeSpecificMethodBuilder.addStatement(
@@ -491,7 +496,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
                                 .getElementUtils()
                                 .getTypeElement(
                                     vajramInfo.lite().requestInterfaceClassName().canonicalName())),
-                        serdeProtocol)));
+                        modelProtocol)));
           }
           resourceMethods.add(serdeSpecificMethodBuilder);
         }

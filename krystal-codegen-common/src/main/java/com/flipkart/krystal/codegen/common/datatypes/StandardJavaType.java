@@ -2,6 +2,8 @@ package com.flipkart.krystal.codegen.common.datatypes;
 
 import static java.util.Objects.requireNonNull;
 
+import com.flipkart.krystal.model.array.ByteArray;
+import com.flipkart.krystal.model.array.SimpleByteArray;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.squareup.javapoet.CodeBlock;
@@ -64,6 +66,10 @@ public enum StandardJavaType implements CodeGenType {
   STRING(TypeKind.DECLARED, CodeBlock.of("$S", ""), String.class.getCanonicalName()),
   LIST_RAW(TypeKind.DECLARED, CodeBlock.of("$T.of()", List.class), List.class.getCanonicalName()),
   MAP_RAW(TypeKind.DECLARED, CodeBlock.of("$T.of()", Map.class), Map.class.getCanonicalName()),
+  BYTE_ARRAY(
+      TypeKind.DECLARED,
+      CodeBlock.of("$T.of()", SimpleByteArray.class),
+      ByteArray.class.getCanonicalName()),
   ;
 
   static final ImmutableMap<String, StandardJavaType> standardTypesByCanonicalName;

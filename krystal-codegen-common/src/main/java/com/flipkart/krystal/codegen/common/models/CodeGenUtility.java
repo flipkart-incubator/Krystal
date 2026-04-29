@@ -9,6 +9,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toMap;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -16,6 +17,8 @@ import static javax.lang.model.element.Modifier.PUBLIC;
 import com.flipkart.krystal.annos.Generated;
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.codegen.common.datatypes.DataTypeRegistry;
+import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider;
+import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider.ModelProtocolConfig;
 import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.Model;
@@ -23,6 +26,7 @@ import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.ModelRoot.ModelType;
 import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.model.array.PrimitiveArray;
 import com.flipkart.krystal.model.list.ModelsListBuilder;
 import com.flipkart.krystal.model.map.ModelsMapBuilder;
 import com.google.common.collect.ImmutableList;
@@ -56,8 +60,10 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
+import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -137,6 +143,24 @@ public class CodeGenUtility {
 
   public boolean isMapType(TypeMirror type) {
     return isRawAssignable(type, Map.class);
+  }
+
+  public boolean isPrimitiveOrBoxed(TypeMirror type) {
+    if (type.getKind().isPrimitive()) {
+      return true;
+    }
+    return isSameRawType(type, Boolean.class)
+        || isSameRawType(type, Byte.class)
+        || isSameRawType(type, Character.class)
+        || isSameRawType(type, Short.class)
+        || isSameRawType(type, Integer.class)
+        || isSameRawType(type, Long.class)
+        || isSameRawType(type, Float.class)
+        || isSameRawType(type, Double.class);
+  }
+
+  public boolean isString(TypeMirror type) {
+    return isSameRawType(type, String.class);
   }
 
   public TypeMirror getMapValueType(TypeMirror typeMirror) {
@@ -924,6 +948,10 @@ public class CodeGenUtility {
     }
   }
 
+  public boolean isPrimitiveArray(TypeMirror type) {
+    return isRawAssignable(type, PrimitiveArray.class);
+  }
+
   public record ModelFieldTypeInfo(
       TypeName fieldType, ContainerType containerType, TypeName elementType) {}
 
@@ -1088,12 +1116,61 @@ public class CodeGenUtility {
     if (supportedModelProtocols == null) {
       return false;
     }
-    // Check if JSON is mentioned in the annotation value
     return getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
         .map(typeMirror -> processingEnv().getTypeUtils().asElement(typeMirror))
         .filter(elem -> elem instanceof QualifiedNameable)
         .map(element -> requireNonNull((QualifiedNameable) element).getQualifiedName().toString())
         .anyMatch(s -> Objects.equals(s, modelProtocol.getCanonicalName()));
+  }
+
+  /**
+   * Returns the list of SerdeProtocol TypeMirrors from the @SupportedModelProtocols annotation on
+   * the given element. Only protocols that extend SerdeProtocol are included.
+   */
+  public List<ModelProtocol> getModelProtocols(Element modelRootType) {
+    SupportedModelProtocols supportedModelProtocols =
+        modelRootType.getAnnotation(SupportedModelProtocols.class);
+    if (supportedModelProtocols == null) {
+      return List.of();
+    }
+    Map<String, ModelProtocol> availableModelProtocols =
+        ServiceLoader.load(ModelProtocolConfigProvider.class, this.getClass().getClassLoader())
+            .stream()
+            .map(ServiceLoader.Provider::get)
+            .map(ModelProtocolConfigProvider::getConfig)
+            .map(ModelProtocolConfig::modelProtocol)
+            .collect(
+                toMap(c -> requireNonNull(c.getClass().getCanonicalName()), Function.identity()));
+
+    return getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
+        .map(
+            tm ->
+                processingEnv().getTypeUtils().asElement(tm)
+                        instanceof QualifiedNameable qualifiedNameable
+                    ? qualifiedNameable.getQualifiedName().toString()
+                    : null)
+        .filter(Objects::nonNull)
+        .map(availableModelProtocols::get)
+        .filter(Objects::nonNull)
+        .toList();
+  }
+
+  /**
+   * Returns true if the given element's @SupportedModelProtocols contains the protocol represented
+   * by the given TypeMirror.
+   */
+  public boolean typeSupportsProtocolByMirror(Element modelRootType, TypeMirror protocolMirror) {
+    SupportedModelProtocols supportedModelProtocols =
+        modelRootType.getAnnotation(SupportedModelProtocols.class);
+    if (supportedModelProtocols == null) {
+      return false;
+    }
+    return getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
+        .anyMatch(
+            typeMirror ->
+                processingEnv
+                    .getTypeUtils()
+                    .isSameType(typeUtils.erasure(typeMirror), typeUtils.erasure(protocolMirror)));
   }
 
   public static ClassName asClassName(TypeName typeName) {

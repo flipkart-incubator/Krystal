@@ -9,13 +9,14 @@ import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.model.array.ByteArray;
 import com.flipkart.krystal.vajram.json.Json;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-@ModelRoot(type = RESPONSE)
+@ModelRoot(type = RESPONSE, pure = false)
 @SupportedModelProtocols({PlainJavaObject.class, Json.class})
 public interface JsonResponse extends Model {
 
@@ -51,6 +52,9 @@ public interface JsonResponse extends Model {
 
   @IfAbsent(ASSUME_DEFAULT_VALUE)
   Map<String, String> mapTypedField();
+
+  @IfAbsent(ASSUME_DEFAULT_VALUE)
+  Map<String, DataRecord> dataRecords();
 
   @Nullable ByteArray byteArray();
 

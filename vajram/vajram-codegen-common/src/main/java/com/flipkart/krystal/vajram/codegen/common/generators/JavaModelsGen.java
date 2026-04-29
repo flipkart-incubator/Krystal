@@ -65,6 +65,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
@@ -181,6 +182,11 @@ public final class JavaModelsGen implements CodeGenerator {
     // Extract and validate model methods
     List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
 
+    // Validate pure model constraints (nested Models must also be pure)
+    if (modelRoot.pure()) {
+      validatePureModel(modelMethods);
+    }
+
     // Get package and class names
     ClassName immutModelNameRaw = util.getImmutInterfaceName(modelRootType);
     String packageName = immutModelNameRaw.packageName();
@@ -205,6 +211,129 @@ public final class JavaModelsGen implements CodeGenerator {
 
   private void validate() {
     validateModelRoot(codeGenContext.modelRootType(), codeGenContext.util());
+  }
+
+  /**
+   * Validates that all fields in a pure model are of allowed types. This validation is
+   * protocol-independent and applies to any model with {@code @ModelRoot(pure = true)}.
+   *
+   * <p>Allowed types: primitives, boxed primitives, String, PrimitiveArray subtypes, pure Models,
+   * Lists of these, or Maps with primitive/String keys and values of these types.
+   */
+  private void validatePureModel(List<ExecutableElement> modelMethods) {
+    for (ExecutableElement method : modelMethods) {
+      TypeMirror returnType = method.getReturnType();
+      if (util.isOptional(returnType)) {
+        returnType = util.getOptionalInnerType(returnType);
+      }
+      validatePureFieldType(method, returnType);
+    }
+  }
+
+  private void validatePureFieldType(ExecutableElement method, TypeMirror type) {
+    String fieldName = method.getSimpleName().toString();
+
+    if (util.isPrimitiveOrBoxed(type)) {
+      return;
+    }
+    if (util.isString(type)) {
+      return;
+    }
+    if (util.isPrimitiveArray(type)) {
+      return;
+    }
+    // Enums are simple value types, allowed in pure models
+    Element typeElement = util.processingEnv().getTypeUtils().asElement(type);
+    if (typeElement != null && typeElement.getKind() == ElementKind.ENUM) {
+      return;
+    }
+    if (util.isRawAssignable(type, Model.class)) {
+      checkModelIsPure(method, type, fieldName);
+      return;
+    }
+    if (util.isListType(type)) {
+      TypeMirror elementType = util.getContentType(type);
+      validatePureListElementType(method, elementType, fieldName);
+      return;
+    }
+    if (util.isMapType(type)) {
+      TypeMirror keyType = util.getMapKeyType(type);
+      TypeMirror valueType = util.getMapValueType(type);
+      validatePureMapTypes(method, keyType, valueType, fieldName);
+      return;
+    }
+
+    util.error(
+        "Field '%s' in pure model '%s' has disallowed type '%s'. "
+                .formatted(fieldName, codeGenContext.modelRootType().getQualifiedName(), type)
+            + "Pure models only allow primitives, boxed primitives, String, enums, PrimitiveArray subtypes, pure Models, "
+            + "Lists of these, or Maps with primitive/String/enum keys and primitive/String/enum/pure Model values.",
+        method);
+  }
+
+  private void checkModelIsPure(ExecutableElement method, TypeMirror type, String fieldName) {
+    Element element = util.processingEnv().getTypeUtils().asElement(type);
+    if (element instanceof TypeElement typeElement) {
+      ModelRoot fieldModelRoot = typeElement.getAnnotation(ModelRoot.class);
+      if (fieldModelRoot == null) {
+        util.error(
+            "Field '%s' in pure model '%s' references type '%s' which extends Model but does not have @ModelRoot annotation."
+                .formatted(
+                    fieldName,
+                    codeGenContext.modelRootType().getQualifiedName(),
+                    typeElement.getQualifiedName()),
+            method);
+      } else if (!fieldModelRoot.pure()) {
+        util.error(
+            "Field '%s' in pure model '%s' references model '%s' which is not pure (pure = false). All Model fields in a pure model must themselves be pure."
+                .formatted(
+                    fieldName,
+                    codeGenContext.modelRootType().getQualifiedName(),
+                    typeElement.getQualifiedName()),
+            method);
+      }
+    }
+  }
+
+  private void validatePureListElementType(
+      ExecutableElement method, TypeMirror elementType, String fieldName) {
+    if (util.isPrimitiveOrBoxed(elementType) || util.isString(elementType)) {
+      return;
+    }
+    Element elemElement = util.processingEnv().getTypeUtils().asElement(elementType);
+    if (elemElement != null && elemElement.getKind() == ElementKind.ENUM) {
+      return;
+    }
+    if (util.isRawAssignable(elementType, Model.class)) {
+      checkModelIsPure(method, elementType, fieldName);
+      return;
+    }
+    util.error(
+        "Field '%s' in pure model '%s' has List with disallowed element type '%s'. "
+                .formatted(
+                    fieldName, codeGenContext.modelRootType().getQualifiedName(), elementType)
+            + "List elements in pure models must be primitives, boxed primitives, String, enums, or pure Models.",
+        method);
+  }
+
+  private void validatePureMapTypes(
+      ExecutableElement method, TypeMirror keyType, TypeMirror valueType, String fieldName) {
+    if (util.isPrimitiveOrBoxed(valueType) || util.isString(valueType)) {
+      return;
+    }
+    Element valElement = util.processingEnv().getTypeUtils().asElement(valueType);
+    if (valElement != null && valElement.getKind() == ElementKind.ENUM) {
+      return;
+    }
+    if (util.isRawAssignable(valueType, Model.class)) {
+      checkModelIsPure(method, valueType, fieldName);
+      return;
+    }
+    util.error(
+        "Field '%s' in pure model '%s' has Map with disallowed value type '%s'. "
+                .formatted(fieldName, codeGenContext.modelRootType().getQualifiedName(), valueType)
+            + "Map values in pure models must be primitives, boxed primitives, String, enums, or pure Models.",
+        method);
   }
 
   /**

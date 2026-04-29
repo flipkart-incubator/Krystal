@@ -7,4 +7,6 @@ module flipkart.krystal.vajram.ext.json {
   requires com.fasterxml.jackson.datatype.jsr310;
   requires flipkart.krystal.common;
   requires com.fasterxml.jackson.module.paramnames;
+  requires org.checkerframework.checker.qual;
+  requires com.google.common;
 }

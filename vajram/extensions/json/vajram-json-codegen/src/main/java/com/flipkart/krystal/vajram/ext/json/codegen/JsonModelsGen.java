@@ -35,6 +35,7 @@ import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.model.list.ModelsListBuilder;
 import com.flipkart.krystal.model.map.ModelsMapBuilder;
 import com.flipkart.krystal.serial.SerializableModel;
+import com.flipkart.krystal.vajram.codegen.common.generators.SerdeModelValidator;
 import com.flipkart.krystal.vajram.json.Json;
 import com.flipkart.krystal.vajram.json.SerializableJsonModel;
 import com.google.common.base.Suppliers;
@@ -62,6 +63,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeMirror;
 
 final class JsonModelsGen implements CodeGenerator {
   private final ModelsCodeGenContext codeGenContext;
@@ -88,9 +90,19 @@ final class JsonModelsGen implements CodeGenerator {
     // Extract and validate model methods
     List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
 
+    // Validate serde compatibility (nested Models must support JSON; purity not required for JSON)
+    new SerdeModelValidator(util, modelRootType, Json.JSON).validate(modelMethods);
+
+    jsonSpecificValidations(modelMethods);
+
     TypeSpec immutablePojo = generateJsonModel(modelRootType, modelMethods, immutClassName);
 
     util.writeJavaFile(packageName, immutablePojo, modelRootType);
+  }
+
+  private void jsonSpecificValidations(List<ExecutableElement> modelMethods) {
+    // Validate that map keys are only String or Integer (JSON object keys constraint)
+    validateMapKeyTypes(modelMethods);
   }
 
   /**
@@ -440,6 +452,27 @@ this.$L = $L == null
                 .addStatement("return this")
                 .build())
         .build();
+  }
+
+  private void validateMapKeyTypes(List<ExecutableElement> modelMethods) {
+    for (ExecutableElement method : modelMethods) {
+      TypeMirror returnType = method.getReturnType();
+      if (util.isOptional(returnType)) {
+        returnType = util.getOptionalInnerType(returnType);
+      }
+      if (util.isMapType(returnType)) {
+        TypeMirror keyType = util.getMapKeyType(returnType);
+        if (!util.isString(keyType) && !util.isSameRawType(keyType, Integer.class)) {
+          util.error(
+              "Field '%s' in model '%s' is a Map with key type '%s'. JSON only supports String and Integer map key types."
+                  .formatted(
+                      method.getSimpleName(),
+                      codeGenContext.modelRootType().getQualifiedName(),
+                      keyType),
+              method);
+        }
+      }
+    }
   }
 
   private boolean isApplicable() {
