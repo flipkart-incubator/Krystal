@@ -1184,8 +1184,7 @@ this.$L = $L == null
     } else if (ifAbsentThen == IfAbsentThen.ASSUME_DEFAULT_VALUE
         && !isMethodOptionalOrNullable(modelMethod, util)
         && !isModelContainer) {
-      TypeMirror returnType = modelMethod.getReturnType();
-      TypeMirror actualType = util.getOptionalInnerType(returnType);
+      TypeMirror actualType = modelMethod.getReturnType();
       CodeGenType dataType = new DeclaredTypeVisitor(util, modelMethod).visit(actualType, null);
       try {
         CodeBlock defaultExpr = dataType.defaultValueExpr(util.processingEnv());
@@ -1354,11 +1353,6 @@ this.$L = $L == null
             method);
       }
     }
-  }
-
-  private static boolean immutTypeSupportsNullForField(
-      ExecutableElement method, CodeGenUtility util, ModelRoot modelRoot) {
-    return !FAIL.equals(util.getIfAbsent(method, modelRoot).value());
   }
 
   @SuppressWarnings("BooleanMethodIsAlwaysInverted")
