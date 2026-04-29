@@ -55,6 +55,7 @@ public abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3Lattice
     long mandatoryLongInput;
 
     @SerialId(7)
+    @IfAbsent(ASSUME_DEFAULT_VALUE)
     ByteArray optionalByteString;
 
     @IfAbsent(ASSUME_DEFAULT_VALUE)

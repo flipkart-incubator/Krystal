@@ -178,7 +178,7 @@ class Proto3LatticeSampleTest {
             "$$ inputWithDefaultValue: 300 $$",
             "$$ optionalLongInput: null $$",
             "$$ mandatoryLongInput: 20 $$",
-            "$$ optionalByteString: null $$",
+            "$$ optionalByteString: [] $$",
             "$$ defaultByteString: [] $$");
   }
 
