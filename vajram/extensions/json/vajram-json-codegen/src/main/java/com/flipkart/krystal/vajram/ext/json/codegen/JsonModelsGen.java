@@ -90,7 +90,7 @@ final class JsonModelsGen implements CodeGenerator {
     // Extract and validate model methods
     List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
 
-    // Validate serde compatibility (nested Models must support Json; purity not required for Json)
+    // Validate serde compatibility (nested Models must support JSON; purity not required for JSON)
     new SerdeModelValidator(util, modelRootType, Json.JSON).validate(modelMethods);
 
     jsonSpecificValidations(modelMethods);
