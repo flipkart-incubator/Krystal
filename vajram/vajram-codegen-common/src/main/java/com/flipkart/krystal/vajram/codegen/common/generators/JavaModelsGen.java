@@ -36,6 +36,7 @@ import com.flipkart.krystal.model.ModelClusterRoot;
 import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.ModelRoot.ModelType;
+import com.flipkart.krystal.model.ModelUtils;
 import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.model.list.ModelsListBuilder;
@@ -61,6 +62,7 @@ import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeVariableName;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.lang.model.element.AnnotationMirror;
@@ -1146,65 +1148,60 @@ this.$L = $L == null
             .returns(immutablePojoName)
             .addAnnotation(Override.class);
 
-    // Validate fields based on IfAbsent annotation strategies
-    for (ExecutableElement method : modelMethods) {
-      Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
-      String fieldName = method.getSimpleName().toString();
-      TypeMirror returnType = method.getReturnType();
-      TypeMirror actualType = util.getOptionalInnerType(returnType);
-      CodeGenType dataType = new DeclaredTypeVisitor(util, method).visit(actualType, null);
-
-      // If IfAbsent annotation was found, handle according to strategy
-      // Only generate null check if validation is needed or error needs to be thrown
-      if (!immutTypeSupportsNullForField(method, util, modelRoot)
-          || !isMethodOptionalOrNullable(method, util)) {
-        buildMethodBuilder.beginControlFlow("if (this.$N == null)", fieldName);
-        switch (util.getIfAbsent(method, modelRoot).value()) {
-          case FAIL ->
-              // FAIL strategy - throw exception when value is null
-              buildMethodBuilder.addStatement(
-                  "throw new $T($S, $S)",
-                  MandatoryFieldMissingException.class,
-                  immutablePojoName,
-                  fieldName);
-          case ASSUME_DEFAULT_VALUE -> {
-            try {
-              buildMethodBuilder.addStatement(
-                  "this.$N = $L",
-                  fieldName,
-                  fieldModelRootInfo.isPresent()
-                          && LIST.equals(fieldModelRootInfo.get().containerType())
-                      ? CodeBlock.of("$T.empty()", ModelsListBuilder.class)
-                      : fieldModelRootInfo.isPresent()
-                              && ContainerType.MAP.equals(fieldModelRootInfo.get().containerType())
-                          ? CodeBlock.of("$T.empty()", ModelsMapBuilder.class)
-                          : dataType.defaultValueExpr(util.processingEnv()));
-            } catch (CodeGenerationException e) {
-              throw util.errorAndThrow(
-                  "Could not find default value expression for type '%s'. Please check if @IfAbsent(ASSUME_DEFAULT_VALUE) is appropriate for this type."
-                      .formatted(dataType),
-                  method);
-            }
-          }
-        }
-        buildMethodBuilder.endControlFlow();
-      }
-    }
-
-    // Build the POJO with all fields
+    // Build the POJO with all fields, with inline validations and defaults
     buildMethodBuilder.addCode("return new $T(", immutablePojoName);
     buildMethodBuilder.addCode(
         modelMethods.stream()
             .map(
                 modelMethod ->
-                    getFieldAccessorExpression(
-                        true,
-                        modelMethod.getSimpleName().toString(),
-                        modelMethod.getReturnType(),
-                        util))
+                    inlineFieldExpression(modelMethod, immutablePojoName, util, modelRoot))
             .collect(CodeBlock.joining(",")));
     buildMethodBuilder.addCode(");");
     return buildMethodBuilder;
+  }
+
+  private static CodeBlock inlineFieldExpression(
+      ExecutableElement modelMethod,
+      TypeName immutablePojoName,
+      CodeGenUtility util,
+      ModelRoot modelRoot) {
+    String fieldName = modelMethod.getSimpleName().toString();
+    CodeBlock fieldAccessorExpr =
+        getFieldAccessorExpression(true, fieldName, modelMethod.getReturnType(), util);
+
+    IfAbsentThen ifAbsentThen = util.getIfAbsent(modelMethod, modelRoot).value();
+    Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(modelMethod.getReturnType());
+    boolean isModelContainer =
+        fieldModelRootInfo.map(info -> info.containerType().isContainer()).orElse(false);
+
+    if (ifAbsentThen == FAIL) {
+      return CodeBlock.of(
+          "$T.validateMandatory($L, $S, $T.class)",
+          ModelUtils.class,
+          fieldAccessorExpr,
+          fieldName,
+          asClassName(immutablePojoName));
+    } else if (ifAbsentThen == IfAbsentThen.ASSUME_DEFAULT_VALUE
+        && !isMethodOptionalOrNullable(modelMethod, util)
+        && !isModelContainer) {
+      TypeMirror actualType = modelMethod.getReturnType();
+      CodeGenType dataType = new DeclaredTypeVisitor(util, modelMethod).visit(actualType, null);
+      try {
+        CodeBlock defaultExpr = dataType.defaultValueExpr(util.processingEnv());
+        return CodeBlock.of(
+            "$T.requireNonNullElse($L, $L)",
+            ClassName.get(Objects.class),
+            fieldAccessorExpr,
+            defaultExpr);
+      } catch (CodeGenerationException e) {
+        throw util.errorAndThrow(
+            "Could not find default value expression for type '%s'. Please check if @IfAbsent(ASSUME_DEFAULT_VALUE) is appropriate for this type."
+                .formatted(dataType),
+            modelMethod);
+      }
+    } else {
+      return fieldAccessorExpr;
+    }
   }
 
   public static MethodSpec.Builder newCopyForBuilder(
@@ -1356,11 +1353,6 @@ this.$L = $L == null
             method);
       }
     }
-  }
-
-  private static boolean immutTypeSupportsNullForField(
-      ExecutableElement method, CodeGenUtility util, ModelRoot modelRoot) {
-    return !FAIL.equals(util.getIfAbsent(method, modelRoot).value());
   }
 
   @SuppressWarnings("BooleanMethodIsAlwaysInverted")
