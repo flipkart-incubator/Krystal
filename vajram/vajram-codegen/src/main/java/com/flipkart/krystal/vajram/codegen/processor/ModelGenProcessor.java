@@ -43,7 +43,10 @@ public final class ModelGenProcessor extends AbstractKrystalAnnoProcessor {
     CodeGenUtility util = codeGenUtil();
     List<TypeElement> modelRoots =
         roundEnv.getElementsAnnotatedWith(ModelRoot.class).stream()
-            .filter(element -> element.getKind() == ElementKind.INTERFACE)
+            .filter(
+                element ->
+                    element.getKind() == ElementKind.INTERFACE
+                        || element.getKind() == ElementKind.ENUM)
             .map(executableElement -> (TypeElement) executableElement)
             .toList();
     util.note(

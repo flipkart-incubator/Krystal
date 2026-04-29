@@ -35,6 +35,7 @@ import com.flipkart.krystal.model.list.UnmodifiableModelsList;
 import com.flipkart.krystal.model.map.UnmodifiableModelsMap;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.vajram.protobuf3.ProtoByteArray;
+import com.flipkart.krystal.vajram.protobuf3.ProtoEnumUtils;
 import com.flipkart.krystal.vajram.protobuf3.ProtoListBuilder;
 import com.flipkart.krystal.vajram.protobuf3.ProtoMapBuilder;
 import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
@@ -115,6 +116,14 @@ public class Proto3ModelsGen implements CodeGenerator {
     if (modelRootAnnotation == null) {
       util.note(
           "Skipping class '%s' since it doesn't have @ModelRoot annotation"
+              .formatted(modelRootType.getQualifiedName()));
+      return false;
+    }
+
+    // Enum models don't need _ImmutProto wrapper classes
+    if (util.isEnumModel(modelRootType)) {
+      util.note(
+          "Skipping protobuf models codegen for enum model '%s' - no wrapper class needed"
               .formatted(modelRootType.getQualifiedName()));
       return false;
     }
@@ -528,8 +537,22 @@ return _serializedPayload;
               immutProtoClass);
         }
       } else {
-        // For repeated fields, use getXList() method
-        getterBuilder.addStatement("return _proto().get$LList()", capitalizeFirstChar(fieldName));
+        // Check if the list element type is an EnumModel
+        TypeMirror listElemType = util.getContentType(method.getReturnType());
+        if (listElemType != null && util.isEnumModelType(listElemType)) {
+          ClassName javaEnumType =
+              ClassName.get(
+                  (TypeElement) util.processingEnv().getTypeUtils().asElement(listElemType));
+          getterBuilder.addStatement(
+              "return $T.transform(_proto().get$LList(), _e -> $T.protoToJava($T.class, _e.name()))",
+              Lists.class,
+              capitalizeFirstChar(fieldName),
+              ProtoEnumUtils.class,
+              javaEnumType);
+        } else {
+          // For repeated fields, use getXList() method
+          getterBuilder.addStatement("return _proto().get$LList()", capitalizeFirstChar(fieldName));
+        }
       }
       return;
     }
@@ -639,22 +662,40 @@ return _serializedPayload;
               """);
       }
     }
-    CodeBlock creatorCode =
-        fieldModelRootInfo
-            .map(
-                _m ->
-                    CodeBlock.of(
-                        "new $T(_proto().get$L())",
-                        util.getImmutClassName(_m.element(), PROTOBUF_3),
-                        capitalizeFirstChar(fieldName)))
-            .orElseGet(
-                () ->
-                    dataType.equals(BYTE_ARRAY)
-                        ? CodeBlock.of(
-                            "new $T(_proto().get$L())",
-                            ProtoByteArray.class,
-                            capitalizeFirstChar(fieldName))
-                        : CodeBlock.of("_proto().get$L()", capitalizeFirstChar(fieldName)));
+    // Check if the field type is an EnumModel
+    TypeMirror rawReturnType =
+        isOptionalReturnType ? util.getOptionalInnerType(methodReturnType) : methodReturnType;
+    boolean isEnumModelField = util.isEnumModelType(rawReturnType);
+
+    CodeBlock creatorCode;
+    if (isEnumModelField) {
+      // For enum fields: convert from proto enum to Java enum with UNKNOWN fallback
+      ClassName javaEnumType =
+          ClassName.get((TypeElement) util.processingEnv().getTypeUtils().asElement(rawReturnType));
+      creatorCode =
+          CodeBlock.of(
+              "$T.protoToJava($T.class, _proto().get$L().name())",
+              ProtoEnumUtils.class,
+              javaEnumType,
+              capitalizeFirstChar(fieldName));
+    } else {
+      creatorCode =
+          fieldModelRootInfo
+              .map(
+                  _m ->
+                      CodeBlock.of(
+                          "new $T(_proto().get$L())",
+                          util.getImmutClassName(_m.element(), PROTOBUF_3),
+                          capitalizeFirstChar(fieldName)))
+              .orElseGet(
+                  () ->
+                      dataType.equals(BYTE_ARRAY)
+                          ? CodeBlock.of(
+                              "new $T(_proto().get$L())",
+                              ProtoByteArray.class,
+                              capitalizeFirstChar(fieldName))
+                          : CodeBlock.of("_proto().get$L()", capitalizeFirstChar(fieldName)));
+    }
 
     // Get the value from the proto message
     if (isOptionalReturnType) {
@@ -753,6 +794,57 @@ return _serializedPayload;
 
       // Check if the field is a repeated field (List) or a map field
       if (isProtoTypeRepeated(dataType)) {
+        // Determine the addAll argument: transform for models/enums, plain for scalars
+        Object addAllArg;
+        if (fieldModelRoot.isPresent() && LIST.equals(fieldModelRoot.get().containerType())) {
+          addAllArg =
+              CodeBlock.of(
+"""
+
+          $T.transform(
+              $L,
+              _element ->
+                  _element instanceof $T _proto
+                      ? _proto._proto()
+                      : _element instanceof $T.Builder _proto
+                          ? _proto._proto().build()
+                          : new $T(_element)._proto())
+""",
+                  Lists.class,
+                  fieldName,
+                  util.getImmutClassName(fieldModelRoot.get().element(), PROTOBUF_3),
+                  util.getImmutClassName(fieldModelRoot.get().element(), PROTOBUF_3),
+                  util.getImmutClassName(fieldModelRoot.get().element(), PROTOBUF_3));
+        } else {
+          // Check if list element is an EnumModel
+          TypeMirror listElemType = util.getContentType(returnType);
+          if (listElemType != null && util.isEnumModelType(listElemType)) {
+            ClassName protoEnumType =
+                ClassName.get(
+                    util.processingEnv()
+                        .getElementUtils()
+                        .getPackageOf(util.processingEnv().getTypeUtils().asElement(listElemType))
+                        .toString(),
+                    util.processingEnv()
+                            .getTypeUtils()
+                            .asElement(listElemType)
+                            .getSimpleName()
+                            .toString()
+                        + MODELS_PROTO_MSG_SUFFIX);
+            addAllArg =
+                CodeBlock.of(
+"""
+
+          $T.transform($L, _e -> $T.javaToProto($T.class, _e.name()))
+""",
+                    Lists.class,
+                    fieldName,
+                    ProtoEnumUtils.class,
+                    protoEnumType);
+          } else {
+            addAllArg = fieldName;
+          }
+        }
         // For repeated fields, use clear and addAll pattern
         setterBuilder.addCode(
             """
@@ -765,25 +857,7 @@ return _serializedPayload;
             capitalizeFirstChar(fieldName),
             fieldName,
             capitalizeFirstChar(fieldName),
-            fieldModelRoot.isPresent() && LIST.equals(fieldModelRoot.get().containerType())
-                ? CodeBlock.of(
-"""
-
-          $T.transform(
-              $L,
-              _element ->
-                  _element instanceof $T _proto
-                      ? _proto._proto()
-                      : _element instanceof $T.Builder _proto
-                          ? _proto._proto().build()
-                          : new $T(_element)._proto())
-""",
-                    Lists.class,
-                    fieldName,
-                    util.getImmutClassName(fieldModelRoot.get().element(), PROTOBUF_3),
-                    util.getImmutClassName(fieldModelRoot.get().element(), PROTOBUF_3),
-                    util.getImmutClassName(fieldModelRoot.get().element(), PROTOBUF_3))
-                : fieldName);
+            addAllArg);
       } else if (isProtoTypeMap(dataType)) {
         // For map fields, use clear and putAll pattern
         setterBuilder.addCode(
@@ -853,21 +927,46 @@ return _serializedPayload;
               fieldModelRoot.get().element(),
               fieldName);
         } else {
-          setterBuilder.addStatement(
-              dataType.equals(BYTE)
-                  ? CodeBlock.of(
-                      "_proto.set$L($T.copyFrom(new byte[]{$L}))",
-                      capitalizeFirstChar(fieldName),
-                      ByteString.class,
-                      fieldName)
-                  : dataType.equals(BYTE_ARRAY)
-                      ? CodeBlock.of(
-                          "_proto.set$L($T.toByteString($L))",
-                          capitalizeFirstChar(fieldName),
-                          ProtoByteArray.class,
-                          fieldName)
-                      : CodeBlock.of(
-                          "_proto.set$L($L)", capitalizeFirstChar(fieldName), fieldName));
+          // Check for enum model type (may be wrapped in Optional)
+          TypeMirror rawSetterType =
+              util.isOptional(returnType) ? util.getOptionalInnerType(returnType) : returnType;
+          if (util.isEnumModelType(rawSetterType)) {
+            // For enum fields: convert Java enum to proto enum by name
+            ClassName protoEnumType =
+                ClassName.get(
+                    util.processingEnv()
+                        .getElementUtils()
+                        .getPackageOf(util.processingEnv().getTypeUtils().asElement(rawSetterType))
+                        .toString(),
+                    util.processingEnv()
+                            .getTypeUtils()
+                            .asElement(rawSetterType)
+                            .getSimpleName()
+                            .toString()
+                        + MODELS_PROTO_MSG_SUFFIX);
+            setterBuilder.addStatement(
+                "_proto.set$L($T.javaToProto($T.class, $L.name()))",
+                capitalizeFirstChar(fieldName),
+                ProtoEnumUtils.class,
+                protoEnumType,
+                fieldName);
+          } else {
+            setterBuilder.addStatement(
+                dataType.equals(BYTE)
+                    ? CodeBlock.of(
+                        "_proto.set$L($T.copyFrom(new byte[]{$L}))",
+                        capitalizeFirstChar(fieldName),
+                        ByteString.class,
+                        fieldName)
+                    : dataType.equals(BYTE_ARRAY)
+                        ? CodeBlock.of(
+                            "_proto.set$L($T.toByteString($L))",
+                            capitalizeFirstChar(fieldName),
+                            ProtoByteArray.class,
+                            fieldName)
+                        : CodeBlock.of(
+                            "_proto.set$L($L)", capitalizeFirstChar(fieldName), fieldName));
+          }
         }
       }
 

@@ -1280,6 +1280,27 @@ public class CodeGenUtility {
     return Optional.empty();
   }
 
+  /**
+   * Returns true if the given TypeElement is an enum that implements {@link
+   * com.flipkart.krystal.model.EnumModel}.
+   */
+  public boolean isEnumModel(TypeElement typeElement) {
+    return typeElement.getKind() == ElementKind.ENUM
+        && isRawAssignable(typeElement.asType(), com.flipkart.krystal.model.EnumModel.class);
+  }
+
+  /**
+   * Returns true if the given TypeMirror is an enum type annotated with {@link ModelRoot} and
+   * implementing {@link com.flipkart.krystal.model.EnumModel}.
+   */
+  public boolean isEnumModelType(TypeMirror type) {
+    Element element = processingEnv().getTypeUtils().asElement(type);
+    if (element instanceof TypeElement typeElement) {
+      return isEnumModel(typeElement) && typeElement.getAnnotation(ModelRoot.class) != null;
+    }
+    return false;
+  }
+
   public record ModelRootInfo(
       TypeElement element, TypeMirror type, ModelRoot annotation, ContainerType containerType) {}
 

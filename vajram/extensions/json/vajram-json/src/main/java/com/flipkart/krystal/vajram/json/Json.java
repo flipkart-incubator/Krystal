@@ -33,7 +33,8 @@ public final class Json implements SerdeProtocol {
           .registerModule(new JavaTimeModule())
           .registerModule(new Jdk8Module())
           .registerModule(new ParameterNamesModule())
-          .registerModule(byteArrayModule());
+          .registerModule(byteArrayModule())
+          .registerModule(new EnumModelModule());
 
   public static final ObjectReader OBJECT_READER = OBJECT_MAPPER.reader();
   public static final ObjectWriter OBJECT_WRITER = OBJECT_MAPPER.writer();
