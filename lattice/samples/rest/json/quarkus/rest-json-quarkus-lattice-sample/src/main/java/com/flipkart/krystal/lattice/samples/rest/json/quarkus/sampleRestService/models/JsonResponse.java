@@ -53,6 +53,9 @@ public interface JsonResponse extends Model {
   @IfAbsent(ASSUME_DEFAULT_VALUE)
   Map<String, String> mapTypedField();
 
+  @IfAbsent(ASSUME_DEFAULT_VALUE)
+  Map<String, DataRecord> dataRecords();
+
   @Nullable ByteArray byteArray();
 
   @IfAbsent(WILL_NEVER_FAIL)
