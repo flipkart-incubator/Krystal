@@ -26,6 +26,7 @@ import com.flipkart.krystal.codegen.common.models.CodeGenerationException;
 import com.flipkart.krystal.codegen.common.models.DeclaredTypeVisitor;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
+import com.flipkart.krystal.model.EnumModel;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.model.ImmutableModel;
@@ -45,6 +46,7 @@ import com.flipkart.krystal.model.list.UnmodifiableModelsList;
 import com.flipkart.krystal.model.map.ModelsMapBuilder;
 import com.flipkart.krystal.model.map.ModelsMapView;
 import com.flipkart.krystal.model.map.UnmodifiableModelsMap;
+import com.flipkart.krystal.serial.SerialId;
 import com.flipkart.krystal.vajram.Trait;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -61,9 +63,11 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeVariableName;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
@@ -71,8 +75,10 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.ElementFilter;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -176,9 +182,17 @@ public final class JavaModelsGen implements CodeGenerator {
     if (!isApplicable()) {
       return;
     }
-    validate();
 
     TypeElement modelRootType = codeGenContext.modelRootType();
+
+    // For enum models: validate only, no code generation needed
+    if (util.isEnumModel(modelRootType)) {
+      validateEnumModel(modelRootType);
+      return;
+    }
+
+    validate();
+
     CodeGenUtility util = codeGenContext.util();
 
     // Extract and validate model methods
@@ -244,9 +258,11 @@ public final class JavaModelsGen implements CodeGenerator {
     if (util.isPrimitiveArray(type)) {
       return;
     }
-    // Enums are simple value types, allowed in pure models
+    // Only enums with @ModelRoot annotation are allowed in pure models
     Element typeElement = util.processingEnv().getTypeUtils().asElement(type);
-    if (typeElement != null && typeElement.getKind() == ElementKind.ENUM) {
+    if (typeElement != null
+        && typeElement.getKind() == ElementKind.ENUM
+        && typeElement.getAnnotation(ModelRoot.class) != null) {
       return;
     }
     if (util.isRawAssignable(type, Model.class)) {
@@ -303,7 +319,9 @@ public final class JavaModelsGen implements CodeGenerator {
       return;
     }
     Element elemElement = util.processingEnv().getTypeUtils().asElement(elementType);
-    if (elemElement != null && elemElement.getKind() == ElementKind.ENUM) {
+    if (elemElement != null
+        && elemElement.getKind() == ElementKind.ENUM
+        && elemElement.getAnnotation(ModelRoot.class) != null) {
       return;
     }
     if (util.isRawAssignable(elementType, Model.class)) {
@@ -324,7 +342,9 @@ public final class JavaModelsGen implements CodeGenerator {
       return;
     }
     Element valElement = util.processingEnv().getTypeUtils().asElement(valueType);
-    if (valElement != null && valElement.getKind() == ElementKind.ENUM) {
+    if (valElement != null
+        && valElement.getKind() == ElementKind.ENUM
+        && valElement.getAnnotation(ModelRoot.class) != null) {
       return;
     }
     if (util.isRawAssignable(valueType, Model.class)) {
@@ -357,6 +377,90 @@ public final class JavaModelsGen implements CodeGenerator {
       util.error(
           "Interface with @ModelRoot annotation must extend " + Model.class.getCanonicalName(),
           modelRootType);
+    }
+  }
+
+  /**
+   * Validates enum model constraints:
+   *
+   * <ul>
+   *   <li>Must implement {@link EnumModel}
+   *   <li>First enum constant must be UNKNOWN
+   *   <li>If any constant has @SerialId, UNKNOWN must have @SerialId(0)
+   * </ul>
+   */
+  private void validateEnumModel(TypeElement enumType) {
+    // Validate that the enum implements EnumModel
+    if (!util.isRawAssignable(enumType.asType(), EnumModel.class)) {
+      util.error(
+          "Enum '%s' with @ModelRoot annotation must implement %s"
+              .formatted(enumType.getQualifiedName(), EnumModel.class.getCanonicalName()),
+          enumType);
+    }
+
+    // Get enum constants in declaration order
+    List<VariableElement> enumConstants =
+        ElementFilter.fieldsIn(enumType.getEnclosedElements()).stream()
+            .filter(field -> field.getKind() == ElementKind.ENUM_CONSTANT)
+            .toList();
+
+    if (enumConstants.isEmpty()) {
+      util.error(
+          "Enum '%s' with @ModelRoot annotation must have at least one constant (UNKNOWN)"
+              .formatted(enumType.getQualifiedName()),
+          enumType);
+      return;
+    }
+
+    // Validate UNKNOWN is the first constant
+    VariableElement firstConstant = enumConstants.get(0);
+    if (!firstConstant.getSimpleName().contentEquals("UNKNOWN")) {
+      util.error(
+          "Enum '%s' with @ModelRoot annotation must have 'UNKNOWN' as the first constant, but found '%s'"
+              .formatted(enumType.getQualifiedName(), firstConstant.getSimpleName()),
+          firstConstant);
+    }
+
+    // Check @SerialId usage
+    boolean anyHasSerialId =
+        enumConstants.stream().anyMatch(c -> c.getAnnotation(SerialId.class) != null);
+
+    if (anyHasSerialId) {
+      // If any constant has @SerialId, UNKNOWN must have @SerialId(0)
+      SerialId unknownSerialId = firstConstant.getAnnotation(SerialId.class);
+      if (unknownSerialId == null) {
+        util.error(
+            "Enum '%s': When @SerialId is used on any constant, UNKNOWN must have @SerialId(0)"
+                .formatted(enumType.getQualifiedName()),
+            firstConstant);
+      } else if (unknownSerialId.value() != 0) {
+        util.error(
+            "Enum '%s': UNKNOWN must have @SerialId(0), but found @SerialId(%d)"
+                .formatted(enumType.getQualifiedName(), unknownSerialId.value()),
+            firstConstant);
+      }
+
+      // Validate no duplicate @SerialId values
+      Set<Integer> usedIds = new HashSet<>();
+      for (VariableElement constant : enumConstants) {
+        SerialId serialId = constant.getAnnotation(SerialId.class);
+        if (serialId != null) {
+          if (!usedIds.add(serialId.value())) {
+            util.error(
+                "Enum '%s': Duplicate @SerialId(%d) on constant '%s'"
+                    .formatted(
+                        enumType.getQualifiedName(), serialId.value(), constant.getSimpleName()),
+                constant);
+          }
+          if (serialId.value() < 0) {
+            util.error(
+                "Enum '%s': @SerialId must be non-negative, but found @SerialId(%d) on constant '%s'"
+                    .formatted(
+                        enumType.getQualifiedName(), serialId.value(), constant.getSimpleName()),
+                constant);
+          }
+        }
+      }
     }
   }
 

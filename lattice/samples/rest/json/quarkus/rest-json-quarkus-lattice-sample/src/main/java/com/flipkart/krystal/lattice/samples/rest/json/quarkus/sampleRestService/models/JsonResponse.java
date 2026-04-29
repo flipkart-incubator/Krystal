@@ -71,4 +71,12 @@ public interface JsonResponse extends Model {
   Map<String, InnerData> namedInnerData();
 
   Map<String, InnerDataV2> namedInnerDataV2();
+
+  Priority priority();
+
+  @IfAbsent(WILL_NEVER_FAIL)
+  @Nullable Priority optionalPriority();
+
+  @IfAbsent(ASSUME_DEFAULT_VALUE)
+  List<Priority> priorities();
 }

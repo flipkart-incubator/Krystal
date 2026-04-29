@@ -28,6 +28,7 @@ import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
+import com.flipkart.krystal.vajram.protobuf3.codegen.types.EnumFieldType;
 import com.flipkart.krystal.vajram.protobuf3.codegen.types.MapFieldType;
 import com.flipkart.krystal.vajram.protobuf3.codegen.types.MessageFieldType;
 import com.flipkart.krystal.vajram.protobuf3.codegen.types.OptionalFieldType;
@@ -240,6 +241,13 @@ public class ProtoGenUtils {
           && util.typeExplicitlySupportsProtocol(javaElement, Protobuf3.class)
           && TypeName.get(dataType.javaModelType(util.processingEnv()))
               instanceof ClassName modelRootName) {
+        // Check if this is an enum model type
+        if (util.isEnumModelType(javaModelType)) {
+          return new EnumFieldType(
+              modelRootName.packageName(),
+              modelRootName.simpleName() + MODELS_PROTO_MSG_SUFFIX,
+              modelRootName.simpleName());
+        }
         return new MessageFieldType(
             modelRootName.packageName(),
             modelRootName.simpleName() + MODELS_PROTO_MSG_SUFFIX,

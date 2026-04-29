@@ -77,4 +77,16 @@ public interface Proto3LatticeSampleResponse extends Model {
   @SerialId(15)
   @IfAbsent(ASSUME_DEFAULT_VALUE)
   Map<String, SubMessage> namedSubMessages();
+
+  @SerialId(16)
+  @IfAbsent(FAIL)
+  Status status();
+
+  @SerialId(17)
+  @IfAbsent(WILL_NEVER_FAIL)
+  @Nullable Status optionalStatus();
+
+  @SerialId(18)
+  @IfAbsent(ASSUME_DEFAULT_VALUE)
+  List<Status> statuses();
 }

@@ -36,6 +36,9 @@ class Proto3LatticeSampleResponseTest {
             .subMessage(sub1)
             .subMessages(List.of(sub1, sub2))
             .namedSubMessages(Map.of("first", sub1, "second", sub2))
+            .status(Status.COMPLETED)
+            .optionalStatus(Status.IN_PROGRESS)
+            .statuses(List.of(Status.PENDING, Status.FAILED))
             ._build();
 
     // Serialize to bytes
@@ -84,6 +87,11 @@ class Proto3LatticeSampleResponseTest {
     assertThat(deserialized.namedSubMessages().get("first").count()).isEqualTo(10);
     assertThat(deserialized.namedSubMessages().get("second").count()).isEqualTo(20);
 
+    // Verify enum fields
+    assertThat(deserialized.status()).isEqualTo(Status.COMPLETED);
+    assertThat(deserialized.optionalStatus()).isEqualTo(Status.IN_PROGRESS);
+    assertThat(deserialized.statuses()).containsExactly(Status.PENDING, Status.FAILED);
+
     // Verify equality between original and deserialized
     assertThat(deserialized).isEqualTo(original);
   }
@@ -96,6 +104,7 @@ class Proto3LatticeSampleResponseTest {
             .string("minimal")
             .mandatoryInt(1)
             .mandatoryStringPartialConstruction("hello")
+            .status(Status.UNKNOWN)
             ._build();
 
     byte[] serialized = original._serialize();
@@ -129,6 +138,7 @@ class Proto3LatticeSampleResponseTest {
             .string("map-test")
             .mandatoryInt(1)
             .namedSubMessages(Map.of("x", sub1, "y", sub2))
+            .status(Status.PENDING)
             ._build();
 
     assertThat(built.namedSubMessages()).hasSize(2);
@@ -146,6 +156,7 @@ class Proto3LatticeSampleResponseTest {
             .mandatoryInt(1)
             .mandatoryStringPartialConstruction("")
             .namedSubMessages(Map.of("key", sub))
+            .status(Status.FAILED)
             ._build();
 
     // Copy via copy constructor (new ImmutProto from model interface)
@@ -170,6 +181,7 @@ class Proto3LatticeSampleResponseTest {
             .mandatoryInt(1)
             .namedSubMessages(Map.of("a", sub1))
             .namedSubMessages(Map.of("b", sub2))
+            .status(Status.UNKNOWN)
             ._build();
 
     assertThat(built.namedSubMessages()).hasSize(1);
@@ -188,6 +200,7 @@ class Proto3LatticeSampleResponseTest {
             .mandatoryInt(1)
             .namedSubMessages(Map.of("a", sub))
             .namedSubMessages(null)
+            .status(Status.UNKNOWN)
             ._build();
 
     assertThat(built.namedSubMessages()).isEmpty();
@@ -213,6 +226,7 @@ class Proto3LatticeSampleResponseTest {
             .mandatoryStringPartialConstruction("hello")
             .subMessages(List.of(sub))
             .subMessage(sub)
+            .status(Status.IN_PROGRESS)
             ._build();
 
     byte[] serialized = original._serialize();

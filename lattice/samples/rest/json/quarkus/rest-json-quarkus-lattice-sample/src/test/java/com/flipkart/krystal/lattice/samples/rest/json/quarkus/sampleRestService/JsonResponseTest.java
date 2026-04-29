@@ -6,6 +6,7 @@ import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.InnerData_ImmutPojo;
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.JsonResponse_ImmutJson;
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.JsonResponse_ImmutPojo;
+import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.Priority;
 import com.flipkart.krystal.model.array.SimpleByteArray;
 import com.google.common.base.Charsets;
 import java.util.List;
@@ -30,6 +31,7 @@ class JsonResponseTest {
             .byteArray(
                 SimpleByteArray.copyOf(new byte[] {23, 45, 23, 56, 67, 64, 45, 45, 3, 45, 56}))
             .nestedData(InnerData_ImmutJson._builder().value("Hello").count(11)._build())
+            .priority(Priority.HIGH)
             ._build();
     byte[] serializedPayload = immutJson._serialize();
     System.out.println(new String(serializedPayload, Charsets.UTF_8));
@@ -52,7 +54,8 @@ class JsonResponseTest {
             .mapTypedField(Map.of("X", "A", "Y", "B", "Z", "C"))
             .byteArray(
                 SimpleByteArray.copyOf(new byte[] {23, 45, 23, 56, 67, 64, 45, 45, 3, 45, 56}))
-            .nestedData(InnerData_ImmutPojo._builder().value("Hello").count(11));
+            .nestedData(InnerData_ImmutPojo._builder().value("Hello").count(11))
+            .priority(Priority.MEDIUM);
     assertThat(immutJsonBuilder._build()).isEqualTo(immutJsonBuilder._newCopy()._build());
   }
 
@@ -74,7 +77,8 @@ class JsonResponseTest {
             .nestedDataList(
                 List.of(
                     InnerData_ImmutPojo._builder().value("Hello").count(11)._build(),
-                    InnerData_ImmutPojo._builder().value("Hello Again").count(34)._build()));
+                    InnerData_ImmutPojo._builder().value("Hello Again").count(34)._build()))
+            .priority(Priority.LOW);
     assertThat(immutJsonBuilder._build()).isEqualTo(immutJsonBuilder._newCopy()._build());
   }
 }

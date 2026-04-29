@@ -476,7 +476,15 @@ this.$L = $L == null
   }
 
   private boolean isApplicable() {
-    return CodegenPhase.MODELS.equals(codeGenContext.codegenPhase()) && isJsonSerdeSupported();
+    if (!CodegenPhase.MODELS.equals(codeGenContext.codegenPhase()) || !isJsonSerdeSupported()) {
+      return false;
+    }
+    // Enum models don't need generated JSON wrapper classes -
+    // Jackson handles them directly via the EnumModelModule
+    if (util.isEnumModel(codeGenContext.modelRootType())) {
+      return false;
+    }
+    return true;
   }
 
   /**
