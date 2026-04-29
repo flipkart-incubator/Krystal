@@ -252,9 +252,11 @@ final class Proto3SchemaGen implements CodeGenerator {
 
       IfAbsentThen ifAbsentThen = util.getIfAbsent(method, modelRoot).value();
 
+      boolean isPrimitiveArray =
+          util.isPrimitiveArray(dataType.javaModelType(util.processingEnv()));
       boolean isRepeated = isProtoTypeRepeated(dataType);
       boolean isMap = isProtoTypeMap(dataType);
-      if ((isRepeated || isMap) && !ifAbsentThen.usePlatformDefault()) {
+      if ((isRepeated || isMap || isPrimitiveArray) && !ifAbsentThen.usePlatformDefault()) {
         // Proto3 always defaults repeated and map fields to default values
         util.error(
             String.format(
@@ -262,7 +264,7 @@ final class Proto3SchemaGen implements CodeGenerator {
                     + "Please use a @IfAbsent(%s) as that is the only strategy supported for repeated and map fields in protobuf3.",
                 method.getSimpleName(),
                 modelRootName,
-                isRepeated ? "repeated" : "map",
+                isRepeated ? "list" : isPrimitiveArray ? "array" : "map",
                 ifAbsentThen,
                 ASSUME_DEFAULT_VALUE),
             method);

@@ -132,8 +132,7 @@ public class Proto3ModelsGen implements CodeGenerator {
   }
 
   private void validate() {
-    TypeElement modelRootType = codeGenContext.modelRootType();
-    validateModelType(modelRootType, util);
+    validateModelType(codeGenContext.modelRootType(), util);
   }
 
   private void generateProtoImplementation() {

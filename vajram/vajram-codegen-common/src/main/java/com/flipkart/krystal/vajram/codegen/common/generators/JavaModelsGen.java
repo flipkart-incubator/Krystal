@@ -318,18 +318,6 @@ public final class JavaModelsGen implements CodeGenerator {
 
   private void validatePureMapTypes(
       ExecutableElement method, TypeMirror keyType, TypeMirror valueType, String fieldName) {
-    boolean keyIsEnum = false;
-    Element keyElement = util.processingEnv().getTypeUtils().asElement(keyType);
-    if (keyElement != null && keyElement.getKind() == ElementKind.ENUM) {
-      keyIsEnum = true;
-    }
-    if (!util.isPrimitiveOrBoxed(keyType) && !util.isString(keyType) && !keyIsEnum) {
-      util.error(
-          "Field '%s' in pure model '%s' has Map with disallowed key type '%s'. "
-                  .formatted(fieldName, codeGenContext.modelRootType().getQualifiedName(), keyType)
-              + "Map keys in pure models must be primitives, boxed primitives, String, or enums.",
-          method);
-    }
     if (util.isPrimitiveOrBoxed(valueType) || util.isString(valueType)) {
       return;
     }

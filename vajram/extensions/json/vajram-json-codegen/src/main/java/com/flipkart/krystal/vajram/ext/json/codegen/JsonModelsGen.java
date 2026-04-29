@@ -63,6 +63,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeMirror;
 
 final class JsonModelsGen implements CodeGenerator {
   private final ModelsCodeGenContext codeGenContext;
@@ -92,9 +93,16 @@ final class JsonModelsGen implements CodeGenerator {
     // Validate serde compatibility (nested Models must support Json; purity not required for Json)
     new SerdeModelValidator(util, modelRootType, Json.JSON).validate(modelMethods);
 
+    jsonSpecificValidations(modelMethods);
+
     TypeSpec immutablePojo = generateJsonModel(modelRootType, modelMethods, immutClassName);
 
     util.writeJavaFile(packageName, immutablePojo, modelRootType);
+  }
+
+  private void jsonSpecificValidations(List<ExecutableElement> modelMethods) {
+    // Validate that map keys are only String or Integer (JSON object keys constraint)
+    validateMapKeyTypes(modelMethods);
   }
 
   /**
@@ -444,6 +452,27 @@ this.$L = $L == null
                 .addStatement("return this")
                 .build())
         .build();
+  }
+
+  private void validateMapKeyTypes(List<ExecutableElement> modelMethods) {
+    for (ExecutableElement method : modelMethods) {
+      TypeMirror returnType = method.getReturnType();
+      if (util.isOptional(returnType)) {
+        returnType = util.getOptionalInnerType(returnType);
+      }
+      if (util.isMapType(returnType)) {
+        TypeMirror keyType = util.getMapKeyType(returnType);
+        if (!util.isString(keyType) && !util.isSameRawType(keyType, Integer.class)) {
+          util.error(
+              "Field '%s' in model '%s' is a Map with key type '%s'. JSON only supports String and Integer map key types."
+                  .formatted(
+                      method.getSimpleName(),
+                      codeGenContext.modelRootType().getQualifiedName(),
+                      keyType),
+              method);
+        }
+      }
+    }
   }
 
   private boolean isApplicable() {

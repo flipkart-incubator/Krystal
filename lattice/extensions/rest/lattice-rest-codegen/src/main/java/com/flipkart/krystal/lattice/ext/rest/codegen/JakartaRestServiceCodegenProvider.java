@@ -434,6 +434,11 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
         for (TypeElement serdeProtocolType : requestSerdeProtocols) {
           ModelProtocol modelProtocol =
               configProviders.get(serdeProtocolType.getQualifiedName().toString());
+          if (modelProtocol == null) {
+            util.note(
+                "Ignoring %s for model %s since model protocol config not found"
+                    .formatted(serdeProtocolType, vajramInfo.vajramName()));
+          }
           String[] contentTypes;
           SerdeConfig serdeConfig = serdeConfigsMap.get(serdeProtocolType);
           if (serdeConfig != null) {

@@ -175,7 +175,7 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
                       .formatted(modelProtocolElem.getQualifiedName()));
           continue;
         }
-        configs.put(requireNonNull(modelProtocolElem.getClass().getCanonicalName()), config);
+        configs.put(requireNonNull(serdeProtocol.getClass().getCanonicalName()), config);
         providingLogics.add(
             CodeBlock.of(
                 """
