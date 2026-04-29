@@ -19,7 +19,7 @@ public final class Protobuf3 implements SerdeProtocol {
   }
 
   @Override
-  public boolean isPurityMandatory() {
+  public boolean modelsNeedToBePure() {
     return true;
   }
 }

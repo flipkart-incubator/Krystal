@@ -9,6 +9,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toMap;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -16,6 +17,8 @@ import static javax.lang.model.element.Modifier.PUBLIC;
 import com.flipkart.krystal.annos.Generated;
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.codegen.common.datatypes.DataTypeRegistry;
+import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider;
+import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider.ModelProtocolConfig;
 import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.Model;
@@ -23,9 +26,9 @@ import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.ModelRoot.ModelType;
 import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.model.array.PrimitiveArray;
 import com.flipkart.krystal.model.list.ModelsListBuilder;
 import com.flipkart.krystal.model.map.ModelsMapBuilder;
-import com.flipkart.krystal.serial.SerdeProtocol;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.googlejavaformat.java.GoogleJavaFormatTool;
@@ -57,8 +60,10 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
+import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -375,27 +380,6 @@ public class CodeGenUtility {
         .filter(Objects::nonNull)
         .findFirst()
         .orElse(null);
-  }
-
-  private static final String PRIMITIVE_ARRAY_QUALIFIED_NAME =
-      "com.flipkart.krystal.model.array.PrimitiveArray";
-
-  /**
-   * Returns true if the given type is a subtype of {@code
-   * com.flipkart.krystal.model.array.PrimitiveArray}. Since PrimitiveArray is package-private, this
-   * uses a qualified-name-based lookup.
-   */
-  public boolean isPrimitiveArrayType(TypeMirror type) {
-    TypeElement primitiveArrayElement =
-        processingEnv.getElementUtils().getTypeElement(PRIMITIVE_ARRAY_QUALIFIED_NAME);
-    if (primitiveArrayElement == null) {
-      return false;
-    }
-    return processingEnv
-        .getTypeUtils()
-        .isAssignable(
-            processingEnv.getTypeUtils().erasure(type),
-            processingEnv.getTypeUtils().erasure(primitiveArrayElement.asType()));
   }
 
   /**
@@ -964,6 +948,10 @@ public class CodeGenUtility {
     }
   }
 
+  public boolean isPrimitiveArray(TypeMirror type) {
+    return isRawAssignable(type, PrimitiveArray.class);
+  }
+
   public record ModelFieldTypeInfo(
       TypeName fieldType, ContainerType containerType, TypeName elementType) {}
 
@@ -1139,14 +1127,31 @@ public class CodeGenUtility {
    * Returns the list of SerdeProtocol TypeMirrors from the @SupportedModelProtocols annotation on
    * the given element. Only protocols that extend SerdeProtocol are included.
    */
-  public List<? extends TypeMirror> getSerdeProtocols(Element modelRootType) {
+  public List<ModelProtocol> getModelProtocols(Element modelRootType) {
     SupportedModelProtocols supportedModelProtocols =
         modelRootType.getAnnotation(SupportedModelProtocols.class);
     if (supportedModelProtocols == null) {
       return List.of();
     }
+    Map<String, ModelProtocol> availableModelProtocols =
+        ServiceLoader.load(ModelProtocolConfigProvider.class, this.getClass().getClassLoader())
+            .stream()
+            .map(ServiceLoader.Provider::get)
+            .map(ModelProtocolConfigProvider::getConfig)
+            .map(ModelProtocolConfig::modelProtocol)
+            .collect(
+                toMap(c -> requireNonNull(c.getClass().getCanonicalName()), Function.identity()));
+
     return getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
-        .filter(typeMirror -> isRawAssignable(typeMirror, SerdeProtocol.class))
+        .map(
+            tm ->
+                processingEnv().getTypeUtils().asElement(tm)
+                        instanceof QualifiedNameable qualifiedNameable
+                    ? qualifiedNameable.getQualifiedName().toString()
+                    : null)
+        .filter(Objects::nonNull)
+        .map(availableModelProtocols::get)
+        .filter(Objects::nonNull)
         .toList();
   }
 

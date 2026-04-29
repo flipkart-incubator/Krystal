@@ -4,7 +4,6 @@ import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
-import com.flipkart.krystal.model.ModelRoot.ModelType;
 import java.util.List;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
@@ -16,9 +15,9 @@ import javax.lang.model.type.TypeMirror;
  * Protobuf3) should instantiate this validator and call {@link #validate} to enforce:
  *
  * <ul>
- *   <li>If the protocol's {@link ModelProtocol#isPurityMandatory()} returns {@code true}, the model
- *       must be pure (except auto-generated REQUEST models)
- *   <li>All nested Model fields must support the same serde protocol
+ *   <li>If the protocol's {@link ModelProtocol#modelsNeedToBePure()} returns {@code true}, the
+ *       model must be pure (except auto-generated REQUEST models)
+ *   <li>All nested Model fields must support the same SerDe protocol
  * </ul>
  */
 public final class SerdeModelValidator {
@@ -43,8 +42,8 @@ public final class SerdeModelValidator {
    */
   public void validate(List<ExecutableElement> modelMethods) {
     ModelRoot modelRoot = modelRootType.getAnnotation(ModelRoot.class);
-    if (modelRoot != null && protocol.isPurityMandatory()) {
-      if (!modelRoot.pure() && modelRoot.type() != ModelType.REQUEST) {
+    if (modelRoot != null && protocol.modelsNeedToBePure()) {
+      if (!modelRoot.pure()) {
         util.error(
             "Model '%s' supports serde protocol '%s' which requires purity (pure = true)."
                 .formatted(modelRootType.getQualifiedName(), protocolName),

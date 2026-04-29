@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen;
 
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.BYTE;
+import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.BYTE_ARRAY;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType.LIST;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType.MAP;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.capitalizeFirstChar;
@@ -9,7 +10,6 @@ import static com.flipkart.krystal.vajram.protobuf3.codegen.Proto3SchemaGen.vali
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeMap;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeRepeated;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_MSG_SUFFIX;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.types.StandardProto3Type.BYTE_ARRAY;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static java.util.Map.entry;
 import static java.util.Map.ofEntries;

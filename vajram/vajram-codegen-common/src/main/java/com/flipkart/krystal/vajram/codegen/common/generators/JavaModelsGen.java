@@ -239,7 +239,7 @@ public final class JavaModelsGen implements CodeGenerator {
     if (util.isString(type)) {
       return;
     }
-    if (util.isPrimitiveArrayType(type)) {
+    if (util.isPrimitiveArray(type)) {
       return;
     }
     // Enums are simple value types, allowed in pure models

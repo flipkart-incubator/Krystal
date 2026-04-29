@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen;
 
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.BOOLEAN;
+import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.BYTE_ARRAY;
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.DOUBLE;
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.FLOAT;
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.INT;

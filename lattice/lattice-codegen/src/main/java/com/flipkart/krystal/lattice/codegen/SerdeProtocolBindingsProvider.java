@@ -58,7 +58,7 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
                 Collectors.toMap(
                     cp ->
                         requireNonNull(
-                            cp.getConfig().serdeProtocol().getClass().getCanonicalName()),
+                            cp.getConfig().modelProtocol().getClass().getCanonicalName()),
                     ModelProtocolConfigProvider::getConfig));
     Map<String, TypeElement> responseTypeElems = new LinkedHashMap<>();
     Map<String, List<String>> responseToVajramsMapping = new LinkedHashMap<>();
@@ -140,7 +140,7 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
         }
 
         ClassName defaultModelBuilderName =
-            util.codegenUtil().getImmutClassName(responseElement, defaultConfig.serdeProtocol());
+            util.codegenUtil().getImmutClassName(responseElement, defaultConfig.modelProtocol());
         providingLogics.add(
             CodeBlock.of(
                 """
@@ -156,26 +156,34 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
                 LinkedHashSet.class,
                 defaultModelBuilderName));
       }
-      for (TypeElement modelProtocol : supportedModelProtocolElems) {
-        ModelProtocolConfig config = configs.get(modelProtocol.getQualifiedName().toString());
+      for (TypeElement modelProtocolElem : supportedModelProtocolElems) {
+        ModelProtocolConfig config = configs.get(modelProtocolElem.getQualifiedName().toString());
         if (config == null) {
           util.codegenUtil()
               .note(
                   """
               Skipping creation of binding for %s as protocol config for this \
               protocol was not found in the annotation processor class path"""
-                      .formatted(modelProtocol.getQualifiedName()));
+                      .formatted(modelProtocolElem.getQualifiedName()));
           continue;
         }
-        configs.put(requireNonNull(config.serdeProtocol().getClass().getCanonicalName()), config);
+        if (!(config.modelProtocol() instanceof SerdeProtocol serdeProtocol)) {
+          util.codegenUtil()
+              .note(
+                  """
+              Skipping creation of binding for %s as this is not a serde protocol"""
+                      .formatted(modelProtocolElem.getQualifiedName()));
+          continue;
+        }
+        configs.put(requireNonNull(modelProtocolElem.getClass().getCanonicalName()), config);
         providingLogics.add(
             CodeBlock.of(
                 """
                 if(acceptHeaderValues.contains($S)) {
                   return $T._builder();
                 }""",
-                config.serdeProtocol().defaultContentType(),
-                util.codegenUtil().getImmutClassName(responseElement, config.serdeProtocol())));
+                serdeProtocol.defaultContentType(),
+                util.codegenUtil().getImmutClassName(responseElement, serdeProtocol)));
       }
       providingLogics.add(
           CodeBlock.of(

@@ -1,6 +1,7 @@
 package com.flipkart.krystal.model.array;
 
 import static com.flipkart.krystal.model.array.ByteArray.areEqual;
+import static java.util.Collections.unmodifiableList;
 
 import com.google.common.primitives.Bytes;
 import java.io.ByteArrayInputStream;
@@ -14,13 +15,19 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public final class SimpleByteArray implements ByteArray {
 
+  private static final SimpleByteArray EMPTY = new SimpleByteArray(new byte[0]);
+
   private final byte[] data;
 
   private SimpleByteArray(byte[] data) {
     this.data = data;
   }
 
-  public static SimpleByteArray copyOf(byte[] data) {
+  public static SimpleByteArray of() {
+    return EMPTY;
+  }
+
+  public static SimpleByteArray copyOf(byte... data) {
     return new SimpleByteArray(data.clone());
   }
 
@@ -78,7 +85,7 @@ public final class SimpleByteArray implements ByteArray {
 
   @Override
   public List<Byte> asList() {
-    return Bytes.asList(data);
+    return unmodifiableList(Bytes.asList(data));
   }
 
   @Override
