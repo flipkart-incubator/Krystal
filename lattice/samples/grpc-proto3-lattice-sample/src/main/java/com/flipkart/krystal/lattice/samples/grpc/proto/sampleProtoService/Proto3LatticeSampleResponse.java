@@ -2,7 +2,6 @@ package com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
-import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.WILL_NEVER_FAIL;
 import static com.flipkart.krystal.model.ModelRoot.ModelType.RESPONSE;
 
@@ -19,7 +18,7 @@ import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Response model for {@link Proto3LatticeSample} */
-@ModelRoot(type = RESPONSE)
+@ModelRoot(type = {RESPONSE})
 @SupportedModelProtocols({PlainJavaObject.class, Protobuf3.class})
 public interface Proto3LatticeSampleResponse extends Model {
   @SerialId(1)
@@ -27,11 +26,11 @@ public interface Proto3LatticeSampleResponse extends Model {
   String string();
 
   @SerialId(2)
-  @IfAbsent(MAY_FAIL_CONDITIONALLY)
+  @IfAbsent(WILL_NEVER_FAIL)
   Optional<Integer> optionalInteger();
 
   @SerialId(3)
-  @IfAbsent(MAY_FAIL_CONDITIONALLY)
+  @IfAbsent(WILL_NEVER_FAIL)
   @Nullable Integer nullableIntegerMayFailConditionally();
 
   @SerialId(4)

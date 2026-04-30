@@ -2,7 +2,7 @@ package com.flipkart.krystal.codegen.common.models;
 
 import static com.flipkart.krystal.codegen.common.models.Constants.IMMUT_SUFFIX;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
-import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.WILL_NEVER_FAIL;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.squareup.javapoet.CodeBlock.joining;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -256,13 +256,22 @@ public class CodeGenUtility {
     // Check if the element has the @IfAbsent annotation
     IfAbsent ifAbsent = element.getAnnotation(IfAbsent.class);
     if (ifAbsent == null) {
-      ModelType modelType = modelRoot == null ? ModelType.DEFAULT : modelRoot.type();
-      ifAbsent =
-          IfAbsent.Creator.create(
-              switch (modelType) {
-                case REQUEST -> WILL_NEVER_FAIL;
-                default -> FAIL;
-              });
+      Set<ModelType> types = modelRoot == null ? Set.of() : Set.of(modelRoot.type());
+      boolean isRequest = types.contains(ModelType.REQUEST);
+      boolean isResponse = types.contains(ModelType.RESPONSE);
+      if (isRequest && isResponse) {
+        // For models with both REQUEST and RESPONSE, @IfAbsent is mandatory
+        errorAndThrow(
+            "Field '%s' in model with both REQUEST and RESPONSE types must have an explicit @IfAbsent annotation."
+                .formatted(element.getSimpleName()),
+            element);
+        // Fallback to FAIL to continue processing
+        ifAbsent = IfAbsent.Creator.create(FAIL);
+      } else if (isRequest) {
+        ifAbsent = IfAbsent.Creator.create(MAY_FAIL_CONDITIONALLY);
+      } else {
+        ifAbsent = IfAbsent.Creator.create(FAIL);
+      }
     }
     return ifAbsent;
   }

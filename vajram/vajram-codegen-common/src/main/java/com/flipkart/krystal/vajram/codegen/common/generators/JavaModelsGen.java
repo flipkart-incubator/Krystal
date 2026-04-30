@@ -7,6 +7,7 @@ import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.asTypeNa
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.withTypeParams;
 import static com.flipkart.krystal.codegen.common.models.CodegenPhase.MODELS;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
 import static com.flipkart.krystal.model.PlainJavaObject.POJO;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
@@ -118,9 +119,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *       above. This Builder interface only extends {@link Builder}.
  * </ul>
  *
- * In addition, if the Model Root doesn't have the {@link SupportedModelProtocols} annotation, or if
- * it does, and {@link SupportedModelProtocols#value()} contains {@link PlainJavaObject}, then this
- * generator also generates the following classes in the same package as the model root:
+ * In addition, if the Model Root has the {@link SupportedModelProtocols} annotation and {@link
+ * SupportedModelProtocols#value()} contains {@link PlainJavaObject}, then this generator also
+ * generates the following classes in the same package as the model root:
  *
  * <ul>
  *   <li>An Immutable model pojo final class which extends the above generated Immutable model
@@ -132,8 +133,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *       {@code Optional<T>}, then the corresponding field in this class also is an Optional, but
  *       the corresponding constructor param is a @{@link Nullable} T and is converted into Optional
  *       in the constructor. The class also implements {@link Model#_asBuilder()} method in which it
- *       calls the all arg constructor of the Builder mentioned below, and it implements {@link
- *       Model#_newCopy()} in which it calls its own all arg constructor.
+ *       calls the all arg constructor of the Builder mentioned below. {@link Model#_newCopy()}
+ *       returns {@code this} (inherited from {@link ImmutableModel}) since immutable objects need
+ *       no copying.
  *   <li>A final class named "Builder" which is an inner class of the above generated Immutable
  *       model pojo class. This class extends the above generated Builder interface inside the
  *       generated Immutable Model interface. This class has setters corresponding to each method in
@@ -210,6 +212,9 @@ public final class JavaModelsGen implements CodeGenerator {
     // Validate enum map keys not used with serde protocols
     validateNoEnumMapKeysForSerdeProtocols(modelRootType, modelMethods);
 
+    // Validate nested model type consistency (REQUEST/RESPONSE)
+    validateNestedModelTypeConsistency(modelRootType, modelMethods);
+
     // Get package and class names
     ClassName immutModelNameRaw = util.getImmutInterfaceName(modelRootType);
     String packageName = immutModelNameRaw.packageName();
@@ -220,9 +225,8 @@ public final class JavaModelsGen implements CodeGenerator {
     // Write the immutable interface to a file
     util.writeJavaFile(packageName, immutableInterface, modelRootType);
 
-    if (codeGenContext.modelRootType().getAnnotation(SupportedModelProtocols.class) == null
-        || util.typeExplicitlySupportsProtocol(modelRootType, PlainJavaObject.class)) {
-      // Generate the POJO class if PlainJavaObject is supported
+    if (util.typeExplicitlySupportsProtocol(modelRootType, PlainJavaObject.class)) {
+      // Generate the POJO class only if PlainJavaObject is explicitly supported
       util.writeJavaFile(
           packageName, generateImmutablePojo(modelRootType, modelMethods), modelRootType);
     }
@@ -398,6 +402,70 @@ public final class JavaModelsGen implements CodeGenerator {
                   + "because unknown enum keys cannot be deserialized reliably.",
               method);
         }
+      }
+    }
+  }
+
+  /**
+   * Validates that REQUEST models only contain nested models that include REQUEST in their type,
+   * and RESPONSE models only contain nested models that include RESPONSE in their type. Models with
+   * empty type have no restriction.
+   */
+  private void validateNestedModelTypeConsistency(
+      TypeElement modelRootType, List<ExecutableElement> modelMethods) {
+    Set<ModelType> parentTypes = Set.of(modelRoot.type());
+    if (parentTypes.isEmpty()) {
+      return;
+    }
+    for (ExecutableElement method : modelMethods) {
+      TypeMirror returnType = method.getReturnType();
+      if (util.isOptional(returnType)) {
+        returnType = util.getOptionalInnerType(returnType);
+      }
+      if (util.isListType(returnType)) {
+        returnType = util.getContentType(returnType);
+      } else if (util.isMapType(returnType)) {
+        returnType = util.getMapValueType(returnType);
+      }
+      checkNestedModelType(method, returnType, modelRootType, parentTypes);
+    }
+  }
+
+  private void checkNestedModelType(
+      ExecutableElement method,
+      TypeMirror fieldType,
+      TypeElement modelRootType,
+      Set<ModelType> parentTypes) {
+    if (!util.isRawAssignable(fieldType, Model.class)) {
+      return;
+    }
+    Element element = util.processingEnv().getTypeUtils().asElement(fieldType);
+    if (!(element instanceof TypeElement fieldTypeElement)) {
+      return;
+    }
+    ModelRoot fieldModelRoot = fieldTypeElement.getAnnotation(ModelRoot.class);
+    if (fieldModelRoot == null) {
+      return;
+    }
+    Set<ModelType> fieldTypes = Set.of(fieldModelRoot.type());
+    // A nested model with empty type can be nested anywhere
+    if (fieldTypes.isEmpty()) {
+      return;
+    }
+    // For each parent type, the nested model must also include that type
+    for (ModelType parentType : parentTypes) {
+      if (!fieldTypes.contains(parentType)) {
+        util.error(
+            "Field '%s' in %s model '%s' references model '%s' which does not include %s in its type. "
+                    .formatted(
+                        method.getSimpleName(),
+                        parentType,
+                        modelRootType.getQualifiedName(),
+                        fieldTypeElement.getQualifiedName(),
+                        parentType)
+                + "%s models can only contain nested models that also include %s in their type."
+                    .formatted(parentType, parentType),
+            method);
       }
     }
   }
@@ -721,8 +789,9 @@ public final class JavaModelsGen implements CodeGenerator {
                 .build())
         .addMethod(
             MethodSpec.overriding(util.getMethod(Model.class, "_newCopy", 0))
-                .addModifiers(PUBLIC, ABSTRACT)
+                .addModifiers(PUBLIC, DEFAULT)
                 .returns(immutableModelName)
+                .addStatement("return this")
                 .build())
         .addMethod(
             MethodSpec.overriding(util.getMethod(Model.class, "_asBuilder", 0))
@@ -921,11 +990,16 @@ public final class JavaModelsGen implements CodeGenerator {
 
     MethodSpec.Builder asBuilderMethodBuilder = asBuilder(modelMethods, builderType);
 
-    MethodSpec.Builder newCopyMethodBuilder = newCopyForImmut(modelMethods, immutPojoType);
-
     // Add methods to the list
     methods.add(asBuilderMethodBuilder.build());
-    methods.add(newCopyMethodBuilder.build());
+
+    // Add _newCopy with refined return type
+    methods.add(
+        MethodSpec.overriding(util.getMethod(Model.class, "_newCopy", 0))
+            .addModifiers(PUBLIC)
+            .returns(immutPojoType)
+            .addStatement("return this")
+            .build());
 
     // Create _builder static method
     MethodSpec builderMethod =
@@ -961,26 +1035,6 @@ public final class JavaModelsGen implements CodeGenerator {
         .addMethod(builderMethod)
         .addType(builderClass)
         .build();
-  }
-
-  public static MethodSpec.Builder newCopyForImmut(
-      List<ExecutableElement> modelMethods, TypeName immutPojoType) {
-    // Create _newCopy method to return a new instance with the same values
-    MethodSpec.Builder newCopyMethodBuilder =
-        MethodSpec.methodBuilder("_newCopy")
-            .addModifiers(PUBLIC)
-            .addAnnotation(Override.class)
-            .returns(immutPojoType);
-
-    // Get list of field names for constructor arguments
-    String fieldNames =
-        modelMethods.stream()
-            .map(m -> m.getSimpleName().toString())
-            .collect(Collectors.joining(", "));
-
-    // Create a new instance of the POJO with current field values
-    newCopyMethodBuilder.addStatement("return new $T($L)", immutPojoType, fieldNames);
-    return newCopyMethodBuilder;
   }
 
   public static MethodSpec.Builder asBuilder(
@@ -1527,10 +1581,25 @@ this.$L = $L == null
     IfAbsentThen ifAbsentThen = util.getIfAbsent(method, modelRoot).value();
     ModelRoot modelRoot =
         requireNonNull(codeGenContext.modelRootType().getAnnotation(ModelRoot.class));
+    Set<ModelType> types = Set.of(modelRoot.type());
     TypeMirror returnType = method.getReturnType();
 
+    // RESPONSE-only models cannot use MAY_FAIL_CONDITIONALLY
+    // (dual-type {REQUEST, RESPONSE} models allow it since they also serve as REQUEST models)
+    if (types.contains(ModelType.RESPONSE)
+        && !types.contains(ModelType.REQUEST)
+        && ifAbsentThen == MAY_FAIL_CONDITIONALLY) {
+      util.error(
+          "Field '%s' in RESPONSE model '%s' uses @IfAbsent(MAY_FAIL_CONDITIONALLY). "
+                  .formatted(
+                      method.getSimpleName(), codeGenContext.modelRootType().getQualifiedName())
+              + "RESPONSE-only models do not support MAY_FAIL_CONDITIONALLY. "
+              + "Use FAIL, WILL_NEVER_FAIL, or ASSUME_DEFAULT_VALUE instead.",
+          method);
+    }
+
     // Only validate REQUEST models with WILL_NEVER_FAIL behavior
-    if (modelRoot.type() == ModelType.REQUEST && ifAbsentThen == IfAbsentThen.WILL_NEVER_FAIL) {
+    if (types.contains(ModelType.REQUEST) && ifAbsentThen == IfAbsentThen.WILL_NEVER_FAIL) {
 
       // Exclude lists and maps from this validation
       if (util.isListType(returnType) || util.isMapType(returnType)) {
@@ -1540,7 +1609,7 @@ this.$L = $L == null
       // Special validation for primitive types
       if (returnType.getKind().isPrimitive()) {
         util.error(
-            "Field '%s' is a primitive type in REQUEST model with @IfAbsent(WILL_NEVER_FAIL) or no @IfAbsent annotation. Primitive types must either use @IfAbsent(ASSUME_DEFAULT_VALUE) or be changed to their boxed type (e.g., int -> Integer) with @Nullable or Optional."
+            "Field '%s' is a primitive type in REQUEST model with @IfAbsent(WILL_NEVER_FAIL). Primitive types must either use @IfAbsent(ASSUME_DEFAULT_VALUE) or be changed to their boxed type (e.g., int -> Integer) with @Nullable or Optional."
                 .formatted(method.getSimpleName()),
             method);
         return;
@@ -1548,7 +1617,7 @@ this.$L = $L == null
 
       if (!isMethodOptionalOrNullable(method, util)) {
         util.error(
-            "Field '%s' in REQUEST model with @IfAbsent(WILL_NEVER_FAIL) or no @IfAbsent annotation must be Optional or annotated with %s. This ensures application developers handle the null case gracefully."
+            "Field '%s' in REQUEST model with @IfAbsent(WILL_NEVER_FAIL) must be Optional or annotated with %s. This ensures application developers handle the null case gracefully."
                 .formatted(method.getSimpleName(), Nullable.class.getCanonicalName()),
             method);
       }

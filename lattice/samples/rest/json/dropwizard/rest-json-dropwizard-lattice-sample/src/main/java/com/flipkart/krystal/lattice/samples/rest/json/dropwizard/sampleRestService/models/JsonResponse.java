@@ -1,7 +1,6 @@
 package com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.models;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
-import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.WILL_NEVER_FAIL;
 import static com.flipkart.krystal.model.ModelRoot.ModelType.RESPONSE;
 
@@ -17,7 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-@ModelRoot(type = RESPONSE)
+@ModelRoot(type = {RESPONSE})
 @SupportedModelProtocols({PlainJavaObject.class, Json.class})
 public interface JsonResponse extends Model {
 
@@ -35,10 +34,10 @@ public interface JsonResponse extends Model {
 
   String string();
 
-  @IfAbsent(MAY_FAIL_CONDITIONALLY)
+  @IfAbsent(WILL_NEVER_FAIL)
   Optional<Integer> optionalInteger();
 
-  @IfAbsent(MAY_FAIL_CONDITIONALLY)
+  @IfAbsent(WILL_NEVER_FAIL)
   @Nullable Integer nullableIntegerMayFailConditionally();
 
   @Nullable Integer nullableInteger();

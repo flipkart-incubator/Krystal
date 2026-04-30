@@ -14,7 +14,9 @@ import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-@ModelRoot(type = ModelType.RESPONSE, builderExtendsModelRoot = true)
+@ModelRoot(
+    type = {ModelType.RESPONSE},
+    builderExtendsModelRoot = true)
 @SupportedModelProtocols(Protobuf3.class)
 public interface SubMessage extends Model {
   @SerialId(1)

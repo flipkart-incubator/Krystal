@@ -16,7 +16,9 @@ import java.util.Map;
 import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-@ModelRoot(type = RESPONSE, pure = false)
+@ModelRoot(
+    type = {RESPONSE},
+    pure = false)
 @SupportedModelProtocols({PlainJavaObject.class, Json.class})
 public interface JsonResponse extends Model {
 

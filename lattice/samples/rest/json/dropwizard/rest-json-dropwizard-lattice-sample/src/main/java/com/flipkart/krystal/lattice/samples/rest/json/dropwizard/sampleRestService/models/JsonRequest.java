@@ -16,7 +16,7 @@ import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @SupportedModelProtocols({Json.class, PlainJavaObject.class})
-@ModelRoot(type = REQUEST)
+@ModelRoot(type = {REQUEST})
 public interface JsonRequest extends Model {
 
   @Nullable Integer optionalInput();

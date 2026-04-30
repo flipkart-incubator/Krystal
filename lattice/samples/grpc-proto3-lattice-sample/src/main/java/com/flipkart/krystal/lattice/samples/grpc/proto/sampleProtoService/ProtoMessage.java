@@ -11,7 +11,7 @@ import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.serial.SerialId;
 import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
 
-@ModelRoot(type = ModelType.RESPONSE)
+@ModelRoot(type = {ModelType.RESPONSE})
 @SupportedModelProtocols({Protobuf3.class, PlainJavaObject.class})
 public interface ProtoMessage extends Model {
   @SerialId(1)
