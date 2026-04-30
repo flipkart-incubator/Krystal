@@ -1288,8 +1288,7 @@ public class CodeGenUtility {
    * com.flipkart.krystal.model.EnumModel}.
    */
   public boolean isEnumModel(TypeElement typeElement) {
-    return typeElement.getKind() == ElementKind.ENUM
-        && isRawAssignable(typeElement.asType(), com.flipkart.krystal.model.EnumModel.class);
+    return typeElement.getKind() == ElementKind.ENUM;
   }
 
   /**

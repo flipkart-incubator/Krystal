@@ -428,7 +428,7 @@ return _serializedPayload;
                   String methodName = method.getSimpleName().toString();
                   Optional<ModelRootInfo> modelRoot = util.asModelRoot(method.getReturnType());
                   CodeBlock accessor;
-                  if (modelRoot.isPresent()) {
+                  if (modelRoot.isPresent() && !util.isEnumModel(modelRoot.get().element())) {
                     if (isOptional) {
                       accessor =
                           CodeBlock.of(
@@ -476,7 +476,9 @@ return _serializedPayload;
         methodBuilder(methodName).addAnnotation(Override.class).addModifiers(PUBLIC);
 
     Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(specifiedType);
-    if (isBuilder && fieldModelRootInfo.isPresent()) {
+    if (isBuilder
+        && fieldModelRootInfo.isPresent()
+        && !util.isEnumModel(fieldModelRootInfo.get().element())) {
       ClassName immutInterfaceName = util.getImmutInterfaceName(fieldModelRootInfo.get().element());
       if (LIST.equals(fieldModelRootInfo.get().containerType())) {
         typeName =
