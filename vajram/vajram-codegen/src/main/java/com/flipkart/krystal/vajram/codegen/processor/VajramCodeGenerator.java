@@ -384,11 +384,17 @@ public class VajramCodeGenerator implements CodeGenerator {
     SupportedModelProtocols vajramProtocols =
         currentVajramInfo.vajramClassElem().getAnnotation(SupportedModelProtocols.class);
     AnnotationSpec.Builder builder = AnnotationSpec.builder(SupportedModelProtocols.class);
+    builder.addMember("value", "$T.class", PlainJavaObject.class);
     if (vajramProtocols != null) {
-      util.getTypesFromAnnotationMember(vajramProtocols::value)
+      util.getTypesFromAnnotationMember(vajramProtocols::value).stream()
+          .filter(
+              tm -> {
+                Element elem = util.processingEnv().getTypeUtils().asElement(tm);
+                return elem instanceof QualifiedNameable qn
+                    && !qn.getQualifiedName()
+                        .contentEquals(PlainJavaObject.class.getCanonicalName());
+              })
           .forEach(tm -> builder.addMember("value", "$T.class", TypeName.get(tm)));
-    } else {
-      builder.addMember("value", "$T.class", PlainJavaObject.class);
     }
     return builder.build();
   }
