@@ -28,4 +28,12 @@ public interface SubMessage extends Model {
   @SerialId(3)
   @IfAbsent(ASSUME_DEFAULT_VALUE)
   List<ProtoMessage> protoMessages();
+
+  @SerialId(4)
+  @IfAbsent(WILL_NEVER_FAIL)
+  @Nullable Status subStatus();
+
+  @SerialId(5)
+  @IfAbsent(ASSUME_DEFAULT_VALUE)
+  List<Status> subStatuses();
 }

@@ -21,6 +21,7 @@ import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3
 import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSample_ReqImmutProto;
 import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.ProtoMessage_ImmutProto;
 import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.ProtoMessage_Proto;
+import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Status;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -302,6 +303,7 @@ class Proto3LatticeSampleTest {
             .string("$$ This is a mocked response $$")
             .mandatoryInt(1)
             .mandatoryStringPartialConstruction("hello")
+            .status(Status.PENDING)
             ._build();
     // Execute the vajram with a mocked response
     CompletableFuture<Proto3LatticeSampleResponse> result;

@@ -1005,7 +1005,8 @@ public class CodeGenUtility {
     finalTypeName =
         switch (containerType) {
           case NO_CONTAINER -> {
-            if (fieldModelRootInfo.isPresent()) {
+            if (fieldModelRootInfo.isPresent()
+                && !isEnumModel(fieldModelRootInfo.get().element())) {
               if (isBuilder) {
                 if (!fieldModelRootInfo.get().annotation().builderExtendsModelRoot()) {
                   yield ClassName.get(Object.class);
@@ -1018,7 +1019,8 @@ public class CodeGenUtility {
           }
           case LIST -> {
             if (isBuilder) {
-              if (fieldModelRootInfo.isPresent()) {
+              if (fieldModelRootInfo.isPresent()
+                  && !isEnumModel(fieldModelRootInfo.get().element())) {
                 ClassName immutType =
                     getImmutClassName(fieldModelRootInfo.get().element(), modelProtocol);
                 yield ParameterizedTypeName.get(
@@ -1040,7 +1042,8 @@ public class CodeGenUtility {
                 getMapKeyType(inferredType).accept(new TypeNameVisitor(), null);
             TypeName mapValueTypeName = typeName;
             if (isBuilder) {
-              if (fieldModelRootInfo.isPresent()) {
+              if (fieldModelRootInfo.isPresent()
+                  && !isEnumModel(fieldModelRootInfo.get().element())) {
                 ClassName immutType =
                     getImmutClassName(fieldModelRootInfo.get().element(), modelProtocol);
                 yield ParameterizedTypeName.get(
@@ -1278,6 +1281,26 @@ public class CodeGenUtility {
       }
     }
     return Optional.empty();
+  }
+
+  /**
+   * Returns true if the given TypeElement is an enum that implements {@link
+   * com.flipkart.krystal.model.EnumModel}.
+   */
+  public boolean isEnumModel(TypeElement typeElement) {
+    return typeElement.getKind() == ElementKind.ENUM;
+  }
+
+  /**
+   * Returns true if the given TypeMirror is an enum type annotated with {@link ModelRoot} and
+   * implementing {@link com.flipkart.krystal.model.EnumModel}.
+   */
+  public boolean isEnumModelType(TypeMirror type) {
+    Element element = processingEnv().getTypeUtils().asElement(type);
+    if (element instanceof TypeElement typeElement) {
+      return isEnumModel(typeElement) && typeElement.getAnnotation(ModelRoot.class) != null;
+    }
+    return false;
   }
 
   public record ModelRootInfo(

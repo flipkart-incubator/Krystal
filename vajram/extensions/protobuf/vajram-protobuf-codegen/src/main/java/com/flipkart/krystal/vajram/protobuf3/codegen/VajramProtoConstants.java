@@ -10,6 +10,7 @@ public final class VajramProtoConstants {
   public static final String MODELS_PROTO_FILE_SUFFIX = ".models.proto";
   public static final String MODELS_PROTO_OUTER_CLASS_SUFFIX = "_ModelsProto";
   public static final String MODELS_PROTO_MSG_SUFFIX = "_Proto";
+  public static final String MODELS_PROTO_UTILS_SUFFIX = "_ProtoUtils";
 
   private VajramProtoConstants() {}
 }

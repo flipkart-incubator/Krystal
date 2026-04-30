@@ -26,6 +26,7 @@ import com.flipkart.krystal.codegen.common.models.CodeGenerationException;
 import com.flipkart.krystal.codegen.common.models.DeclaredTypeVisitor;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
+import com.flipkart.krystal.model.EnumModel;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.model.ImmutableModel;
@@ -45,6 +46,8 @@ import com.flipkart.krystal.model.list.UnmodifiableModelsList;
 import com.flipkart.krystal.model.map.ModelsMapBuilder;
 import com.flipkart.krystal.model.map.ModelsMapView;
 import com.flipkart.krystal.model.map.UnmodifiableModelsMap;
+import com.flipkart.krystal.serial.SerdeProtocol;
+import com.flipkart.krystal.serial.SerialId;
 import com.flipkart.krystal.vajram.Trait;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -61,9 +64,11 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeVariableName;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
@@ -71,8 +76,10 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.ElementFilter;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -176,18 +183,32 @@ public final class JavaModelsGen implements CodeGenerator {
     if (!isApplicable()) {
       return;
     }
-    validate();
 
     TypeElement modelRootType = codeGenContext.modelRootType();
+
+    // For enum models: validate only, no code generation needed
+    if (util.isEnumModel(modelRootType)) {
+      validateEnumModel(modelRootType);
+      return;
+    }
+
+    validate();
+
     CodeGenUtility util = codeGenContext.util();
 
     // Extract and validate model methods
     List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
 
+    // Validate @SerialId all-or-none consistency
+    validateSerialIdConsistency(modelMethods);
+
     // Validate pure model constraints (nested Models must also be pure)
     if (modelRoot.pure()) {
       validatePureModel(modelMethods);
     }
+
+    // Validate enum map keys not used with serde protocols
+    validateNoEnumMapKeysForSerdeProtocols(modelRootType, modelMethods);
 
     // Get package and class names
     ClassName immutModelNameRaw = util.getImmutInterfaceName(modelRootType);
@@ -244,9 +265,11 @@ public final class JavaModelsGen implements CodeGenerator {
     if (util.isPrimitiveArray(type)) {
       return;
     }
-    // Enums are simple value types, allowed in pure models
+    // Only enums with @ModelRoot annotation are allowed in pure models
     Element typeElement = util.processingEnv().getTypeUtils().asElement(type);
-    if (typeElement != null && typeElement.getKind() == ElementKind.ENUM) {
+    if (typeElement != null
+        && typeElement.getKind() == ElementKind.ENUM
+        && typeElement.getAnnotation(ModelRoot.class) != null) {
       return;
     }
     if (util.isRawAssignable(type, Model.class)) {
@@ -303,7 +326,9 @@ public final class JavaModelsGen implements CodeGenerator {
       return;
     }
     Element elemElement = util.processingEnv().getTypeUtils().asElement(elementType);
-    if (elemElement != null && elemElement.getKind() == ElementKind.ENUM) {
+    if (elemElement != null
+        && elemElement.getKind() == ElementKind.ENUM
+        && elemElement.getAnnotation(ModelRoot.class) != null) {
       return;
     }
     if (util.isRawAssignable(elementType, Model.class)) {
@@ -324,7 +349,9 @@ public final class JavaModelsGen implements CodeGenerator {
       return;
     }
     Element valElement = util.processingEnv().getTypeUtils().asElement(valueType);
-    if (valElement != null && valElement.getKind() == ElementKind.ENUM) {
+    if (valElement != null
+        && valElement.getKind() == ElementKind.ENUM
+        && valElement.getAnnotation(ModelRoot.class) != null) {
       return;
     }
     if (util.isRawAssignable(valueType, Model.class)) {
@@ -336,6 +363,63 @@ public final class JavaModelsGen implements CodeGenerator {
                 .formatted(fieldName, codeGenContext.modelRootType().getQualifiedName(), valueType)
             + "Map values in pure models must be primitives, boxed primitives, String, enums, or pure Models.",
         method);
+  }
+
+  /**
+   * Validates that enum models are not used as map keys in models that support serde protocols.
+   * Enum map keys have problematic unknown-key semantics during deserialization. For non-serde
+   * (model-only) protocols like {@link PlainJavaObject}, enum map keys are allowed.
+   */
+  private void validateNoEnumMapKeysForSerdeProtocols(
+      TypeElement modelRootType, List<ExecutableElement> modelMethods) {
+    SupportedModelProtocols supportedModelProtocols =
+        modelRootType.getAnnotation(SupportedModelProtocols.class);
+    if (supportedModelProtocols == null) {
+      return;
+    }
+    boolean hasSerdeProtocol =
+        util.getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
+            .anyMatch(tm -> util.isRawAssignable(tm, SerdeProtocol.class));
+    if (!hasSerdeProtocol) {
+      return;
+    }
+    for (ExecutableElement method : modelMethods) {
+      TypeMirror returnType = method.getReturnType();
+      if (util.isOptional(returnType)) {
+        returnType = util.getOptionalInnerType(returnType);
+      }
+      if (util.isMapType(returnType)) {
+        TypeMirror keyType = util.getMapKeyType(returnType);
+        if (util.isEnumModelType(keyType)) {
+          util.error(
+              "Field '%s' in model '%s' uses an EnumModel ('%s') as a map key. "
+                      .formatted(method.getSimpleName(), modelRootType.getQualifiedName(), keyType)
+                  + "EnumModel map keys are not allowed in models that support serde protocols "
+                  + "because unknown enum keys cannot be deserialized reliably.",
+              method);
+        }
+      }
+    }
+  }
+
+  /**
+   * Validates that @SerialId is either present on all model methods or none. Partial usage is not
+   * allowed.
+   */
+  private void validateSerialIdConsistency(List<ExecutableElement> modelMethods) {
+    boolean anyHasSerialId =
+        modelMethods.stream().anyMatch(m -> m.getAnnotation(SerialId.class) != null);
+    if (anyHasSerialId) {
+      for (ExecutableElement method : modelMethods) {
+        if (method.getAnnotation(SerialId.class) == null) {
+          util.error(
+              "Model '%s': @SerialId must be present on all fields or none. Field '%s' is missing @SerialId"
+                  .formatted(
+                      codeGenContext.modelRootType().getQualifiedName(), method.getSimpleName()),
+              method);
+        }
+      }
+    }
   }
 
   /**
@@ -357,6 +441,109 @@ public final class JavaModelsGen implements CodeGenerator {
       util.error(
           "Interface with @ModelRoot annotation must extend " + Model.class.getCanonicalName(),
           modelRootType);
+    }
+  }
+
+  /**
+   * Validates enum model constraints:
+   *
+   * <ul>
+   *   <li>Must implement {@link EnumModel}
+   *   <li>First enum constant must be UNKNOWN
+   *   <li>If any constant has @SerialId, UNKNOWN must have @SerialId(0)
+   * </ul>
+   */
+  private void validateEnumModel(TypeElement enumType) {
+    // Validate that the enum implements EnumModel
+    if (!util.isRawAssignable(enumType.asType(), EnumModel.class)) {
+      util.error(
+          "Enum '%s' with @ModelRoot annotation must implement %s"
+              .formatted(enumType.getQualifiedName(), EnumModel.class.getCanonicalName()),
+          enumType);
+    }
+
+    // Validate that builderExtendsModelRoot is not used on enum models
+    ModelRoot modelRoot = enumType.getAnnotation(ModelRoot.class);
+    if (modelRoot != null && modelRoot.builderExtendsModelRoot()) {
+      util.error(
+          "Enum '%s' with @ModelRoot annotation must not have builderExtendsModelRoot = true"
+              .formatted(enumType.getQualifiedName()),
+          enumType);
+    }
+
+    // Get enum constants in declaration order
+    List<VariableElement> enumConstants =
+        ElementFilter.fieldsIn(enumType.getEnclosedElements()).stream()
+            .filter(field -> field.getKind() == ElementKind.ENUM_CONSTANT)
+            .toList();
+
+    if (enumConstants.isEmpty()) {
+      util.error(
+          "Enum '%s' with @ModelRoot annotation must have at least one constant (UNKNOWN)"
+              .formatted(enumType.getQualifiedName()),
+          enumType);
+      return;
+    }
+
+    // Validate UNKNOWN is the first constant
+    VariableElement firstConstant = enumConstants.get(0);
+    if (!firstConstant.getSimpleName().contentEquals("UNKNOWN")) {
+      util.error(
+          "Enum '%s' with @ModelRoot annotation must have 'UNKNOWN' as the first constant, but found '%s'"
+              .formatted(enumType.getQualifiedName(), firstConstant.getSimpleName()),
+          firstConstant);
+    }
+
+    // Check @SerialId usage
+    boolean anyHasSerialId =
+        enumConstants.stream().anyMatch(c -> c.getAnnotation(SerialId.class) != null);
+
+    if (anyHasSerialId) {
+      // All-or-none: if any constant has @SerialId, all must have it
+      for (VariableElement constant : enumConstants) {
+        if (constant.getAnnotation(SerialId.class) == null) {
+          util.error(
+              "Enum '%s': @SerialId must be present on all constants or none. Constant '%s' is missing @SerialId"
+                  .formatted(enumType.getQualifiedName(), constant.getSimpleName()),
+              constant);
+        }
+      }
+
+      // If any constant has @SerialId, UNKNOWN must have @SerialId(0)
+      SerialId unknownSerialId = firstConstant.getAnnotation(SerialId.class);
+      if (unknownSerialId == null) {
+        util.error(
+            "Enum '%s': When @SerialId is used on any constant, UNKNOWN must have @SerialId(0)"
+                .formatted(enumType.getQualifiedName()),
+            firstConstant);
+      } else if (unknownSerialId.value() != 0) {
+        util.error(
+            "Enum '%s': UNKNOWN must have @SerialId(0), but found @SerialId(%d)"
+                .formatted(enumType.getQualifiedName(), unknownSerialId.value()),
+            firstConstant);
+      }
+
+      // Validate no duplicate @SerialId values
+      Set<Integer> usedIds = new HashSet<>();
+      for (VariableElement constant : enumConstants) {
+        SerialId serialId = constant.getAnnotation(SerialId.class);
+        if (serialId != null) {
+          if (!usedIds.add(serialId.value())) {
+            util.error(
+                "Enum '%s': Duplicate @SerialId(%d) on constant '%s'"
+                    .formatted(
+                        enumType.getQualifiedName(), serialId.value(), constant.getSimpleName()),
+                constant);
+          }
+          if (serialId.value() < 0) {
+            util.error(
+                "Enum '%s': @SerialId must be non-negative, but found @SerialId(%d) on constant '%s'"
+                    .formatted(
+                        enumType.getQualifiedName(), serialId.value(), constant.getSimpleName()),
+                constant);
+          }
+        }
+      }
     }
   }
 
@@ -644,6 +831,7 @@ public final class JavaModelsGen implements CodeGenerator {
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
       if (fieldModelRootInfo.isPresent()
           && !fieldModelRootInfo.get().annotation().builderExtendsModelRoot()
+          && !util.isEnumModel(fieldModelRootInfo.get().element())
           && NO_CONTAINER.equals(fieldModelRootInfo.get().containerType())) {
         MethodSpec.Builder methodBuilder =
             MethodSpec.methodBuilder(methodName)
@@ -659,6 +847,7 @@ public final class JavaModelsGen implements CodeGenerator {
         methods.add(methodBuilder.build());
       }
       if (fieldModelRootInfo.isPresent()
+          && !util.isEnumModel(fieldModelRootInfo.get().element())
           && fieldModelRootInfo.get().containerType().isContainer()) {
         methods.add(
             MethodSpec.methodBuilder(methodName)
@@ -933,7 +1122,9 @@ this.$L = $L == null
     Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(specifiedReturnType);
     String fieldName = method.getSimpleName().toString();
     TypeName actualReturnType =
-        isBuilder && fieldModelRootInfo.isPresent()
+        isBuilder
+                && fieldModelRootInfo.isPresent()
+                && !util.isEnumModel(fieldModelRootInfo.get().element())
             ? switch (modelFieldType.containerType()) {
               case NO_CONTAINER -> TypeName.get(specifiedReturnType);
               case LIST ->
@@ -980,6 +1171,7 @@ this.$L = $L == null
 """,
               fieldName,
               fieldModelRootInfo.isPresent()
+                      && !util.isEnumModel(fieldModelRootInfo.get().element())
                       && LIST.equals(fieldModelRootInfo.get().containerType())
                   ? CodeBlock.of(
                       "$T.<$T, $T>empty().asModelsView()",
@@ -987,6 +1179,7 @@ this.$L = $L == null
                       TypeName.get(fieldModelRootInfo.get().type()),
                       util.getImmutInterfaceName(fieldModelRootInfo.get().element()))
                   : fieldModelRootInfo.isPresent()
+                          && !util.isEnumModel(fieldModelRootInfo.get().element())
                           && ContainerType.MAP.equals(fieldModelRootInfo.get().containerType())
                       ? CodeBlock.of(
                           "$T.<$T, $T, $T>empty().asModelsView()",
@@ -1042,7 +1235,9 @@ this.$L = $L == null
     CodeBlock fieldAccessorCode = CodeBlock.of("$L", fieldName);
 
     Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(returnType);
-    if (isBuilder && fieldModelRootInfo.isPresent()) {
+    if (isBuilder
+        && fieldModelRootInfo.isPresent()
+        && !util.isEnumModel(fieldModelRootInfo.get().element())) {
       fieldAccessorCode =
           switch (fieldModelRootInfo.get().containerType()) {
             case NO_CONTAINER ->
@@ -1092,7 +1287,7 @@ this.$L = $L == null
       TypeName fieldType = util.getModelFieldType(method, true, null).fieldType();
       FieldSpec.Builder fieldBuilder = FieldSpec.builder(fieldType, fieldName, PRIVATE);
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
-      if (fieldModelRootInfo.isPresent()) {
+      if (fieldModelRootInfo.isPresent() && !util.isEnumModel(fieldModelRootInfo.get().element())) {
         if (LIST.equals(fieldModelRootInfo.get().containerType())) {
           fieldBuilder.initializer("$T.empty()", ModelsListBuilder.class);
         } else if (ContainerType.MAP.equals(fieldModelRootInfo.get().containerType())) {
@@ -1220,6 +1415,7 @@ this.$L = $L == null
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
       if (fieldModelRootInfo.isPresent()
           && !fieldModelRootInfo.get().annotation().builderExtendsModelRoot()
+          && !util.isEnumModel(fieldModelRootInfo.get().element())
           && NO_CONTAINER.equals(fieldModelRootInfo.get().containerType())) {
         builderCopyMethodBuilder.addCode(
 """
@@ -1265,6 +1461,7 @@ this.$L = $L == null
               .returns(builderType)
               .addCode(
                   fieldModelRootInfo
+                      .filter(info -> !util.isEnumModel(info.element()))
                       .map(ModelRootInfo::containerType)
                       .map(
                           containerType ->
@@ -1293,6 +1490,7 @@ this.$L = $L == null
       Optional<ModelRootInfo> fieldModelRoot = util.asModelRoot(method.getReturnType());
       if (fieldModelRoot.isPresent()
           && !fieldModelRoot.get().annotation().builderExtendsModelRoot()
+          && !util.isEnumModel(fieldModelRoot.get().element())
           && NO_CONTAINER.equals(fieldModelRoot.get().containerType())) {
         ClassName fieldBuilderType =
             util.getImmutInterfaceName(fieldModelRoot.get().element()).nestedClass("Builder");
@@ -1308,7 +1506,9 @@ this.$L = $L == null
       }
 
       if (modelRoot.builderExtendsModelRoot()
-          || (fieldModelRoot.isPresent() && fieldModelRoot.get().containerType().isContainer())) {
+          || (fieldModelRoot.isPresent()
+              && !util.isEnumModel(fieldModelRoot.get().element())
+              && fieldModelRoot.get().containerType().isContainer())) {
         MethodSpec.Builder getterMethod =
             getterMethod(method, true, modelProtocol, util, builderType, modelRoot)
                 .addAnnotation(Override.class);
