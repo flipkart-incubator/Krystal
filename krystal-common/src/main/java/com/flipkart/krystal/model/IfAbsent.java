@@ -135,7 +135,7 @@ public @interface IfAbsent {
     }
 
     public static IfAbsent create(IfAbsentThen value) {
-      return create(value, "");
+      return create(value, "Unspecified");
     }
   }
 }

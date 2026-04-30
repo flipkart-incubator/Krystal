@@ -2,7 +2,7 @@ package com.flipkart.krystal.codegen.common.models;
 
 import static com.flipkart.krystal.codegen.common.models.Constants.IMMUT_SUFFIX;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
-import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.WILL_NEVER_FAIL;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.squareup.javapoet.CodeBlock.joining;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -260,7 +260,7 @@ public class CodeGenUtility {
       ifAbsent =
           IfAbsent.Creator.create(
               switch (modelType) {
-                case REQUEST -> WILL_NEVER_FAIL;
+                case REQUEST -> MAY_FAIL_CONDITIONALLY;
                 default -> FAIL;
               });
     }

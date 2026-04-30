@@ -7,6 +7,7 @@ import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.asTypeNa
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.withTypeParams;
 import static com.flipkart.krystal.codegen.common.models.CodegenPhase.MODELS;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
 import static com.flipkart.krystal.model.PlainJavaObject.POJO;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
@@ -210,6 +211,9 @@ public final class JavaModelsGen implements CodeGenerator {
     // Validate enum map keys not used with serde protocols
     validateNoEnumMapKeysForSerdeProtocols(modelRootType, modelMethods);
 
+    // Validate nested model type consistency (REQUEST/RESPONSE)
+    validateNestedModelTypeConsistency(modelRootType, modelMethods);
+
     // Get package and class names
     ClassName immutModelNameRaw = util.getImmutInterfaceName(modelRootType);
     String packageName = immutModelNameRaw.packageName();
@@ -399,6 +403,62 @@ public final class JavaModelsGen implements CodeGenerator {
               method);
         }
       }
+    }
+  }
+
+  /**
+   * Validates that REQUEST models only contain REQUEST nested models, and RESPONSE
+   * models only contain RESPONSE nested models. DEFAULT models have no restriction.
+   */
+  private void validateNestedModelTypeConsistency(
+      TypeElement modelRootType, List<ExecutableElement> modelMethods) {
+    ModelType parentType = modelRoot.type();
+    if (parentType == ModelType.DEFAULT) {
+      return;
+    }
+    for (ExecutableElement method : modelMethods) {
+      TypeMirror returnType = method.getReturnType();
+      if (util.isOptional(returnType)) {
+        returnType = util.getOptionalInnerType(returnType);
+      }
+      if (util.isListType(returnType)) {
+        returnType = util.getContentType(returnType);
+      } else if (util.isMapType(returnType)) {
+        returnType = util.getMapValueType(returnType);
+      }
+      checkNestedModelType(method, returnType, modelRootType, parentType);
+    }
+  }
+
+  private void checkNestedModelType(
+      ExecutableElement method,
+      TypeMirror fieldType,
+      TypeElement modelRootType,
+      ModelType parentType) {
+    if (!util.isRawAssignable(fieldType, Model.class)) {
+      return;
+    }
+    Element element = util.processingEnv().getTypeUtils().asElement(fieldType);
+    if (!(element instanceof TypeElement fieldTypeElement)) {
+      return;
+    }
+    ModelRoot fieldModelRoot = fieldTypeElement.getAnnotation(ModelRoot.class);
+    if (fieldModelRoot == null) {
+      return;
+    }
+    ModelType fieldModelType = fieldModelRoot.type();
+    if (fieldModelType != parentType) {
+      util.error(
+          "Field '%s' in %s model '%s' references %s model '%s'. "
+                  .formatted(
+                      method.getSimpleName(),
+                      parentType,
+                      modelRootType.getQualifiedName(),
+                      fieldModelType,
+                      fieldTypeElement.getQualifiedName())
+              + "%s models can only contain %s or DEFAULT models."
+                  .formatted(parentType, parentType),
+          method);
     }
   }
 
@@ -1528,6 +1588,17 @@ this.$L = $L == null
     ModelRoot modelRoot =
         requireNonNull(codeGenContext.modelRootType().getAnnotation(ModelRoot.class));
     TypeMirror returnType = method.getReturnType();
+
+    // RESPONSE models cannot use MAY_FAIL_CONDITIONALLY
+    if (modelRoot.type() == ModelType.RESPONSE && ifAbsentThen == MAY_FAIL_CONDITIONALLY) {
+      util.error(
+          "Field '%s' in RESPONSE model '%s' uses @IfAbsent(MAY_FAIL_CONDITIONALLY). "
+                  .formatted(
+                      method.getSimpleName(), codeGenContext.modelRootType().getQualifiedName())
+              + "RESPONSE models do not support MAY_FAIL_CONDITIONALLY. "
+              + "Use FAIL, WILL_NEVER_FAIL, or ASSUME_DEFAULT_VALUE instead.",
+          method);
+    }
 
     // Only validate REQUEST models with WILL_NEVER_FAIL behavior
     if (modelRoot.type() == ModelType.REQUEST && ifAbsentThen == IfAbsentThen.WILL_NEVER_FAIL) {
