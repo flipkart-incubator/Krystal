@@ -651,8 +651,20 @@ return _serializedPayload;
               immutProtoClass);
         }
       } else {
-        // For map fields without model values, use getXMap() method
-        getterBuilder.addStatement("return _proto().get$LMap()", capitalizeFirstChar(fieldName));
+        // Check if the map value type is an EnumModel
+        TypeMirror mapValueType = util.getMapValueType(method.getReturnType());
+        if (mapValueType != null && util.isEnumModelType(mapValueType)) {
+          TypeElement enumElement =
+              (TypeElement) util.processingEnv().getTypeUtils().asElement(mapValueType);
+          getterBuilder.addStatement(
+              "return $T.transformValues(_proto().get$LMap(), $T::protoToJava)",
+              Maps.class,
+              capitalizeFirstChar(fieldName),
+              getProtoUtilsClassName(enumElement));
+        } else {
+          // For map fields without model values, use getXMap() method
+          getterBuilder.addStatement("return _proto().get$LMap()", capitalizeFirstChar(fieldName));
+        }
       }
       return;
     }
@@ -929,7 +941,15 @@ return _serializedPayload;
                     util.getImmutClassName(fieldModelRoot.get().element(), PROTOBUF_3),
                     util.getImmutClassName(fieldModelRoot.get().element(), PROTOBUF_3),
                     util.getImmutClassName(fieldModelRoot.get().element(), PROTOBUF_3))
-                : fieldName);
+                : fieldModelRoot.isPresent()
+                        && util.isEnumModel(fieldModelRoot.get().element())
+                        && ContainerType.MAP.equals(fieldModelRoot.get().containerType())
+                    ? CodeBlock.of(
+                        "\n          $T.transformValues($L, $T::javaToProto)\n",
+                        Maps.class,
+                        fieldName,
+                        getProtoUtilsClassName(fieldModelRoot.get().element()))
+                    : fieldName);
       } else {
         // For regular fields
         setterBuilder.addCode(

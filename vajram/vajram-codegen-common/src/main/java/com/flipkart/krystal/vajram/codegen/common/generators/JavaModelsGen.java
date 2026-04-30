@@ -46,6 +46,7 @@ import com.flipkart.krystal.model.list.UnmodifiableModelsList;
 import com.flipkart.krystal.model.map.ModelsMapBuilder;
 import com.flipkart.krystal.model.map.ModelsMapView;
 import com.flipkart.krystal.model.map.UnmodifiableModelsMap;
+import com.flipkart.krystal.serial.SerdeProtocol;
 import com.flipkart.krystal.serial.SerialId;
 import com.flipkart.krystal.vajram.Trait;
 import com.google.common.collect.ImmutableList;
@@ -206,6 +207,9 @@ public final class JavaModelsGen implements CodeGenerator {
       validatePureModel(modelMethods);
     }
 
+    // Validate enum map keys not used with serde protocols
+    validateNoEnumMapKeysForSerdeProtocols(modelRootType, modelMethods);
+
     // Get package and class names
     ClassName immutModelNameRaw = util.getImmutInterfaceName(modelRootType);
     String packageName = immutModelNameRaw.packageName();
@@ -362,6 +366,43 @@ public final class JavaModelsGen implements CodeGenerator {
   }
 
   /**
+   * Validates that enum models are not used as map keys in models that support serde protocols.
+   * Enum map keys have problematic unknown-key semantics during deserialization. For non-serde
+   * (model-only) protocols like {@link PlainJavaObject}, enum map keys are allowed.
+   */
+  private void validateNoEnumMapKeysForSerdeProtocols(
+      TypeElement modelRootType, List<ExecutableElement> modelMethods) {
+    SupportedModelProtocols supportedModelProtocols =
+        modelRootType.getAnnotation(SupportedModelProtocols.class);
+    if (supportedModelProtocols == null) {
+      return;
+    }
+    boolean hasSerdeProtocol =
+        util.getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
+            .anyMatch(tm -> util.isRawAssignable(tm, SerdeProtocol.class));
+    if (!hasSerdeProtocol) {
+      return;
+    }
+    for (ExecutableElement method : modelMethods) {
+      TypeMirror returnType = method.getReturnType();
+      if (util.isOptional(returnType)) {
+        returnType = util.getOptionalInnerType(returnType);
+      }
+      if (util.isMapType(returnType)) {
+        TypeMirror keyType = util.getMapKeyType(returnType);
+        if (util.isEnumModelType(keyType)) {
+          util.error(
+              "Field '%s' in model '%s' uses an EnumModel ('%s') as a map key. "
+                      .formatted(method.getSimpleName(), modelRootType.getQualifiedName(), keyType)
+                  + "EnumModel map keys are not allowed in models that support serde protocols "
+                  + "because unknown enum keys cannot be deserialized reliably.",
+              method);
+        }
+      }
+    }
+  }
+
+  /**
    * Validates that @SerialId is either present on all model methods or none. Partial usage is not
    * allowed.
    */
@@ -418,6 +459,15 @@ public final class JavaModelsGen implements CodeGenerator {
       util.error(
           "Enum '%s' with @ModelRoot annotation must implement %s"
               .formatted(enumType.getQualifiedName(), EnumModel.class.getCanonicalName()),
+          enumType);
+    }
+
+    // Validate that builderExtendsModelRoot is not used on enum models
+    ModelRoot modelRoot = enumType.getAnnotation(ModelRoot.class);
+    if (modelRoot != null && modelRoot.builderExtendsModelRoot()) {
+      util.error(
+          "Enum '%s' with @ModelRoot annotation must not have builderExtendsModelRoot = true"
+              .formatted(enumType.getQualifiedName()),
           enumType);
     }
 

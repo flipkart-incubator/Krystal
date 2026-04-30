@@ -89,4 +89,8 @@ public interface Proto3LatticeSampleResponse extends Model {
   @SerialId(18)
   @IfAbsent(ASSUME_DEFAULT_VALUE)
   List<Status> statuses();
+
+  @SerialId(19)
+  @IfAbsent(ASSUME_DEFAULT_VALUE)
+  Map<String, Status> namedStatuses();
 }

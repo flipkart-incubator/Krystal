@@ -246,6 +246,113 @@ class Proto3LatticeSampleResponseTest {
   }
 
   @Test
+  void copyConstructor_preservesNullableEnumWhenSet() {
+    Proto3LatticeSampleResponse_ImmutProto original =
+        Proto3LatticeSampleResponse_ImmutProto._builder()
+            .string("copy-enum-test")
+            .mandatoryInt(1)
+            .mandatoryStringPartialConstruction("")
+            .status(Status.COMPLETED)
+            .optionalStatus(Status.IN_PROGRESS)
+            .statuses(List.of(Status.PENDING, Status.FAILED))
+            ._build();
+
+    Proto3LatticeSampleResponse_ImmutProto copy =
+        new Proto3LatticeSampleResponse_ImmutProto(original);
+
+    assertThat(copy.status()).isEqualTo(Status.COMPLETED);
+    assertThat(copy.optionalStatus()).isEqualTo(Status.IN_PROGRESS);
+    assertThat(copy.statuses()).containsExactly(Status.PENDING, Status.FAILED);
+    assertThat(copy).isEqualTo(original);
+  }
+
+  @Test
+  void copyConstructor_preservesNullableEnumWhenAbsent() {
+    Proto3LatticeSampleResponse_ImmutProto original =
+        Proto3LatticeSampleResponse_ImmutProto._builder()
+            .string("copy-null-enum-test")
+            .mandatoryInt(1)
+            .mandatoryStringPartialConstruction("")
+            .status(Status.UNKNOWN)
+            ._build();
+
+    Proto3LatticeSampleResponse_ImmutProto copy =
+        new Proto3LatticeSampleResponse_ImmutProto(original);
+
+    assertThat(copy.optionalStatus()).isNull();
+    assertThat(copy.statuses()).isEmpty();
+    assertThat(copy).isEqualTo(original);
+  }
+
+  @Test
+  void builderExtendsModelRoot_enumFieldsInSubMessage() {
+    // SubMessage has builderExtendsModelRoot=true, so builder getters must not
+    // reference non-existent _Immut types for enum fields
+    SubMessage_ImmutProto.Builder builder =
+        SubMessage_ImmutProto._builder()
+            .count(42)
+            .subStatus(Status.COMPLETED)
+            .subStatuses(List.of(Status.PENDING, Status.FAILED));
+
+    // Verify builder getters work correctly (these would fail with
+    // UnmodifiableModelsList<Status, Status_Immut> return types)
+    assertThat(builder.subStatus()).isEqualTo(Status.COMPLETED);
+    assertThat(builder.subStatuses()).containsExactly(Status.PENDING, Status.FAILED);
+
+    SubMessage_Immut built = builder._build();
+    assertThat(built.subStatus()).isEqualTo(Status.COMPLETED);
+    assertThat(built.subStatuses()).containsExactly(Status.PENDING, Status.FAILED);
+  }
+
+  @Test
+  void builderExtendsModelRoot_nullableEnumFieldInSubMessage() {
+    SubMessage_ImmutProto.Builder builder = SubMessage_ImmutProto._builder().count(1);
+
+    // Nullable enum field defaults to null
+    assertThat(builder.subStatus()).isNull();
+    assertThat(builder.subStatuses()).isEmpty();
+
+    SubMessage_Immut built = builder._build();
+    assertThat(built.subStatus()).isNull();
+    assertThat(built.subStatuses()).isEmpty();
+  }
+
+  @Test
+  void builderExtendsModelRoot_enumFieldsRoundTrip() throws Exception {
+    SubMessage_ImmutProto original =
+        SubMessage_ImmutProto._builder()
+            .count(99)
+            .subStatus(Status.IN_PROGRESS)
+            .subStatuses(List.of(Status.COMPLETED, Status.UNKNOWN))
+            ._build();
+
+    byte[] serialized = original._serialize();
+    SubMessage_ImmutProto deserialized = new SubMessage_ImmutProto(serialized);
+
+    assertThat(deserialized.count()).isEqualTo(99);
+    assertThat(deserialized.subStatus()).isEqualTo(Status.IN_PROGRESS);
+    assertThat(deserialized.subStatuses()).containsExactly(Status.COMPLETED, Status.UNKNOWN);
+    assertThat(deserialized).isEqualTo(original);
+  }
+
+  @Test
+  void builderExtendsModelRoot_copyConstructorWithEnumFields() {
+    SubMessage_ImmutProto original =
+        SubMessage_ImmutProto._builder()
+            .count(55)
+            .subStatus(Status.FAILED)
+            .subStatuses(List.of(Status.PENDING))
+            ._build();
+
+    SubMessage_ImmutProto copy = new SubMessage_ImmutProto(original);
+
+    assertThat(copy.count()).isEqualTo(55);
+    assertThat(copy.subStatus()).isEqualTo(Status.FAILED);
+    assertThat(copy.subStatuses()).containsExactly(Status.PENDING);
+    assertThat(copy).isEqualTo(original);
+  }
+
+  @Test
   void unknownProtoEnumValue_deserializesToUnknown() throws Exception {
     // Build a raw proto message with an unrecognized enum value (999) for the status field
     Proto3LatticeSampleResponse_Proto rawProto =
@@ -268,5 +375,75 @@ class Proto3LatticeSampleResponseTest {
 
     // List enum: unknown value should fall back to UNKNOWN, known value should map correctly
     assertThat(deserialized.statuses()).containsExactly(Status.UNKNOWN, Status.PENDING);
+  }
+
+  @Test
+  void mapEnumField_setAndGet() {
+    Proto3LatticeSampleResponse_ImmutProto response =
+        Proto3LatticeSampleResponse_ImmutProto._builder()
+            .string("map-enum-test")
+            .mandatoryInt(1)
+            .mandatoryStringPartialConstruction("")
+            .status(Status.UNKNOWN)
+            .namedStatuses(Map.of("a", Status.COMPLETED, "b", Status.PENDING))
+            ._build();
+
+    assertThat(response.namedStatuses())
+        .containsEntry("a", Status.COMPLETED)
+        .containsEntry("b", Status.PENDING)
+        .hasSize(2);
+  }
+
+  @Test
+  void mapEnumField_roundTrip() throws Exception {
+    Proto3LatticeSampleResponse_ImmutProto original =
+        Proto3LatticeSampleResponse_ImmutProto._builder()
+            .string("map-enum-roundtrip")
+            .mandatoryInt(1)
+            .mandatoryStringPartialConstruction("")
+            .status(Status.UNKNOWN)
+            .namedStatuses(Map.of("x", Status.FAILED, "y", Status.IN_PROGRESS))
+            ._build();
+
+    byte[] serialized = original._serialize();
+    Proto3LatticeSampleResponse_ImmutProto deserialized =
+        new Proto3LatticeSampleResponse_ImmutProto(serialized);
+
+    assertThat(deserialized.namedStatuses())
+        .containsEntry("x", Status.FAILED)
+        .containsEntry("y", Status.IN_PROGRESS)
+        .hasSize(2);
+    assertThat(deserialized).isEqualTo(original);
+  }
+
+  @Test
+  void mapEnumField_emptyByDefault() {
+    Proto3LatticeSampleResponse_ImmutProto response =
+        Proto3LatticeSampleResponse_ImmutProto._builder()
+            .string("map-enum-default")
+            .mandatoryInt(1)
+            .mandatoryStringPartialConstruction("")
+            .status(Status.UNKNOWN)
+            ._build();
+
+    assertThat(response.namedStatuses()).isEmpty();
+  }
+
+  @Test
+  void mapEnumField_copyConstructor() {
+    Proto3LatticeSampleResponse_ImmutProto original =
+        Proto3LatticeSampleResponse_ImmutProto._builder()
+            .string("map-enum-copy")
+            .mandatoryInt(1)
+            .mandatoryStringPartialConstruction("")
+            .status(Status.UNKNOWN)
+            .namedStatuses(Map.of("k1", Status.COMPLETED))
+            ._build();
+
+    Proto3LatticeSampleResponse_ImmutProto copy =
+        new Proto3LatticeSampleResponse_ImmutProto(original);
+
+    assertThat(copy.namedStatuses()).containsEntry("k1", Status.COMPLETED).hasSize(1);
+    assertThat(copy).isEqualTo(original);
   }
 }
