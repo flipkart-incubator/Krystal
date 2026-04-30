@@ -9,6 +9,7 @@ import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.Priority;
 import com.flipkart.krystal.model.array.SimpleByteArray;
 import com.google.common.base.Charsets;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,32 @@ class JsonResponseTest {
     System.out.println(new String(serializedPayload, Charsets.UTF_8));
     JsonResponse_ImmutJson deserialized = new JsonResponse_ImmutJson(serializedPayload);
     assertThat(deserialized).isEqualTo(immutJson);
+  }
+
+  @Test
+  void unknownEnumValue_deserializesToUnknown() throws Exception {
+    // Build a valid response with a known enum value, serialize it, then replace the enum value
+    JsonResponse_ImmutJson original =
+        JsonResponse_ImmutJson._builder()
+            .string("test")
+            .optionalInteger(1)
+            .nullableIntegerMayFailConditionally(2)
+            .nullableInteger(3)
+            .mandatoryInt(4)
+            .mandatoryStringPartialConstruction("sp")
+            .byteArray(SimpleByteArray.copyOf(new byte[] {1}))
+            .nestedData(InnerData_ImmutJson._builder().value("v").count(1)._build())
+            .priority(Priority.HIGH)
+            ._build();
+    String json = new String(original._serialize(), StandardCharsets.UTF_8);
+
+    // Replace "HIGH" with a non-existent enum value
+    String modifiedJson = json.replace("\"HIGH\"", "\"NONEXISTENT\"");
+
+    // Deserialize — unknown enum should fall back to UNKNOWN
+    JsonResponse_ImmutJson deserialized =
+        new JsonResponse_ImmutJson(modifiedJson.getBytes(StandardCharsets.UTF_8));
+    assertThat(deserialized.priority()).isEqualTo(Priority.UNKNOWN);
   }
 
   @Test

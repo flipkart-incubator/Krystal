@@ -244,4 +244,29 @@ class Proto3LatticeSampleResponseTest {
 
     assertThat(deserialized).isEqualTo(original);
   }
+
+  @Test
+  void unknownProtoEnumValue_deserializesToUnknown() throws Exception {
+    // Build a raw proto message with an unrecognized enum value (999) for the status field
+    Proto3LatticeSampleResponse_Proto rawProto =
+        Proto3LatticeSampleResponse_Proto.newBuilder()
+            .setString("test")
+            .setMandatoryInt(1)
+            .setStatusValue(999)
+            .addStatusesValue(999)
+            .addStatusesValue(1)
+            .build();
+
+    byte[] serialized = rawProto.toByteArray();
+
+    // Deserialize through the Krystal wrapper
+    Proto3LatticeSampleResponse_ImmutProto deserialized =
+        new Proto3LatticeSampleResponse_ImmutProto(serialized);
+
+    // Scalar enum: unknown value should fall back to UNKNOWN
+    assertThat(deserialized.status()).isEqualTo(Status.UNKNOWN);
+
+    // List enum: unknown value should fall back to UNKNOWN, known value should map correctly
+    assertThat(deserialized.statuses()).containsExactly(Status.UNKNOWN, Status.PENDING);
+  }
 }
