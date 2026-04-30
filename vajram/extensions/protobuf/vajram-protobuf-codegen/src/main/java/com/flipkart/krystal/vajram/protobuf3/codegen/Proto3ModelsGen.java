@@ -304,6 +304,15 @@ return _serializedPayload;
             .addStatement("return this")
             .build());
 
+    // Add _newCopy with refined return type
+    classBuilder.addMethod(
+        methodBuilder("_newCopy")
+            .addAnnotation(Override.class)
+            .addModifiers(PUBLIC)
+            .returns(immutableProtoType)
+            .addStatement("return this")
+            .build());
+
     // Add _asBuilder method from ImmutableModel interface
     classBuilder.addMethod(
         methodBuilder("_asBuilder")
@@ -311,27 +320,6 @@ return _serializedPayload;
             .addModifiers(PUBLIC)
             .returns(ClassName.get("", "Builder"))
             .addStatement("return new Builder(_proto().toBuilder())")
-            .build());
-
-    // Add _newCopy method from ImmutableModel interface
-    classBuilder.addMethod(
-        methodBuilder("_newCopy")
-            .addAnnotation(Override.class)
-            .addModifiers(PUBLIC)
-            .returns(immutableProtoType)
-            .addCode(
-                """
-                if(_serializedPayload != null) {
-                  return new $L(_serializedPayload);
-                } else if(_proto != null){
-                  return new $L(_proto);
-                } else {
-                  throw new $T("Both _proto and _serializedPayload are null");
-                }
-                """,
-                protoClassName,
-                protoClassName,
-                IllegalStateException.class)
             .build());
 
     // Add method to lazily deserialize the proto message

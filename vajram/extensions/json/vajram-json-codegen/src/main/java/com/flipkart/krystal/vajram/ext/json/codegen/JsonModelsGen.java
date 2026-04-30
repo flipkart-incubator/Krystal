@@ -7,7 +7,6 @@ import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGe
 import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.getterMethod;
 import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.isIfAbsentFail;
 import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.newCopyForBuilder;
-import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.newCopyForImmut;
 import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.stripNullableAnnotation;
 import static com.flipkart.krystal.vajram.json.Json.JSON;
 import static java.util.Objects.requireNonNull;
@@ -211,8 +210,12 @@ return _serializedPayload;
     }
     methods.addAll(
         List.of(
-            newCopyForImmut(modelMethods, immutableJsonModelName).build(),
             asBuilder(modelMethods, builderType).build(),
+            MethodSpec.overriding(util.getMethod(Model.class, "_newCopy", 0))
+                .addModifiers(Modifier.PUBLIC)
+                .returns(immutableJsonModelName)
+                .addStatement("return this")
+                .build(),
             MethodSpec.methodBuilder("_builder")
                 .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
                 .returns(builderType)

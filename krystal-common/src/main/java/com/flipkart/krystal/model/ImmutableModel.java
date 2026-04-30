@@ -7,6 +7,11 @@ public interface ImmutableModel extends Model {
     return this;
   }
 
+  @Override
+  default Model _newCopy() {
+    return this;
+  }
+
   interface Builder extends Model {
 
     @Override

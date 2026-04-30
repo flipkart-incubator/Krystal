@@ -46,7 +46,7 @@ public interface OrderResponse extends Model {
 
 | Attribute                 | Default      | Description                                                                                                                                                                                                                                                                                                                                          |
 |---------------------------|--------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `type`                    | _(required)_ | `DEFAULT`, `REQUEST`, or `RESPONSE`. Determines how the model is treated by the framework (e.g. `REQUEST` models might have special `@IfAbsent` semantics). `REQUEST` models are used to accept data from a client of this module. `RESPONSE` models are used to provide data to a client of this module. For other scenarios, `DEFAULT` can be used |
+| `type`                    | `{}` (empty) | An array of `ModelType` values: `REQUEST`, `RESPONSE`, or both `{REQUEST, RESPONSE}`. An empty array (the default) means the model is a general-purpose model with no request/response-specific semantics. `REQUEST` models are used to accept data from a client. `RESPONSE` models are used to provide data to a client. Models with both types must adhere to **both** sets of constraints. |
 | `pure`                    | `true`       | If true, all field types are restricted to primitives, boxed primitives, `String`, `PrimitiveArray` subtypes, `@ModelRoot` enums, pure `Model`s, and `List`/`Map` of these types. See [Model Purity](#model-purity).                                                                                                                                 |
 | `builderExtendsModelRoot` | `false`      | If true, the generated `Builder` interface also extends the model root interface, so builder instances can be used wherever the model root type is expected. See [Builder Extends ModelRoot](#builderextendmodelroot).                                                                                                                               |
 | `suffixSeparator`         | `"_"`        | The separator between the model root name and the generated class suffix (e.g. `_Immut`, `_ImmutPojo`).                                                                                                                                                                                                                                              |
@@ -67,19 +67,28 @@ Documents the behavior when a field has no value. The possible strategies are:
 - **`FAIL`** — The field is mandatory. Building the model without this field throws
   `MandatoryFieldMissingException`. In `REQUEST` models, this implies that the API accepting the
   request will fail if the value is null. In `RESPONSE` models, it means the API will always return
-  a non-null value. In
-  `RESPONSE` models, this is the default value for fields which don't have `@IfAbsent` annotation.
+  a non-null value. In `RESPONSE` models and general-purpose models (empty `type`), this is the
+  default value for fields which don't have `@IfAbsent` annotation.
 - **`MAY_FAIL_CONDITIONALLY`** — The field is conditionally mandatory. The API may fail in certain
   conditions if the value is null. The documentation of the field should specify this behaviour. In
-  `REQUEST` models, this is the default value for fields which don't have `@IfAbsent` annotation.
-  **This value is not allowed in `RESPONSE` models** — a compile error is emitted if used.
+  `REQUEST`-only models, this is the default value for fields which don't have `@IfAbsent`
+  annotation. **This value is not allowed in `RESPONSE`-only models** — a compile error is emitted
+  if used. However, it is allowed in dual-type `{REQUEST, RESPONSE}` models since they also serve
+  as REQUEST models.
 - **`WILL_NEVER_FAIL`** — The field is optional. The code handles the missing case gracefully. The
   field type should be `Optional<T>` or `@Nullable T`. In `REQUEST` models it means the API will
   never fail if this field is `null`. In `RESPONSE` models it means that the API may return `null`
   for this field.
 - **`ASSUME_DEFAULT_VALUE`** — If absent, a type-specific default is assumed (0 for numbers, empty
-  string, empty list/map, false for booleans, empty model for models). This enables serialization optimizations in protocols
-  like Protobuf where defaults are not transmitted on the wire.
+  string, empty list/map, false for booleans, empty model for models). This enables serialization
+  optimizations in protocols like Protobuf where defaults are not transmitted on the wire.
+
+**Models with `type = {REQUEST, RESPONSE}`:** Since `REQUEST` and `RESPONSE` have different
+`@IfAbsent` defaults, models with both types **must** have an explicit `@IfAbsent` annotation on
+every field. Omitting it triggers a compile error. Such models must also satisfy both sets of
+constraints — for example, `WILL_NEVER_FAIL` fields must still be `Optional` or `@Nullable`
+because the model includes `REQUEST`. `MAY_FAIL_CONDITIONALLY` is allowed since the model also
+includes `REQUEST`.
 
 #### `@Nullable` and `Optional<T>`
 
@@ -136,8 +145,8 @@ For fields whose value type is a nested model root (not an enum), the builder al
 
 #### 3. `<ModelRoot>_ImmutPojo` — The POJO Implementation
 
-Generated only if the model supports `PlainJavaObject` (or has no `@SupportedModelProtocols`
-annotation, which defaults to POJO). This is a `final` class that implements `_Immut` with one field
+Generated only if `PlainJavaObject` is explicitly listed in `@SupportedModelProtocols`.
+This is a `final` class that implements `_Immut` with one field
 per accessor. It includes:
 
 - A static `_builder()` factory method returning its inner `Builder`.
@@ -170,7 +179,8 @@ Lists which `ModelProtocol` implementations the model supports:
 @SupportedModelProtocols({PlainJavaObject.class, Json.class, Protobuf3.class})
 ```
 
-- If absent, only `PlainJavaObject` (POJO) is generated.
+- If absent or empty, only the `_Immut` interface is generated (no POJO, no serde implementations).
+  `PlainJavaObject` must be explicitly listed to get POJO generation.
 - Each protocol listed must have a corresponding code generator on the annotation processor
   classpath.
 - Nested model fields must support at least the same serde protocols as the parent model — this is
@@ -229,23 +239,36 @@ intermediate, mutable representations in a processing pipeline.
 
 ### Nested Model Type Consistency
 
-`REQUEST` models can only contain nested models that are also `REQUEST` models. Similarly, `RESPONSE`
-models can only contain nested `RESPONSE` models. `DEFAULT` models have no such restriction and can
-be nested anywhere. This is validated at compile time.
+`REQUEST` models can only contain nested models whose `type` includes `REQUEST`. Similarly,
+`RESPONSE` models can only contain nested models whose `type` includes `RESPONSE`. Models with
+empty `type` (general-purpose) can be nested anywhere and have no restrictions on their nested
+models. This is validated at compile time.
 
-For example, a `RESPONSE` model cannot have a field whose type is a `REQUEST` model:
+For example, a `RESPONSE` model cannot have a field whose type is a `REQUEST`-only model:
 
 ```java
-// ✗ Compile error: RESPONSE model references REQUEST model
-@ModelRoot(type = RESPONSE)
+// ✗ Compile error: RESPONSE model references REQUEST-only model
+@ModelRoot(type = {RESPONSE})
 public interface MyResponse extends Model {
-  MyRequest nested(); // ERROR — MyRequest is a REQUEST model
+  MyRequest nested(); // ERROR — MyRequest is type = {REQUEST}
 }
 
-// ✓ Correct: both are RESPONSE models
-@ModelRoot(type = RESPONSE)
+// ✓ Correct: nested model includes RESPONSE
+@ModelRoot(type = {RESPONSE})
 public interface MyResponse extends Model {
-  InnerResponse nested(); // OK — InnerResponse is also RESPONSE
+  InnerResponse nested(); // OK — InnerResponse type includes RESPONSE
+}
+
+// ✓ Correct: nested model has both types
+@ModelRoot(type = {RESPONSE})
+public interface MyResponse extends Model {
+  SharedData nested(); // OK — SharedData type = {REQUEST, RESPONSE}
+}
+
+// ✓ Correct: general-purpose models can be nested anywhere
+@ModelRoot(type = {REQUEST})
+public interface MyRequest extends Model {
+  CommonData nested(); // OK — CommonData type = {} (general-purpose)
 }
 ```
 
@@ -269,7 +292,7 @@ For a model root `MyModel`:
 |----------------------------------------------|--------|----------------------------------------------------------------|
 | `MyModel_Immut` (interface)                  | MODELS | Always                                                         |
 | `MyModel_Immut.Builder` (interface)          | MODELS | Always                                                         |
-| `MyModel_ImmutPojo` (class + inner Builder)  | MODELS | `PlainJavaObject` supported (or no `@SupportedModelProtocols`) |
+| `MyModel_ImmutPojo` (class + inner Builder)  | MODELS | `PlainJavaObject` explicitly in `@SupportedModelProtocols`     |
 | `MyModel_ImmutJson` (class + inner Builder)  | FINAL  | `Json` in `@SupportedModelProtocols`                           |
 | `MyModel_ImmutProto` (class + inner Builder) | FINAL  | `Protobuf3` in `@SupportedModelProtocols`                      |
 | `MyModel_Proto.proto` (schema)               | FINAL  | `Protobuf3` in `@SupportedModelProtocols`                      |

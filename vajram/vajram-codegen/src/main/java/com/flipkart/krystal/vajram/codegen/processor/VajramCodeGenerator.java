@@ -87,6 +87,7 @@ import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.ModelRoot.ModelType;
+import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.serial.ReservedSerialIds;
 import com.flipkart.krystal.serial.SerialId;
@@ -204,7 +205,7 @@ public class VajramCodeGenerator implements CodeGenerator {
 
   private static final ImmutableSet<String> MODEL_CLASS_ANNOTATIONS =
       ImmutableSet.<@NonNull String>copyOf(
-          Stream.of(ReservedSerialIds.class, SupportedModelProtocols.class)
+          Stream.of(ReservedSerialIds.class)
               .<@NonNull String>map(aClass -> requireNonNull(aClass.getCanonicalName()))
               .toList());
 
@@ -311,6 +312,7 @@ public class VajramCodeGenerator implements CodeGenerator {
                     ? TraitRequestRoot.class
                     : VajramRequestRoot.class)
             .addAnnotation(buildReqModelRootAnnotation())
+            .addAnnotation(buildReqSupportedModelProtocols())
             .addAnnotations(
                 currentVajramInfo.vajramClassElem().getAnnotationMirrors().stream()
                     .filter(
@@ -367,7 +369,7 @@ public class VajramCodeGenerator implements CodeGenerator {
 
   private AnnotationSpec buildReqModelRootAnnotation() {
     return AnnotationSpec.builder(ModelRoot.class)
-        .addMember("type", CodeBlock.of("$T.$L", ModelType.class, ModelType.REQUEST.name()))
+        .addMember("type", CodeBlock.of("{$T.$L}", ModelType.class, ModelType.REQUEST.name()))
         .addMember("suffixSeparator", CodeBlock.of("$S", ""))
         .addMember("builderExtendsModelRoot", "true")
         .addMember(
@@ -376,6 +378,19 @@ public class VajramCodeGenerator implements CodeGenerator {
             util.getModelProtocols(currentVajramInfo.vajramClassElem()).stream()
                 .anyMatch(ModelProtocol::modelsNeedToBePure))
         .build();
+  }
+
+  private AnnotationSpec buildReqSupportedModelProtocols() {
+    SupportedModelProtocols vajramProtocols =
+        currentVajramInfo.vajramClassElem().getAnnotation(SupportedModelProtocols.class);
+    AnnotationSpec.Builder builder = AnnotationSpec.builder(SupportedModelProtocols.class);
+    if (vajramProtocols != null) {
+      util.getTypesFromAnnotationMember(vajramProtocols::value)
+          .forEach(tm -> builder.addMember("value", "$T.class", TypeName.get(tm)));
+    } else {
+      builder.addMember("value", "$T.class", PlainJavaObject.class);
+    }
+    return builder.build();
   }
 
   public void vajramFacets() {
@@ -2504,9 +2519,13 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
             .addSuperinterface(Model.class)
             .addAnnotation(
                 AnnotationSpec.builder(ModelRoot.class)
-                    .addMember("type", "$T.$L", ModelType.class, DEFAULT.name())
+                    .addMember("type", "{}")
                     .addMember("suffixSeparator", "$S", "")
                     .addMember("pure", "false")
+                    .build())
+            .addAnnotation(
+                AnnotationSpec.builder(SupportedModelProtocols.class)
+                    .addMember("value", "$T.class", PlainJavaObject.class)
                     .build());
 
     for (FacetGenModel facet : batchedFacets) {

@@ -156,7 +156,7 @@ class GraphQLEntityGen implements CodeGenerator {
               util.interfaceBuilder(entityClassName.simpleName(), "")
                   .addAnnotation(
                       AnnotationSpec.builder(ModelRoot.class)
-                          .addMember("type", "$T.$L", ModelType.class, ModelType.RESPONSE.name())
+                          .addMember("type", "{$T.$L}", ModelType.class, ModelType.RESPONSE.name())
                           .addMember("builderExtendsModelRoot", "true")
                           .addMember("pure", "false")
                           .build())
