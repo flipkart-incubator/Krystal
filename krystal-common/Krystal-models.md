@@ -20,7 +20,7 @@ public enum Priority implements EnumModel {
 ### Constraints
 
 - **UNKNOWN must be the first constant.** Every `@ModelRoot` enum must declare `UNKNOWN` as its first value.
-- **`@SerialId` rules.** If `@SerialId` is used on any enum constant, `UNKNOWN` must have `@SerialId(0)`. Duplicate `@SerialId` values are not allowed. If `@SerialId` is not used, the proto index defaults to the ordinal (declaration order), with `UNKNOWN = 0`.
+- **`@SerialId` rules.** `@SerialId` must be present on all constants or none — partial usage is not allowed. If `@SerialId` is used, `UNKNOWN` must have `@SerialId(0)`, and duplicate values are not allowed. If `@SerialId` is not used, the binary index used by serde protocols defaults to the ordinal (declaration order), with `UNKNOWN = 0`. This all-or-none rule applies to all `@ModelRoot` types (both enums and interface models).
 - **Pure models.** Pure models (where `@ModelRoot(pure = true)`) can only reference enums that themselves carry a `@ModelRoot` annotation. Plain Java enums without `@ModelRoot` are not allowed as field types in pure models.
 
 ### JSON Serialization
@@ -32,7 +32,7 @@ public enum Priority implements EnumModel {
 
 - **Schema generation:** `Proto3SchemaGen` generates a `.proto` enum definition for each `@ModelRoot` enum. The proto enum name is the Java enum name with a `_Proto` suffix (same convention as messages).
 - **Index assignment:** Proto indices follow declaration order (ordinal) unless overridden by `@SerialId` annotations.
-- **Proto to Java mediation:** The `ProtoEnumUtils` utility provides name-based conversion between proto-generated enum values and Java enum values. Unknown proto values (e.g., `UNRECOGNIZED`) fall back to `UNKNOWN`.
+- **Proto to Java mediation:** For each `@ModelRoot` enum that supports Protobuf3, a `<EnumName>_ProtoUtils` utility class is generated with `protoToJava` and `javaToProto` static methods. These use switch expressions with enum constants for performant conversion. Unknown proto values (e.g., `UNRECOGNIZED`) fall back to `UNKNOWN`. All generated `_ImmutProto` wrappers that reference the enum delegate to these shared utility methods.
 
 ### Usage as a Field in Models
 
@@ -47,4 +47,4 @@ public interface Task extends Model {
 }
 ```
 
-When used in protobuf messages, the enum field is generated as the corresponding proto enum type, and getter/setter code in the generated `_ImmutProto` wrapper handles conversion automatically.
+When used in protobuf messages, the enum field is generated as the corresponding proto enum type, and getter/setter code in the generated `_ImmutProto` wrapper delegates to the shared `<EnumName>_ProtoUtils` class for conversion.

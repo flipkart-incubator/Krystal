@@ -25,7 +25,7 @@ public final class ProtoEnumUtils {
     try {
       return Enum.valueOf(enumClass, protoEnumName);
     } catch (IllegalArgumentException e) {
-      // Fall back to UNKNOWN (first constant)
+      // Fall back to first constant (ex: UNKNOWN)
       return enumClass.getEnumConstants()[0];
     }
   }

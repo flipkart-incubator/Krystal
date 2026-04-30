@@ -198,6 +198,9 @@ public final class JavaModelsGen implements CodeGenerator {
     // Extract and validate model methods
     List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
 
+    // Validate @SerialId all-or-none consistency
+    validateSerialIdConsistency(modelMethods);
+
     // Validate pure model constraints (nested Models must also be pure)
     if (modelRoot.pure()) {
       validatePureModel(modelMethods);
@@ -359,6 +362,26 @@ public final class JavaModelsGen implements CodeGenerator {
   }
 
   /**
+   * Validates that @SerialId is either present on all model methods or none. Partial usage is not
+   * allowed.
+   */
+  private void validateSerialIdConsistency(List<ExecutableElement> modelMethods) {
+    boolean anyHasSerialId =
+        modelMethods.stream().anyMatch(m -> m.getAnnotation(SerialId.class) != null);
+    if (anyHasSerialId) {
+      for (ExecutableElement method : modelMethods) {
+        if (method.getAnnotation(SerialId.class) == null) {
+          util.error(
+              "Model '%s': @SerialId must be present on all fields or none. Field '%s' is missing @SerialId"
+                  .formatted(
+                      codeGenContext.modelRootType().getQualifiedName(), method.getSimpleName()),
+              method);
+        }
+      }
+    }
+  }
+
+  /**
    * Validates that the model root type is an interface and extends Model.
    *
    * @param modelRootType The type element representing the model root
@@ -426,6 +449,16 @@ public final class JavaModelsGen implements CodeGenerator {
         enumConstants.stream().anyMatch(c -> c.getAnnotation(SerialId.class) != null);
 
     if (anyHasSerialId) {
+      // All-or-none: if any constant has @SerialId, all must have it
+      for (VariableElement constant : enumConstants) {
+        if (constant.getAnnotation(SerialId.class) == null) {
+          util.error(
+              "Enum '%s': @SerialId must be present on all constants or none. Constant '%s' is missing @SerialId"
+                  .formatted(enumType.getQualifiedName(), constant.getSimpleName()),
+              constant);
+        }
+      }
+
       // If any constant has @SerialId, UNKNOWN must have @SerialId(0)
       SerialId unknownSerialId = firstConstant.getAnnotation(SerialId.class);
       if (unknownSerialId == null) {
@@ -748,6 +781,7 @@ public final class JavaModelsGen implements CodeGenerator {
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
       if (fieldModelRootInfo.isPresent()
           && !fieldModelRootInfo.get().annotation().builderExtendsModelRoot()
+          && !util.isEnumModel(fieldModelRootInfo.get().element())
           && NO_CONTAINER.equals(fieldModelRootInfo.get().containerType())) {
         MethodSpec.Builder methodBuilder =
             MethodSpec.methodBuilder(methodName)
@@ -763,6 +797,7 @@ public final class JavaModelsGen implements CodeGenerator {
         methods.add(methodBuilder.build());
       }
       if (fieldModelRootInfo.isPresent()
+          && !util.isEnumModel(fieldModelRootInfo.get().element())
           && fieldModelRootInfo.get().containerType().isContainer()) {
         methods.add(
             MethodSpec.methodBuilder(methodName)
@@ -1037,7 +1072,9 @@ this.$L = $L == null
     Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(specifiedReturnType);
     String fieldName = method.getSimpleName().toString();
     TypeName actualReturnType =
-        isBuilder && fieldModelRootInfo.isPresent()
+        isBuilder
+                && fieldModelRootInfo.isPresent()
+                && !util.isEnumModel(fieldModelRootInfo.get().element())
             ? switch (modelFieldType.containerType()) {
               case NO_CONTAINER -> TypeName.get(specifiedReturnType);
               case LIST ->
@@ -1084,6 +1121,7 @@ this.$L = $L == null
 """,
               fieldName,
               fieldModelRootInfo.isPresent()
+                      && !util.isEnumModel(fieldModelRootInfo.get().element())
                       && LIST.equals(fieldModelRootInfo.get().containerType())
                   ? CodeBlock.of(
                       "$T.<$T, $T>empty().asModelsView()",
@@ -1091,6 +1129,7 @@ this.$L = $L == null
                       TypeName.get(fieldModelRootInfo.get().type()),
                       util.getImmutInterfaceName(fieldModelRootInfo.get().element()))
                   : fieldModelRootInfo.isPresent()
+                          && !util.isEnumModel(fieldModelRootInfo.get().element())
                           && ContainerType.MAP.equals(fieldModelRootInfo.get().containerType())
                       ? CodeBlock.of(
                           "$T.<$T, $T, $T>empty().asModelsView()",
@@ -1146,7 +1185,9 @@ this.$L = $L == null
     CodeBlock fieldAccessorCode = CodeBlock.of("$L", fieldName);
 
     Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(returnType);
-    if (isBuilder && fieldModelRootInfo.isPresent()) {
+    if (isBuilder
+        && fieldModelRootInfo.isPresent()
+        && !util.isEnumModel(fieldModelRootInfo.get().element())) {
       fieldAccessorCode =
           switch (fieldModelRootInfo.get().containerType()) {
             case NO_CONTAINER ->
@@ -1196,7 +1237,7 @@ this.$L = $L == null
       TypeName fieldType = util.getModelFieldType(method, true, null).fieldType();
       FieldSpec.Builder fieldBuilder = FieldSpec.builder(fieldType, fieldName, PRIVATE);
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
-      if (fieldModelRootInfo.isPresent()) {
+      if (fieldModelRootInfo.isPresent() && !util.isEnumModel(fieldModelRootInfo.get().element())) {
         if (LIST.equals(fieldModelRootInfo.get().containerType())) {
           fieldBuilder.initializer("$T.empty()", ModelsListBuilder.class);
         } else if (ContainerType.MAP.equals(fieldModelRootInfo.get().containerType())) {
@@ -1324,6 +1365,7 @@ this.$L = $L == null
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
       if (fieldModelRootInfo.isPresent()
           && !fieldModelRootInfo.get().annotation().builderExtendsModelRoot()
+          && !util.isEnumModel(fieldModelRootInfo.get().element())
           && NO_CONTAINER.equals(fieldModelRootInfo.get().containerType())) {
         builderCopyMethodBuilder.addCode(
 """
@@ -1369,6 +1411,7 @@ this.$L = $L == null
               .returns(builderType)
               .addCode(
                   fieldModelRootInfo
+                      .filter(info -> !util.isEnumModel(info.element()))
                       .map(ModelRootInfo::containerType)
                       .map(
                           containerType ->
@@ -1397,6 +1440,7 @@ this.$L = $L == null
       Optional<ModelRootInfo> fieldModelRoot = util.asModelRoot(method.getReturnType());
       if (fieldModelRoot.isPresent()
           && !fieldModelRoot.get().annotation().builderExtendsModelRoot()
+          && !util.isEnumModel(fieldModelRoot.get().element())
           && NO_CONTAINER.equals(fieldModelRoot.get().containerType())) {
         ClassName fieldBuilderType =
             util.getImmutInterfaceName(fieldModelRoot.get().element()).nestedClass("Builder");
@@ -1412,7 +1456,9 @@ this.$L = $L == null
       }
 
       if (modelRoot.builderExtendsModelRoot()
-          || (fieldModelRoot.isPresent() && fieldModelRoot.get().containerType().isContainer())) {
+          || (fieldModelRoot.isPresent()
+              && !util.isEnumModel(fieldModelRoot.get().element())
+              && fieldModelRoot.get().containerType().isContainer())) {
         MethodSpec.Builder getterMethod =
             getterMethod(method, true, modelProtocol, util, builderType, modelRoot)
                 .addAnnotation(Override.class);

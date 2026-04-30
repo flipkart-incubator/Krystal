@@ -186,7 +186,7 @@ return _serializedPayload;
               .addStatement("_deserialize()")
               .addCode(pojoGetterMethod.code)
               .addAnnotation(JsonProperty.class);
-      if (fieldModelRootInfo.isPresent()) {
+      if (fieldModelRootInfo.isPresent() && !util.isEnumModel(fieldModelRootInfo.get().element())) {
         getterBuilder.addAnnotation(
             AnnotationSpec.builder(JsonDeserialize.class)
                 .addMember(
@@ -267,7 +267,8 @@ return _serializedPayload;
 
     return switch (util.getContainerType(method.getReturnType())) {
       case NO_CONTAINER -> {
-        if (fieldModelRootInfo.isPresent()) {
+        if (fieldModelRootInfo.isPresent()
+            && !util.isEnumModel(fieldModelRootInfo.get().element())) {
           yield CodeBlock.of(
               "this.$L = $L;",
               fieldName,
@@ -280,7 +281,8 @@ return _serializedPayload;
         }
       }
       case LIST -> {
-        if (fieldModelRootInfo.isPresent()) {
+        if (fieldModelRootInfo.isPresent()
+            && !util.isEnumModel(fieldModelRootInfo.get().element())) {
           yield CodeBlock.of(
               """
               this.$L = $L == null
@@ -307,7 +309,8 @@ return _serializedPayload;
         }
       }
       case MAP -> {
-        if (fieldModelRootInfo.isPresent()) {
+        if (fieldModelRootInfo.isPresent()
+            && !util.isEnumModel(fieldModelRootInfo.get().element())) {
           yield CodeBlock.of(
 """
 this.$L = $L == null
@@ -374,7 +377,9 @@ this.$L = $L == null
       FieldSpec.Builder fieldBuilder =
           FieldSpec.builder(fieldType, method.getSimpleName().toString(), PRIVATE);
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
-      if (isBuilder && fieldModelRootInfo.isPresent()) {
+      if (isBuilder
+          && fieldModelRootInfo.isPresent()
+          && !util.isEnumModel(fieldModelRootInfo.get().element())) {
         switch (fieldModelRootInfo.get().containerType()) {
           case LIST -> fieldBuilder.initializer("$T.empty()", ModelsListBuilder.class);
           case MAP -> fieldBuilder.initializer("$T.empty()", ModelsMapBuilder.class);

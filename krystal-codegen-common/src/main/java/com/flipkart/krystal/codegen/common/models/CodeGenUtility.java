@@ -1005,7 +1005,8 @@ public class CodeGenUtility {
     finalTypeName =
         switch (containerType) {
           case NO_CONTAINER -> {
-            if (fieldModelRootInfo.isPresent()) {
+            if (fieldModelRootInfo.isPresent()
+                && !isEnumModel(fieldModelRootInfo.get().element())) {
               if (isBuilder) {
                 if (!fieldModelRootInfo.get().annotation().builderExtendsModelRoot()) {
                   yield ClassName.get(Object.class);
@@ -1018,7 +1019,8 @@ public class CodeGenUtility {
           }
           case LIST -> {
             if (isBuilder) {
-              if (fieldModelRootInfo.isPresent()) {
+              if (fieldModelRootInfo.isPresent()
+                  && !isEnumModel(fieldModelRootInfo.get().element())) {
                 ClassName immutType =
                     getImmutClassName(fieldModelRootInfo.get().element(), modelProtocol);
                 yield ParameterizedTypeName.get(
@@ -1040,7 +1042,8 @@ public class CodeGenUtility {
                 getMapKeyType(inferredType).accept(new TypeNameVisitor(), null);
             TypeName mapValueTypeName = typeName;
             if (isBuilder) {
-              if (fieldModelRootInfo.isPresent()) {
+              if (fieldModelRootInfo.isPresent()
+                  && !isEnumModel(fieldModelRootInfo.get().element())) {
                 ClassName immutType =
                     getImmutClassName(fieldModelRootInfo.get().element(), modelProtocol);
                 yield ParameterizedTypeName.get(

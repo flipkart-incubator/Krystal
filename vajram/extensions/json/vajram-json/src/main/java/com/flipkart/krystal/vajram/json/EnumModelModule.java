@@ -9,12 +9,13 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.flipkart.krystal.model.EnumModel;
-import java.io.IOException;
+import com.flipkart.krystal.model.ModelRoot;
 
 /**
  * A Jackson module that provides fallback deserialization for {@link EnumModel} enums. When an
- * unknown enum value is encountered in JSON, it is deserialized to the {@code UNKNOWN} constant
- * (which must be the first enum constant).
+ * unknown enum value is encountered in JSON, it is deserialized to the first enum constant. For
+ * {@link EnumModel}s with @{@link ModelRoot} annotation, {@code UNKNOWN} is guaranteed to be the
+ * first enum constant.
  */
 final class EnumModelModule extends SimpleModule {
 
@@ -43,26 +44,22 @@ final class EnumModelModule extends SimpleModule {
   private static class EnumModelDeserializer<E extends Enum<E> & EnumModel>
       extends JsonDeserializer<E> {
 
-    private final Class<E> enumClass;
     private final JsonDeserializer<?> delegate;
-    private final E unknownValue;
+    private final E firstEnumConstant;
 
     @SuppressWarnings("unchecked")
-    EnumModelDeserializer(Class<?> enumClass, JsonDeserializer<?> delegate) {
-      this.enumClass = (Class<E>) enumClass;
+    EnumModelDeserializer(Class<? extends Enum> enumClass, JsonDeserializer<?> delegate) {
       this.delegate = delegate;
-      // UNKNOWN is guaranteed to be the first constant by validation
-      this.unknownValue = this.enumClass.getEnumConstants()[0];
+      this.firstEnumConstant = ((Class<E>) enumClass).getEnumConstants()[0];
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public E deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+    public E deserialize(JsonParser p, DeserializationContext ctxt) {
       try {
-        E value = (E) delegate.deserialize(p, ctxt);
-        return value != null ? value : unknownValue;
+        return (E) delegate.deserialize(p, ctxt);
       } catch (Exception e) {
-        return unknownValue;
+        return firstEnumConstant;
       }
     }
   }

@@ -11,11 +11,37 @@ package com.flipkart.krystal.model;
  *   <li>If {@link com.flipkart.krystal.serial.SerialId @SerialId} is used on any constant, {@code
  *       UNKNOWN} must have {@code @SerialId(0)}.
  * </ul>
- *
- * <p>In JSON serialization, if the deserializer encounters a value not present in the enum, it will
- * be deserialized to {@code UNKNOWN}.
- *
- * <p>In Protobuf serialization, a proto enum is generated. The proto index for enum values matches
- * the declaration order (ordinal) unless overridden by {@code @SerialId}.
  */
-public interface EnumModel {}
+public interface EnumModel extends ImmutableModel {
+  default EnumModel.Builder _asBuilder() {
+    return new Builder(this);
+  }
+
+  @Override
+  default EnumModel _newCopy() {
+    return this;
+  }
+
+  /**
+   * A dummy builder with no functionality (since enums are immutable by design). This class exists
+   * only to conform to the Model interface's requirement to support _asBuilder
+   */
+  final class Builder implements ImmutableModel.Builder {
+
+    private final EnumModel enumModel;
+
+    private Builder(EnumModel enumModel) {
+      this.enumModel = enumModel;
+    }
+
+    @Override
+    public EnumModel _build() {
+      return enumModel;
+    }
+
+    @Override
+    public Builder _newCopy() {
+      return this;
+    }
+  }
+}
