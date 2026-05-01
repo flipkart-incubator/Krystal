@@ -90,7 +90,7 @@ public abstract sealed class FacetJavaType {
     @Override
     public CodeBlock fieldGetterCode(FacetGenModel facet, CodeGenParams codeGenParams) {
       if (codeGenParams.isSubsetBatch()) {
-        IfAbsent ifAbsent = facet.facetField().getAnnotation(IfAbsent.class);
+        IfAbsent ifAbsent = facet.facetElement().getAnnotation(IfAbsent.class);
         if (ifAbsent != null && !ifAbsent.value().usePlatformDefault()) {
           return CodeBlock.of(
               """

@@ -10,10 +10,9 @@ import com.flipkart.krystal.vajram.facets.Output;
 
 @Vajram
 public abstract class GetPersonBanner extends ComputeVajramDef<String> {
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    PersonId id;
+    PersonId id();
   }
 
   @Output

@@ -21,7 +21,7 @@ public record DefaultFacetModel(
     @NonNull CodeGenType dataType,
     @Nullable String documentation,
     FacetType facetType,
-    @NonNull Element facetField)
+    @NonNull Element facetElement)
     implements FacetGenModel {
 
   private static final ImmutableSet<FacetType> ALLOWED_FACET_TYPES =

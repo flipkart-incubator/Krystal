@@ -19,21 +19,19 @@ import com.flipkart.krystal.vajram.samples.user.response_pojos.UserWithProfile;
 @Vajram
 public abstract class GetUserWithProfile extends ComputeVajramDef<UserWithProfile> {
 
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    String userId;
+    String userId();
   }
 
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _InternalFacets {
+  interface _InternalFacets {
     @IfAbsent(FAIL)
     @Dependency(onVajram = GetUser.class)
-    User user;
+    User user();
 
     @IfAbsent(FAIL)
     @Dependency(onVajram = GetUserProfile.class)
-    UserProfile userProfile;
+    UserProfile userProfile();
   }
 
   @Resolve(dep = user_n, depInputs = GetUser_Req.userId_n)

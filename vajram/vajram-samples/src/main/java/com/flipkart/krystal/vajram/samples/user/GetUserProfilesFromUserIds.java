@@ -19,16 +19,14 @@ import java.util.List;
 @Vajram
 public abstract class GetUserProfilesFromUserIds extends ComputeVajramDef<List<UserWithProfile>> {
 
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    List<String> userIds;
+    List<String> userIds();
   }
 
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _InternalFacets {
+  interface _InternalFacets {
     @Dependency(onVajram = GetUserWithProfile.class, canFanout = true)
-    UserWithProfile userProfiles;
+    UserWithProfile userProfiles();
   }
 
   @Resolve(dep = userProfiles_n, depInputs = GetUserWithProfile_Req.userId_n)

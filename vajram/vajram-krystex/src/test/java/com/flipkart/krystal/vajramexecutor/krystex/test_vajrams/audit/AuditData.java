@@ -11,9 +11,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Vajram
 public abstract class AuditData extends ComputeVajramDef<Void> {
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    String data;
+    String data();
   }
 
   @Output

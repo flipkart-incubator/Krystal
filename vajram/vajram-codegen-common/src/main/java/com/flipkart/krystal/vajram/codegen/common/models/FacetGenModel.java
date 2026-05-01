@@ -18,7 +18,7 @@ public sealed interface FacetGenModel permits DefaultFacetModel, DependencyModel
 
   VajramInfoLite vajramInfo();
 
-  Element facetField();
+  Element facetElement();
 
   FacetType facetType();
 
@@ -29,27 +29,27 @@ public sealed interface FacetGenModel permits DefaultFacetModel, DependencyModel
   }
 
   default boolean isMandatoryOnServer() {
-    IfAbsent ifAbsent = facetField().getAnnotation(IfAbsent.class);
+    IfAbsent ifAbsent = facetElement().getAnnotation(IfAbsent.class);
     return ifAbsent != null && ifAbsent.value().isMandatoryOnServer();
   }
 
   default boolean isOptionalForClient() {
-    IfAbsent ifAbsent = facetField().getAnnotation(IfAbsent.class);
+    IfAbsent ifAbsent = facetElement().getAnnotation(IfAbsent.class);
     return ifAbsent == null || ifAbsent.value().isOptionalForClient();
   }
 
   @Nullable String documentation();
 
   default boolean isBatched() {
-    return facetField().getAnnotation(Batched.class) != null;
+    return facetElement().getAnnotation(Batched.class) != null;
   }
 
   default boolean isUsedToGroupBatches() {
-    return facetField().getAnnotation(BatchesGroupedBy.class) != null;
+    return facetElement().getAnnotation(BatchesGroupedBy.class) != null;
   }
 
   @SneakyThrows
   default List<? extends AnnotationMirror> annotations() {
-    return facetField().getAnnotationMirrors();
+    return facetElement().getAnnotationMirrors();
   }
 }

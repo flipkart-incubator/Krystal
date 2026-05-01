@@ -22,7 +22,7 @@ public record DependencyModel(
     @NonNull TypeName depReqType,
     boolean canFanout,
     @Nullable String documentation,
-    @NonNull Element facetField)
+    @NonNull Element facetElement)
     implements FacetGenModel {
 
   @Override

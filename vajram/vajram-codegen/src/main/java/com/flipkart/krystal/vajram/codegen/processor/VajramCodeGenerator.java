@@ -101,7 +101,6 @@ import com.flipkart.krystal.vajram.VajramRequestRoot;
 import com.flipkart.krystal.vajram.batching.BatchEnabledFacetValues;
 import com.flipkart.krystal.vajram.batching.BatchEnabledImmutableFacetValues;
 import com.flipkart.krystal.vajram.batching.BatchItemExecutionItem;
-import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.batching.BatchedFacets;
 import com.flipkart.krystal.vajram.batching.BatchesGroupedBy;
 import com.flipkart.krystal.vajram.codegen.common.models.CodeGenParams;
@@ -1135,7 +1134,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
           getParsedVajramData().vajramInfo().givenFacets().stream()
               .filter(DefaultFacetModel::isBatched)
               .findAny()
-              .<Element>map(DefaultFacetModel::facetField)
+              .<Element>map(DefaultFacetModel::facetElement)
               .orElse(getParsedVajramData().vajramInfo().vajramClassElem()));
     } else { // TODO : Need non batched IO vajramDef to test this
       nonBatchedExecuteMethodBuilder(executeBuilder, false);
@@ -2220,7 +2219,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
         method.addJavadoc("$L", documentation);
       }
       method.addAnnotations(
-          facet.facetField().getAnnotationMirrors().stream()
+          facet.facetElement().getAnnotationMirrors().stream()
               .filter(
                   annotationMirror ->
                       MODEL_METHOD_ANNOTATIONS.contains(
@@ -2261,7 +2260,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
 
     // Check each facet's SerialId annotation
     for (FacetGenModel facet : facetModelsByName.values()) {
-      SerialId facetSerialId = facet.facetField().getAnnotation(SerialId.class);
+      SerialId facetSerialId = facet.facetElement().getAnnotation(SerialId.class);
       if (facetSerialId != null && reservedIdSet.contains(facetSerialId.value())) {
         String message =
             String.format(
@@ -2270,7 +2269,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                 facetSerialId.value(),
                 facet.name(),
                 currentVajramInfo.vajramClassElem().getSimpleName());
-        @Nullable Element[] elements = new Element[] {facet.facetField()};
+        @Nullable Element[] elements = new Element[] {facet.facetElement()};
         util.error(message, elements);
       }
     }
@@ -2284,7 +2283,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
   private void validateIfAbsentStrategyApplicability() {
 
     for (FacetGenModel facet : facetModelsByName.values()) {
-      Element facetField = facet.facetField();
+      Element facetField = facet.facetElement();
       IfAbsent ifAbsent = facetField.getAnnotation(IfAbsent.class);
       if (ifAbsent != null) {
         IfAbsentThen ifAbsentThen = ifAbsent.value();
@@ -2561,7 +2560,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
           methodBuilder(facet.name())
               .addModifiers(PUBLIC, ABSTRACT)
               .addAnnotations(
-                  facet.facetField().getAnnotationMirrors().stream()
+                  facet.facetElement().getAnnotationMirrors().stream()
                       .filter(
                           annotationMirror ->
                               IfAbsent.class
@@ -2811,7 +2810,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
             depReqInterfaceClass,
             VAJRAM_ID_CONSTANT_NAME);
       }
-      String docComment = elementUtils.getDocComment(facet.facetField());
+      String docComment = elementUtils.getDocComment(facet.facetElement());
       if (docComment == null) {
         docComment = "";
       }
@@ -2837,7 +2836,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
             conformsToTraitInfoOrSelf.reqImmutInterfaceClassName().nestedClass("Builder"),
             facet.name());
         fieldSpec.addAnnotations(
-            facet.facetField().getAnnotationMirrors().stream()
+            facet.facetElement().getAnnotationMirrors().stream()
                 .filter(
                     annotationMirror ->
                         annotationMirror
@@ -2849,7 +2848,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                 .toList());
       } else {
         String facetReflectionAccessor =
-            facet.facetField() instanceof ExecutableElement
+            facet.facetElement() instanceof ExecutableElement
                 ? "getDeclaredMethod"
                 : "getDeclaredField";
         initializerCodeBlock.add(
@@ -2866,7 +2865,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                     }
                   )
                 """,
-            facet.facetField().getAnnotation(Batched.class) != null,
+            facet.isBatched(),
             FacetUtils.class,
             currentVajramInfo.vajramClassElem(),
             facet.facetType().equals(INPUT) ? _INPUTS_CLASS : _INTERNAL_FACETS_CLASS,

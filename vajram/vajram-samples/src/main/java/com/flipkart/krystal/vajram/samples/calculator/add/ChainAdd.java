@@ -27,18 +27,17 @@ import java.util.Optional;
 @InvocableOutsideGraph
 @Vajram
 public abstract class ChainAdd extends ComputeVajramDef<Integer> implements MultiAdd {
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    List<Integer> numbers;
+    List<Integer> numbers();
   }
 
-  static class _InternalFacets {
+  interface _InternalFacets {
     @Dependency(onVajram = ChainAdd.class, canFanout = true)
-    int chainSum;
+    int chainSum();
 
     @Dependency(onVajram = Add.class)
-    int sum;
+    int sum();
   }
 
   @Resolve(dep = chainSum_n, depInputs = ChainAdd_Req.numbers_n)

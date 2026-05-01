@@ -29,24 +29,26 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @GET
 @Vajram
 public abstract class RestGetMappingLatticeSample extends ComputeVajramDef<JsonResponse> {
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
     @PathParam
-    String fullPath;
+    String fullPath();
 
-    @QueryParam String name;
+    @QueryParam
+    String name();
 
-    @QueryParam String age;
+    @QueryParam
+    String age();
   }
 
-  static class _InternalFacets {
+  interface _InternalFacets {
     @Inject
     @IfAbsent(FAIL)
-    JsonResponse_Immut.Builder responseBuilder;
+    JsonResponse_Immut.Builder responseBuilder();
 
     @Inject
     @IfAbsent(FAIL)
-    UriInfo uriInfo;
+    UriInfo uriInfo();
   }
 
   @Output

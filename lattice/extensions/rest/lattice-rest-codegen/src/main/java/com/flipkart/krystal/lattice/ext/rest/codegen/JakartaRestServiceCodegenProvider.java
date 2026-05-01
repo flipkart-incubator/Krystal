@@ -286,7 +286,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
       Map<FacetGenModel, FacetParamType> params = new LinkedHashMap<>();
       FacetGenModel bodyFacet = null;
       for (FacetGenModel facet : vajramInfo.facetStream().toList()) {
-        Element facetField = facet.facetField();
+        Element facetField = facet.facetElement();
         if (facetField.getAnnotation(PathParam.class) != null) {
           if (!explicitPath) {
             util.error("Path param cannot be used without @Path annotation", facetField);
@@ -359,7 +359,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
         Map<Element, SerdeConfig> serdeConfigsMap = new HashMap<>();
         if (bodyFacet != null) {
           Map<@NonNull Element, SerdeConfig> collect =
-              Arrays.stream(bodyFacet.facetField().getAnnotationsByType(SerdeConfig.class))
+              Arrays.stream(bodyFacet.facetElement().getAnnotationsByType(SerdeConfig.class))
                   .collect(
                       toMap(
                           s ->
@@ -403,7 +403,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
         if (supportedModelProtocols == null) {
           util.error(
               "Rest request body doesn't support any ModelProtocol.",
-              bodyFacet == null ? vajramElem : bodyFacet.facetField());
+              bodyFacet == null ? vajramElem : bodyFacet.facetElement());
         } else {
           requestSerdeProtocols =
               util.getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
@@ -418,7 +418,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
             util.error(
                 "Rest request Body facet doesn't support any SerdeProtocols. Found: "
                     + Arrays.toString(supportedModelProtocols.value()),
-                bodyFacet == null ? vajramElem : bodyFacet.facetField());
+                bodyFacet == null ? vajramElem : bodyFacet.facetElement());
           }
         }
         if (bodyFacet != null) {
@@ -429,7 +429,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
                   doesn't support request body, but the vajram has a \
                   facet with the @Body annotation."""
                     .formatted(vajramInfo.vajramName(), restMethod),
-                bodyFacet.facetField());
+                bodyFacet.facetElement());
           }
         }
         for (TypeElement serdeProtocolType : requestSerdeProtocols) {
@@ -556,7 +556,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
       if (facetParamType != null && facetParamType != type) {
         util.error(
             "The facet " + facet.name() + " cannot be both " + facetParamType + " and " + type,
-            facet.facetField());
+            facet.facetElement());
       } else {
         params.put(facet, type);
       }

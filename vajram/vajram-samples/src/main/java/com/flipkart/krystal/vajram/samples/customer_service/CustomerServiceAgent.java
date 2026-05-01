@@ -19,19 +19,18 @@ import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
 @CallGraphDelegationMode(NONE)
 @InvocableOutsideGraph
 public interface CustomerServiceAgent extends TraitDef<String> {
-  @SuppressWarnings("initialization.field.uninitialized")
-  class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
     @UseForPredicateDispatch
-    AgentType agentType;
+    AgentType agentType();
 
     @IfAbsent(FAIL)
     @UseForPredicateDispatch
-    InitialCommunication initialCommunication;
+    InitialCommunication initialCommunication();
 
     @IfAbsent(FAIL)
     @UseForPredicateDispatch
-    String customerName;
+    String customerName();
   }
 
   enum AgentType {

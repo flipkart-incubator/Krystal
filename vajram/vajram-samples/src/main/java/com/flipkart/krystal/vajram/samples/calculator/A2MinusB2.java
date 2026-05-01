@@ -27,27 +27,27 @@ import com.google.common.collect.ImmutableCollection;
 @InvocableOutsideGraph
 @Vajram
 public abstract class A2MinusB2 extends ComputeVajramDef<Integer> {
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    int a;
+    int a();
 
     @IfAbsent(FAIL)
-    int b;
+    int b();
   }
 
-  static class _InternalFacets {
+  interface _InternalFacets {
     /** The value of facet {@code a} multiplied by {@code 2} */
     @IfAbsent(FAIL)
     @Dependency(onVajram = Multiply.class)
-    int twoA;
+    int twoA();
 
     @IfAbsent(FAIL)
     @Dependency(onVajram = Multiply.class)
-    int twoB;
+    int twoB();
 
     @IfAbsent(FAIL)
     @Dependency(onVajram = Subtract.class)
-    int diff;
+    int diff();
   }
 
   @Override

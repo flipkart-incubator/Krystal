@@ -20,10 +20,10 @@ import java.util.stream.Collectors;
 @SuppressWarnings("initialization.field.uninitialized")
 public abstract class UserService extends IOVajramDef<UserInfo> {
 
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
     @Batched
-    String userId;
+    String userId();
   }
 
   @Output.Batched

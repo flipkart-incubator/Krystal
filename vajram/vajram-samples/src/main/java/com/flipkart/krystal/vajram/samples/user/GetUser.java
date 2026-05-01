@@ -12,10 +12,9 @@ import java.util.concurrent.CompletableFuture;
 @Vajram
 public abstract class GetUser extends IOVajramDef<User> {
 
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    String userId;
+    String userId();
   }
 
   @Output

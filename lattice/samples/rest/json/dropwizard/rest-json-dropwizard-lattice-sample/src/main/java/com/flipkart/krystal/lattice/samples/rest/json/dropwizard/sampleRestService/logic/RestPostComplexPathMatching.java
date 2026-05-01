@@ -28,32 +28,32 @@ import jakarta.inject.Inject;
 @POST
 @Vajram
 public abstract class RestPostComplexPathMatching extends ComputeVajramDef<JsonResponse> {
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
     @Body
-    JsonRequest jsonRequest;
+    JsonRequest jsonRequest();
 
     @IfAbsent(FAIL)
     @PathParam
-    String context;
+    String context();
 
     @IfAbsent(FAIL)
     @PathParam
-    String name;
+    String name();
 
     @IfAbsent(FAIL)
     @PathParam
-    String threePaths;
+    String threePaths();
 
     @IfAbsent(FAIL)
     @PathParam
-    int id;
+    int id();
   }
 
-  static class _InternalFacets {
+  interface _InternalFacets {
     @Inject
     @IfAbsent(FAIL)
-    JsonResponse_Immut.Builder responseBuilder;
+    JsonResponse_Immut.Builder responseBuilder();
   }
 
   @Output

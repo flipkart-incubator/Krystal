@@ -12,11 +12,10 @@ import com.flipkart.krystal.vajram.facets.Output;
 @InvocableOutsideGraph
 @Vajram
 public abstract class AddSecretNumber extends ComputeVajramDef<Integer> {
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _Inputs {
+  interface _Inputs {
     /** The number to add the secret number */
     @IfAbsent(FAIL)
-    int input;
+    int input();
   }
 
   @Output

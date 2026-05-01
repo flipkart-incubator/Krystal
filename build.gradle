@@ -32,8 +32,10 @@ configure(subprojects.findAll {
     //Only leaf projects are of interest to us
     it.subprojects.isEmpty()
 }) {
-
-
+    tasks.withType(JavaCompile).configureEach {
+        options.compilerArgs += ['-Xlint:unchecked', '-parameters', '-Xmaxerrs', '10000']
+        options.deprecation = true
+    }
 }
 
 configure(subprojects.findAll {
@@ -232,11 +234,6 @@ configure(subprojects.findAll {
 
     java {
         withSourcesJar()
-    }
-
-    compileJava {
-        options.compilerArgs += ['-Xlint:unchecked', '-parameters']
-        options.deprecation = true
     }
 
     javadoc {

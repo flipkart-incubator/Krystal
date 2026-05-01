@@ -25,10 +25,10 @@ import java.util.concurrent.atomic.LongAdder;
 @InvocableOutsideGraph
 @Vajram
 public abstract class TestUserService extends IOVajramDef<TestUserInfo> {
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
     @Batched
-    String userId;
+    String userId();
   }
 
   private static final ScheduledExecutorService LATENCY_INDUCER =

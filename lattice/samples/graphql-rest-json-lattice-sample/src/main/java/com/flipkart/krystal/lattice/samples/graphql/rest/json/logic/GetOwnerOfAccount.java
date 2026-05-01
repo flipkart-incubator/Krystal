@@ -11,10 +11,9 @@ import com.flipkart.krystal.vajram.facets.Output;
 
 @Vajram
 public abstract class GetOwnerOfAccount extends ComputeVajramDef<PersonId> {
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    AccountId id;
+    AccountId id();
   }
 
   @Output

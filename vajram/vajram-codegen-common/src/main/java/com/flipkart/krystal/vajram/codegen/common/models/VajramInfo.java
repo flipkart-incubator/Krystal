@@ -30,13 +30,13 @@ public record VajramInfo(
         if (!defaultFacet.facetType().equals(INPUT)) {
           lite.util()
               .codegenUtil()
-              .error("Only INPUT facets are supported in Traits", defaultFacet.facetField());
+              .error("Only INPUT facets are supported in Traits", defaultFacet.facetElement());
         }
       }
       if (!dependencies.isEmpty()) {
         lite.util()
             .codegenUtil()
-            .error("Traits cannot have dependencies", dependencies.get(0).facetField());
+            .error("Traits cannot have dependencies", dependencies.get(0).facetElement());
       }
     }
   }

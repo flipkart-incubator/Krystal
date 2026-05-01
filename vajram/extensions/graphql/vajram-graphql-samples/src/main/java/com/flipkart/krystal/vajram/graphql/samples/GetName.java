@@ -8,8 +8,8 @@ import com.flipkart.krystal.vajram.graphql.samples.name.Name_ImmutGQlRespJson;
 
 @Vajram
 public abstract class GetName extends ComputeVajramDef<Name> {
-  static class _Inputs {
-    boolean allCaps;
+  interface _Inputs {
+    boolean allCaps();
   }
 
   @Output

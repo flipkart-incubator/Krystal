@@ -10,10 +10,9 @@ import java.util.List;
 
 @Vajram
 public abstract class GetOrderItemNames extends ComputeVajramDef<GetOrderItemNames_GQlFields> {
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    OrderId id;
+    OrderId id();
   }
 
   @Output

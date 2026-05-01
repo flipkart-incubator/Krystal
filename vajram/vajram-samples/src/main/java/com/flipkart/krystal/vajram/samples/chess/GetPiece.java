@@ -12,10 +12,9 @@ import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
 @Trait
 @CallGraphDelegationMode(SYNC)
 public interface GetPiece<T extends Piece> extends TraitDef<T> {
-  @SuppressWarnings("initialization.field.uninitialized")
-  class _Inputs {
+  interface _Inputs {
     @UseForPredicateDispatch
     @IfAbsent(FAIL)
-    PieceType type;
+    PieceType type();
   }
 }

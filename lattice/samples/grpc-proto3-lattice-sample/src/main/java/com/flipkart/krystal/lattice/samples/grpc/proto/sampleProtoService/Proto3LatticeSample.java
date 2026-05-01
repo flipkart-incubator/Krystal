@@ -32,40 +32,40 @@ public abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3Lattice
 
   @SupportedModelProtocols({Protobuf3.class, PlainJavaObject.class})
   @ReservedSerialIds(8)
-  static class _Inputs {
+  interface _Inputs {
     @SerialId(1)
-    int optionalInput;
+    int optionalInput();
 
     @SerialId(2)
     @IfAbsent(FAIL)
-    int mandatoryInput;
+    int mandatoryInput();
 
     @SerialId(3)
     @IfAbsent(value = MAY_FAIL_CONDITIONALLY, conditionalFailureInfo = "In some scenarios")
-    int conditionallyMandatoryInput;
+    int conditionallyMandatoryInput();
 
     @SerialId(4)
     @IfAbsent(ASSUME_DEFAULT_VALUE)
-    int inputWithDefaultValue;
+    int inputWithDefaultValue();
 
     @SerialId(5)
-    long optionalLongInput;
+    long optionalLongInput();
 
     @SerialId(6)
     @IfAbsent(FAIL)
-    long mandatoryLongInput;
+    long mandatoryLongInput();
 
     @SerialId(7)
     @IfAbsent(ASSUME_DEFAULT_VALUE)
-    ByteArray optionalByteString;
+    ByteArray optionalByteString();
 
     @IfAbsent(ASSUME_DEFAULT_VALUE)
     @SerialId(9)
-    List<Integer> repeatedInts;
+    List<Integer> repeatedInts();
 
     @SerialId(10)
     @IfAbsent(ASSUME_DEFAULT_VALUE)
-    ByteArray defaultByteString;
+    ByteArray defaultByteString();
   }
 
   static class _InternalFacets {

@@ -11,14 +11,15 @@ import java.util.List;
 
 @Vajram
 public abstract class GetDummyIds extends ComputeVajramDef<List<DummyId>> {
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    OrderId id;
+    OrderId id();
 
-    boolean filter;
-    String preferredType;
-    int count;
+    boolean filter();
+
+    String preferredType();
+
+    int count();
   }
 
   @Output

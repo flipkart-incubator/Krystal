@@ -61,6 +61,7 @@ import com.squareup.javapoet.TypeName;
 import jakarta.inject.Inject;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map.Entry;
@@ -139,7 +140,7 @@ public class VajramCodeGenUtility {
     } else {
       boolean localDevAccessible = codeGenParams.isDevAccessible() && codeGenParams.isLocal();
       if (localDevAccessible) {
-        IfAbsent ifAbsent = codegenUtil.getIfAbsent(facet.facetField(), null);
+        IfAbsent ifAbsent = codegenUtil.getIfAbsent(facet.facetElement(), null);
         // Developers should not deal with boxed types. So we need to return the actual type or
         // an Optional wrapper as needed
         if (ifAbsent.value().isMandatoryOnServer()) {
@@ -225,8 +226,8 @@ public class VajramCodeGenUtility {
             .map(element -> typeUtils.asElement(element.asType()));
     BiMap<String, Integer> givenIdsByName = HashBiMap.create();
     Set<Integer> takenFacetIds = givenIdsByName.values();
-    List<Element> inputFacetElements = extractFacetElements(inputsClass);
-    List<Element> internalFacetElements = extractFacetElements(internalFacetsClass);
+    List<Element> inputFacetElements = extractFacetElements(inputsClass.orElse(null));
+    List<Element> internalFacetElements = extractFacetElements(internalFacetsClass.orElse(null));
     List<Element> dependencyElements =
         internalFacetElements.stream()
             .filter(element -> element.getAnnotation(Dependency.class) != null)
@@ -286,7 +287,7 @@ public class VajramCodeGenUtility {
         .forEach(
             facetGenModel -> {
               if (facetGenModel.name().startsWith("_")) {
-                @Nullable Element[] elements = new Element[] {facetGenModel.facetField()};
+                @Nullable Element[] elements = new Element[] {facetGenModel.facetElement()};
                 codegenUtil()
                     .error(
                         "Facet names cannot start with an underscore (_). These are reserved for platform specific identifiers",
@@ -300,20 +301,23 @@ public class VajramCodeGenUtility {
    * fields. For interfaces, returns abstract methods. For classes with abstract methods (abstract
    * classes), returns both fields and abstract methods.
    */
-  private List<Element> extractFacetElements(Optional<Element> container) {
-    if (container.isEmpty()) {
+  private List<Element> extractFacetElements(@Nullable Element container) {
+    if (container == null) {
       return List.of();
     }
-    List<? extends Element> enclosed = container.get().getEnclosedElements();
-    List<Element> result = new java.util.ArrayList<>();
+    List<? extends Element> enclosed = container.getEnclosedElements();
     // Add fields
-    result.addAll(ElementFilter.fieldsIn(enclosed));
+    List<Element> result = new ArrayList<>(ElementFilter.fieldsIn(enclosed));
     // Add abstract methods (from interfaces or abstract classes)
     for (ExecutableElement method : ElementFilter.methodsIn(enclosed)) {
       if (method.getModifiers().contains(ABSTRACT)
           && method.getParameters().isEmpty()
           && method.getReturnType().getKind() != TypeKind.VOID) {
         result.add(method);
+      } else {
+        codegenUtil.error(
+            "Facet methods must be abstract have a return a value and accept zero parameters",
+            method);
       }
     }
     return Collections.unmodifiableList(result);
@@ -331,20 +335,20 @@ public class VajramCodeGenUtility {
   }
 
   private Optional<DefaultFacetModel> toGivenFacetModel(
-      Element facetField,
+      Element facetElement,
       BiMap<String, Integer> givenIdsByName,
       Set<Integer> takenFacetIds,
       AtomicInteger nextFacetId,
       VajramInfoLite vajramInfoLite) {
-    DefaultFacetModelBuilder facetBuilder = DefaultFacetModel.builder().facetField(facetField);
-    String facetName = facetField.getSimpleName().toString();
+    DefaultFacetModelBuilder facetBuilder = DefaultFacetModel.builder().facetElement(facetElement);
+    String facetName = facetElement.getSimpleName().toString();
     facetBuilder.id(
         requireNonNullElseGet(
             givenIdsByName.get(facetName),
             () -> getNextAvailableFacetId(takenFacetIds, nextFacetId)));
     facetBuilder.name(facetName);
-    facetBuilder.documentation(elementUtils.getDocComment(facetField));
-    TypeMirror facetFieldType = getFacetElementType(facetField);
+    facetBuilder.documentation(elementUtils.getDocComment(facetElement));
+    TypeMirror facetFieldType = getFacetElementType(facetElement);
     if (TypeKind.ERROR.equals(facetFieldType.getKind())) {
       throw new CodeGenShortCircuitException(
           "Vajram Id : "
@@ -357,17 +361,17 @@ public class VajramCodeGenUtility {
 
     CodeGenType dataType =
         facetFieldType.accept(
-            new DeclaredTypeVisitor(codegenUtil, facetField, DISALLOWED_FACET_TYPES), null);
+            new DeclaredTypeVisitor(codegenUtil, facetElement, DISALLOWED_FACET_TYPES), null);
     facetBuilder.dataType(dataType);
     FacetType facetType = null;
-    boolean isInput = "_Inputs".contentEquals(facetField.getEnclosingElement().getSimpleName());
+    boolean isInput = "_Inputs".contentEquals(facetElement.getEnclosingElement().getSimpleName());
     if (isInput) {
       facetType = INPUT;
     }
-    if (facetField.getAnnotation(Inject.class) != null) {
+    if (facetElement.getAnnotation(Inject.class) != null) {
       if (isInput) {
         codegenUtil()
-            .error("Inject facet '%s' cannot be an input facet".formatted(facetName), facetField);
+            .error("Inject facet '%s' cannot be an input facet".formatted(facetName), facetElement);
       }
       facetType = INJECTION;
     }
@@ -397,7 +401,7 @@ public class VajramCodeGenUtility {
     VajramID vajramId = vajramInfo.vajramId();
     String facetName = depField.getSimpleName().toString();
     Dependency dependency = depField.getAnnotation(Dependency.class);
-    DependencyModelBuilder depBuilder = DependencyModel.builder().facetField(depField);
+    DependencyModelBuilder depBuilder = DependencyModel.builder().facetElement(depField);
     depBuilder.id(
         requireNonNullElseGet(
             givenIdsByName.get(facetName),
@@ -711,12 +715,12 @@ public class VajramCodeGenUtility {
   }
 
   public boolean usePlatformDefault(FacetGenModel facet) {
-    IfAbsent ifAbsent = facet.facetField().getAnnotation(IfAbsent.class);
+    IfAbsent ifAbsent = facet.facetElement().getAnnotation(IfAbsent.class);
     return ifAbsent != null && ifAbsent.value().usePlatformDefault();
   }
 
   public boolean isMandatoryOnServer(FacetGenModel facet) {
-    IfAbsent ifAbsent = facet.facetField().getAnnotation(IfAbsent.class);
+    IfAbsent ifAbsent = facet.facetElement().getAnnotation(IfAbsent.class);
     return ifAbsent != null && ifAbsent.value().isMandatoryOnServer();
   }
 

@@ -9,10 +9,9 @@ import com.flipkart.krystal.vajram.facets.Output;
 
 @Vajram
 abstract class GetKnight extends ComputeVajramDef<Knight> implements GetPiece<Knight> {
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    PieceType type;
+    PieceType type();
   }
 
   @Output

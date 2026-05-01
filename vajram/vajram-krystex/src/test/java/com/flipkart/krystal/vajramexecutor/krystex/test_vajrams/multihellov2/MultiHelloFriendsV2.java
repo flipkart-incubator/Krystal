@@ -28,19 +28,19 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @InvocableOutsideGraph
 @Vajram
 public abstract class MultiHelloFriendsV2 extends ComputeVajramDef<String> {
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    Set<String> userIds;
+    Set<String> userIds();
 
-    boolean skip;
+    boolean skip();
 
     @IfAbsent(ASSUME_DEFAULT_VALUE)
-    boolean fail;
+    boolean fail();
   }
 
-  static class _InternalFacets {
+  interface _InternalFacets {
     @Dependency(onVajram = HelloFriendsV2.class, canFanout = true)
-    String hellos;
+    String hellos();
   }
 
   @Resolve(dep = hellos_n, depInputs = HelloFriendsV2_Req.userId_n)
