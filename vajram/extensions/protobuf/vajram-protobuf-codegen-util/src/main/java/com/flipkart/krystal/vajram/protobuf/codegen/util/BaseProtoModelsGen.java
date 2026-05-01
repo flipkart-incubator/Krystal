@@ -110,15 +110,6 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
       return false;
     }
 
-    TypeElement modelRootType = codeGenContext.modelRootType();
-    ModelRoot modelRootAnnotation = modelRootType.getAnnotation(ModelRoot.class);
-    if (modelRootAnnotation == null) {
-      util.note(
-          "Skipping class '%s' since it doesn't have @ModelRoot annotation"
-              .formatted(modelRootType.getQualifiedName()));
-      return false;
-    }
-
     return true;
   }
 
@@ -174,8 +165,7 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
             .addModifiers(PUBLIC, STATIC)
             .returns(javaEnumType)
             .addParameter(protoEnumType, "protoValue")
-            .addStatement(
-                "return $L", protoToJavaSwitchExpr("protoValue", enumElement, javaEnumType))
+            .addStatement("return $L", protoToJavaSwitchExpr(enumElement, javaEnumType))
             .build());
 
     classBuilder.addMethod(
@@ -183,8 +173,7 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
             .addModifiers(PUBLIC, STATIC)
             .returns(protoEnumType)
             .addParameter(javaEnumType, "javaValue")
-            .addStatement(
-                "return $L", javaToProtoSwitchExpr("javaValue", enumElement, protoEnumType))
+            .addStatement("return $L", javaToProtoSwitchExpr(enumElement, protoEnumType))
             .build());
 
     JavaFile javaFile = JavaFile.builder(packageName, classBuilder.build()).build();
@@ -516,9 +505,9 @@ return _serializedPayload;
               },
               _proto()::clear$fieldNameCap:L,
               (index, _model) ->
-                  _proto().add$fieldNameCap:L(index, $immutProto:T._proto(_model)),
+                  _proto().set$fieldNameCap:L(index, $immutProto:T._proto(_model)),
               (index, _builder) ->
-                  _proto().add$fieldNameCap:L(index, $immutProto:T._proto(_builder)),
+                  _proto().set$fieldNameCap:L(index, $immutProto:T._proto(_builder)),
               index -> {
                 $protoMsgOrBuilder:T ret = _proto().get$fieldNameCap:LOrBuilder(index);
                 _proto().remove$fieldNameCap:L(index);
@@ -1008,10 +997,9 @@ return _serializedPayload;
         && (util.isOptional(returnType) || util.isAnyNullable(returnType, method));
   }
 
-  private CodeBlock protoToJavaSwitchExpr(
-      String switchTarget, TypeElement javaEnumElement, ClassName javaEnumType) {
+  private CodeBlock protoToJavaSwitchExpr(TypeElement javaEnumElement, ClassName javaEnumType) {
     CodeBlock.Builder cb = CodeBlock.builder();
-    cb.add("switch ($L) {\n", switchTarget);
+    cb.add("switch ($L) {\n", "protoValue");
     String firstConstant = null;
     for (var enclosed : javaEnumElement.getEnclosedElements()) {
       if (enclosed.getKind() == ElementKind.ENUM_CONSTANT) {
@@ -1029,10 +1017,9 @@ return _serializedPayload;
     return cb.build();
   }
 
-  private CodeBlock javaToProtoSwitchExpr(
-      String switchTarget, TypeElement javaEnumElement, ClassName protoEnumType) {
+  private CodeBlock javaToProtoSwitchExpr(TypeElement javaEnumElement, ClassName protoEnumType) {
     CodeBlock.Builder cb = CodeBlock.builder();
-    cb.add("switch ($L) {\n", switchTarget);
+    cb.add("switch ($L) {\n", "javaValue");
     for (var enclosed : javaEnumElement.getEnclosedElements()) {
       if (enclosed.getKind() == ElementKind.ENUM_CONSTANT) {
         String name = enclosed.getSimpleName().toString();

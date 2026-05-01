@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.protobuf2024e.codegen;
 
-import static com.flipkart.krystal.vajram.protobuf2024e.Protobuf2024e.PROTOBUF_2024_E;
+import static com.flipkart.krystal.vajram.protobuf2024e.Protobuf2024e.PROTOBUF_2024E;
 import static com.flipkart.krystal.vajram.protobuf2024e.codegen.Proto2024eConstants.MODELS_PROTO_FILE_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf2024e.codegen.Proto2024eConstants.MODELS_PROTO_MSG_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf2024e.codegen.Proto2024eConstants.MODELS_PROTO_OUTER_CLASS_SUFFIX;
@@ -16,7 +16,7 @@ final class Proto2024eSchemaConfig {
   static final ProtoSchemaConfig INSTANCE =
       new ProtoSchemaConfig(
           Protobuf2024e.class,
-          PROTOBUF_2024_E,
+          PROTOBUF_2024E,
           // Edition 2024 uses `edition = "2024";` instead of `syntax = "proto3";`. With edition
           // defaults, singular fields have explicit presence by default - no `optional` keyword
           // needed - and enums are open, repeated fields are packed, messages are length-prefixed,

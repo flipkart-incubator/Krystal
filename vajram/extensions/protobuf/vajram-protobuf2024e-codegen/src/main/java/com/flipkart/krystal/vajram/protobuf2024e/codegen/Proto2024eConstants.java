@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajram.protobuf2024e.codegen;
 
+import lombok.experimental.UtilityClass;
+
 /**
  * Edition-2024-specific suffixes used by Krystal codegen and any downstream codegen modules that
  * consume edition-2024 outputs.
@@ -8,6 +10,7 @@ package com.flipkart.krystal.vajram.protobuf2024e.codegen;
  * proto schema's message name (e.g. {@code Foo_Proto}) lines up with the generated framework
  * wrapper class (e.g. {@code Foo_ImmutProto}).
  */
+@UtilityClass
 public final class Proto2024eConstants {
 
   public static final String VAJRAM_REQ_PROTO_FILE_SUFFIX = "_Req.models.proto";
@@ -19,6 +22,4 @@ public final class Proto2024eConstants {
   public static final String MODELS_PROTO_OUTER_CLASS_SUFFIX = "_ModelsProto";
   public static final String MODELS_PROTO_MSG_SUFFIX = "_Proto";
   public static final String MODELS_PROTO_UTILS_SUFFIX = "_ProtoUtils";
-
-  private Proto2024eConstants() {}
 }

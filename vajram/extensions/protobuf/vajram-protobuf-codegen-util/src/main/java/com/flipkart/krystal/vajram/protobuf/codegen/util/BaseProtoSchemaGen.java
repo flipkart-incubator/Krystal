@@ -21,6 +21,7 @@ import com.flipkart.krystal.model.EnumModel;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
+import com.flipkart.krystal.model.array.PrimitiveArray;
 import com.flipkart.krystal.serial.SerialId;
 import com.flipkart.krystal.vajram.codegen.common.generators.SerdeModelValidator;
 import com.flipkart.krystal.vajram.protobuf.codegen.util.types.ProtoFieldType;
@@ -36,6 +37,7 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -327,11 +329,15 @@ public abstract class BaseProtoSchemaGen implements CodeGenerator {
 
       IfAbsentThen ifAbsentThen = util.getIfAbsent(method, modelRoot).value();
 
-      boolean isPrimitiveArray =
-          util.isPrimitiveArray(dataType.javaModelType(util.processingEnv()));
+      TypeMirror type = dataType.javaModelType(util.processingEnv());
+      boolean isPrimitiveArray = util.isPrimitiveArray(type);
+      boolean isByteArray = util.isRawAssignable(type, PrimitiveArray.class);
       boolean isRepeated = isProtoTypeRepeated(dataType);
       boolean isMap = isProtoTypeMap(dataType);
-      if ((isRepeated || isMap || isPrimitiveArray) && !ifAbsentThen.usePlatformDefault()) {
+      if ((isRepeated
+              || isMap
+              || (isPrimitiveArray && !isByteArray)) // proto supports presence check for bytes
+          && !ifAbsentThen.usePlatformDefault()) {
         // Repeated and map fields always default to empty in protobuf - presence is implicit.
         util.error(
             String.format(

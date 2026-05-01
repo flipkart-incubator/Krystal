@@ -17,7 +17,7 @@ import com.flipkart.krystal.serial.SerdeProtocol;
  */
 public final class Protobuf2024e implements SerdeProtocol {
 
-  public static final Protobuf2024e PROTOBUF_2024_E = new Protobuf2024e();
+  public static final Protobuf2024e PROTOBUF_2024E = new Protobuf2024e();
 
   private Protobuf2024e() {}
 
