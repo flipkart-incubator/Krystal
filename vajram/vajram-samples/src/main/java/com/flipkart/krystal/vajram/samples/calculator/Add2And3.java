@@ -22,10 +22,10 @@ import com.google.common.collect.ImmutableCollection;
 @Vajram
 abstract class Add2And3 extends ComputeVajramDef<Integer> {
 
-  static class _InternalFacets {
+  interface _InternalFacets {
     @IfAbsent(FAIL)
     @Dependency(onVajram = Add.class)
-    int sumOf2And3;
+    int sumOf2And3();
   }
 
   @Override

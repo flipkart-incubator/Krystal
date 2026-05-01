@@ -27,9 +27,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
 @InvocableOutsideGraph
 @InvocableOutsideProcess
-@SupportedModelProtocols({Json.class, PlainJavaObject.class})
 @Vajram
 public abstract class RestLatticeSample extends ComputeVajramDef<JsonResponse> {
+  @SupportedModelProtocols({Json.class, PlainJavaObject.class})
   static class _Inputs {
 
     int optionalInput;

@@ -7,7 +7,7 @@ import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.batching.BatchesGroupedBy;
 import java.util.List;
 import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.VariableElement;
+import javax.lang.model.element.Element;
 import lombok.SneakyThrows;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -18,7 +18,7 @@ public sealed interface FacetGenModel permits DefaultFacetModel, DependencyModel
 
   VajramInfoLite vajramInfo();
 
-  VariableElement facetField();
+  Element facetField();
 
   FacetType facetType();
 

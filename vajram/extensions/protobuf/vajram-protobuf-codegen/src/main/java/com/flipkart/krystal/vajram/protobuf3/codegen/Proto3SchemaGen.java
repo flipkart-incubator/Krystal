@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.protobuf3.codegen;
 
 import static com.flipkart.krystal.codegen.common.models.CodegenPhase.MODELS;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
+import static com.flipkart.krystal.vajram.protobuf3.Protobuf3.PROTOBUF_3;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.createOutputDirectory;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.getProtobufType;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeMap;
@@ -26,7 +27,6 @@ import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.serial.SerialId;
 import com.flipkart.krystal.vajram.codegen.common.generators.SerdeModelValidator;
-import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
 import com.flipkart.krystal.vajram.protobuf3.codegen.types.OptionalFieldType;
 import com.flipkart.krystal.vajram.protobuf3.codegen.types.ProtoFieldType;
 import com.google.common.base.Splitter;
@@ -73,22 +73,7 @@ final class Proto3SchemaGen implements CodeGenerator {
       return false;
     }
 
-    TypeElement modelRootType = codeGenContext.modelRootType();
-    if (modelRootType == null) {
-      util.note("Skipping protobuf codegen since model root type is null");
-      return false;
-    }
-
-    // Check if the model root has the ModelRoot annotation
-    ModelRoot modelRootAnnotation = modelRootType.getAnnotation(ModelRoot.class);
-    if (modelRootAnnotation == null) {
-      util.note(
-          "Skipping class '%s' since it doesn't have @ModelRoot annotation"
-              .formatted(modelRootType.getQualifiedName()));
-      return false;
-    }
-
-    return true;
+    return util.getModelProtocols(codeGenContext.modelRootType()).contains(PROTOBUF_3);
   }
 
   private void validate() {
@@ -98,7 +83,7 @@ final class Proto3SchemaGen implements CodeGenerator {
     if (!util.isEnumModel(modelRootType)) {
       // Validate purity (if required by protocol) and nested model protocol support
       List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
-      new SerdeModelValidator(util, modelRootType, Protobuf3.PROTOBUF_3).validate(modelMethods);
+      new SerdeModelValidator(util, modelRootType, PROTOBUF_3).validate(modelMethods);
     }
   }
 

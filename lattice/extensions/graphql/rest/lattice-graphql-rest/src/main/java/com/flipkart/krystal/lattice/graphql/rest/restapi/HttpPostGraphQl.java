@@ -32,9 +32,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @InvocableOutsideProcess
 @POST
 @Vajram
-@SupportedModelProtocols({Json.class, PlainJavaObject.class})
 public abstract class HttpPostGraphQl extends ComputeVajramDef<Response> {
 
+  @SupportedModelProtocols({Json.class, PlainJavaObject.class})
   static class _Inputs {
     @IfAbsent(FAIL)
     String query;

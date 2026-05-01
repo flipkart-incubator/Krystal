@@ -34,11 +34,11 @@ public class PredicateDispatchUtil {
   }
 
   public static <T, R> DispatchCaseBuilder<R> when(
-      InputMirrorSpec<T, ? extends Request> input, InputValueMatcher<T> inputValueMatcher) {
+      InputMirrorSpec<T, ? extends Request> input, InputValueMatcher<T> matcher) {
     checkArgument(
         input.tags().getAnnotationByType(UseForPredicateDispatch.class).isPresent(),
         "Only the trait Inputs annotated as @UseForPredicateDispatch can be used for dynamic dispatching");
-    return new DispatchCaseBuilder<>(ImmutableMap.of(input, inputValueMatcher));
+    return new DispatchCaseBuilder<>(ImmutableMap.of(input, matcher));
   }
 
   @AllArgsConstructor(access = PRIVATE)

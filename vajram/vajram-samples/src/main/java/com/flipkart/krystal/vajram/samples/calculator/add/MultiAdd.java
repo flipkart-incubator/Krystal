@@ -2,6 +2,9 @@ package com.flipkart.krystal.vajram.samples.calculator.add;
 
 import static com.flipkart.krystal.annos.ComputeDelegationMode.SYNC;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.model.IfAbsent;
@@ -11,9 +14,7 @@ import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
 import com.google.auto.value.AutoAnnotation;
 import jakarta.inject.Qualifier;
-import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.util.List;
 import lombok.experimental.UtilityClass;
@@ -24,29 +25,30 @@ import lombok.experimental.UtilityClass;
 @InvocableOutsideGraph
 public interface MultiAdd extends TraitDef<Integer> {
   @SuppressWarnings("initialization.field.uninitialized")
-  class _Inputs {
+  interface _Inputs {
     @UseForPredicateDispatch
     @IfAbsent(FAIL)
-    List<Integer> numbers;
+    List<Integer> numbers();
+  }
+
+  @Qualifier
+  @Retention(RUNTIME)
+  @Target({FIELD, METHOD})
+  @interface AdditionMethod {
+
+    MultiAddType value();
+
+    @UtilityClass
+    final class Creator {
+      public static @AutoAnnotation AdditionMethod create(MultiAddType value) {
+        return new AutoAnnotation_MultiAdd_AdditionMethod_Creator_create(value);
+      }
+    }
   }
 
   enum MultiAddType {
     SIMPLE,
     CHAIN,
     SPLIT,
-  }
-
-  @Qualifier
-  @Retention(RetentionPolicy.RUNTIME)
-  @Target(ElementType.FIELD)
-  @interface MultiAddQualifier {
-    MultiAddType value();
-
-    @UtilityClass
-    final class Creator {
-      public static @AutoAnnotation MultiAddQualifier create(MultiAddType value) {
-        return new AutoAnnotation_MultiAdd_MultiAddQualifier_Creator_create(value);
-      }
-    }
   }
 }

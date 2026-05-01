@@ -487,12 +487,13 @@ this.$L = $L == null
     if (!CodegenPhase.MODELS.equals(codeGenContext.codegenPhase()) || !isJsonSerdeSupported()) {
       return false;
     }
-    // Enum models don't need generated JSON wrapper classes -
-    // Jackson handles them directly via the EnumModelModule
-    if (util.isEnumModel(codeGenContext.modelRootType())) {
+
+    if (!util.getModelProtocols(codeGenContext.modelRootType()).contains(JSON)) {
       return false;
     }
-    return true;
+    // Enum models don't need generated JSON wrapper classes -
+    // Jackson handles them directly via the EnumModelModule
+    return !util.isEnumModel(codeGenContext.modelRootType());
   }
 
   /**

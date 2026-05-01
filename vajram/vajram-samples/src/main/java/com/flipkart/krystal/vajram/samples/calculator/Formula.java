@@ -30,25 +30,24 @@ import com.google.common.collect.ImmutableCollection;
 @InvocableOutsideGraph
 @Vajram
 public abstract class Formula extends ComputeVajramDef<Integer> {
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _Inputs {
+  interface _Inputs {
     /** The numerator */
-    int a;
+    int a();
 
     /** First addend of the denominator */
     @IfAbsent(ASSUME_DEFAULT_VALUE)
-    int p;
+    int p();
 
     /** Second addend of the denominator */
     @IfAbsent(FAIL)
-    int q;
+    int q();
   }
 
-  static class _InternalFacets {
+  interface _InternalFacets {
     /** The denominator */
     @IfAbsent(FAIL)
     @Dependency(onVajram = Add.class)
-    int sum;
+    int sum();
 
     /**
      * The final result to be returned. This is the result of the computation
@@ -56,7 +55,7 @@ public abstract class Formula extends ComputeVajramDef<Integer> {
      * <pre>{@code a/(p+q)} </pre>
      */
     @Dependency(onVajram = Divide.class)
-    int quotient;
+    int quotient();
   }
 
   @Override

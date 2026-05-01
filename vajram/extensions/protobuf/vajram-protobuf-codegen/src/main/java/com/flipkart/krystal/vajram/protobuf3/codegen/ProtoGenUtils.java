@@ -106,8 +106,11 @@ public class ProtoGenUtils {
       return false;
     }
 
+    Element annotationSource =
+        vajramInfo.inputsElement() != null ? vajramInfo.inputsElement() : vajramClass;
+    // Note: @SupportedModelProtocols should only be on the _Inputs class/interface.
     SupportedModelProtocols supportedSerdeProtocols =
-        vajramClass.getAnnotation(SupportedModelProtocols.class);
+        annotationSource.getAnnotation(SupportedModelProtocols.class);
     List<? extends TypeMirror> serializationProtocols =
         getSerializationProtocols(supportedSerdeProtocols, util);
     if (serializationProtocols.stream()

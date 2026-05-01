@@ -4,7 +4,7 @@ import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.facets.FacetType;
 import com.google.common.collect.ImmutableSet;
 import java.util.EnumSet;
-import javax.lang.model.element.VariableElement;
+import javax.lang.model.element.Element;
 import lombok.Builder;
 import lombok.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -21,7 +21,7 @@ public record DefaultFacetModel(
     @NonNull CodeGenType dataType,
     @Nullable String documentation,
     FacetType facetType,
-    @NonNull VariableElement facetField)
+    @NonNull Element facetField)
     implements FacetGenModel {
 
   private static final ImmutableSet<FacetType> ALLOWED_FACET_TYPES =

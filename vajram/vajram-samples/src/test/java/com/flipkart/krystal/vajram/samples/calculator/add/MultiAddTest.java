@@ -32,7 +32,7 @@ import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.vajram.guice.traitbinding.StaticDispatchPolicyImpl;
 import com.flipkart.krystal.vajram.guice.traitbinding.TraitBinder;
 import com.flipkart.krystal.vajram.samples.Util;
-import com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiAddQualifier;
+import com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.AdditionMethod;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
@@ -116,7 +116,7 @@ class MultiAddTest {
               KryonExecutionConfig.builder()
                   .disabledDependentChains(getDisabledDependentChains(vGraph))
                   .executionId(REQUEST_ID)
-                  .staticDispatchQualifier(MultiAddQualifier.Creator.create(CHAIN))
+                  .staticDispatchQualifier(AdditionMethod.Creator.create(CHAIN))
                   .build());
     }
 
@@ -144,7 +144,7 @@ class MultiAddTest {
               KryonExecutionConfig.builder()
                   .disabledDependentChains(getDisabledDependentChains(vGraph))
                   .executionId(REQUEST_ID)
-                  .staticDispatchQualifier(MultiAddQualifier.Creator.create(SPLIT))
+                  .staticDispatchQualifier(AdditionMethod.Creator.create(SPLIT))
                   .build());
     }
 
@@ -171,7 +171,7 @@ class MultiAddTest {
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
               KryonExecutionConfig.builder()
                   .executionId(REQUEST_ID)
-                  .staticDispatchQualifier(MultiAddQualifier.Creator.create(SIMPLE))
+                  .staticDispatchQualifier(AdditionMethod.Creator.create(SIMPLE))
                   .build());
     }
 
@@ -408,15 +408,15 @@ class MultiAddTest {
     TraitBinder traitBinder = new TraitBinder();
     traitBinder
         .bindTrait(MultiAdd_Req.class)
-        .annotatedWith(MultiAddQualifier.Creator.create(SIMPLE))
+        .annotatedWith(AdditionMethod.Creator.create(SIMPLE))
         .to(SimpleAdd_Req.class);
     traitBinder
         .bindTrait(MultiAdd_Req.class)
-        .annotatedWith(MultiAddQualifier.Creator.create(CHAIN))
+        .annotatedWith(AdditionMethod.Creator.create(CHAIN))
         .to(ChainAdd_Req.class);
     traitBinder
         .bindTrait(MultiAdd_Req.class)
-        .annotatedWith(MultiAddQualifier.Creator.create(SPLIT))
+        .annotatedWith(AdditionMethod.Creator.create(SPLIT))
         .to(SplitAdd_Req.class);
     this.kGraph.traitDispatchPolicies(
         new TraitDispatchPolicies(

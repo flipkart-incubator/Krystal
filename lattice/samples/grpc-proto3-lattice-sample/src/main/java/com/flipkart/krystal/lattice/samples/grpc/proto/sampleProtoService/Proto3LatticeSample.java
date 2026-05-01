@@ -27,10 +27,11 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @SuppressWarnings("initialization.field.uninitialized")
 @InvocableOutsideGraph
 @InvocableOutsideProcess
-@SupportedModelProtocols({Protobuf3.class, PlainJavaObject.class})
-@ReservedSerialIds(8)
 @Vajram
 public abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3LatticeSampleResponse> {
+
+  @SupportedModelProtocols({Protobuf3.class, PlainJavaObject.class})
+  @ReservedSerialIds(8)
   static class _Inputs {
     @SerialId(1)
     int optionalInput;

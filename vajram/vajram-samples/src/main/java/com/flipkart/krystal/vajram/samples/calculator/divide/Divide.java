@@ -10,16 +10,16 @@ import com.flipkart.krystal.vajram.facets.Output;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-@SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
+@SuppressWarnings("optional.parameter")
 @Vajram
 public abstract class Divide extends IOVajramDef<Integer> {
 
-  static class _Inputs {
+  interface _Inputs {
 
     @IfAbsent(FAIL)
-    int numerator;
+    int numerator();
 
-    int denominator;
+    int denominator();
   }
 
   @Output

@@ -7,7 +7,7 @@ import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.facets.FacetType;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.TypeName;
-import javax.lang.model.element.VariableElement;
+import javax.lang.model.element.Element;
 import lombok.Builder;
 import lombok.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -22,7 +22,7 @@ public record DependencyModel(
     @NonNull TypeName depReqType,
     boolean canFanout,
     @Nullable String documentation,
-    @NonNull VariableElement facetField)
+    @NonNull Element facetField)
     implements FacetGenModel {
 
   @Override

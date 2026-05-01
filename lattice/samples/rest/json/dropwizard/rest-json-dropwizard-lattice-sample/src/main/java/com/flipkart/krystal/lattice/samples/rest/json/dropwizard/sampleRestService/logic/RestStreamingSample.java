@@ -20,10 +20,12 @@ import org.glassfish.jersey.server.ChunkedOutput;
 @Slf4j
 @InvocableOutsideGraph
 @InvocableOutsideProcess
-@SupportedModelProtocols({Json.class, PlainJavaObject.class})
 @Vajram
 @Produces(MediaType.TEXT_PLAIN)
 public abstract class RestStreamingSample extends ComputeVajramDef<ChunkedOutput<String>> {
+  @SupportedModelProtocols({Json.class, PlainJavaObject.class})
+  interface _Inputs {}
+
   private static int count;
 
   @Output

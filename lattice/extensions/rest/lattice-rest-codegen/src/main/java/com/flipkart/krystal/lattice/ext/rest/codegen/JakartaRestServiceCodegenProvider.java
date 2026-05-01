@@ -67,7 +67,6 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
 import lombok.SneakyThrows;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -287,7 +286,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
       Map<FacetGenModel, FacetParamType> params = new LinkedHashMap<>();
       FacetGenModel bodyFacet = null;
       for (FacetGenModel facet : vajramInfo.facetStream().toList()) {
-        VariableElement facetField = facet.facetField();
+        Element facetField = facet.facetField();
         if (facetField.getAnnotation(PathParam.class) != null) {
           if (!explicitPath) {
             util.error("Path param cannot be used without @Path annotation", facetField);
@@ -385,9 +384,11 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
           }
           supportedModelProtocols = bodyTypeElem.getAnnotation(SupportedModelProtocols.class);
         } else {
-          supportedModelProtocols = vajramElem.getAnnotation(SupportedModelProtocols.class);
+          Element annotationSource =
+              vajramInfo.inputsElement() != null ? vajramInfo.inputsElement() : vajramElem;
+          supportedModelProtocols = annotationSource.getAnnotation(SupportedModelProtocols.class);
           Map<@NonNull Element, SerdeConfig> collect =
-              Arrays.stream(vajramElem.getAnnotationsByType(SerdeConfig.class))
+              Arrays.stream(annotationSource.getAnnotationsByType(SerdeConfig.class))
                   .collect(
                       toMap(
                           s ->

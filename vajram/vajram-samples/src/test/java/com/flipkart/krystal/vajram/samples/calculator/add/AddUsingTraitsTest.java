@@ -24,7 +24,7 @@ import com.flipkart.krystal.vajram.guice.traitbinding.StaticDispatchPolicyImpl;
 import com.flipkart.krystal.vajram.guice.traitbinding.TraitBinder;
 import com.flipkart.krystal.vajram.samples.Util;
 import com.flipkart.krystal.vajram.samples.calculator.add.AddUsingTraits.ThreeSums;
-import com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiAddQualifier;
+import com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.AdditionMethod;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
@@ -72,15 +72,15 @@ class AddUsingTraitsTest {
     TraitBinder traitBinder = new TraitBinder();
     traitBinder
         .bindTrait(MultiAdd_Req.class)
-        .annotatedWith(MultiAddQualifier.Creator.create(SIMPLE))
+        .annotatedWith(AdditionMethod.Creator.create(SIMPLE))
         .to(SimpleAdd_Req.class);
     traitBinder
         .bindTrait(MultiAdd_Req.class)
-        .annotatedWith(MultiAddQualifier.Creator.create(CHAIN))
+        .annotatedWith(AdditionMethod.Creator.create(CHAIN))
         .to(ChainAdd_Req.class);
     traitBinder
         .bindTrait(MultiAdd_Req.class)
-        .annotatedWith(MultiAddQualifier.Creator.create(SPLIT))
+        .annotatedWith(AdditionMethod.Creator.create(SPLIT))
         .to(SplitAdd_Req.class);
     this.graph = Util.loadFromClasspath(AddUsingTraits.class.getPackageName()).build();
     this.kGraph = KrystexGraph.builder().vajramGraph(graph);

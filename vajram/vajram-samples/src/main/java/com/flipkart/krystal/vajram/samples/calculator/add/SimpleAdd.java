@@ -11,10 +11,9 @@ import java.util.List;
 /** Adds all the {@code numbers} and returns the result */
 @Vajram
 public abstract class SimpleAdd extends ComputeVajramDef<Integer> implements MultiAdd {
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(ASSUME_DEFAULT_VALUE)
-    List<Integer> numbers;
+    List<Integer> numbers();
   }
 
   @Output
