@@ -33,20 +33,20 @@ import java.util.stream.IntStream;
 @InvocableOutsideGraph
 @Vajram
 public abstract class HelloFriends extends ComputeVajramDef<String> {
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    String userId;
+    String userId();
 
-    int numberOfFriends;
+    int numberOfFriends();
   }
 
-  static class _InternalFacets {
+  interface _InternalFacets {
     @IfAbsent(FAIL)
     @Dependency(onVajram = TestUserService.class)
-    TestUserInfo userInfo;
+    TestUserInfo userInfo();
 
     @Dependency(onVajram = TestUserService.class, canFanout = true)
-    TestUserInfo friendInfos;
+    TestUserInfo friendInfos();
   }
 
   @Override

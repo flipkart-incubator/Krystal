@@ -30,19 +30,18 @@ import java.util.Optional;
  */
 @Vajram
 public abstract class DoubleMinusOne extends ComputeVajramDef<Integer> {
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    List<Integer> numbers;
+    List<Integer> numbers();
   }
 
-  static class _InternalFacets {
+  interface _InternalFacets {
     @Dependency(onVajram = Multiply.class, canFanout = true)
-    int doubledNumbers;
+    int doubledNumbers();
 
     @IfAbsent(FAIL)
     @Dependency(onVajram = Subtract.class)
-    int result;
+    int result();
   }
 
   @Override

@@ -32,23 +32,23 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @InvocableOutsideProcess
 @POST
 @Vajram
-@SupportedModelProtocols({Json.class, PlainJavaObject.class})
 public abstract class HttpPostGraphQl extends ComputeVajramDef<Response> {
 
-  static class _Inputs {
+  @SupportedModelProtocols({Json.class, PlainJavaObject.class})
+  interface _Inputs {
     @IfAbsent(FAIL)
-    String query;
+    String query();
 
-    Map<String, Object> variables;
+    Map<String, Object> variables();
 
-    String operationName;
+    String operationName();
 
-    Map<String, Object> extensions;
+    Map<String, Object> extensions();
   }
 
-  static class _InternalFacets {
+  interface _InternalFacets {
     @Dependency(onVajram = GraphQlOperationAggregate.class)
-    @Nullable GraphQlOperationObject queryResponse;
+    @Nullable GraphQlOperationObject queryResponse();
   }
 
   @Resolve(dep = queryResponse_n, depInputs = GraphQlOperationAggregate_Req.executionInput_n)

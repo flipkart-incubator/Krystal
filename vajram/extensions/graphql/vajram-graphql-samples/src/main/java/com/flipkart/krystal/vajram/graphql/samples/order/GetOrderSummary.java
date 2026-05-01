@@ -20,10 +20,9 @@ public abstract class GetOrderSummary extends ComputeVajramDef<GetOrderSummary_G
   /** Unix epoch date - January 1, 1970 */
   public static final LocalDate UNIX_EPOCH_DATE = LocalDate.of(1970, 1, 1);
 
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    OrderId id;
+    OrderId id();
   }
 
   @Output

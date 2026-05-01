@@ -101,7 +101,6 @@ import com.flipkart.krystal.vajram.VajramRequestRoot;
 import com.flipkart.krystal.vajram.batching.BatchEnabledFacetValues;
 import com.flipkart.krystal.vajram.batching.BatchEnabledImmutableFacetValues;
 import com.flipkart.krystal.vajram.batching.BatchItemExecutionItem;
-import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.batching.BatchedFacets;
 import com.flipkart.krystal.vajram.batching.BatchesGroupedBy;
 import com.flipkart.krystal.vajram.codegen.common.models.CodeGenParams;
@@ -283,7 +282,7 @@ public class VajramCodeGenerator implements CodeGenerator {
     validateIfAbsentStrategyApplicability();
 
     // Validate that none of the SerialId annotations on facets clash with the ReservedSerialIds
-    // annotation on the Vajram
+    // annotation on the _Inputs class/interface
     validateSerialIdReservations();
   }
 
@@ -313,17 +312,7 @@ public class VajramCodeGenerator implements CodeGenerator {
                     : VajramRequestRoot.class)
             .addAnnotation(buildReqModelRootAnnotation())
             .addAnnotation(buildReqSupportedModelProtocols())
-            .addAnnotations(
-                currentVajramInfo.vajramClassElem().getAnnotationMirrors().stream()
-                    .filter(
-                        annotationMirror ->
-                            MODEL_CLASS_ANNOTATIONS.contains(
-                                ((QualifiedNameable)
-                                        annotationMirror.getAnnotationType().asElement())
-                                    .getQualifiedName()
-                                    .toString()))
-                    .map(AnnotationSpec::get)
-                    .toList())
+            .addAnnotations(getModelClassAnnotations())
             .addSuperinterfaces(currentVajramInfo.requestInterfaceSuperTypes());
 
     // Add VAJRAM_ID constant to the request interface
@@ -368,6 +357,7 @@ public class VajramCodeGenerator implements CodeGenerator {
   }
 
   private AnnotationSpec buildReqModelRootAnnotation() {
+    Element protocolSource = getInputsAnnotationSource();
     return AnnotationSpec.builder(ModelRoot.class)
         .addMember("type", CodeBlock.of("{$T.$L}", ModelType.class, ModelType.REQUEST.name()))
         .addMember("suffixSeparator", CodeBlock.of("$S", ""))
@@ -375,18 +365,18 @@ public class VajramCodeGenerator implements CodeGenerator {
         .addMember(
             "pure",
             "$L",
-            util.getModelProtocols(currentVajramInfo.vajramClassElem()).stream()
+            util.getModelProtocols(protocolSource).stream()
                 .anyMatch(ModelProtocol::modelsNeedToBePure))
         .build();
   }
 
   private AnnotationSpec buildReqSupportedModelProtocols() {
-    SupportedModelProtocols vajramProtocols =
-        currentVajramInfo.vajramClassElem().getAnnotation(SupportedModelProtocols.class);
+    Element protocolSource = getInputsAnnotationSource();
+    SupportedModelProtocols protocols = protocolSource.getAnnotation(SupportedModelProtocols.class);
     AnnotationSpec.Builder builder = AnnotationSpec.builder(SupportedModelProtocols.class);
     builder.addMember("value", "$T.class", PlainJavaObject.class);
-    if (vajramProtocols != null) {
-      util.getTypesFromAnnotationMember(vajramProtocols::value).stream()
+    if (protocols != null) {
+      util.getTypesFromAnnotationMember(protocols::value).stream()
           .filter(
               tm -> {
                 Element elem = util.processingEnv().getTypeUtils().asElement(tm);
@@ -397,6 +387,34 @@ public class VajramCodeGenerator implements CodeGenerator {
           .forEach(tm -> builder.addMember("value", "$T.class", TypeName.get(tm)));
     }
     return builder.build();
+  }
+
+  /**
+   * Returns the {@code _Inputs} element from which request-specific annotations like {@link
+   * SupportedModelProtocols} and {@link ReservedSerialIds} should be read. If the {@code _Inputs}
+   * element is not present, returns the vajram class element as a fallback (which should not have
+   * these annotations).
+   */
+  private Element getInputsAnnotationSource() {
+    Element inputsElement = currentVajramInfo.inputsElement();
+    return inputsElement != null ? inputsElement : currentVajramInfo.vajramClassElem();
+  }
+
+  /**
+   * Returns the list of model class annotations (e.g. {@link ReservedSerialIds}) from the {@code
+   * _Inputs} element.
+   */
+  private List<AnnotationSpec> getModelClassAnnotations() {
+    Element source = getInputsAnnotationSource();
+    return source.getAnnotationMirrors().stream()
+        .filter(
+            annotationMirror ->
+                MODEL_CLASS_ANNOTATIONS.contains(
+                    ((QualifiedNameable) annotationMirror.getAnnotationType().asElement())
+                        .getQualifiedName()
+                        .toString()))
+        .map(AnnotationSpec::get)
+        .toList();
   }
 
   public void vajramFacets() {
@@ -1116,7 +1134,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
           getParsedVajramData().vajramInfo().givenFacets().stream()
               .filter(DefaultFacetModel::isBatched)
               .findAny()
-              .<Element>map(DefaultFacetModel::facetField)
+              .<Element>map(DefaultFacetModel::facetElement)
               .orElse(getParsedVajramData().vajramInfo().vajramClassElem()));
     } else { // TODO : Need non batched IO vajramDef to test this
       nonBatchedExecuteMethodBuilder(executeBuilder, false);
@@ -2201,7 +2219,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
         method.addJavadoc("$L", documentation);
       }
       method.addAnnotations(
-          facet.facetField().getAnnotationMirrors().stream()
+          facet.facetElement().getAnnotationMirrors().stream()
               .filter(
                   annotationMirror ->
                       MODEL_METHOD_ANNOTATIONS.contains(
@@ -2222,14 +2240,14 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
 
   /**
    * Validates that none of the SerialId annotations on facets clash with the ReservedSerialIds
-   * annotation on the Vajram.
+   * annotation on the {@code _Inputs} class/interface.
    *
    * <p>This ensures that facets don't use serial IDs that are explicitly reserved for backward
    * compatibility reasons.
    */
   private void validateSerialIdReservations() {
     ReservedSerialIds reservedSerialIds =
-        currentVajramInfo.vajramClassElem().getAnnotation(ReservedSerialIds.class);
+        getInputsAnnotationSource().getAnnotation(ReservedSerialIds.class);
 
     // If there's no ReservedSerialIds annotation, there's nothing to validate
     if (reservedSerialIds == null) {
@@ -2242,16 +2260,16 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
 
     // Check each facet's SerialId annotation
     for (FacetGenModel facet : facetModelsByName.values()) {
-      SerialId facetSerialId = facet.facetField().getAnnotation(SerialId.class);
+      SerialId facetSerialId = facet.facetElement().getAnnotation(SerialId.class);
       if (facetSerialId != null && reservedIdSet.contains(facetSerialId.value())) {
         String message =
             String.format(
                 "SerialId %d on facet '%s' in Vajram '%s' conflicts with a reserved ID. "
-                    + "This ID is reserved via the @ReservedSerialIds annotation on the Vajram class.",
+                    + "This ID is reserved via the @ReservedSerialIds annotation on the _Inputs class.",
                 facetSerialId.value(),
                 facet.name(),
                 currentVajramInfo.vajramClassElem().getSimpleName());
-        @Nullable Element[] elements = new Element[] {facet.facetField()};
+        @Nullable Element[] elements = new Element[] {facet.facetElement()};
         util.error(message, elements);
       }
     }
@@ -2265,7 +2283,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
   private void validateIfAbsentStrategyApplicability() {
 
     for (FacetGenModel facet : facetModelsByName.values()) {
-      Element facetField = facet.facetField();
+      Element facetField = facet.facetElement();
       IfAbsent ifAbsent = facetField.getAnnotation(IfAbsent.class);
       if (ifAbsent != null) {
         IfAbsentThen ifAbsentThen = ifAbsent.value();
@@ -2542,7 +2560,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
           methodBuilder(facet.name())
               .addModifiers(PUBLIC, ABSTRACT)
               .addAnnotations(
-                  facet.facetField().getAnnotationMirrors().stream()
+                  facet.facetElement().getAnnotationMirrors().stream()
                       .filter(
                           annotationMirror ->
                               IfAbsent.class
@@ -2792,7 +2810,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
             depReqInterfaceClass,
             VAJRAM_ID_CONSTANT_NAME);
       }
-      String docComment = elementUtils.getDocComment(facet.facetField());
+      String docComment = elementUtils.getDocComment(facet.facetElement());
       if (docComment == null) {
         docComment = "";
       }
@@ -2818,7 +2836,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
             conformsToTraitInfoOrSelf.reqImmutInterfaceClassName().nestedClass("Builder"),
             facet.name());
         fieldSpec.addAnnotations(
-            facet.facetField().getAnnotationMirrors().stream()
+            facet.facetElement().getAnnotationMirrors().stream()
                 .filter(
                     annotationMirror ->
                         annotationMirror
@@ -2829,11 +2847,15 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                 .map(AnnotationSpec::get)
                 .toList());
       } else {
+        String facetReflectionAccessor =
+            facet.facetElement() instanceof ExecutableElement
+                ? "getDeclaredMethod"
+                : "getDeclaredField";
         initializerCodeBlock.add(
             """
                     $L,
                     $T.fieldTagsParser(
-                      () -> $T.$L.class.getDeclaredField($S),
+                      () -> $T.$L.class.$L($S),
                       () -> $T.class.getDeclaredField($S)),
                     _facetValues -> (($T)_facetValues).$L(),
                     (_facetValues, _value) -> {
@@ -2843,10 +2865,11 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                     }
                   )
                 """,
-            facet.facetField().getAnnotation(Batched.class) != null,
+            facet.isBatched(),
             FacetUtils.class,
             currentVajramInfo.vajramClassElem(),
             facet.facetType().equals(INPUT) ? _INPUTS_CLASS : _INTERNAL_FACETS_CLASS,
+            facetReflectionAccessor,
             facet.name(),
             currentVajramInfo.facetsInterfaceType(),
             facet.name() + FACET_SPEC_SUFFIX,

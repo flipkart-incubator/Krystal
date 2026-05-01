@@ -11,13 +11,13 @@ import java.util.Optional;
 
 @InvocableOutsideGraph
 @Vajram
-@SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
+@SuppressWarnings("optional.parameter")
 public abstract class Multiply extends ComputeVajramDef<Integer> {
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    int numberOne;
+    int numberOne();
 
-    int numberTwo;
+    int numberTwo();
   }
 
   @Output

@@ -9,16 +9,15 @@ import com.flipkart.krystal.vajram.facets.Output;
 
 @Vajram
 public abstract class L1CallAgent extends ComputeVajramDef<String> implements CustomerServiceAgent {
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    AgentType agentType;
+    AgentType agentType();
 
     @IfAbsent(FAIL)
-    InitialCommunication initialCommunication;
+    InitialCommunication initialCommunication();
 
     @IfAbsent(FAIL)
-    String customerName;
+    String customerName();
   }
 
   @Output

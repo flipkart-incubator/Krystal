@@ -23,20 +23,20 @@ import java.util.Optional;
 @Vajram
 @SuppressWarnings({"optional.parameter", "initialization.field.uninitialized"})
 public abstract class SplitAdd extends ComputeVajramDef<Integer> implements MultiAdd {
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    List<Integer> numbers;
+    List<Integer> numbers();
   }
 
-  static class _InternalFacets {
+  interface _InternalFacets {
     @Dependency(onVajram = SplitAdd.class)
-    int splitSum1;
+    int splitSum1();
 
     @Dependency(onVajram = SplitAdd.class)
-    int splitSum2;
+    int splitSum2();
 
     @Dependency(onVajram = Add.class)
-    int sum;
+    int sum();
   }
 
   @Resolve(dep = splitSum1_n, depInputs = SplitAdd_Req.numbers_n)

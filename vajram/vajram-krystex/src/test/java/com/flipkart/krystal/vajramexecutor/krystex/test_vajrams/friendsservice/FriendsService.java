@@ -20,10 +20,10 @@ import java.util.concurrent.atomic.LongAdder;
 
 @Vajram
 public abstract class FriendsService extends IOVajramDef<Set<String>> {
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
     @Batched
-    String userId;
+    String userId();
   }
 
   public static final LongAdder CALL_COUNTER = new LongAdder();

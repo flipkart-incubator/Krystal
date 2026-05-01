@@ -28,20 +28,20 @@ import java.util.Set;
 @InvocableOutsideGraph
 @Vajram
 public abstract class MutualFriendsHello extends ComputeVajramDef<String> {
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    String userId;
+    String userId();
 
-    boolean skip;
+    boolean skip();
   }
 
-  static class _InternalFacets {
+  interface _InternalFacets {
     @IfAbsent(FAIL)
     @Dependency(onVajram = FriendsService.class)
-    Set<String> friendIds;
+    Set<String> friendIds();
 
     @Dependency(onVajram = HelloFriendsV2.class, canFanout = true)
-    String hellos;
+    String hellos();
   }
 
   @Resolve(dep = friendIds_n, depInputs = FriendsService_Req.userId_n)

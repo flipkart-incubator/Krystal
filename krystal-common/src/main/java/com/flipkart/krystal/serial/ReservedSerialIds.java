@@ -1,8 +1,10 @@
 package com.flipkart.krystal.serial;
 
+import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.SOURCE;
 
 import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 
 /**
  * {@link SerialId}s which are not to be used by any facet because they represent older facets which
@@ -17,6 +19,7 @@ import java.lang.annotation.Retention;
  * feature of protobuf
  */
 @Retention(SOURCE)
+@Target(TYPE)
 public @interface ReservedSerialIds {
   int[] value();
 }

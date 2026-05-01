@@ -21,15 +21,15 @@ import com.google.common.collect.ImmutableCollection;
 @Vajram
 @InvocableOutsideGraph
 public abstract class AddZero extends ComputeVajramDef<Integer> {
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    int number;
+    int number();
   }
 
-  static class _InternalFacets {
+  interface _InternalFacets {
     @IfAbsent(FAIL)
     @Dependency(onVajram = Add.class)
-    int sum;
+    int sum();
   }
 
   @Override

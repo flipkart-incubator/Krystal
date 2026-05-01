@@ -34,19 +34,19 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @Vajram
 public abstract class Add extends IOVajramDef<Integer> {
 
-  static class _Inputs {
+  interface _Inputs {
     /** The first number to add */
     @IfAbsent(FAIL)
     @Batched
-    int numberOne;
+    int numberOne();
 
     /** The second number to add */
     @IfAbsent(ASSUME_DEFAULT_VALUE)
     @Batched
-    int numberTwo;
+    int numberTwo();
   }
 
-  static class _InternalFacets {
+  interface _InternalFacets {
     /**
      * Flag to indicate if the adder should fail. If set to true, the adder will throw a {@link
      * RuntimeException}
@@ -54,7 +54,7 @@ public abstract class Add extends IOVajramDef<Integer> {
     @BatchesGroupedBy
     @Named(FAIL_ADDER_FLAG)
     @Inject
-    boolean fail;
+    boolean fail();
   }
 
   public static final LongAdder CALL_COUNTER = new LongAdder();

@@ -26,7 +26,6 @@ dependencies {
     krystalModelsGenProcessor 'com.flipkart.krystal:lattice-codegen'
     krystalModelsGenProcessor 'com.flipkart.krystal:lattice-cdi-codegen'
     krystalModelsGenProcessor 'com.flipkart.krystal:vajram-json-codegen'
-    krystalModelsGenProcessor 'com.flipkart.krystal:lattice-json-codegen'
     krystalModelsGenProcessor 'com.flipkart.krystal:lattice-rest-codegen'
     krystalModelsGenProcessor 'com.flipkart.krystal:lattice-rest-quarkus-codegen'
     krystalModelsGenProcessor 'com.flipkart.krystal:lattice-quarkus-codegen'

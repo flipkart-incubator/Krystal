@@ -5,7 +5,7 @@ import static com.flipkart.krystal.facets.FacetType.INPUT;
 
 import com.flipkart.krystal.tags.ElementTags;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
+import java.lang.reflect.AnnotatedElement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -20,10 +20,11 @@ public class FacetUtils {
   }
 
   @SafeVarargs
-  public static Callable<ElementTags> fieldTagsParser(Callable<Field>... facetFieldSuppliers) {
+  public static Callable<ElementTags> fieldTagsParser(
+      Callable<? extends AnnotatedElement>... facetFieldSuppliers) {
     return () -> {
       List<Annotation> annotationList = new ArrayList<>();
-      for (Callable<Field> facetFieldSupplier : facetFieldSuppliers) {
+      for (Callable<? extends AnnotatedElement> facetFieldSupplier : facetFieldSuppliers) {
         annotationList.addAll(Arrays.asList(facetFieldSupplier.call().getAnnotations()));
       }
       return ElementTags.of(annotationList);

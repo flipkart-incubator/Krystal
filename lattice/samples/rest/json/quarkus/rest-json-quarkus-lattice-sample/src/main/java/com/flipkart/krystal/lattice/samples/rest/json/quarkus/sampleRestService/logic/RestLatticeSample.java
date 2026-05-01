@@ -27,40 +27,40 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
 @InvocableOutsideGraph
 @InvocableOutsideProcess
-@SupportedModelProtocols({Json.class, PlainJavaObject.class})
 @Vajram
 public abstract class RestLatticeSample extends ComputeVajramDef<JsonResponse> {
-  static class _Inputs {
+  @SupportedModelProtocols({Json.class, PlainJavaObject.class})
+  interface _Inputs {
 
-    int optionalInput;
+    int optionalInput();
 
     @IfAbsent(FAIL)
-    int mandatoryInput;
+    int mandatoryInput();
 
     @IfAbsent(value = MAY_FAIL_CONDITIONALLY, conditionalFailureInfo = "In some scenarios")
-    int conditionallyMandatoryInput;
+    int conditionallyMandatoryInput();
 
     @IfAbsent(ASSUME_DEFAULT_VALUE)
-    int inputWithDefaultValue;
+    int inputWithDefaultValue();
 
-    long optionalLongInput;
+    long optionalLongInput();
 
     @IfAbsent(FAIL)
-    long mandatoryLongInput;
+    long mandatoryLongInput();
 
-    ByteArray optionalByteString;
+    ByteArray optionalByteString();
 
     @IfAbsent(ASSUME_DEFAULT_VALUE)
-    List<Integer> repeatedInts;
+    List<Integer> repeatedInts();
 
     @IfAbsent(FAIL)
-    ByteArray defaultByteString;
+    ByteArray defaultByteString();
   }
 
-  static class _InternalFacets {
+  interface _InternalFacets {
     @Inject
     @IfAbsent(FAIL)
-    JsonResponse_Immut.Builder responseBuilder;
+    JsonResponse_Immut.Builder responseBuilder();
   }
 
   @Output

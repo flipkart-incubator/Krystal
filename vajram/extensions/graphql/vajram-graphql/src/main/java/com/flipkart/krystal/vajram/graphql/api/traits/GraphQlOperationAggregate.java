@@ -17,20 +17,20 @@ import graphql.language.OperationDefinition.Operation;
 @CallGraphDelegationMode(SYNC)
 @Trait
 public interface GraphQlOperationAggregate<T extends GraphQlOperationObject> extends TraitDef<T> {
-  class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    ExecutionInput executionInput;
+    ExecutionInput executionInput();
 
     @IfAbsent(FAIL)
-    Operation operationType;
+    Operation operationType();
 
     @IfAbsent(FAIL)
-    ExecutionContext graphql_executionContext;
+    ExecutionContext graphql_executionContext();
 
     @IfAbsent(FAIL)
-    VajramExecutionStrategy graphql_executionStrategy;
+    VajramExecutionStrategy graphql_executionStrategy();
 
     @IfAbsent(FAIL)
-    ExecutionStrategyParameters graphql_executionStrategyParams;
+    ExecutionStrategyParameters graphql_executionStrategyParams();
   }
 }

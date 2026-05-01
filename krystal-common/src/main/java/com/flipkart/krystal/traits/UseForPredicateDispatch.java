@@ -1,6 +1,7 @@
 package com.flipkart.krystal.traits;
 
 import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 import com.flipkart.krystal.annos.ApplicableToElements;
@@ -19,5 +20,5 @@ import java.lang.annotation.Target;
 @ApplicableToElements(Facet.class)
 @Documented
 @Retention(RUNTIME)
-@Target(FIELD)
+@Target({FIELD, METHOD})
 public @interface UseForPredicateDispatch {}

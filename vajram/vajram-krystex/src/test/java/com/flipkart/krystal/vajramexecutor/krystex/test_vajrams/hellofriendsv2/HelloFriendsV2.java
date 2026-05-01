@@ -28,16 +28,16 @@ import java.util.Set;
 @InvocableOutsideGraph
 @Vajram
 public abstract class HelloFriendsV2 extends ComputeVajramDef<String> {
-  static class _Inputs {
-    String userId;
+  interface _Inputs {
+    String userId();
   }
 
-  static class _InternalFacets {
+  interface _InternalFacets {
     @Dependency(onVajram = FriendsService.class)
-    Set<String> friendIds;
+    Set<String> friendIds();
 
     @Dependency(onVajram = TestUserService.class, canFanout = true)
-    TestUserInfo friendInfos;
+    TestUserInfo friendInfos();
   }
 
   @Override

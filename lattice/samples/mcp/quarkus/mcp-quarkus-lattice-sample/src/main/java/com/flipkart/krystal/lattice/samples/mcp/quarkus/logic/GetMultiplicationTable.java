@@ -14,11 +14,10 @@ import com.flipkart.krystal.vajram.facets.Output;
 @InvocableOutsideGraph
 @Vajram
 public abstract class GetMultiplicationTable extends ComputeVajramDef<MultiplicationTable> {
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _Inputs {
+  interface _Inputs {
     /** The number to get the multiplication table for */
     @IfAbsent(FAIL)
-    int number;
+    int number();
   }
 
   @Output

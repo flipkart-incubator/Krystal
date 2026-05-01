@@ -10,10 +10,9 @@ import com.flipkart.krystal.vajram.graphql.samples.state.State;
 
 @Vajram
 public abstract class GetOrderState extends ComputeVajramDef<State> {
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    OrderId id;
+    OrderId id();
   }
 
   @Output

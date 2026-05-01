@@ -67,7 +67,6 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
 import lombok.SneakyThrows;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -287,7 +286,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
       Map<FacetGenModel, FacetParamType> params = new LinkedHashMap<>();
       FacetGenModel bodyFacet = null;
       for (FacetGenModel facet : vajramInfo.facetStream().toList()) {
-        VariableElement facetField = facet.facetField();
+        Element facetField = facet.facetElement();
         if (facetField.getAnnotation(PathParam.class) != null) {
           if (!explicitPath) {
             util.error("Path param cannot be used without @Path annotation", facetField);
@@ -360,7 +359,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
         Map<Element, SerdeConfig> serdeConfigsMap = new HashMap<>();
         if (bodyFacet != null) {
           Map<@NonNull Element, SerdeConfig> collect =
-              Arrays.stream(bodyFacet.facetField().getAnnotationsByType(SerdeConfig.class))
+              Arrays.stream(bodyFacet.facetElement().getAnnotationsByType(SerdeConfig.class))
                   .collect(
                       toMap(
                           s ->
@@ -385,9 +384,11 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
           }
           supportedModelProtocols = bodyTypeElem.getAnnotation(SupportedModelProtocols.class);
         } else {
-          supportedModelProtocols = vajramElem.getAnnotation(SupportedModelProtocols.class);
+          Element annotationSource =
+              vajramInfo.inputsElement() != null ? vajramInfo.inputsElement() : vajramElem;
+          supportedModelProtocols = annotationSource.getAnnotation(SupportedModelProtocols.class);
           Map<@NonNull Element, SerdeConfig> collect =
-              Arrays.stream(vajramElem.getAnnotationsByType(SerdeConfig.class))
+              Arrays.stream(annotationSource.getAnnotationsByType(SerdeConfig.class))
                   .collect(
                       toMap(
                           s ->
@@ -402,7 +403,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
         if (supportedModelProtocols == null) {
           util.error(
               "Rest request body doesn't support any ModelProtocol.",
-              bodyFacet == null ? vajramElem : bodyFacet.facetField());
+              bodyFacet == null ? vajramElem : bodyFacet.facetElement());
         } else {
           requestSerdeProtocols =
               util.getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
@@ -417,7 +418,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
             util.error(
                 "Rest request Body facet doesn't support any SerdeProtocols. Found: "
                     + Arrays.toString(supportedModelProtocols.value()),
-                bodyFacet == null ? vajramElem : bodyFacet.facetField());
+                bodyFacet == null ? vajramElem : bodyFacet.facetElement());
           }
         }
         if (bodyFacet != null) {
@@ -428,7 +429,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
                   doesn't support request body, but the vajram has a \
                   facet with the @Body annotation."""
                     .formatted(vajramInfo.vajramName(), restMethod),
-                bodyFacet.facetField());
+                bodyFacet.facetElement());
           }
         }
         for (TypeElement serdeProtocolType : requestSerdeProtocols) {
@@ -555,7 +556,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
       if (facetParamType != null && facetParamType != type) {
         util.error(
             "The facet " + facet.name() + " cannot be both " + facetParamType + " and " + type,
-            facet.facetField());
+            facet.facetElement());
       } else {
         params.put(facet, type);
       }

@@ -10,12 +10,11 @@ import com.flipkart.krystal.vajram.graphql.samples.dummy.DummyId;
 
 @Vajram
 public abstract class GetDummyIdForOrder extends ComputeVajramDef<DummyId> {
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    OrderId id;
+    OrderId id();
 
-    String name;
+    String name();
   }
 
   @Output

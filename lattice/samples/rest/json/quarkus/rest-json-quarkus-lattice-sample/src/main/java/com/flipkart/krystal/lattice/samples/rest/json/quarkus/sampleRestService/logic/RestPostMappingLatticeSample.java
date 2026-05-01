@@ -30,23 +30,23 @@ import jakarta.inject.Inject;
 @POST
 @Vajram
 public abstract class RestPostMappingLatticeSample extends ComputeVajramDef<JsonResponse> {
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
     @Body
     @SerdeConfig(
         protocol = Json.class,
         contentTypes = {"application/json", "application/x-json-test"})
-    JsonRequest jsonRequest;
+    JsonRequest jsonRequest();
 
     @IfAbsent(FAIL)
     @PathParam
-    String fullPath;
+    String fullPath();
   }
 
-  static class _InternalFacets {
+  interface _InternalFacets {
     @Inject
     @IfAbsent(FAIL)
-    JsonResponse_Immut.Builder responseBuilder;
+    JsonResponse_Immut.Builder responseBuilder();
   }
 
   @Output

@@ -23,7 +23,6 @@ dependencies {
         c.api 'com.flipkart.krystal:lattice-guice-codegen:' + project.lattice_version
         c.api 'com.flipkart.krystal:lattice-guice-servlet:' + project.lattice_version
         c.api 'com.flipkart.krystal:lattice-guice:' + project.lattice_version
-        c.api 'com.flipkart.krystal:lattice-json-codegen:' + project.lattice_version
         c.api 'com.flipkart.krystal:lattice-protobuf-codegen:' + project.lattice_version
         c.api 'com.flipkart.krystal:lattice-protobuf:' + project.lattice_version
         c.api 'com.flipkart.krystal:lattice-rest-api:' + project.lattice_version

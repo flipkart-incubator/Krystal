@@ -32,18 +32,18 @@ import java.util.function.Function;
 @InvocableOutsideGraph
 @Vajram
 abstract class MultiAgentContact extends ComputeVajramDef<List<String>> {
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    String name;
+    String name();
 
     @IfAbsent(FAIL)
-    String communication;
+    String communication();
   }
 
-  static class _InternalFacets {
+  interface _InternalFacets {
     @IfAbsent(FAIL)
     @Dependency(onVajram = CustomerServiceAgent.class, canFanout = true)
-    String responses;
+    String responses();
   }
 
   @Resolve(

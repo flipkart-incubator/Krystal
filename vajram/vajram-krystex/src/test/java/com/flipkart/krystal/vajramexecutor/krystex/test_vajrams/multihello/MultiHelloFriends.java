@@ -40,19 +40,19 @@ import lombok.extern.slf4j.Slf4j;
 @InvocableOutsideGraph
 @Vajram
 public abstract class MultiHelloFriends extends ComputeVajramDef<String> {
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    List<String> userIds;
+    List<String> userIds();
 
-    boolean skip;
+    boolean skip();
   }
 
-  static class _InternalFacets {
+  interface _InternalFacets {
     @Dependency(onVajram = HelloFriends.class, canFanout = true)
-    String hellos;
+    String hellos();
 
     @Dependency(onVajram = AuditData.class, canFanout = true)
-    Void audited;
+    Void audited();
   }
 
   private static final List<Integer> NUMBER_OF_FRIENDS = List.of(1, 2);

@@ -9,10 +9,9 @@ import com.flipkart.krystal.vajram.facets.Output;
 
 @Vajram
 public abstract class GetMostRecentOrder extends ComputeVajramDef<OrderId> {
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    String userId;
+    String userId();
   }
 
   @Output

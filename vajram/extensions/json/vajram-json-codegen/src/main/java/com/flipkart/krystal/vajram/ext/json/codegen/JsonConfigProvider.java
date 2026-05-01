@@ -1,4 +1,4 @@
-package com.flipkart.krystal.lattice.ext.json.codegen;
+package com.flipkart.krystal.vajram.ext.json.codegen;
 
 import static com.flipkart.krystal.vajram.json.Json.JSON;
 

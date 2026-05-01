@@ -12,6 +12,7 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import java.util.List;
 import java.util.stream.Stream;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -20,7 +21,8 @@ public record VajramInfo(
     ImmutableList<DefaultFacetModel> givenFacets,
     ImmutableList<DependencyModel> dependencies,
     @Nullable VajramInfoLite conformsToTraitInfo,
-    @Nullable ComputeDelegationMode vajramDelegationMode) {
+    @Nullable ComputeDelegationMode vajramDelegationMode,
+    @Nullable Element inputsElement) {
 
   public VajramInfo {
     if (lite.isTrait()) {
@@ -28,13 +30,13 @@ public record VajramInfo(
         if (!defaultFacet.facetType().equals(INPUT)) {
           lite.util()
               .codegenUtil()
-              .error("Only INPUT facets are supported in Traits", defaultFacet.facetField());
+              .error("Only INPUT facets are supported in Traits", defaultFacet.facetElement());
         }
       }
       if (!dependencies.isEmpty()) {
         lite.util()
             .codegenUtil()
-            .error("Traits cannot have dependencies", dependencies.get(0).facetField());
+            .error("Traits cannot have dependencies", dependencies.get(0).facetElement());
       }
     }
   }

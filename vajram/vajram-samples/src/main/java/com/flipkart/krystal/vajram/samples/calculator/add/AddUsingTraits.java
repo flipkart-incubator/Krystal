@@ -22,7 +22,7 @@ import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajram.samples.calculator.add.AddUsingTraits.ThreeSums;
-import com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiAddQualifier;
+import com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.AdditionMethod;
 import com.google.common.collect.ImmutableCollection;
 import java.util.List;
 import java.util.Optional;
@@ -32,31 +32,30 @@ import java.util.Optional;
 @InvocableOutsideGraph
 @Vajram
 public abstract class AddUsingTraits extends ComputeVajramDef<ThreeSums> {
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    List<Integer> numbers1;
+    List<Integer> numbers1();
 
     @IfAbsent(FAIL)
-    List<Integer> numbers2;
+    List<Integer> numbers2();
 
     @IfAbsent(FAIL)
-    List<Integer> numbers3;
+    List<Integer> numbers3();
   }
 
-  static class _InternalFacets {
+  interface _InternalFacets {
 
     @Dependency(onVajram = MultiAdd.class)
-    @MultiAddQualifier(SIMPLE)
-    int sum1;
+    @AdditionMethod(SIMPLE)
+    int sum1();
 
     @Dependency(onVajram = MultiAdd.class)
-    @MultiAddQualifier(CHAIN)
-    int sum2;
+    @AdditionMethod(CHAIN)
+    int sum2();
 
     @Dependency(onVajram = MultiAdd.class)
-    @MultiAddQualifier(SPLIT)
-    int sum3;
+    @AdditionMethod(SPLIT)
+    int sum3();
   }
 
   @Override

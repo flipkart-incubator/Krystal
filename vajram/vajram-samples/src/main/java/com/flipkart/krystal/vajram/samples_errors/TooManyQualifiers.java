@@ -18,17 +18,17 @@ import java.lang.annotation.RetentionPolicy;
 @Vajram
 public abstract class TooManyQualifiers extends ComputeVajramDef<String> {
 
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    String input;
+    String input();
   }
 
-  static class _InternalFacets {
+  interface _InternalFacets {
     @IfAbsent(FAIL)
     @Inject
     @Named("toInject")
     @InjectionQualifier
-    String inject;
+    String inject();
   }
 
   @Retention(RetentionPolicy.RUNTIME)

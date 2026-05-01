@@ -5,7 +5,7 @@ import com.flipkart.krystal.vajram.VajramDefRoot;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Target;
 
-@Target(ElementType.FIELD)
+@Target({ElementType.FIELD, ElementType.METHOD})
 public @interface Dependency {
 
   /**

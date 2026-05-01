@@ -20,10 +20,12 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @InvocableOutsideGraph
 @InvocableOutsideProcess
-@SupportedModelProtocols({Json.class, PlainJavaObject.class})
 @Vajram
 @Produces(MediaType.TEXT_PLAIN)
 public abstract class RestStreamingSample extends ComputeVajramDef<Publisher<Buffer>> {
+  @SupportedModelProtocols({Json.class, PlainJavaObject.class})
+  interface _Inputs {}
+
   private static int count;
 
   @Output

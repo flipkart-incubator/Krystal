@@ -48,7 +48,6 @@ import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
-import com.squareup.javapoet.TypeSpec.Builder;
 import graphql.execution.ExecutionContext;
 import graphql.execution.ExecutionStrategyParameters;
 import graphql.language.FieldDefinition;
@@ -101,7 +100,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
             ClassName aggregatorName = schemaReaderUtil.getAggregatorName(objectTypeName);
             Map<ClassName, List<GraphQlFieldSpec>> refToFieldMap =
                 getDfToListOfFieldsDeRef(typeDefinition);
-            Builder typeAggregator =
+            TypeSpec.Builder typeAggregator =
                 util.classBuilder(aggregatorName.simpleName(), "")
                     .addModifiers(PUBLIC)
                     .addModifiers(ABSTRACT)
@@ -185,37 +184,47 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
   private List<TypeSpec> createFacetDefinitions(ObjectTypeDefinition typeDefinition) {
     GraphQLTypeName typeName = GraphQLTypeName.of(typeDefinition);
 
-    Builder inputs = TypeSpec.classBuilder("_Inputs").addModifiers(STATIC);
+    TypeSpec.Builder inputs = TypeSpec.interfaceBuilder("_Inputs").addModifiers(STATIC);
 
     if (schemaReaderUtil.hasEntityId(typeDefinition)) {
-      inputs.addField(
-          FieldSpec.builder(schemaReaderUtil.entityIdClassName(typeName), Facets.ENTITY_ID)
+      inputs.addMethod(
+          MethodSpec.methodBuilder(Facets.ENTITY_ID)
+              .returns(schemaReaderUtil.entityIdClassName(typeName))
+              .addModifiers(ABSTRACT, PUBLIC)
               .addAnnotation(IF_ABSENT_FAIL)
               .build());
     }
-    inputs.addField(
-        FieldSpec.builder(ExecutionContext.class, Facets.EXECUTION_CONTEXT)
+    inputs.addMethod(
+        MethodSpec.methodBuilder(Facets.EXECUTION_CONTEXT)
+            .returns(ExecutionContext.class)
+            .addModifiers(ABSTRACT, PUBLIC)
             .addAnnotation(IF_ABSENT_FAIL)
             .build());
-    inputs.addField(
-        FieldSpec.builder(ClassName.get(VajramExecutionStrategy.class), Facets.EXECUTION_STRATEGY)
+    inputs.addMethod(
+        MethodSpec.methodBuilder(Facets.EXECUTION_STRATEGY)
+            .returns(ClassName.get(VajramExecutionStrategy.class))
+            .addModifiers(ABSTRACT, PUBLIC)
             .addAnnotation(IF_ABSENT_FAIL)
             .build());
-    inputs.addField(
-        FieldSpec.builder(ExecutionStrategyParameters.class, Facets.EXECUTION_STRATEGY_PARAMS)
+    inputs.addMethod(
+        MethodSpec.methodBuilder(Facets.EXECUTION_STRATEGY_PARAMS)
+            .returns(ExecutionStrategyParameters.class)
+            .addModifiers(ABSTRACT, PUBLIC)
             .addAnnotation(IF_ABSENT_FAIL)
             .build());
 
-    Builder internalFacets = TypeSpec.classBuilder(_INTERNAL_FACETS_CLASS).addModifiers(STATIC);
+    TypeSpec.Builder internalFacets =
+        TypeSpec.interfaceBuilder(_INTERNAL_FACETS_CLASS).addModifiers(STATIC);
 
     Map<Fetcher, List<GraphQlFieldSpec>> fetcherToFields =
         schemaReaderUtil.typeToFetcherToFields().get(typeName);
     for (Entry<Fetcher, List<GraphQlFieldSpec>> entry : fetcherToFields.entrySet()) {
       if (entry.getKey() instanceof VajramFetcher fetcher) {
         List<GraphQlFieldSpec> fields = entry.getValue();
-        internalFacets.addField(
-            FieldSpec.builder(
-                    getFetcherResponseType(fetcher, fields), getFacetName(fetcher, fields))
+        internalFacets.addMethod(
+            MethodSpec.methodBuilder(getFacetName(fetcher, fields))
+                .returns(getFetcherResponseType(fetcher, fields))
+                .addModifiers(ABSTRACT, PUBLIC)
                 .addAnnotation(
                     AnnotationSpec.builder(Dependency.class)
                         .addMember("onVajram", "$T.class", fetcher.vajramClassName())
@@ -236,8 +245,10 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
         depAnnotation.addMember("canFanout", "true");
       }
 
-      internalFacets.addField(
-          FieldSpec.builder(asVajramReturnType(fieldSpec), fieldSpec.fieldName())
+      internalFacets.addMethod(
+          MethodSpec.methodBuilder(fieldSpec.fieldName())
+              .returns(asVajramReturnType(fieldSpec))
+              .addModifiers(ABSTRACT, PUBLIC)
               .addAnnotation(depAnnotation.build())
               .build());
     }

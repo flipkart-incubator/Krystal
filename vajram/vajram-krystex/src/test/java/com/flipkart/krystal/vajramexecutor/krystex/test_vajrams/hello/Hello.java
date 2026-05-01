@@ -13,11 +13,11 @@ import java.util.concurrent.atomic.LongAdder;
 @InvocableOutsideGraph
 @Vajram
 public abstract class Hello extends ComputeVajramDef<String> {
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    String name;
+    String name();
 
-    String greeting;
+    String greeting();
   }
 
   public static final LongAdder CALL_COUNTER = new LongAdder();
