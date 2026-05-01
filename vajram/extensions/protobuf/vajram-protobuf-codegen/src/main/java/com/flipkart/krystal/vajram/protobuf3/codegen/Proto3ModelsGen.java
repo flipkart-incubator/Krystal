@@ -414,7 +414,7 @@ return _serializedPayload;
                   boolean isOptional = util.isOptional(method.getReturnType());
                   boolean isNullable = method.getReturnType().getAnnotation(Nullable.class) != null;
                   String methodName = method.getSimpleName().toString();
-                  Optional<ModelRootInfo> modelRoot = util.asModelRoot(method.getReturnType());
+                  Optional<ModelRootInfo> modelRoot = util.asModelRoot(method.getReturnType(), method);
                   CodeBlock accessor;
                   if (modelRoot.isPresent() && !util.isEnumModel(modelRoot.get().element())) {
                     if (isOptional) {
@@ -463,7 +463,7 @@ return _serializedPayload;
     MethodSpec.Builder getterBuilder =
         methodBuilder(methodName).addAnnotation(Override.class).addModifiers(PUBLIC);
 
-    Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(specifiedType);
+    Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(specifiedType, method);
     if (isBuilder
         && fieldModelRootInfo.isPresent()
         && !util.isEnumModel(fieldModelRootInfo.get().element())) {
@@ -509,7 +509,7 @@ return _serializedPayload;
       @Nullable ModelRoot modelRoot,
       @Nullable ClassName immutableProtoTypeName) {
 
-    Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
+    Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType(), method);
     if (isProtoTypeRepeated(dataType)) {
       if (fieldModelRootInfo.isPresent() && !util.isEnumModel(fieldModelRootInfo.get().element())) {
         ClassName immutProtoClass =
@@ -827,7 +827,7 @@ return _serializedPayload;
       TypeMirror returnType = method.getReturnType();
       CodeGenType dataType = new DeclaredTypeVisitor(util, method).visit(returnType);
 
-      Optional<ModelRootInfo> fieldModelRoot = util.asModelRoot(method.getReturnType());
+      Optional<ModelRootInfo> fieldModelRoot = util.asModelRoot(method.getReturnType(), method);
       if (modelRoot.builderExtendsModelRoot()
           || (fieldModelRoot.isPresent()
               && !util.isEnumModel(fieldModelRoot.get().element())

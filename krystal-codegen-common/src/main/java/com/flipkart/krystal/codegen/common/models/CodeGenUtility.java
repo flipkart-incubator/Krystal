@@ -324,14 +324,18 @@ public class CodeGenUtility {
     }
 
     // Validate no nested collections (List<List>, List<Map>, Map<K, List>, Map<K, Map>)
-    TypeMirror typeToCheck = returnType;
-    if (isOptional(typeToCheck)) {
-      typeToCheck = getOptionalInnerType(typeToCheck);
-    }
-    validateNoNestedCollections(method, typeToCheck);
+    validateNoNestedCollections(method, returnType);
   }
 
   private void validateNoNestedCollections(ExecutableElement method, TypeMirror type) {
+    if (isOptional(type)) {
+      type = getOptionalInnerType(type);
+      if (isOptional(type)) {
+        error(
+            "Optional of Optional (Optional<Optional<..>>) is not supported by Krystal Modelling framework",
+            method);
+      }
+    }
     if (isListType(type)) {
       TypeMirror elementType = getContentType(type);
       if (isListType(elementType)) {
@@ -370,10 +374,24 @@ public class CodeGenUtility {
                 + "Field '%s' has type Map<..., Optional<...>>.".formatted(method.getSimpleName()),
             method);
       }
+      if (isMapType(keyType)) {
+        error(
+            "Nested collections are not allowed in Krystal models. "
+                + "Field '%s' has type Map<Map<...>, ...>. Use a @ModelRoot model to wrap the inner Map."
+                    .formatted(method.getSimpleName()),
+            method);
+      }
       if (isMapType(valueType)) {
         error(
             "Nested collections are not allowed in Krystal models. "
                 + "Field '%s' has type Map<..., Map<...>>. Use a @ModelRoot model to wrap the inner Map."
+                    .formatted(method.getSimpleName()),
+            method);
+      }
+      if (isListType(keyType)) {
+        error(
+            "Nested collections are not allowed in Krystal models. "
+                + "Field '%s' has type Map<List<...>, ...>. Use a @ModelRoot model to wrap the inner List."
                     .formatted(method.getSimpleName()),
             method);
       }
@@ -1071,7 +1089,7 @@ public class CodeGenUtility {
     }
     TypeName finalTypeName;
     TypeName elementType = typeName;
-    Optional<ModelRootInfo> fieldModelRootInfo = asModelRoot(inferredType);
+    Optional<ModelRootInfo> fieldModelRootInfo = asModelRoot(inferredType, method);
     ContainerType containerType = getContainerType(inferredType);
 
     finalTypeName =
@@ -1300,8 +1318,8 @@ public class CodeGenUtility {
     return null;
   }
 
-  public boolean isModelRoot(TypeMirror javaModelType) {
-    return asModelRoot(javaModelType).isPresent();
+  public boolean isModelRoot(TypeMirror javaModelType, Element... elements) {
+    return asModelRoot(javaModelType, elements).isPresent();
   }
 
   public ContainerType getContainerType(TypeMirror javaModelType) {
@@ -1315,14 +1333,17 @@ public class CodeGenUtility {
         : isMapType(javaModelType) ? ContainerType.MAP : ContainerType.NO_CONTAINER;
   }
 
-  public Optional<ModelRootInfo> asModelRoot(TypeMirror javaModelType) {
+  public Optional<ModelRootInfo> asModelRoot(TypeMirror javaModelType, Element... elements) {
+    if (elements.length == 0) {
+      elements = new Element[] {typeUtils.asElement(javaModelType)};
+    }
     ContainerType containerType = ContainerType.NO_CONTAINER;
     if (isOptional(javaModelType)) {
       javaModelType = getOptionalInnerType(javaModelType);
       if (isOptional(javaModelType)) {
         error(
-            "Optional of Optional (Optional<Optional<..>>) is not supported by Krystal Modelling protocol",
-            typeUtils.asElement(javaModelType));
+            "Optional of Optional (Optional<Optional<..>>) is not supported by Krystal Modelling framework",
+            elements);
       }
     }
     if (isListType(javaModelType)) {
@@ -1330,7 +1351,7 @@ public class CodeGenUtility {
       if (isListType(javaModelType)) {
         error(
             "List of Lists (List<List<..>>) is not supported by Krystal Modelling protocol",
-            typeUtils.asElement(javaModelType));
+            elements);
       }
       containerType = ContainerType.LIST;
     } else if (isMapType(javaModelType)) {
@@ -1338,7 +1359,7 @@ public class CodeGenUtility {
       if (isMapType(javaModelType)) {
         error(
             "Map of Maps (Map<K, Map<..>>) is not supported by Krystal Modelling protocol",
-            typeUtils.asElement(javaModelType));
+            elements);
       }
       containerType = ContainerType.MAP;
     }
