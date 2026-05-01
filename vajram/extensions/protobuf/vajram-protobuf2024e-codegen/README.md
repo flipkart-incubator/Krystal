@@ -1,0 +1,142 @@
+# vajram-protobuf2024e
+
+Krystal `SerdeProtocol` implementation for **protobuf edition 2024**.
+
+## Overview
+
+Protocol Buffers transitioned from versioned syntaxes (`syntax = "proto2"` / `syntax = "proto3"`)
+to a tracked editions model. The 2024 edition is the current released edition. It keeps proto3's
+compact wire format but adopts a different - and safer - set of defaults via the editions
+*features* mechanism.
+
+This module wires edition 2024 into Krystal as a first-class `SerdeProtocol`, sitting alongside
+the existing `vajram-protobuf3` module. A model opts in by listing `Protobuf2024e.class` under
+`@SupportedModelProtocols`; the codegen here then emits an edition-2024 `.proto` schema and a
+framework wrapper class that delegates to the protoc-generated message.
+
+## Module map
+
+```
+vajram/extensions/protobuf/
+├── vajram-protobuf-util/             runtime helpers, protocol-agnostic
+│   ├── ProtoByteArray
+│   ├── ProtoEnumUtils
+│   ├── ProtoListBuilder / ProtoListView
+│   ├── ProtoMapBuilder / ProtoMapView
+│   └── SerializableProtoModel<P>     (abstract base)
+│
+├── vajram-protobuf-codegen-util/     codegen helpers, protocol-agnostic
+│   ├── ProtoSchemaConfig             per-protocol knob bag
+│   ├── ProtoGenUtility               schema/type helpers
+│   ├── BaseProtoSchemaGen            shared schema generator
+│   ├── BaseProtoModelsGen            shared wrapper-class generator
+│   └── types/                        ProtoFieldType, ProtoScalarType, ...
+│
+├── vajram-protobuf3/                 proto3 SerdeProtocol
+│   ├── Protobuf3                     modelClassesSuffix = "Proto3"
+│   └── SerializableProto3Model
+│
+├── vajram-protobuf-codegen/          proto3 codegen
+│   ├── Proto3SchemaGen               extends BaseProtoSchemaGen
+│   └── Proto3ModelsGen               extends BaseProtoModelsGen
+│
+├── vajram-protobuf2024e/             edition-2024 SerdeProtocol
+│   ├── Protobuf2024e                 modelClassesSuffix = "Proto"
+│   └── SerializableProto2024eModel
+│
+└── vajram-protobuf2024e-codegen/     edition-2024 codegen   ← (this module)
+    ├── Proto2024eSchemaGen           extends BaseProtoSchemaGen
+    └── Proto2024eModelsGen           extends BaseProtoModelsGen
+```
+
+The two `*-util` modules contain everything that is genuinely protocol-version-agnostic so that
+the proto3 and edition-2024 codegen modules can stay tiny - each is essentially a `ProtoSchemaConfig`
+and four trivial subclasses.
+
+## Generated artifacts
+
+For a model root `Foo` (annotated `@SupportedModelProtocols(Protobuf2024e.class)`) the framework
+emits:
+
+| File                                  | Producer                  | Purpose                                                      |
+|---------------------------------------|---------------------------|--------------------------------------------------------------|
+| `Foo.models.proto`                    | `Proto2024eSchemaGen`     | Edition-2024 schema with one message named `Foo_Proto`       |
+| `Foo_Proto` (Java)                    | `protoc`                  | Protoc-generated message class                               |
+| `Foo_ImmutProto` + nested `Builder`   | `Proto2024eModelsGen`     | Krystal wrapper implementing `Foo_Immut` + `SerializableProto2024eModel<Foo_Proto>` |
+
+For an enum model root `Bar`:
+
+| File                                  | Producer                  | Purpose                                                      |
+|---------------------------------------|---------------------------|--------------------------------------------------------------|
+| `Bar.models.proto`                    | `Proto2024eSchemaGen`     | Edition-2024 schema with `enum Bar_Proto { ... }`            |
+| `Bar_ProtoUtils`                      | `Proto2024eModelsGen`     | Static `protoToJava` / `javaToProto` converters              |
+
+For comparison, `vajram-protobuf3` produces `Foo.models.proto3.proto`, `Foo_Proto3`,
+`Foo_ImmutProto3`, and `Bar_Proto3Utils`. Distinct names mean a model could in principle declare
+both protocols simultaneously without collision, although in practice you should pick one.
+
+## Edition 2024 features
+
+Krystal emits a plain `edition = "2024";` header and relies on edition defaults. Per the 2024
+edition spec these are:
+
+| Feature                      | 2024 default          | What this gives you                                        |
+|------------------------------|-----------------------|------------------------------------------------------------|
+| `field_presence`             | `EXPLICIT`            | Singular fields track presence by default - no need for the proto3 `optional` keyword. Calling `hasFoo()` returns whether the field was set. |
+| `enum_type`                  | `OPEN`                | Unknown enum values round-trip on the wire instead of being silently dropped (proto2 was `CLOSED`). |
+| `repeated_field_encoding`    | `PACKED`              | Scalar repeated fields are packed for compactness (proto2 default was `EXPANDED`). |
+| `utf8_validation`            | `VERIFY`              | String fields are validated as UTF-8 on parse - matches proto3 behaviour and prevents silent corruption. |
+| `json_format`                | `ALLOW`               | The schema is emittable as JSON via the canonical proto-JSON mapping. |
+| `message_encoding`           | `LENGTH_PREFIXED`     | Submessages on the wire use the proto3 length-prefixed encoding rather than the proto2 group encoding. |
+
+Krystal does **not** emit any `[features = ...]` overrides; if you ever need one (e.g. forcing a
+field back to implicit presence for migration purposes), do it on the source `.proto` after the
+generator has emitted it, or extend `Proto2024eSchemaGen` in your project.
+
+## Differences vs proto3
+
+| Aspect                          | proto3                                | edition 2024                      |
+|---------------------------------|---------------------------------------|------------------------------------|
+| Schema header                   | `syntax = "proto3";`                  | `edition = "2024";`               |
+| Singular field presence         | implicit unless `optional` keyword    | explicit by default               |
+| Enum behaviour                  | open (UNRECOGNIZED variant)           | open                              |
+| Wrapper class suffix            | `Foo_ImmutProto3`                     | `Foo_ImmutProto`                  |
+| Proto message name              | `Foo_Proto3`                          | `Foo_Proto`                       |
+| `.proto` file name              | `Foo.models.proto3.proto`             | `Foo.models.proto`                |
+| Enum-utils class                | `Foo_Proto3Utils`                     | `Foo_ProtoUtils`                  |
+
+The wire format is identical between proto3 and edition 2024 (with edition defaults), so messages
+serialised by one can be parsed by the other as long as the schemas line up.
+
+## Selecting the protocol
+
+```java
+@ModelRoot
+@SupportedModelProtocols(Protobuf2024e.class)
+public interface Foo extends Model {
+  @SerialId(1) String name();
+  @SerialId(2) int count();
+  @SerialId(3) Optional<Bar> bar();
+  @SerialId(4) List<Long> tags();
+}
+```
+
+After codegen runs you can build `Foo` instances via `Foo_ImmutProto._builder()`, serialise via
+`Foo_ImmutProto._serialize()`, and round-trip from a byte array via the
+`Foo_ImmutProto(byte[])` constructor.
+
+## Best practices
+
+- **Keep tag numbers stable.** `@SerialId` values are the on-wire field numbers. Never reuse a tag
+  number for a different field; never renumber an existing field. If you stop using a field, leave
+  the `@SerialId` reserved.
+- **`@SerialId` is required on every model method.** The schema generator fails compilation if a
+  method is missing one or if two methods share the same tag.
+- **`@IfAbsent` semantics for repeated/map fields.** Repeated and map fields always default to the
+  empty collection in protobuf - presence cannot be tracked. Use only `@IfAbsent(ASSUME_DEFAULT_VALUE)`
+  for these; anything else is a compile error.
+- **First enum constant is `UNKNOWN` (proto index 0).** This convention is shared across both
+  protocols and matches protobuf's recommendation for safely evolving enums.
+- **Prefer edition defaults.** Reach for `[features = ...]` overrides only with a concrete reason
+  (e.g. interop with an existing proto2 schema). Don't reintroduce implicit presence just because
+  you used to have it.

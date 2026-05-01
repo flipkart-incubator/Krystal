@@ -19,7 +19,7 @@ import com.flipkart.krystal.lattice.ext.grpc.GrpcService;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfoLite;
-import com.flipkart.krystal.vajram.protobuf3.SerializableProtoModel;
+import com.flipkart.krystal.vajram.protobuf.util.SerializableProtoModel;
 import com.google.auto.service.AutoService;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.MessageLite;

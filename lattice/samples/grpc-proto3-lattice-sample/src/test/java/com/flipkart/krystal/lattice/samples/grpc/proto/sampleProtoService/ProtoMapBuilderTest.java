@@ -12,13 +12,13 @@ class ProtoMapBuilderTest {
 
   @Test
   void protoBuilderMapMutation_putModel_success() {
-    Proto3LatticeSampleResponse_ImmutProto.Builder builder =
-        Proto3LatticeSampleResponse_ImmutProto._builder().string("test").mandatoryInt(1);
+    Proto3LatticeSampleResponse_ImmutProto3.Builder builder =
+        Proto3LatticeSampleResponse_ImmutProto3._builder().string("test").mandatoryInt(1);
 
     ModelsMapBuilder<String, SubMessage, SubMessage_Immut, Builder> mapBuilder =
         builder.namedSubMessages().modelsBuilder();
 
-    SubMessage_Immut sub1 = SubMessage_ImmutProto._builder().count(10)._build();
+    SubMessage_Immut sub1 = SubMessage_ImmutProto3._builder().count(10)._build();
     mapBuilder.putModel("a", sub1);
 
     // Verify mutation is reflected in the builder's getter (live view)
@@ -26,7 +26,7 @@ class ProtoMapBuilderTest {
     assertThat(builder.namedSubMessages().get("a").count()).isEqualTo(10);
 
     // Add another entry
-    SubMessage_Immut sub2 = SubMessage_ImmutProto._builder().count(20)._build();
+    SubMessage_Immut sub2 = SubMessage_ImmutProto3._builder().count(20)._build();
     mapBuilder.putModel("b", sub2);
 
     assertThat(builder.namedSubMessages()).hasSize(2);
@@ -41,13 +41,13 @@ class ProtoMapBuilderTest {
 
   @Test
   void protoBuilderMapMutation_putBuilder_success() {
-    Proto3LatticeSampleResponse_ImmutProto.Builder builder =
-        Proto3LatticeSampleResponse_ImmutProto._builder().string("test").mandatoryInt(1);
+    Proto3LatticeSampleResponse_ImmutProto3.Builder builder =
+        Proto3LatticeSampleResponse_ImmutProto3._builder().string("test").mandatoryInt(1);
 
     ModelsMapBuilder<String, SubMessage, SubMessage_Immut, Builder> mapBuilder =
         builder.namedSubMessages().modelsBuilder();
 
-    SubMessage_ImmutProto.Builder subBuilder = SubMessage_ImmutProto._builder().count(42);
+    SubMessage_ImmutProto3.Builder subBuilder = SubMessage_ImmutProto3._builder().count(42);
     mapBuilder.putBuilder("key", subBuilder);
 
     Proto3LatticeSampleResponse_Immut built = builder._build();
@@ -57,14 +57,14 @@ class ProtoMapBuilderTest {
 
   @Test
   void protoBuilderMapMutation_remove_success() {
-    Proto3LatticeSampleResponse_ImmutProto.Builder builder =
-        Proto3LatticeSampleResponse_ImmutProto._builder()
+    Proto3LatticeSampleResponse_ImmutProto3.Builder builder =
+        Proto3LatticeSampleResponse_ImmutProto3._builder()
             .string("test")
             .mandatoryInt(1)
             .namedSubMessages(
                 Map.of(
-                    "a", SubMessage_ImmutProto._builder().count(1)._build(),
-                    "b", SubMessage_ImmutProto._builder().count(2)._build()));
+                    "a", SubMessage_ImmutProto3._builder().count(1)._build(),
+                    "b", SubMessage_ImmutProto3._builder().count(2)._build()));
 
     ModelsMapBuilder<String, SubMessage, SubMessage_Immut, Builder> mapBuilder =
         builder.namedSubMessages().modelsBuilder();
@@ -80,11 +80,11 @@ class ProtoMapBuilderTest {
 
   @Test
   void protoBuilderMapMutation_clear_success() {
-    Proto3LatticeSampleResponse_ImmutProto.Builder builder =
-        Proto3LatticeSampleResponse_ImmutProto._builder()
+    Proto3LatticeSampleResponse_ImmutProto3.Builder builder =
+        Proto3LatticeSampleResponse_ImmutProto3._builder()
             .string("test")
             .mandatoryInt(1)
-            .namedSubMessages(Map.of("x", SubMessage_ImmutProto._builder().count(5)._build()));
+            .namedSubMessages(Map.of("x", SubMessage_ImmutProto3._builder().count(5)._build()));
 
     ModelsMapBuilder<String, SubMessage, SubMessage_Immut, Builder> mapBuilder =
         builder.namedSubMessages().modelsBuilder();
@@ -98,7 +98,7 @@ class ProtoMapBuilderTest {
     assertThat(builder.namedSubMessages()).isEmpty();
 
     // Verify we can add again after clearing via the same mapBuilder
-    mapBuilder.putModel("new", SubMessage_ImmutProto._builder().count(42)._build());
+    mapBuilder.putModel("new", SubMessage_ImmutProto3._builder().count(42)._build());
     assertThat(mapBuilder.size()).isEqualTo(1);
     assertThat(builder.namedSubMessages()).hasSize(1);
     assertThat(builder.namedSubMessages().get("new").count()).isEqualTo(42);
@@ -106,14 +106,14 @@ class ProtoMapBuilderTest {
 
   @Test
   void protoBuilderMapMutation_putAllModels_success() {
-    Proto3LatticeSampleResponse_ImmutProto.Builder builder =
-        Proto3LatticeSampleResponse_ImmutProto._builder().string("test").mandatoryInt(1);
+    Proto3LatticeSampleResponse_ImmutProto3.Builder builder =
+        Proto3LatticeSampleResponse_ImmutProto3._builder().string("test").mandatoryInt(1);
 
     ModelsMapBuilder<String, SubMessage, SubMessage_Immut, Builder> mapBuilder =
         builder.namedSubMessages().modelsBuilder();
 
-    SubMessage_Immut sub1 = SubMessage_ImmutProto._builder().count(1)._build();
-    SubMessage_Immut sub2 = SubMessage_ImmutProto._builder().count(2)._build();
+    SubMessage_Immut sub1 = SubMessage_ImmutProto3._builder().count(1)._build();
+    SubMessage_Immut sub2 = SubMessage_ImmutProto3._builder().count(2)._build();
     mapBuilder.putAllModels(Map.of("one", sub1, "two", sub2));
 
     assertThat(builder.namedSubMessages()).hasSize(2);
@@ -125,8 +125,8 @@ class ProtoMapBuilderTest {
 
   @Test
   void protoBuilderMapMutation_liveView_reflectsMutations() {
-    Proto3LatticeSampleResponse_ImmutProto.Builder builder =
-        Proto3LatticeSampleResponse_ImmutProto._builder().string("test").mandatoryInt(1);
+    Proto3LatticeSampleResponse_ImmutProto3.Builder builder =
+        Proto3LatticeSampleResponse_ImmutProto3._builder().string("test").mandatoryInt(1);
 
     // Get the map view — should be empty initially
     UnmodifiableModelsMap<String, SubMessage, SubMessage_Immut> mapView =
@@ -136,7 +136,7 @@ class ProtoMapBuilderTest {
     // Mutate via modelsBuilder
     ModelsMapBuilder<String, SubMessage, SubMessage_Immut, Builder> mapBuilder =
         mapView.modelsBuilder();
-    mapBuilder.putModel("live", SubMessage_ImmutProto._builder().count(99)._build());
+    mapBuilder.putModel("live", SubMessage_ImmutProto3._builder().count(99)._build());
 
     // Re-read from builder — should reflect the mutation
     assertThat(builder.namedSubMessages()).hasSize(1);
@@ -145,11 +145,11 @@ class ProtoMapBuilderTest {
 
   @Test
   void protoBuilderMapMutation_getModel_returnsModel() {
-    Proto3LatticeSampleResponse_ImmutProto.Builder builder =
-        Proto3LatticeSampleResponse_ImmutProto._builder()
+    Proto3LatticeSampleResponse_ImmutProto3.Builder builder =
+        Proto3LatticeSampleResponse_ImmutProto3._builder()
             .string("test")
             .mandatoryInt(1)
-            .namedSubMessages(Map.of("k", SubMessage_ImmutProto._builder().count(55)._build()));
+            .namedSubMessages(Map.of("k", SubMessage_ImmutProto3._builder().count(55)._build()));
 
     ModelsMapBuilder<String, SubMessage, SubMessage_Immut, Builder> mapBuilder =
         builder.namedSubMessages().modelsBuilder();
@@ -161,16 +161,16 @@ class ProtoMapBuilderTest {
 
   @Test
   void protoBuilderMapMutation_multipleEntries_thenBuild() {
-    Proto3LatticeSampleResponse_ImmutProto.Builder builder =
-        Proto3LatticeSampleResponse_ImmutProto._builder().string("test").mandatoryInt(1);
+    Proto3LatticeSampleResponse_ImmutProto3.Builder builder =
+        Proto3LatticeSampleResponse_ImmutProto3._builder().string("test").mandatoryInt(1);
 
     ModelsMapBuilder<String, SubMessage, SubMessage_Immut, Builder> mapBuilder =
         builder.namedSubMessages().modelsBuilder();
 
     // Add multiple entries via builder
-    mapBuilder.putModel("first", SubMessage_ImmutProto._builder().count(10)._build());
-    mapBuilder.putModel("second", SubMessage_ImmutProto._builder().count(20)._build());
-    mapBuilder.putModel("third", SubMessage_ImmutProto._builder().count(30)._build());
+    mapBuilder.putModel("first", SubMessage_ImmutProto3._builder().count(10)._build());
+    mapBuilder.putModel("second", SubMessage_ImmutProto3._builder().count(20)._build());
+    mapBuilder.putModel("third", SubMessage_ImmutProto3._builder().count(30)._build());
 
     Proto3LatticeSampleResponse_Immut built = builder._build();
     assertThat(built.namedSubMessages()).hasSize(3);

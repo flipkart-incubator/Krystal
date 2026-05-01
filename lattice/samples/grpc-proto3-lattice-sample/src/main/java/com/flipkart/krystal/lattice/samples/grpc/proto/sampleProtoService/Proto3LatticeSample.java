@@ -108,7 +108,7 @@ public abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3Lattice
                     optionalByteString,
                     defaultByteString))
         .mandatoryInt(1)
-        .protoMessage(ProtoMessage_ImmutProto._builder().count(100))
+        .protoMessage(ProtoMessage_ImmutProto3._builder().count(100))
         ._build();
   }
 }

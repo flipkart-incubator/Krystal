@@ -1,6 +1,7 @@
-description = 'Codegen module for enabling support for protocol buffers in lattice'
+description = 'Codegen module for proto3 SerdeProtocol support'
 
 dependencies {
+    api project(':vajram:extensions:protobuf:vajram-protobuf-codegen-util')
     implementation project(':krystal-common')
     implementation project(':vajram:extensions:protobuf:vajram-protobuf3')
     implementation project(':krystal-codegen-common')

@@ -1,0 +1,6 @@
+description = 'Protocol-agnostic runtime helpers shared by Krystal protobuf SerdeProtocol implementations'
+
+dependencies {
+    implementation project(':krystal-common')
+    implementation 'com.google.protobuf:protobuf-java'
+}

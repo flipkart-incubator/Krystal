@@ -10,7 +10,7 @@ public final class Protobuf3 implements SerdeProtocol {
 
   @Override
   public String modelClassesSuffix() {
-    return "Proto";
+    return "Proto3";
   }
 
   @Override

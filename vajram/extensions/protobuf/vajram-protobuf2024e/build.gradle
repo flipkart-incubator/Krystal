@@ -1,0 +1,7 @@
+description = 'Enables support for protobuf edition 2024 as a Krystal SerdeProtocol'
+
+dependencies {
+    api project(':vajram:extensions:protobuf:vajram-protobuf-util')
+    implementation project(':krystal-common')
+    implementation 'com.google.protobuf:protobuf-java'
+}

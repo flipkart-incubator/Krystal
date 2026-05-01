@@ -1,8 +1,8 @@
 package com.flipkart.krystal.lattice.ext.grpc.codegen;
 
-import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.createOutputDirectory;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.getPackageName;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.getSimpleClassName;
+import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.createOutputDirectory;
+import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.getPackageName;
+import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.getSimpleClassName;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_FILE_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_MSG_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.VAJRAM_REQ_PROTO_FILE_SUFFIX;

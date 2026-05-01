@@ -6,7 +6,8 @@ module flipkart.krystal.vajram.ext.protobuf.codegen {
   exports com.flipkart.krystal.vajram.protobuf3.codegen;
 
   requires flipkart.krystal.codegen.common;
-  requires flipkart.krystal.vajram.ext.protobuf;
+  requires transitive flipkart.krystal.vajram.ext.protobuf;
+  requires transitive flipkart.krystal.vajram.ext.protobuf.codegen.util;
   requires com.google.auto.service;
   requires org.slf4j;
   requires com.google.common;
