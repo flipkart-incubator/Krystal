@@ -284,6 +284,40 @@ Map fields have the following key-type restrictions:
 - **Protobuf3 specifically:** Only integral types and `String` are valid map keys (a proto3
   limitation).
 
+### Nested Collection Restrictions
+
+Nested collections are **not allowed** in Krystal models. The following patterns are rejected at
+compile time:
+
+- `List<List<...>>`
+- `List<Map<...>>`
+- `Map<K, Map<...>>`
+- `Map<K, List<...>>`
+
+This applies to **all** models regardless of purity or serde protocol. To model nested collections,
+wrap the inner collection in a `@ModelRoot` model:
+
+```java
+// ✗ Compile error: nested collection
+@ModelRoot
+public interface MyModel extends Model {
+  List<List<String>> nestedList();       // ERROR
+  Map<String, Map<String, Integer>> nestedMap(); // ERROR
+}
+
+// ✓ Correct: wrap inner collection in a model
+@ModelRoot
+public interface StringList extends Model {
+  List<String> values();
+}
+
+@ModelRoot
+public interface MyModel extends Model {
+  List<StringList> nestedList();          // OK
+  Map<String, StringList> nestedMap();    // OK
+}
+```
+
 ### Summary of Generated Artifacts
 
 For a model root `MyModel`:

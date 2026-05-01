@@ -322,6 +322,50 @@ public class CodeGenUtility {
     if (returnType.getKind() == TypeKind.ARRAY) {
       error("Model root methods must not return arrays. Use List instead.", method);
     }
+
+    // Validate no nested collections (List<List>, List<Map>, Map<K, List>, Map<K, Map>)
+    TypeMirror typeToCheck = returnType;
+    if (isOptional(typeToCheck)) {
+      typeToCheck = getOptionalInnerType(typeToCheck);
+    }
+    validateNoNestedCollections(method, typeToCheck);
+  }
+
+  private void validateNoNestedCollections(ExecutableElement method, TypeMirror type) {
+    if (isListType(type)) {
+      TypeMirror elementType = getContentType(type);
+      if (isListType(elementType)) {
+        error(
+            "Nested collections are not allowed in Krystal models. "
+                + "Field '%s' has type List<List<...>>. Use a @ModelRoot model to wrap the inner List."
+                    .formatted(method.getSimpleName()),
+            method);
+      }
+      if (isMapType(elementType)) {
+        error(
+            "Nested collections are not allowed in Krystal models. "
+                + "Field '%s' has type List<Map<...>>. Use a @ModelRoot model to wrap the inner Map."
+                    .formatted(method.getSimpleName()),
+            method);
+      }
+    }
+    if (isMapType(type)) {
+      TypeMirror valueType = getMapValueType(type);
+      if (isMapType(valueType)) {
+        error(
+            "Nested collections are not allowed in Krystal models. "
+                + "Field '%s' has type Map<..., Map<...>>. Use a @ModelRoot model to wrap the inner Map."
+                    .formatted(method.getSimpleName()),
+            method);
+      }
+      if (isListType(valueType)) {
+        error(
+            "Nested collections are not allowed in Krystal models. "
+                + "Field '%s' has type Map<..., List<...>>. Use a @ModelRoot model to wrap the inner List."
+                    .formatted(method.getSimpleName()),
+            method);
+      }
+    }
   }
 
   public boolean isAnyNullable(TypeMirror type, Element elementToCheck) {
