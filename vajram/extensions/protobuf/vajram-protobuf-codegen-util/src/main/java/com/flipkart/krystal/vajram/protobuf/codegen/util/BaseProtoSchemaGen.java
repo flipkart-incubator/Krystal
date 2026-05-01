@@ -6,6 +6,9 @@ import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.
 import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.getProtobufType;
 import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.isProtoTypeMap;
 import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.isProtoTypeRepeated;
+import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.toLowerSnakeCasePackage;
+import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.toSnakeCase;
+import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.toTitleCaseProtoName;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
@@ -166,10 +169,14 @@ public abstract class BaseProtoSchemaGen implements CodeGenerator {
 
     protoBuilder.append(config.schemaHeader()).append("\n\n");
 
-    protoBuilder.append("package ").append(packageName).append(";\n\n");
+    // Proto package is lower_snake_case (required by editions 2024+); java_package keeps the
+    // original Java package so downstream Java consumers are unaffected.
+    protoBuilder.append("package ").append(toLowerSnakeCasePackage(packageName)).append(";\n\n");
 
     protoBuilder.append("option java_package = \"").append(packageName).append("\";\n");
-    protoBuilder.append("option java_multiple_files = true;\n");
+    if (config.emitJavaMultipleFiles()) {
+      protoBuilder.append("option java_multiple_files = true;\n");
+    }
     //noinspection SpellCheckingInspection: java_outer_classname
     protoBuilder
         .append("option java_outer_classname = \"")
@@ -186,7 +193,9 @@ public abstract class BaseProtoSchemaGen implements CodeGenerator {
       }
     }
 
-    String protoEnumName = enumName + config.messageSuffix();
+    // Strip underscores from the model name so the proto enum name is TitleCase (required by
+    // editions 2024+).
+    String protoEnumName = toTitleCaseProtoName(enumName) + config.messageSuffix();
     protoBuilder.append("enum ").append(protoEnumName).append(" {\n");
 
     List<VariableElement> enumConstants =
@@ -247,10 +256,14 @@ public abstract class BaseProtoSchemaGen implements CodeGenerator {
 
     protoBuilder.append(config.schemaHeader()).append("\n\n");
 
-    protoBuilder.append("package ").append(packageName).append(";\n\n");
+    // Proto package is lower_snake_case (required by editions 2024+); java_package keeps the
+    // original Java package so downstream Java consumers are unaffected.
+    protoBuilder.append("package ").append(toLowerSnakeCasePackage(packageName)).append(";\n\n");
 
     protoBuilder.append("option java_package = \"").append(packageName).append("\";\n");
-    protoBuilder.append("option java_multiple_files = true;\n");
+    if (config.emitJavaMultipleFiles()) {
+      protoBuilder.append("option java_multiple_files = true;\n");
+    }
     //noinspection SpellCheckingInspection: java_outer_classname
     protoBuilder
         .append("option java_outer_classname = \"")
@@ -274,9 +287,12 @@ public abstract class BaseProtoSchemaGen implements CodeGenerator {
         protoBuilder.append("// ").append(line.trim()).append("\n");
       }
     }
+    // Strip underscores from the model name so the proto message name is TitleCase (required by
+    // editions 2024+). The corresponding protoc-generated Java class will also lose the
+    // underscores - BaseProtoModelsGen mirrors this when computing class references.
     protoBuilder
         .append("message ")
-        .append(modelRootName)
+        .append(toTitleCaseProtoName(modelRootName))
         .append(config.messageSuffix())
         .append(" {\n");
     protoBuilder.append(protoMessageBody);
@@ -370,10 +386,15 @@ public abstract class BaseProtoSchemaGen implements CodeGenerator {
       if (needsExplicitPresence) {
         protobufType = config.presenceWrapper().wrap(protobufType, util, method);
       }
+      // Field names are emitted in lower_snake_case (proto convention, required by editions
+      // 2024+ naming-style enforcement). Krystal model methods are camelCase, so we convert.
+      // The protoc-generated Java getters/setters are derived from the proto field name and
+      // happen to round-trip back to the original camelCase, so downstream Java code is
+      // unaffected by this rename.
       protoMessageBody
           .append(protobufType.typeInProtoFile())
           .append(" ")
-          .append(method.getSimpleName().toString())
+          .append(toSnakeCase(method.getSimpleName().toString()))
           .append(" = ")
           .append(fieldNumber)
           .append(";\n");

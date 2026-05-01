@@ -3,10 +3,8 @@ package com.flipkart.krystal.lattice.ext.grpc.codegen;
 import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.createOutputDirectory;
 import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.getPackageName;
 import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.getSimpleClassName;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_FILE_SUFFIX;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_MSG_SUFFIX;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.VAJRAM_REQ_PROTO_FILE_SUFFIX;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.VAJRAM_REQ_PROTO_MSG_SUFFIX;
+import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.toLowerSnakeCasePackage;
+import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.toTitleCaseProtoName;
 import static java.util.Arrays.deepToString;
 import static java.util.Objects.requireNonNull;
 
@@ -19,6 +17,7 @@ import com.flipkart.krystal.lattice.ext.grpc.GrpcServer;
 import com.flipkart.krystal.lattice.ext.grpc.GrpcService;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfoLite;
+import com.flipkart.krystal.vajram.protobuf.util.ProtobufProtocol;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
@@ -40,16 +39,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 /**
- * Code generator which generates protobuf schema for a request proto containing the input facets of
- * a vajram
+ * Code generator which generates the protobuf schema describing a grpc service. Detects which
+ * {@link ProtobufProtocol} the rpc vajrams use and emits a schema in that protocol's syntax.
  */
 @Slf4j
-class Proto3ServiceSchemaGen implements CodeGenerator {
+class ProtoServiceSchemaGen implements CodeGenerator {
 
   private final LatticeCodegenContext context;
   private final VajramCodeGenUtility util;
 
-  public Proto3ServiceSchemaGen(LatticeCodegenContext context) {
+  public ProtoServiceSchemaGen(LatticeCodegenContext context) {
     this.context = context;
     this.util = context.codeGenUtility();
   }
@@ -72,7 +71,14 @@ class Proto3ServiceSchemaGen implements CodeGenerator {
       return;
     }
     validate(grpcServer);
-    generateServerFile(grpcServer.annotation());
+    ProtobufProtocol protocol =
+        GrpcProtocolResolver.resolveResponseProtocol(
+            grpcServer.annotation(), util, context.latticeAppTypeElement());
+    if (protocol == null) {
+      // Resolver already emitted an error.
+      return;
+    }
+    generateServerFile(grpcServer.annotation(), protocol);
   }
 
   /** Validates the Vajram for protobuf compatibility. Throws exceptions if validations fail. */
@@ -188,8 +194,9 @@ class Proto3ServiceSchemaGen implements CodeGenerator {
    * remotely invocable Vajram.
    *
    * @param grpcServer The grpc server annotation
+   * @param protocol The {@link ProtobufProtocol} all rpc vajram response models share
    */
-  private void generateServerFile(GrpcServer grpcServer) {
+  private void generateServerFile(GrpcServer grpcServer, ProtobufProtocol protocol) {
     GrpcService[] services = grpcServer.services();
     String packageName =
         util.processingEnv()
@@ -197,6 +204,12 @@ class Proto3ServiceSchemaGen implements CodeGenerator {
             .getPackageOf(context.latticeAppTypeElement())
             .getQualifiedName()
             .toString();
+    String reqProtoFileSuffix = "_Req" + protocol.protoFileSuffix();
+    // The vajram-id is the bare vajram name (without `_Req`) so the message suffix bundles
+    // `Req` (no leading underscore - proto messages must be TitleCase).
+    String reqProtoMsgSuffix = "Req" + protocol.protoMsgSuffix();
+    String modelsProtoFileSuffix = protocol.protoFileSuffix();
+    String modelsProtoMsgSuffix = protocol.protoMsgSuffix();
     try {
       // Create output directory if it doesn't exist
       String serviceProtoFileName =
@@ -212,11 +225,14 @@ class Proto3ServiceSchemaGen implements CodeGenerator {
           .append("\n")
           .append("// Any manual edits to this file will be overwritten.\n\n");
 
-      // Add syntax, package, and options
-      protoBuilder.append("syntax = \"proto3\";\n\n");
+      // Add the protocol-specific header (syntax/edition), package, and options
+      protoBuilder.append(protocol.schemaHeader()).append("\n\n");
 
       protoBuilder.append("option java_package = \"").append(packageName).append("\";\n");
-      protoBuilder.append("option java_multiple_files = true;\n\n");
+      if (protocol.emitJavaMultipleFiles()) {
+        protoBuilder.append("option java_multiple_files = true;\n");
+      }
+      protoBuilder.append("\n");
       // Add documentation for the service
       protoBuilder.append(
           "// Service definition for the services defined by lattice application  %s\n"
@@ -241,21 +257,26 @@ class Proto3ServiceSchemaGen implements CodeGenerator {
                       vajramInfo.packageName().replace('.', '/')
                           + "/"
                           + vajramInfo.vajramId().id()
-                          + VAJRAM_REQ_PROTO_FILE_SUFFIX);
+                          + reqProtoFileSuffix);
                   imports.add(
                       String.join(
                           "/",
                           getPackageName(vajramInfo.responseType().canonicalClassName())
                               .orElse("")
                               .replace('.', '/'),
-                          responseTypeName + MODELS_PROTO_FILE_SUFFIX));
+                          responseTypeName + modelsProtoFileSuffix));
                 }
               });
       for (String anImport : imports) {
         protoBuilder.append("import \"").append(anImport).append("\";\n");
       }
       protoBuilder.append("\n");
-      protoBuilder.append("package ").append(packageName).append(";\n\n\n");
+      // Proto package is lower_snake_case (required by editions 2024+); java_package keeps the
+      // original Java package above so downstream Java consumers are unaffected.
+      protoBuilder
+          .append("package ")
+          .append(toLowerSnakeCasePackage(packageName))
+          .append(";\n\n\n");
 
       Arrays.stream(services)
           .forEach(
@@ -303,10 +324,10 @@ class Proto3ServiceSchemaGen implements CodeGenerator {
                       .append(vajramId)
                       .append("(")
                       .append(vajramId)
-                      .append(VAJRAM_REQ_PROTO_MSG_SUFFIX)
+                      .append(reqProtoMsgSuffix)
                       .append(") \n    returns (")
-                      .append(responseTypeName)
-                      .append(MODELS_PROTO_MSG_SUFFIX)
+                      .append(toTitleCaseProtoName(responseTypeName))
+                      .append(modelsProtoMsgSuffix)
                       .append(");\n\n");
                 }
                 // Close the service definition

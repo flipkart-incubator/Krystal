@@ -1,8 +1,8 @@
 package com.flipkart.krystal.vajram.protobuf3;
 
-import com.flipkart.krystal.serial.SerdeProtocol;
+import com.flipkart.krystal.vajram.protobuf.util.ProtobufProtocol;
 
-public final class Protobuf3 implements SerdeProtocol {
+public final class Protobuf3 implements ProtobufProtocol {
 
   public static final Protobuf3 PROTOBUF_3 = new Protobuf3();
 
@@ -21,5 +21,15 @@ public final class Protobuf3 implements SerdeProtocol {
   @Override
   public boolean modelsNeedToBePure() {
     return true;
+  }
+
+  @Override
+  public String schemaHeader() {
+    return "syntax = \"proto3\";";
+  }
+
+  @Override
+  public String protoFileSuffix() {
+    return ".models.proto3.proto";
   }
 }

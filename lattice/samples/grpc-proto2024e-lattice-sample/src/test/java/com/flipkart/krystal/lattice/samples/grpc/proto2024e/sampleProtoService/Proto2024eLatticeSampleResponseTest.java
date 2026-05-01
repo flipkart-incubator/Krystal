@@ -1,4 +1,4 @@
-package com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService;
+package com.flipkart.krystal.lattice.samples.grpc.proto2024e.sampleProtoService;
 
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -7,21 +7,21 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-class Proto3LatticeSampleResponseTest {
+class Proto2024eLatticeSampleResponseTest {
 
   @Test
   void allFields_serializeAndDeserialize_roundTrip() throws Exception {
     // Build SubMessages for map and list fields
-    SubMessage_Immut sub1 = SubMessage_ImmutProto3._builder().count(10)._build();
-    SubMessage_Immut sub2 = SubMessage_ImmutProto3._builder().count(20)._build();
+    SubMessage_Immut sub1 = SubMessage_ImmutProto._builder().count(10)._build();
+    SubMessage_Immut sub2 = SubMessage_ImmutProto._builder().count(20)._build();
 
     // Build ProtoMessages for list and nested fields
-    ProtoMessage_Immut protoMsg = ProtoMessage_ImmutProto3._builder().count(42)._build();
-    ProtoMessage_Immut protoMsg2 = ProtoMessage_ImmutProto3._builder().count(99)._build();
+    ProtoMessage_Immut protoMsg = ProtoMessage_ImmutProto._builder().count(42)._build();
+    ProtoMessage_Immut protoMsg2 = ProtoMessage_ImmutProto._builder().count(99)._build();
 
     // Build the full response with all fields populated
-    Proto3LatticeSampleResponse_ImmutProto3 original =
-        Proto3LatticeSampleResponse_ImmutProto3._builder()
+    Proto2024eLatticeSampleResponse_ImmutProto original =
+        Proto2024eLatticeSampleResponse_ImmutProto._builder()
             .string("hello")
             .optionalInteger(7)
             .nullableIntegerMayFailConditionally(3)
@@ -46,8 +46,8 @@ class Proto3LatticeSampleResponseTest {
     assertThat(serialized).isNotEmpty();
 
     // Deserialize from bytes
-    Proto3LatticeSampleResponse_ImmutProto3 deserialized =
-        new Proto3LatticeSampleResponse_ImmutProto3(serialized);
+    Proto2024eLatticeSampleResponse_ImmutProto deserialized =
+        new Proto2024eLatticeSampleResponse_ImmutProto(serialized);
 
     // Verify all scalar and string fields
     assertThat(deserialized.string()).isEqualTo("hello");
@@ -99,8 +99,8 @@ class Proto3LatticeSampleResponseTest {
   @Test
   void defaultFields_serializeAndDeserialize_roundTrip() throws Exception {
     // Build with only mandatory fields — others use defaults
-    Proto3LatticeSampleResponse_ImmutProto3 original =
-        Proto3LatticeSampleResponse_ImmutProto3._builder()
+    Proto2024eLatticeSampleResponse_ImmutProto original =
+        Proto2024eLatticeSampleResponse_ImmutProto._builder()
             .string("minimal")
             .mandatoryInt(1)
             .mandatoryStringPartialConstruction("hello")
@@ -108,8 +108,8 @@ class Proto3LatticeSampleResponseTest {
             ._build();
 
     byte[] serialized = original._serialize();
-    Proto3LatticeSampleResponse_ImmutProto3 deserialized =
-        new Proto3LatticeSampleResponse_ImmutProto3(serialized);
+    Proto2024eLatticeSampleResponse_ImmutProto deserialized =
+        new Proto2024eLatticeSampleResponse_ImmutProto(serialized);
 
     assertThat(deserialized.string()).isEqualTo("minimal");
     assertThat(deserialized.mandatoryInt()).isEqualTo(1);
@@ -130,11 +130,11 @@ class Proto3LatticeSampleResponseTest {
   @Test
   void mapWithModelValues_builderRoundTrip() {
     // Build via builder, then verify via _build()
-    SubMessage_Immut sub1 = SubMessage_ImmutProto3._builder().count(5)._build();
-    SubMessage_Immut sub2 = SubMessage_ImmutProto3._builder().count(15)._build();
+    SubMessage_Immut sub1 = SubMessage_ImmutProto._builder().count(5)._build();
+    SubMessage_Immut sub2 = SubMessage_ImmutProto._builder().count(15)._build();
 
-    Proto3LatticeSampleResponse_Immut built =
-        Proto3LatticeSampleResponse_ImmutProto3._builder()
+    Proto2024eLatticeSampleResponse_Immut built =
+        Proto2024eLatticeSampleResponse_ImmutProto._builder()
             .string("map-test")
             .mandatoryInt(1)
             .namedSubMessages(Map.of("x", sub1, "y", sub2))
@@ -148,10 +148,10 @@ class Proto3LatticeSampleResponseTest {
 
   @Test
   void mapWithModelValues_copyConstructor() {
-    SubMessage_Immut sub = SubMessage_ImmutProto3._builder().count(77)._build();
+    SubMessage_Immut sub = SubMessage_ImmutProto._builder().count(77)._build();
 
-    Proto3LatticeSampleResponse_ImmutProto3 original =
-        Proto3LatticeSampleResponse_ImmutProto3._builder()
+    Proto2024eLatticeSampleResponse_ImmutProto original =
+        Proto2024eLatticeSampleResponse_ImmutProto._builder()
             .string("copy-test")
             .mandatoryInt(1)
             .mandatoryStringPartialConstruction("")
@@ -160,8 +160,8 @@ class Proto3LatticeSampleResponseTest {
             ._build();
 
     // Copy via copy constructor (new ImmutProto from model interface)
-    Proto3LatticeSampleResponse_ImmutProto3 copy =
-        new Proto3LatticeSampleResponse_ImmutProto3(original);
+    Proto2024eLatticeSampleResponse_ImmutProto copy =
+        new Proto2024eLatticeSampleResponse_ImmutProto(original);
 
     assertThat(copy.string()).isEqualTo("copy-test");
     assertThat(copy.namedSubMessages()).hasSize(1);
@@ -171,12 +171,12 @@ class Proto3LatticeSampleResponseTest {
 
   @Test
   void mapWithModelValues_overwriteInBuilder() {
-    SubMessage_Immut sub1 = SubMessage_ImmutProto3._builder().count(1)._build();
-    SubMessage_Immut sub2 = SubMessage_ImmutProto3._builder().count(2)._build();
+    SubMessage_Immut sub1 = SubMessage_ImmutProto._builder().count(1)._build();
+    SubMessage_Immut sub2 = SubMessage_ImmutProto._builder().count(2)._build();
 
     // First set, then overwrite with a different map, then build
-    Proto3LatticeSampleResponse_Immut built =
-        Proto3LatticeSampleResponse_ImmutProto3._builder()
+    Proto2024eLatticeSampleResponse_Immut built =
+        Proto2024eLatticeSampleResponse_ImmutProto._builder()
             .string("overwrite-test")
             .mandatoryInt(1)
             .namedSubMessages(Map.of("a", sub1))
@@ -191,11 +191,11 @@ class Proto3LatticeSampleResponseTest {
 
   @Test
   void mapWithModelValues_nullClearsMap() {
-    SubMessage_Immut sub = SubMessage_ImmutProto3._builder().count(1)._build();
+    SubMessage_Immut sub = SubMessage_ImmutProto._builder().count(1)._build();
 
     // Set map, then clear with null, then build — should have empty map
-    Proto3LatticeSampleResponse_Immut built =
-        Proto3LatticeSampleResponse_ImmutProto3._builder()
+    Proto2024eLatticeSampleResponse_Immut built =
+        Proto2024eLatticeSampleResponse_ImmutProto._builder()
             .string("null-test")
             .mandatoryInt(1)
             .namedSubMessages(Map.of("a", sub))
@@ -208,18 +208,18 @@ class Proto3LatticeSampleResponseTest {
 
   @Test
   void subMessageWithNestedProtoMessages_serializeAndDeserialize() throws Exception {
-    ProtoMessage_Immut pm1 = ProtoMessage_ImmutProto3._builder().count(11)._build();
-    ProtoMessage_Immut pm2 = ProtoMessage_ImmutProto3._builder().count(22)._build();
+    ProtoMessage_Immut pm1 = ProtoMessage_ImmutProto._builder().count(11)._build();
+    ProtoMessage_Immut pm2 = ProtoMessage_ImmutProto._builder().count(22)._build();
 
     SubMessage_Immut sub =
-        SubMessage_ImmutProto3._builder()
+        SubMessage_ImmutProto._builder()
             .count(99)
             .protoMessage(pm1)
             .protoMessages(List.of(pm1, pm2))
             ._build();
 
-    Proto3LatticeSampleResponse_ImmutProto3 original =
-        Proto3LatticeSampleResponse_ImmutProto3._builder()
+    Proto2024eLatticeSampleResponse_ImmutProto original =
+        Proto2024eLatticeSampleResponse_ImmutProto._builder()
             .string("nested-test")
             .mandatoryInt(1)
             .namedSubMessages(Map.of("nested", sub))
@@ -230,8 +230,8 @@ class Proto3LatticeSampleResponseTest {
             ._build();
 
     byte[] serialized = original._serialize();
-    Proto3LatticeSampleResponse_ImmutProto3 deserialized =
-        new Proto3LatticeSampleResponse_ImmutProto3(serialized);
+    Proto2024eLatticeSampleResponse_ImmutProto deserialized =
+        new Proto2024eLatticeSampleResponse_ImmutProto(serialized);
 
     // Verify deeply nested fields survive round-trip
     SubMessage deserializedSub = deserialized.namedSubMessages().get("nested");
@@ -247,8 +247,8 @@ class Proto3LatticeSampleResponseTest {
 
   @Test
   void copyConstructor_preservesNullableEnumWhenSet() {
-    Proto3LatticeSampleResponse_ImmutProto3 original =
-        Proto3LatticeSampleResponse_ImmutProto3._builder()
+    Proto2024eLatticeSampleResponse_ImmutProto original =
+        Proto2024eLatticeSampleResponse_ImmutProto._builder()
             .string("copy-enum-test")
             .mandatoryInt(1)
             .mandatoryStringPartialConstruction("")
@@ -257,8 +257,8 @@ class Proto3LatticeSampleResponseTest {
             .statuses(List.of(Status.PENDING, Status.FAILED))
             ._build();
 
-    Proto3LatticeSampleResponse_ImmutProto3 copy =
-        new Proto3LatticeSampleResponse_ImmutProto3(original);
+    Proto2024eLatticeSampleResponse_ImmutProto copy =
+        new Proto2024eLatticeSampleResponse_ImmutProto(original);
 
     assertThat(copy.status()).isEqualTo(Status.COMPLETED);
     assertThat(copy.optionalStatus()).isEqualTo(Status.IN_PROGRESS);
@@ -268,16 +268,16 @@ class Proto3LatticeSampleResponseTest {
 
   @Test
   void copyConstructor_preservesNullableEnumWhenAbsent() {
-    Proto3LatticeSampleResponse_ImmutProto3 original =
-        Proto3LatticeSampleResponse_ImmutProto3._builder()
+    Proto2024eLatticeSampleResponse_ImmutProto original =
+        Proto2024eLatticeSampleResponse_ImmutProto._builder()
             .string("copy-null-enum-test")
             .mandatoryInt(1)
             .mandatoryStringPartialConstruction("")
             .status(Status.UNKNOWN)
             ._build();
 
-    Proto3LatticeSampleResponse_ImmutProto3 copy =
-        new Proto3LatticeSampleResponse_ImmutProto3(original);
+    Proto2024eLatticeSampleResponse_ImmutProto copy =
+        new Proto2024eLatticeSampleResponse_ImmutProto(original);
 
     assertThat(copy.optionalStatus()).isNull();
     assertThat(copy.statuses()).isEmpty();
@@ -288,14 +288,13 @@ class Proto3LatticeSampleResponseTest {
   void builderExtendsModelRoot_enumFieldsInSubMessage() {
     // SubMessage has builderExtendsModelRoot=true, so builder getters must not
     // reference non-existent _Immut types for enum fields
-    SubMessage_ImmutProto3.Builder builder =
-        SubMessage_ImmutProto3._builder()
+    SubMessage_ImmutProto.Builder builder =
+        SubMessage_ImmutProto._builder()
             .count(42)
             .subStatus(Status.COMPLETED)
             .subStatuses(List.of(Status.PENDING, Status.FAILED));
 
-    // Verify builder getters work correctly (these would fail with
-    // UnmodifiableModelsList<Status, Status_Immut> return types)
+    // Verify builder getters work correctly
     assertThat(builder.subStatus()).isEqualTo(Status.COMPLETED);
     assertThat(builder.subStatuses()).containsExactly(Status.PENDING, Status.FAILED);
 
@@ -306,7 +305,7 @@ class Proto3LatticeSampleResponseTest {
 
   @Test
   void builderExtendsModelRoot_nullableEnumFieldInSubMessage() {
-    SubMessage_ImmutProto3.Builder builder = SubMessage_ImmutProto3._builder().count(1);
+    SubMessage_ImmutProto.Builder builder = SubMessage_ImmutProto._builder().count(1);
 
     // Nullable enum field defaults to null
     assertThat(builder.subStatus()).isNull();
@@ -319,15 +318,15 @@ class Proto3LatticeSampleResponseTest {
 
   @Test
   void builderExtendsModelRoot_enumFieldsRoundTrip() throws Exception {
-    SubMessage_ImmutProto3 original =
-        SubMessage_ImmutProto3._builder()
+    SubMessage_ImmutProto original =
+        SubMessage_ImmutProto._builder()
             .count(99)
             .subStatus(Status.IN_PROGRESS)
             .subStatuses(List.of(Status.COMPLETED, Status.UNKNOWN))
             ._build();
 
     byte[] serialized = original._serialize();
-    SubMessage_ImmutProto3 deserialized = new SubMessage_ImmutProto3(serialized);
+    SubMessage_ImmutProto deserialized = new SubMessage_ImmutProto(serialized);
 
     assertThat(deserialized.count()).isEqualTo(99);
     assertThat(deserialized.subStatus()).isEqualTo(Status.IN_PROGRESS);
@@ -337,14 +336,14 @@ class Proto3LatticeSampleResponseTest {
 
   @Test
   void builderExtendsModelRoot_copyConstructorWithEnumFields() {
-    SubMessage_ImmutProto3 original =
-        SubMessage_ImmutProto3._builder()
+    SubMessage_ImmutProto original =
+        SubMessage_ImmutProto._builder()
             .count(55)
             .subStatus(Status.FAILED)
             .subStatuses(List.of(Status.PENDING))
             ._build();
 
-    SubMessage_ImmutProto3 copy = new SubMessage_ImmutProto3(original);
+    SubMessage_ImmutProto copy = new SubMessage_ImmutProto(original);
 
     assertThat(copy.count()).isEqualTo(55);
     assertThat(copy.subStatus()).isEqualTo(Status.FAILED);
@@ -355,8 +354,8 @@ class Proto3LatticeSampleResponseTest {
   @Test
   void unknownProtoEnumValue_deserializesToUnknown() throws Exception {
     // Build a raw proto message with an unrecognized enum value (999) for the status field
-    Proto3LatticeSampleResponseProto3 rawProto =
-        Proto3LatticeSampleResponseProto3.newBuilder()
+    Proto2024eLatticeSampleResponseProto rawProto =
+        Proto2024eLatticeSampleResponseProto.newBuilder()
             .setString("test")
             .setMandatoryInt(1)
             .setStatusValue(999)
@@ -367,8 +366,8 @@ class Proto3LatticeSampleResponseTest {
     byte[] serialized = rawProto.toByteArray();
 
     // Deserialize through the Krystal wrapper
-    Proto3LatticeSampleResponse_ImmutProto3 deserialized =
-        new Proto3LatticeSampleResponse_ImmutProto3(serialized);
+    Proto2024eLatticeSampleResponse_ImmutProto deserialized =
+        new Proto2024eLatticeSampleResponse_ImmutProto(serialized);
 
     // Scalar enum: unknown value should fall back to UNKNOWN
     assertThat(deserialized.status()).isEqualTo(Status.UNKNOWN);
@@ -379,8 +378,8 @@ class Proto3LatticeSampleResponseTest {
 
   @Test
   void mapEnumField_setAndGet() {
-    Proto3LatticeSampleResponse_ImmutProto3 response =
-        Proto3LatticeSampleResponse_ImmutProto3._builder()
+    Proto2024eLatticeSampleResponse_ImmutProto response =
+        Proto2024eLatticeSampleResponse_ImmutProto._builder()
             .string("map-enum-test")
             .mandatoryInt(1)
             .mandatoryStringPartialConstruction("")
@@ -396,8 +395,8 @@ class Proto3LatticeSampleResponseTest {
 
   @Test
   void mapEnumField_roundTrip() throws Exception {
-    Proto3LatticeSampleResponse_ImmutProto3 original =
-        Proto3LatticeSampleResponse_ImmutProto3._builder()
+    Proto2024eLatticeSampleResponse_ImmutProto original =
+        Proto2024eLatticeSampleResponse_ImmutProto._builder()
             .string("map-enum-roundtrip")
             .mandatoryInt(1)
             .mandatoryStringPartialConstruction("")
@@ -406,8 +405,8 @@ class Proto3LatticeSampleResponseTest {
             ._build();
 
     byte[] serialized = original._serialize();
-    Proto3LatticeSampleResponse_ImmutProto3 deserialized =
-        new Proto3LatticeSampleResponse_ImmutProto3(serialized);
+    Proto2024eLatticeSampleResponse_ImmutProto deserialized =
+        new Proto2024eLatticeSampleResponse_ImmutProto(serialized);
 
     assertThat(deserialized.namedStatuses())
         .containsEntry("x", Status.FAILED)
@@ -418,8 +417,8 @@ class Proto3LatticeSampleResponseTest {
 
   @Test
   void mapEnumField_emptyByDefault() {
-    Proto3LatticeSampleResponse_ImmutProto3 response =
-        Proto3LatticeSampleResponse_ImmutProto3._builder()
+    Proto2024eLatticeSampleResponse_ImmutProto response =
+        Proto2024eLatticeSampleResponse_ImmutProto._builder()
             .string("map-enum-default")
             .mandatoryInt(1)
             .mandatoryStringPartialConstruction("")
@@ -431,8 +430,8 @@ class Proto3LatticeSampleResponseTest {
 
   @Test
   void mapEnumField_copyConstructor() {
-    Proto3LatticeSampleResponse_ImmutProto3 original =
-        Proto3LatticeSampleResponse_ImmutProto3._builder()
+    Proto2024eLatticeSampleResponse_ImmutProto original =
+        Proto2024eLatticeSampleResponse_ImmutProto._builder()
             .string("map-enum-copy")
             .mandatoryInt(1)
             .mandatoryStringPartialConstruction("")
@@ -440,8 +439,8 @@ class Proto3LatticeSampleResponseTest {
             .namedStatuses(Map.of("k1", Status.COMPLETED))
             ._build();
 
-    Proto3LatticeSampleResponse_ImmutProto3 copy =
-        new Proto3LatticeSampleResponse_ImmutProto3(original);
+    Proto2024eLatticeSampleResponse_ImmutProto copy =
+        new Proto2024eLatticeSampleResponse_ImmutProto(original);
 
     assertThat(copy.namedStatuses()).containsEntry("k1", Status.COMPLETED).hasSize(1);
     assertThat(copy).isEqualTo(original);

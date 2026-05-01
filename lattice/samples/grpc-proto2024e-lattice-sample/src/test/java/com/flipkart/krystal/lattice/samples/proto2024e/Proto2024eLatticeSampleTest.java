@@ -1,4 +1,4 @@
-package com.flipkart.krystal.lattice.samples.proto3;
+package com.flipkart.krystal.lattice.samples.proto2024e;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -11,17 +11,17 @@ import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.krystex.caching.TestRequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
-import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSample;
-import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSampleResponse;
-import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSampleResponse_Immut;
-import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSampleResponse_ImmutPojo;
-import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSampleResponse_ImmutProto3;
-import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSample_Req;
-import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSample_ReqImmut;
-import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSample_ReqImmutProto3;
-import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.ProtoMessageProto3;
-import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.ProtoMessage_ImmutProto3;
-import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Status;
+import com.flipkart.krystal.lattice.samples.grpc.proto2024e.sampleProtoService.Proto2024eLatticeSample;
+import com.flipkart.krystal.lattice.samples.grpc.proto2024e.sampleProtoService.Proto2024eLatticeSampleResponse;
+import com.flipkart.krystal.lattice.samples.grpc.proto2024e.sampleProtoService.Proto2024eLatticeSampleResponse_Immut;
+import com.flipkart.krystal.lattice.samples.grpc.proto2024e.sampleProtoService.Proto2024eLatticeSampleResponse_ImmutPojo;
+import com.flipkart.krystal.lattice.samples.grpc.proto2024e.sampleProtoService.Proto2024eLatticeSampleResponse_ImmutProto;
+import com.flipkart.krystal.lattice.samples.grpc.proto2024e.sampleProtoService.Proto2024eLatticeSample_Req;
+import com.flipkart.krystal.lattice.samples.grpc.proto2024e.sampleProtoService.Proto2024eLatticeSample_ReqImmut;
+import com.flipkart.krystal.lattice.samples.grpc.proto2024e.sampleProtoService.Proto2024eLatticeSample_ReqImmutProto;
+import com.flipkart.krystal.lattice.samples.grpc.proto2024e.sampleProtoService.ProtoMessageProto;
+import com.flipkart.krystal.lattice.samples.grpc.proto2024e.sampleProtoService.ProtoMessage_ImmutProto;
+import com.flipkart.krystal.lattice.samples.grpc.proto2024e.sampleProtoService.Status;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -46,10 +46,10 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class Proto3LatticeSampleTest {
+class Proto2024eLatticeSampleTest {
 
   private static SingleThreadExecutorsPool EXEC_POOL;
-  private static final String REQUEST_ID = "protoExhaustiveTest";
+  private static final String REQUEST_ID = "proto2024eExhaustiveTest";
   private final TestRequestLevelCache requestLevelCache = new TestRequestLevelCache();
 
   private VajramGraph graph;
@@ -69,7 +69,7 @@ class Proto3LatticeSampleTest {
   @BeforeEach
   void setUp() throws LeaseUnavailableException {
     this.executorLease = EXEC_POOL.lease();
-    this.graph = VajramGraph.builder().loadClasses(Proto3LatticeSample.class).build();
+    this.graph = VajramGraph.builder().loadClasses(Proto2024eLatticeSample.class).build();
     this.kGraph = KrystexGraph.builder().vajramGraph(graph);
     this.kGraph.injectionProvider(
         new VajramGuiceInputInjector(
@@ -77,8 +77,8 @@ class Proto3LatticeSampleTest {
                 new AbstractModule() {
                   @Override
                   protected void configure() {
-                    bind(Proto3LatticeSampleResponse_Immut.Builder.class)
-                        .to(Proto3LatticeSampleResponse_ImmutProto3.Builder.class);
+                    bind(Proto2024eLatticeSampleResponse_Immut.Builder.class)
+                        .to(Proto2024eLatticeSampleResponse_ImmutProto.Builder.class);
                   }
                 })));
   }
@@ -90,9 +90,8 @@ class Proto3LatticeSampleTest {
 
   @Test
   void allInputsProvided_success() {
-    // Create a request with all inputs provided
-    Proto3LatticeSample_ReqImmut request =
-        Proto3LatticeSample_ReqImmutProto3._builder()
+    Proto2024eLatticeSample_ReqImmut request =
+        Proto2024eLatticeSample_ReqImmutProto._builder()
             .optionalInput(42)
             .mandatoryInput(100)
             .conditionallyMandatoryInput(200)
@@ -103,8 +102,7 @@ class Proto3LatticeSampleTest {
             .defaultByteString(new ProtoByteArray(ByteString.copyFromUtf8("hello")))
             ._build();
 
-    // Execute the vajram
-    CompletableFuture<Proto3LatticeSampleResponse> result;
+    CompletableFuture<Proto2024eLatticeSampleResponse> result;
     try (KrystexVajramExecutor executor =
         kGraph
             .build()
@@ -120,10 +118,9 @@ class Proto3LatticeSampleTest {
               request, KryonExecutionConfig.builder().executionId("test_all_inputs").build());
     }
 
-    // Verify the result
     assertThat(result)
         .succeedsWithin(1, SECONDS)
-        .extracting(Proto3LatticeSampleResponse::string, STRING)
+        .extracting(Proto2024eLatticeSampleResponse::string, STRING)
         .contains(
             "$$ optionalInput: 42 $$",
             "$$ mandatoryInput: 100 $$",
@@ -135,25 +132,23 @@ class Proto3LatticeSampleTest {
             "$$ defaultByteString: [104, 101, 108, 108, 111] $$");
     assertThat(result)
         .succeedsWithin(1, SECONDS)
-        .extracting(Proto3LatticeSampleResponse::protoMessage)
-        .asInstanceOf(type(ProtoMessage_ImmutProto3.class))
+        .extracting(Proto2024eLatticeSampleResponse::protoMessage)
+        .asInstanceOf(type(ProtoMessage_ImmutProto.class))
         .extracting(SerializableProtoModel::_proto)
-        .isEqualTo(ProtoMessageProto3.newBuilder().setCount(100).build());
+        .isEqualTo(ProtoMessageProto.newBuilder().setCount(100).build());
   }
 
   @Test
   void optionalInputsOmitted_success() {
-    // Create a request with only mandatory inputs
-    Proto3LatticeSample_ReqImmut request =
-        Proto3LatticeSample_ReqImmutProto3._builder()
+    Proto2024eLatticeSample_ReqImmut request =
+        Proto2024eLatticeSample_ReqImmutProto._builder()
             .mandatoryInput(100)
             .conditionallyMandatoryInput(200)
             .inputWithDefaultValue(300)
             .mandatoryLongInput(20L)
             ._build();
 
-    // Execute the vajram
-    CompletableFuture<Proto3LatticeSampleResponse> result;
+    CompletableFuture<Proto2024eLatticeSampleResponse> result;
     try (KrystexVajramExecutor executor =
         kGraph
             .build()
@@ -169,10 +164,9 @@ class Proto3LatticeSampleTest {
               request, KryonExecutionConfig.builder().executionId("test_optional_omitted").build());
     }
 
-    // Verify the result
     assertThat(result)
         .succeedsWithin(1, SECONDS)
-        .extracting(Proto3LatticeSampleResponse::string, STRING)
+        .extracting(Proto2024eLatticeSampleResponse::string, STRING)
         .contains(
             "$$ optionalInput: null $$",
             "$$ mandatoryInput: 100 $$",
@@ -185,16 +179,14 @@ class Proto3LatticeSampleTest {
 
   @Test
   void defaultValueStrategy() {
-    // Create a request without the input that has a default value strategy
-    Proto3LatticeSample_ReqImmut request =
-        Proto3LatticeSample_ReqImmutProto3._builder()
+    Proto2024eLatticeSample_ReqImmut request =
+        Proto2024eLatticeSample_ReqImmutProto._builder()
             .mandatoryInput(100)
             .conditionallyMandatoryInput(200)
             .mandatoryLongInput(20L)
             ._build();
 
-    // Execute the vajram
-    CompletableFuture<Proto3LatticeSampleResponse> result;
+    CompletableFuture<Proto2024eLatticeSampleResponse> result;
     try (KrystexVajramExecutor executor =
         kGraph
             .build()
@@ -210,27 +202,23 @@ class Proto3LatticeSampleTest {
               request, KryonExecutionConfig.builder().executionId("test_default_value").build());
     }
 
-    // Verify the result - inputWithDefaultValue should be 0 (default for int)
     assertThat(result)
         .succeedsWithin(1, SECONDS)
-        .extracting(Proto3LatticeSampleResponse::string, STRING)
+        .extracting(Proto2024eLatticeSampleResponse::string, STRING)
         .contains("inputWithDefaultValue: 0");
   }
 
   @Test
   void missingMandatoryInput_throws() {
-    // Create a request missing a mandatory input
-    Proto3LatticeSample_ReqImmut request =
-        Proto3LatticeSample_ReqImmutProto3._builder()
+    Proto2024eLatticeSample_ReqImmut request =
+        Proto2024eLatticeSample_ReqImmutProto._builder()
             // Missing mandatoryInput
-            // .mandatoryInput(100)
             .conditionallyMandatoryInput(200)
             .inputWithDefaultValue(300)
             .mandatoryLongInput(20L)
             ._build();
 
-    CompletableFuture<Proto3LatticeSampleResponse> result;
-    // Execute the vajram and expect failure
+    CompletableFuture<Proto2024eLatticeSampleResponse> result;
     try (KrystexVajramExecutor executor =
         kGraph
             .build()
@@ -254,18 +242,16 @@ class Proto3LatticeSampleTest {
   }
 
   @Test
-  void missingMandatoryByteInput_throws() {
-    // Create a request missing a mandatory byte input
-    Proto3LatticeSample_ReqImmut request =
-        Proto3LatticeSample_ReqImmutProto3._builder()
+  void missingMandatoryLongInput_throws() {
+    Proto2024eLatticeSample_ReqImmut request =
+        Proto2024eLatticeSample_ReqImmutProto._builder()
             .mandatoryInput(100)
             .conditionallyMandatoryInput(200)
             .inputWithDefaultValue(300)
-            // Missing mandatoryByteInput
+            // Missing mandatoryLongInput
             ._build();
 
-    CompletableFuture<Proto3LatticeSampleResponse> result;
-    // Execute the vajram and expect failure
+    CompletableFuture<Proto2024eLatticeSampleResponse> result;
     try (KrystexVajramExecutor executor =
         kGraph
             .build()
@@ -279,7 +265,7 @@ class Proto3LatticeSampleTest {
       result =
           executor.execute(
               request,
-              KryonExecutionConfig.builder().executionId("test_missing_mandatory_byte").build());
+              KryonExecutionConfig.builder().executionId("test_missing_mandatory_long").build());
     }
     assertThat(result)
         .failsWithin(1, SECONDS)
@@ -290,23 +276,21 @@ class Proto3LatticeSampleTest {
 
   @Test
   void mockedResponse_success() {
-    // Create a test harness with a mocked response
-    Proto3LatticeSample_ReqImmut request =
-        Proto3LatticeSample_ReqImmutProto3._builder()
+    Proto2024eLatticeSample_ReqImmut request =
+        Proto2024eLatticeSample_ReqImmutProto._builder()
             .mandatoryInput(100)
             .conditionallyMandatoryInput(200)
             .mandatoryLongInput(20L)
             ._build();
 
-    Proto3LatticeSampleResponse mockedOutput =
-        Proto3LatticeSampleResponse_ImmutPojo._builder()
+    Proto2024eLatticeSampleResponse mockedOutput =
+        Proto2024eLatticeSampleResponse_ImmutPojo._builder()
             .string("$$ This is a mocked response $$")
             .mandatoryInt(1)
             .mandatoryStringPartialConstruction("hello")
             .status(Status.PENDING)
             ._build();
-    // Execute the vajram with a mocked response
-    CompletableFuture<Proto3LatticeSampleResponse> result;
+    CompletableFuture<Proto2024eLatticeSampleResponse> result;
     try (KrystexVajramExecutor executor =
         kGraph
             .build()
@@ -321,7 +305,9 @@ class Proto3LatticeSampleTest {
                         requestLevelCache)
                     .withMock(
                         ((VajramDef<?>)
-                                graph.getVajramDefinition(Proto3LatticeSample_Req._VAJRAM_ID).def())
+                                graph
+                                    .getVajramDefinition(Proto2024eLatticeSample_Req._VAJRAM_ID)
+                                    .def())
                             .facetsFromRequest(request)
                             ._build(),
                         Errable.withValue(mockedOutput))
@@ -331,16 +317,14 @@ class Proto3LatticeSampleTest {
               request, KryonExecutionConfig.builder().executionId("test_mocked_response").build());
     }
 
-    // Verify the mocked result
     assertThat(result).succeedsWithin(1, SECONDS).isEqualTo(mockedOutput);
   }
 
   @Test
   void byteStringInput_success() {
-    // Create a request with ByteString input
     ByteString byteString = ByteString.copyFromUtf8("Hello, World!");
-    Proto3LatticeSample_ReqImmut request =
-        Proto3LatticeSample_ReqImmutProto3._builder()
+    Proto2024eLatticeSample_ReqImmut request =
+        Proto2024eLatticeSample_ReqImmutProto._builder()
             .mandatoryInput(100)
             .conditionallyMandatoryInput(200)
             .inputWithDefaultValue(300)
@@ -348,8 +332,7 @@ class Proto3LatticeSampleTest {
             .optionalByteString(new ProtoByteArray(byteString))
             ._build();
 
-    // Execute the vajram
-    CompletableFuture<Proto3LatticeSampleResponse> result;
+    CompletableFuture<Proto2024eLatticeSampleResponse> result;
     try (KrystexVajramExecutor executor =
         kGraph
             .build()
@@ -365,10 +348,9 @@ class Proto3LatticeSampleTest {
               request, KryonExecutionConfig.builder().executionId("test_byte_string").build());
     }
 
-    // Verify the result
     assertThat(result)
         .succeedsWithin(100, SECONDS)
-        .extracting(Proto3LatticeSampleResponse::string, STRING)
+        .extracting(Proto2024eLatticeSampleResponse::string, STRING)
         .contains(
             "$$ optionalByteString: [72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33] $$");
   }

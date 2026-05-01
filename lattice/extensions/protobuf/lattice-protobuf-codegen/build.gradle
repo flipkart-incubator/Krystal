@@ -7,6 +7,7 @@ dependencies {
     implementation project(':lattice:lattice-core')
     implementation project(':vajram:extensions:protobuf:vajram-protobuf-codegen')
     implementation project(':vajram:extensions:protobuf:vajram-protobuf3')
+    implementation project(':vajram:extensions:protobuf:vajram-protobuf2024e')
     implementation project(':vajram:vajram-codegen-common')
 
 }

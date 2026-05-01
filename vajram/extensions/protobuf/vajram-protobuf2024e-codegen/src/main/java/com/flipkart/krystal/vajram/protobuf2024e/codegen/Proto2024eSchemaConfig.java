@@ -28,7 +28,10 @@ final class Proto2024eSchemaConfig {
           MODELS_PROTO_UTILS_SUFFIX,
           SerializableProto2024eModel.class,
           // Singular fields in edition 2024 already have explicit presence - no need to wrap.
-          (type, util, element) -> type);
+          (type, util, element) -> type,
+          // editions 2024+ default to multi-file Java emission and reject the
+          // `option java_multiple_files` directive, so we don't emit it.
+          /* emitJavaMultipleFiles= */ false);
 
   private Proto2024eSchemaConfig() {}
 }

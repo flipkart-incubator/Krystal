@@ -31,6 +31,9 @@ import javax.lang.model.element.Element;
  *     SerializableProtoModel} that generated wrapper classes should declare (e.g. {@code
  *     SerializableProto3Model.class} or {@code SerializableProto2024eModel.class}). The default
  *     {@code _serdeProtocol()} on this sub-interface returns this protocol's instance.
+ * @param emitJavaMultipleFiles whether to emit {@code option java_multiple_files = true;} in
+ *     generated {@code .proto} files. True for proto3 (where the default is single-file mode);
+ *     false for editions 2024+ (which reject the option since the default is already multi-file).
  */
 public record ProtoSchemaConfig(
     Class<? extends ModelProtocol> protocolClass,
@@ -41,7 +44,8 @@ public record ProtoSchemaConfig(
     String messageSuffix,
     String utilsSuffix,
     Class<? extends SerializableProtoModel> serializableProtoSubInterface,
-    PresenceWrapper presenceWrapper) {
+    PresenceWrapper presenceWrapper,
+    boolean emitJavaMultipleFiles) {
 
   /**
    * Wraps a {@link ProtoFieldType} so it is rendered with the protocol-appropriate explicit-

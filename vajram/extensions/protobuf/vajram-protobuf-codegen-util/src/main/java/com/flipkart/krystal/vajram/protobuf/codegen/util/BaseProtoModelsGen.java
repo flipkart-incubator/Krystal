@@ -8,6 +8,7 @@ import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.capitali
 import static com.flipkart.krystal.vajram.protobuf.codegen.util.BaseProtoSchemaGen.validateModelType;
 import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.isProtoTypeMap;
 import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.isProtoTypeRepeated;
+import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.toTitleCaseProtoName;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static java.util.Map.entry;
 import static java.util.Map.ofEntries;
@@ -151,8 +152,12 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
     String utilsClassName = enumElement.getSimpleName().toString() + config.utilsSuffix();
 
     ClassName javaEnumType = ClassName.get(enumElement);
+    // The protoc-generated Java class mirrors the proto enum name, which is TitleCased -
+    // underscores stripped from the model name.
     ClassName protoEnumType =
-        ClassName.get(packageName, enumElement.getSimpleName().toString() + config.messageSuffix());
+        ClassName.get(
+            packageName,
+            toTitleCaseProtoName(enumElement.getSimpleName().toString()) + config.messageSuffix());
 
     Builder classBuilder =
         util.classBuilder(utilsClassName, enumElement.getQualifiedName().toString())
@@ -193,9 +198,13 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
     ClassName immutableProtoType = ClassName.get(packageName, protoClassName);
     ClassName immutInterfaceName = util.getImmutInterfaceName(modelRootType);
     ClassName immutModelName = immutInterfaceName;
+    // The protoc-generated Java class mirrors the proto message name, which is TitleCased -
+    // underscores stripped from the model name.
     ClassName protoMsgType =
         ClassName.get(
-            packageName, modelRootType.getSimpleName().toString() + config.messageSuffix());
+            packageName,
+            toTitleCaseProtoName(modelRootType.getSimpleName().toString())
+                + config.messageSuffix());
 
     ClassName protoMsgOrBuilderType =
         ClassName.get(protoMsgType.packageName(), protoMsgType.simpleName() + "OrBuilder");
@@ -477,7 +486,8 @@ return _serializedPayload;
           ClassName protoMsgOrBuilderType =
               ClassName.get(
                   immutProtoClass.packageName(),
-                  fieldModelRootInfo.get().element().getSimpleName().toString()
+                  toTitleCaseProtoName(
+                          fieldModelRootInfo.get().element().getSimpleName().toString())
                       + config.messageSuffix()
                       + "OrBuilder");
           getterBuilder.addStatement(

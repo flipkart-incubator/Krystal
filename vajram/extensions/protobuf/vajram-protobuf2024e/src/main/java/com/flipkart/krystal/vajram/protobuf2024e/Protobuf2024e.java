@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.protobuf2024e;
 
-import com.flipkart.krystal.serial.SerdeProtocol;
+import com.flipkart.krystal.vajram.protobuf.util.ProtobufProtocol;
 
 /**
  * SerdeProtocol for protobuf edition 2024.
@@ -15,7 +15,7 @@ import com.flipkart.krystal.serial.SerdeProtocol;
  * "Proto" suffix for generated wrapper class names ({@code Foo_ImmutProto}). Models that opt into
  * the older proto3 protocol get a "Proto3" suffix instead.
  */
-public final class Protobuf2024e implements SerdeProtocol {
+public final class Protobuf2024e implements ProtobufProtocol {
 
   public static final Protobuf2024e PROTOBUF_2024E = new Protobuf2024e();
 
@@ -34,5 +34,20 @@ public final class Protobuf2024e implements SerdeProtocol {
   @Override
   public boolean modelsNeedToBePure() {
     return true;
+  }
+
+  @Override
+  public String schemaHeader() {
+    return "edition = \"2024\";";
+  }
+
+  @Override
+  public String protoFileSuffix() {
+    return ".models.proto";
+  }
+
+  @Override
+  public boolean emitJavaMultipleFiles() {
+    return false;
   }
 }

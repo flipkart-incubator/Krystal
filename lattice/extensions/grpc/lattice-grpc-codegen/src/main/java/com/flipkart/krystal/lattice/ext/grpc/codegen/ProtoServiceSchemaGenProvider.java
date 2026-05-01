@@ -6,10 +6,10 @@ import com.flipkart.krystal.lattice.codegen.spi.LatticeCodeGeneratorProvider;
 import com.google.auto.service.AutoService;
 
 @AutoService(LatticeCodeGeneratorProvider.class)
-public class Proto3ServiceSchemaGenProvider implements LatticeCodeGeneratorProvider {
+public class ProtoServiceSchemaGenProvider implements LatticeCodeGeneratorProvider {
 
   @Override
   public CodeGenerator create(LatticeCodegenContext latticeCodegenContext) {
-    return new Proto3ServiceSchemaGen(latticeCodegenContext);
+    return new ProtoServiceSchemaGen(latticeCodegenContext);
   }
 }

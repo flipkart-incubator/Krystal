@@ -29,7 +29,6 @@ import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.protobuf.codegen.util.types.EnumFieldType;
 import com.flipkart.krystal.vajram.protobuf.codegen.util.types.MapFieldType;
 import com.flipkart.krystal.vajram.protobuf.codegen.util.types.MessageFieldType;
-import com.flipkart.krystal.vajram.protobuf.codegen.util.types.OptionalFieldType;
 import com.flipkart.krystal.vajram.protobuf.codegen.util.types.ProtoFieldType;
 import com.flipkart.krystal.vajram.protobuf.codegen.util.types.ProtoScalarType;
 import com.flipkart.krystal.vajram.protobuf.codegen.util.types.RepeatedFieldType;
@@ -75,6 +74,70 @@ public final class ProtoGenUtility {
       typeName = typeName.substring(typeName.lastIndexOf('.') + 1);
     }
     return typeName;
+  }
+
+  /**
+   * Converts a camelCase identifier to the lower_snake_case form expected by protobuf field names
+   * (and required by the editions 2024 naming-style enforcement). Examples:
+   *
+   * <ul>
+   *   <li>{@code "mandatoryInt"} → {@code "mandatory_int"}
+   *   <li>{@code "optionalByteString"} → {@code "optional_byte_string"}
+   *   <li>{@code "string"} → {@code "string"} (no change)
+   *   <li>{@code "URL"} → {@code "u_r_l"} - acronyms get split per char (acceptable; Krystal model
+   *       methods avoid all-uppercase acronyms by convention)
+   * </ul>
+   */
+  public static String toSnakeCase(String camelCase) {
+    if (camelCase.isEmpty()) {
+      return camelCase;
+    }
+    StringBuilder out = new StringBuilder(camelCase.length() + 4);
+    out.append(Character.toLowerCase(camelCase.charAt(0)));
+    for (int i = 1; i < camelCase.length(); i++) {
+      char c = camelCase.charAt(i);
+      if (Character.isUpperCase(c)) {
+        out.append('_').append(Character.toLowerCase(c));
+      } else {
+        out.append(c);
+      }
+    }
+    return out.toString();
+  }
+
+  /**
+   * Strips underscores from a Krystal model identifier so it conforms to the protobuf TitleCase
+   * convention required for message and enum names in editions 2024+. Used only when computing
+   * proto schema names; Java class names that retain the underscores (e.g. the {@code _Immut}
+   * wrapper interfaces) are unaffected.
+   *
+   * <p>Examples: {@code "Foo_Req"} → {@code "FooReq"}, {@code "Status"} → {@code "Status"}.
+   */
+  public static String toTitleCaseProtoName(String modelRootName) {
+    return modelRootName.replace("_", "");
+  }
+
+  /**
+   * Converts a Java package name (which may contain camelCase segments) to the lower_snake_case
+   * form required by editions 2024+. Each dot-separated segment is split on uppercase boundaries
+   * and lowercased. {@code option java_package} retains the original Java package - only the proto
+   * {@code package} declaration is affected.
+   *
+   * <p>Example: {@code "com.foo.sampleProtoService"} → {@code "com.foo.sample_proto_service"}.
+   */
+  public static String toLowerSnakeCasePackage(String javaPackage) {
+    if (javaPackage.isEmpty()) {
+      return javaPackage;
+    }
+    StringBuilder out = new StringBuilder(javaPackage.length() + 8);
+    String[] segments = javaPackage.split("\\.");
+    for (int i = 0; i < segments.length; i++) {
+      if (i > 0) {
+        out.append('.');
+      }
+      out.append(toSnakeCase(segments[i]));
+    }
+    return out.toString();
   }
 
   public static @NonNull Optional<String> getPackageName(String responseTypeName) {
@@ -198,8 +261,12 @@ public final class ProtoGenUtility {
     ImmutableList<CodeGenType> typeParameters = dataType.typeParameters();
     TypeMirror javaModelType = dataType.javaModelType(util.processingEnv());
     if (util.isOptional(javaModelType)) {
-      return new OptionalFieldType(
-          getProtobufType(typeParameters.get(0), util, element, config), util, element);
+      // Java Optional<T> is the model-level signal that this field is presence-aware. Let the
+      // protocol's presence wrapper decide whether that needs to be reflected in the .proto schema
+      // (proto3: yes, emit `optional`; editions 2024+: no, all singular fields already have
+      // explicit presence).
+      ProtoFieldType inner = getProtobufType(typeParameters.get(0), util, element, config);
+      return config.presenceWrapper().wrap(inner, util, element);
     } else if (isProtoTypeRepeated(dataType)) {
       if (typeParameters.isEmpty()) {
         throw util.errorAndThrow("Raw list types are not supported by protobuf", element);
@@ -223,16 +290,21 @@ public final class ProtoGenUtility {
           && util.typeExplicitlySupportsProtocol(javaElement, config.protocolClass())
           && TypeName.get(dataType.javaModelType(util.processingEnv()))
               instanceof ClassName modelRootName) {
+        // Strip underscores from the model name for the proto type reference - proto messages and
+        // enums must be TitleCase. The file name keeps the original Java simple name since the
+        // file path doesn't have to obey TitleCase.
+        String protoTypeName =
+            toTitleCaseProtoName(modelRootName.simpleName()) + config.messageSuffix();
         if (util.isEnumModelType(javaModelType)) {
           return new EnumFieldType(
               modelRootName.packageName(),
-              modelRootName.simpleName() + config.messageSuffix(),
+              protoTypeName,
               modelRootName.simpleName(),
               config.fileSuffix());
         }
         return new MessageFieldType(
             modelRootName.packageName(),
-            modelRootName.simpleName() + config.messageSuffix(),
+            protoTypeName,
             modelRootName.simpleName(),
             config.fileSuffix());
       }

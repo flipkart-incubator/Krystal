@@ -28,9 +28,8 @@ final class Proto3SchemaConfig {
           // presence semantics. Skip the wrap if the field is already optional (e.g. the model
           // method returns Optional<T>, which getProtobufType already rendered as `optional T`).
           (type, util, element) ->
-              type instanceof OptionalFieldType
-                  ? type
-                  : new OptionalFieldType(type, util, element));
+              type instanceof OptionalFieldType ? type : new OptionalFieldType(type, util, element),
+          /* emitJavaMultipleFiles= */ true);
 
   private Proto3SchemaConfig() {}
 }
