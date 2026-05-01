@@ -348,9 +348,28 @@ public class CodeGenUtility {
                     .formatted(method.getSimpleName()),
             method);
       }
+      if (isOptional(elementType)) {
+        error(
+            "Optional is not allowed as a List element type in Krystal models. "
+                + "Field '%s' has type List<Optional<...>>.".formatted(method.getSimpleName()),
+            method);
+      }
     }
     if (isMapType(type)) {
+      TypeMirror keyType = getMapKeyType(type);
       TypeMirror valueType = getMapValueType(type);
+      if (isOptional(keyType)) {
+        error(
+            "Optional is not allowed as a Map key type in Krystal models. "
+                + "Field '%s' has type Map<Optional<...>, ...>.".formatted(method.getSimpleName()),
+            method);
+      }
+      if (isOptional(valueType)) {
+        error(
+            "Optional is not allowed as a Map value type in Krystal models. "
+                + "Field '%s' has type Map<..., Optional<...>>.".formatted(method.getSimpleName()),
+            method);
+      }
       if (isMapType(valueType)) {
         error(
             "Nested collections are not allowed in Krystal models. "
