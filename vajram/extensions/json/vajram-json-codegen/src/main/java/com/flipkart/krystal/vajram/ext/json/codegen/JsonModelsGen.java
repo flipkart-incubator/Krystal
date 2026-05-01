@@ -171,7 +171,7 @@ return _serializedPayload;
     List<MethodSpec> methods = new ArrayList<>();
 
     for (ExecutableElement method : modelMethods) {
-      Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
+      Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType(), method);
       MethodSpec pojoGetterMethod =
           getterMethod(method, false, JSON, util, immutableJsonModelName, modelRoot)
               .addAnnotation(Override.class)
@@ -266,7 +266,7 @@ return _serializedPayload;
 
   private CodeBlock setterCode(ExecutableElement method) {
     String fieldName = method.getSimpleName().toString();
-    Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
+    Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType(), method);
 
     return switch (util.getContainerType(method.getReturnType())) {
       case NO_CONTAINER -> {
@@ -379,7 +379,7 @@ this.$L = $L == null
       }
       FieldSpec.Builder fieldBuilder =
           FieldSpec.builder(fieldType, method.getSimpleName().toString(), PRIVATE);
-      Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
+      Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType(), method);
       if (isBuilder
           && fieldModelRootInfo.isPresent()
           && !util.isEnumModel(fieldModelRootInfo.get().element())) {

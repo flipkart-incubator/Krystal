@@ -192,7 +192,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
         TypeMirror elementType = getListElementType(returnType);
         if (elementType != null) {
           TypeName elementTypeName;
-          if (util.isModelRoot(elementType) && !isEntityIdType(elementType, util)) {
+          if (util.isModelRoot(elementType, method) && !isEntityIdType(elementType, util)) {
             // For custom model types (but NOT entity IDs), use _Immut suffix
             TypeElement elementTypeElement =
                 (TypeElement) util.processingEnv().getTypeUtils().asElement(elementType);
@@ -476,7 +476,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
     asBuilderMethodBuilder.addCode("return new $T()", builderType);
     for (ExecutableElement method : modelMethods) {
       String fieldName = method.getSimpleName().toString();
-      Optional<ModelRootInfo> fieldModelRoot = util.asModelRoot(method.getReturnType());
+      Optional<ModelRootInfo> fieldModelRoot = util.asModelRoot(method.getReturnType(), method);
       if (fieldModelRoot.isPresent()) {
         asBuilderMethodBuilder.addCode(
             switch (fieldModelRoot.get().containerType()) {
@@ -529,7 +529,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
 
         // Determine the actual type stored in the field (with _Immut for custom models)
         TypeName fieldElementTypeName;
-        if (util.isModelRoot(elementType) && !isEntityIdType(elementType, util)) {
+        if (util.isModelRoot(elementType, method) && !isEntityIdType(elementType, util)) {
           // For custom model types (but NOT entity IDs), field uses _Immut suffix
           TypeElement elementTypeElement =
               (TypeElement) util.processingEnv().getTypeUtils().asElement(elementType);
@@ -563,7 +563,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
             ParameterizedTypeName.get(
                 ClassName.get(Errable.class), WildcardTypeName.subtypeOf(fieldElementTypeName)));
         // Only cast for custom model types (from _Immut to interface), not for standard types
-        if (util.isModelRoot(elementType) && !isEntityIdType(elementType, util)) {
+        if (util.isModelRoot(elementType, method) && !isEntityIdType(elementType, util)) {
           getter.addStatement("result.add(($T) e.valueOpt().orElse(null))", elementTypeName);
         } else {
           getter.addStatement("result.add(e.valueOpt().orElse(null))");
@@ -927,7 +927,8 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
 
     if (isListType) {
       TypeMirror elementType = getListElementType(returnType);
-      isListOfEntities = util.isModelRoot(elementType) && !isEntityIdType(elementType, util);
+      isListOfEntities =
+          util.isModelRoot(elementType, method) && !isEntityIdType(elementType, util);
     }
 
     // Determine the correct Errable field type for the second overload
@@ -964,7 +965,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
             .addAnnotation(Override.class)
             .addModifiers(PUBLIC)
             .returns(builderType);
-    Optional<ModelRootInfo> fieldModelRoot = util.asModelRoot(returnType);
+    Optional<ModelRootInfo> fieldModelRoot = util.asModelRoot(returnType, method);
     if (isListType) {
       // For ALL lists (entities OR standard types), use complex wrapping logic
       directSetterBuilder.addParameter(fieldType, fieldName);

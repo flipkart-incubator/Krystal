@@ -897,7 +897,7 @@ public final class JavaModelsGen implements CodeGenerator {
       }
       methods.add(setter.build());
 
-      Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
+      Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType(), method);
       if (fieldModelRootInfo.isPresent()
           && !fieldModelRootInfo.get().annotation().builderExtendsModelRoot()
           && !util.isEnumModel(fieldModelRootInfo.get().element())
@@ -1066,7 +1066,7 @@ public final class JavaModelsGen implements CodeGenerator {
       constructorBuilder.addParameter(
           ParameterSpec.builder(util.getVariableType(method, false), fieldName).build());
       ContainerType containerType = util.getContainerType(method.getReturnType());
-      Optional<ModelRootInfo> modelRootInfo = util.asModelRoot(method.getReturnType());
+      Optional<ModelRootInfo> modelRootInfo = util.asModelRoot(method.getReturnType(), method);
       switch (containerType) {
         case NO_CONTAINER -> {
           if (modelRootInfo.isPresent()) {
@@ -1173,7 +1173,7 @@ this.$L = $L == null
       ModelRoot modelRoot) {
     TypeMirror specifiedReturnType = method.getReturnType();
     ModelFieldTypeInfo modelFieldType = util.getModelFieldType(method, true, null);
-    Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(specifiedReturnType);
+    Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(specifiedReturnType, method);
     String fieldName = method.getSimpleName().toString();
     TypeName actualReturnType =
         isBuilder
@@ -1212,7 +1212,7 @@ this.$L = $L == null
       methodBuilder.addStatement(
           "return $T.ofNullable($L)",
           Optional.class,
-          getFieldAccessorExpression(isBuilder, fieldName, specifiedReturnType, util));
+          getFieldAccessorExpression(isBuilder, fieldName, specifiedReturnType, method, util));
     } else {
       if (util.getIfAbsent(method, modelRoot).value().usePlatformDefault()
           && !specifiedReturnType.getKind().isPrimitive()) {
@@ -1279,16 +1279,21 @@ this.$L = $L == null
                 .build());
       }
       methodBuilder.addStatement(
-          "return $L", getFieldAccessorExpression(isBuilder, fieldName, specifiedReturnType, util));
+          "return $L",
+          getFieldAccessorExpression(isBuilder, fieldName, specifiedReturnType, method, util));
     }
     return methodBuilder;
   }
 
   private static CodeBlock getFieldAccessorExpression(
-      boolean isBuilder, String fieldName, TypeMirror returnType, CodeGenUtility util) {
+      boolean isBuilder,
+      String fieldName,
+      TypeMirror returnType,
+      ExecutableElement method,
+      CodeGenUtility util) {
     CodeBlock fieldAccessorCode = CodeBlock.of("$L", fieldName);
 
-    Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(returnType);
+    Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(returnType, method);
     if (isBuilder
         && fieldModelRootInfo.isPresent()
         && !util.isEnumModel(fieldModelRootInfo.get().element())) {
@@ -1340,7 +1345,7 @@ this.$L = $L == null
       String fieldName = method.getSimpleName().toString();
       TypeName fieldType = util.getModelFieldType(method, true, null).fieldType();
       FieldSpec.Builder fieldBuilder = FieldSpec.builder(fieldType, fieldName, PRIVATE);
-      Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
+      Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType(), method);
       if (fieldModelRootInfo.isPresent() && !util.isEnumModel(fieldModelRootInfo.get().element())) {
         if (LIST.equals(fieldModelRootInfo.get().containerType())) {
           fieldBuilder.initializer("$T.empty()", ModelsListBuilder.class);
@@ -1416,10 +1421,11 @@ this.$L = $L == null
       ModelRoot modelRoot) {
     String fieldName = modelMethod.getSimpleName().toString();
     CodeBlock fieldAccessorExpr =
-        getFieldAccessorExpression(true, fieldName, modelMethod.getReturnType(), util);
+        getFieldAccessorExpression(true, fieldName, modelMethod.getReturnType(), modelMethod, util);
 
     IfAbsentThen ifAbsentThen = util.getIfAbsent(modelMethod, modelRoot).value();
-    Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(modelMethod.getReturnType());
+    Optional<ModelRootInfo> fieldModelRootInfo =
+        util.asModelRoot(modelMethod.getReturnType(), modelMethod);
     boolean isModelContainer =
         fieldModelRootInfo.map(info -> info.containerType().isContainer()).orElse(false);
 
@@ -1466,7 +1472,7 @@ this.$L = $L == null
     builderCopyMethodBuilder.addStatement("$T _copy = new $T()", builderType, builderType);
     for (ExecutableElement method : modelMethods) {
       String fieldName = method.getSimpleName().toString();
-      Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
+      Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType(), method);
       if (fieldModelRootInfo.isPresent()
           && !fieldModelRootInfo.get().annotation().builderExtendsModelRoot()
           && !util.isEnumModel(fieldModelRootInfo.get().element())
@@ -1489,7 +1495,7 @@ this.$L = $L == null
         builderCopyMethodBuilder.addStatement(
             "_copy.$L(this.$L)",
             fieldName,
-            getFieldAccessorExpression(true, fieldName, method.getReturnType(), util));
+            getFieldAccessorExpression(true, fieldName, method.getReturnType(), method, util));
       }
     }
     builderCopyMethodBuilder.addStatement("return _copy");
@@ -1506,7 +1512,7 @@ this.$L = $L == null
     List<MethodSpec> dataAccessMethods = new ArrayList<>();
     for (ExecutableElement method : modelMethods) {
       String methodName = method.getSimpleName().toString();
-      Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType());
+      Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType(), method);
       dataAccessMethods.add(
           MethodSpec.methodBuilder(methodName)
               .addModifiers(PUBLIC)
@@ -1541,7 +1547,7 @@ this.$L = $L == null
               .addStatement("return this")
               .build());
 
-      Optional<ModelRootInfo> fieldModelRoot = util.asModelRoot(method.getReturnType());
+      Optional<ModelRootInfo> fieldModelRoot = util.asModelRoot(method.getReturnType(), method);
       if (fieldModelRoot.isPresent()
           && !fieldModelRoot.get().annotation().builderExtendsModelRoot()
           && !util.isEnumModel(fieldModelRoot.get().element())
