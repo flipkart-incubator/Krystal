@@ -64,8 +64,6 @@ include 'lattice:extensions:guice:lattice-guice-servlet'
 include 'lattice:extensions:grpc:lattice-grpc'
 include 'lattice:extensions:grpc:lattice-grpc-codegen'
 
-include 'lattice:extensions:json:lattice-json-codegen'
-
 include 'lattice:extensions:protobuf:lattice-protobuf'
 include 'lattice:extensions:protobuf:lattice-protobuf-codegen'
 

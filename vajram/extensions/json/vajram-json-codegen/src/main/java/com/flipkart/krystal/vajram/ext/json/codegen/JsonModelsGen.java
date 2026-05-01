@@ -488,12 +488,17 @@ this.$L = $L == null
       return false;
     }
 
-    if (!util.getModelProtocols(codeGenContext.modelRootType()).contains(JSON)) {
+    TypeElement modelRootType = codeGenContext.modelRootType();
+    if (!util.getModelProtocols(modelRootType).contains(JSON)) {
+      util.note(
+          "Skipping json codegen for %s as model protocols doesn't contain JSON"
+              .formatted(modelRootType),
+          modelRootType);
       return false;
     }
     // Enum models don't need generated JSON wrapper classes -
     // Jackson handles them directly via the EnumModelModule
-    return !util.isEnumModel(codeGenContext.modelRootType());
+    return !util.isEnumModel(modelRootType);
   }
 
   /**

@@ -414,7 +414,8 @@ return _serializedPayload;
                   boolean isOptional = util.isOptional(method.getReturnType());
                   boolean isNullable = method.getReturnType().getAnnotation(Nullable.class) != null;
                   String methodName = method.getSimpleName().toString();
-                  Optional<ModelRootInfo> modelRoot = util.asModelRoot(method.getReturnType(), method);
+                  Optional<ModelRootInfo> modelRoot =
+                      util.asModelRoot(method.getReturnType(), method);
                   CodeBlock accessor;
                   if (modelRoot.isPresent() && !util.isEnumModel(modelRoot.get().element())) {
                     if (isOptional) {
