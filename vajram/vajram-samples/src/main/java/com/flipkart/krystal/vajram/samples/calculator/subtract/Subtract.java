@@ -7,11 +7,11 @@ import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
-import java.util.Optional;
+import java.util.Objects;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 @InvocableOutsideGraph
 @Vajram
-@SuppressWarnings("optional.parameter")
 public abstract class Subtract extends ComputeVajramDef<Integer> {
   interface _Inputs {
     @IfAbsent(FAIL)
@@ -21,7 +21,7 @@ public abstract class Subtract extends ComputeVajramDef<Integer> {
   }
 
   @Output
-  static int subtract(int numberOne, Optional<Integer> numberTwo) {
-    return numberOne - numberTwo.orElse(0);
+  static int subtract(int numberOne, @Nullable Integer numberTwo) {
+    return numberOne - Objects.requireNonNullElse(numberTwo, 0);
   }
 }

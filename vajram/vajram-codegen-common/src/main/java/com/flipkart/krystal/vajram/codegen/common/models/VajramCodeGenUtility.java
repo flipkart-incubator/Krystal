@@ -306,8 +306,13 @@ public class VajramCodeGenUtility {
       return List.of();
     }
     List<? extends Element> enclosed = container.getEnclosedElements();
-    // Add fields
-    List<Element> result = new ArrayList<>(ElementFilter.fieldsIn(enclosed));
+    List<Element> result = new ArrayList<>();
+    // Add fields only for class containers (not interfaces, to exclude public static final
+    // constants)
+    if (container instanceof TypeElement typeElement
+        && typeElement.getKind() == ElementKind.CLASS) {
+      result.addAll(ElementFilter.fieldsIn(enclosed));
+    }
     // Add abstract methods (from interfaces or abstract classes)
     for (ExecutableElement method : ElementFilter.methodsIn(enclosed)) {
       if (method.getModifiers().contains(ABSTRACT)
