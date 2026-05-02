@@ -21,12 +21,12 @@ class ModelsListBuilderTest {
             Proto3LatticeSampleResponse_Immut,
             Proto3LatticeSampleResponse_Immut.Builder>
         newBuilder = modelListView.modelsBuilder();
-    newBuilder.addModel(Proto3LatticeSampleResponse_ImmutProto._builder()._build());
+    newBuilder.addModel(Proto3LatticeSampleResponse_ImmutProto3._builder()._build());
 
     assertThat(og).size().isOne();
     assertThat(modelListView).size().isOne();
 
-    newBuilder.addBuilder(Proto3LatticeSampleResponse_ImmutProto._builder());
+    newBuilder.addBuilder(Proto3LatticeSampleResponse_ImmutProto3._builder());
 
     assertThat(og).size().isEqualTo(2);
     assertThat(modelListView).size().isEqualTo(2);

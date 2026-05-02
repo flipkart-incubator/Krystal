@@ -2,8 +2,6 @@ package com.flipkart.krystal.lattice.ext.grpc.codegen;
 
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.lowerCaseFirstChar;
 import static com.flipkart.krystal.codegen.common.models.CodegenPhase.FINAL;
-import static com.flipkart.krystal.vajram.protobuf3.Protobuf3.PROTOBUF_3;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_MSG_SUFFIX;
 import static java.util.Map.entry;
 import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -19,7 +17,9 @@ import com.flipkart.krystal.lattice.ext.grpc.GrpcService;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfoLite;
-import com.flipkart.krystal.vajram.protobuf3.SerializableProtoModel;
+import com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility;
+import com.flipkart.krystal.vajram.protobuf.util.ProtobufProtocol;
+import com.flipkart.krystal.vajram.protobuf.util.SerializableProtoModel;
 import com.google.auto.service.AutoService;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.MessageLite;
@@ -115,19 +115,25 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
                   (TypeElement)
                       requireNonNull(util.processingEnv().getTypeUtils().asElement(vajram)));
           ClassName requestType = vajramInfoLite.requestInterfaceClassName();
+          TypeElement requestTypeElement =
+              requireNonNull(
+                  util.codegenUtil()
+                      .processingEnv()
+                      .getElementUtils()
+                      .getTypeElement(requestType.canonicalName()));
+          ProtobufProtocol requestProtocol =
+              requireProtobufProtocol(requestTypeElement, vajramInfoLite);
           ClassName reqProtoModelType =
-              util.codegenUtil()
-                  .getImmutClassName(
-                      requireNonNull(
-                          util.codegenUtil()
-                              .processingEnv()
-                              .getElementUtils()
-                              .getTypeElement(requestType.canonicalName())),
-                      PROTOBUF_3);
+              util.codegenUtil().getImmutClassName(requestTypeElement, requestProtocol);
 
+          // The protoc-generated class name strips underscores from the model simple name (proto
+          // messages must be TitleCase under editions 2024+) and appends the protocol's class
+          // suffix (e.g. "Proto3", "Proto"). E.g. Foo_Req -> FooReqProto3.
           ClassName protoReqMsgType =
               ClassName.get(
-                  requestType.packageName(), requestType.simpleName() + MODELS_PROTO_MSG_SUFFIX);
+                  requestType.packageName(),
+                  ProtoGenUtility.toTitleCaseProtoName(requestType.simpleName())
+                      + requestProtocol.protoMsgSuffix());
           TypeMirror responseType =
               vajramInfoLite.responseType().javaModelType(util.processingEnv());
           TypeName protoRespMsgType;
@@ -136,13 +142,17 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
             TypeElement responseTypeElem =
                 (TypeElement)
                     requireNonNull(util.processingEnv().getTypeUtils().asElement(responseType));
+            ProtobufProtocol responseProtocol =
+                requireProtobufProtocol(responseTypeElem, vajramInfoLite);
             protoRespMsgType =
                 ClassName.get(
                     requireNonNull(
                             util.processingEnv().getElementUtils().getPackageOf(responseTypeElem))
                         .getQualifiedName()
                         .toString(),
-                    responseTypeElem.getSimpleName() + MODELS_PROTO_MSG_SUFFIX);
+                    ProtoGenUtility.toTitleCaseProtoName(
+                            responseTypeElem.getSimpleName().toString())
+                        + responseProtocol.protoMsgSuffix());
           } else {
             protoRespMsgType = TypeName.get(responseType);
             if (!util.codegenUtil().isRawAssignable(responseType, MessageLite.class)) {
@@ -150,7 +160,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
                   .error(
                       "Response type of a vajram added to a grpc service must either be a '"
                           + Model.class
-                          + "' with annotation @SupportedModelProtocols({..., Protobuf3.class, ...}) or it must be a "
+                          + "' with annotation @SupportedModelProtocols({..., <a ProtobufProtocol>.class, ...}) or it must be a "
                           + MessageLite.class,
                       vajramInfoLite.vajramOrReqClass());
             }
@@ -225,6 +235,40 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
 
     private boolean isProtoModel(TypeMirror responseType) {
       return util.codegenUtil().isRawAssignable(responseType, Model.class);
+    }
+
+    /**
+     * Returns the {@link ProtobufProtocol} declared in the given model's @SupportedModelProtocols.
+     * Errors out if zero or multiple are declared - a grpc-exposed model must commit to exactly one
+     * protobuf protocol so the dopant can wire request/response types unambiguously.
+     */
+    private ProtobufProtocol requireProtobufProtocol(
+        TypeElement modelType, VajramInfoLite vajramInfoLite) {
+      List<ProtobufProtocol> matches =
+          util.codegenUtil().getModelProtocols(modelType).stream()
+              .filter(ProtobufProtocol.class::isInstance)
+              .map(ProtobufProtocol.class::cast)
+              .toList();
+      if (matches.isEmpty()) {
+        throw util.codegenUtil()
+            .errorAndThrow(
+                "Model '"
+                    + modelType.getQualifiedName()
+                    + "' used in a grpc service must declare a ProtobufProtocol "
+                    + "(e.g. Protobuf3 or Protobuf2024e) in @SupportedModelProtocols",
+                vajramInfoLite.vajramOrReqClass());
+      } else if (matches.size() > 1) {
+        throw util.codegenUtil()
+            .errorAndThrow(
+                "Model '"
+                    + modelType.getQualifiedName()
+                    + "' declares multiple ProtobufProtocols ("
+                    + matches.stream().map(p -> p.getClass().getSimpleName()).toList()
+                    + ") in @SupportedModelProtocols; grpc-exposed models must use exactly one",
+                vajramInfoLite.vajramOrReqClass());
+      } else {
+        return matches.get(0);
+      }
     }
 
     @EnsuresNonNullIf(expression = "#1", result = true)

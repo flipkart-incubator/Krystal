@@ -1,0 +1,12 @@
+description = 'Codegen module for protobuf edition 2024 SerdeProtocol support'
+
+dependencies {
+    api project(':vajram:extensions:protobuf:vajram-protobuf-codegen-util')
+    implementation project(':krystal-common')
+    implementation project(':vajram:extensions:protobuf:vajram-protobuf2024e')
+    implementation project(':krystal-codegen-common')
+    implementation project(':vajram:vajram-codegen-common')
+
+    implementation 'com.google.protobuf:protobuf-java'
+    implementation 'com.squareup:javapoet'
+}

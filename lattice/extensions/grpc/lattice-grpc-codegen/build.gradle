@@ -5,8 +5,8 @@ dependencies {
     implementation project(':lattice:extensions:grpc:lattice-grpc')
     implementation project(':lattice:lattice-codegen')
     implementation project(':lattice:lattice-core')
-    implementation project(':vajram:extensions:protobuf:vajram-protobuf-codegen')
-    implementation project(':vajram:extensions:protobuf:vajram-protobuf3')
+    implementation project(':vajram:extensions:protobuf:vajram-protobuf-util')
+    implementation project(':vajram:extensions:protobuf:vajram-protobuf-codegen-util')
 
     implementation 'jakarta.enterprise:jakarta.enterprise.cdi-api'
     implementation 'com.squareup:javapoet'

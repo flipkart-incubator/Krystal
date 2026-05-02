@@ -15,20 +15,20 @@ import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3
 import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSampleResponse;
 import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSampleResponse_Immut;
 import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSampleResponse_ImmutPojo;
-import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSampleResponse_ImmutProto;
+import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSampleResponse_ImmutProto3;
 import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSample_Req;
 import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSample_ReqImmut;
-import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSample_ReqImmutProto;
-import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.ProtoMessage_ImmutProto;
-import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.ProtoMessage_Proto;
+import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSample_ReqImmutProto3;
+import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.ProtoMessageProto3;
+import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.ProtoMessage_ImmutProto3;
 import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Status;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.exception.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajram.guice.injection.VajramGuiceInputInjector;
-import com.flipkart.krystal.vajram.protobuf3.ProtoByteArray;
-import com.flipkart.krystal.vajram.protobuf3.SerializableProtoModel;
+import com.flipkart.krystal.vajram.protobuf.util.ProtoByteArray;
+import com.flipkart.krystal.vajram.protobuf.util.SerializableProtoModel;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
@@ -78,7 +78,7 @@ class Proto3LatticeSampleTest {
                   @Override
                   protected void configure() {
                     bind(Proto3LatticeSampleResponse_Immut.Builder.class)
-                        .to(Proto3LatticeSampleResponse_ImmutProto.Builder.class);
+                        .to(Proto3LatticeSampleResponse_ImmutProto3.Builder.class);
                   }
                 })));
   }
@@ -92,7 +92,7 @@ class Proto3LatticeSampleTest {
   void allInputsProvided_success() {
     // Create a request with all inputs provided
     Proto3LatticeSample_ReqImmut request =
-        Proto3LatticeSample_ReqImmutProto._builder()
+        Proto3LatticeSample_ReqImmutProto3._builder()
             .optionalInput(42)
             .mandatoryInput(100)
             .conditionallyMandatoryInput(200)
@@ -136,16 +136,16 @@ class Proto3LatticeSampleTest {
     assertThat(result)
         .succeedsWithin(1, SECONDS)
         .extracting(Proto3LatticeSampleResponse::protoMessage)
-        .asInstanceOf(type(ProtoMessage_ImmutProto.class))
+        .asInstanceOf(type(ProtoMessage_ImmutProto3.class))
         .extracting(SerializableProtoModel::_proto)
-        .isEqualTo(ProtoMessage_Proto.newBuilder().setCount(100).build());
+        .isEqualTo(ProtoMessageProto3.newBuilder().setCount(100).build());
   }
 
   @Test
   void optionalInputsOmitted_success() {
     // Create a request with only mandatory inputs
     Proto3LatticeSample_ReqImmut request =
-        Proto3LatticeSample_ReqImmutProto._builder()
+        Proto3LatticeSample_ReqImmutProto3._builder()
             .mandatoryInput(100)
             .conditionallyMandatoryInput(200)
             .inputWithDefaultValue(300)
@@ -187,7 +187,7 @@ class Proto3LatticeSampleTest {
   void defaultValueStrategy() {
     // Create a request without the input that has a default value strategy
     Proto3LatticeSample_ReqImmut request =
-        Proto3LatticeSample_ReqImmutProto._builder()
+        Proto3LatticeSample_ReqImmutProto3._builder()
             .mandatoryInput(100)
             .conditionallyMandatoryInput(200)
             .mandatoryLongInput(20L)
@@ -221,7 +221,7 @@ class Proto3LatticeSampleTest {
   void missingMandatoryInput_throws() {
     // Create a request missing a mandatory input
     Proto3LatticeSample_ReqImmut request =
-        Proto3LatticeSample_ReqImmutProto._builder()
+        Proto3LatticeSample_ReqImmutProto3._builder()
             // Missing mandatoryInput
             // .mandatoryInput(100)
             .conditionallyMandatoryInput(200)
@@ -257,7 +257,7 @@ class Proto3LatticeSampleTest {
   void missingMandatoryByteInput_throws() {
     // Create a request missing a mandatory byte input
     Proto3LatticeSample_ReqImmut request =
-        Proto3LatticeSample_ReqImmutProto._builder()
+        Proto3LatticeSample_ReqImmutProto3._builder()
             .mandatoryInput(100)
             .conditionallyMandatoryInput(200)
             .inputWithDefaultValue(300)
@@ -292,7 +292,7 @@ class Proto3LatticeSampleTest {
   void mockedResponse_success() {
     // Create a test harness with a mocked response
     Proto3LatticeSample_ReqImmut request =
-        Proto3LatticeSample_ReqImmutProto._builder()
+        Proto3LatticeSample_ReqImmutProto3._builder()
             .mandatoryInput(100)
             .conditionallyMandatoryInput(200)
             .mandatoryLongInput(20L)
@@ -340,7 +340,7 @@ class Proto3LatticeSampleTest {
     // Create a request with ByteString input
     ByteString byteString = ByteString.copyFromUtf8("Hello, World!");
     Proto3LatticeSample_ReqImmut request =
-        Proto3LatticeSample_ReqImmutProto._builder()
+        Proto3LatticeSample_ReqImmutProto3._builder()
             .mandatoryInput(100)
             .conditionallyMandatoryInput(200)
             .inputWithDefaultValue(300)
