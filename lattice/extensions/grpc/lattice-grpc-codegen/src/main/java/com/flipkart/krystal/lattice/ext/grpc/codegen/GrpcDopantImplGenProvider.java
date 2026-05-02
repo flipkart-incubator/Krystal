@@ -250,58 +250,25 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
               .map(ProtobufProtocol.class::cast)
               .toList();
       if (matches.isEmpty()) {
-        util.codegenUtil()
-            .error(
+        throw util.codegenUtil()
+            .errorAndThrow(
                 "Model '"
                     + modelType.getQualifiedName()
                     + "' used in a grpc service must declare a ProtobufProtocol "
                     + "(e.g. Protobuf3 or Protobuf2024e) in @SupportedModelProtocols",
                 vajramInfoLite.vajramOrReqClass());
-      }
-      if (matches.size() > 1) {
-        util.codegenUtil()
-            .error(
+      } else if (matches.size() > 1) {
+        throw util.codegenUtil()
+            .errorAndThrow(
                 "Model '"
                     + modelType.getQualifiedName()
                     + "' declares multiple ProtobufProtocols ("
                     + matches.stream().map(p -> p.getClass().getSimpleName()).toList()
                     + ") in @SupportedModelProtocols; grpc-exposed models must use exactly one",
                 vajramInfoLite.vajramOrReqClass());
+      } else {
+        return matches.get(0);
       }
-      return matches.isEmpty() ? noOpProtobufProtocol() : matches.get(0);
-    }
-
-    /**
-     * Sentinel returned only after we've already emitted an error for missing or multiple
-     * ProtobufProtocols, so codegen can proceed to flush diagnostics without NPE.
-     */
-    private static ProtobufProtocol noOpProtobufProtocol() {
-      return new ProtobufProtocol() {
-        @Override
-        public String modelClassesSuffix() {
-          return "Proto";
-        }
-
-        @Override
-        public String defaultContentType() {
-          return "application/protobuf";
-        }
-
-        @Override
-        public boolean modelsNeedToBePure() {
-          return true;
-        }
-
-        @Override
-        public String schemaHeader() {
-          return "";
-        }
-
-        @Override
-        public String protoFileSuffix() {
-          return ".models.proto";
-        }
-      };
     }
 
     @EnsuresNonNullIf(expression = "#1", result = true)

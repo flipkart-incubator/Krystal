@@ -3,20 +3,18 @@ package com.flipkart.krystal.lattice.samples.grpc.proto2024e.sampleProtoService;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.WILL_NEVER_FAIL;
+import static com.flipkart.krystal.model.ModelRoot.ModelType.RESPONSE;
 
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
-import com.flipkart.krystal.model.ModelRoot.ModelType;
 import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.serial.SerialId;
 import com.flipkart.krystal.vajram.protobuf2024e.Protobuf2024e;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-@ModelRoot(
-    type = {ModelType.RESPONSE},
-    builderExtendsModelRoot = true)
+@ModelRoot(type = RESPONSE, builderExtendsModelRoot = true)
 @SupportedModelProtocols(Protobuf2024e.class)
 public interface SubMessage extends Model {
   @SerialId(1)

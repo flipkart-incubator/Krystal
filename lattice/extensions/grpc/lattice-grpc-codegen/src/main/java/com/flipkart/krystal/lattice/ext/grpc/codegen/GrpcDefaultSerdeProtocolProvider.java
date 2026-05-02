@@ -1,5 +1,7 @@
 package com.flipkart.krystal.lattice.ext.grpc.codegen;
 
+import static com.flipkart.krystal.lattice.ext.grpc.codegen.GrpcProtocolResolver.resolveResponseProtocol;
+
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.codegen.spi.DefaultSerdeProtocolProvider;
 import com.flipkart.krystal.lattice.ext.grpc.GrpcServer;
@@ -19,8 +21,7 @@ public final class GrpcDefaultSerdeProtocolProvider implements DefaultSerdeProto
       return null;
     }
     ProtobufProtocol protocol =
-        GrpcProtocolResolver.resolveResponseProtocol(
-            grpcServer, context.codeGenUtility(), latticeAppElement);
+        resolveResponseProtocol(grpcServer, context.codeGenUtility(), latticeAppElement);
     if (protocol == null) {
       return null;
     }

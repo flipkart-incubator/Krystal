@@ -14,6 +14,8 @@ import static com.flipkart.krystal.vajram.protobuf.codegen.util.types.ProtoScala
 import static com.flipkart.krystal.vajram.protobuf.codegen.util.types.ProtoScalarType.SINT32_P;
 import static com.flipkart.krystal.vajram.protobuf.codegen.util.types.ProtoScalarType.SINT64_P;
 import static com.flipkart.krystal.vajram.protobuf.codegen.util.types.ProtoScalarType.STRING_P;
+import static com.google.common.base.CaseFormat.LOWER_UNDERSCORE;
+import static com.google.common.base.CaseFormat.UPPER_CAMEL;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.nio.file.Files.createDirectories;
 import static java.util.Objects.requireNonNull;
@@ -47,7 +49,6 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Protocol-agnostic helpers shared across the protobuf codegen pipeline. */
@@ -89,20 +90,7 @@ public final class ProtoGenUtility {
    * </ul>
    */
   public static String toSnakeCase(String camelCase) {
-    if (camelCase.isEmpty()) {
-      return camelCase;
-    }
-    StringBuilder out = new StringBuilder(camelCase.length() + 4);
-    out.append(Character.toLowerCase(camelCase.charAt(0)));
-    for (int i = 1; i < camelCase.length(); i++) {
-      char c = camelCase.charAt(i);
-      if (Character.isUpperCase(c)) {
-        out.append('_').append(Character.toLowerCase(c));
-      } else {
-        out.append(c);
-      }
-    }
-    return out.toString();
+    return UPPER_CAMEL.to(LOWER_UNDERSCORE, camelCase);
   }
 
   /**
@@ -140,7 +128,7 @@ public final class ProtoGenUtility {
     return out.toString();
   }
 
-  public static @NonNull Optional<String> getPackageName(String responseTypeName) {
+  public static Optional<String> getPackageName(String responseTypeName) {
     int lastDotIndex = responseTypeName.lastIndexOf('.');
     if (lastDotIndex == -1) {
       return Optional.empty();
