@@ -1,4 +1,4 @@
-package com.flipkart.krystal.lattice.ext.protobuf.codegen;
+package com.flipkart.krystal.vajram.protobuf3.codegen;
 
 import static com.flipkart.krystal.vajram.protobuf3.Protobuf3.PROTOBUF_3;
 

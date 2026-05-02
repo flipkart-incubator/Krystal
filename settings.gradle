@@ -39,7 +39,7 @@ include 'vajram:extensions:json:vajram-json'
 include 'vajram:extensions:json:vajram-json-codegen'
 include 'vajram:extensions:protobuf:vajram-protobuf-util'
 include 'vajram:extensions:protobuf:vajram-protobuf-codegen-util'
-include 'vajram:extensions:protobuf:vajram-protobuf-codegen'
+include 'vajram:extensions:protobuf:vajram-protobuf3-codegen'
 include 'vajram:extensions:protobuf:vajram-protobuf3'
 include 'vajram:extensions:protobuf:vajram-protobuf2024e'
 include 'vajram:extensions:protobuf:vajram-protobuf2024e-codegen'
@@ -67,9 +67,6 @@ include 'lattice:extensions:guice:lattice-guice-servlet'
 
 include 'lattice:extensions:grpc:lattice-grpc'
 include 'lattice:extensions:grpc:lattice-grpc-codegen'
-
-include 'lattice:extensions:protobuf:lattice-protobuf'
-include 'lattice:extensions:protobuf:lattice-protobuf-codegen'
 
 include 'lattice:extensions:rest:lattice-rest'
 include 'lattice:extensions:rest:lattice-rest-api'
