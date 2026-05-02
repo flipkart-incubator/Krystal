@@ -1,0 +1,9 @@
+dopants:
+  - krystal.lattice.threadingStrategy:
+      maxApplicationThreads: 50
+  - krystal.lattice.restService:
+      applicationServer:
+        name: rest-json-lattice-sample-test
+        serveStaticKrystalGraph: true
+  - krystal.lattice.DropwizardServerDopant:
+      args: [ src/test/resources/test_dw_config.yaml ]

@@ -1,7 +1,6 @@
 package com.flipkart.krystal.lattice.core.execution;
 
 import static com.flipkart.krystal.lattice.core.execution.ThreadingStrategyDopant.DOPANT_TYPE;
-import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.lattice.core.di.Bindings;
@@ -19,6 +18,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Singleton
 @Slf4j
@@ -31,29 +31,25 @@ public final class ThreadingStrategyDopant implements DopantWithConfig<Threading
   private final SingleThreadExecutorsPool executorPool;
   @Getter private final Function<ExecutorService, ExecutorService> executorServiceTransformer;
 
+  private static final int DEFAULT_MAX_APPLICATION_THREADS = 50;
+
   @Inject
   ThreadingStrategyDopant(
       ThreadingStrategySpec spec,
-      ThreadingStrategyConfig config,
+      @Nullable ThreadingStrategyConfig config,
       DependencyInjectionFramework binder) {
-    requireNonNull(
-        config,
-        "Configuration is mandatory for dopant '"
-            + ThreadingStrategyDopant.class.getSimpleName()
-            + "' of dopant type '"
-            + DOPANT_TYPE
-            + "'");
     this.threadingStrategy = spec.threadingStrategy();
     this.binder = binder;
     this.executorServiceTransformer =
         // Reduce all transformer functions to a single one which applies all of them in order
         spec.executorServiceTransformers().stream().reduce(Function.identity(), Function::andThen);
+    int maxThreads =
+        config != null ? config.maxApplicationThreads() : DEFAULT_MAX_APPLICATION_THREADS;
     this.executorPool =
         switch (threadingStrategy) {
           case POOLED_NATIVE_THREAD_PER_REQUEST ->
               new SingleThreadExecutorsPool(
-                  "ThreadingStrategyDopant-ThreadPerRequestExecutorsPool",
-                  config.maxApplicationThreads());
+                  "ThreadingStrategyDopant-ThreadPerRequestExecutorsPool", maxThreads);
           default -> throw new UnsupportedOperationException(threadingStrategy.toString());
         };
   }

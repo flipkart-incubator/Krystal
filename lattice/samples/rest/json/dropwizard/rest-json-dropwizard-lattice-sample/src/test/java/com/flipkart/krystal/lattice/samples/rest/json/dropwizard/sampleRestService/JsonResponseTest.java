@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.models.JsonResponse_ImmutJson;
 import com.flipkart.krystal.model.array.SimpleByteArray;
-import com.google.common.base.Charsets;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -28,7 +28,7 @@ class JsonResponseTest {
                 SimpleByteArray.copyOf(new byte[] {23, 45, 23, 56, 67, 64, 45, 45, 3, 45, 56}))
             ._build();
     byte[] serializedPayload = immutJson._serialize();
-    System.out.println(new String(serializedPayload, Charsets.UTF_8));
+    System.out.println(new String(serializedPayload, StandardCharsets.UTF_8));
     JsonResponse_ImmutJson deserialized = new JsonResponse_ImmutJson(serializedPayload);
     assertThat(deserialized).isEqualTo(immutJson);
   }

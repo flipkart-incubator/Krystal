@@ -50,6 +50,11 @@ dependencies {
     testImplementation 'org.assertj:assertj-core'
 }
 
+test {
+    useJUnitPlatform()
+    forkEvery = 1
+}
+
 extraJavaModuleInfo {
     failOnMissingModuleInfo = false
 }

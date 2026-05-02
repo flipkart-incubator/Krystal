@@ -16,9 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-@ModelRoot(
-    type = {RESPONSE},
-    pure = false)
+@ModelRoot(type = RESPONSE, pure = false)
 @SupportedModelProtocols({PlainJavaObject.class, Json.class})
 public interface JsonResponse extends Model {
 
@@ -36,10 +34,13 @@ public interface JsonResponse extends Model {
 
   String string();
 
+  @IfAbsent(WILL_NEVER_FAIL)
   Optional<Integer> optionalInteger();
 
+  @IfAbsent(WILL_NEVER_FAIL)
   @Nullable Integer nullableIntegerMayFailConditionally();
 
+  @IfAbsent(WILL_NEVER_FAIL)
   @Nullable Integer nullableInteger();
 
   @IfAbsent(ASSUME_DEFAULT_VALUE)
@@ -50,6 +51,7 @@ public interface JsonResponse extends Model {
   @IfAbsent(ASSUME_DEFAULT_VALUE)
   int defaultInt();
 
+  @IfAbsent(WILL_NEVER_FAIL)
   @Nullable String mandatoryStringPartialConstruction();
 
   @IfAbsent(ASSUME_DEFAULT_VALUE)
@@ -58,6 +60,7 @@ public interface JsonResponse extends Model {
   @IfAbsent(ASSUME_DEFAULT_VALUE)
   Map<String, DataRecord> dataRecords();
 
+  @IfAbsent(WILL_NEVER_FAIL)
   @Nullable ByteArray byteArray();
 
   @IfAbsent(WILL_NEVER_FAIL)
@@ -66,15 +69,20 @@ public interface JsonResponse extends Model {
   @IfAbsent(WILL_NEVER_FAIL)
   InnerDataV2 nestedDataV2();
 
+  @IfAbsent(WILL_NEVER_FAIL)
   List<InnerData> nestedDataList();
 
+  @IfAbsent(WILL_NEVER_FAIL)
   List<InnerDataV2> nestedDataListV2();
 
+  @IfAbsent(WILL_NEVER_FAIL)
   Map<String, InnerData> namedInnerData();
 
+  @IfAbsent(WILL_NEVER_FAIL)
   Map<String, InnerDataV2> namedInnerDataV2();
 
-  Priority priority();
+  @IfAbsent(WILL_NEVER_FAIL)
+  @Nullable Priority priority();
 
   @IfAbsent(WILL_NEVER_FAIL)
   @Nullable Priority optionalPriority();
