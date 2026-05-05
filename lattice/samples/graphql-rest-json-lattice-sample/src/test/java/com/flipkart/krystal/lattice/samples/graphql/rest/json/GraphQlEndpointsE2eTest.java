@@ -49,7 +49,8 @@ class GraphQlEndpointsE2eTest {
     serverThread.setDaemon(true);
     serverThread.start();
 
-    long deadline = System.currentTimeMillis() + 120_000L;
+    Duration waitTime = Duration.ofSeconds(120);
+    long deadline = System.currentTimeMillis() + waitTime.toMillis();
     while (System.currentTimeMillis() < deadline) {
       if (isPortOpen()) {
         httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
@@ -58,7 +59,10 @@ class GraphQlEndpointsE2eTest {
       Thread.sleep(200);
     }
     throw new IllegalStateException(
-        "Embedded Quarkus GraphQL server did not start on port " + APP_PORT + " within 60s");
+        "Embedded Quarkus GraphQL server did not start on port "
+            + APP_PORT
+            + " within "
+            + waitTime);
   }
 
   @AfterAll

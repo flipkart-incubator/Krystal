@@ -28,7 +28,7 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
  * a fresh JVM, isolating Guice/Jetty state.
  */
 @TestInstance(Lifecycle.PER_CLASS)
-class RestEndpointsE2eTest {
+class DwRestEndpointsE2eTest {
 
   private static final int APP_PORT = 18080;
   private static final String BASE_URL = "http://localhost:" + APP_PORT;
@@ -158,7 +158,7 @@ class RestEndpointsE2eTest {
 
   private static boolean isPortOpen() {
     try (Socket s = new Socket()) {
-      s.connect(new InetSocketAddress("localhost", RestEndpointsE2eTest.APP_PORT), 250);
+      s.connect(new InetSocketAddress("localhost", DwRestEndpointsE2eTest.APP_PORT), 250);
       return true;
     } catch (IOException e) {
       return false;

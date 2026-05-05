@@ -1,4 +1,4 @@
-package com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService;
+package com.flipkart.krystal.lattice.samples.grpc.proto2024e.sampleProtoService;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -6,27 +6,27 @@ import com.flipkart.krystal.model.list.ModelsListBuilder;
 import com.flipkart.krystal.model.list.ModelsListView;
 import org.junit.jupiter.api.Test;
 
-class ModelsListBuilderTest {
+class ProtoModelsListBuilderTest {
   @Test
-  void listBuilder_mutation_success() {
+  void test() {
 
-    ModelsListView<Proto3LatticeSampleResponse, Proto3LatticeSampleResponse_Immut> og =
+    ModelsListView<Proto2024eLatticeSampleResponse, Proto2024eLatticeSampleResponse_Immut> og =
         ModelsListView.empty();
 
     var modelListView = og.modelsBuilder().immutModelsView();
     assertThat(modelListView).size().isZero();
 
     ModelsListBuilder<
-            Proto3LatticeSampleResponse,
-            Proto3LatticeSampleResponse_Immut,
-            Proto3LatticeSampleResponse_Immut.Builder>
+            Proto2024eLatticeSampleResponse,
+            Proto2024eLatticeSampleResponse_Immut,
+            Proto2024eLatticeSampleResponse_Immut.Builder>
         newBuilder = modelListView.modelsBuilder();
-    newBuilder.addModel(Proto3LatticeSampleResponse_ImmutProto3._builder()._build());
+    newBuilder.addModel(Proto2024eLatticeSampleResponse_ImmutProto._builder()._build());
 
     assertThat(og).size().isOne();
     assertThat(modelListView).size().isOne();
 
-    newBuilder.addBuilder(Proto3LatticeSampleResponse_ImmutProto3._builder());
+    newBuilder.addBuilder(Proto2024eLatticeSampleResponse_ImmutProto._builder());
 
     assertThat(og).size().isEqualTo(2);
     assertThat(modelListView).size().isEqualTo(2);

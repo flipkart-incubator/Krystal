@@ -2,10 +2,10 @@ package com.flipkart.krystal.lattice.samples.grpc.proto3;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSampleReqProto3;
-import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSampleResponseProto3;
-import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.app.GrpcApp_Impl;
-import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.app.SampleGrpcServiceGrpc;
+import com.flipkart.krystal.lattice.samples.grpc.proto3.sampleProtoService.Proto3LatticeSampleReqProto3;
+import com.flipkart.krystal.lattice.samples.grpc.proto3.sampleProtoService.Proto3LatticeSampleResponseProto3;
+import com.flipkart.krystal.lattice.samples.grpc.proto3.sampleProtoService.app.GrpcApp_Impl;
+import com.flipkart.krystal.lattice.samples.grpc.proto3.sampleProtoService.app.SampleGrpcServiceGrpc;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.io.IOException;

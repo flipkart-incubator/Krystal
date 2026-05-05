@@ -1,4 +1,4 @@
-package com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService;
+package com.flipkart.krystal.lattice.samples.grpc.proto3.sampleProtoService;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 

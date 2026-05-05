@@ -54,6 +54,7 @@ public class DropWizardApplicationGen implements LatticeCodeGeneratorProvider {
             util.classBuilder(
                     dwAppClassName.simpleName(),
                     context.latticeAppTypeElement().getQualifiedName().toString())
+                .addModifiers(PUBLIC, FINAL)
                 .addAnnotation(Singleton.class)
                 .superclass(DropwizardRestApplication.class)
                 .addField(GuiceFramework.class, "guiceFramework", PRIVATE, FINAL);

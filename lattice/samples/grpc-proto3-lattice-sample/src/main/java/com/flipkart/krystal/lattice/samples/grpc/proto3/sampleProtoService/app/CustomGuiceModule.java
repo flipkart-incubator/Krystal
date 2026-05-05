@@ -1,4 +1,4 @@
-package com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.app;
+package com.flipkart.krystal.lattice.samples.grpc.proto3.sampleProtoService.app;
 
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
 import com.google.inject.AbstractModule;

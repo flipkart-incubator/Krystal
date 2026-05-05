@@ -1,4 +1,4 @@
-package com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.app;
+package com.flipkart.krystal.lattice.samples.grpc.proto3.sampleProtoService.app;
 
 import static com.flipkart.krystal.lattice.core.execution.ThreadingStrategy.POOLED_NATIVE_THREAD_PER_REQUEST;
 import static com.flipkart.krystal.lattice.ext.grpc.GrpcServerDopant.grpcServer;
@@ -15,7 +15,7 @@ import com.flipkart.krystal.lattice.ext.guice.GuiceFramework;
 import com.flipkart.krystal.lattice.ext.guice.servlet.GuiceServletFramework;
 import com.flipkart.krystal.lattice.krystex.KrystexDopantSpec;
 import com.flipkart.krystal.lattice.krystex.KrystexDopantSpec.KrystexDopantSpecBuilder;
-import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSample;
+import com.flipkart.krystal.lattice.samples.grpc.proto3.sampleProtoService.Proto3LatticeSample;
 import com.flipkart.krystal.lattice.vajram.VajramDopantSpec;
 import com.flipkart.krystal.lattice.vajram.VajramDopantSpec.VajramDopantSpecBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
