@@ -719,7 +719,7 @@ $L
                     $allUsedFutures:L)
                 .whenComplete(
                   (_unused, _throwable) -> {
-                    $list:T<$reqRespFuture:T<$reqImmutType:T, $depType:T>> _$facetName:L_reqs = new $arrayList:T<>();
+                    $list:T<$reqRespFuture:T<$reqBuilder:T, $depType:T>> _$facetName:L_reqs = new $arrayList:T<>();
                     $list:T<$executionItem:T> _executionItems = _graphExecData.executionItems();
                     var _$facetName:L_futures = new $completableFuture:T[_executionItems.size()];
                     for (int i = 0; i < _executionItems.size(); i++) {
@@ -828,8 +828,8 @@ $L
                           ? CodeBlock.builder()
                               .addNamed(
 """
-$list:T<$reqRespFuture:T<$reqImmutType:T, $respType:T>> _$facetName:L_reqRespFutures =
-    $reqRespFuture:T.forRequestBuilders(_$facetName:L_reqBuilders, $reqType:T._VAJRAM_ID, $fac:T.$facetSpec:L);
+$list:T<$reqRespFuture:T<$reqBuilder:T, $respType:T>> _$facetName:L_reqRespFutures =
+    $reqRespFuture:T.forRequestBuilders(_$facetName:L_reqBuilders);
 _$facetName:L_reqs.addAll(_$facetName:L_reqRespFutures);
 _$facetName:L_futures[i] = $completableFuture:T.allOf($reqRespFuture:T.getFutures(_$facetName:L_reqRespFutures))
     .whenComplete(
@@ -861,10 +861,7 @@ _$facetName:L_futures[i] = $completableFuture:T.allOf($reqRespFuture:T.getFuture
 if (_$facetName:L_reqBuilders.isEmpty()) {
   _$facetName:L_futures[i] = $completableFuture:T.completedFuture(null);
 } else {
-  $reqRespFuture:T<$reqImmutType:T, $depType:T> _rrf = $reqRespFuture:T.forRequestBuilder(
-      _$facetName:L_requestBuilder,
-      $reqType:T._VAJRAM_ID,
-      $fac:T.$facetSpec:L);
+  $reqRespFuture:T<$reqBuilder:T, $depType:T> _rrf = $reqRespFuture:T.forRequestBuilder(_$facetName:L_requestBuilder);
   if(_rrf != null){
     var _$facetName:L_future = _rrf.response();
     _$facetName:L_futures[i] =

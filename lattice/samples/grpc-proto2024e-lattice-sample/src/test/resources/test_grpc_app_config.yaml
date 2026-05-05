@@ -1,0 +1,5 @@
+dopants:
+  - krystal.lattice.threadingStrategy:
+      maxApplicationThreads: 10
+  - krystal.lattice.grpcServer:
+      port: 18790

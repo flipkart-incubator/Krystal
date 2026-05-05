@@ -46,11 +46,17 @@ dependencies {
     testCompileOnly "org.projectlombok:lombok:$lombok_version"
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
-    implementation platform('org.assertj:assertj-bom:3.25.2')
+    testImplementation platform('org.assertj:assertj-bom:3.25.2')
     testImplementation 'org.assertj:assertj-core'
 }
 
 extraJavaModuleInfo {
     failOnMissingModuleInfo = false
+}
+
+test {
+    // Fork a fresh JVM per test class so the embedded Dropwizard app booted by
+    // RestEndpointsE2eTest doesn't share Guice/Jetty state with other suites.
+    forkEvery = 1
 }
 

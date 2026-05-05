@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-@ModelRoot(type = {RESPONSE})
+@ModelRoot(type = RESPONSE)
 @SupportedModelProtocols({PlainJavaObject.class, Json.class})
 public interface JsonResponse extends Model {
 
@@ -40,6 +40,7 @@ public interface JsonResponse extends Model {
   @IfAbsent(WILL_NEVER_FAIL)
   @Nullable Integer nullableIntegerMayFailConditionally();
 
+  @IfAbsent(WILL_NEVER_FAIL)
   @Nullable Integer nullableInteger();
 
   @IfAbsent(ASSUME_DEFAULT_VALUE)
@@ -50,10 +51,12 @@ public interface JsonResponse extends Model {
   @IfAbsent(ASSUME_DEFAULT_VALUE)
   int defaultInt();
 
+  @IfAbsent(WILL_NEVER_FAIL)
   @Nullable String mandatoryStringPartialConstruction();
 
   @IfAbsent(ASSUME_DEFAULT_VALUE)
   @Nullable Map<String, String> mapTypedField();
 
+  @IfAbsent(WILL_NEVER_FAIL)
   @Nullable ByteArray byteArray();
 }

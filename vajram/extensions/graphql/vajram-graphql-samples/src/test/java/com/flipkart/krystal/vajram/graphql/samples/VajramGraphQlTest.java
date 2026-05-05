@@ -41,7 +41,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class GraphQlSamplesE2ETest {
+public class VajramGraphQlTest {
 
   private static final Duration TEST_TIMEOUT = Duration.ofSeconds(1);
 

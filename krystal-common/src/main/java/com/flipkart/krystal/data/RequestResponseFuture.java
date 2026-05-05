@@ -1,7 +1,5 @@
 package com.flipkart.krystal.data;
 
-import com.flipkart.krystal.core.VajramID;
-import com.flipkart.krystal.facets.Dependency;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -28,34 +26,20 @@ public record RequestResponseFuture<R extends Request<T>, T>(
   }
 
   @SuppressWarnings("unchecked")
-  public static <R extends Request<T>, B extends R, I extends R, T>
-      List<RequestResponseFuture<I, T>> forRequestBuilders(
-          List<B> requests, VajramID ofVajram, Dependency dependency) {
-    List<RequestResponseFuture<I, T>> list = new ArrayList<>();
-    for (R r : requests) {
-      RequestResponseFuture<I, T> rrf = forRequestBuilder(r, ofVajram, dependency);
-      if (rrf != null) {
-        list.add(rrf);
-      }
+  public static <R extends Request<T>, B extends R, T>
+      List<RequestResponseFuture<R, T>> forRequestBuilders(List<B> requests) {
+    List<RequestResponseFuture<R, T>> list = new ArrayList<>();
+    for (B r : requests) {
+      RequestResponseFuture<R, T> rrf = forRequestBuilder(r);
+      list.add(rrf);
     }
     return list;
   }
 
   @SuppressWarnings("unchecked")
-  public static <R extends Request<T>, B extends R, I extends R, T>
-      @Nullable RequestResponseFuture<I, T> forRequestBuilder(
-          B builder, VajramID ofVajram, Dependency dependency) {
-    try {
-      return forRequest((I) builder._build());
-    } catch (Exception e) {
-      // This might happen if a mandatory field was not set, for example.
-      log.error(
-          "The request builder created by vajram {} for dependency {} could not be built due to an exception. Skipping this request.",
-          ofVajram,
-          dependency,
-          e);
-      return null;
-    }
+  public static <R extends Request<T>, B extends R, T>
+      RequestResponseFuture<B, T> forRequestBuilder(B builder) {
+    return new RequestResponseFuture<>(builder, new CompletableFuture<@Nullable T>());
   }
 
   public static <R extends Request<T>, T> CompletableFuture<@Nullable T>[] getFutures(

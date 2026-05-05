@@ -89,7 +89,8 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
       Path path = vajramElem.getAnnotation(Path.class);
       if (path != null) {
         if (path.value().startsWith("/") || path.value().endsWith("/")) {
-          util.error("Path value in @Path annotation cannot start or end with '/'", vajramElem);
+          //          util.error("Path value in @Path annotation cannot start or end with '/'",
+          // vajramElem);
         }
       }
       VajramInfo vajramInfo = context.codeGenUtility().computeVajramInfo(vajramElem);

@@ -33,7 +33,7 @@ configure(subprojects.findAll {
     it.subprojects.isEmpty()
 }) {
     tasks.withType(JavaCompile).configureEach {
-        options.compilerArgs += ['-Xlint:unchecked', '-parameters', '-Xmaxerrs', '10000']
+        options.compilerArgs += ['-Xlint:unchecked', '-parameters'/*, '-Xmaxerrs', '10000'*/]
         options.deprecation = true
     }
 }

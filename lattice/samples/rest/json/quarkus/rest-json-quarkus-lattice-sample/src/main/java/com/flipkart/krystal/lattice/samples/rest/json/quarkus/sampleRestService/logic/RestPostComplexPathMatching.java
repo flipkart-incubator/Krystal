@@ -24,7 +24,7 @@ import jakarta.inject.Inject;
 @SuppressWarnings("initialization.field.uninitialized")
 @InvocableOutsideGraph
 @InvocableOutsideProcess
-@Path("complex/{context}/path/{name}/{threePaths: ([^/]+/){2}[^/]+}/{id}")
+@Path("/complex/{context}/path/{name}/{threePaths:[^_]+_[^_]+_[^_]+}/{id}")
 @POST
 @Vajram
 public abstract class RestPostComplexPathMatching extends ComputeVajramDef<JsonResponse> {

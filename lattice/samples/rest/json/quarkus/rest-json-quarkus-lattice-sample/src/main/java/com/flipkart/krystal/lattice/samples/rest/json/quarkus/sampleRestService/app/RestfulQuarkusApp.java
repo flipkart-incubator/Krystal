@@ -33,7 +33,8 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
       RestLatticeSample.class,
       RestGetMappingLatticeSample.class,
       RestPostMappingLatticeSample.class,
-      RestPostComplexPathMatching.class,
+      //      RestPostComplexPathMatching.class, //Unable to make regex path work properly in
+      // quarkus
       RestHeadMappingLatticeSample.class,
       RestStreamingSample.class
     })

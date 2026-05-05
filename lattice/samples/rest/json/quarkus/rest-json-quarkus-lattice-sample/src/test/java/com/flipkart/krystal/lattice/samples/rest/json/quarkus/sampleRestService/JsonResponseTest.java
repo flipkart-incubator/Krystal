@@ -1,5 +1,6 @@
 package com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.InnerData_ImmutJson;
@@ -8,8 +9,6 @@ import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.JsonResponse_ImmutPojo;
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.Priority;
 import com.flipkart.krystal.model.array.SimpleByteArray;
-import com.google.common.base.Charsets;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -35,7 +34,7 @@ class JsonResponseTest {
             .priority(Priority.HIGH)
             ._build();
     byte[] serializedPayload = immutJson._serialize();
-    System.out.println(new String(serializedPayload, Charsets.UTF_8));
+    System.out.println(new String(serializedPayload, UTF_8));
     JsonResponse_ImmutJson deserialized = new JsonResponse_ImmutJson(serializedPayload);
     assertThat(deserialized).isEqualTo(immutJson);
   }
@@ -55,14 +54,13 @@ class JsonResponseTest {
             .nestedData(InnerData_ImmutJson._builder().value("v").count(1)._build())
             .priority(Priority.HIGH)
             ._build();
-    String json = new String(original._serialize(), StandardCharsets.UTF_8);
+    String json = new String(original._serialize(), UTF_8);
 
     // Replace "HIGH" with a non-existent enum value
     String modifiedJson = json.replace("\"HIGH\"", "\"NONEXISTENT\"");
 
     // Deserialize — unknown enum should fall back to UNKNOWN
-    JsonResponse_ImmutJson deserialized =
-        new JsonResponse_ImmutJson(modifiedJson.getBytes(StandardCharsets.UTF_8));
+    JsonResponse_ImmutJson deserialized = new JsonResponse_ImmutJson(modifiedJson.getBytes(UTF_8));
     assertThat(deserialized.priority()).isEqualTo(Priority.UNKNOWN);
   }
 

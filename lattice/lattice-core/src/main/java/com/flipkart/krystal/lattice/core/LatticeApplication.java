@@ -55,7 +55,7 @@ public abstract class LatticeApplication {
           .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
           .disable(SerializationFeature.FAIL_ON_SELF_REFERENCES);
 
-  private ImmutableList<String> args;
+  private ImmutableList<String> args = ImmutableList.of();
 
   public abstract DependencyInjectionFramework getDependencyInjector();
 

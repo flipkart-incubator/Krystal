@@ -144,7 +144,7 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
         providingLogics.add(
             CodeBlock.of(
                 """
-                if (null == acceptHeader){
+                if (null == acceptHeader || acceptHeader.values().isEmpty()){
                   return $T._builder();
                 }
                 var acceptHeaderValues = new $T<>(acceptHeader.values());

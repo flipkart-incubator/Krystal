@@ -49,10 +49,15 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 
-    implementation platform('org.assertj:assertj-bom:3.25.2')
+    testImplementation platform('org.assertj:assertj-bom:3.25.2')
     testImplementation 'org.assertj:assertj-core'
 
+    testRuntimeOnly 'io.grpc:grpc-netty-shaded'
 
+}
+
+test {
+    forkEvery = 1
 }
 
 sourceSets {
