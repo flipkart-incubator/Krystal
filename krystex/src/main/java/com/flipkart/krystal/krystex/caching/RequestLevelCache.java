@@ -3,6 +3,7 @@ package com.flipkart.krystal.krystex.caching;
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.concurrent.Futures.propagateCompletion;
 import static com.flipkart.krystal.except.KrystalCompletionException.wrapAsCompletionException;
+import static com.flipkart.krystal.krystex.caching.CacheKey.newCacheKey;
 import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.data.Errable;
@@ -93,14 +94,20 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
       List<ExecutionItem> cacheMisses = new ArrayList<>();
       for (ExecutionItem executionItem : command.executionItems()) {
         FacetValues facetValues = executionItem.facetValues();
-        var cacheKey = new CacheKey(facetValues._build());
+        var cacheKey = newCacheKey(facetValues);
+        if (cacheKey == null) {
+          // Since the cache key could not be generated, we skip caching for this request
+          log.error("Skipping caching for request since cache key is null");
+          cacheMisses.add(executionItem);
+          continue;
+        }
         var cachedFuture = getCachedValue(cacheKey);
-        if (cachedFuture != null) {
-          propagateCompletion(cachedFuture, executionItem.response());
-        } else {
+        if (cachedFuture == null) {
           cache.put(cacheKey, executionItem.response());
           cacheMisses.add(executionItem);
+          continue;
         }
+        propagateCompletion(cachedFuture, executionItem.response());
       }
       return kryon.executeCommand(
           new DirectForwardReceive(command.vajramID(), cacheMisses, command.dependentChain()));

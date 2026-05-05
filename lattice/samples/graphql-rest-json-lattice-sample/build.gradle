@@ -39,6 +39,13 @@ dependencies {
     compileOnly "org.projectlombok:lombok:$lombok_version"
     annotationProcessor "org.projectlombok:lombok:$lombok_version"
 
+    testImplementation platform('org.assertj:assertj-bom:3.25.2')
+    testImplementation 'org.assertj:assertj-core'
+
+}
+
+test {
+    forkEvery = 1
 }
 
 tasks.withType(JavaCompile).configureEach {

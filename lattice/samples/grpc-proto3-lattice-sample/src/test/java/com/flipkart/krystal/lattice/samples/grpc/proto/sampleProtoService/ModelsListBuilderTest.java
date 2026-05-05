@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 class ModelsListBuilderTest {
   @Test
-  void test() {
+  void listBuilder_mutation_success() {
 
     ModelsListView<Proto3LatticeSampleResponse, Proto3LatticeSampleResponse_Immut> og =
         ModelsListView.empty();

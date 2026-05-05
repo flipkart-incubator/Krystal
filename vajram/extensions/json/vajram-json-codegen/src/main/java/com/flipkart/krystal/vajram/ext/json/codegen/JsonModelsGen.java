@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.ext.json.codegen;
 
-import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.asBuilder;
 import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.buildForBuilder;
 import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.builderGettersAndSetters;
 import static com.flipkart.krystal.vajram.codegen.common.generators.JavaModelsGen.copyCtor;
@@ -210,7 +209,7 @@ return _serializedPayload;
     }
     methods.addAll(
         List.of(
-            asBuilder(modelMethods, builderType).build(),
+            asBuilderUsingGetters(modelMethods, builderType, util).build(),
             MethodSpec.overriding(util.getMethod(Model.class, "_newCopy", 0))
                 .addModifiers(Modifier.PUBLIC)
                 .returns(immutableJsonModelName)
@@ -460,6 +459,32 @@ this.$L = $L == null
                 .addStatement("return this")
                 .build())
         .build();
+  }
+
+  /**
+   * Generates {@code _asBuilder()} that reads each field via its getter so that lazy
+   * deserialization (e.g. the pending-flag pattern in Json immutable models) is triggered before
+   * the values are copied into the new builder. For Optional-typed getters the value is unwrapped
+   * via {@code .orElse(null)} to match the builder setter's {@code @Nullable T} signature.
+   */
+  private static MethodSpec.Builder asBuilderUsingGetters(
+      List<ExecutableElement> modelMethods, TypeName builderType, CodeGenUtility util) {
+    MethodSpec.Builder builder =
+        MethodSpec.methodBuilder("_asBuilder")
+            .addModifiers(PUBLIC)
+            .addAnnotation(Override.class)
+            .returns(builderType);
+    builder.addCode("return new $T()", builderType);
+    for (ExecutableElement method : modelMethods) {
+      String fieldName = method.getSimpleName().toString();
+      if (util.isOptional(method.getReturnType())) {
+        builder.addCode(".$L($L().orElse(null))", fieldName, fieldName);
+      } else {
+        builder.addCode(".$L($L())", fieldName, fieldName);
+      }
+    }
+    builder.addCode(";");
+    return builder;
   }
 
   private void validateMapKeyTypes(List<ExecutableElement> modelMethods) {
