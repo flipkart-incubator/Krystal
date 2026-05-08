@@ -15,7 +15,7 @@ plugins {
 }
 
 ext {
-    krystal_version = project['com.flipkart.krystal.currentVersion']
+    krystal_version = project['com.flipkart.krystal.previousVersion']
     lattice_version = project['com.flipkart.krystal.lattice.currentVersion']
 
     java_code_std_version = '5.6'
@@ -160,11 +160,11 @@ configure(subprojects.findAll {
         testAnnotationProcessor 'org.projectlombok:lombok'
 
         api platform('org.mockito:mockito-bom:5.17.0')
-        api platform('org.assertj:assertj-bom:3.25.2')
+        api platform('org.assertj:assertj-bom:3.27.7')
         api platform('io.github.resilience4j:resilience4j-bom:2.2.0')
         api platform('com.google.inject:guice-bom:7.0.0')
         api platform('org.slf4j:slf4j-bom:2.0.13')
-        api platform('com.fasterxml.jackson:jackson-bom:2.18.3')
+        api platform('com.fasterxml.jackson:jackson-bom:2.18.6')
         api platform("com.google.protobuf:protobuf-bom:${protobuf_version}")
         api platform("io.grpc:grpc-bom:${grpc_version}")
 

@@ -1,0 +1,5 @@
+description = "SQL codegen utilities for Krystal - annotation model parsing and SQL query building"
+
+dependencies {
+    api project(':vajram:extensions:sql:vajram-sql')
+}

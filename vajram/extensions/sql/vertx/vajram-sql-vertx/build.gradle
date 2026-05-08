@@ -1,0 +1,14 @@
+plugins {
+    id 'com.flipkart.krystal' version "${krystal_version}"
+}
+
+dependencies {
+    implementation platform('io.vertx:vertx-stack-depchain:5.0.11')
+    api project(':vajram:vajram-java-sdk')
+    api 'io.vertx:vertx-sql-client'
+    krystalModelsGenProcessor "com.flipkart.krystal:vajram-codegen:${krystal_version}"
+}
+
+extraJavaModuleInfo {
+    failOnMissingModuleInfo = false
+}
