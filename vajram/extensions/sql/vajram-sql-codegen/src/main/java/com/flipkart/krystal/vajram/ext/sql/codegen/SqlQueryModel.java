@@ -70,7 +70,7 @@ public final class SqlQueryModel {
    * @param scalars scalar columns in this projection (excludes {@code List<Projection>} methods)
    * @param joins LEFT JOIN relations discovered from {@code List<Projection>} methods
    */
-  public record ProjectionInfo(
+  public record SelectionInfo(
       TypeElement projectionElement,
       TypeElement tableElement,
       String tableName,

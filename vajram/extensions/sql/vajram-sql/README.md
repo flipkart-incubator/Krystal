@@ -8,11 +8,11 @@ You define your schema and query shapes as annotated Java interfaces; the compan
 
 ## Design Philosophy
 
-### Projection reuse through WHERE clause separation
+### Selection reuse through WHERE clause separation
 
-Projections (what columns to fetch) and WHERE clauses (which rows to fetch) are modeled as distinct
-types by design. The same `@Projection` can be reused across multiple `@SQL @SELECT @Trait`
-definitions that apply different WHERE predicates. For example, a `UserInfo` projection can serve
+Selections (what columns to fetch) and WHERE clauses (which rows to fetch) are modeled as distinct
+types by design. The same `@Selection` can be reused across multiple `@SQL @SELECT @Trait`
+definitions that apply different WHERE predicates. For example, a `UserInfo` selection can serve
 both `GetUserById` and `GetUserByEmail` without duplication — only the WHERE input type changes.
 
 ### Performance and transparency through code generation
@@ -26,7 +26,7 @@ vajram-sql generates SQL at compile time rather than at runtime via reflection. 
 
 ### Declarative definitions, imperative execution
 
-You write declarative annotations (`@Table`, `@Projection`, `@WHERE`, `@ORDER`). The codegen
+You write declarative annotations (`@Table`, `@Selection`, `@WHERE`, `@ORDER`). The codegen
 converts these into the imperative Java boilerplate — the `SELECT` string, the `Tuple.from(...)`
 parameter binding, the `RowSet<Row>` mapping loop. This keeps your code declarative and easy to
 review while keeping the execution path explicit and traceable.
@@ -38,13 +38,13 @@ every column and every relationship. Queries return `User` objects that may have
 and others null or lazy — the caller must know which fields were requested to avoid
 `LazyInitializationException` or silent nulls.
 
-vajram-sql takes the opposite approach: **each query has its own projection tightly coupled to its
-business use case**. A `UserSummary` projection fetches just `id` and `name`; a `UserProfile`
-projection fetches `id`, `name`, `email`, and `phoneNumber`. Neither projection can be confused with
+vajram-sql takes the opposite approach: **each query has its own selection tightly coupled to its
+business use case**. A `UserSummary` selection fetches just `id` and `name`; a `UserProfile`
+selection fetches `id`, `name`, `email`, and `phoneNumber`. Neither selection can be confused with
 the other, and both are always fully populated — there are no nullable fields from under-fetching
 and no wasted data from over-fetching.
 
-This also eliminates N+1 problems by construction: nested `List<Projection>` methods generate a
+This also eliminates N+1 problems by construction: nested `List<Selection>` methods generate a
 single LEFT JOIN query, not a loop of separate queries.
 
 ---
@@ -132,8 +132,8 @@ to be valid:
 List<Order> orders();       // reverse of Order.userId — not a real DB column
 ```
 
-**Bidirectional-FK invariant (enforced at compile time):** a `List<@Projection>` join in a
-`@Projection` interface is only valid when both directions of the FK relationship are declared:
+**Bidirectional-FK invariant (enforced at compile time):** a `List<@Selection>` join in a
+`@Selection` interface is only valid when both directions of the FK relationship are declared:
 
 - The **child** table must have a `@ForeignKey`-annotated method whose return type is the **parent**
   table model.
@@ -141,7 +141,7 @@ List<Order> orders();       // reverse of Order.userId — not a real DB column
   `List<ChildTable>` or `ChildTable`.
 
 If either annotation is absent the code generator reports a compile-time error pointing to the
-`List<@Projection>` method that triggered the join.
+`List<@Selection>` method that triggered the join.
 
 **Additional invariants:**
 
@@ -172,16 +172,16 @@ public interface UserEmail extends TableModel {
 
 ---
 
-### Projections
+### Selections
 
-A projection is a [
+A selection is a [
 `@ModelRoot`](../../../../../../../../krystal-common/src/main/java/com/flipkart/krystal/model/ModelRoot.java)
 interface annotated with [
-`@Projection(over = TableClass.class)`](src/main/java/com/flipkart/krystal/vajram/ext/sql/statement/Projection.java).
+`@Selection(from = TableClass.class)`](src/main/java/com/flipkart/krystal/vajram/ext/sql/statement/Selection.java).
 It defines the shape of data returned by a SELECT query — which columns to include and how to name
-them. Each method in the projection corresponds to a column in the underlying table.
+them. Each method in the selection corresponds to a column in the underlying table.
 
-To be instantiable at runtime the projection must also carry
+To be instantiable at runtime the selection must also carry
 `@SupportedModelProtocols(PlainJavaObject.class)` so that Krystal generates a concrete `_ImmutPojo`
 implementation.
 
@@ -189,7 +189,7 @@ implementation.
 
 @ModelRoot
 @SupportedModelProtocols(PlainJavaObject.class)
-@Projection(over = User.class)
+@Selection(from = User.class)
 public interface UserInfo extends Model {
 
   long id();
@@ -205,19 +205,19 @@ public interface UserInfo extends Model {
 
 **Invariants:**
 
-- A `@Projection` **must** be backed by a `@Table` model via the `over` attribute. The referenced
+- A `@Selection` **must** be backed by a `@Table` model via the `from` attribute. The referenced
   table is the source of truth for column names, types, and nullability.
-- Every method in a projection must correspond to a real column in the underlying table (by the
+- Every method in a selection must correspond to a real column in the underlying table (by the
   method name, or by the `@Column("name")` override). Methods referencing non-existent columns will
   produce a compile-time error during codegen.
 - A nullable column (i.e., one that allows SQL `NULL`) may be typed as `Optional<T>` **or** as
   `@org.checkerframework.checker.nullness.qual.Nullable T`. Both signal to the codegen and to
   readers that the value may be absent. Using a plain non-nullable type for a nullable column will
   cause a `NullPointerException` at runtime when the column value is `NULL`.
-- A projection is **never** a table model. Do not annotate a projection with `@Table`. The SELECT
-  trait's `TraitDef<T>` result type must be a `@Projection`, not a `@Table` model. Returning a table
+- A selection is **never** a table model. Do not annotate a selection with `@Table`. The SELECT
+  trait's `TraitDef<T>` result type must be a `@Selection`, not a `@Table` model. Returning a table
   model directly couples query results to the full schema and defeats the purpose of
-  projection-per-use-case.
+  selection-per-use-case.
 
 #### Column Aliasing
 
@@ -232,10 +232,10 @@ String contactEmail();
 // → generates "email AS contactEmail" in the SELECT clause
 ```
 
-#### Nested Projections and LEFT JOINs
+#### Nested Selections and LEFT JOINs
 
-A projection method whose return type is `List<AnotherProjection>` — where `AnotherProjection` is
-itself a `@Projection` — signals a **LEFT JOIN**. The codegen automatically discovers the join
+A selection method whose return type is `List<AnotherSelection>` — where `AnotherSelection` is
+itself a `@Selection` — signals a **LEFT JOIN**. The codegen automatically discovers the join
 condition from the `@ForeignKey` relationship between the two tables.
 
 **Single-level LEFT JOIN:**
@@ -244,15 +244,16 @@ condition from the `@ForeignKey` relationship between the two tables.
 
 @ModelRoot
 @SupportedModelProtocols(PlainJavaObject.class)
-@Projection(over = User.class)
+@Selection(over = User.class)
 public interface UserNameAndOrders extends Model {
 
   String name();
 
   @ORDER(by = "orderTime", direction = DESC)
   @LIMIT(10)
-  List<OrderInfo> orders();    // LEFT JOIN orders ON users.id = orders.userId
+  List<OrderInfo> orders(); // LEFT JOIN orders ON users.id = orders.userId
 }
+
 ```
 
 **Two-level nested LEFT JOIN** (parent → child → grandchild):
@@ -261,7 +262,7 @@ public interface UserNameAndOrders extends Model {
 
 @ModelRoot
 @SupportedModelProtocols(PlainJavaObject.class)
-@Projection(over = Order.class)
+@Selection(over = Order.class)
 public interface OrderWithItems extends Model {
 
   long orderId();
@@ -271,29 +272,30 @@ public interface OrderWithItems extends Model {
   long orderTime();
 
   @LIMIT(LIMIT.NO_LIMIT)
-  List<OrderItemInfo> orderItems();    // nested join: orders → orderItems
+  List<OrderItemInfo> orderItems(); // nested join: orders → orderItems
 }
 
 @ModelRoot
 @SupportedModelProtocols(PlainJavaObject.class)
-@Projection(over = User.class)
+@Selection(over = User.class)
 public interface UserWithOrdersAndItems extends Model {
 
   String name();
 
   @ORDER(by = "orderTime", direction = DESC)
   @LIMIT(3)
-  List<OrderWithItems> orders();       // joins: users → orders → orderItems
+  List<OrderWithItems> orders(); // joins: users → orders → orderItems
 }
+
 ```
 
 The codegen generates a single SQL query with two LEFT JOINs and uses a `LinkedHashMap`-based
 deduplication strategy to reconstruct the nested object graph from the flat result set.
 
-| Annotation              | Target                    | Meaning                                                                                  |
-|-------------------------|---------------------------|------------------------------------------------------------------------------------------|
-| `@ORDER(by, direction)` | `List<Projection>` method | Adds an `ORDER BY` clause on the joined table's column                                   |
-| `@LIMIT(n)`             | `List<Projection>` method | **Required.** Adds a `LIMIT` clause. Use `@LIMIT(LIMIT.NO_LIMIT)` to explicitly opt out. |
+| Annotation              | Target                   | Meaning                                                                                  |
+|-------------------------|--------------------------|------------------------------------------------------------------------------------------|
+| `@ORDER(by, direction)` | `List<Selection>` method | Adds an `ORDER BY` clause on the joined table's column                                   |
+| `@LIMIT(n)`             | `List<Selection>` method | **Required.** Adds a `LIMIT` clause. Use `@LIMIT(LIMIT.NO_LIMIT)` to explicitly opt out. |
 
 `@ORDER` is repeatable — apply it multiple times for multi-column ordering.
 
@@ -308,16 +310,16 @@ List<OrderInfo> orders();  // all orders, explicitly unbounded
 
 **Invariants:**
 
-- A `List<AnotherProjection>` method in a parent projection signals a LEFT JOIN. The child
-  projection must also be annotated with `@Projection(over = ChildTable.class)`.
-- **`@LIMIT` is mandatory** on every `List<Projection>` join method. Omitting it produces a
+- A `List<AnotherSelection>` method in a parent selection signals a LEFT JOIN. The child
+  selection must also be annotated with `@Selection(over = ChildTable.class)`.
+- **`@LIMIT` is mandatory** on every `List<Selection>` join method. Omitting it produces a
   compile-time error. The requirement exists because unbounded JOINs can return excessive data. Use
   `@LIMIT(LIMIT.NO_LIMIT)` to explicitly opt out.
 - **Bidirectional FK required:** the child table must have `@ForeignKey` pointing to the parent
   table AND the parent table must have `@IncomingForeignKey` pointing back to the child table. If
-  either is absent, codegen reports a compile-time error on the `List<@Projection>` method that
+  either is absent, codegen reports a compile-time error on the `List<@Selection>` method that
   caused the join.
-- For multi-level joins, the intermediate table's projection must include the primary key column so
+- For multi-level joins, the intermediate table's selection must include the primary key column so
   that the codegen can use it as the deduplication key when grouping grandchild rows.
 - The generated LEFT JOIN returns `NULL` in child columns when there is no matching child row. This
   means child rows with all `NULL` columns are silently dropped, and an empty `List` is returned —
@@ -379,7 +381,7 @@ Key points:
 - `TraitDef<T>` — `T` is the result type. Use `TraitDef<List<T>>` for queries that return multiple
   rows.
 - `@LIMIT(1)` on the type arg — required for single-result traits; added as `LIMIT 1` to the
-  generated SQL for simple queries. For JOIN queries (projections with `List<ChildProjection>`
+  generated SQL for simple queries. For JOIN queries (selections with `List<ChildSelection>`
   methods), `@LIMIT(1)` is still required but is *not* added to the SQL — applying LIMIT at the
   outer query level would truncate joined child rows.
 - `@LIMIT(N)` with N > 1 or `@LIMIT(LIMIT.NO_LIMIT)` — **required** on `List<T>` result traits. A
@@ -396,7 +398,7 @@ Key points:
 
 **Invariants:**
 
-- `T` in `TraitDef<T>` or `TraitDef<List<T>>` **must** be a `@Projection`-annotated interface. If
+- `T` in `TraitDef<T>` or `TraitDef<List<T>>` **must** be a `@Selection`-annotated interface. If
   `T` is a `@Table` model, codegen will report an error. This enforces the separation between table
   schema and query result shape.
 - A **single-result** trait (`TraitDef<T>`) **must** declare `@LIMIT(1)` on the type argument.
@@ -490,18 +492,18 @@ public interface User extends TableModel {
 }
 ```
 
-### Step 2 — Define the Projection
+### Step 2 — Define the Selection
 
-Create a `@Projection` interface for the specific data shape your query needs. Name it after the use
+Create a `@Selection` interface for the specific data shape your query needs. Name it after the use
 case, not the table.
 
-**Simple projection (single or multiple rows):**
+**Simple selection (single or multiple rows):**
 
 ```java
 
 @ModelRoot
 @SupportedModelProtocols(PlainJavaObject.class)
-@Projection(over = User.class)
+@Selection(over = User.class)
 public interface UserSummary extends Model {
 
   long id();
@@ -510,13 +512,13 @@ public interface UserSummary extends Model {
 }
 ```
 
-**Projection with a LEFT JOIN:**
+**Selection with a LEFT JOIN:**
 
 ```java
 
 @ModelRoot
 @SupportedModelProtocols(PlainJavaObject.class)
-@Projection(over = User.class)
+@election(over = User.class)
 public interface UserWithRecentOrders extends Model {
 
   String name();
@@ -525,6 +527,7 @@ public interface UserWithRecentOrders extends Model {
   @LIMIT(5)
   List<OrderInfo> orders();
 }
+
 ```
 
 ### Step 3 — Define the WHERE clause input(s)
@@ -545,7 +548,7 @@ public interface UserIdEquals extends WhereClause {
 
 ### Step 4 — Declare the SELECT Trait
 
-Create a `@SQL @SELECT @Trait` interface that wires the projection to the WHERE inputs. Place
+Create a `@SQL @SELECT @Trait` interface that wires the selection to the WHERE inputs. Place
 `@LIMIT` and `@ORDER` as type-use annotations on the `TraitDef<T>` type argument.
 
 ```java
@@ -628,7 +631,7 @@ The generated vajram expects a `io.vertx.sqlclient.Pool` to be available under t
 ### Step 7 — Invoke the generated vajram
 
 Call the generated `*_VertxSql` vajram from any upstream vajram in your call graph. The vajram
-accepts the WHERE clause inputs and returns the projection result asynchronously.
+accepts the WHERE clause inputs and returns the selection result asynchronously.
 
 ```java
 // As a dependency in another vajram:
@@ -640,19 +643,15 @@ UserSummary userSummary;
 
 ### Query pattern summary
 
-| Use case                                      | Projection                         | Trait signature                           | `@LIMIT` requirement                                                                                                              |
-|-----------------------------------------------|------------------------------------|-------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
-| Fetch a single row by PK or UK                | Scalar methods only                | `TraitDef<T>`                             | Not Required — enforces single-row intent at runtime if more than one rwo is returned                                             |
-| Fetch a single row by non unique where clause | Scalar methods only                | `TraitDef<@LIMIT(1) T>`                   | Required — enforces single-row in the query by applying limit                                                                     |
-| Fetch multiple rows (bounded)                 | Scalar methods only                | `TraitDef<@LIMIT(N) List<T>>`             | **Required** — `SqlTraitVajramGen` emits a compile error if `TraitDef<List<T>>` has no `@LIMIT`; use `@LIMIT(N)` to cap at N rows |
-| Fetch N most recent rows                      | Scalar methods only                | `TraitDef<@ORDER(...) @LIMIT(N) List<T>>` | **Required** — `@LIMIT(N)` with N > 1                                                                                             |
-| Fetch one parent + its children               | One `List<ChildProjection>` method | `TraitDef<@LIMIT(1) T>`                   | Required — Interpretation: pick first parent.                                                                                     |
-| Fetch parent → child → grandchild             | Nested `List<ChildProjection>`     | `TraitDef<@LIMIT(1) T>`                   | Required — Interpretation: pick first parent.                                                                                     |
-| Fetch all rows (unbounded)                    | Scalar methods only                | `TraitDef<@LIMIT(NO_LIMIT) List<T>>`      | **Required** — `@LIMIT(NO_LIMIT)` is the explicit opt-out; omitting `@LIMIT` entirely is a compile error                          |
+| Use case                                      | Selection                         | Trait signature                           | `@LIMIT` requirement                                                                                                              |
+|-----------------------------------------------|-----------------------------------|-------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| Fetch a single row by PK or UK                | Scalar methods only               | `TraitDef<T>`                             | Not Required — enforces single-row intent at runtime if more than one rwo is returned                                             |
+| Fetch a single row by non unique where clause | Scalar methods only               | `TraitDef<@LIMIT(1) T>`                   | Required — enforces single-row in the query by applying limit                                                                     |
+| Fetch multiple rows (bounded)                 | Scalar methods only               | `TraitDef<@LIMIT(N) List<T>>`             | **Required** — `SqlTraitVajramGen` emits a compile error if `TraitDef<List<T>>` has no `@LIMIT`; use `@LIMIT(N)` to cap at N rows |
+| Fetch N most recent rows                      | Scalar methods only               | `TraitDef<@ORDER(...) @LIMIT(N) List<T>>` | **Required** — `@LIMIT(N)` with N > 1                                                                                             |
+| Fetch one parent + its children               | One `List<ChildSelection>` method | `TraitDef<@LIMIT(1) T>`                   | Required — Interpretation: pick first parent.                                                                                     |
+| Fetch parent → child → grandchild             | Nested `List<ChildSelection>`     | `TraitDef<@LIMIT(1) T>`                   | Required — Interpretation: pick first parent.                                                                                     |
+| Fetch all rows (unbounded)                    | Scalar methods only               | `TraitDef<@LIMIT(NO_LIMIT) List<T>>`      | **Required** — `@LIMIT(NO_LIMIT)` is the explicit opt-out; omitting `@LIMIT` entirely is a compile error                          |
 
 ---
 
-## Dependencies
-
-This module depends only on `krystal-common` and carries no runtime overhead — it contains pure
-annotations and interfaces consumed at compile time by the codegen processor.

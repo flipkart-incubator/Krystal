@@ -3,8 +3,8 @@ package com.flipkart.krystal.vajram.ext.sql.codegen;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.JoinRelation;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.JoinSqlResult;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.OrderByClause;
-import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.ProjectionInfo;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.ScalarColumn;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.SelectionInfo;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereInput;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,9 +19,9 @@ import java.util.List;
  *
  * <ol>
  *   <li><b>Simple</b> — scalar-only projection, single or multiple rows ({@link
- *       #buildSimpleSql(ProjectionInfo, List)})
+ *       #buildSimpleSql(SelectionInfo, List)})
  *   <li><b>JOIN</b> — projection with at least one {@code List<AnotherProjection>} field ({@link
- *       #buildJoinSql(ProjectionInfo, List)})
+ *       #buildJoinSql(SelectionInfo, List)})
  * </ol>
  */
 public final class SqlQueryBuilder {
@@ -37,7 +37,7 @@ public final class SqlQueryBuilder {
    * <p>The SQL uses positional placeholders ({@code $1}, {@code $2}, …) compatible with PostgreSQL
    * and the Vert.x SQL client.
    */
-  public static String buildSimpleSql(ProjectionInfo proj, List<WhereInput> whereInputs) {
+  public static String buildSimpleSql(SelectionInfo proj, List<WhereInput> whereInputs) {
     return buildSimpleSql(proj, whereInputs, List.of(), -1);
   }
 
@@ -49,7 +49,7 @@ public final class SqlQueryBuilder {
    * @param limit trait-level LIMIT value; {@code -1} means no LIMIT is appended
    */
   public static String buildSimpleSql(
-      ProjectionInfo proj, List<WhereInput> whereInputs, List<OrderByClause> orderBys, int limit) {
+      SelectionInfo proj, List<WhereInput> whereInputs, List<OrderByClause> orderBys, int limit) {
     List<String> cols = new ArrayList<>();
     for (ScalarColumn col : proj.scalars()) {
       cols.add(colExpr(col.dbColumnName(), col.methodName()));
@@ -87,7 +87,7 @@ public final class SqlQueryBuilder {
    * JoinSqlResult#parentPkAlias()} and is used by the code generator to emit per-row identity
    * validation in {@code mapResult}.
    */
-  public static JoinSqlResult buildJoinSql(ProjectionInfo proj, List<WhereInput> whereInputs) {
+  public static JoinSqlResult buildJoinSql(SelectionInfo proj, List<WhereInput> whereInputs) {
     return buildJoinSql(proj, whereInputs, List.of(), -1, false);
   }
 
@@ -109,7 +109,7 @@ public final class SqlQueryBuilder {
    * @param isListTrait {@code true} when the trait return type is {@code List<T>}
    */
   public static JoinSqlResult buildJoinSql(
-      ProjectionInfo proj,
+      SelectionInfo proj,
       List<WhereInput> whereInputs,
       List<OrderByClause> traitOrderBys,
       int traitLimit,

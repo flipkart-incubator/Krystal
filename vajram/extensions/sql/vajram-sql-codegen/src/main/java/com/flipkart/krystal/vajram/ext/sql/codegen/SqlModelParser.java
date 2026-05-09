@@ -3,8 +3,8 @@ package com.flipkart.krystal.vajram.ext.sql.codegen;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.JoinRelation;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.OrderByClause;
-import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.ProjectionInfo;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.ScalarColumn;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.SelectionInfo;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.TraitResultType;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereInput;
 import com.flipkart.krystal.vajram.ext.sql.model.ForeignKey;
@@ -14,7 +14,7 @@ import com.flipkart.krystal.vajram.ext.sql.model.Table;
 import com.flipkart.krystal.vajram.ext.sql.model.UniqueKey;
 import com.flipkart.krystal.vajram.ext.sql.statement.Column;
 import com.flipkart.krystal.vajram.ext.sql.statement.ORDER;
-import com.flipkart.krystal.vajram.ext.sql.statement.Projection;
+import com.flipkart.krystal.vajram.ext.sql.statement.Selection;
 import com.flipkart.krystal.vajram.ext.sql.statement.WHERE;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -52,7 +52,7 @@ public final class SqlModelParser {
       "com.flipkart.krystal.vajram.ext.sql.statement.WhereClause";
 
   private static final String TABLE_ANNO = Table.class.getName();
-  private static final String PROJECTION_ANNO = Projection.class.getName();
+  private static final String SELECTION_ANNO = Selection.class.getName();
   private static final String COLUMN_ANNO = Column.class.getName();
   private static final String WHERE_ANNO = WHERE.class.getName();
   private static final String FOREIGN_KEY_ANNO = ForeignKey.class.getName();
@@ -115,11 +115,11 @@ public final class SqlModelParser {
   // ─── Projection info ─────────────────────────────────────────────────────────
 
   /**
-   * Parses a {@code @Projection(over = TableClass.class)} interface into a {@link ProjectionInfo}.
+   * Parses a {@code @Projection(over = TableClass.class)} interface into a {@link SelectionInfo}.
    * Returns {@code null} if the interface does not have {@code @Projection}.
    */
-  public ProjectionInfo parseProjectionInfo(TypeElement projectionElement) {
-    TypeElement tableElement = getAnnotationClassValue(projectionElement, PROJECTION_ANNO, "over");
+  public SelectionInfo parseProjectionInfo(TypeElement projectionElement) {
+    TypeElement tableElement = getAnnotationClassValue(projectionElement, SELECTION_ANNO, "from");
     if (tableElement == null) {
       return null;
     }
@@ -148,7 +148,7 @@ public final class SqlModelParser {
       }
     }
 
-    return new ProjectionInfo(
+    return new SelectionInfo(
         projectionElement, tableElement, tableName, parentPkColumn, scalars, joins);
   }
 
@@ -207,7 +207,7 @@ public final class SqlModelParser {
    */
   private JoinRelation parseJoinRelation(
       ExecutableElement method, TypeElement childProjElem, TypeElement parentTableElem) {
-    TypeElement childTableElem = getAnnotationClassValue(childProjElem, PROJECTION_ANNO, "over");
+    TypeElement childTableElem = getAnnotationClassValue(childProjElem, SELECTION_ANNO, "from");
     if (childTableElem == null) {
       return null;
     }
@@ -437,7 +437,7 @@ public final class SqlModelParser {
     }
     TypeMirror inner = dt.getTypeArguments().get(0);
     TypeElement innerElem = (TypeElement) util.processingEnv().getTypeUtils().asElement(inner);
-    if (innerElem != null && hasAnnotation(innerElem, PROJECTION_ANNO)) {
+    if (innerElem != null && hasAnnotation(innerElem, SELECTION_ANNO)) {
       return innerElem;
     }
     return null;

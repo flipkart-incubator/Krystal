@@ -8,13 +8,13 @@ import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.vajram.ext.sql.statement.LIMIT;
 import com.flipkart.krystal.vajram.ext.sql.statement.ORDER;
-import com.flipkart.krystal.vajram.ext.sql.statement.Projection;
+import com.flipkart.krystal.vajram.ext.sql.statement.Selection;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.User;
 import java.util.List;
 
 @ModelRoot
 @SupportedModelProtocols(PlainJavaObject.class)
-@Projection(over = User.class)
+@Selection(from = User.class)
 public interface UserWithOrdersAndItems extends Model {
 
   String name();

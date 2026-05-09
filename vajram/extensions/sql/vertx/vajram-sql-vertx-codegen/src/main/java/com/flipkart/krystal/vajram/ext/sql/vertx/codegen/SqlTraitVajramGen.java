@@ -15,8 +15,8 @@ import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryBuilder;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.JoinRelation;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.JoinSqlResult;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.OrderByClause;
-import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.ProjectionInfo;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.ScalarColumn;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.SelectionInfo;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.TraitResultType;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereInput;
 import com.flipkart.krystal.vajram.ext.sql.statement.SELECT;
@@ -144,7 +144,7 @@ public class SqlTraitVajramGen {
       return;
     }
 
-    ProjectionInfo proj = parser.parseProjectionInfo(resultType.projectionElement());
+    SelectionInfo proj = parser.parseProjectionInfo(resultType.projectionElement());
     if (proj == null) {
       util.error(
           "[SqlTraitVajramGen] @Projection(over=...) not found on "
@@ -393,7 +393,7 @@ public class SqlTraitVajramGen {
 
   private MethodSpec buildMapResultMethod(
       TraitResultType resultType,
-      ProjectionInfo proj,
+      SelectionInfo proj,
       String resultPkg,
       String resultName,
       TypeName outputReturnTypeName,
@@ -414,7 +414,7 @@ public class SqlTraitVajramGen {
 
   /** Maps the first row to the result type; returns {@code null} when the result set is empty. */
   private MethodSpec buildSingleMapResultMethod(
-      ProjectionInfo proj, String resultPkg, String resultName) {
+      SelectionInfo proj, String resultPkg, String resultName) {
     ClassName resultImmutPojo = ClassName.get(resultPkg, resultName + IMMUT_POJO_SUFFIX);
 
     MethodSpec.Builder method =
@@ -445,7 +445,7 @@ public class SqlTraitVajramGen {
 
   /** Maps all rows to a {@code List<result>}. */
   private MethodSpec buildListMapResultMethod(
-      ProjectionInfo proj, String resultPkg, String resultName, TypeName outputReturnTypeName) {
+      SelectionInfo proj, String resultPkg, String resultName, TypeName outputReturnTypeName) {
     ClassName resultImmutPojo = ClassName.get(resultPkg, resultName + IMMUT_POJO_SUFFIX);
     ClassName resultClass = ClassName.get(resultPkg, resultName);
 
@@ -483,7 +483,7 @@ public class SqlTraitVajramGen {
    * accumulators per parent for each level-2 join.
    */
   private MethodSpec buildListJoinMapResultMethod(
-      ProjectionInfo proj,
+      SelectionInfo proj,
       String resultPkg,
       String resultName,
       TypeName outputReturnTypeName,
@@ -751,7 +751,7 @@ public class SqlTraitVajramGen {
    * for multiple parent entities.
    */
   private MethodSpec buildJoinMapResultMethod(
-      ProjectionInfo proj,
+      SelectionInfo proj,
       String resultPkg,
       String resultName,
       String vajramName,
