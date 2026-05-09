@@ -243,15 +243,25 @@ public final class SqlQueryBuilder {
 
     // ── Standard approach when traitLimit <= 0 (NO_LIMIT or absent) ─────────────
     // WHERE and ORDER BY (parent + child) go on the outer query.
-    // Top-level join limits: use ROW_NUMBER when the parent is multi-row (list trait), otherwise
-    // use a plain LIMIT N at the end of the outer query (single-parent equivalent).
-    // Nested joins always use ROW_NUMBER because their immediate parent (level-1) is multi-row.
+    //
+    // Top-level join limit strategy:
+    //   - isListTrait=true  → always ROW_NUMBER (multiple parents, must partition per parent)
+    //   - isListTrait=false, join has nested joins → ROW_NUMBER (a plain LIMIT N would truncate
+    //     total result rows, not the number of level-1 children; each level-1 row expands into
+    //     multiple rows due to level-2 joins, so outer LIMIT N would cut off mid-entity)
+    //   - isListTrait=false, join has NO nested joins → plain LIMIT N at the outer query
+    //     (valid because there is exactly one parent, so no per-parent partitioning is needed,
+    //     and there is only one level of child rows so LIMIT N == first N children)
+    //
+    // Nested (level-2) joins always use ROW_NUMBER because their immediate parent is multi-row.
     StringBuilder sql =
         new StringBuilder("SELECT ").append(selectCols).append(" FROM ").append(proj.tableName());
 
     for (JoinRelation join : proj.joins()) {
-      sql.append(" ")
-          .append(buildJoinClause(join, proj.tableName(), /* useRowNumber= */ isListTrait));
+      // ROW_NUMBER is required whenever there is more than one parent (list trait) OR whenever
+      // this join has nested joins (outer LIMIT would truncate grandchild rows).
+      boolean useRowNumber = isListTrait || !join.nestedJoins().isEmpty();
+      sql.append(" ").append(buildJoinClause(join, proj.tableName(), useRowNumber));
       for (JoinRelation nested : join.nestedJoins()) {
         sql.append(" ").append(buildJoinClause(nested, join.tableName(), /* useRowNumber= */ true));
       }
@@ -278,11 +288,14 @@ public final class SqlQueryBuilder {
       sql.append(" ORDER BY ").append(String.join(", ", orderByParts));
     }
 
-    // For single-parent traits, a top-level join's @LIMIT(N) is expressed as LIMIT N on the outer
-    // query — equivalent to ROW_NUMBER, but simpler because there is exactly one parent.
+    // For a single-parent trait whose level-1 join has NO nested joins, express the join's
+    // @LIMIT(N) as a plain LIMIT N on the outer query. This is equivalent to ROW_NUMBER but
+    // simpler, because there is exactly one parent and no grandchild rows to disturb the count.
+    // When the level-1 join has nested joins, ROW_NUMBER is used instead (see above), so no
+    // outer LIMIT is emitted here.
     if (!isListTrait) {
       for (JoinRelation join : proj.joins()) {
-        if (join.limit() > 0) {
+        if (join.limit() > 0 && join.nestedJoins().isEmpty()) {
           sql.append(" LIMIT ").append(join.limit());
           break;
         }
@@ -331,8 +344,10 @@ public final class SqlQueryBuilder {
    * ) <child> ON <parent>.<pk> = <child>.<fk> AND <child>._rn <= N
    * }</pre>
    *
-   * <p>When {@code useRowNumber} is {@code false} (single-parent context), the limit is deferred to
-   * the outer query as a plain {@code LIMIT N}; this method emits only the plain LEFT JOIN.
+   * <p>When {@code useRowNumber} is {@code false} (single-parent, no nested joins), the limit is
+   * deferred to the outer query as a plain {@code LIMIT N}; this method emits only the plain LEFT
+   * JOIN. Callers must not pass {@code false} when the join has nested joins — outer LIMIT would
+   * then truncate grandchild rows instead of bounding level-1 children.
    *
    * <p>Without a positive limit a plain {@code LEFT JOIN <child> ON …} is always emitted.
    */

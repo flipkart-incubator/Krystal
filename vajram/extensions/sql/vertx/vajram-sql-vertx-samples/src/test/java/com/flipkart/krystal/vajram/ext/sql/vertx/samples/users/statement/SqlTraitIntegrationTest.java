@@ -97,28 +97,51 @@ class SqlTraitIntegrationTest {
             + "itemPriceCents BIGINT NOT NULL, "
             + "orderId BIGINT NOT NULL)");
 
-    // Single user: Alice (id=1)
+    // Alice (id=1): 6 orders so that @LIMIT(3) on orders AND @LIMIT(5) on the recent-orders list
+    // are both exceeded, proving each cap is enforced independently at every nesting level.
+    // Each order carries 6 items (prices 100–600) so that @LIMIT(5) on orderItems is also
+    // exercised.
     runSql("INSERT INTO users VALUES (1, 'Alice', 'alice@example.com', '+1-555-0100')");
-    // Two orders for Alice: orderId=10 (older), orderId=11 (newer)
-    runSql("INSERT INTO orders VALUES (10, 1, 5000, 1000)");
-    runSql("INSERT INTO orders VALUES (11, 1, 12000, 2000)");
-    // Order 10 has 2 line items, order 11 has 1
-    runSql("INSERT INTO orderItems VALUES (100, 'Widget A', 999, 10)");
-    runSql("INSERT INTO orderItems VALUES (101, 'Widget B', 1999, 10)");
-    runSql("INSERT INTO orderItems VALUES (102, 'Gadget', 4999, 11)");
+    for (int i = 0; i < 6; i++) {
+      int orderId = 10 + i;
+      runSql("INSERT INTO orders VALUES (" + orderId + ", 1, 5000, " + ((i + 1) * 1000) + ")");
+      for (int j = 0; j < 6; j++) {
+        int itemId = orderId * 100 + j;
+        int price = (j + 1) * 100;
+        runSql(
+            "INSERT INTO orderItems VALUES ("
+                + itemId
+                + ", 'Item-"
+                + price
+                + "', "
+                + price
+                + ", "
+                + orderId
+                + ")");
+      }
+    }
 
-    // User Bob (id=2) with one order (orderId=20) containing 7 items of varying prices.
-    // The @LIMIT(5) @ORDER_BY(itemPriceCents DESC) on orderItems() must return only the 5 most
-    // expensive items in descending price order.
+    // Bob (id=2): 11 orders so that @LIMIT(10) on the orders list trait is exceeded.
+    // Each order also carries 6 items so that @LIMIT(5) on orderItems is exercised per order.
     runSql("INSERT INTO users VALUES (2, 'Bob', 'bob@example.com', null)");
-    runSql("INSERT INTO orders VALUES (20, 2, 99000, 3000)");
-    runSql("INSERT INTO orderItems VALUES (200, 'Item-100', 100, 20)");
-    runSql("INSERT INTO orderItems VALUES (201, 'Item-500', 500, 20)");
-    runSql("INSERT INTO orderItems VALUES (202, 'Item-200', 200, 20)");
-    runSql("INSERT INTO orderItems VALUES (203, 'Item-800', 800, 20)");
-    runSql("INSERT INTO orderItems VALUES (204, 'Item-300', 300, 20)");
-    runSql("INSERT INTO orderItems VALUES (205, 'Item-700', 700, 20)");
-    runSql("INSERT INTO orderItems VALUES (206, 'Item-400', 400, 20)");
+    for (int i = 0; i < 11; i++) {
+      int orderId = 20 + i;
+      runSql("INSERT INTO orders VALUES (" + orderId + ", 2, 10000, " + ((i + 1) * 1000) + ")");
+      for (int j = 0; j < 6; j++) {
+        int itemId = orderId * 100 + j;
+        int price = (j + 1) * 100;
+        runSql(
+            "INSERT INTO orderItems VALUES ("
+                + itemId
+                + ", 'Item-"
+                + price
+                + "', "
+                + price
+                + ", "
+                + orderId
+                + ")");
+      }
+    }
   }
 
   @AfterAll
@@ -191,10 +214,11 @@ class SqlTraitIntegrationTest {
         .succeedsWithin(TIMEOUT)
         .satisfies(
             orders -> {
-              assertThat(orders).hasSize(2);
+              // @LIMIT(NO_LIMIT) — all 6 of Alice's orders are returned
+              assertThat(orders).hasSize(6);
               assertThat(orders.stream().mapToLong(OrderInfo::orderId).boxed())
-                  .containsExactlyInAnyOrder(10L, 11L);
-              assertThat(orders.stream().mapToLong(OrderInfo::amountCents).sum()).isEqualTo(17000L);
+                  .containsExactlyInAnyOrder(10L, 11L, 12L, 13L, 14L, 15L);
+              assertThat(orders.stream().mapToLong(OrderInfo::amountCents).sum()).isEqualTo(30000L);
             });
   }
 
@@ -233,9 +257,10 @@ class SqlTraitIntegrationTest {
             result -> {
               assertThat(result).isNotNull();
               assertThat(result.name()).isEqualTo("Alice");
-              assertThat(result.orders()).hasSize(2);
+              // @LIMIT(10) not exceeded — all 6 orders returned, newest first
+              assertThat(result.orders()).hasSize(6);
               assertThat(result.orders().stream().mapToLong(OrderInfo::orderId).boxed())
-                  .containsExactlyInAnyOrder(10L, 11L);
+                  .containsExactly(15L, 14L, 13L, 12L, 11L, 10L);
             });
   }
 
@@ -276,15 +301,21 @@ class SqlTraitIntegrationTest {
             result -> {
               assertThat(result).isNotNull();
               assertThat(result.name()).isEqualTo("Alice");
-              assertThat(result.orders()).hasSize(2);
-              assertThat(result.orders().stream().filter(o -> o.orderId() == 10L).findFirst())
-                  .isPresent()
-                  .get()
-                  .satisfies(o -> assertThat(o.orderItems()).hasSize(2));
-              assertThat(result.orders().stream().filter(o -> o.orderId() == 11L).findFirst())
-                  .isPresent()
-                  .get()
-                  .satisfies(o -> assertThat(o.orderItems()).hasSize(1));
+              // Alice has 6 orders; @LIMIT(3) must cap at exactly 3
+              assertThat(result.orders()).hasSize(3);
+              // @ORDER(by = "orderTime", direction = DESC) — newest 3: orderId 15, 14, 13
+              assertThat(result.orders().stream().mapToLong(OrderWithItems::orderId).boxed())
+                  .containsExactly(15L, 14L, 13L);
+              // Each order has 6 items; @LIMIT(5) must cap at exactly 5 per order
+              for (OrderWithItems order : result.orders()) {
+                assertThat(order.orderItems()).hasSize(5);
+                // @ORDER(by = "itemPriceCents", direction = DESC) — top 5: 600, 500, 400, 300, 200
+                assertThat(
+                        order.orderItems().stream()
+                            .mapToLong(OrderItemInfo::itemPriceCents)
+                            .boxed())
+                    .containsExactly(600L, 500L, 400L, 300L, 200L);
+              }
             });
   }
 
@@ -309,20 +340,28 @@ class SqlTraitIntegrationTest {
             result -> {
               assertThat(result).isNotNull();
               assertThat(result.name()).isEqualTo("Alice");
-              // Alice has 2 orders, both within the @LIMIT(3) on orders
-              assertThat(result.orders()).hasSize(2);
-              // orderId=11 (orderTime=2000) comes first — @ORDER_BY(orderTime DESC)
-              assertThat(result.orders().get(0).orderId()).isEqualTo(11L);
-              assertThat(result.orders().get(0).orderItems()).hasSize(1);
-              assertThat(result.orders().get(1).orderId()).isEqualTo(10L);
-              assertThat(result.orders().get(1).orderItems()).hasSize(2);
+              // Alice has 6 orders; @LIMIT(3) must cap at exactly 3, newest first
+              assertThat(result.orders()).hasSize(3);
+              assertThat(result.orders().get(0).orderId()).isEqualTo(15L);
+              assertThat(result.orders().get(1).orderId()).isEqualTo(14L);
+              assertThat(result.orders().get(2).orderId()).isEqualTo(13L);
+              // Each order has 6 items; @LIMIT(5) caps at 5 per order, highest price first
+              for (OrderWithItems order : result.orders()) {
+                assertThat(order.orderItems()).hasSize(5);
+                assertThat(
+                        order.orderItems().stream()
+                            .mapToLong(OrderItemInfo::itemPriceCents)
+                            .boxed())
+                    .containsExactly(600L, 500L, 400L, 300L, 200L);
+              }
             });
   }
 
   @Test
-  void getUserByNameWithOrdersAndItems_respectsThreeLevelLimits() {
-    // Bob has 1 order (orderId=20) with 7 items; @LIMIT(5) @ORDER_BY(itemPriceCents DESC)
-    // must return only the 5 most expensive items in descending price order.
+  void getUserByNameWithOrdersAndItems_respectsOrderAndItemLimitsIndependently() {
+    // Bob has 11 orders each with 6 items.
+    // @LIMIT(3) on orders caps at 3 (not 11); @LIMIT(5) on items caps at 5 per order (not 6).
+    // Both limits are verified to be independent of each other.
     CompletableFuture<UserWithOrdersAndItems> future;
     try (KrystexVajramExecutor executor =
         createExecutor("getUserByNameWithOrdersAndItems_limits")) {
@@ -341,13 +380,21 @@ class SqlTraitIntegrationTest {
             result -> {
               assertThat(result).isNotNull();
               assertThat(result.name()).isEqualTo("Bob");
-              assertThat(result.orders()).hasSize(1);
-              List<OrderItemInfo> items = result.orders().get(0).orderItems();
-              // @LIMIT(5) caps at 5 even though 7 items exist
-              assertThat(items).hasSize(5);
-              // @ORDER_BY(itemPriceCents DESC) — prices descending: 800, 700, 500, 400, 300
-              assertThat(items.stream().mapToLong(OrderItemInfo::itemPriceCents).boxed())
-                  .containsExactly(800L, 700L, 500L, 400L, 300L);
+              // Bob has 11 orders; @LIMIT(3) must cap at exactly 3
+              assertThat(result.orders()).hasSize(3);
+              // @ORDER(by = "orderTime", direction = DESC) — newest 3: orderId 30, 29, 28
+              assertThat(result.orders().stream().mapToLong(OrderWithItems::orderId).boxed())
+                  .containsExactly(30L, 29L, 28L);
+              // Each order has 6 items; @LIMIT(5) must cap at exactly 5 per order
+              for (OrderWithItems order : result.orders()) {
+                assertThat(order.orderItems()).hasSize(5);
+                // @ORDER(by = "itemPriceCents", direction = DESC) — top 5: 600, 500, 400, 300, 200
+                assertThat(
+                        order.orderItems().stream()
+                            .mapToLong(OrderItemInfo::itemPriceCents)
+                            .boxed())
+                    .containsExactly(600L, 500L, 400L, 300L, 200L);
+              }
             });
   }
 
@@ -387,19 +434,27 @@ class SqlTraitIntegrationTest {
         .succeedsWithin(TIMEOUT)
         .satisfies(
             orders -> {
-              assertThat(orders).hasSize(2);
-              // orderTime=2000 (orderId=11) must come before orderTime=1000 (orderId=10)
-              assertThat(orders.get(0).orderId()).isEqualTo(11L);
-              assertThat(orders.get(0).orderItems()).hasSize(1);
-              assertThat(orders.get(1).orderId()).isEqualTo(10L);
-              assertThat(orders.get(1).orderItems()).hasSize(2);
+              // @LIMIT(10) not exceeded — all 6 of Alice's orders returned, newest first
+              assertThat(orders).hasSize(6);
+              assertThat(orders.stream().mapToLong(OrderWithItems::orderId).boxed())
+                  .containsExactly(15L, 14L, 13L, 12L, 11L, 10L);
+              // Each order has 6 items; @LIMIT(5) caps at 5 per order, highest price first
+              for (OrderWithItems order : orders) {
+                assertThat(order.orderItems()).hasSize(5);
+                assertThat(
+                        order.orderItems().stream()
+                            .mapToLong(OrderItemInfo::itemPriceCents)
+                            .boxed())
+                    .containsExactly(600L, 500L, 400L, 300L, 200L);
+              }
             });
   }
 
   @Test
-  void getOrdersWithItemsByUserId_respectsJoinLimitAndOrderBy() {
-    // Bob (id=2) has order 20 with 7 items. @LIMIT(5) @ORDER_BY(itemPriceCents DESC) must return
-    // only the 5 most expensive items, in descending price order.
+  void getOrdersWithItemsByUserId_respectsOrderAndItemLimitsIndependently() {
+    // Bob (id=2) has 11 orders each with 6 items.
+    // @LIMIT(10) on the list trait caps orders at 10 (not 11); @LIMIT(5) on orderItems caps items
+    // at 5 per order (not 6). Both limits are verified independently.
     CompletableFuture<List<OrderWithItems>> future;
     try (KrystexVajramExecutor executor = createExecutor("getOrdersWithItemsByUserId_joinLimit")) {
       future =
@@ -415,13 +470,20 @@ class SqlTraitIntegrationTest {
         .succeedsWithin(TIMEOUT)
         .satisfies(
             orders -> {
-              assertThat(orders).hasSize(1);
-              List<OrderItemInfo> items = orders.get(0).orderItems();
-              // LIMIT(5) on orderItems must cap at 5 even though 7 were inserted
-              assertThat(items).hasSize(5);
-              // ORDER_BY(itemPriceCents DESC) — prices must be descending: 800, 700, 500, 400, 300
-              assertThat(items.stream().mapToLong(OrderItemInfo::itemPriceCents).boxed())
-                  .containsExactly(800L, 700L, 500L, 400L, 300L);
+              // Bob has 11 orders; @LIMIT(10) must cap at exactly 10
+              assertThat(orders).hasSize(10);
+              // @ORDER(by = "orderTime", direction = DESC) — newest 10: orderId 30..21
+              assertThat(orders.stream().mapToLong(OrderWithItems::orderId).boxed())
+                  .containsExactly(30L, 29L, 28L, 27L, 26L, 25L, 24L, 23L, 22L, 21L);
+              // Each order has 6 items; @LIMIT(5) caps at 5 per order, highest price first
+              for (OrderWithItems order : orders) {
+                assertThat(order.orderItems()).hasSize(5);
+                assertThat(
+                        order.orderItems().stream()
+                            .mapToLong(OrderItemInfo::itemPriceCents)
+                            .boxed())
+                    .containsExactly(600L, 500L, 400L, 300L, 200L);
+              }
             });
   }
 
@@ -458,10 +520,11 @@ class SqlTraitIntegrationTest {
         .succeedsWithin(TIMEOUT)
         .satisfies(
             orders -> {
-              assertThat(orders).hasSize(2);
-              // orderTime=2000 (orderId=11) must come before orderTime=1000 (orderId=10)
-              assertThat(orders.get(0).orderId()).isEqualTo(11L);
-              assertThat(orders.get(1).orderId()).isEqualTo(10L);
+              // Alice has 6 orders; @LIMIT(5) must cap at exactly 5
+              assertThat(orders).hasSize(5);
+              // @ORDER(by = "orderTime", direction = DESC) — newest 5: orderId 15..11
+              assertThat(orders.stream().mapToLong(OrderInfo::orderId).boxed())
+                  .containsExactly(15L, 14L, 13L, 12L, 11L);
             });
   }
 

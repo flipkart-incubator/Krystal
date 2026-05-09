@@ -312,18 +312,22 @@ class SqlVajramMapResultTest {
   @Test
   void getUserByIdWithOrdersAndItems_sql_isCorrect() {
     assertThat(GetUserByIdWithOrdersAndItems_VertxSql.resolveSql())
-        // No @LIMIT on type arg → standard path; WHERE goes directly on the outer query
-        .contains("FROM users LEFT JOIN orders ON users.id = orders.userId")
-        // orderItems is a nested join (level-2) so it always uses ROW_NUMBER
+        // No @LIMIT on type arg → standard path; WHERE goes directly on the outer query.
+        // orders has @LIMIT(3) AND nested orderItems → ROW_NUMBER required (outer LIMIT would
+        // truncate grandchild rows instead of bounding the number of orders per user).
+        .contains(
+            "LEFT JOIN (SELECT *, ROW_NUMBER() OVER (PARTITION BY userId"
+                + " ORDER BY orderTime DESC) AS _rn FROM orders) orders"
+                + " ON users.id = orders.userId AND orders._rn <= 3")
+        // orderItems is a nested join (level-2) → always ROW_NUMBER
         .contains(
             "LEFT JOIN (SELECT *, ROW_NUMBER() OVER (PARTITION BY orderId"
                 + " ORDER BY itemPriceCents DESC) AS _rn FROM orderItems) orderItems"
                 + " ON orders.orderId = orderItems.orderId AND orderItems._rn <= 5")
         .contains("WHERE users.id = $1")
-        // orders has @ORDER_BY(orderTime DESC); orderItems has @ORDER_BY(itemPriceCents DESC)
         .contains("ORDER BY orders.orderTime DESC, orderItems.itemPriceCents DESC")
-        // single parent → orders @LIMIT(3) expressed as outer LIMIT
-        .endsWith("LIMIT 3");
+        // No outer LIMIT — ROW_NUMBER is used instead
+        .doesNotContain("LIMIT 3");
   }
 
   // ─── GetUserByNameWithOrdersAndItems (three-level limits: user×orders×items) ──

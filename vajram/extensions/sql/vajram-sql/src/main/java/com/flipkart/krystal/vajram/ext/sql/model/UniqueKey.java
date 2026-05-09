@@ -6,10 +6,9 @@ import static java.lang.annotation.ElementType.TYPE;
 import java.lang.annotation.Target;
 
 /**
- * Annotation to mark a field or a set of fields in a @{@link Table} model as a unique key. The
- * field type must be same as the model type of the otherTable. If the unique key is on a single
- * column, the annotation must be applied to the model method. If the unique key is on multiple
- * columns, the annotation must be applied to the model interface.
+ * Annotation to mark a field or a set of fields in a @{@link Table} model as a unique key. If the
+ * unique key is on a single column, the annotation must be applied to the model method. If the
+ * unique key is on multiple columns, the annotation must be applied to the model interface.
  */
 @Target({METHOD, TYPE})
 public @interface UniqueKey {

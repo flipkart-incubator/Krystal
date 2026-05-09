@@ -449,7 +449,7 @@ public abstract class GetUserInfoById_VertxSql
 @SELECT
 @Trait
 @CallGraphDelegationMode(SYNC)
-public interface GetOrderInfoByUserId extends TraitDef<List<OrderInfo>> {
+public interface GetOrderInfoByUserId extends TraitDef<@LIMIT(NO_LIMIT) List<OrderInfo>> {
     interface _Inputs {
         @IfAbsent(FAIL) OrderUserIdEquals where();
     }

@@ -1,4 +1,5 @@
 module krystal.vajram.ext.sql.vertx {
+  requires java.compiler;
   requires flipkart.krystal.vajram;
   requires io.vertx.core;
   requires io.vertx.sql.client;
@@ -6,7 +7,6 @@ module krystal.vajram.ext.sql.vertx {
   requires static lombok;
   requires org.slf4j;
   requires jakarta.inject;
-  requires java.compiler;
   requires com.google.common;
 
   exports com.flipkart.krystal.vajram.ext.sql.vertx;

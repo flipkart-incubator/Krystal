@@ -29,5 +29,4 @@ dependencies {
     testImplementation project(':vajram:extensions:guice:vajram-guice')
     testImplementation 'io.vertx:vertx-jdbc-client'
     testImplementation 'com.h2database:h2:2.3.232'
-    testImplementation 'io.agroal:agroal-pool:2.5'
 }

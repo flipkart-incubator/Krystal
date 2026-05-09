@@ -2,4 +2,5 @@ description = "SQL codegen utilities for Krystal - annotation model parsing and 
 
 dependencies {
     api project(':vajram:extensions:sql:vajram-sql')
+    api project(':krystal-codegen-common')
 }

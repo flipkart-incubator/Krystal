@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.statement;
 
 import static com.flipkart.krystal.annos.ComputeDelegationMode.SYNC;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
+import static com.flipkart.krystal.vajram.ext.sql.statement.LIMIT.NO_LIMIT;
 
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.Trait;
@@ -18,7 +19,7 @@ import java.util.List;
 @SELECT
 @Trait
 @CallGraphDelegationMode(SYNC)
-public interface GetOrderInfoByUserId extends TraitDef<@LIMIT(LIMIT.NO_LIMIT) List<OrderInfo>> {
+public interface GetOrderInfoByUserId extends TraitDef<@LIMIT(NO_LIMIT) List<OrderInfo>> {
   interface _Inputs {
     @IfAbsent(FAIL)
     OrderUserIdEquals where();

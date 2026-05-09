@@ -81,7 +81,7 @@ public class SqlTraitVajramGen {
 
   public SqlTraitVajramGen(CodeGenUtility util) {
     this.util = util;
-    this.parser = new SqlModelParser(util.processingEnv());
+    this.parser = new SqlModelParser(util);
   }
 
   // ─── Entry point ─────────────────────────────────────────────────────────────
@@ -112,7 +112,7 @@ public class SqlTraitVajramGen {
 
   // ─── Main generation ─────────────────────────────────────────────────────────
 
-  private void generateSqlVajram(TypeElement traitElement) throws Exception {
+  private void generateSqlVajram(TypeElement traitElement) {
     String pkg =
         util.processingEnv()
             .getElementUtils()
@@ -202,18 +202,6 @@ public class SqlTraitVajramGen {
                 + ": returns a List but has no @LIMIT on the type argument. "
                 + "Use @LIMIT(N) to cap the number of returned rows or "
                 + "@LIMIT(LIMIT.NO_LIMIT) to explicitly fetch all rows.",
-            traitElement);
-        return;
-      }
-      if (traitLimit == 1) {
-        util.error(
-            "[SqlTraitVajramGen] "
-                + traitName
-                + ": @LIMIT(1) is not valid on a list-result trait (TraitDef<List<"
-                + resultType.projectionElement().getSimpleName()
-                + ">>). For a single-row result use TraitDef<@LIMIT(1) "
-                + resultType.projectionElement().getSimpleName()
-                + "> instead.",
             traitElement);
         return;
       }
@@ -608,7 +596,11 @@ public class SqlTraitVajramGen {
       ClassName joinImmutPojo = ClassName.get(joinProjPkg, joinProjName + IMMUT_POJO_SUFFIX);
 
       if (join.nestedJoins().isEmpty()) {
-        String sentinelAlias = join.tableName() + "_" + join.columns().get(0).methodName();
+        String sentinelMethodName = findSentinelMethodName(join);
+        if (sentinelMethodName == null) {
+          return method.build();
+        }
+        String sentinelAlias = join.tableName() + "_" + sentinelMethodName;
         method.beginControlFlow(
             "if (_parentKey != null && _row.getValue($S) != null)", sentinelAlias);
         CodeBlock.Builder childChain =
@@ -624,11 +616,11 @@ public class SqlTraitVajramGen {
         method.endControlFlow();
       } else {
         // Nested: key on level-1 join PK, accumulate level-2 rows
-        String childPkCol =
-            join.childPkColumn() != null
-                ? join.childPkColumn()
-                : join.columns().get(0).methodName();
-        String childPkAlias = join.tableName() + "_" + childPkCol;
+        String childPkMethodName = findDedupeKeyMethodName(join);
+        if (childPkMethodName == null) {
+          return method.build();
+        }
+        String childPkAlias = join.tableName() + "_" + childPkMethodName;
         method.addStatement(
             "$T _$LKey = _row.getValue($S)", Object.class, join.methodName(), childPkAlias);
         method.beginControlFlow(
@@ -665,8 +657,11 @@ public class SqlTraitVajramGen {
           String nestedProjName = nested.projectionElement().getSimpleName().toString();
           ClassName nestedImmutPojo =
               ClassName.get(nestedProjPkg, nestedProjName + IMMUT_POJO_SUFFIX);
-          String nestedSentinelAlias =
-              nested.tableName() + "_" + nested.columns().get(0).methodName();
+          String nestedSentinelMethodName = findSentinelMethodName(nested);
+          if (nestedSentinelMethodName == null) {
+            return method.build();
+          }
+          String nestedSentinelAlias = nested.tableName() + "_" + nestedSentinelMethodName;
           method.beginControlFlow(
               "if (_parentKey != null && _$LKey != null && _row.getValue($S) != null)",
               join.methodName(),
@@ -864,7 +859,11 @@ public class SqlTraitVajramGen {
 
       if (join.nestedJoins().isEmpty()) {
         // Simple: sentinel-null-check then append to list
-        String sentinelAlias = join.tableName() + "_" + join.columns().get(0).methodName();
+        String sentinelMethodName = findSentinelMethodName(join);
+        if (sentinelMethodName == null) {
+          return method.build();
+        }
+        String sentinelAlias = join.tableName() + "_" + sentinelMethodName;
         method.beginControlFlow("if (_row.getValue($S) != null)", sentinelAlias);
         CodeBlock.Builder childChain =
             CodeBlock.builder().add("_$L.add($T._builder()", join.methodName(), joinImmutPojo);
@@ -878,11 +877,11 @@ public class SqlTraitVajramGen {
         method.endControlFlow();
       } else {
         // Nested: deduplicate level-1 by PK, accumulate level-2 into separate lists
-        String childPkCol =
-            join.childPkColumn() != null
-                ? join.childPkColumn()
-                : join.columns().get(0).methodName();
-        String childPkAlias = join.tableName() + "_" + childPkCol;
+        String childPkMethodName = findDedupeKeyMethodName(join);
+        if (childPkMethodName == null) {
+          return method.build();
+        }
+        String childPkAlias = join.tableName() + "_" + childPkMethodName;
         method.addStatement(
             "$T _$LKey = _row.getValue($S)", Object.class, join.methodName(), childPkAlias);
         method.beginControlFlow(
@@ -921,8 +920,11 @@ public class SqlTraitVajramGen {
           String nestedProjName = nested.projectionElement().getSimpleName().toString();
           ClassName nestedImmutPojo =
               ClassName.get(nestedProjPkg, nestedProjName + IMMUT_POJO_SUFFIX);
-          String nestedSentinelAlias =
-              nested.tableName() + "_" + nested.columns().get(0).methodName();
+          String nestedSentinelMethodName = findSentinelMethodName(nested);
+          if (nestedSentinelMethodName == null) {
+            return method.build();
+          }
+          String nestedSentinelAlias = nested.tableName() + "_" + nestedSentinelMethodName;
           method.beginControlFlow(
               "if (_$LKey != null && _row.getValue($S) != null)",
               join.methodName(),
@@ -998,6 +1000,85 @@ public class SqlTraitVajramGen {
     return method.build();
   }
 
+  /**
+   * Returns the projection {@code methodName} (SQL alias suffix) that can be used as a
+   * null-sentinel to detect absent LEFT JOIN rows.
+   *
+   * <p>The sentinel must be a column that is guaranteed non-null whenever a real child row is
+   * present. Priority:
+   *
+   * <ol>
+   *   <li>The child primary-key column — non-null IFF a row exists.
+   *   <li>The child foreign-key column ({@code childJoinColumn}) — non-null IFF a row exists
+   *       because the SQL {@code ON} clause is defined on it.
+   * </ol>
+   *
+   * <p>If neither is projected, a compile error is emitted and {@code null} is returned; the
+   * developer must add the PK or FK column to the projection.
+   */
+  private String findSentinelMethodName(JoinRelation join) {
+    if (join.childPkColumn() != null) {
+      for (ScalarColumn col : join.columns()) {
+        if (col.dbColumnName().equals(join.childPkColumn())) {
+          return col.methodName();
+        }
+      }
+    }
+    for (ScalarColumn col : join.columns()) {
+      if (col.dbColumnName().equals(join.childJoinColumn())) {
+        return col.methodName();
+      }
+    }
+    String projName = join.projectionElement().getSimpleName().toString();
+    util.error(
+        "[vajram-sql] Projection '"
+            + projName
+            + "' must project either its primary-key column"
+            + (join.childPkColumn() != null ? " ('" + join.childPkColumn() + "')" : "")
+            + " or its foreign-key column ('"
+            + join.childJoinColumn()
+            + "') so that absent LEFT JOIN rows can be detected reliably. "
+            + "Add the PK or FK column as a method in '"
+            + projName
+            + "'.",
+        join.projectionElement());
+    return null;
+  }
+
+  /**
+   * Returns the projection {@code methodName} (SQL alias suffix) to use as the deduplication key
+   * for level-1 child rows in a nested join.
+   *
+   * <p>Unlike {@link #findSentinelMethodName} this only accepts the child PK — using the FK ({@code
+   * childJoinColumn}) is wrong here because the FK holds the parent's PK value, which is identical
+   * for every child of the same parent and would collapse all children to one entry.
+   *
+   * <p>If the child PK column is not projected, a compile error is emitted and {@code null} is
+   * returned; the developer must add the PK column to the child projection.
+   */
+  private String findDedupeKeyMethodName(JoinRelation join) {
+    if (join.childPkColumn() != null) {
+      for (ScalarColumn col : join.columns()) {
+        if (col.dbColumnName().equals(join.childPkColumn())) {
+          return col.methodName();
+        }
+      }
+    }
+    String projName = join.projectionElement().getSimpleName().toString();
+    util.error(
+        "[vajram-sql] Projection '"
+            + projName
+            + "' must project its primary-key column"
+            + (join.childPkColumn() != null ? " ('" + join.childPkColumn() + "')" : "")
+            + " when used as a nested join (i.e. it itself contains a List<Projection> method), "
+            + "because the PK is required to deduplicate level-1 child rows. "
+            + "Add the PK column as a method in '"
+            + projName
+            + "'.",
+        join.projectionElement());
+    return null;
+  }
+
   /** Returns the package name of a join's projection element. */
   private String projPkg(JoinRelation join) {
     return util.processingEnv()
@@ -1011,12 +1092,24 @@ public class SqlTraitVajramGen {
 
   private String rowGetter(String rowVar, String alias, TypeMirror type) {
     String q = "\"" + alias + "\"";
-    if (type.getKind() == TypeKind.LONG) return rowVar + ".getLong(" + q + ")";
-    if (type.getKind() == TypeKind.INT) return rowVar + ".getInteger(" + q + ")";
-    if (type.getKind() == TypeKind.BOOLEAN) return rowVar + ".getBoolean(" + q + ")";
-    if (type.getKind() == TypeKind.DOUBLE) return rowVar + ".getDouble(" + q + ")";
-    if (type.getKind() == TypeKind.FLOAT) return rowVar + ".getFloat(" + q + ")";
-    if (type.getKind() == TypeKind.SHORT) return rowVar + ".getShort(" + q + ")";
+    if (type.getKind() == TypeKind.LONG) {
+      return rowVar + ".getLong(" + q + ")";
+    }
+    if (type.getKind() == TypeKind.INT) {
+      return rowVar + ".getInteger(" + q + ")";
+    }
+    if (type.getKind() == TypeKind.BOOLEAN) {
+      return rowVar + ".getBoolean(" + q + ")";
+    }
+    if (type.getKind() == TypeKind.DOUBLE) {
+      return rowVar + ".getDouble(" + q + ")";
+    }
+    if (type.getKind() == TypeKind.FLOAT) {
+      return rowVar + ".getFloat(" + q + ")";
+    }
+    if (type.getKind() == TypeKind.SHORT) {
+      return rowVar + ".getShort(" + q + ")";
+    }
     return switch (type.toString()) {
       case "java.lang.String" -> rowVar + ".getString(" + q + ")";
       case "java.lang.Long" -> rowVar + ".getLong(" + q + ")";

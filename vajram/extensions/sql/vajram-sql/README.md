@@ -20,7 +20,7 @@ vajram-sql generates SQL at compile time rather than at runtime via reflection. 
 
 ### Declarative definitions, imperative execution
 
-You write declarative annotations (`@Table`, `@Projection`, `@WHERE`, `@ORDER_BY`). The codegen converts these into the imperative Java boilerplate — the `SELECT` string, the `Tuple.from(...)` parameter binding, the `RowSet<Row>` mapping loop. This keeps your code declarative and easy to review while keeping the execution path explicit and traceable.
+You write declarative annotations (`@Table`, `@Projection`, `@WHERE`, `@ORDER`). The codegen converts these into the imperative Java boilerplate — the `SELECT` string, the `Tuple.from(...)` parameter binding, the `RowSet<Row>` mapping loop. This keeps your code declarative and easy to review while keeping the execution path explicit and traceable.
 
 ### How vajram-sql differs from Hibernate-style ORMs
 
@@ -90,17 +90,22 @@ public interface Order extends TableModel {
 }
 ```
 
-The referenced table declares the reverse side with `@IncomingForeignKey` (optional but useful for documentation):
+The referenced table **must** also declare the reverse side with `@IncomingForeignKey` for any JOIN to be valid:
 
 ```java
 @IncomingForeignKey
 List<Order> orders();       // reverse of Order.userId — not a real DB column
 ```
 
-**Invariants:**
+**Bidirectional-FK invariant (enforced at compile time):** a `List<@Projection>` join in a `@Projection` interface is only valid when both directions of the FK relationship are declared:
+- The **child** table must have a `@ForeignKey`-annotated method whose return type is the **parent** table model.
+- The **parent** table must have an `@IncomingForeignKey`-annotated method whose return type is `List<ChildTable>` or `ChildTable`.
+
+If either annotation is absent the code generator reports a compile-time error pointing to the `List<@Projection>` method that triggered the join.
+
+**Additional invariants:**
 - A `@ForeignKey` method's return type **must** be a `@Table`-annotated model interface. Referencing a non-table type will prevent the codegen from discovering the join condition.
-- An `@IncomingForeignKey` method must **not** represent a real DB column. It documents the reverse side of a relationship that is physically stored on another table.
-- For a LEFT JOIN to be generated, the child table **must** have a `@ForeignKey` method whose return type is the parent table. Without this, the codegen cannot determine the join condition.
+- An `@IncomingForeignKey` method must **not** represent a real DB column. It models the reverse side of a relationship that is physically stored on another table.
 
 #### Composite Unique Key
 
@@ -164,7 +169,7 @@ A projection method whose return type is `List<AnotherProjection>` — where `An
 public interface UserNameAndOrders extends Model {
     String name();
 
-    @ORDER_BY(column = "orderTime", order = DESC)
+    @ORDER(by = "orderTime", direction = DESC)
     @LIMIT(10)
     List<OrderInfo> orders();    // LEFT JOIN orders ON users.id = orders.userId
 }
@@ -188,7 +193,8 @@ public interface OrderWithItems extends Model {
 @Projection(over = User.class)
 public interface UserWithOrdersAndItems extends Model {
     String name();
-    @LIMIT(LIMIT.NO_LIMIT)
+    @ORDER(by = "orderTime", direction = DESC)
+    @LIMIT(3)
     List<OrderWithItems> orders();       // joins: users → orders → orderItems
 }
 ```
@@ -197,10 +203,10 @@ The codegen generates a single SQL query with two LEFT JOINs and uses a `LinkedH
 
 | Annotation | Target | Meaning |
 |---|---|---|
-| `@ORDER_BY(column, order)` | `List<Projection>` method | Adds an `ORDER BY` clause on the joined table's column |
+| `@ORDER(by, direction)` | `List<Projection>` method | Adds an `ORDER BY` clause on the joined table's column |
 | `@LIMIT(n)` | `List<Projection>` method | **Required.** Adds a `LIMIT` clause. Use `@LIMIT(LIMIT.NO_LIMIT)` to explicitly opt out. |
 
-`@ORDER_BY` is repeatable — apply it multiple times for multi-column ordering.
+`@ORDER` is repeatable — apply it multiple times for multi-column ordering.
 
 `LIMIT.NO_LIMIT` is the constant `int NO_LIMIT = -1` on the `@LIMIT` annotation interface, used to declare an explicit "fetch all" intent without magic numbers:
 
@@ -212,7 +218,7 @@ List<OrderInfo> orders();  // all orders, explicitly unbounded
 **Invariants:**
 - A `List<AnotherProjection>` method in a parent projection signals a LEFT JOIN. The child projection must also be annotated with `@Projection(over = ChildTable.class)`.
 - **`@LIMIT` is mandatory** on every `List<Projection>` join method. Omitting it produces a compile-time error. The requirement exists because unbounded JOINs can return excessive data. Use `@LIMIT(LIMIT.NO_LIMIT)` to explicitly opt out.
-- The child table **must** have a `@ForeignKey` method whose return type is the parent table. The codegen uses this to generate the `ON parent.pk = child.fk` join condition. If no such FK exists, codegen will error.
+- **Bidirectional FK required:** the child table must have `@ForeignKey` pointing to the parent table AND the parent table must have `@IncomingForeignKey` pointing back to the child table. If either is absent, codegen reports a compile-time error on the `List<@Projection>` method that caused the join.
 - For multi-level joins, the intermediate table's projection must include the primary key column so that the codegen can use it as the deduplication key when grouping grandchild rows.
 - The generated LEFT JOIN returns `NULL` in child columns when there is no matching child row. This means child rows with all `NULL` columns are silently dropped, and an empty `List` is returned — correct behaviour for a LEFT JOIN with no matches.
 
@@ -222,7 +228,7 @@ List<OrderInfo> orders();  // all orders, explicitly unbounded
 
 The code generation trigger is a `@SQL @SELECT @Trait` interface — a Krystal trait that declares the WHERE-clause inputs and the result type. The codegen module generates a complete Vert.x-backed Compute Vajram for each such trait.
 
-`@LIMIT` and `@ORDER_BY` are placed as **type-use annotations on the `TraitDef<T>` type argument** — not on the trait interface itself. This makes the query contract self-contained: the type signature declares both _what_ is returned and _how many_ rows are expected.
+`@LIMIT` and `@ORDER` are placed as **type-use annotations on the `TraitDef<T>` type argument** — not on the trait interface itself. This makes the query contract self-contained: the type signature declares both _what_ is returned and _how many_ rows are expected.
 
 **Single-row result** (`TraitDef<@LIMIT(1) T>`):
 ```java
@@ -237,14 +243,14 @@ public interface GetUserInfoById extends TraitDef<@LIMIT(1) UserInfo> {
 }
 ```
 
-**Multi-row result with ORDER BY and LIMIT** (`TraitDef<@ORDER_BY @LIMIT List<T>>`):
+**Multi-row result with ORDER BY and LIMIT** (`TraitDef<@ORDER @LIMIT List<T>>`):
 ```java
 @SQL
 @SELECT
 @Trait
 @CallGraphDelegationMode(SYNC)
 public interface GetRecentOrdersByUserId
-    extends TraitDef<@ORDER_BY(column = "orderTime", order = DESC) @LIMIT(5) List<OrderInfo>> {
+    extends TraitDef<@ORDER(by = "orderTime", direction = DESC) @LIMIT(5) List<OrderInfo>> {
     interface _Inputs {
         @IfAbsent(FAIL) OrderUserIdEquals where();
     }
@@ -259,7 +265,7 @@ Key points:
 - `@LIMIT(1)` on the type arg — required for single-result traits; added as `LIMIT 1` to the generated SQL for simple queries. For JOIN queries (projections with `List<ChildProjection>` methods), `@LIMIT(1)` is still required but is *not* added to the SQL — applying LIMIT at the outer query level would truncate joined child rows.
 - `@LIMIT(N)` with N > 1 or `@LIMIT(LIMIT.NO_LIMIT)` — **required** on `List<T>` result traits. A plain `TraitDef<List<T>>` without `@LIMIT` produces a compile-time error. `LIMIT.NO_LIMIT` = -1 means no limit.
 - For `TraitDef<@LIMIT(N) List<T>>` where `T` contains a join: the LIMIT applies to the number of **parent rows** returned, implemented via a subquery (not a plain `LIMIT N` at the end). See the codegen README for details.
-- `@ORDER_BY(column, order)` on the type arg — appends `ORDER BY col [ASC|DESC]` to the generated SQL for simple queries. Repeatable for multi-column ordering.
+- `@ORDER(by, direction)` on the type arg — appends `ORDER BY col [ASC|DESC]` to the generated SQL for simple queries. Repeatable for multi-column ordering.
 - `_Inputs` should contain **only functional/business inputs** (WHERE-clause values). Infrastructure like the connection pool is injected into the generated vajram automatically.
 - `@CallGraphDelegationMode(SYNC)` is required by Krystal's trait system.
 
@@ -272,13 +278,13 @@ Key points:
 
 #### Single vs. Multiple Results
 
-| Trait signature | Generated SQL shape | `mapResult` behaviour |
-|---|---|---|
-| `TraitDef<@LIMIT(1) UserInfo>` | `... WHERE ... LIMIT 1` | Maps the first row; returns `null` if empty |
-| `TraitDef<@LIMIT(1) UserNameAndOrders>` (JOIN) | `... WHERE ...` (no outer LIMIT) | Maps single parent + joined children; returns `null` if empty |
-| `TraitDef<@LIMIT(LIMIT.NO_LIMIT) List<OrderInfo>>` | `... WHERE ...` (no LIMIT) | Maps all rows; returns empty list if none |
-| `TraitDef<@LIMIT(5) List<OrderInfo>>` | `... WHERE ... LIMIT 5` | Maps up to 5 rows; returns empty list if none |
-| `TraitDef<@LIMIT(10) List<OrderWithItems>>` (JOIN) | `FROM (SELECT * FROM … LIMIT 10) parent LEFT JOIN child` | Maps up to 10 parent rows, each with all their children |
+| Trait signature | Generated SQL shape                                              | `mapResult` behaviour |
+|---|------------------------------------------------------------------|---|
+| `TraitDef<@LIMIT(1) UserInfo>` | `... WHERE ... LIMIT 1`                                          | Maps the first row; returns `null` if empty |
+| `TraitDef<@LIMIT(1) UserNameAndOrders>` (JOIN) | `... WHERE ...` (no outer LIMIT uses sub query LIMIT for correctness) | Maps single parent + joined children; returns `null` if empty |
+| `TraitDef<@LIMIT(LIMIT.NO_LIMIT) List<OrderInfo>>` | `... WHERE ...` (no LIMIT)                                       | Maps all rows; returns empty list if none |
+| `TraitDef<@LIMIT(5) List<OrderInfo>>` | `... WHERE ... LIMIT 5`                                          | Maps up to 5 rows; returns empty list if none |
+| `TraitDef<@LIMIT(10) List<OrderWithItems>>` (JOIN) | `FROM (SELECT * FROM … LIMIT 10) parent LEFT JOIN child`         | Maps up to 10 parent rows, each with all their children |
 
 #### WHERE Clause Inputs
 
@@ -323,7 +329,7 @@ public interface User extends TableModel {
     String name();
     @UniqueKey(name = "uk_users_email") String email();
     Optional<String> phoneNumber();
-    @IncomingForeignKey List<Order> orders();   // optional — documents the reverse FK
+    @IncomingForeignKey List<Order> orders();   // required for any JOIN that starts from users
 }
 ```
 
@@ -350,7 +356,7 @@ public interface UserSummary extends Model {
 public interface UserWithRecentOrders extends Model {
     String name();
 
-    @ORDER_BY(column = "orderTime", order = DESC)
+    @ORDER(by = "orderTime", direction = DESC)
     @LIMIT(5)
     List<OrderInfo> orders();
 }
@@ -371,7 +377,7 @@ public interface UserIdEquals extends WhereClause {
 
 ### Step 4 — Declare the SELECT Trait
 
-Create a `@SQL @SELECT @Trait` interface that wires the projection to the WHERE inputs. Place `@LIMIT` and `@ORDER_BY` as type-use annotations on the `TraitDef<T>` type argument.
+Create a `@SQL @SELECT @Trait` interface that wires the projection to the WHERE inputs. Place `@LIMIT` and `@ORDER` as type-use annotations on the `TraitDef<T>` type argument.
 
 ```java
 // Single-row result — @LIMIT(1) required on the type argument
@@ -394,7 +400,7 @@ public interface GetAllUsers extends TraitDef<@LIMIT(LIMIT.NO_LIMIT) List<UserSu
 @SQL @SELECT @Trait
 @CallGraphDelegationMode(SYNC)
 public interface GetRecentOrdersByUserId
-    extends TraitDef<@ORDER_BY(column = "orderTime", order = DESC) @LIMIT(5) List<OrderInfo>> {
+    extends TraitDef<@ORDER(by = "orderTime", direction = DESC) @LIMIT(5) List<OrderInfo>> {
     interface _Inputs {
         @IfAbsent(FAIL) OrderUserIdEquals where();
     }
@@ -416,7 +422,7 @@ The codegen module (`vajram-sql-vertx-codegen`) is an annotation processor. Add 
 
 ```groovy
 dependencies {
-    annotationProcessor project(':vajram:extensions:sql:vertx:vajram-sql-vertx-codegen')
+    krystalModelsGenProcessor project(':vajram:extensions:sql:vertx:vajram-sql-vertx-codegen')
 }
 ```
 
@@ -444,11 +450,11 @@ UserSummary userSummary;
 |---|---|---|---|
 | Fetch a single row by PK | Scalar methods only | `TraitDef<@LIMIT(1) T>` | Required — enforces single-row intent |
 | Fetch a single row by unique column | Scalar methods only | `TraitDef<@LIMIT(1) T>` | Required — enforces single-row intent |
-| Fetch multiple rows | Scalar methods only | `TraitDef<List<T>>` | Optional — `@LIMIT(N)` appends `LIMIT N` to SQL |
-| Fetch N most recent rows | Scalar methods only | `TraitDef<@ORDER_BY(...) @LIMIT(N) List<T>>` | `@LIMIT(N)` with N > 1 |
+| Fetch multiple rows (bounded) | Scalar methods only | `TraitDef<@LIMIT(N) List<T>>` | **Required** — `SqlTraitVajramGen` emits a compile error if `TraitDef<List<T>>` has no `@LIMIT`; use `@LIMIT(N)` to cap at N rows |
+| Fetch N most recent rows | Scalar methods only | `TraitDef<@ORDER(...) @LIMIT(N) List<T>>` | **Required** — `@LIMIT(N)` with N > 1 |
 | Fetch one parent + its children | One `List<ChildProjection>` method | `TraitDef<@LIMIT(1) T>` | Required — NOT added to SQL for JOINs |
 | Fetch parent → child → grandchild | Nested `List<ChildProjection>` | `TraitDef<@LIMIT(1) T>` | Required — NOT added to SQL for JOINs |
-| Fetch all rows | Scalar methods only | `TraitDef<List<T>>` | Not needed |
+| Fetch all rows (unbounded) | Scalar methods only | `TraitDef<@LIMIT(LIMIT.NO_LIMIT) List<T>>` | **Required** — `@LIMIT(LIMIT.NO_LIMIT)` is the explicit opt-out; omitting `@LIMIT` entirely is a compile error |
 
 ---
 
@@ -470,7 +476,7 @@ com.flipkart.krystal.vajram.ext.sql
     ├── WHERE.java              — @WHERE(inTable=...): marks an interface as a WHERE-clause param group
     ├── WhereClause.java        — base interface for @WHERE types
     ├── Column.java             — @Column("colName"): explicit column name / aliasing
-    ├── ORDER_BY.java           — @ORDER_BY(column, order): ORDER BY on List<Projection> methods or TraitDef<T> type arg
+    ├── ORDER.java              — @ORDER(by, direction): ORDER BY on List<Projection> methods or TraitDef<T> type arg
     ├── LIMIT.java              — @LIMIT(n): LIMIT on List<Projection> methods or TraitDef<T> type arg
     ├── INSERT.java             — @INSERT: planned
     ├── UPDATE.java             — @UPDATE: planned

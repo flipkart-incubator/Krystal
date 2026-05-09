@@ -198,12 +198,24 @@ public class SelectResultGen {
   }
 
   private TypeName resolveTypeName(TypeMirror type) {
-    if (type.getKind() == TypeKind.LONG) return TypeName.LONG;
-    if (type.getKind() == TypeKind.INT) return TypeName.INT;
-    if (type.getKind() == TypeKind.BOOLEAN) return TypeName.BOOLEAN;
-    if (type.getKind() == TypeKind.DOUBLE) return TypeName.DOUBLE;
-    if (type.getKind() == TypeKind.FLOAT) return TypeName.FLOAT;
-    if (type.getKind() == TypeKind.SHORT) return TypeName.SHORT;
+    if (type.getKind() == TypeKind.LONG) {
+      return TypeName.LONG;
+    }
+    if (type.getKind() == TypeKind.INT) {
+      return TypeName.INT;
+    }
+    if (type.getKind() == TypeKind.BOOLEAN) {
+      return TypeName.BOOLEAN;
+    }
+    if (type.getKind() == TypeKind.DOUBLE) {
+      return TypeName.DOUBLE;
+    }
+    if (type.getKind() == TypeKind.FLOAT) {
+      return TypeName.FLOAT;
+    }
+    if (type.getKind() == TypeKind.SHORT) {
+      return TypeName.SHORT;
+    }
     if (isOptionalType(type)) {
       TypeMirror inner = getOptionalInnerType(type);
       return ParameterizedTypeName.get(ClassName.get(Optional.class), resolveTypeName(inner).box());
@@ -219,12 +231,24 @@ public class SelectResultGen {
    */
   private String rowGetterCall(TypeMirror type, String colName) {
     String quoted = "\"" + colName + "\"";
-    if (type.getKind() == TypeKind.LONG) return "row.getLong(" + quoted + ")";
-    if (type.getKind() == TypeKind.INT) return "row.getInteger(" + quoted + ")";
-    if (type.getKind() == TypeKind.BOOLEAN) return "row.getBoolean(" + quoted + ")";
-    if (type.getKind() == TypeKind.DOUBLE) return "row.getDouble(" + quoted + ")";
-    if (type.getKind() == TypeKind.FLOAT) return "row.getFloat(" + quoted + ")";
-    if (type.getKind() == TypeKind.SHORT) return "row.getShort(" + quoted + ")";
+    if (type.getKind() == TypeKind.LONG) {
+      return "row.getLong(" + quoted + ")";
+    }
+    if (type.getKind() == TypeKind.INT) {
+      return "row.getInteger(" + quoted + ")";
+    }
+    if (type.getKind() == TypeKind.BOOLEAN) {
+      return "row.getBoolean(" + quoted + ")";
+    }
+    if (type.getKind() == TypeKind.DOUBLE) {
+      return "row.getDouble(" + quoted + ")";
+    }
+    if (type.getKind() == TypeKind.FLOAT) {
+      return "row.getFloat(" + quoted + ")";
+    }
+    if (type.getKind() == TypeKind.SHORT) {
+      return "row.getShort(" + quoted + ")";
+    }
     String typeName = type.toString();
     return switch (typeName) {
       case "java.lang.String" -> "row.getString(" + quoted + ")";
