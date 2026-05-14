@@ -95,7 +95,8 @@ public class DropWizardApplicationGen implements LatticeCodeGeneratorProvider {
       private void validate(AnnotationInfo<LatticeApp> annotationInfo) {
         CodeGenUtility util = context.codeGenUtility().codegenUtil();
         TypeMirror depInjectionFramework =
-            util.getTypeFromAnnotationMember(context.latticeApp()::dependencyInjectionFramework);
+            util.getTypeElemFromAnnotationMember(context.latticeApp()::dependencyInjectionFramework)
+                .asType();
         if (!util.isRawAssignable(depInjectionFramework, GuiceFramework.class)) {
           util.processingEnv()
               .getMessager()

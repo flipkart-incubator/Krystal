@@ -260,7 +260,8 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
           .codeGenUtility()
           .codegenUtil()
           .isRawAssignable(
-              vajramResponseType.rawType().javaModelType(processingEnv), Publisher.class)) {
+              processingEnv.getTypeUtils().erasure(vajramResponseType.typeMirror(processingEnv)),
+              Publisher.class)) {
         jakartaResourceReturnType = publisherType;
         returnsPublisher = true;
       } else {
@@ -315,7 +316,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
       for (Entry<FacetGenModel, FacetParamType> entry : params.entrySet()) {
         FacetGenModel facet = entry.getKey();
         FacetParamType facetParamType = entry.getValue();
-        TypeMirror facetType = facet.dataType().javaModelType(util.processingEnv());
+        TypeMirror facetType = facet.dataType().typeMirror(util.processingEnv());
         if (facetParamType == FacetParamType.PATH) {
           methodBuilder.addParameter(
               ParameterSpec.builder(TypeName.get(facetType), facet.name())
@@ -361,27 +362,16 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
         if (bodyFacet != null) {
           Map<@NonNull Element, SerdeConfig> collect =
               Arrays.stream(bodyFacet.facetElement().getAnnotationsByType(SerdeConfig.class))
-                  .collect(
-                      toMap(
-                          s ->
-                              requireNonNull(
-                                  util.processingEnv()
-                                      .getTypeUtils()
-                                      .asElement(util.getTypeFromAnnotationMember(s::protocol))),
-                          s -> s));
+                  .collect(toMap(s -> util.getTypeElemFromAnnotationMember(s::protocol), s -> s));
           serdeConfigsMap.putAll(collect);
           Element bodyTypeElem =
               requireNonNull(
                   util.processingEnv()
                       .getTypeUtils()
-                      .asElement(bodyFacet.dataType().javaModelType(util.processingEnv())));
+                      .asElement(bodyFacet.dataType().typeMirror(util.processingEnv())));
           for (SerdeConfig serdeConfig : bodyTypeElem.getAnnotationsByType(SerdeConfig.class)) {
             serdeConfigsMap.putIfAbsent(
-                requireNonNull(
-                    util.processingEnv()
-                        .getTypeUtils()
-                        .asElement(util.getTypeFromAnnotationMember(serdeConfig::protocol))),
-                serdeConfig);
+                util.getTypeElemFromAnnotationMember(serdeConfig::protocol), serdeConfig);
           }
           supportedModelProtocols = bodyTypeElem.getAnnotation(SupportedModelProtocols.class);
         } else {
@@ -390,14 +380,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
           supportedModelProtocols = annotationSource.getAnnotation(SupportedModelProtocols.class);
           Map<@NonNull Element, SerdeConfig> collect =
               Arrays.stream(annotationSource.getAnnotationsByType(SerdeConfig.class))
-                  .collect(
-                      toMap(
-                          s ->
-                              requireNonNull(
-                                  util.processingEnv()
-                                      .getTypeUtils()
-                                      .asElement(util.getTypeFromAnnotationMember(s::protocol))),
-                          s -> s));
+                  .collect(toMap(s -> util.getTypeElemFromAnnotationMember(s::protocol), s -> s));
           serdeConfigsMap.putAll(collect);
         }
         ImmutableList<TypeElement> requestSerdeProtocols = ImmutableList.of();
@@ -480,7 +463,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
                     (TypeElement)
                         util.processingEnv()
                             .getTypeUtils()
-                            .asElement(bodyFacet.dataType().javaModelType(util.processingEnv())));
+                            .asElement(bodyFacet.dataType().typeMirror(util.processingEnv())));
 
             serdeSpecificMethodBuilder.addStatement(
                 CodeBlock.of(

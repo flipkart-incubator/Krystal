@@ -1,14 +1,15 @@
 package com.flipkart.krystal.codegen.common.datatypes;
 
-import static com.flipkart.krystal.codegen.common.datatypes.CodeGenTypeUtils.box;
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.standardTypesByCanonicalName;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenerationException;
 import com.google.common.collect.ImmutableList;
 import com.squareup.javapoet.CodeBlock;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import lombok.EqualsAndHashCode;
@@ -18,38 +19,32 @@ import lombok.Getter;
 public final class JavaCodeGenType implements CodeGenType {
 
   static JavaCodeGenType create(
-      String canonicalClassName, ImmutableList<CodeGenType> typeParameters) {
-    return new JavaCodeGenType(canonicalClassName, typeParameters);
+      TypeMirror typeMirror,
+      List<CodeGenType> typeParameters,
+      ProcessingEnvironment processingEnvironment) {
+    return new JavaCodeGenType(typeMirror, typeParameters, processingEnvironment);
   }
 
   @Getter private final String canonicalClassName;
   @Getter private final ImmutableList<CodeGenType> typeParameters;
+  @Getter private final TypeMirror typeMirror;
 
-  private JavaCodeGenType(String canonicalClassName, ImmutableList<CodeGenType> typeParameters) {
-    this.canonicalClassName = canonicalClassName;
-    this.typeParameters = typeParameters;
-  }
-
-  @Override
-  public TypeMirror javaModelType(ProcessingEnvironment processingEnv) {
-    TypeElement typeElement = processingEnv.getElementUtils().getTypeElement(canonicalClassName);
-    if (typeElement == null) {
-      throw new IllegalArgumentException(
-          "Could not find typeElement for canonical class name '%s'".formatted(canonicalClassName));
+  private JavaCodeGenType(
+      TypeMirror typeMirror,
+      List<CodeGenType> typeParameters,
+      ProcessingEnvironment processingEnvironment) {
+    Element element = processingEnvironment.getTypeUtils().asElement(typeMirror);
+    if (!(element instanceof TypeElement typeElement)) {
+      throw new IllegalArgumentException(typeMirror + "");
     }
-    return processingEnv
-        .getTypeUtils()
-        .getDeclaredType(
-            typeElement,
-            typeParameters.stream()
-                .map(t -> box(t.javaModelType(processingEnv), processingEnv))
-                .toArray(TypeMirror[]::new));
+    this.canonicalClassName = typeElement.getQualifiedName().toString();
+    this.typeMirror = typeMirror;
+    this.typeParameters = ImmutableList.copyOf(typeParameters);
   }
 
-  @SuppressWarnings("unchecked")
   @Override
-  public CodeGenType rawType() {
-    return new JavaCodeGenType(canonicalClassName, ImmutableList.of());
+  public TypeMirror typeMirror(ProcessingEnvironment processingEnv) {
+    return typeMirror;
   }
 
   @Override

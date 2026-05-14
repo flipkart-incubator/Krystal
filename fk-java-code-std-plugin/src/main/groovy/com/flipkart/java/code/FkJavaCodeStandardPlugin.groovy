@@ -136,6 +136,6 @@ class FkJavaCodeStandardPlugin implements Plugin<Project> {
     private static jacoco(Project project) {
         project.pluginManager.apply('jacoco')
 
-        project.extensions.findByType(JacocoPluginExtension).setToolVersion("0.8.12")
+        project.extensions.findByType(JacocoPluginExtension).setToolVersion("0.8.14")
     }
 }

@@ -1,26 +1,31 @@
 package com.flipkart.krystal.vajram.ext.sql.vertx.codegen;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
+import static com.flipkart.krystal.vajram.ext.sql.statement.LIMIT.NO_LIMIT;
+import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
+import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
-import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.Vajram;
+import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
+import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlModelParser;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryBuilder;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.JoinRelation;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.JoinSqlResult;
-import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.OrderByClause;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.ScalarColumn;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.SelectionInfo;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.TraitResultType;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereInput;
-import com.flipkart.krystal.vajram.ext.sql.statement.SELECT;
-import com.flipkart.krystal.vajram.ext.sql.statement.SQL;
+import com.flipkart.krystal.vajram.ext.sql.model.Table;
+import com.flipkart.krystal.vajram.ext.sql.statement.LIMIT;
+import com.flipkart.krystal.vajram.ext.sql.statement.LIMIT.Creator;
+import com.flipkart.krystal.vajram.ext.sql.statement.ORDER;
 import com.flipkart.krystal.vajram.ext.sql.vertx.ExecuteVertxSql;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Output;
@@ -43,14 +48,13 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
-import javax.annotation.processing.RoundEnvironment;
-import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 /**
  * Generates a {@code @Vajram} ComputeVajram for each {@code @SQL @SELECT @Trait} interface.
@@ -59,7 +63,7 @@ import javax.lang.model.util.ElementFilter;
  * vajram-sql-codegen} module ({@link SqlModelParser}, {@link SqlQueryBuilder}). This class handles
  * only the Vert.x-specific JavaPoet code generation.
  */
-public class SqlTraitVajramGen {
+public class SqlTraitVajramGen implements CodeGenerator {
 
   private static final String SQL_VAJRAM_SUFFIX = "_VertxSql";
   private static final String IMMUT_POJO_SUFFIX = "_ImmutPojo";
@@ -77,133 +81,112 @@ public class SqlTraitVajramGen {
       ParameterizedTypeName.get(ClassName.get(RowSet.class), ClassName.get(Row.class));
 
   private final CodeGenUtility util;
+  private final VajramInfo vajramInfo;
   private final SqlModelParser parser;
+  private final VajramCodeGenUtility vajramUtil;
 
-  public SqlTraitVajramGen(CodeGenUtility util) {
-    this.util = util;
-    this.parser = new SqlModelParser(util);
+  public SqlTraitVajramGen(
+      VajramCodeGenUtility vajramUtil, VajramInfo vajramInfo, SqlModelParser parser) {
+    this.util = vajramUtil.codegenUtil();
+    this.vajramInfo = vajramInfo;
+    this.parser = parser;
+    this.vajramUtil = vajramUtil;
   }
 
   // ─── Entry point ─────────────────────────────────────────────────────────────
 
-  public void generate(RoundEnvironment roundEnv) {
-    parser.validateTableAndWhereElements(roundEnv);
-    Set<? extends Element> sqlElements = roundEnv.getElementsAnnotatedWith(SQL.class);
-    for (Element element : sqlElements) {
-      if (element.getAnnotation(Trait.class) == null) {
-        continue;
-      }
-      if (element.getAnnotation(SELECT.class) == null) {
-        continue;
-      }
-      if (!(element instanceof TypeElement typeElement)) {
-        continue;
-      }
-      try {
-        generateSqlVajram(typeElement);
-      } catch (Exception e) {
-        util.error(
-            "[SqlTraitVajramGen] Error generating SQL Vajram for %s: %s"
-                .formatted(element, stackTrace(e)),
-            element);
-      }
-    }
-  }
-
-  // ─── Main generation ─────────────────────────────────────────────────────────
-
-  private void generateSqlVajram(TypeElement traitElement) {
+  public void generate() {
+    TypeElement sqlTraitElement = vajramInfo.definitionElement();
     String pkg =
         util.processingEnv()
             .getElementUtils()
-            .getPackageOf(traitElement)
+            .getPackageOf(sqlTraitElement)
             .getQualifiedName()
             .toString();
-    String traitName = traitElement.getSimpleName().toString();
+    String traitName = sqlTraitElement.getSimpleName().toString();
     String vajramName = traitName + SQL_VAJRAM_SUFFIX;
 
-    TraitResultType resultType = parser.parseTraitResultType(traitElement);
-    if (resultType == null) {
-      util.error(
-          "[SqlTraitVajramGen] Cannot resolve TraitDef<T> return type for " + traitName,
-          traitElement);
-      return;
-    }
+    VajramInfo vajramInfo = vajramUtil.computeVajramInfo(sqlTraitElement);
+    TraitResultType resultType = parseTraitResultType(vajramInfo);
 
-    // Invariant: TraitDef<T> result type must be a @Projection, never a @Table model.
-    if (parser.isTableModel(resultType.projectionElement())) {
+    // Invariant: TraitDef<T> result type must be a @Selection, never a @Table model.
+    if (resultType.selectionElement().getAnnotation(Table.class) != null) {
       util.error(
           "[SqlTraitVajramGen] "
               + traitName
               + ": TraitDef<T> result type '"
-              + resultType.projectionElement().getSimpleName()
-              + "' is annotated with @Table. SELECT traits must return a @Projection, never a"
-              + " @Table model. Create a dedicated @Projection interface for this query's result"
+              + resultType.selectionElement().getSimpleName()
+              + "' is annotated with @Table. SELECT traits must return a @Selection, never a"
+              + " @Table model. Create a dedicated @Selection interface for this query's result"
               + " shape.",
-          traitElement);
+          sqlTraitElement);
       return;
     }
 
-    SelectionInfo proj = parser.parseProjectionInfo(resultType.projectionElement());
-    if (proj == null) {
+    SelectionInfo selection = parser.parseSelectionInfo(resultType.selectionElement());
+    if (selection == null) {
       util.error(
-          "[SqlTraitVajramGen] @Projection(over=...) not found on "
-              + resultType.projectionElement().getSimpleName()
+          "[SqlTraitVajramGen] @Selection(from=...) not found on "
+              + resultType.selectionElement().getSimpleName()
               + " (required for "
               + traitName
               + ")",
-          traitElement);
+          sqlTraitElement);
       return;
     }
 
     // Invariant: every projected column must exist in the underlying table.
     List<String> invalidCols =
-        parser.findInvalidProjectionColumns(resultType.projectionElement(), proj.tableElement());
+        parser.findInvalidSelectionColumns(resultType.selectionElement(), selection.tableElement());
     if (!invalidCols.isEmpty()) {
       util.error(
           "[SqlTraitVajramGen] "
               + traitName
-              + ": projection '"
-              + resultType.projectionElement().getSimpleName()
+              + ": selection '"
+              + resultType.selectionElement().getSimpleName()
               + "' references columns not present in table '"
-              + proj.tableName()
+              + selection.tableName()
               + "': "
               + invalidCols
               + ". Check column names and @Column overrides.",
-          traitElement);
+          sqlTraitElement);
       return;
     }
 
     String resultPkg =
         util.processingEnv()
             .getElementUtils()
-            .getPackageOf(resultType.projectionElement())
+            .getPackageOf(resultType.selectionElement())
             .getQualifiedName()
             .toString();
-    String resultName = resultType.projectionElement().getSimpleName().toString();
+    String resultName = resultType.selectionElement().getSimpleName().toString();
 
-    List<ExecutableElement> traitInputMethods = findInputMethods(traitElement);
-    List<WhereInput> whereInputs = parser.collectWhereInputs(traitInputMethods);
+    List<ExecutableElement> traitInputMethods = findInputMethods(sqlTraitElement);
+    List<WhereInput> whereInputs = parser.collectWhereInputs(vajramInfo);
 
-    boolean hasJoins = !proj.joins().isEmpty();
+    boolean hasJoins = !selection.joins().isEmpty();
 
     // Parse ORDER BY / LIMIT from the TraitDef<@LIMIT @ORDER_BY T> type argument
-    List<OrderByClause> traitOrderBys = parser.parseOrderBysFromTraitTypeArg(traitElement);
-    int traitLimit = parser.parseLimitFromTraitTypeArg(traitElement);
+    TypeMirror vajramResponseType =
+        vajramInfo.lite().responseType().typeMirror(util.processingEnv());
+    List<ORDER> traitOrderBys = parser.parseOrderBys(vajramResponseType);
+    LIMIT limit = parser.parseLimit(vajramResponseType);
 
     // Invariant: List-result traits must declare an explicit @LIMIT on the type argument.
     // Fetching an unbounded list can return excessive data. Use @LIMIT(LIMIT.NO_LIMIT) to
     // explicitly opt out. @LIMIT(1) is not valid on a list trait — use TraitDef<T> instead.
-    if (resultType.isList()) {
-      if (!parser.hasLimitAnnotationOnTraitTypeArg(traitElement)) {
+    if (limit == null) {
+      if (resultType.isList()) {
         util.error(
             "[SqlTraitVajramGen] "
                 + traitName
                 + ": returns a List but has no @LIMIT on the type argument. "
                 + "Use @LIMIT(N) to cap the number of returned rows or "
                 + "@LIMIT(LIMIT.NO_LIMIT) to explicitly fetch all rows.",
-            traitElement);
-        return;
+            sqlTraitElement);
+        limit = Creator.create(1);
+      } else {
+        limit = Creator.create(NO_LIMIT);
       }
     }
 
@@ -217,11 +200,11 @@ public class SqlTraitVajramGen {
     if (hasJoins) {
       JoinSqlResult joinResult =
           SqlQueryBuilder.buildJoinSql(
-              proj, whereInputs, traitOrderBys, traitLimit, resultType.isList());
+              selection, whereInputs, traitOrderBys, limit.value(), resultType.isList());
       sql = joinResult.sql();
       parentPkAlias = joinResult.parentPkAlias();
     } else {
-      sql = SqlQueryBuilder.buildSimpleSql(proj, whereInputs, traitOrderBys, traitLimit);
+      sql = SqlQueryBuilder.buildSimpleSql(selection, whereInputs, traitOrderBys, limit.value());
       parentPkAlias = null;
     }
 
@@ -253,7 +236,7 @@ public class SqlTraitVajramGen {
             .addMethod(
                 buildMapResultMethod(
                     resultType,
-                    proj,
+                    selection,
                     resultPkg,
                     resultName,
                     vajramResultTypeName,
@@ -263,8 +246,23 @@ public class SqlTraitVajramGen {
     ClassName vajramClassName = ClassName.get(pkg, vajramName);
 
     JavaFile javaFile = JavaFile.builder(pkg, vajramSpec).build();
-    util.generateSourceFile(vajramClassName.canonicalName(), javaFile, traitElement);
+    util.generateSourceFile(vajramClassName.canonicalName(), javaFile, sqlTraitElement);
     util.note("Generated " + pkg + "." + vajramName);
+  }
+
+  private TraitResultType parseTraitResultType(@MonotonicNonNull VajramInfo vajramInfoLite) {
+    DeclaredType responseType =
+        (DeclaredType) vajramInfoLite.lite().responseType().typeMirror(util.processingEnv());
+    TypeElement responseTypeElem =
+        requireNonNull((TypeElement) util.processingEnv().getTypeUtils().asElement(responseType));
+    boolean isList = false;
+    if (responseTypeElem.getQualifiedName().contentEquals(List.class.getCanonicalName())) {
+      isList = true;
+      responseType = (DeclaredType) responseType.getTypeArguments().get(0);
+      responseTypeElem =
+          requireNonNull((TypeElement) util.processingEnv().getTypeUtils().asElement(responseType));
+    }
+    return new TraitResultType(responseTypeElem, isList);
   }
 
   // ─── _Inputs / _InternalFacets ────────────────────────────────────────────────
@@ -393,22 +391,22 @@ public class SqlTraitVajramGen {
 
   private MethodSpec buildMapResultMethod(
       TraitResultType resultType,
-      SelectionInfo proj,
+      SelectionInfo selection,
       String resultPkg,
       String resultName,
       TypeName outputReturnTypeName,
       String vajramName,
       String parentPkAlias) {
 
-    if (!proj.joins().isEmpty() && resultType.isList()) {
+    if (!selection.joins().isEmpty() && resultType.isList()) {
       return buildListJoinMapResultMethod(
-          proj, resultPkg, resultName, outputReturnTypeName, parentPkAlias);
-    } else if (!proj.joins().isEmpty()) {
-      return buildJoinMapResultMethod(proj, resultPkg, resultName, vajramName, parentPkAlias);
+          selection, resultPkg, resultName, outputReturnTypeName, parentPkAlias);
+    } else if (!selection.joins().isEmpty()) {
+      return buildJoinMapResultMethod(selection, resultPkg, resultName, vajramName, parentPkAlias);
     } else if (resultType.isList()) {
-      return buildListMapResultMethod(proj, resultPkg, resultName, outputReturnTypeName);
+      return buildListMapResultMethod(selection, resultPkg, resultName, outputReturnTypeName);
     } else {
-      return buildSingleMapResultMethod(proj, resultPkg, resultName);
+      return buildSingleMapResultMethod(selection, resultPkg, resultName);
     }
   }
 
@@ -477,13 +475,13 @@ public class SqlTraitVajramGen {
    * grouped child lists.
    *
    * <p>The parent PK column (via {@code parentPkAlias}) is used as the grouping key. For simple
-   * joins (no nested joins on the child projection), each child row is accumulated into a {@link
-   * List} keyed by the parent PK. For nested joins (child has its own {@code List<Projection>}
+   * joins (no nested joins on the child selection), each child row is accumulated into a {@link
+   * List} keyed by the parent PK. For nested joins (child has its own {@code List<Selection>}
    * methods), a {@link LinkedHashMap} is used to deduplicate level-1 child rows, with separate
    * accumulators per parent for each level-2 join.
    */
   private MethodSpec buildListJoinMapResultMethod(
-      SelectionInfo proj,
+      SelectionInfo selection,
       String resultPkg,
       String resultName,
       TypeName outputReturnTypeName,
@@ -508,12 +506,12 @@ public class SqlTraitVajramGen {
         LinkedHashMap.class);
 
     // Pre-loop: one accumulator map per join
-    for (JoinRelation join : proj.joins()) {
-      String joinProjPkg = projPkg(join);
-      String joinProjName = join.projectionElement().getSimpleName().toString();
-      ClassName joinClass = ClassName.get(joinProjPkg, joinProjName);
+    for (JoinRelation join : selection.joins()) {
+      String joinSelectionPkg = projPkg(join);
+      String joinSelectionName = join.childSelectionElement().getSimpleName().toString();
+      ClassName joinClass = ClassName.get(joinSelectionPkg, joinSelectionName);
       ClassName joinBuilderClass =
-          ClassName.get(joinProjPkg, joinProjName + IMMUT_POJO_SUFFIX, "Builder");
+          ClassName.get(joinSelectionPkg, joinSelectionName + IMMUT_POJO_SUFFIX, "Builder");
 
       if (join.nestedJoins().isEmpty()) {
         // Simple: LinkedHashMap<Object, List<JoinType>> — outer key = parent PK
@@ -538,7 +536,7 @@ public class SqlTraitVajramGen {
             LinkedHashMap.class);
         for (JoinRelation nested : join.nestedJoins()) {
           String nestedProjPkg = projPkg(nested);
-          String nestedProjName = nested.projectionElement().getSimpleName().toString();
+          String nestedProjName = nested.childSelectionElement().getSimpleName().toString();
           ClassName nestedClass = ClassName.get(nestedProjPkg, nestedProjName);
           // LinkedHashMap<Object, LinkedHashMap<Object, List<NestedType>>>
           method.addStatement(
@@ -565,14 +563,14 @@ public class SqlTraitVajramGen {
     method.beginControlFlow("if (_parentKey != null && !_parentBuilders.containsKey(_parentKey))");
     CodeBlock.Builder parentChain =
         CodeBlock.builder().add("_parentBuilders.put(_parentKey, $T._builder()", resultImmutPojo);
-    for (ScalarColumn col : proj.scalars()) {
-      String alias = proj.tableName() + "_" + col.methodName();
+    for (ScalarColumn col : selection.scalars()) {
+      String alias = selection.tableName() + "_" + col.methodName();
       parentChain.add("\n    .$L($L)", col.methodName(), rowGetter("_row", alias, col.javaType()));
     }
     parentChain.add(")");
     method.addStatement(parentChain.build());
     // Initialise child accumulators for this new parent
-    for (JoinRelation join : proj.joins()) {
+    for (JoinRelation join : selection.joins()) {
       if (join.nestedJoins().isEmpty()) {
         method.addStatement("_$L.put(_parentKey, new $T<>())", join.methodName(), ArrayList.class);
       } else {
@@ -590,9 +588,9 @@ public class SqlTraitVajramGen {
     method.endControlFlow();
 
     // Accumulate child rows
-    for (JoinRelation join : proj.joins()) {
+    for (JoinRelation join : selection.joins()) {
       String joinProjPkg = projPkg(join);
-      String joinProjName = join.projectionElement().getSimpleName().toString();
+      String joinProjName = join.childSelectionElement().getSimpleName().toString();
       ClassName joinImmutPojo = ClassName.get(joinProjPkg, joinProjName + IMMUT_POJO_SUFFIX);
 
       if (join.nestedJoins().isEmpty()) {
@@ -654,7 +652,7 @@ public class SqlTraitVajramGen {
         // Level-2 accumulation
         for (JoinRelation nested : join.nestedJoins()) {
           String nestedProjPkg = projPkg(nested);
-          String nestedProjName = nested.projectionElement().getSimpleName().toString();
+          String nestedProjName = nested.childSelectionElement().getSimpleName().toString();
           ClassName nestedImmutPojo =
               ClassName.get(nestedProjPkg, nestedProjName + IMMUT_POJO_SUFFIX);
           String nestedSentinelMethodName = findSentinelMethodName(nested);
@@ -693,10 +691,10 @@ public class SqlTraitVajramGen {
     method.beginControlFlow("for ($T _key : _parentBuilders.keySet())", Object.class);
 
     // For nested joins, build the intermediate List<JoinType> first
-    for (JoinRelation join : proj.joins()) {
+    for (JoinRelation join : selection.joins()) {
       if (!join.nestedJoins().isEmpty()) {
         String joinProjPkg = projPkg(join);
-        String joinProjName = join.projectionElement().getSimpleName().toString();
+        String joinProjName = join.childSelectionElement().getSimpleName().toString();
         ClassName joinClass = ClassName.get(joinProjPkg, joinProjName);
         method.addStatement(
             "$T<$T> _$L = new $T<>()", List.class, joinClass, join.methodName(), ArrayList.class);
@@ -723,7 +721,7 @@ public class SqlTraitVajramGen {
 
     // Build and add the parent
     CodeBlock.Builder finalChain = CodeBlock.builder().add("_result.add(_parentBuilders.get(_key)");
-    for (JoinRelation join : proj.joins()) {
+    for (JoinRelation join : selection.joins()) {
       if (join.nestedJoins().isEmpty()) {
         finalChain.add("\n    .$L(_$L.get(_key))", join.methodName(), join.methodName());
       } else {
@@ -777,7 +775,7 @@ public class SqlTraitVajramGen {
     // Pre-loop declarations for each JOIN
     for (JoinRelation join : proj.joins()) {
       String joinProjPkg = projPkg(join);
-      String joinProjName = join.projectionElement().getSimpleName().toString();
+      String joinProjName = join.childSelectionElement().getSimpleName().toString();
       ClassName joinClass = ClassName.get(joinProjPkg, joinProjName);
       ClassName joinBuilderClass =
           ClassName.get(joinProjPkg, joinProjName + IMMUT_POJO_SUFFIX, "Builder");
@@ -798,7 +796,7 @@ public class SqlTraitVajramGen {
         // One List accumulator per level-2 nested join, keyed by the level-1 PK
         for (JoinRelation nested : join.nestedJoins()) {
           String nestedProjPkg = projPkg(nested);
-          String nestedProjName = nested.projectionElement().getSimpleName().toString();
+          String nestedProjName = nested.childSelectionElement().getSimpleName().toString();
           ClassName nestedClass = ClassName.get(nestedProjPkg, nestedProjName);
           method.addStatement(
               "$T<$T, $T<$T>> _$L_$L = new $T<>()",
@@ -854,7 +852,7 @@ public class SqlTraitVajramGen {
     // Append child rows for each JOIN
     for (JoinRelation join : proj.joins()) {
       String joinProjPkg = projPkg(join);
-      String joinProjName = join.projectionElement().getSimpleName().toString();
+      String joinProjName = join.childSelectionElement().getSimpleName().toString();
       ClassName joinImmutPojo = ClassName.get(joinProjPkg, joinProjName + IMMUT_POJO_SUFFIX);
 
       if (join.nestedJoins().isEmpty()) {
@@ -917,7 +915,7 @@ public class SqlTraitVajramGen {
         // Level-2: accumulate grandchild rows
         for (JoinRelation nested : join.nestedJoins()) {
           String nestedProjPkg = projPkg(nested);
-          String nestedProjName = nested.projectionElement().getSimpleName().toString();
+          String nestedProjName = nested.childSelectionElement().getSimpleName().toString();
           ClassName nestedImmutPojo =
               ClassName.get(nestedProjPkg, nestedProjName + IMMUT_POJO_SUFFIX);
           String nestedSentinelMethodName = findSentinelMethodName(nested);
@@ -959,7 +957,7 @@ public class SqlTraitVajramGen {
     for (JoinRelation join : proj.joins()) {
       if (!join.nestedJoins().isEmpty()) {
         String joinProjPkg = projPkg(join);
-        String joinProjName = join.projectionElement().getSimpleName().toString();
+        String joinProjName = join.childSelectionElement().getSimpleName().toString();
         ClassName joinClass = ClassName.get(joinProjPkg, joinProjName);
         // Build List<JoinType> from the dedup map
         method.addStatement(
@@ -1001,8 +999,8 @@ public class SqlTraitVajramGen {
   }
 
   /**
-   * Returns the projection {@code methodName} (SQL alias suffix) that can be used as a
-   * null-sentinel to detect absent LEFT JOIN rows.
+   * Returns the selection {@code methodName} (SQL alias suffix) that can be used as a null-sentinel
+   * to detect absent LEFT JOIN rows.
    *
    * <p>The sentinel must be a column that is guaranteed non-null whenever a real child row is
    * present. Priority:
@@ -1014,7 +1012,7 @@ public class SqlTraitVajramGen {
    * </ol>
    *
    * <p>If neither is projected, a compile error is emitted and {@code null} is returned; the
-   * developer must add the PK or FK column to the projection.
+   * developer must add the PK or FK column to the selection.
    */
   private String findSentinelMethodName(JoinRelation join) {
     if (join.childPkColumn() != null) {
@@ -1029,9 +1027,9 @@ public class SqlTraitVajramGen {
         return col.methodName();
       }
     }
-    String projName = join.projectionElement().getSimpleName().toString();
+    String projName = join.childSelectionElement().getSimpleName().toString();
     util.error(
-        "[vajram-sql] Projection '"
+        "[vajram-sql] Selection '"
             + projName
             + "' must project either its primary-key column"
             + (join.childPkColumn() != null ? " ('" + join.childPkColumn() + "')" : "")
@@ -1041,20 +1039,20 @@ public class SqlTraitVajramGen {
             + "Add the PK or FK column as a method in '"
             + projName
             + "'.",
-        join.projectionElement());
+        join.childSelectionElement());
     return null;
   }
 
   /**
-   * Returns the projection {@code methodName} (SQL alias suffix) to use as the deduplication key
-   * for level-1 child rows in a nested join.
+   * Returns the selection {@code methodName} (SQL alias suffix) to use as the deduplication key for
+   * level-1 child rows in a nested join.
    *
    * <p>Unlike {@link #findSentinelMethodName} this only accepts the child PK — using the FK ({@code
    * childJoinColumn}) is wrong here because the FK holds the parent's PK value, which is identical
    * for every child of the same parent and would collapse all children to one entry.
    *
-   * <p>If the child PK column is not projected, a compile error is emitted and {@code null} is
-   * returned; the developer must add the PK column to the child projection.
+   * <p>If the child PK column is not selected, a compile error is emitted and {@code null} is
+   * returned; the developer must add the PK column to the child selection.
    */
   private String findDedupeKeyMethodName(JoinRelation join) {
     if (join.childPkColumn() != null) {
@@ -1064,26 +1062,26 @@ public class SqlTraitVajramGen {
         }
       }
     }
-    String projName = join.projectionElement().getSimpleName().toString();
+    String childSelectionName = join.childSelectionElement().getSimpleName().toString();
     util.error(
-        "[vajram-sql] Projection '"
-            + projName
-            + "' must project its primary-key column"
+        "[vajram-sql] Selection '"
+            + childSelectionName
+            + "' must select its foreign-key column"
             + (join.childPkColumn() != null ? " ('" + join.childPkColumn() + "')" : "")
-            + " when used as a nested join (i.e. it itself contains a List<Projection> method), "
+            + " when used as a nested join (i.e. it itself is present in a List<Selection> method) of another Seleciton, "
             + "because the PK is required to deduplicate level-1 child rows. "
             + "Add the PK column as a method in '"
-            + projName
+            + childSelectionName
             + "'.",
-        join.projectionElement());
+        join.childSelectionElement());
     return null;
   }
 
-  /** Returns the package name of a join's projection element. */
+  /** Returns the package name of a join's selection element. */
   private String projPkg(JoinRelation join) {
     return util.processingEnv()
         .getElementUtils()
-        .getPackageOf(join.projectionElement())
+        .getPackageOf(join.childSelectionElement())
         .getQualifiedName()
         .toString();
   }

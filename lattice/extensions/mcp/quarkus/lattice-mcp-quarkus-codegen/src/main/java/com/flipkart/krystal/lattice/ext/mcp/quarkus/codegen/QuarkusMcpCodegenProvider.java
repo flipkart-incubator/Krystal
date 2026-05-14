@@ -17,8 +17,8 @@ import com.flipkart.krystal.lattice.ext.mcp.McpServerDopant;
 import com.flipkart.krystal.lattice.ext.mcp.api.McpServer;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.vajram.codegen.common.models.FacetGenModel;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
-import com.flipkart.krystal.vajram.codegen.common.models.VajramInfoLite.FacetDetail;
 import com.flipkart.krystal.vajram.json.Json;
 import com.google.auto.service.AutoService;
 import com.squareup.javapoet.AnnotationSpec;
@@ -41,7 +41,6 @@ import jakarta.inject.Singleton;
 import jakarta.ws.rs.core.UriBuilder;
 import java.net.URI;
 import java.util.List;
-import java.util.Map.Entry;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
@@ -123,15 +122,13 @@ public class QuarkusMcpCodegenProvider implements LatticeCodeGeneratorProvider {
                       vajramInfo.lite().packageName(),
                       vajramInfo.vajramName() + IMMUT_REQUEST_POJO_SUFFIX));
 
-      for (Entry<String, FacetDetail> entry : vajramInfo.lite().facetDetails().entrySet()) {
-        String facetName = entry.getKey();
-        FacetDetail facetDetail = entry.getValue();
-        if (facetDetail.facetType() != FacetType.INPUT) {
+      for (FacetGenModel facet : vajramInfo.facetStream().toList()) {
+        String facetName = facet.name();
+        if (facet.facetType() != FacetType.INPUT) {
           continue;
         }
 
-        TypeName typeName =
-            TypeName.get(facetDetail.dataType().javaModelType(util.processingEnv()));
+        TypeName typeName = TypeName.get(facet.dataType().typeMirror(util.processingEnv()));
 
         if (typeName.equals(ClassName.get(String.class))) {
           methodBuilder.addParameter(ParameterSpec.builder(typeName, facetName).build());
@@ -209,22 +206,18 @@ public class QuarkusMcpCodegenProvider implements LatticeCodeGeneratorProvider {
         toolAnnotation.addMember("structuredContent", "$L", true);
       }
       methodBuilder.addAnnotation(toolAnnotation.build());
-      for (Entry<String, FacetDetail> entry : vajramInfo.lite().facetDetails().entrySet()) {
-        String facetName = entry.getKey();
-        FacetDetail facetDetail = entry.getValue();
-        if (facetDetail.facetType() != FacetType.INPUT) {
+      for (FacetGenModel facet : vajramInfo.facetStream().toList()) {
+        String facetName = facet.name();
+        if (facet.facetType() != FacetType.INPUT) {
           continue;
         }
         methodBuilder.addParameter(
             ParameterSpec.builder(
-                    TypeName.get(facetDetail.dataType().javaModelType(util.processingEnv())),
-                    facetName)
+                    TypeName.get(facet.dataType().typeMirror(util.processingEnv())), facetName)
                 .addAnnotation(
                     AnnotationSpec.builder(ToolArg.class)
                         .addMember(
-                            "description",
-                            "$S",
-                            requireNonNullElse(facetDetail.documentation(), ""))
+                            "description", "$S", requireNonNullElse(facet.documentation(), ""))
                         .build())
                 .build());
       }
@@ -240,7 +233,8 @@ return $T.createFrom()
           Uni.class,
           ClassName.get(
               vajramInfo.lite().packageName(), vajramInfo.vajramName() + IMMUT_REQUEST_POJO_SUFFIX),
-          vajramInfo.lite().facetDetails().values().stream()
+          vajramInfo
+              .facetStream()
               .filter(fd -> fd.facetType() == FacetType.INPUT)
               .map(fd -> CodeBlock.of(".$L($L)", fd.name(), fd.name()))
               .collect(CodeBlock.joining("\n")));
@@ -275,9 +269,10 @@ return $T.createFrom()
     for (TypeMirror resourceVajram : resourceVajrams) {
       VajramInfo vajramInfo =
           latticeCodegenContext.codeGenUtility().computeVajramInfo(resourceVajram);
-      if (!vajramInfo.lite().facetDetails().isEmpty()) {
+      if (vajramInfo.givenFacets().stream().anyMatch(f -> f.facetType() == FacetType.INPUT)) {
         util.error(
-            "Resource vajrams cannot have input parameters. Use as a Tool or ResourceTemplate instead.");
+            "MCP Resource vajrams cannot have input parameters. Use as a Tool or ResourceTemplate instead.",
+            util.processingEnv().getTypeUtils().asElement(resourceVajram));
       }
       MethodSpec.Builder methodBuilder = createUniMethodBuilder(vajramInfo, util);
       methodBuilder.addAnnotation(
@@ -312,7 +307,7 @@ return $T.createFrom()
         .returns(
             ParameterizedTypeName.get(
                 ClassName.get(Uni.class),
-                TypeName.get(vajramInfo.lite().responseType().javaModelType(util.processingEnv()))
+                TypeName.get(vajramInfo.lite().responseType().typeMirror(util.processingEnv()))
                     .box()));
   }
 
@@ -332,7 +327,7 @@ return $T.createFrom()
   }
 
   private boolean supportsStructuredContent(VajramInfo vajramInfo, CodeGenUtility util) {
-    TypeMirror responseType = vajramInfo.lite().responseType().javaModelType(util.processingEnv());
+    TypeMirror responseType = vajramInfo.lite().responseType().typeMirror(util.processingEnv());
     Types typeUtils = util.processingEnv().getTypeUtils();
     Elements elementUtils = util.processingEnv().getElementUtils();
 

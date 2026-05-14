@@ -144,18 +144,13 @@ public enum StandardJavaType implements CodeGenType {
   }
 
   @Override
-  public TypeMirror javaModelType(ProcessingEnvironment processingEnv) {
+  public TypeMirror typeMirror(ProcessingEnvironment processingEnv) {
     return getJavaModelType.apply(processingEnv);
   }
 
   @Override
   public ImmutableList<CodeGenType> typeParameters() {
     return ImmutableList.of();
-  }
-
-  @Override
-  public CodeGenType rawType() {
-    return this;
   }
 
   @Override

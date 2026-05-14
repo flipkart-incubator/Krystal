@@ -18,4 +18,5 @@ module flipkart.krystal.codegen.common {
   requires com.google.errorprone.annotations;
   requires jdk.jshell;
   requires com.google.googlejavaformat;
+  requires jdk.compiler;
 }

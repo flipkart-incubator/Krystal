@@ -1,41 +1,48 @@
 package com.flipkart.krystal.vajram.ext.sql.codegen;
 
+import static com.flipkart.krystal.vajram.ext.sql.statement.LIMIT.Creator.create;
+import static java.util.Objects.requireNonNull;
+
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
+import com.flipkart.krystal.codegen.common.models.CodeGenUtility.AnnotationInfo;
+import com.flipkart.krystal.facets.FacetType;
+import com.flipkart.krystal.model.ModelRoot;
+import com.flipkart.krystal.vajram.codegen.common.models.DefaultFacetModel;
+import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
+import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.JoinRelation;
-import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.OrderByClause;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.ScalarColumn;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.SelectionInfo;
-import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.TraitResultType;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereInput;
 import com.flipkart.krystal.vajram.ext.sql.model.ForeignKey;
 import com.flipkart.krystal.vajram.ext.sql.model.IncomingForeignKey;
 import com.flipkart.krystal.vajram.ext.sql.model.PrimaryKey;
 import com.flipkart.krystal.vajram.ext.sql.model.Table;
+import com.flipkart.krystal.vajram.ext.sql.model.TableModel;
 import com.flipkart.krystal.vajram.ext.sql.model.UniqueKey;
 import com.flipkart.krystal.vajram.ext.sql.statement.Column;
+import com.flipkart.krystal.vajram.ext.sql.statement.LIMIT;
 import com.flipkart.krystal.vajram.ext.sql.statement.ORDER;
+import com.flipkart.krystal.vajram.ext.sql.statement.ORDER.Direction;
 import com.flipkart.krystal.vajram.ext.sql.statement.Selection;
 import com.flipkart.krystal.vajram.ext.sql.statement.WHERE;
+import com.flipkart.krystal.vajram.ext.sql.statement.WhereClause;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.processing.RoundEnvironment;
-import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
-import javax.lang.model.util.ElementFilter;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * Reads {@code @Table}, {@code @Projection}, {@code @WHERE}, {@code @ForeignKey}, and related
+ * Reads {@code @Table}, {@code @Selection}, {@code @WHERE}, {@code @ForeignKey}, and related
  * annotations from source elements and builds {@link SqlQueryModel} records suitable for SQL query
  * generation.
  *
@@ -43,83 +50,26 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public final class SqlModelParser {
 
-  private static final String TRAIT_DEF_CLASS = "com.flipkart.krystal.vajram.TraitDef";
-
-  private static final String MODEL_ROOT_ANNO = "com.flipkart.krystal.model.ModelRoot";
-  private static final String TABLE_MODEL_FQN =
-      "com.flipkart.krystal.vajram.ext.sql.model.TableModel";
-  private static final String WHERE_CLAUSE_FQN =
-      "com.flipkart.krystal.vajram.ext.sql.statement.WhereClause";
-
-  private static final String TABLE_ANNO = Table.class.getName();
-  private static final String SELECTION_ANNO = Selection.class.getName();
-  private static final String COLUMN_ANNO = Column.class.getName();
-  private static final String WHERE_ANNO = WHERE.class.getName();
-  private static final String FOREIGN_KEY_ANNO = ForeignKey.class.getName();
-  private static final String INCOMING_FK_ANNO = IncomingForeignKey.class.getName();
-  private static final String PRIMARY_KEY_ANNO = PrimaryKey.class.getName();
-  private static final String UNIQUE_KEY_ANNO = UniqueKey.class.getName();
-  private static final String ORDER_BY_ANNO = ORDER.class.getName();
-  private static final String ORDER_BYS_ANNO = ORDER.class.getName() + ".ORDER_BYs";
-  private static final String LIMIT_ANNO = "com.flipkart.krystal.vajram.ext.sql.statement.LIMIT";
-
   private final CodeGenUtility util;
 
-  public SqlModelParser(CodeGenUtility util) {
-    this.util = util;
+  public SqlModelParser(VajramCodeGenUtility vajramUtil) {
+    this.util = vajramUtil.codegenUtil();
   }
 
   // ─── Trait result type ────────────────────────────────────────────────────────
 
+  // ─── Selection info ─────────────────────────────────────────────────────────
+
   /**
-   * Parses the {@code T} from {@code TraitDef<T>} or {@code TraitDef<List<T>>} on the given trait
-   * element. Returns {@code null} if the trait does not extend {@code TraitDef}.
+   * Parses a {@code @Selection(from = TableClass.class)} interface into a {@link SelectionInfo}.
+   * Returns {@code null} if the interface does not have {@code @Selection}.
    */
-  public TraitResultType parseTraitResultType(TypeElement traitElement) {
-    for (TypeMirror iface : traitElement.getInterfaces()) {
-      if (!(iface instanceof DeclaredType dt)) {
-        continue;
-      }
-      if (!(dt.asElement() instanceof TypeElement te)) {
-        continue;
-      }
-      if (!te.getQualifiedName().contentEquals(TRAIT_DEF_CLASS)) {
-        continue;
-      }
-      if (dt.getTypeArguments().isEmpty()) {
-        continue;
-      }
-      TypeMirror arg = dt.getTypeArguments().get(0);
-      if (!(arg instanceof DeclaredType argDt)) {
-        continue;
-      }
-      if (!(argDt.asElement() instanceof TypeElement argElem)) {
-        continue;
-      }
-      if (argElem.getQualifiedName().contentEquals("java.util.List")) {
-        if (!argDt.getTypeArguments().isEmpty()) {
-          TypeMirror inner = argDt.getTypeArguments().get(0);
-          TypeElement innerElem =
-              (TypeElement) util.processingEnv().getTypeUtils().asElement(inner);
-          if (innerElem != null) {
-            return new TraitResultType(innerElem, true);
-          }
-        }
-      } else {
-        return new TraitResultType(argElem, false);
-      }
+  public @Nullable SelectionInfo parseSelectionInfo(TypeElement selectionElement) {
+    Selection selectionAnno = selectionElement.getAnnotation(Selection.class);
+    if (selectionAnno == null) {
+      return null;
     }
-    return null;
-  }
-
-  // ─── Projection info ─────────────────────────────────────────────────────────
-
-  /**
-   * Parses a {@code @Projection(over = TableClass.class)} interface into a {@link SelectionInfo}.
-   * Returns {@code null} if the interface does not have {@code @Projection}.
-   */
-  public SelectionInfo parseProjectionInfo(TypeElement projectionElement) {
-    TypeElement tableElement = getAnnotationClassValue(projectionElement, SELECTION_ANNO, "from");
+    TypeElement tableElement = util.getTypeElemFromAnnotationMember(selectionAnno::from);
     if (tableElement == null) {
       return null;
     }
@@ -130,18 +80,17 @@ public final class SqlModelParser {
     List<ScalarColumn> scalars = new ArrayList<>();
     List<JoinRelation> joins = new ArrayList<>();
 
-    for (ExecutableElement method :
-        ElementFilter.methodsIn(projectionElement.getEnclosedElements())) {
+    for (ExecutableElement method : util.extractAndValidateModelMethods(selectionElement)) {
       TypeMirror returnType = method.getReturnType();
-      TypeElement joinProjElem = getListElementProjection(returnType);
-      if (joinProjElem != null) {
-        JoinRelation join = parseJoinRelation(method, joinProjElem, tableElement);
+      TypeElement joinSelectionElem = getListElementSelection(returnType);
+      if (joinSelectionElem != null) {
+        JoinRelation join = parseJoinRelation(method, joinSelectionElem, tableElement);
         if (join != null) {
           joins.add(join);
         }
       } else {
-        boolean isOpt = isOptionalType(returnType);
-        TypeMirror actualType = isOpt ? getOptionalInnerType(returnType) : returnType;
+        boolean isOpt = util.isOptional(returnType);
+        TypeMirror actualType = util.getOptionalInnerType(returnType);
         scalars.add(
             new ScalarColumn(
                 method.getSimpleName().toString(), resolveColumnName(method), actualType, isOpt));
@@ -149,7 +98,7 @@ public final class SqlModelParser {
     }
 
     return new SelectionInfo(
-        projectionElement, tableElement, tableName, parentPkColumn, scalars, joins);
+        selectionElement, tableElement, tableName, parentPkColumn, scalars, joins);
   }
 
   // ─── WHERE inputs ─────────────────────────────────────────────────────────────
@@ -158,30 +107,34 @@ public final class SqlModelParser {
    * Collects {@link WhereInput} records from the given list of trait {@code _Inputs} methods. Only
    * methods whose return type is annotated with {@code @WHERE} are included.
    */
-  public List<WhereInput> collectWhereInputs(List<ExecutableElement> inputMethods) {
+  public List<WhereInput> collectWhereInputs(@MonotonicNonNull VajramInfo vajramInfo) {
+    List<DefaultFacetModel> inputs =
+        vajramInfo.givenFacets().stream().filter(fd -> fd.facetType() == FacetType.INPUT).toList();
+    util.note("Input facets on " + vajramInfo.lite().vajramId() + " : " + vajramInfo.givenFacets());
+
     List<WhereInput> result = new ArrayList<>();
-    for (ExecutableElement method : inputMethods) {
-      TypeMirror rt = method.getReturnType();
-      if (!(rt instanceof DeclaredType dt)) {
+    for (DefaultFacetModel input : inputs) {
+      TypeMirror inputType = input.dataType().typeMirror(util.processingEnv());
+
+      if (!(inputType instanceof DeclaredType dt)) {
         continue;
       }
       if (!(dt.asElement() instanceof TypeElement typeElem)) {
         continue;
       }
-      if (!hasAnnotation(typeElem, WHERE_ANNO)) {
+      WHERE whereAnno = typeElem.getAnnotation(WHERE.class);
+      if (whereAnno == null) {
         continue;
       }
 
-      TypeElement inTable = getAnnotationClassValue(typeElem, WHERE_ANNO, "inTable");
+      TypeElement inTable = util.getTypeElemFromAnnotationMember(whereAnno::inTable);
       String inTableName = inTable != null ? getTableName(inTable) : "";
 
       List<String> fields = new ArrayList<>();
-      for (ExecutableElement wm : ElementFilter.methodsIn(typeElem.getEnclosedElements())) {
+      for (ExecutableElement wm : util.extractAndValidateModelMethods(typeElem)) {
         fields.add(wm.getSimpleName().toString());
       }
-      result.add(
-          new WhereInput(
-              method.getSimpleName().toString(), typeElem, inTable, inTableName, fields));
+      result.add(new WhereInput(input.name(), typeElem, inTable, inTableName, fields));
     }
     return result;
   }
@@ -189,9 +142,9 @@ public final class SqlModelParser {
   // ─── Internal helpers ────────────────────────────────────────────────────────
 
   /**
-   * Parses a single {@code List<ChildProjection>} join method into a {@link JoinRelation}.
+   * Parses a single {@code List<ChildSelection>} join method into a {@link JoinRelation}.
    *
-   * <p><b>Invariant:</b> a nested {@code List<@Projection>} join is only valid when the two
+   * <p><b>Invariant:</b> a nested {@code List<@Selection>} join is only valid when the two
    * underlying tables have a <em>bidirectional</em> FK relationship:
    *
    * <ul>
@@ -206,11 +159,12 @@ public final class SqlModelParser {
    * visible to developers at build time rather than at runtime.
    */
   private JoinRelation parseJoinRelation(
-      ExecutableElement method, TypeElement childProjElem, TypeElement parentTableElem) {
-    TypeElement childTableElem = getAnnotationClassValue(childProjElem, SELECTION_ANNO, "from");
-    if (childTableElem == null) {
+      ExecutableElement method, TypeElement childSelectionElem, TypeElement parentTableElem) {
+    Selection selectionAnno = childSelectionElem.getAnnotation(Selection.class);
+    if (selectionAnno == null) {
       return null;
     }
+    TypeElement childTableElem = util.getTypeElemFromAnnotationMember(selectionAnno::from);
 
     String childTableName = getTableName(childTableElem);
     String childFkCol = findFkColumnInChildForParent(childTableElem, parentTableElem);
@@ -260,12 +214,13 @@ public final class SqlModelParser {
     if (parentPkCol == null) {
       return null;
     }
+    LIMIT limit = parseLimit(method.getReturnType());
 
-    // Invariant: every List<Projection> join method must declare @LIMIT.
+    // Invariant: every List<Selection> join method must declare @LIMIT.
     // Use @LIMIT(LIMIT.NO_LIMIT) for an unbounded join.
-    if (!hasAnnotationOnElement(method, LIMIT_ANNO)) {
+    if (limit == null) {
       util.error(
-          "[vajram-sql] @LIMIT is required on '"
+          "[vajram-sql] @LIMIT is required on return type of '"
               + method.getSimpleName()
               + "()' in '"
               + method.getEnclosingElement().getSimpleName()
@@ -273,17 +228,16 @@ public final class SqlModelParser {
               + "Use @LIMIT(N) for a bounded result or @LIMIT(LIMIT.NO_LIMIT) to"
               + " explicitly opt out of a limit.",
           method);
+      limit = LIMIT.Creator.create(1);
     }
 
-    List<ScalarColumn> columns = parseScalarColumns(childProjElem);
-    List<OrderByClause> orderBys = parseOrderBys(method);
-    int limit = parseLimit(method);
+    List<ScalarColumn> columns = parseScalarColumns(childSelectionElem);
+    List<ORDER> orderBys = parseOrderBys(method.getReturnType());
 
-    // Recursively parse nested joins from the child projection's List<Projection> methods
+    // Recursively parse nested joins from the child selection's List<Selection> methods
     List<JoinRelation> nestedJoins = new ArrayList<>();
-    for (ExecutableElement childMethod :
-        ElementFilter.methodsIn(childProjElem.getEnclosedElements())) {
-      TypeElement grandChildProjElem = getListElementProjection(childMethod.getReturnType());
+    for (ExecutableElement childMethod : util.extractAndValidateModelMethods(childSelectionElem)) {
+      TypeElement grandChildProjElem = getListElementSelection(childMethod.getReturnType());
       if (grandChildProjElem != null) {
         JoinRelation nested = parseJoinRelation(childMethod, grandChildProjElem, childTableElem);
         if (nested != null) {
@@ -294,7 +248,7 @@ public final class SqlModelParser {
 
     return new JoinRelation(
         method.getSimpleName().toString(),
-        childProjElem,
+        childSelectionElem,
         childTableElem,
         childTableName,
         parentPkCol,
@@ -302,20 +256,20 @@ public final class SqlModelParser {
         childPkCol,
         columns,
         orderBys,
-        limit,
+        limit.value(),
         nestedJoins);
   }
 
-  /** Parses all scalar (non-join) columns from a projection interface. */
-  public List<ScalarColumn> parseScalarColumns(TypeElement projectionElement) {
+  /** Parses all scalar (non-join) columns from a selection interface. */
+  public List<ScalarColumn> parseScalarColumns(TypeElement selectionElement) {
     List<ScalarColumn> result = new ArrayList<>();
-    for (ExecutableElement m : ElementFilter.methodsIn(projectionElement.getEnclosedElements())) {
+    for (ExecutableElement m : util.extractAndValidateModelMethods(selectionElement)) {
       TypeMirror rt = m.getReturnType();
-      if (getListElementProjection(rt) != null) {
-        continue; // skip List<@Projection> join methods
+      if (getListElementSelection(rt) != null) {
+        continue; // skip List<@Selection> join methods
       }
-      boolean isOpt = isOptionalType(rt);
-      TypeMirror actualType = isOpt ? getOptionalInnerType(rt) : rt;
+      boolean isOpt = util.isOptional(rt);
+      TypeMirror actualType = util.getOptionalInnerType(rt);
       result.add(
           new ScalarColumn(m.getSimpleName().toString(), resolveColumnName(m), actualType, isOpt));
     }
@@ -326,103 +280,28 @@ public final class SqlModelParser {
 
   /** Resolves the DB column name from {@code @Column("name")} or falls back to the method name. */
   public String resolveColumnName(ExecutableElement method) {
-    for (AnnotationMirror mirror : method.getAnnotationMirrors()) {
-      if (!mirror.getAnnotationType().toString().equals(COLUMN_ANNO)) {
-        continue;
-      }
-      for (AnnotationValue value : mirror.getElementValues().values()) {
-        String col = (String) value.getValue();
-        if (!col.isEmpty()) {
-          return col;
-        }
-      }
+    Column columnAnno = method.getAnnotation(Column.class);
+    if (columnAnno == null) {
+      return method.getSimpleName().toString();
+    } else {
+      return columnAnno.value();
     }
-    return method.getSimpleName().toString();
   }
 
   /** Returns the SQL table name from {@code @Table(name = "...")} on a table model element. */
   public String getTableName(TypeElement tableElement) {
-    for (AnnotationMirror mirror : tableElement.getAnnotationMirrors()) {
-      if (!mirror.getAnnotationType().toString().equals(TABLE_ANNO)) {
-        continue;
-      }
-      for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> e :
-          mirror.getElementValues().entrySet()) {
-        if (e.getKey().getSimpleName().contentEquals("name")) {
-          String name = (String) e.getValue().getValue();
-          if (!name.isEmpty()) {
-            return name;
-          }
-        }
-      }
+    Table tableAnno = tableElement.getAnnotation(Table.class);
+    if (tableAnno == null) {
       return tableElement.getSimpleName().toString().toLowerCase();
     }
-    return tableElement.getSimpleName().toString().toLowerCase();
+    return tableAnno.name();
   }
 
   /**
-   * Reads a {@code Class}-typed annotation attribute and returns the corresponding element. Returns
-   * {@code null} if the annotation or attribute is absent.
+   * Returns the selection element T when {@code returnType} is {@code List<T>} and T has
+   * {@code @Selection}. Returns {@code null} otherwise.
    */
-  public TypeElement getAnnotationClassValue(TypeElement element, String annoFqn, String attrName) {
-    for (AnnotationMirror mirror : element.getAnnotationMirrors()) {
-      if (!mirror.getAnnotationType().toString().equals(annoFqn)) {
-        continue;
-      }
-      for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> e :
-          mirror.getElementValues().entrySet()) {
-        if (!e.getKey().getSimpleName().contentEquals(attrName)) {
-          continue;
-        }
-        TypeMirror tm = (TypeMirror) e.getValue().getValue();
-        return (TypeElement) util.processingEnv().getTypeUtils().asElement(tm);
-      }
-    }
-    return null;
-  }
-
-  /** Returns {@code true} if the element carries an annotation with the given FQN. */
-  public boolean hasAnnotation(TypeElement element, String annoFqn) {
-    for (AnnotationMirror mirror : element.getAnnotationMirrors()) {
-      if (mirror.getAnnotationType().toString().equals(annoFqn)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /** Returns {@code true} if the method element carries an annotation with the given FQN. */
-  public boolean hasAnnotationOnElement(ExecutableElement element, String annoFqn) {
-    for (AnnotationMirror mirror : element.getAnnotationMirrors()) {
-      if (mirror.getAnnotationType().toString().equals(annoFqn)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  public boolean isOptionalType(TypeMirror type) {
-    if (!(type instanceof DeclaredType dt)) {
-      return false;
-    }
-    if (!(dt.asElement() instanceof TypeElement te)) {
-      return false;
-    }
-    return te.getQualifiedName().contentEquals("java.util.Optional");
-  }
-
-  public TypeMirror getOptionalInnerType(TypeMirror type) {
-    if (type instanceof DeclaredType dt && !dt.getTypeArguments().isEmpty()) {
-      return dt.getTypeArguments().get(0);
-    }
-    return type;
-  }
-
-  /**
-   * Returns the projection element T when {@code returnType} is {@code List<T>} and T has
-   * {@code @Projection}. Returns {@code null} otherwise.
-   */
-  public @Nullable TypeElement getListElementProjection(TypeMirror returnType) {
+  public @Nullable TypeElement getListElementSelection(TypeMirror returnType) {
     if (!(returnType instanceof DeclaredType dt)) {
       return null;
     }
@@ -437,7 +316,7 @@ public final class SqlModelParser {
     }
     TypeMirror inner = dt.getTypeArguments().get(0);
     TypeElement innerElem = (TypeElement) util.processingEnv().getTypeUtils().asElement(inner);
-    if (innerElem != null && hasAnnotation(innerElem, SELECTION_ANNO)) {
+    if (innerElem != null && innerElem.getAnnotation(Selection.class) != null) {
       return innerElem;
     }
     return null;
@@ -445,8 +324,8 @@ public final class SqlModelParser {
 
   /** Finds the FK column name in {@code childTable} whose type references {@code parentTable}. */
   public String findFkColumnInChildForParent(TypeElement childTable, TypeElement parentTable) {
-    for (ExecutableElement method : ElementFilter.methodsIn(childTable.getEnclosedElements())) {
-      if (!hasAnnotationOnElement(method, FOREIGN_KEY_ANNO)) {
+    for (ExecutableElement method : util.extractAndValidateModelMethods(childTable)) {
+      if (method.getAnnotation(ForeignKey.class) == null) {
         continue;
       }
       if (!(method.getReturnType() instanceof DeclaredType dt)) {
@@ -464,12 +343,16 @@ public final class SqlModelParser {
 
   /** Returns the name of the {@code @PrimaryKey}-annotated column in the given table. */
   public String findPkColumn(TypeElement tableElement) {
-    for (ExecutableElement method : ElementFilter.methodsIn(tableElement.getEnclosedElements())) {
-      if (hasAnnotationOnElement(method, PRIMARY_KEY_ANNO)) {
+    for (ExecutableElement method : util.extractAndValidateModelMethods(tableElement)) {
+      if (method.getAnnotation(PrimaryKey.class) != null) {
         return method.getSimpleName().toString();
       }
     }
-    return null;
+    throw util.errorAndThrow(
+        "@PrimaryKey not found in table "
+            + getTableName(tableElement)
+            + ". Primary Key is mandatory for tables modelled using vajram-sql",
+        tableElement);
   }
 
   /**
@@ -477,8 +360,8 @@ public final class SqlModelParser {
    * method whose return type is {@code ChildTable} or {@code List<ChildTable>}.
    */
   public boolean hasIncomingFkForChild(TypeElement parentTable, TypeElement childTable) {
-    for (ExecutableElement method : ElementFilter.methodsIn(parentTable.getEnclosedElements())) {
-      if (!hasAnnotationOnElement(method, INCOMING_FK_ANNO)) {
+    for (ExecutableElement method : util.extractAndValidateModelMethods(parentTable)) {
+      if (method.getAnnotation(IncomingForeignKey.class) == null) {
         continue;
       }
       TypeElement refType = extractSingleOrListType(method.getReturnType());
@@ -494,18 +377,12 @@ public final class SqlModelParser {
    * Returns {@code null} if the type cannot be resolved.
    */
   private TypeElement extractSingleOrListType(TypeMirror rt) {
-    if (!(rt instanceof DeclaredType dt)) {
-      return null;
-    }
-    TypeElement te = (TypeElement) util.processingEnv().getTypeUtils().asElement(dt);
-    if (te == null) {
-      return null;
-    }
-    if (te.getQualifiedName().contentEquals("java.util.List") && !dt.getTypeArguments().isEmpty()) {
-      TypeMirror inner = dt.getTypeArguments().get(0);
-      return (TypeElement) util.processingEnv().getTypeUtils().asElement(inner);
-    }
-    return te;
+    return switch (util.getContainerType(rt)) {
+      case NO_CONTAINER -> (TypeElement) util.processingEnv().getTypeUtils().asElement(rt);
+      case LIST ->
+          (TypeElement) util.processingEnv().getTypeUtils().asElement(util.getContentType(rt));
+      case MAP -> null;
+    };
   }
 
   // ─── Structural validations ───────────────────────────────────────────────────
@@ -524,15 +401,15 @@ public final class SqlModelParser {
    */
   public void validateTableAndWhereElements(RoundEnvironment roundEnv) {
     TypeElement tableModelType =
-        util.processingEnv().getElementUtils().getTypeElement(TABLE_MODEL_FQN);
+        util.processingEnv().getElementUtils().getTypeElement(TableModel.class.getCanonicalName());
     TypeElement whereClauseType =
-        util.processingEnv().getElementUtils().getTypeElement(WHERE_CLAUSE_FQN);
+        util.processingEnv().getElementUtils().getTypeElement(WhereClause.class.getCanonicalName());
 
     for (Element element : roundEnv.getElementsAnnotatedWith(Table.class)) {
       if (!(element instanceof TypeElement te)) {
         continue;
       }
-      if (!hasAnnotation(te, MODEL_ROOT_ANNO)) {
+      if (te.getAnnotation(ModelRoot.class) == null) {
         util.error(
             "[vajram-sql] @Table interface '"
                 + te.getQualifiedName()
@@ -553,7 +430,7 @@ public final class SqlModelParser {
       if (!(element instanceof TypeElement te)) {
         continue;
       }
-      if (!hasAnnotation(te, MODEL_ROOT_ANNO)) {
+      if (te.getAnnotation(ModelRoot.class) == null) {
         util.error(
             "[vajram-sql] @WHERE interface '"
                 + te.getQualifiedName()
@@ -573,11 +450,6 @@ public final class SqlModelParser {
     }
   }
 
-  /** Returns {@code true} if the element is annotated with {@code @Table}. */
-  public boolean isTableModel(TypeElement element) {
-    return hasAnnotation(element, TABLE_ANNO);
-  }
-
   /**
    * Returns {@code true} when the WHERE inputs collectively cover at least one complete unique key
    * of the table (the {@code @PrimaryKey}, a single-column {@code @UniqueKey}, or all columns of a
@@ -595,57 +467,41 @@ public final class SqlModelParser {
       return true;
     }
 
-    for (ExecutableElement method : ElementFilter.methodsIn(tableElement.getEnclosedElements())) {
-      if (hasAnnotationOnElement(method, UNIQUE_KEY_ANNO)) {
+    for (ExecutableElement method : util.extractAndValidateModelMethods(tableElement)) {
+      if (method.getAnnotation(UniqueKey.class) != null) {
         if (whereFields.contains(method.getSimpleName().toString())) {
           return true;
         }
       }
     }
 
-    for (AnnotationMirror mirror : tableElement.getAnnotationMirrors()) {
-      if (!mirror.getAnnotationType().toString().equals(UNIQUE_KEY_ANNO)) {
-        continue;
-      }
-      for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> e :
-          mirror.getElementValues().entrySet()) {
-        if (!e.getKey().getSimpleName().contentEquals("columns")) {
-          continue;
-        }
-        List<?> colValues = (List<?>) e.getValue().getValue();
-        Set<String> keyColumns = new HashSet<>();
-        for (Object cv : colValues) {
-          if (cv instanceof AnnotationValue av) {
-            keyColumns.add((String) av.getValue());
-          }
-        }
-        if (!keyColumns.isEmpty() && whereFields.containsAll(keyColumns)) {
-          return true;
-        }
+    for (UniqueKey uniqueKeyAnno : tableElement.getAnnotationsByType(UniqueKey.class)) {
+      String[] columns = uniqueKeyAnno.columns();
+      if (whereFields.containsAll(Arrays.asList(columns))) {
+        return true;
       }
     }
-
     return false;
   }
 
   /**
-   * Returns DB column names referenced in the projection that do not exist as methods on the
+   * Returns DB column names referenced in the selection that do not exist as methods on the
    * underlying table. An empty list means every projected column is present in the table schema.
    *
    * <p>{@code @IncomingForeignKey} methods on the table are excluded — they are not real columns.
-   * {@code List<Projection>} methods (JOIN signals) in the projection are skipped.
+   * {@code List<Selection>} methods (JOIN signals) in the selection are skipped.
    */
-  public List<String> findInvalidProjectionColumns(
-      TypeElement projectionElement, TypeElement tableElement) {
+  public List<String> findInvalidSelectionColumns(
+      TypeElement selectionElement, TypeElement tableElement) {
     Set<String> tableColumns =
-        ElementFilter.methodsIn(tableElement.getEnclosedElements()).stream()
-            .filter(m -> !hasAnnotationOnElement(m, INCOMING_FK_ANNO))
+        util.extractAndValidateModelMethods(tableElement).stream()
+            .filter(m -> m.getAnnotation(IncomingForeignKey.class) == null)
             .map(m -> m.getSimpleName().toString())
             .collect(Collectors.toSet());
 
     List<String> invalid = new ArrayList<>();
-    for (ExecutableElement m : ElementFilter.methodsIn(projectionElement.getEnclosedElements())) {
-      if (getListElementProjection(m.getReturnType()) != null) {
+    for (ExecutableElement m : util.extractAndValidateModelMethods(selectionElement)) {
+      if (getListElementSelection(m.getReturnType()) != null) {
         continue;
       }
       String dbCol = resolveColumnName(m);
@@ -656,151 +512,30 @@ public final class SqlModelParser {
     return invalid;
   }
 
-  /**
-   * Parses {@code @ORDER_BY} annotations from the type argument of {@code TraitDef<T>}.
-   *
-   * <p>For example, {@code extends TraitDef<@ORDER(by="name", direction=ASC) UserInfo>} will return
-   * a single {@link OrderByClause}. Multiple {@code @ORDER} annotations are supported via the
-   * repeatable container.
-   */
-  public List<OrderByClause> parseOrderBysFromTraitTypeArg(TypeElement traitElement) {
-    TypeMirror typeArg = findTraitDefTypeArg(traitElement);
-    if (typeArg == null) {
-      return List.of();
-    }
-    List<OrderByClause> result = new ArrayList<>();
-    for (AnnotationMirror mirror : typeArg.getAnnotationMirrors()) {
-      String type = mirror.getAnnotationType().toString();
-      if (type.equals(ORDER_BY_ANNO)) {
-        result.add(parseOrderBy(mirror));
-      } else if (type.equals(ORDER_BYS_ANNO)) {
-        for (AnnotationValue containerVal : mirror.getElementValues().values()) {
-          if (!(containerVal.getValue() instanceof List<?> list)) {
-            continue;
-          }
-          for (Object item : list) {
-            if (item instanceof AnnotationValue av
-                && av.getValue() instanceof AnnotationMirror am) {
-              result.add(parseOrderBy(am));
-            }
-          }
-        }
-      }
-    }
-    return result;
+  public List<ORDER> parseOrderBys(TypeMirror type) {
+    return util
+        .getAnnotationInfos(
+            type,
+            ORDER.class,
+            annoValues ->
+                ORDER.Creator.create(
+                    String.valueOf(requireNonNull(annoValues.get("by")).getValue()),
+                    Direction.valueOf(
+                        ((Element) requireNonNull(annoValues.get("direction")).getValue())
+                            .getSimpleName()
+                            .toString())))
+        .stream()
+        .map(AnnotationInfo::annotation)
+        .toList();
   }
 
-  /**
-   * Parses the {@code @LIMIT} value from the type argument of {@code TraitDef<T>}; returns {@code
-   * -1} if absent.
-   *
-   * <p>For example, {@code extends TraitDef<@LIMIT(1) UserInfo>} returns {@code 1}.
-   */
-  public int parseLimitFromTraitTypeArg(TypeElement traitElement) {
-    TypeMirror typeArg = findTraitDefTypeArg(traitElement);
-    if (typeArg == null) {
-      return -1;
-    }
-    for (AnnotationMirror mirror : typeArg.getAnnotationMirrors()) {
-      if (!mirror.getAnnotationType().toString().equals(LIMIT_ANNO)) {
-        continue;
-      }
-      for (AnnotationValue val : mirror.getElementValues().values()) {
-        return ((Number) val.getValue()).intValue();
-      }
-    }
-    return -1;
-  }
-
-  /**
-   * Returns {@code true} when the {@code TraitDef<T>} type argument carries an explicit
-   * {@code @LIMIT} annotation (including {@code @LIMIT(LIMIT.NO_LIMIT)}). Returns {@code false}
-   * when no {@code @LIMIT} annotation is present on the type argument at all.
-   */
-  public boolean hasLimitAnnotationOnTraitTypeArg(TypeElement traitElement) {
-    TypeMirror typeArg = findTraitDefTypeArg(traitElement);
-    if (typeArg == null) {
-      return false;
-    }
-    for (AnnotationMirror mirror : typeArg.getAnnotationMirrors()) {
-      if (mirror.getAnnotationType().toString().equals(LIMIT_ANNO)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Returns the first type argument {@code T} of {@code TraitDef<T>} or {@code TraitDef<List<T>>}
-   * as a raw {@link TypeMirror}, preserving any type-use annotations. Returns {@code null} if the
-   * element does not extend {@code TraitDef}.
-   */
-  private TypeMirror findTraitDefTypeArg(TypeElement traitElement) {
-    for (TypeMirror iface : traitElement.getInterfaces()) {
-      if (!(iface instanceof DeclaredType dt)) {
-        continue;
-      }
-      if (!(dt.asElement() instanceof TypeElement te)) {
-        continue;
-      }
-      if (!te.getQualifiedName().contentEquals(TRAIT_DEF_CLASS)) {
-        continue;
-      }
-      if (!dt.getTypeArguments().isEmpty()) {
-        return dt.getTypeArguments().get(0);
-      }
-    }
-    return null;
-  }
-
-  private List<OrderByClause> parseOrderBys(ExecutableElement method) {
-    List<OrderByClause> result = new ArrayList<>();
-    for (AnnotationMirror mirror : method.getAnnotationMirrors()) {
-      String type = mirror.getAnnotationType().toString();
-      if (type.equals(ORDER_BY_ANNO)) {
-        result.add(parseOrderBy(mirror));
-      } else if (type.equals(ORDER_BYS_ANNO)) {
-        for (AnnotationValue containerVal : mirror.getElementValues().values()) {
-          if (!(containerVal.getValue() instanceof List<?> list)) {
-            continue;
-          }
-          for (Object item : list) {
-            if (item instanceof AnnotationValue av
-                && av.getValue() instanceof AnnotationMirror am) {
-              result.add(parseOrderBy(am));
-            }
-          }
-        }
-      }
-    }
-    return result;
-  }
-
-  private OrderByClause parseOrderBy(AnnotationMirror mirror) {
-    String column = "";
-    String order = "ASC";
-    for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> e :
-        mirror.getElementValues().entrySet()) {
-      String attr = e.getKey().getSimpleName().toString();
-      if (attr.equals("by")) {
-        column = (String) e.getValue().getValue();
-      } else if (attr.equals("direction")) {
-        VariableElement ve = (VariableElement) e.getValue().getValue();
-        order = ve.getSimpleName().toString();
-      }
-    }
-    return new OrderByClause(column, order);
-  }
-
-  private int parseLimit(ExecutableElement method) {
-    for (AnnotationMirror mirror : method.getAnnotationMirrors()) {
-      if (!mirror.getAnnotationType().toString().equals(LIMIT_ANNO)) {
-        continue;
-      }
-      for (AnnotationValue val : mirror.getElementValues().values()) {
-        return ((Number) val.getValue()).intValue();
-      }
-    }
-    return -1;
+  public @Nullable LIMIT parseLimit(TypeMirror type) {
+    List<AnnotationInfo<LIMIT>> annotationInfos =
+        util.getAnnotationInfos(
+            type,
+            LIMIT.class,
+            annoParamValues ->
+                create((Integer) requireNonNull(annoParamValues.get("value")).getValue()));
+    return annotationInfos.isEmpty() ? null : annotationInfos.get(0).annotation();
   }
 }

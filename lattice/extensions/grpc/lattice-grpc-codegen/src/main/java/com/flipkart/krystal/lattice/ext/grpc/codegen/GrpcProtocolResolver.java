@@ -41,8 +41,8 @@ final class GrpcProtocolResolver {
         TypeElement vajramElement =
             (TypeElement)
                 requireNonNull(util.processingEnv().getTypeUtils().asElement(vajramMirror));
-        VajramInfoLite vajramInfo = util.computeVajramInfoLite(vajramElement);
-        TypeMirror responseType = vajramInfo.responseType().javaModelType(util.processingEnv());
+        VajramInfoLite vajramInfo = util.computeVajramInfoLiteWithUpperBoundTypeArgs(vajramElement);
+        TypeMirror responseType = vajramInfo.responseType().typeMirror(util.processingEnv());
         Element responseElement = util.processingEnv().getTypeUtils().asElement(responseType);
         if (!(responseElement instanceof TypeElement responseTypeElement)) {
           continue;

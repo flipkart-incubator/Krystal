@@ -10,7 +10,6 @@ import com.flipkart.krystal.codegen.common.datatypes.VariableCodeGenType;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.vajram.Trait;
-import com.google.common.collect.ImmutableMap;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.TypeName;
 import java.util.List;
@@ -24,7 +23,6 @@ public record VajramInfoLite(
     VajramID vajramId,
     CodeGenType responseType,
     String packageName,
-    ImmutableMap<String, FacetDetail> facetDetails,
     TypeElement vajramOrReqClass,
     List<? extends TypeMirror> typeArguments,
     String docString,
@@ -82,9 +80,8 @@ public record VajramInfoLite(
   }
 
   public record FacetDetail(
-      int id,
-      String name,
-      CodeGenType dataType,
-      FacetType facetType,
-      @Nullable String documentation) {}
+      String name, CodeGenType dataType, FacetType facetType, @Nullable String documentation) {
+
+    public FacetDetail {}
+  }
 }

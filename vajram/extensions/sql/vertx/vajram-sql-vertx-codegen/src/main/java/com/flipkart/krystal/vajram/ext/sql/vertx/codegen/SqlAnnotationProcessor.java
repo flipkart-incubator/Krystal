@@ -6,8 +6,18 @@ import static com.flipkart.krystal.codegen.common.models.Constants.MODULE_ROOT_P
 import static com.google.common.base.Throwables.getStackTraceAsString;
 
 import com.flipkart.krystal.codegen.common.models.AbstractKrystalAnnoProcessor;
+import com.flipkart.krystal.codegen.common.models.CodeGenShortCircuitException;
 import com.flipkart.krystal.codegen.common.models.RunOnlyWhenCodegenPhaseIs;
+import com.flipkart.krystal.vajram.Trait;
+import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
+import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlModelParser;
+import com.flipkart.krystal.vajram.ext.sql.statement.SQL;
 import com.google.auto.service.AutoService;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
@@ -15,6 +25,7 @@ import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedOptions;
 import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 
 @SupportedAnnotationTypes("com.flipkart.krystal.vajram.ext.sql.statement.SQL")
@@ -24,19 +35,52 @@ import javax.lang.model.element.TypeElement;
 @RunOnlyWhenCodegenPhaseIs(MODELS)
 public class SqlAnnotationProcessor extends AbstractKrystalAnnoProcessor {
 
-  private boolean generated;
+  private final List<TypeElement> sqlTraits = new LinkedList<>();
 
   @Override
   protected boolean processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-    if (generated) {
-      return false;
-    }
     try {
-      new SqlTraitVajramGen(codeGenUtil()).generate(roundEnv);
+      VajramCodeGenUtility vajramUtil = new VajramCodeGenUtility(codeGenUtil());
+      SqlModelParser parser = new SqlModelParser(vajramUtil);
+      parser.validateTableAndWhereElements(roundEnv);
+      List<TypeElement> sqlTraits = getSqlTraits(roundEnv);
+      this.sqlTraits.addAll(sqlTraits);
+      Iterator<TypeElement> iterator = sqlTraits.iterator();
+      while (iterator.hasNext()) {
+        TypeElement vajramElement = iterator.next();
+        try {
+          VajramInfo vajramInfo = vajramUtil.computeVajramInfo(vajramElement);
+          new SqlTraitVajramGen(vajramUtil, vajramInfo, parser).generate();
+          iterator.remove();
+        } catch (Exception e) {
+          if (e instanceof CodeGenShortCircuitException) {
+            vajramUtil
+                .codegenUtil()
+                .note("[Vajram Codegen Exception]" + e.getMessage(), vajramElement);
+          } else {
+            vajramUtil
+                .codegenUtil()
+                .error("[Vajram Codegen Exception] " + getStackTraceAsString(e), vajramElement);
+          }
+        }
+      }
     } catch (Exception e) {
       codeGenUtil().error("[SQL TraitVajramGen] " + getStackTraceAsString(e));
     }
-    generated = true;
     return false;
+  }
+
+  private List<TypeElement> getSqlTraits(RoundEnvironment roundEnv) {
+    List<TypeElement> sqlTraits = new ArrayList<>();
+    for (Element element : roundEnv.getElementsAnnotatedWith(SQL.class)) {
+      if (element.getAnnotation(Trait.class) == null) {
+        continue;
+      }
+      if (!(element instanceof TypeElement typeElement)) {
+        continue;
+      }
+      sqlTraits.add(typeElement);
+    }
+    return sqlTraits;
   }
 }

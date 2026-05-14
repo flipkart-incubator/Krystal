@@ -3,6 +3,8 @@ package com.flipkart.krystal.vajram.ext.sql.model;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.TYPE;
 
+import com.flipkart.krystal.vajram.ext.sql.model.UniqueKey.UniqueKeys;
+import java.lang.annotation.Repeatable;
 import java.lang.annotation.Target;
 
 /**
@@ -11,6 +13,7 @@ import java.lang.annotation.Target;
  * unique key is on multiple columns, the annotation must be applied to the model interface.
  */
 @Target({METHOD, TYPE})
+@Repeatable(UniqueKeys.class)
 public @interface UniqueKey {
 
   /** The name of the unique key */
@@ -27,4 +30,9 @@ public @interface UniqueKey {
    * </ul>
    */
   String[] columns() default {};
+
+  @Target({METHOD, TYPE})
+  @interface UniqueKeys {
+    UniqueKey[] value();
+  }
 }

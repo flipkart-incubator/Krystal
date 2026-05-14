@@ -67,7 +67,7 @@ class ProtoServiceSchemaGen implements CodeGenerator {
             .codegenUtil()
             .getAnnotationInfo(context.latticeAppTypeElement(), GrpcServer.class);
     if (grpcServer == null) {
-      util.codegenUtil().note("grpc Server is null");
+      util.codegenUtil().note("gRPC Server is null");
       return;
     }
     validate(grpcServer);
@@ -87,7 +87,7 @@ class ProtoServiceSchemaGen implements CodeGenerator {
         anno.mirror().getElementValues().entrySet().stream()
             .collect(Collectors.toMap(e -> e.getKey().getSimpleName().toString(), Entry::getValue));
     if (anno.annotation().serverName().isEmpty()) {
-      String message = "grpc serverName cannot be empty";
+      String message = "gRPC serverName cannot be empty";
       util.processingEnv()
           .getMessager()
           .printMessage(
@@ -101,7 +101,7 @@ class ProtoServiceSchemaGen implements CodeGenerator {
 
     GrpcService[] grpcServices = anno.annotation().services();
     if (grpcServices.length == 0) {
-      String message = "No Services registered with the grpc server. This is not allowed";
+      String message = "No Services registered with the gRPC server. This is not allowed";
       util.processingEnv()
           .getMessager()
           .printMessage(
@@ -138,7 +138,7 @@ class ProtoServiceSchemaGen implements CodeGenerator {
       String serviceName = grpcService.serviceName();
       AnnotationMirror serviceAnnoMirror = list.get(i);
       if (serviceName.isEmpty()) {
-        String message = "grpc Service name cannot be empty";
+        String message = "gRPC Service name cannot be empty";
         util.processingEnv()
             .getMessager()
             .printMessage(
@@ -154,7 +154,7 @@ class ProtoServiceSchemaGen implements CodeGenerator {
         throw new CodeValidationException(message);
       }
       if (!serviceNames.add(serviceName)) {
-        String message = "Duplicate grpc service name";
+        String message = "Duplicate gRPC service name";
         util.processingEnv()
             .getMessager()
             .printMessage(
@@ -193,7 +193,7 @@ class ProtoServiceSchemaGen implements CodeGenerator {
    * Generates the content for the service proto file that contains the service definition for the
    * remotely invocable Vajram.
    *
-   * @param grpcServer The grpc server annotation
+   * @param grpcServer The gRPC server annotation
    * @param protocol The {@link ProtobufProtocol} all rpc vajram response models share
    */
   private void generateServerFile(GrpcServer grpcServer, ProtobufProtocol protocol) {
@@ -244,7 +244,7 @@ class ProtoServiceSchemaGen implements CodeGenerator {
                 for (TypeMirror vajramType :
                     util.codegenUtil().getTypesFromAnnotationMember(serviceAnno::rpcVajrams)) {
                   VajramInfoLite vajramInfo =
-                      util.computeVajramInfoLite(
+                      util.computeVajramInfoLiteWithUpperBoundTypeArgs(
                           requireNonNull(
                               (TypeElement)
                                   util.processingEnv().getTypeUtils().asElement(vajramType)));
@@ -288,7 +288,7 @@ class ProtoServiceSchemaGen implements CodeGenerator {
                         .stream()
                         .map(
                             typeMirror ->
-                                util.computeVajramInfoLite(
+                                util.computeVajramInfoLiteWithUpperBoundTypeArgs(
                                     requireNonNull(
                                         (TypeElement)
                                             util.processingEnv()

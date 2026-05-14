@@ -1,14 +1,13 @@
 package com.flipkart.krystal.codegen.common.datatypes;
 
-import java.lang.reflect.Type;
+import java.util.List;
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.type.TypeMirror;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public interface DataTypeFactory {
   @Nullable CodeGenType create(
-      ProcessingEnvironment processingEnvironment,
-      String canonicalClassName,
-      CodeGenType... typeParameters);
-
-  @Nullable CodeGenType create(ProcessingEnvironment processingEnvironment, Type type);
+      TypeMirror typeMirror,
+      List<CodeGenType> typeParameters,
+      ProcessingEnvironment processingEnvironment);
 }

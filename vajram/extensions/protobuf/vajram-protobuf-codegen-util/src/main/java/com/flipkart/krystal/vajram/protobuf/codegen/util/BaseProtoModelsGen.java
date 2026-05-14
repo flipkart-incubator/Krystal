@@ -55,6 +55,7 @@ import com.squareup.javapoet.TypeSpec.Builder;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
@@ -76,12 +77,14 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
   private final CodeGenUtility util;
   private final ModelRoot modelRoot;
   private final ProtoSchemaConfig config;
+  private final ProcessingEnvironment processingEnv;
 
   protected BaseProtoModelsGen(ModelsCodeGenContext codeGenContext, ProtoSchemaConfig config) {
     this.codeGenContext = codeGenContext;
     this.util = codeGenContext.util();
     this.modelRoot = requireNonNull(codeGenContext.modelRootType().getAnnotation(ModelRoot.class));
     this.config = config;
+    processingEnv = util.processingEnv();
   }
 
   @Override
@@ -147,8 +150,7 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
    */
   private void generateEnumProtoUtils() {
     TypeElement enumElement = codeGenContext.modelRootType();
-    String packageName =
-        util.processingEnv().getElementUtils().getPackageOf(enumElement).toString();
+    String packageName = processingEnv.getElementUtils().getPackageOf(enumElement).toString();
     String utilsClassName = enumElement.getSimpleName().toString() + config.utilsSuffix();
 
     ClassName javaEnumType = ClassName.get(enumElement);
@@ -189,7 +191,7 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
 
   private ClassName getProtoUtilsClassName(TypeElement enumElement) {
     return ClassName.get(
-        util.processingEnv().getElementUtils().getPackageOf(enumElement).toString(),
+        processingEnv.getElementUtils().getPackageOf(enumElement).toString(),
         enumElement.getSimpleName().toString() + config.utilsSuffix());
   }
 
@@ -548,7 +550,7 @@ return _serializedPayload;
         TypeMirror listElemType = util.getContentType(method.getReturnType());
         if (listElemType != null && util.isEnumModelType(listElemType)) {
           TypeElement enumElement =
-              (TypeElement) util.processingEnv().getTypeUtils().asElement(listElemType);
+              (TypeElement) processingEnv.getTypeUtils().asElement(listElemType);
           getterBuilder.addStatement(
               "return $T.transform(_proto().get$LList(), $T::protoToJava)",
               Lists.class,
@@ -609,7 +611,7 @@ return _serializedPayload;
         TypeMirror mapValueType = util.getMapValueType(method.getReturnType());
         if (mapValueType != null && util.isEnumModelType(mapValueType)) {
           TypeElement enumElement =
-              (TypeElement) util.processingEnv().getTypeUtils().asElement(mapValueType);
+              (TypeElement) processingEnv.getTypeUtils().asElement(mapValueType);
           getterBuilder.addStatement(
               "return $T.transformValues(_proto().get$LMap(), $T::protoToJava)",
               Maps.class,
@@ -679,8 +681,7 @@ return _serializedPayload;
 
     CodeBlock creatorCode;
     if (isEnumModelField) {
-      TypeElement enumElement =
-          (TypeElement) util.processingEnv().getTypeUtils().asElement(rawReturnType);
+      TypeElement enumElement = (TypeElement) processingEnv.getTypeUtils().asElement(rawReturnType);
       creatorCode =
           CodeBlock.of(
               "$T.protoToJava(_proto().get$L())",
@@ -697,7 +698,7 @@ return _serializedPayload;
                           capitalizeFirstChar(fieldName)))
               .orElseGet(
                   () ->
-                      dataType.equals(BYTE_ARRAY)
+                      dataType.isSameType(BYTE_ARRAY, processingEnv)
                           ? CodeBlock.of(
                               "new $T(_proto().get$L())",
                               ProtoByteArray.class,
@@ -819,7 +820,7 @@ return _serializedPayload;
           TypeMirror listElemType = util.getContentType(returnType);
           if (listElemType != null && util.isEnumModelType(listElemType)) {
             TypeElement enumElement =
-                (TypeElement) util.processingEnv().getTypeUtils().asElement(listElemType);
+                (TypeElement) processingEnv.getTypeUtils().asElement(listElemType);
             addAllArg =
                 CodeBlock.of(
                     "\n          $T.transform($L, $T::javaToProto)\n",
@@ -925,7 +926,7 @@ return _serializedPayload;
               util.isOptional(returnType) ? util.getOptionalInnerType(returnType) : returnType;
           if (util.isEnumModelType(rawSetterType)) {
             TypeElement enumElement =
-                (TypeElement) util.processingEnv().getTypeUtils().asElement(rawSetterType);
+                (TypeElement) processingEnv.getTypeUtils().asElement(rawSetterType);
             setterBuilder.addStatement(
                 "_proto.set$L($T.javaToProto($L))",
                 capitalizeFirstChar(fieldName),
@@ -939,7 +940,7 @@ return _serializedPayload;
                         capitalizeFirstChar(fieldName),
                         ByteString.class,
                         fieldName)
-                    : dataType.equals(BYTE_ARRAY)
+                    : dataType.isSameType(BYTE_ARRAY, processingEnv)
                         ? CodeBlock.of(
                             "_proto.set$L($T.toByteString($L))",
                             capitalizeFirstChar(fieldName),

@@ -106,8 +106,9 @@ public final class LatticeAppImplGenProvider implements LatticeCodeGeneratorProv
                               () -> LatticeApplication.class.getMethod("getDependencyInjector")))
                       .returns(
                           TypeName.get(
-                              util.getTypeFromAnnotationMember(
-                                  context.latticeApp()::dependencyInjectionFramework)))
+                              util.getTypeElemFromAnnotationMember(
+                                      context.latticeApp()::dependencyInjectionFramework)
+                                  .asType()))
                       .addCode("$L", depInjectBinderGen.getBinderCreationCode(context))
                       .build());
 

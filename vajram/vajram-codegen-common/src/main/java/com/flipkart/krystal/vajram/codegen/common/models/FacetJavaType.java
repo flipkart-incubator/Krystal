@@ -73,7 +73,7 @@ public abstract sealed class FacetJavaType {
 
     @Override
     public TypeName javaTypeName(FacetGenModel facet) {
-      CodeGenType dataType = util.getDataType(facet);
+      CodeGenType dataType = facet.dataType();
       return util.codegenUtil().getTypeName(dataType).typeName();
     }
 
@@ -117,7 +117,7 @@ public abstract sealed class FacetJavaType {
 
     @Override
     public TypeName javaTypeName(FacetGenModel facet) {
-      CodeGenType dataType = util.getDataType(facet);
+      CodeGenType dataType = facet.dataType();
       TypeAndName javaType = util.codegenUtil().getTypeName(dataType);
       return util.codegenUtil().box(javaType).typeName();
     }
@@ -136,7 +136,7 @@ public abstract sealed class FacetJavaType {
 
     @Override
     public TypeName javaTypeName(FacetGenModel facet) {
-      CodeGenType dataType = util.getDataType(facet);
+      CodeGenType dataType = facet.dataType();
       TypeAndName javaType = util.codegenUtil().getTypeName(dataType);
       TypeAndName javaType1 = util.codegenUtil().box(javaType);
       return util.codegenUtil().optional(javaType1);
@@ -165,7 +165,7 @@ public abstract sealed class FacetJavaType {
 
     @Override
     public TypeName javaTypeName(FacetGenModel facet) {
-      return util.responseType((DependencyModel) facet);
+      return util.getVajramResponseType((DependencyModel) facet);
     }
 
     @Override

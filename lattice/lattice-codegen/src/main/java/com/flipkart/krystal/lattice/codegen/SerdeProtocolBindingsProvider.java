@@ -63,9 +63,9 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
     Map<String, TypeElement> responseTypeElems = new LinkedHashMap<>();
     Map<String, List<String>> responseToVajramsMapping = new LinkedHashMap<>();
     for (TypeElement vajram : remotelyInvocableVajrams) {
-      VajramInfoLite vajramInfoLite = util.computeVajramInfoLite(vajram);
+      VajramInfoLite vajramInfoLite = util.computeVajramInfoLiteWithUpperBoundTypeArgs(vajram);
       CodeGenType responseType = vajramInfoLite.responseType();
-      TypeMirror responseMirror = responseType.javaModelType(util.processingEnv());
+      TypeMirror responseMirror = responseType.typeMirror(util.processingEnv());
       if (!util.codegenUtil().isRawAssignable(responseMirror, Model.class)) {
         continue;
       }

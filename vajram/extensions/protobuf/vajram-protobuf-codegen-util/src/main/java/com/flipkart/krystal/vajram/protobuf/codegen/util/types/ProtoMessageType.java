@@ -27,20 +27,15 @@ public final class ProtoMessageType implements CodeGenType {
   }
 
   @Override
-  public TypeMirror javaModelType(ProcessingEnvironment processingEnv) {
+  public TypeMirror typeMirror(ProcessingEnvironment processingEnv) {
     return requireNonNull(processingEnv.getElementUtils().getTypeElement(canonicalClassName))
         .asType();
   }
 
   @Override
-  public CodeGenType rawType() {
-    return this;
-  }
-
-  @Override
   public CodeBlock defaultValueExpr(ProcessingEnvironment processingEnv)
       throws IllegalArgumentException {
-    return CodeBlock.of("$T.getDefaultInstance()", javaModelType(processingEnv));
+    return CodeBlock.of("$T.getDefaultInstance()", typeMirror(processingEnv));
   }
 
   @Override

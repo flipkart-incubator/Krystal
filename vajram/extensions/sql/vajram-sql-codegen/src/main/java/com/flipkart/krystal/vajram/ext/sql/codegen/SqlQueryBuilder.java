@@ -2,10 +2,10 @@ package com.flipkart.krystal.vajram.ext.sql.codegen;
 
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.JoinRelation;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.JoinSqlResult;
-import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.OrderByClause;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.ScalarColumn;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.SelectionInfo;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereInput;
+import com.flipkart.krystal.vajram.ext.sql.statement.ORDER;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,9 +19,9 @@ import java.util.List;
  *
  * <ol>
  *   <li><b>Simple</b> — scalar-only projection, single or multiple rows ({@link
- *       #buildSimpleSql(SelectionInfo, List)})
+ *       #buildSimpleSql(SelectionInfo, List, List, int)})
  *   <li><b>JOIN</b> — projection with at least one {@code List<AnotherProjection>} field ({@link
- *       #buildJoinSql(SelectionInfo, List)})
+ *       #buildJoinSql(SelectionInfo, List, List, int, boolean)})
  * </ol>
  */
 public final class SqlQueryBuilder {
@@ -29,18 +29,6 @@ public final class SqlQueryBuilder {
   private SqlQueryBuilder() {}
 
   // ─── Simple SELECT (no JOIN) ──────────────────────────────────────────────────
-
-  /**
-   * Builds a simple {@code SELECT ... FROM ... WHERE ...} statement for projections that contain
-   * only scalar columns (no nested {@code List<Projection>} methods).
-   *
-   * <p>The SQL uses positional placeholders ({@code $1}, {@code $2}, …) compatible with PostgreSQL
-   * and the Vert.x SQL client.
-   */
-  public static String buildSimpleSql(SelectionInfo proj, List<WhereInput> whereInputs) {
-    return buildSimpleSql(proj, whereInputs, List.of(), -1);
-  }
-
   /**
    * Builds a simple {@code SELECT ... FROM ... WHERE ... ORDER BY ... LIMIT ...} statement,
    * appending trait-level {@code ORDER BY} and {@code LIMIT} clauses when provided.
@@ -49,7 +37,7 @@ public final class SqlQueryBuilder {
    * @param limit trait-level LIMIT value; {@code -1} means no LIMIT is appended
    */
   public static String buildSimpleSql(
-      SelectionInfo proj, List<WhereInput> whereInputs, List<OrderByClause> orderBys, int limit) {
+      SelectionInfo proj, List<WhereInput> whereInputs, List<ORDER> orderBys, int limit) {
     List<String> cols = new ArrayList<>();
     for (ScalarColumn col : proj.scalars()) {
       cols.add(colExpr(col.dbColumnName(), col.methodName()));
@@ -62,8 +50,8 @@ public final class SqlQueryBuilder {
     appendWhere(sql, whereInputs, /* qualified= */ false);
     if (!orderBys.isEmpty()) {
       List<String> parts = new ArrayList<>();
-      for (OrderByClause ob : orderBys) {
-        parts.add(ob.columnName() + " " + ob.order());
+      for (ORDER ob : orderBys) {
+        parts.add(ob.by() + " " + ob.direction());
       }
       sql.append(" ORDER BY ").append(String.join(", ", parts));
     }
@@ -74,22 +62,6 @@ public final class SqlQueryBuilder {
   }
 
   // ─── JOIN SELECT ─────────────────────────────────────────────────────────────
-
-  /**
-   * Builds a LEFT JOIN {@code SELECT} statement for projections that contain at least one {@code
-   * List<AnotherProjection>} method.
-   *
-   * <p>All column aliases are prefixed with {@code tableName_} to prevent clashes across tables
-   * (e.g. {@code users.name AS users_name}, {@code orders.orderId AS orders_orderId}).
-   *
-   * <p>The parent table's PK column is always included in the {@code SELECT} — either because it is
-   * already a projected scalar, or as an extra sentinel column. This alias is returned in {@link
-   * JoinSqlResult#parentPkAlias()} and is used by the code generator to emit per-row identity
-   * validation in {@code mapResult}.
-   */
-  public static JoinSqlResult buildJoinSql(SelectionInfo proj, List<WhereInput> whereInputs) {
-    return buildJoinSql(proj, whereInputs, List.of(), -1, false);
-  }
 
   /**
    * Builds a LEFT JOIN {@code SELECT} statement, optionally appending trait-level {@code ORDER BY}
@@ -109,37 +81,37 @@ public final class SqlQueryBuilder {
    * @param isListTrait {@code true} when the trait return type is {@code List<T>}
    */
   public static JoinSqlResult buildJoinSql(
-      SelectionInfo proj,
+      SelectionInfo selection,
       List<WhereInput> whereInputs,
-      List<OrderByClause> traitOrderBys,
+      List<ORDER> traitOrderBys,
       int traitLimit,
       boolean isListTrait) {
-    String parentPkCol = proj.parentPkColumn();
-    String parentPkAlias = parentPkCol != null ? proj.tableName() + "_" + parentPkCol : null;
+    String parentPkCol = selection.parentPkColumn();
+    String parentPkAlias = parentPkCol != null ? selection.tableName() + "_" + parentPkCol : null;
 
     List<String> cols = new ArrayList<>();
 
     // Add parent PK sentinel only if it is not already projected as a scalar.
     boolean pkAlreadyProjected =
         parentPkCol != null
-            && proj.scalars().stream().anyMatch(c -> c.methodName().equals(parentPkCol));
+            && selection.scalars().stream().anyMatch(c -> c.methodName().equals(parentPkCol));
 
     if (parentPkAlias != null && !pkAlreadyProjected) {
-      cols.add(proj.tableName() + "." + parentPkCol + " AS " + parentPkAlias);
+      cols.add(selection.tableName() + "." + parentPkCol + " AS " + parentPkAlias);
     }
 
-    for (ScalarColumn col : proj.scalars()) {
+    for (ScalarColumn col : selection.scalars()) {
       cols.add(
-          proj.tableName()
+          selection.tableName()
               + "."
               + col.dbColumnName()
               + " AS "
-              + proj.tableName()
+              + selection.tableName()
               + "_"
               + col.methodName());
     }
 
-    for (JoinRelation join : proj.joins()) {
+    for (JoinRelation join : selection.joins()) {
       // Add child PK sentinel if this join has nested joins and the PK is not already projected
       if (!join.nestedJoins().isEmpty() && join.childPkColumn() != null) {
         boolean childPkProjected =
@@ -188,13 +160,13 @@ public final class SqlQueryBuilder {
     // rows. Instead, wrap the parent table in a subquery so the LIMIT and ORDER BY apply only to
     // parent rows before the join expands them.
     if (traitLimit > 0) {
-      StringBuilder inner = new StringBuilder("SELECT * FROM ").append(proj.tableName());
+      StringBuilder inner = new StringBuilder("SELECT * FROM ").append(selection.tableName());
       // Unqualified WHERE inside the subquery — only one table in scope.
       appendWhere(inner, whereInputs, /* qualified= */ false);
       if (!traitOrderBys.isEmpty()) {
         List<String> parts = new ArrayList<>();
-        for (OrderByClause ob : traitOrderBys) {
-          parts.add(ob.columnName() + " " + ob.order());
+        for (ORDER ob : traitOrderBys) {
+          parts.add(ob.by() + " " + ob.direction());
         }
         inner.append(" ORDER BY ").append(String.join(", ", parts));
       }
@@ -206,12 +178,13 @@ public final class SqlQueryBuilder {
               .append(" FROM (")
               .append(inner)
               .append(") ")
-              .append(proj.tableName());
+              .append(selection.tableName());
 
       // In the subquery path the parent is always multi-row, so every top-level join uses
       // ROW_NUMBER. Nested joins always use ROW_NUMBER regardless.
-      for (JoinRelation join : proj.joins()) {
-        sql.append(" ").append(buildJoinClause(join, proj.tableName(), /* useRowNumber= */ true));
+      for (JoinRelation join : selection.joins()) {
+        sql.append(" ")
+            .append(buildJoinClause(join, selection.tableName(), /* useRowNumber= */ true));
         for (JoinRelation nested : join.nestedJoins()) {
           sql.append(" ")
               .append(buildJoinClause(nested, join.tableName(), /* useRowNumber= */ true));
@@ -221,16 +194,16 @@ public final class SqlQueryBuilder {
       // Outer ORDER BY: parent ordering columns (to preserve subquery order in the final result)
       // followed by join-level ordering columns (for consistent child-row ordering).
       List<String> outerOrderBys = new ArrayList<>();
-      for (OrderByClause ob : traitOrderBys) {
-        outerOrderBys.add(proj.tableName() + "." + ob.columnName() + " " + ob.order());
+      for (ORDER ob : traitOrderBys) {
+        outerOrderBys.add(selection.tableName() + "." + ob.by() + " " + ob.direction());
       }
-      for (JoinRelation join : proj.joins()) {
-        for (OrderByClause ob : join.orderBys()) {
-          outerOrderBys.add(join.tableName() + "." + ob.columnName() + " " + ob.order());
+      for (JoinRelation join : selection.joins()) {
+        for (ORDER ob : join.orderBys()) {
+          outerOrderBys.add(join.tableName() + "." + ob.by() + " " + ob.direction());
         }
         for (JoinRelation nested : join.nestedJoins()) {
-          for (OrderByClause ob : nested.orderBys()) {
-            outerOrderBys.add(nested.tableName() + "." + ob.columnName() + " " + ob.order());
+          for (ORDER ob : nested.orderBys()) {
+            outerOrderBys.add(nested.tableName() + "." + ob.by() + " " + ob.direction());
           }
         }
       }
@@ -255,13 +228,16 @@ public final class SqlQueryBuilder {
     //
     // Nested (level-2) joins always use ROW_NUMBER because their immediate parent is multi-row.
     StringBuilder sql =
-        new StringBuilder("SELECT ").append(selectCols).append(" FROM ").append(proj.tableName());
+        new StringBuilder("SELECT ")
+            .append(selectCols)
+            .append(" FROM ")
+            .append(selection.tableName());
 
-    for (JoinRelation join : proj.joins()) {
+    for (JoinRelation join : selection.joins()) {
       // ROW_NUMBER is required whenever there is more than one parent (list trait) OR whenever
       // this join has nested joins (outer LIMIT would truncate grandchild rows).
       boolean useRowNumber = isListTrait || !join.nestedJoins().isEmpty();
-      sql.append(" ").append(buildJoinClause(join, proj.tableName(), useRowNumber));
+      sql.append(" ").append(buildJoinClause(join, selection.tableName(), useRowNumber));
       for (JoinRelation nested : join.nestedJoins()) {
         sql.append(" ").append(buildJoinClause(nested, join.tableName(), /* useRowNumber= */ true));
       }
@@ -271,16 +247,16 @@ public final class SqlQueryBuilder {
 
     // ORDER BY: trait-level (parent table) first, then join-level (child tables).
     List<String> orderByParts = new ArrayList<>();
-    for (OrderByClause ob : traitOrderBys) {
-      orderByParts.add(proj.tableName() + "." + ob.columnName() + " " + ob.order());
+    for (ORDER ob : traitOrderBys) {
+      orderByParts.add(selection.tableName() + "." + ob.by() + " " + ob.direction());
     }
-    for (JoinRelation join : proj.joins()) {
-      for (OrderByClause ob : join.orderBys()) {
-        orderByParts.add(join.tableName() + "." + ob.columnName() + " " + ob.order());
+    for (JoinRelation join : selection.joins()) {
+      for (ORDER ob : join.orderBys()) {
+        orderByParts.add(join.tableName() + "." + ob.by() + " " + ob.direction());
       }
       for (JoinRelation nested : join.nestedJoins()) {
-        for (OrderByClause ob : nested.orderBys()) {
-          orderByParts.add(nested.tableName() + "." + ob.columnName() + " " + ob.order());
+        for (ORDER ob : nested.orderBys()) {
+          orderByParts.add(nested.tableName() + "." + ob.by() + " " + ob.direction());
         }
       }
     }
@@ -294,7 +270,7 @@ public final class SqlQueryBuilder {
     // When the level-1 join has nested joins, ROW_NUMBER is used instead (see above), so no
     // outer LIMIT is emitted here.
     if (!isListTrait) {
-      for (JoinRelation join : proj.joins()) {
+      for (JoinRelation join : selection.joins()) {
         if (join.limit() > 0 && join.nestedJoins().isEmpty()) {
           sql.append(" LIMIT ").append(join.limit());
           break;
@@ -357,8 +333,8 @@ public final class SqlQueryBuilder {
       StringBuilder overClause = new StringBuilder("PARTITION BY ").append(join.childJoinColumn());
       if (!join.orderBys().isEmpty()) {
         List<String> parts = new ArrayList<>();
-        for (OrderByClause ob : join.orderBys()) {
-          parts.add(ob.columnName() + " " + ob.order());
+        for (ORDER ob : join.orderBys()) {
+          parts.add(ob.by() + " " + ob.direction());
         }
         overClause.append(" ORDER BY ").append(String.join(", ", parts));
       }

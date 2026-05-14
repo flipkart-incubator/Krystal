@@ -2,9 +2,10 @@ package com.flipkart.krystal.concurrent;
 
 import static java.lang.Thread.State.TERMINATED;
 import static java.lang.Thread.currentThread;
-import static java.util.concurrent.TimeUnit.DAYS;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import com.google.common.annotations.VisibleForTesting;
+import java.time.Duration;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.ForkJoinWorkerThread;
@@ -23,6 +24,21 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 public class SingleThreadExecutor extends ForkJoinPool {
 
   public SingleThreadExecutor(String poolName) {
+
+    this(
+        poolName,
+        // Default value is 1 minute. Set to 1 hour, so that idle threads are not reclaimed too
+        // aggressively. This is needed because single thread executors are generally
+        // pooled and used by picking one up randomly. During low traffic, it is possible that some
+        // pools remain idle for a long time if the total number of executors is high during peak.
+        // By
+        // setting this number to a high value, we avoid reclamation of ideal threads and
+        // unnecessary creation of new threads.
+        Math.toIntExact(Duration.ofHours(1).toMillis()));
+  }
+
+  @VisibleForTesting
+  SingleThreadExecutor(String poolName, int keepAliveTimeMillis) {
     // Default values picked from Executors.newWorkStealingPool(parallelism)
     super(
         /* parallelism= */ 1, /* Set to 1 because maximumPoolSize is 1 anyway.*/
@@ -43,10 +59,9 @@ public class SingleThreadExecutor extends ForkJoinPool {
 
         /* saturate= */ null, /* Same as default */
 
-        // Default is 1. Set to high number so that threads are not reclaimed.
-        /* keepAliveTime= */ Integer.MAX_VALUE,
+        /* keepAliveTime= */ keepAliveTimeMillis,
 
-        /* unit= */ DAYS /* Default is MINUTES. Set to DAYS so that keepAliveTime is high */);
+        /* unit= */ MILLISECONDS /* Default is MILLISECONDS.*/);
 
     // This is to make sure that the execution thread is created before the constructor returns.
     @SuppressWarnings({"initialization.fields.uninitialized", "method.invocation"})
