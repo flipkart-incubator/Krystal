@@ -21,4 +21,8 @@ public interface UserNameAndOrders extends Model {
   @ORDER(by = "orderTime", direction = DESC)
   @LIMIT(10)
   List<OrderInfo> orders();
+
+  @ORDER(by = "amountCents", direction = DESC)
+  @LIMIT(5)
+  List<OrderInfo> ordersV2();
 }

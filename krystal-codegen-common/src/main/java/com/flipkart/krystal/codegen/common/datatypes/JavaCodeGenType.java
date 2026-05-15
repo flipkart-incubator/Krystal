@@ -35,7 +35,9 @@ public final class JavaCodeGenType implements CodeGenType {
       ProcessingEnvironment processingEnvironment) {
     Element element = processingEnvironment.getTypeUtils().asElement(typeMirror);
     if (!(element instanceof TypeElement typeElement)) {
-      throw new IllegalArgumentException(typeMirror + "");
+      throw new IllegalArgumentException(
+          "JavaCodeGenType supports only declared types, but got '%s' (kind=%s, element=%s)"
+              .formatted(typeMirror, typeMirror.getKind(), element));
     }
     this.canonicalClassName = typeElement.getQualifiedName().toString();
     this.typeMirror = typeMirror;

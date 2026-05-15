@@ -1066,7 +1066,7 @@ public class SqlTraitVajramGen implements CodeGenerator {
     util.error(
         "[vajram-sql] Selection '"
             + childSelectionName
-            + "' must select its foreign-key column"
+            + "' must select its primary-key column"
             + (join.childPkColumn() != null ? " ('" + join.childPkColumn() + "')" : "")
             + " when used as a nested join (i.e. it itself is present in a List<Selection> method) of another Seleciton, "
             + "because the PK is required to deduplicate level-1 child rows. "

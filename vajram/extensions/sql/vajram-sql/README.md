@@ -86,7 +86,7 @@ review while keeping the execution path explicit and traceable.
 ### Tables
 
 A table is a [
-`@ModelRoot`](../../../../../../../../krystal-common/src/main/java/com/flipkart/krystal/model/ModelRoot.java)
+`@ModelRoot`](../../../../krystal-common/src/main/java/com/flipkart/krystal/model/ModelRoot.java)
 interface that extends [
 `TableModel`](src/main/java/com/flipkart/krystal/vajram/ext/sql/model/TableModel.java) and is
 annotated with [`@Table`](src/main/java/com/flipkart/krystal/vajram/ext/sql/model/Table.java). Each
@@ -550,7 +550,7 @@ public interface UserSummary extends Model {
 
 @ModelRoot
 @SupportedModelProtocols(PlainJavaObject.class)
-@election(over = User.class)
+@Selection(over = User.class)
 public interface UserWithRecentOrders extends Model {
 
   String name();
@@ -677,7 +677,7 @@ UserSummary userSummary;
 
 | Use case                                      | Selection                         | Trait signature                           | `@LIMIT` requirement                                                                                                              |
 |-----------------------------------------------|-----------------------------------|-------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
-| Fetch a single row by PK or UK                | Scalar methods only               | `TraitDef<T>`                             | Not Required — enforces single-row intent at runtime if more than one rwo is returned                                             |
+| Fetch a single row by PK or UK                | Scalar methods only               | `TraitDef<T>`                             | Not Required — enforces single-row intent at runtime if more than one row is returned                                             |
 | Fetch a single row by non unique where clause | Scalar methods only               | `TraitDef<@LIMIT(1) T>`                   | Required — enforces single-row in the query by applying limit                                                                     |
 | Fetch multiple rows (bounded)                 | Scalar methods only               | `TraitDef<@LIMIT(N) List<T>>`             | **Required** — `SqlTraitVajramGen` emits a compile error if `TraitDef<List<T>>` has no `@LIMIT`; use `@LIMIT(N)` to cap at N rows |
 | Fetch N most recent rows                      | Scalar methods only               | `TraitDef<@ORDER(...) @LIMIT(N) List<T>>` | **Required** — `@LIMIT(N)` with N > 1                                                                                             |

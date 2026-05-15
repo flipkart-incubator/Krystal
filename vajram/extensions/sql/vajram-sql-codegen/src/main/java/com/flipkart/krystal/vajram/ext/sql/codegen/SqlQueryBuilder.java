@@ -111,7 +111,8 @@ public final class SqlQueryBuilder {
               + col.methodName());
     }
 
-    for (JoinRelation join : selection.joins()) {
+    List<JoinRelation> level1Joins = selection.joins();
+    for (JoinRelation join : level1Joins) {
       // Add child PK sentinel if this join has nested joins and the PK is not already projected
       if (!join.nestedJoins().isEmpty() && join.childPkColumn() != null) {
         boolean childPkProjected =
@@ -182,7 +183,7 @@ public final class SqlQueryBuilder {
 
       // In the subquery path the parent is always multi-row, so every top-level join uses
       // ROW_NUMBER. Nested joins always use ROW_NUMBER regardless.
-      for (JoinRelation join : selection.joins()) {
+      for (JoinRelation join : level1Joins) {
         sql.append(" ")
             .append(buildJoinClause(join, selection.tableName(), /* useRowNumber= */ true));
         for (JoinRelation nested : join.nestedJoins()) {
@@ -197,7 +198,7 @@ public final class SqlQueryBuilder {
       for (ORDER ob : traitOrderBys) {
         outerOrderBys.add(selection.tableName() + "." + ob.by() + " " + ob.direction());
       }
-      for (JoinRelation join : selection.joins()) {
+      for (JoinRelation join : level1Joins) {
         for (ORDER ob : join.orderBys()) {
           outerOrderBys.add(join.tableName() + "." + ob.by() + " " + ob.direction());
         }
@@ -233,10 +234,11 @@ public final class SqlQueryBuilder {
             .append(" FROM ")
             .append(selection.tableName());
 
-    for (JoinRelation join : selection.joins()) {
-      // ROW_NUMBER is required whenever there is more than one parent (list trait) OR whenever
+    for (JoinRelation join : level1Joins) {
+      // ROW_NUMBER is required whenever there is more than one parent (list trait) OR there are
+      // multiple level1 Joins (outer LIMIT would truncate sibling cross product rows) OR whenever
       // this join has nested joins (outer LIMIT would truncate grandchild rows).
-      boolean useRowNumber = isListTrait || !join.nestedJoins().isEmpty();
+      boolean useRowNumber = isListTrait || !join.nestedJoins().isEmpty() || level1Joins.size() > 1;
       sql.append(" ").append(buildJoinClause(join, selection.tableName(), useRowNumber));
       for (JoinRelation nested : join.nestedJoins()) {
         sql.append(" ").append(buildJoinClause(nested, join.tableName(), /* useRowNumber= */ true));
@@ -250,7 +252,7 @@ public final class SqlQueryBuilder {
     for (ORDER ob : traitOrderBys) {
       orderByParts.add(selection.tableName() + "." + ob.by() + " " + ob.direction());
     }
-    for (JoinRelation join : selection.joins()) {
+    for (JoinRelation join : level1Joins) {
       for (ORDER ob : join.orderBys()) {
         orderByParts.add(join.tableName() + "." + ob.by() + " " + ob.direction());
       }
@@ -264,16 +266,17 @@ public final class SqlQueryBuilder {
       sql.append(" ORDER BY ").append(String.join(", ", orderByParts));
     }
 
-    // For a single-parent trait whose level-1 join has NO nested joins, express the join's
+    // For a single-parent trait whose has one level-1 join with NO nested joins, express the join's
     // @LIMIT(N) as a plain LIMIT N on the outer query. This is equivalent to ROW_NUMBER but
-    // simpler, because there is exactly one parent and no grandchild rows to disturb the count.
+    // simpler, because there is exactly one parent with one join and no grandchild rows or sibling
+    // joins to disturb the count.
     // When the level-1 join has nested joins, ROW_NUMBER is used instead (see above), so no
     // outer LIMIT is emitted here.
     if (!isListTrait) {
-      for (JoinRelation join : selection.joins()) {
+      if (level1Joins.size() == 1) {
+        JoinRelation join = level1Joins.get(0);
         if (join.limit() > 0 && join.nestedJoins().isEmpty()) {
           sql.append(" LIMIT ").append(join.limit());
-          break;
         }
       }
     }

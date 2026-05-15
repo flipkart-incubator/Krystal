@@ -106,6 +106,7 @@ public class SingleThreadExecutor extends ForkJoinPool {
       this.poolName = poolName;
     }
 
+    // TODO Make this thread safe?
     @Override
     public ForkJoinWorkerThread newThread(ForkJoinPool pool) {
       if (threadReturned) {
@@ -126,13 +127,12 @@ public class SingleThreadExecutor extends ForkJoinPool {
       boolean isTerminated = false;
       if (singleThread == null || (isTerminated = TERMINATED.equals(singleThread.getState()))) {
         if (isTerminated) {
-          log.error(
+          log.warn(
               """
-              ThreadPerRequestExecutor thread was terminated. \
-               This should not happen. Needs investigation. \
+              ThreadPerRequestExecutor thread was terminated, possibly due to keepAliveTime expiring. \
                Creating a new thread.""");
         }
-        @NonNull ForkJoinWorkerThread thread = defaultForkJoinWorkerThreadFactory.newThread(pool);
+        ForkJoinWorkerThread thread = defaultForkJoinWorkerThreadFactory.newThread(pool);
         thread.setName(poolName() + '-' + thread.getName());
         this.singleThread = thread;
       }
