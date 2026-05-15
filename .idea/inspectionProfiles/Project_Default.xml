@@ -514,6 +514,7 @@
           <option value="SpellCheckingInspection" />
           <option value="ImmutableEnumChecker" />
           <option value="DataFlowIssue" />
+          <option value="return" />
         </list>
       </option>
     </inspection_tool>

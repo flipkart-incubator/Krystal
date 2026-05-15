@@ -51,8 +51,9 @@ public final class TestRequestLevelCache extends RequestLevelCache {
   }
 
   @Override
-  @Nullable CompletableFuture<@Nullable Object> getCachedValue(CacheKey cacheKey) {
-    CompletableFuture<@Nullable Object> futureStub = getFuture(cacheKey.facets());
+  @Nullable CompletableFuture<@Nullable Object> getCachedValue(
+      ImmutableFacetValuesContainer cacheKey) {
+    CompletableFuture<@Nullable Object> futureStub = getFuture(cacheKey);
     if (futureStub.getNow(null) == NO_VALUE) {
       return super.getCachedValue(cacheKey);
     }

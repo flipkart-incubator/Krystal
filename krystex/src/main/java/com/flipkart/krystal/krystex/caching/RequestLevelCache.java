@@ -6,6 +6,8 @@ import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.data.ImmutableFacetValues;
+import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardReceive;
@@ -37,7 +39,7 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
   private static final Errable<@Nullable Object> UNKNOWN_ERROR =
       Errable.withError(new StackTracelessException("Unknown error in request cache"));
 
-  private final Map<CacheKey, CompletableFuture<@Nullable Object>> cache = new LinkedHashMap<>();
+  private final CacheContainer cache = new CacheContainer();
 
   @Override
   public void addToConfig(KryonExecutorConfigBuilder configBuilder) {
@@ -55,6 +57,10 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
   public Kryon<KryonCommand, KryonCommandResponse> decorateKryon(
       KryonDecorationInput decorationInput) {
     return new CachingDecoratedKryon(decorationInput.kryon());
+  }
+
+  CacheContainer cacheContainer() {
+    return cache;
   }
 
   private class CachingDecoratedKryon implements Kryon<KryonCommand, KryonCommandResponse> {
@@ -96,13 +102,13 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
           new LinkedHashMap<>();
       executableRequests.forEach(
           (requestId, facets) -> {
-            var cacheKey = new CacheKey(facets._build());
-            var cachedFuture = getCachedValue(cacheKey);
+            ImmutableFacetValues immutableFacetValues = facets._build();
+            var cachedFuture = getCachedValue(immutableFacetValues);
             if (cachedFuture == null) {
               var placeHolderFuture = new CompletableFuture<@Nullable Object>();
               newCacheEntries.put(requestId, placeHolderFuture);
-              cache.put(cacheKey, placeHolderFuture);
-              cacheMisses.put(requestId, facets._build());
+              cache.put(immutableFacetValues, placeHolderFuture);
+              cacheMisses.put(requestId, immutableFacetValues);
             } else {
               cacheHits.put(requestId, cachedFuture);
             }
@@ -160,11 +166,12 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
     }
   }
 
-  @Nullable CompletableFuture<@Nullable Object> getCachedValue(CacheKey cacheKey) {
+  @Nullable CompletableFuture<@Nullable Object> getCachedValue(
+      ImmutableFacetValuesContainer cacheKey) {
     return cache.get(cacheKey);
   }
 
-  void primeCache(FacetValues request, CompletableFuture<@Nullable Object> data) {
-    cache.put(new CacheKey(request._build()), data);
+  void primeCache(FacetValues facetValues, CompletableFuture<@Nullable Object> data) {
+    cache.put(facetValues._build(), data);
   }
 }
