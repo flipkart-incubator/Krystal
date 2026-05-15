@@ -91,6 +91,9 @@ include 'lattice:extensions:graphql:rest:lattice-graphql-rest'
 include 'lattice:extensions:mcp:lattice-mcp'
 include 'lattice:extensions:mcp:quarkus:lattice-mcp-quarkus-codegen'
 
+include 'lattice:extensions:a2a:lattice-a2a'
+include 'lattice:extensions:a2a:lattice-a2a-codegen'
+
 /* ******** LATTICE EXTENSIONS : END *********** */
 
 /* ******** SAMPLE PROJECTS : START *********** */

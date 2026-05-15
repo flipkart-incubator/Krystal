@@ -1,0 +1,5 @@
+dependencies {
+    implementation platform('org.a2aproject.sdk:a2a-java-sdk-reference-bom:1.0.0.Beta1')
+    implementation 'org.a2aproject.sdk:a2a-java-sdk-reference-rest'
+    implementation 'org.a2aproject.sdk:a2a-java-sdk-spec'
+}
