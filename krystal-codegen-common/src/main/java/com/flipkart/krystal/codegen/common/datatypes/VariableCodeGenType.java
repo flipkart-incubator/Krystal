@@ -29,13 +29,8 @@ public final class VariableCodeGenType implements CodeGenType {
   }
 
   @Override
-  public TypeMirror javaModelType(ProcessingEnvironment processingEnv) {
+  public TypeMirror typeMirror(ProcessingEnvironment processingEnv) {
     return typeVariable;
-  }
-
-  @Override
-  public CodeGenType rawType() {
-    return upperBound.rawType();
   }
 
   @Override

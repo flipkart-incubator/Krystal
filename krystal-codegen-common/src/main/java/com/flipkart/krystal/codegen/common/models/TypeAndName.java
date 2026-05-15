@@ -1,14 +1,16 @@
 package com.flipkart.krystal.codegen.common.models;
 
-import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.TypeName;
-import java.util.List;
 import javax.lang.model.type.TypeMirror;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public record TypeAndName(
-    TypeName typeName, @Nullable TypeMirror type, List<AnnotationSpec> annotationSpecs) {
+public record TypeAndName(TypeName typeName, @Nullable TypeMirror type) {
+
+  public TypeAndName(TypeMirror type) {
+    this(new TypeNameVisitor(false).visit(type), type);
+  }
+
   public TypeAndName(TypeName typeName) {
-    this(typeName, null, List.of());
+    this(typeName, null);
   }
 }

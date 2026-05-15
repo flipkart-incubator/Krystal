@@ -7,9 +7,11 @@ import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.codegen.common.datatypes.DataTypeFactory;
 import com.google.auto.service.AutoService;
 import com.google.protobuf.MessageLiteOrBuilder;
-import java.lang.reflect.Type;
+import java.util.List;
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -18,38 +20,31 @@ public final class ProtoDataTypeFactory implements DataTypeFactory {
 
   @Override
   public @Nullable CodeGenType create(
-      ProcessingEnvironment processingEnv,
-      String canonicalClassName,
-      CodeGenType... typeParameters) {
-    if (typeParameters.length > 0) {
+      TypeMirror typeMirror,
+      List<CodeGenType> typeParameters,
+      ProcessingEnvironment processingEnv) {
+    if ((typeMirror instanceof DeclaredType declaredType)
+        && !declaredType.getTypeArguments().isEmpty()) {
       // Protobuf types do not support generics
       return null;
     }
+    Element element = processingEnv.getTypeUtils().asElement(typeMirror);
+    if (!(element instanceof TypeElement typeElement)) {
+      // Protobuf types will always have type elements
+      return null;
+    }
+    String canonicalClassName = typeElement.getQualifiedName().toString();
     CodeGenType standardType = standardProtoTypesByCanonicalName.get(canonicalClassName);
     if (standardType != null) {
       return standardType;
     }
-    TypeElement typeElement = processingEnv.getElementUtils().getTypeElement(canonicalClassName);
-    if (typeElement == null) {
-      return null;
-    }
-    TypeMirror type = typeElement.asType();
     // Check if the type is a subtype of Message
-    if (isProtoMessage(type, processingEnv)) {
+    if (isProtoMessage(typeMirror, processingEnv)) {
       return ProtoMessageType.create(canonicalClassName);
     } else {
       // Not a protobuf message type
       return null;
     }
-  }
-
-  @Override
-  public @Nullable CodeGenType create(ProcessingEnvironment processingEnv, Type type) {
-    if (!(type instanceof Class<?> clazz)) {
-      // All custom proto data types will be of type class
-      return null;
-    }
-    return create(processingEnv, requireNonNull(clazz.getCanonicalName()));
   }
 
   private static boolean isProtoMessage(TypeMirror type, ProcessingEnvironment processingEnv) {

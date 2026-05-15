@@ -37,14 +37,9 @@ public enum StandardProtoType implements CodeGenType {
   }
 
   @Override
-  public TypeMirror javaModelType(ProcessingEnvironment processingEnv) {
+  public TypeMirror typeMirror(ProcessingEnvironment processingEnv) {
     return requireNonNull(processingEnv.getElementUtils().getTypeElement(canonicalClassName))
         .asType();
-  }
-
-  @Override
-  public CodeGenType rawType() {
-    return this;
   }
 
   @Override

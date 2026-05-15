@@ -54,6 +54,7 @@ import java.nio.file.Paths;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -71,6 +72,7 @@ import java.util.stream.Stream;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.AnnotatedConstruct;
 import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -261,7 +263,7 @@ public class CodeGenUtility {
       boolean isResponse = types.contains(ModelType.RESPONSE);
       if (isRequest && isResponse) {
         // For models with both REQUEST and RESPONSE, @IfAbsent is mandatory
-        errorAndThrow(
+        error(
             "Field '%s' in model with both REQUEST and RESPONSE types must have an explicit @IfAbsent annotation."
                 .formatted(element.getSimpleName()),
             element);
@@ -547,7 +549,13 @@ public class CodeGenUtility {
     }
   }
 
-  public TypeMirror getTypeFromAnnotationMember(Supplier<Class<?>> supplier) {
+  public TypeElement getTypeElemFromAnnotationMember(Supplier<Class<?>> supplier) {
+    return requireNonNull(
+        (TypeElement)
+            processingEnv.getTypeUtils().asElement(getTypeFromAnnotationMember(supplier)));
+  }
+
+  private TypeMirror getTypeFromAnnotationMember(Supplier<Class<?>> supplier) {
     try {
       var ignored = supplier.get();
       throw new AssertionError("Expected supplier to throw error");
@@ -568,6 +576,12 @@ public class CodeGenUtility {
     } catch (MirroredTypesException mte) {
       return mte.getTypeMirrors();
     }
+  }
+
+  public List<TypeElement> getTypeElemsFromAnnotationMember(Supplier<Class<?>[]> supplier) {
+    return getTypesFromAnnotationMember(supplier).stream()
+        .map(t -> requireNonNull((TypeElement) processingEnv.getTypeUtils().asElement(t)))
+        .toList();
   }
 
   public ImmutableList<TypeMirror> getTypeParamTypes(
@@ -602,13 +616,11 @@ public class CodeGenUtility {
       }
     } while (!currentTypes.isEmpty() && targetType == null);
     if (targetType != null) {
-      return ImmutableList.copyOf(getTypeMirrors(targetType));
+      note("TargetType: " + targetType);
+      note("TargetType TypeArgs: " + targetType.getTypeArguments());
+      return ImmutableList.copyOf(targetType.getTypeArguments());
     }
     return ImmutableList.of();
-  }
-
-  private static List<? extends TypeMirror> getTypeMirrors(DeclaredType targetType) {
-    return targetType.getTypeArguments();
   }
 
   public void note(CharSequence message) {
@@ -686,7 +698,7 @@ public class CodeGenUtility {
   }
 
   public TypeName toTypeName(CodeGenType dataType) {
-    return TypeName.get(dataType.javaModelType(processingEnv));
+    return TypeName.get(dataType.typeMirror(processingEnv));
   }
 
   public static List<? extends TypeMirror> getTypeParameters(TypeMirror returnType) {
@@ -847,20 +859,11 @@ public class CodeGenUtility {
     } else {
       boxed = processingEnv.getTypeUtils().boxedClass((PrimitiveType) typeMirror).asType();
     }
-    return new TypeAndName(
-        TypeName.get(boxed).annotated(javaType.annotationSpecs()),
-        boxed,
-        javaType.annotationSpecs());
-  }
-
-  public TypeAndName getTypeName(CodeGenType dataType, List<AnnotationSpec> typeAnnotations) {
-    TypeMirror javaModelType = dataType.javaModelType(processingEnv);
-    return new TypeAndName(
-        TypeName.get(javaModelType).annotated(typeAnnotations), javaModelType, typeAnnotations);
+    return new TypeAndName(TypeName.get(boxed).annotated(javaType.typeName().annotations), boxed);
   }
 
   public TypeAndName getTypeName(CodeGenType dataType) {
-    return getTypeName(dataType, List.of());
+    return new TypeAndName(dataType.typeMirror(processingEnv));
   }
 
   @SneakyThrows
@@ -923,7 +926,7 @@ public class CodeGenUtility {
   }
 
   public String getJavaTypeCreationCode(CodeGenType javaType, List<TypeName> collectClassNames) {
-    TypeMirror typeMirror = javaType.javaModelType(processingEnv);
+    TypeMirror typeMirror = javaType.typeMirror(processingEnv);
     collectClassNames.add(ClassName.get(JavaType.class));
     if (javaType.typeParameters().isEmpty()) {
       collectClassNames.add(TypeName.get(typeMirror));
@@ -1209,10 +1212,8 @@ public class CodeGenUtility {
     if (supportedModelProtocols == null) {
       return false;
     }
-    return getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
-        .map(typeMirror -> processingEnv().getTypeUtils().asElement(typeMirror))
-        .filter(elem -> elem instanceof QualifiedNameable)
-        .map(element -> requireNonNull((QualifiedNameable) element).getQualifiedName().toString())
+    return getTypeElemsFromAnnotationMember(supportedModelProtocols::value).stream()
+        .map(element -> element.getQualifiedName().toString())
         .anyMatch(s -> Objects.equals(s, modelProtocol.getCanonicalName()));
   }
 
@@ -1235,13 +1236,8 @@ public class CodeGenUtility {
             .collect(
                 toMap(c -> requireNonNull(c.getClass().getCanonicalName()), Function.identity()));
 
-    return getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
-        .map(
-            tm ->
-                processingEnv().getTypeUtils().asElement(tm)
-                        instanceof QualifiedNameable qualifiedNameable
-                    ? qualifiedNameable.getQualifiedName().toString()
-                    : null)
+    return getTypeElemsFromAnnotationMember(supportedModelProtocols::value).stream()
+        .map(element -> element.getQualifiedName().toString())
         .filter(Objects::nonNull)
         .map(availableModelProtocols::get)
         .filter(Objects::nonNull)
@@ -1258,12 +1254,10 @@ public class CodeGenUtility {
     if (supportedModelProtocols == null) {
       return false;
     }
-    return getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
+    return getTypeElemsFromAnnotationMember(supportedModelProtocols::value).stream()
         .anyMatch(
-            typeMirror ->
-                processingEnv
-                    .getTypeUtils()
-                    .isSameType(typeUtils.erasure(typeMirror), typeUtils.erasure(protocolMirror)));
+            typeElement ->
+                typeUtils.isSameType(typeElement.asType(), typeUtils.erasure(protocolMirror)));
   }
 
   public static ClassName asClassName(TypeName typeName) {
@@ -1316,6 +1310,33 @@ public class CodeGenUtility {
       return new AnnotationInfo<>(annotation, mirror.get());
     }
     return null;
+  }
+
+  public <T extends Annotation> List<AnnotationInfo<T>> getAnnotationInfos(
+      TypeMirror annotatedType,
+      Class<T> annoClass,
+      Function<Map<String, AnnotationValue>, T> annoCreator) {
+    // annotatedType.getAnnotation(annoClass) always returns null - we need to use AnnotationMirror
+    return annotatedType.getAnnotationMirrors().stream()
+        .filter(
+            annotationMirror ->
+                annotationMirror.getAnnotationType().asElement() instanceof QualifiedNameable q
+                    && q.getQualifiedName()
+                        .contentEquals(requireNonNull(annoClass.getCanonicalName())))
+        .map(mirror -> new AnnotationInfo<>(annotationFromMirror(mirror, annoCreator), mirror))
+        .toList();
+  }
+
+  private <T extends Annotation> T annotationFromMirror(
+      AnnotationMirror mirror, Function<Map<String, AnnotationValue>, T> annoCreator) {
+
+    Map<String, AnnotationValue> elementValuesWithDefaults = new LinkedHashMap<>();
+    elementUtils
+        .getElementValuesWithDefaults(mirror)
+        .forEach(
+            (key, value) -> elementValuesWithDefaults.put(key.getSimpleName().toString(), value));
+
+    return annoCreator.apply(elementValuesWithDefaults);
   }
 
   public boolean isModelRoot(TypeMirror javaModelType, Element... elements) {

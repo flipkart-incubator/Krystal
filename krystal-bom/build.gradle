@@ -28,6 +28,10 @@ dependencies {
         api 'com.flipkart.krystal:vajram-protobuf2024e-codegen:' + project.krystal_version
         api 'com.flipkart.krystal:vajram-graphql:' + project.krystal_version
         api 'com.flipkart.krystal:vajram-graphql-codegen:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-sql:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-sql-codegen:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-sql-vertx:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-sql-vertx-codegen:' + project.krystal_version
     }
 }
 

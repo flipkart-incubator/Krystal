@@ -289,7 +289,7 @@ public class VajramCodeGenerator implements CodeGenerator {
   private void vajramRequest() {
     ClassName requestInterfaceType = currentVajramInfo.lite().requestInterfaceClassName();
     TypeMirror responseType =
-        currentVajramInfo.lite().responseType().javaModelType(util.processingEnv());
+        currentVajramInfo.lite().responseType().typeMirror(util.processingEnv());
     TypeName responseTypeName = new TypeNameVisitor(true).visit(responseType);
     List<TypeVariableName> typeVariableNames = new ArrayList<>();
     if (responseTypeName instanceof TypeVariableName typeVariableName) {
@@ -685,15 +685,12 @@ $L
                       dependency
                           .depVajramInfo()
                           .responseTypeBounds()
-                          .javaModelType(util.processingEnv()))),
+                          .typeMirror(util.processingEnv()))),
               entry("one2OneInputResolver", One2OneInputResolver.class),
               entry(
                   "respType",
                   util.box(
-                      dependency
-                          .depVajramInfo()
-                          .responseType()
-                          .javaModelType(util.processingEnv()))),
+                      dependency.depVajramInfo().responseType().typeMirror(util.processingEnv()))),
               entry("completableFuture", CompletableFuture.class),
               entry("arrayList", ArrayList.class),
               entry("fanoutDepResponses", FanoutDepResponses.class),
@@ -1173,7 +1170,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
           outputLogicParams);
     } else {
       TypeMirror expectedReturnType =
-          currentVajramInfo.lite().responseType().javaModelType(util.processingEnv());
+          currentVajramInfo.lite().responseType().typeMirror(util.processingEnv());
       if (!typeUtils.isSameType(util.box(returnType), util.box(expectedReturnType))) {
         util.error(
             "The OutputLogic of the Compute vajram %s must return %s"
@@ -1268,11 +1265,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
 
     TypeMirror unbatchOutputReturnType = withBatchingOutputLogic.unbatchOutput().getReturnType();
     TypeMirror type =
-        getParsedVajramData()
-            .vajramInfo()
-            .lite()
-            .responseType()
-            .javaModelType(util.processingEnv());
+        getParsedVajramData().vajramInfo().lite().responseType().typeMirror(util.processingEnv());
     TypeMirror vajramResponseType = util.box(type);
     TypeName vajramResponseTypeName =
         TypeName.get(vajramResponseType).annotated(AnnotationSpec.builder(Nullable.class).build());
@@ -1638,7 +1631,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
     if (usingFacetModel instanceof DependencyModel) {
       facetLocalVarCode = depFacetLocalVariable(method, usingFacetModel.id(), parameter);
     } else if (usingFacetModel instanceof DefaultFacetModel defaultFacetModel) {
-      TypeMirror facetType = defaultFacetModel.dataType().javaModelType(util.processingEnv());
+      TypeMirror facetType = defaultFacetModel.dataType().typeMirror(util.processingEnv());
       TypeMirror parameterTypeMirror = parameter.asType();
       final TypeName parameterType = TypeName.get(parameterTypeMirror);
       if (defaultFacetModel.isMandatoryOnServer()) {
@@ -2726,7 +2719,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
 
       idFields.add(facetIdField);
 
-      CodeGenType dataType = vajramUtil.getDataType(facet);
+      CodeGenType dataType = facet.dataType();
       TypeAndName facetType = util.getTypeName(dataType);
       TypeAndName boxedFacetType = util.box(facetType);
       ClassName vajramReqClass = getRequestInterfaceType();

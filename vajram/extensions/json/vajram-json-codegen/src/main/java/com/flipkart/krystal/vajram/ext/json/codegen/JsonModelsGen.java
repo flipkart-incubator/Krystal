@@ -59,7 +59,6 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
-import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 
@@ -539,10 +538,8 @@ this.$L = $L == null
       return false;
     }
     // Check if JSON is mentioned in the annotation value
-    return util.getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
-        .map(typeMirror -> util.processingEnv().getTypeUtils().asElement(typeMirror))
-        .filter(elem -> elem instanceof QualifiedNameable)
-        .map(element -> requireNonNull((QualifiedNameable) element).getQualifiedName().toString())
+    return util.getTypeElemsFromAnnotationMember(supportedModelProtocols::value).stream()
+        .map(element -> element.getQualifiedName().toString())
         .anyMatch(Json.class.getCanonicalName()::equals);
   }
 }

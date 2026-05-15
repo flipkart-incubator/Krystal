@@ -3,7 +3,6 @@ package com.flipkart.krystal.codegen.common.datatypes;
 import com.flipkart.krystal.codegen.common.models.CodeGenerationException;
 import com.google.common.collect.ImmutableList;
 import com.squareup.javapoet.CodeBlock;
-import java.util.List;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.type.TypeMirror;
 
@@ -13,17 +12,7 @@ public interface CodeGenType {
 
   ImmutableList<CodeGenType> typeParameters();
 
-  TypeMirror javaModelType(ProcessingEnvironment processingEnv);
-
-  /**
-   * Returns the raw type of this data type. For example, if this represents a {@link List}{@code
-   * <}{@link String}{@code >},this will return {@link List}.
-   *
-   * <p>If the data type is a type variable, this will return the raw type of the upperBound. For
-   * example, if this represents a type variable T extends {@link List}{@code <U extends } {@link
-   * String}{@code >}, this will return {@link List}{@code <}{@link String}{@code >}.
-   */
-  CodeGenType rawType();
+  TypeMirror typeMirror(ProcessingEnvironment processingEnv);
 
   /**
    * Returns the default value for this data type. This is useful in case the developer has marked
@@ -69,4 +58,10 @@ public interface CodeGenType {
    * @throws CodeGenerationException if the datatype does not have a platform default value.
    */
   CodeBlock defaultValueExpr(ProcessingEnvironment processingEnv) throws CodeGenerationException;
+
+  default boolean isSameType(CodeGenType codeGenType, ProcessingEnvironment processingEnv) {
+    return processingEnv
+        .getTypeUtils()
+        .isSameType(typeMirror(processingEnv), codeGenType.typeMirror(processingEnv));
+  }
 }

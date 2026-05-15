@@ -476,18 +476,11 @@ public class DopantBindingsProvider implements BindingsProvider {
                     new ArrayList<>(
                         qualifierAnnotations.stream().map(AnnotationSpec::get).toList());
 
-                TypeMirror scopedTypeMirror =
+                TypeElement scopeElem =
                     context
                         .codeGenUtility()
                         .codegenUtil()
-                        .getTypeFromAnnotationMember(producesAnno::inScope);
-                TypeElement scopeElem =
-                    (TypeElement)
-                        context
-                            .codeGenUtility()
-                            .processingEnv()
-                            .getTypeUtils()
-                            .asElement(scopedTypeMirror);
+                        .getTypeElemFromAnnotationMember(producesAnno::inScope);
                 if (!ClassName.get(scopeElem).equals(ClassName.get(NoScope.class))
                     && scopeElem.getAnnotation(Scope.class) != null
                     && scopeElem.getAnnotation(NormalScope.class) != null) {

@@ -345,7 +345,7 @@ public abstract class BaseProtoSchemaGen implements CodeGenerator {
 
       IfAbsentThen ifAbsentThen = util.getIfAbsent(method, modelRoot).value();
 
-      TypeMirror type = dataType.javaModelType(util.processingEnv());
+      TypeMirror type = dataType.typeMirror(util.processingEnv());
       boolean isPrimitiveArray = util.isPrimitiveArray(type);
       boolean isByteArray = util.isRawAssignable(type, PrimitiveArray.class);
       boolean isRepeated = isProtoTypeRepeated(dataType);

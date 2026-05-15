@@ -33,7 +33,7 @@ dependencies {
     api platform('io.github.resilience4j:resilience4j-bom:2.2.0')
 
     api platform('org.junit:junit-bom:5.10.1')
-    api platform('org.assertj:assertj-bom:3.25.2')
+    api platform('org.assertj:assertj-bom:3.27.7')
 
     constraints {
         api 'com.google.auto.service:auto-service:1.1.1'

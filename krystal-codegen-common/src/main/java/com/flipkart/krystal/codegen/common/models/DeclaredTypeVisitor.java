@@ -4,8 +4,8 @@ import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.codegen.common.datatypes.DataTypeRegistry;
 import com.flipkart.krystal.codegen.common.datatypes.VariableCodeGenType;
 import com.google.common.collect.ImmutableMap;
+import java.util.List;
 import javax.lang.model.element.Element;
-import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ErrorType;
@@ -49,31 +49,23 @@ public class DeclaredTypeVisitor extends AbstractTypeVisitor14<CodeGenType, Void
     if (disallowedMessage != null) {
       throw util.errorAndThrow(disallowedMessage, element);
     }
-    Element elementOfType = t.asElement();
-    if (elementOfType instanceof QualifiedNameable qualifiedNameable) {
-      return dataTypeRegistry.create(
-          util.processingEnv(),
-          qualifiedNameable.getQualifiedName().toString(),
-          t.getTypeArguments().stream().map(this::visit).toArray(CodeGenType[]::new));
-    }
-    throw util.errorAndThrow("Could not infer data type for type " + elementOfType, element);
+    return dataTypeRegistry.create(
+        t, t.getTypeArguments().stream().map(this::visit).toList(), util.processingEnv());
   }
 
   @Override
   public CodeGenType visitPrimitive(PrimitiveType t, Void unused) {
-    PrimitiveType withoutAnnotations =
-        util.processingEnv().getTypeUtils().getPrimitiveType(t.getKind());
-    return dataTypeRegistry.create(util.processingEnv(), withoutAnnotations.toString());
-  }
-
-  @Override
-  public CodeGenType visitArray(ArrayType t, Void unused) {
-    throw uoe("Array types are not supported by Krystal. Use collections instead.");
+    return dataTypeRegistry.create(t, List.of(), util.processingEnv());
   }
 
   @Override
   public CodeGenType visitTypeVariable(TypeVariable t, Void unused) {
     return new VariableCodeGenType(t, this.visit(t.getUpperBound()));
+  }
+
+  @Override
+  public CodeGenType visitArray(ArrayType t, Void unused) {
+    throw uoe("Array types are not supported by Krystal. Use collections instead.");
   }
 
   @Override

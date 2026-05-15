@@ -32,9 +32,6 @@ public final class TypeUtils {
   static final Map<String, Function<DataType<?>[], JavaType<?>>> dataTypeMappings =
       new LinkedHashMap<>();
 
-  static final Set<Class<?>> NON_PRIMITIVE_CLASSES_WITH_PLATFORM_DEFAULTS =
-      Set.of(String.class, List.class, Map.class);
-
   static {
     dataTypeMappings.put(boolean.class.getCanonicalName(), _unused -> BOOLEAN);
     dataTypeMappings.put(Boolean.class.getCanonicalName(), _unused -> BOOLEAN);

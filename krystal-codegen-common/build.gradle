@@ -9,6 +9,7 @@ dependencies {
     api project(':krystal-common')
     implementation 'com.squareup:javapoet'
     implementation 'com.google.googlejavaformat:google-java-format'
+    implementation 'com.google.auto:auto-common'
 }
 
 checkerFramework {

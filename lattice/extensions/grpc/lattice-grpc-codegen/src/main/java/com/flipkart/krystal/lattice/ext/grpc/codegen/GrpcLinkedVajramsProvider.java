@@ -1,7 +1,6 @@
 package com.flipkart.krystal.lattice.ext.grpc.codegen;
 
 import static com.flipkart.krystal.datatypes.Trilean.TRUE;
-import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.codegen.spi.LatticeAppCodeGenAttrsProvider;
@@ -33,17 +32,11 @@ public final class GrpcLinkedVajramsProvider implements LatticeAppCodeGenAttrsPr
     GrpcService[] services = grpcServer.services();
     List<TypeElement> results = new ArrayList<>();
     for (GrpcService service : services) {
-      context
-          .codeGenUtility()
-          .codegenUtil()
-          .getTypesFromAnnotationMember(service::rpcVajrams)
-          .stream()
-          .map(
-              tm ->
-                  (TypeElement)
-                      requireNonNull(
-                          context.codeGenUtility().processingEnv().getTypeUtils().asElement(tm)))
-          .forEach(results::add);
+      results.addAll(
+          context
+              .codeGenUtility()
+              .codegenUtil()
+              .getTypeElemsFromAnnotationMember(service::rpcVajrams));
     }
     return ImmutableList.copyOf(results);
   }

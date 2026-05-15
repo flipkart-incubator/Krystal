@@ -20,6 +20,7 @@ public record VajramInfo(
     VajramInfoLite lite,
     ImmutableList<DefaultFacetModel> givenFacets,
     ImmutableList<DependencyModel> dependencies,
+    TypeElement definitionElement,
     @Nullable VajramInfoLite conformsToTraitInfo,
     @Nullable ComputeDelegationMode vajramDelegationMode,
     @Nullable Element inputsElement) {
@@ -60,7 +61,7 @@ public record VajramInfo(
             : ParameterizedTypeName.get(
                 ClassName.get(Request.class),
                 new TypeNameVisitor(true)
-                    .visit(lite.responseType().javaModelType(util().processingEnv()))));
+                    .visit(lite.responseType().typeMirror(util().processingEnv()))));
   }
 
   private VajramCodeGenUtility util() {

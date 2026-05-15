@@ -39,7 +39,7 @@ public class TraitDispatchPolicies {
   public static class TraitDispatchPoliciesBuilder {
 
     public TraitDispatchPolicies.TraitDispatchPoliciesBuilder addTraitDispatchPolicies(
-        List<TraitDispatchPolicy> traitDispatchPolicies) {
+        List<? extends TraitDispatchPolicy> traitDispatchPolicies) {
       if (this.traitDispatchPolicies == null) {
         this.traitDispatchPolicies = new ArrayList<>();
       }

@@ -3,7 +3,6 @@ package com.flipkart.krystal.lattice.ext.guice.codegen;
 import static com.flipkart.krystal.lattice.codegen.LatticeCodegenUtils.getDiBindingContainerName;
 import static com.flipkart.krystal.lattice.codegen.spi.di.BindingsContainer.getBindingContainers;
 import static java.util.Map.entry;
-import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
@@ -54,17 +53,10 @@ return new $guiceModuleBinder:T(
   }
 
   static TypeElement getDependencyInjectionBinder(LatticeCodegenContext context) {
-    CodeGenUtility util = context.codeGenUtility().codegenUtil();
-
-    TypeElement dependencyInjectionBinder =
-        (TypeElement)
-            requireNonNull(
-                util.processingEnv()
-                    .getTypeUtils()
-                    .asElement(
-                        util.getTypeFromAnnotationMember(
-                            context.latticeApp()::dependencyInjectionFramework)));
-    return dependencyInjectionBinder;
+    return context
+        .codeGenUtility()
+        .codegenUtil()
+        .getTypeElemFromAnnotationMember(context.latticeApp()::dependencyInjectionFramework);
   }
 
   @Override

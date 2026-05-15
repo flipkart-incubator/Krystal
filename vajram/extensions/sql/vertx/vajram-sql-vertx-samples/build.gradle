@@ -1,0 +1,35 @@
+plugins {
+    id 'java-library'
+    id 'com.flipkart.krystal' version "${krystal_version}"
+    id 'com.flipkart.java.code.standard' version "${java_code_std_version}"
+}
+dependencies {
+    implementation platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
+    krystalModelsGenProcessor platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
+
+    implementation platform('io.vertx:vertx-stack-depchain:5.0.11')
+    implementation platform('org.slf4j:slf4j-bom:2.0.13')
+
+    implementation 'com.flipkart.krystal:vajram-sql'
+    implementation 'com.flipkart.krystal:vajram-sql-vertx'
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-sql-vertx-codegen'
+
+    compileOnly "org.projectlombok:lombok:${lombok_version}"
+    annotationProcessor "org.projectlombok:lombok:${lombok_version}"
+    implementation 'jakarta.inject:jakarta.inject-api:2.0.1'
+    implementation 'org.slf4j:slf4j-api'
+    implementation 'org.checkerframework:checker-qual:3.48.4'
+
+    testImplementation platform('org.mockito:mockito-bom:5.17.0')
+    testImplementation 'org.mockito:mockito-core'
+    testImplementation platform('org.assertj:assertj-bom:3.27.7')
+    testImplementation 'org.assertj:assertj-core'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.12.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.12.2'
+
+    testImplementation 'com.flipkart.krystal:vajram-krystex'
+    testImplementation 'com.flipkart.krystal:vajram-guice'
+    testImplementation 'io.vertx:vertx-jdbc-client'
+    testImplementation 'com.h2database:h2:2.3.232'
+}

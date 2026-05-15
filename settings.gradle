@@ -48,6 +48,10 @@ include 'vajram:extensions:resilience4j:vajram-resilience4j'
 include 'vajram:extensions:graphql:vajram-graphql'
 include 'vajram:extensions:graphql:vajram-graphql-codegen'
 
+include 'vajram:extensions:sql:vajram-sql'
+include 'vajram:extensions:sql:vajram-sql-codegen'
+include 'vajram:extensions:sql:vertx:vajram-sql-vertx'
+include 'vajram:extensions:sql:vertx:vajram-sql-vertx-codegen'
 /* ******** VAJRAM EXTENSIONS : END *********** */
 
 
@@ -92,6 +96,7 @@ include 'lattice:extensions:mcp:quarkus:lattice-mcp-quarkus-codegen'
 /* ******** SAMPLE PROJECTS : START *********** */
 include 'vajram:vajram-samples'
 include 'vajram:extensions:graphql:vajram-graphql-samples'
+include 'vajram:extensions:sql:vertx:vajram-sql-vertx-samples'
 include 'lattice:samples:rest:json:quarkus:rest-json-quarkus-lattice-sample'
 include 'lattice:samples:rest:json:dropwizard:rest-json-dropwizard-lattice-sample'
 include 'lattice:samples:grpc-proto3-lattice-sample'

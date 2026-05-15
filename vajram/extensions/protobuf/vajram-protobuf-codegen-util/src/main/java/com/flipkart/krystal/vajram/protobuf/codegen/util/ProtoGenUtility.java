@@ -57,16 +57,19 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class ProtoGenUtility {
 
   /** Map of Java DataType objects to their Protocol Buffers scalar-type mapping. */
-  private static final Map<CodeGenType, ProtoScalarType> JAVA_TO_PROTO_SCALAR_TYPES =
-      ImmutableMap.<CodeGenType, ProtoScalarType>builder()
-          .put(BOOLEAN, BOOL_P)
-          .put(INT, SINT32_P)
-          .put(LONG, SINT64_P)
-          .put(FLOAT, FLOAT_P)
-          .put(DOUBLE, DOUBLE_P)
-          .put(STRING, STRING_P)
-          .put(BYTE_ARRAY, BYTES_P)
-          .build();
+  private static final Map<String, ProtoScalarType> JAVA_TO_PROTO_SCALAR_TYPES;
+
+  static {
+    ImmutableMap.Builder<String, ProtoScalarType> builder = ImmutableMap.builder();
+    BOOLEAN.canonicalClassNames().forEach(s -> builder.put(s, BOOL_P));
+    INT.canonicalClassNames().forEach(s -> builder.put(s, SINT32_P));
+    LONG.canonicalClassNames().forEach(s -> builder.put(s, SINT64_P));
+    FLOAT.canonicalClassNames().forEach(s -> builder.put(s, FLOAT_P));
+    DOUBLE.canonicalClassNames().forEach(s -> builder.put(s, DOUBLE_P));
+    STRING.canonicalClassNames().forEach(s -> builder.put(s, STRING_P));
+    BYTE_ARRAY.canonicalClassNames().forEach(s -> builder.put(s, BYTES_P));
+    JAVA_TO_PROTO_SCALAR_TYPES = builder.build();
+  }
 
   public static String getSimpleClassName(String canonicalClassName) {
     String typeName = canonicalClassName;
@@ -225,11 +228,12 @@ public final class ProtoGenUtility {
   /** Returns true iff the given data type maps to a protobuf scalar type. */
   public static boolean isProtoTypeScalar(CodeGenType dataType, CodeGenUtility util) {
     if (util.isSameRawType(
-        dataType.rawType().javaModelType(util.processingEnv()), Optional.class)) {
+        util.processingEnv().getTypeUtils().erasure(dataType.typeMirror(util.processingEnv())),
+        Optional.class)) {
       CodeGenType innerType = dataType.typeParameters().get(0);
       return isProtoTypeScalar(innerType, util);
     }
-    return JAVA_TO_PROTO_SCALAR_TYPES.containsKey(dataType);
+    return JAVA_TO_PROTO_SCALAR_TYPES.containsKey(dataType.canonicalClassName());
   }
 
   public static boolean isProtoTypeRepeated(CodeGenType dataType) {
@@ -247,7 +251,7 @@ public final class ProtoGenUtility {
   public static ProtoFieldType getProtobufType(
       CodeGenType dataType, CodeGenUtility util, Element element, ProtoSchemaConfig config) {
     ImmutableList<CodeGenType> typeParameters = dataType.typeParameters();
-    TypeMirror javaModelType = dataType.javaModelType(util.processingEnv());
+    TypeMirror javaModelType = dataType.typeMirror(util.processingEnv());
     if (util.isOptional(javaModelType)) {
       // Java Optional<T> is the model-level signal that this field is presence-aware. Let the
       // protocol's presence wrapper decide whether that needs to be reflected in the .proto schema
@@ -270,13 +274,13 @@ public final class ProtoGenUtility {
           getProtobufType(typeParameters.get(1), util, element, config),
           util,
           element);
-    } else if (JAVA_TO_PROTO_SCALAR_TYPES.containsKey(dataType)) {
-      return JAVA_TO_PROTO_SCALAR_TYPES.get(dataType);
+    } else if (JAVA_TO_PROTO_SCALAR_TYPES.containsKey(dataType.canonicalClassName())) {
+      return JAVA_TO_PROTO_SCALAR_TYPES.get(dataType.canonicalClassName());
     } else {
       Element javaElement = util.processingEnv().getTypeUtils().asElement(javaModelType);
       if (javaElement != null
           && util.typeExplicitlySupportsProtocol(javaElement, config.protocolClass())
-          && TypeName.get(dataType.javaModelType(util.processingEnv()))
+          && TypeName.get(dataType.typeMirror(util.processingEnv()))
               instanceof ClassName modelRootName) {
         // Strip underscores from the model name for the proto type reference - proto messages and
         // enums must be TitleCase. The file name keeps the original Java simple name since the
@@ -315,12 +319,12 @@ public final class ProtoGenUtility {
         requireNonNull(
             util.processingEnv()
                 .getTypeUtils()
-                .asElement(returnType.javaModelType(util.processingEnv())));
+                .asElement(returnType.typeMirror(util.processingEnv())));
     SupportedModelProtocols supportedModelProtocols =
         typeElement.getAnnotation(SupportedModelProtocols.class);
     if (supportedModelProtocols == null
-        || util.getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
-            .noneMatch(t -> util.isSameRawType(t, protocolClass))) {
+        || util.getTypeElemsFromAnnotationMember(supportedModelProtocols::value).stream()
+            .noneMatch(t -> util.isSameRawType(t.asType(), protocolClass))) {
       util.error(
           String.format(
               "Vajram '%s' has return type '%s' which is not a supported model protocol. "

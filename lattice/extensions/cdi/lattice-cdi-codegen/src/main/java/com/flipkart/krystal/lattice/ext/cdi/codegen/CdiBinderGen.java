@@ -1,7 +1,5 @@
 package com.flipkart.krystal.lattice.ext.cdi.codegen;
 
-import static java.util.Objects.requireNonNull;
-
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.codegen.spi.di.DepInjectBinderGen;
@@ -28,17 +26,10 @@ public final class CdiBinderGen implements DepInjectBinderGen {
   }
 
   static @NonNull TypeElement getDependencyInjectionBinder(LatticeCodegenContext context) {
-    CodeGenUtility util = context.codeGenUtility().codegenUtil();
-
-    TypeElement dependencyInjectionBinder =
-        (TypeElement)
-            requireNonNull(
-                util.processingEnv()
-                    .getTypeUtils()
-                    .asElement(
-                        util.getTypeFromAnnotationMember(
-                            context.latticeApp()::dependencyInjectionFramework)));
-    return dependencyInjectionBinder;
+    return context
+        .codeGenUtility()
+        .codegenUtil()
+        .getTypeElemFromAnnotationMember(context.latticeApp()::dependencyInjectionFramework);
   }
 
   @Override

@@ -3,7 +3,7 @@ import com.vanniktech.maven.publish.JavadocJar
 
 //file:noinspection SpellCheckingInspection
 plugins {
-    id 'com.flipkart.java.code.standard' version '5.6'
+    id 'com.flipkart.java.code.standard' version "${java_code_std_version}"
     id 'org.gradlex.extra-java-module-info' version '1.11'
     id 'java-test-fixtures'
     id 'com.vanniktech.maven.publish' version "0.35.0" // Check for latest
@@ -18,12 +18,10 @@ ext {
     krystal_version = project['com.flipkart.krystal.currentVersion']
     lattice_version = project['com.flipkart.krystal.lattice.currentVersion']
 
-    java_code_std_version = '5.6'
-
     protobuf_version = '4.34.1'
     grpc_version = '1.81.0'
-    quarkus_version = '3.30.5'
-    lombok_version = '1.18.36'
+    quarkus_version = '3.35.3'
+    lombok_version = '1.18.46'
     kordamp_jandex_version = '2.3.0'
 }
 
@@ -160,11 +158,11 @@ configure(subprojects.findAll {
         testAnnotationProcessor 'org.projectlombok:lombok'
 
         api platform('org.mockito:mockito-bom:5.17.0')
-        api platform('org.assertj:assertj-bom:3.25.2')
+        api platform('org.assertj:assertj-bom:3.27.7')
         api platform('io.github.resilience4j:resilience4j-bom:2.2.0')
         api platform('com.google.inject:guice-bom:7.0.0')
         api platform('org.slf4j:slf4j-bom:2.0.13')
-        api platform('com.fasterxml.jackson:jackson-bom:2.18.3')
+        api platform('com.fasterxml.jackson:jackson-bom:2.18.6')
         api platform("com.google.protobuf:protobuf-bom:${protobuf_version}")
         api platform("io.grpc:grpc-bom:${grpc_version}")
 
@@ -172,6 +170,7 @@ configure(subprojects.findAll {
             c.implementation "org.projectlombok:lombok:$lombok_version"
             c.implementation 'com.google.api.grpc:proto-google-common-protos:2.56.0'
             c.implementation 'com.google.auto.service:auto-service-annotations:1.1.1'
+            c.implementation 'com.google.auto:auto-common:1.2.2'
             c.implementation 'com.google.code.findbugs:jsr305:3.0.2'
             c.api 'com.google.guava:guava:33.4.8-jre'
             c.implementation 'com.google.guava:guava:33.4.8-jre'
@@ -234,6 +233,9 @@ configure(subprojects.findAll {
 
     java {
         withSourcesJar()
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(17))
+        }
     }
 
     javadoc {
@@ -258,9 +260,9 @@ configure(subprojects.findAll {
         module('javax.cache:cache-api', 'javax.cache.api')
         module('javax.inject:javax.inject', 'javax.inject')
 
-        module('gradle-api-8.14.3.jar', 'gradle.api')
-        module('gradle-installation-beacon-8.14.3.jar', 'gradle.installation.beacon')
-        module('gradle-test-kit-8.14.3.jar', 'gradle.test.kit')
+        module('gradle-api-8.14.5.jar', 'gradle.api')
+        module('gradle-installation-beacon-8.14.5.jar', 'gradle.installation.beacon')
+        module('gradle-test-kit-8.14.5.jar', 'gradle.test.kit')
 
         module('ch.qos.reload4j:reload4j', 'ch.qos.reload4j')
         module('com.flipkart.krystal:vajram-codegen', 'com.flipkart.krystal.vajram.codegen')

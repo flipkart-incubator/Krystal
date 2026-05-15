@@ -6,6 +6,7 @@ import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.asClassN
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.asTypeNameWithTypes;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.withTypeParams;
 import static com.flipkart.krystal.codegen.common.models.CodegenPhase.MODELS;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
 import static com.flipkart.krystal.model.PlainJavaObject.POJO;
@@ -382,8 +383,8 @@ public final class JavaModelsGen implements CodeGenerator {
       return;
     }
     boolean hasSerdeProtocol =
-        util.getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
-            .anyMatch(tm -> util.isRawAssignable(tm, SerdeProtocol.class));
+        util.getTypeElemsFromAnnotationMember(supportedModelProtocols::value).stream()
+            .anyMatch(tm -> util.isRawAssignable(tm.asType(), SerdeProtocol.class));
     if (!hasSerdeProtocol) {
       return;
     }
@@ -702,8 +703,7 @@ public final class JavaModelsGen implements CodeGenerator {
             .or(
                 () ->
                     modelClusterRootAnno
-                        .map(anno -> util.getTypeFromAnnotationMember(anno::immutableRoot))
-                        .map(tm -> (TypeElement) util.processingEnv().getTypeUtils().asElement(tm))
+                        .map(anno -> util.getTypeElemFromAnnotationMember(anno::immutableRoot))
                         .map(ClassName::get))
             .orElse(ClassName.get(ImmutableModel.class));
 
@@ -729,8 +729,7 @@ public final class JavaModelsGen implements CodeGenerator {
             .or(
                 () ->
                     modelClusterRootAnno
-                        .map(anno -> util.getTypeFromAnnotationMember(anno::builderRoot))
-                        .map(tm -> (TypeElement) util.processingEnv().getTypeUtils().asElement(tm))
+                        .map(anno -> util.getTypeElemFromAnnotationMember(anno::builderRoot))
                         .map(ClassName::get))
             .orElse(ClassName.get(Builder.class));
 
@@ -1424,21 +1423,14 @@ this.$L = $L == null
         getFieldAccessorExpression(true, fieldName, modelMethod.getReturnType(), modelMethod, util);
 
     IfAbsentThen ifAbsentThen = util.getIfAbsent(modelMethod, modelRoot).value();
-    Optional<ModelRootInfo> fieldModelRootInfo =
-        util.asModelRoot(modelMethod.getReturnType(), modelMethod);
-    boolean isModelContainer =
-        fieldModelRootInfo.map(info -> info.containerType().isContainer()).orElse(false);
-
-    if (ifAbsentThen == FAIL) {
+    if (FAIL.equals(ifAbsentThen)) {
       return CodeBlock.of(
           "$T.validateMandatory($L, $S, $T.class)",
           ModelUtils.class,
           fieldAccessorExpr,
           fieldName,
           asClassName(immutablePojoName));
-    } else if (ifAbsentThen == IfAbsentThen.ASSUME_DEFAULT_VALUE
-        && !isMethodOptionalOrNullable(modelMethod, util)
-        && !isModelContainer) {
+    } else if (ASSUME_DEFAULT_VALUE.equals(ifAbsentThen)) {
       TypeMirror actualType = modelMethod.getReturnType();
       CodeGenType dataType = new DeclaredTypeVisitor(util, modelMethod).visit(actualType, null);
       try {

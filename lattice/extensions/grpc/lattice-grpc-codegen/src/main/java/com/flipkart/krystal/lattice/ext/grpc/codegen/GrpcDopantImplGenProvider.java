@@ -108,12 +108,9 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
         ClassName grpcImplBaseClass =
             ClassName.get(latticePackageName, serviceName + "Grpc", serviceName + "ImplBase");
         List<CodeBlock> rpcMethodsCode = new ArrayList<>();
-        for (TypeMirror vajram :
-            util.codegenUtil().getTypesFromAnnotationMember(service::rpcVajrams)) {
-          VajramInfoLite vajramInfoLite =
-              util.computeVajramInfoLite(
-                  (TypeElement)
-                      requireNonNull(util.processingEnv().getTypeUtils().asElement(vajram)));
+        for (TypeElement vajram :
+            util.codegenUtil().getTypeElemsFromAnnotationMember(service::rpcVajrams)) {
+          VajramInfoLite vajramInfoLite = util.computeVajramInfoLiteWithUpperBoundTypeArgs(vajram);
           ClassName requestType = vajramInfoLite.requestInterfaceClassName();
           TypeElement requestTypeElement =
               requireNonNull(
@@ -134,8 +131,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
                   requestType.packageName(),
                   ProtoGenUtility.toTitleCaseProtoName(requestType.simpleName())
                       + requestProtocol.protoMsgSuffix());
-          TypeMirror responseType =
-              vajramInfoLite.responseType().javaModelType(util.processingEnv());
+          TypeMirror responseType = vajramInfoLite.responseType().typeMirror(util.processingEnv());
           TypeName protoRespMsgType;
           boolean isModel = isProtoModel(responseType);
           if (isModel) {
@@ -158,7 +154,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
             if (!util.codegenUtil().isRawAssignable(responseType, MessageLite.class)) {
               util.codegenUtil()
                   .error(
-                      "Response type of a vajram added to a grpc service must either be a '"
+                      "Response type of a vajram added to a gRPC service must either be a '"
                           + Model.class
                           + "' with annotation @SupportedModelProtocols({..., <a ProtobufProtocol>.class, ...}) or it must be a "
                           + MessageLite.class,
@@ -254,7 +250,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
             .errorAndThrow(
                 "Model '"
                     + modelType.getQualifiedName()
-                    + "' used in a grpc service must declare a ProtobufProtocol "
+                    + "' used in a gRPC service must declare a ProtobufProtocol "
                     + "(e.g. Protobuf3 or Protobuf2024e) in @SupportedModelProtocols",
                 vajramInfoLite.vajramOrReqClass());
       } else if (matches.size() > 1) {
@@ -277,12 +273,12 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
       if (!FINAL.equals(codegenPhase)) {
         util.codegenUtil()
             .note(
-                "Skipping Grpc Dopant Impl generation because this is not codegen phase: " + FINAL);
+                "Skipping gRPC Dopant Impl generation because this is not codegen phase: " + FINAL);
         return false;
       }
       if (grpcServer == null) {
         CharSequence message =
-            "Skipping Grpc Dopant Impl gen because @GrpcServer missing on lattice app: "
+            "Skipping gRPC Dopant Impl gen because @GrpcServer missing on lattice app: "
                 + context.latticeAppTypeElement().getSimpleName();
         util.codegenUtil().note(message);
         return false;

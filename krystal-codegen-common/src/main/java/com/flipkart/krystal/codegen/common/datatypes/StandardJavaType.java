@@ -7,6 +7,7 @@ import com.flipkart.krystal.model.array.SimpleByteArray;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.squareup.javapoet.CodeBlock;
+import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,6 +71,13 @@ public enum StandardJavaType implements CodeGenType {
       TypeKind.DECLARED,
       CodeBlock.of("$T.of()", SimpleByteArray.class),
       ByteArray.class.getCanonicalName()),
+  // ...
+  // Other Primitive Arrays to be added here
+  // ...
+  LOCAL_DATE_TIME(
+      TypeKind.DECLARED,
+      CodeBlock.of("$T.parse(\"1970-01-01T00:00:00\")", LocalDateTime.class),
+      LocalDateTime.class.getCanonicalName()),
   ;
 
   static final ImmutableMap<String, StandardJavaType> standardTypesByCanonicalName;
@@ -136,18 +144,13 @@ public enum StandardJavaType implements CodeGenType {
   }
 
   @Override
-  public TypeMirror javaModelType(ProcessingEnvironment processingEnv) {
+  public TypeMirror typeMirror(ProcessingEnvironment processingEnv) {
     return getJavaModelType.apply(processingEnv);
   }
 
   @Override
   public ImmutableList<CodeGenType> typeParameters() {
     return ImmutableList.of();
-  }
-
-  @Override
-  public CodeGenType rawType() {
-    return this;
   }
 
   @Override
