@@ -60,7 +60,7 @@ class TooManyQualifiersTest {
         .withThrowableOfType(ExecutionException.class)
         .withCauseInstanceOf(MandatoryFacetsMissingException.class)
         .withMessageContaining(
-            "Vajram v<TooManyQualifiers> did not receive these mandatory inputs:"
+            "Vajram v<TooManyQualifiers> did not receive these mandatory facets:"
                 + " [ 'inject' (Cause: Mandatory facet 'inject' of vajram 'TooManyQualifiers'"
                 + " does not have a value) ]");
   }

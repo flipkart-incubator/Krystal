@@ -433,9 +433,12 @@ Key points:
 - `T` in `TraitDef<T>` or `TraitDef<List<T>>` **must** be a `@Selection`-annotated interface. If
   `T` is a `@Table` model, codegen will report an error. This enforces the separation between table
   schema and query result shape.
-- A **single-result** trait (`TraitDef<T>`) **must** declare `@LIMIT(1)` on the type argument.
-  Omitting it produces a compile-time error: `[SqlTraitVajramGen] ... does not declare @LIMIT(1)`.
-  This makes the single-row expectation explicit.
+- A **single-result** trait (`TraitDef<T>`) **must** declare `@LIMIT(1)` on the type argument if the
+  WHERE clause is not guaranteed to match a single row (ex: by equating a Primary Key or Unique
+  Key). If `@Limit(1)` is omitted on a single-result trait, and the SQL server returns more than one
+  row of the table, an exception is thrown at runtime - which is a risk - and so, omitting
+  `@Limit(1)` should be done with caution. If the developer is not sure that the Where clause
+  guarantees a single row, then `@Limit(1)` **must** be added.
 - A **list-result** trait (`TraitDef<List<T>>`) **must** declare `@LIMIT` on the type argument.
   Omitting it produces a compile-time error:
   `[SqlTraitVajramGen] ... returns a List but has no @LIMIT`. Use `@LIMIT(LIMIT.NO_LIMIT)` to
@@ -675,15 +678,15 @@ UserSummary userSummary;
 
 ### Query pattern summary
 
-| Use case                                      | Selection                         | Trait signature                           | `@LIMIT` requirement                                                                                                              |
-|-----------------------------------------------|-----------------------------------|-------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
-| Fetch a single row by PK or UK                | Scalar methods only               | `TraitDef<T>`                             | Not Required — enforces single-row intent at runtime if more than one row is returned                                             |
-| Fetch a single row by non unique where clause | Scalar methods only               | `TraitDef<@LIMIT(1) T>`                   | Required — enforces single-row in the query by applying limit                                                                     |
-| Fetch multiple rows (bounded)                 | Scalar methods only               | `TraitDef<@LIMIT(N) List<T>>`             | **Required** — `SqlTraitVajramGen` emits a compile error if `TraitDef<List<T>>` has no `@LIMIT`; use `@LIMIT(N)` to cap at N rows |
-| Fetch N most recent rows                      | Scalar methods only               | `TraitDef<@ORDER(...) @LIMIT(N) List<T>>` | **Required** — `@LIMIT(N)` with N > 1                                                                                             |
-| Fetch one parent + its children               | One `List<ChildSelection>` method | `TraitDef<@LIMIT(1) T>`                   | Required — Interpretation: pick first parent.                                                                                     |
-| Fetch parent → child → grandchild             | Nested `List<ChildSelection>`     | `TraitDef<@LIMIT(1) T>`                   | Required — Interpretation: pick first parent.                                                                                     |
-| Fetch all rows (unbounded)                    | Scalar methods only               | `TraitDef<@LIMIT(NO_LIMIT) List<T>>`      | **Required** — `@LIMIT(NO_LIMIT)` is the explicit opt-out; omitting `@LIMIT` entirely is a compile error                          |
+| Use case                                      | Selection                         | Trait signature                           | `@LIMIT` requirement                                                                                                                                                                                       |
+|-----------------------------------------------|-----------------------------------|-------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Fetch a single row by PK or UK                | Scalar methods only               | `TraitDef<T>`                             | Not Required — enforces single-row intent at runtime if more than one row is returned. Should be used only when the where clause is guaranteed match exactly one row (Ex: querying by equating PrimaryKey) |
+| Fetch a single row by non unique where clause | Scalar methods only               | `TraitDef<@LIMIT(1) T>`                   | Required — enforces single-row in the query by applying limit                                                                                                                                              |
+| Fetch multiple rows (bounded)                 | Scalar methods only               | `TraitDef<@LIMIT(N) List<T>>`             | **Required** — `SqlTraitVajramGen` emits a compile error if `TraitDef<List<T>>` has no `@LIMIT`; use `@LIMIT(N)` to cap at N rows                                                                          |
+| Fetch N most recent rows                      | Scalar methods only               | `TraitDef<@ORDER(...) @LIMIT(N) List<T>>` | **Required** — `@LIMIT(N)` with N > 1                                                                                                                                                                      |
+| Fetch one parent + its children               | One `List<ChildSelection>` method | `TraitDef<@LIMIT(1) T>`                   | Required — Interpretation: pick first parent.                                                                                                                                                              |
+| Fetch parent → child → grandchild             | Nested `List<ChildSelection>`     | `TraitDef<@LIMIT(1) T>`                   | Required — Interpretation: pick first parent.                                                                                                                                                              |
+| Fetch all rows (unbounded)                    | Scalar methods only               | `TraitDef<@LIMIT(NO_LIMIT) List<T>>`      | **Required** — `@LIMIT(NO_LIMIT)` is the explicit opt-out; omitting `@LIMIT` entirely is a compile error                                                                                                   |
 
 ---
 

@@ -28,7 +28,7 @@ public class MandatoryFacetsMissingException extends KrystalCompletionException 
   }
 
   private String createMessage() {
-    return "Vajram %s did not receive these mandatory inputs: [ %s ]"
+    return "Vajram %s did not receive these mandatory facets: [ %s ]"
         .formatted(
             vajramID,
             String.join(

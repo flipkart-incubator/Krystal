@@ -11,7 +11,6 @@ import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.ForkJoinWorkerThread;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * A {@link ForkJoinPool} which is guaranteed to have one and exactly one thread. This is useful

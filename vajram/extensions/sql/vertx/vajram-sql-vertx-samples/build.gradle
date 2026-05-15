@@ -4,13 +4,16 @@ plugins {
     id 'com.flipkart.java.code.standard' version "${java_code_std_version}"
 }
 dependencies {
+    implementation platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
+    krystalModelsGenProcessor platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
+
     implementation platform('io.vertx:vertx-stack-depchain:5.0.11')
     implementation platform('org.slf4j:slf4j-bom:2.0.13')
 
-    implementation project(':vajram:extensions:sql:vajram-sql')
-    implementation project(':vajram:extensions:sql:vertx:vajram-sql-vertx')
-    krystalModelsGenProcessor project(':vajram:vajram-codegen')
-    krystalModelsGenProcessor project(':vajram:extensions:sql:vertx:vajram-sql-vertx-codegen')
+    implementation 'com.flipkart.krystal:vajram-sql'
+    implementation 'com.flipkart.krystal:vajram-sql-vertx'
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-sql-vertx-codegen'
 
     compileOnly "org.projectlombok:lombok:${lombok_version}"
     annotationProcessor "org.projectlombok:lombok:${lombok_version}"
@@ -25,8 +28,8 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.12.2'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.12.2'
 
-    testImplementation project(':vajram:vajram-krystex')
-    testImplementation project(':vajram:extensions:guice:vajram-guice')
+    testImplementation 'com.flipkart.krystal:vajram-krystex'
+    testImplementation 'com.flipkart.krystal:vajram-guice'
     testImplementation 'io.vertx:vertx-jdbc-client'
     testImplementation 'com.h2database:h2:2.3.232'
 }
