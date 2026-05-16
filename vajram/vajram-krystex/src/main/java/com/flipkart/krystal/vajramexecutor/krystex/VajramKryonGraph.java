@@ -376,8 +376,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
       ElementTags currentTransitiveTags =
           ElementTags.of(
               vajramDefinition.vajramTags().annotations().stream()
-                  .filter(
-                      annotation -> annotation.getClass().getAnnotation(Transitive.class) != null)
+                  .filter(ElementTags::isTransitive)
                   .toList());
       ElementTags resolvedTransitiveTags = resolveTagConflicts(depVajramTags);
       @Nullable ConflictResponse conflictingAnnotation =

@@ -1,5 +1,6 @@
 package com.flipkart.krystal.tags;
 
+import static java.util.Collections.synchronizedMap;
 import static java.util.stream.Collectors.groupingBy;
 
 import com.flipkart.krystal.annos.ElementTagUtility;
@@ -44,26 +45,28 @@ public final class ElementTags {
   private static final ElementTags EMPTY_TAGS = new ElementTags(List.of());
 
   private static final Map<Class<? extends Annotation>, ElementTagUtils<Annotation>>
-      elementTagUtilsCache = new HashMap<>();
+      ELEMENT_TAG_UTILS_CACHE = synchronizedMap(new HashMap<>());
 
   private final ImmutableMap<Class<? extends Annotation>, Annotation> annotationTags;
   private final ImmutableMap<String, NamedValueTag> namedValueTags;
 
   private ElementTags(Iterable<Annotation> tags) {
-    ImmutableMap.Builder<Class<? extends Annotation>, Annotation> annos = ImmutableMap.builder();
-    ImmutableMap.Builder<String, NamedValueTag> namedValueTags = ImmutableMap.builder();
+    Map<Class<? extends Annotation>, Annotation> annos = new HashMap<>();
+    Map<String, NamedValueTag> namedValueTags = new HashMap<>();
     for (Annotation annotation : tags) {
-      validate(annotation);
       if (annotation instanceof NamedValueTag namedValueTag) {
-        namedValueTags.put(namedValueTag.name(), namedValueTag);
-      } else if (annotation.annotationType().isAnnotationPresent(Repeatable.class)) {
-        log.error("Element tags does not support repeatable annotations apart from @NamedValueTag");
+        if (namedValueTags.put(namedValueTag.name(), namedValueTag) != null) {
+          throw new IllegalArgumentException("Found duplicate named value tag: " + namedValueTag);
+        }
       } else {
-        annos.put(annotation.annotationType(), annotation);
+        if (annos.put(annotation.annotationType(), annotation) != null) {
+          throw new IllegalArgumentException(
+              "Found duplicate annotation of this type: " + annotation);
+        }
       }
     }
-    this.annotationTags = annos.build();
-    this.namedValueTags = namedValueTags.build();
+    this.annotationTags = ImmutableMap.copyOf(annos);
+    this.namedValueTags = ImmutableMap.copyOf(namedValueTags);
   }
 
   private ElementTags(
@@ -73,7 +76,7 @@ public final class ElementTags {
     this.namedValueTags = ImmutableMap.copyOf(namedValueTags);
   }
 
-  private void validate(Annotation annotation) {
+  private static void validate(Annotation annotation) {
     Class<? extends Annotation> annotationType = annotation.annotationType();
     ElementTagUtility elementTagUtility = annotationType.getAnnotation(ElementTagUtility.class);
     if (elementTagUtility != null) {
@@ -103,6 +106,7 @@ public final class ElementTags {
     if (tags.isEmpty()) {
       return emptyTags();
     }
+    tags.forEach(ElementTags::validate);
     return new ElementTags(tags);
   }
 
@@ -127,7 +131,8 @@ public final class ElementTags {
     if (annotations.length == 0) {
       return this;
     }
-    return mergeTagsWithOverwrite(new ElementTags(Arrays.stream(annotations).toList()));
+    return mergeTagsWithOverwrite(
+        new ElementTags(Arrays.stream(annotations).peek(ElementTags::validate).toList()));
   }
 
   public ElementTags mergeTagsWithOverwrite(ElementTags otherTags) {
@@ -144,7 +149,7 @@ public final class ElementTags {
   }
 
   public static boolean isTransitive(Annotation annotation) {
-    return annotation.annotationType().getAnnotation(Transitive.class) != null;
+    return annotation.annotationType().isAnnotationPresent(Transitive.class);
   }
 
   public static ElementTags resolveTagConflicts(Collection<ElementTags> tagsIterable) {
@@ -197,7 +202,7 @@ public final class ElementTags {
               + annotationType
               + " as the annotation type does not have @ElementTagUtility");
     }
-    return elementTagUtilsCache.computeIfAbsent(
+    return ELEMENT_TAG_UTILS_CACHE.computeIfAbsent(
         annotationType,
         etu -> {
           try {
