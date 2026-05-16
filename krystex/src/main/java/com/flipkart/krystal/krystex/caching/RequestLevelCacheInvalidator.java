@@ -2,15 +2,12 @@ package com.flipkart.krystal.krystex.caching;
 
 import static com.flipkart.krystal.datatypes.Trilean.TRUE;
 
-import com.flipkart.krystal.core.MutatesState;
+import com.flipkart.krystal.data.MutatesState;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.datatypes.Trilean;
-import com.flipkart.krystal.krystex.kryon.KryonExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorExecutionInfo;
-import com.flipkart.krystal.krystex.resolution.FacetsFromRequest;
 import com.flipkart.krystal.tags.ElementTags;
 import java.util.Iterator;
 import java.util.Optional;
@@ -54,30 +51,24 @@ public class RequestLevelCacheInvalidator {
       Class<R> reqClass, Predicate<FacetValues> invalidateIfTrue) {
     VajramID activeVajram = executionInfo.activeKryon();
     if (activeVajram == null) {
-      log.error(
-          "invalidateCacheKeys can only be called from an active vajram. Found no active vajram");
-      return;
+      IllegalStateException e =
+          new IllegalStateException(
+              "InvalidateCacheKeys can only be called from an active vajram. Found no active vajram - possibly a framework bug?");
+      log.error("", e);
+      throw e;
     }
     ElementTags vajramTags = vajramTagsProvider.apply(activeVajram);
-    if (vajramTags == null) {
-      log.error("Skipping cache invalidation: Found no vajramTags");
-      return;
-    }
-    Optional<MutatesState> mutatesState = vajramTags.getAnnotationByType(MutatesState.class);
-    if (mutatesState.isEmpty() || !mutatesState.get().value().equals(TRUE)) {
-      log.error(
-          "Request Level Cache invalidation can be done only from a @MutatesState(TRUE) vajram. For vajram {} found {}",
-          activeVajram,
-          mutatesState);
-      return;
-    }
-
-    Optional<RequestLevelCacheConfig> requestLevelCacheConfig =
-        vajramTags.getAnnotationByType(RequestLevelCacheConfig.class);
-    if (requestLevelCacheConfig.isEmpty()) {
-      log.error(
-          "@RequestLevelCacheConfig missing on Vajram {} - this is mandatory for cache invalidation",
-          activeVajram);
+    Optional<RequestLevelCacheConfig> requestLevelCacheConfig;
+    if (vajramTags == null
+        || (requestLevelCacheConfig = vajramTags.getAnnotationByType(RequestLevelCacheConfig.class))
+            .isEmpty()) {
+      IllegalStateException e =
+          new IllegalStateException(
+              "@RequestLevelCacheConfig missing on Vajram "
+                  + activeVajram
+                  + " - this is mandatory for cache invalidation");
+      log.error("", e);
+      throw e;
     }
     Class<? extends Request<?>>[] permittedTargetVajrams =
         requestLevelCacheConfig.get().canInvalidateCacheOf();

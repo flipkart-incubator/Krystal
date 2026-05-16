@@ -1,13 +1,18 @@
 package com.flipkart.krystal.krystex.caching;
 
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
+import static com.flipkart.krystal.datatypes.Trilean.TRUE;
+import static com.flipkart.krystal.datatypes.Trilean.UNKNOWN;
 import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
 import static java.util.concurrent.CompletableFuture.allOf;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
+import com.flipkart.krystal.data.MutatesState;
+import com.flipkart.krystal.datatypes.Trilean;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardReceive;
@@ -15,6 +20,8 @@ import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.kryon.BatchResponse;
 import com.flipkart.krystal.krystex.kryon.Kryon;
 import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
+import com.flipkart.krystal.krystex.kryon.KryonDefinition;
+import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
 import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
@@ -26,6 +33,7 @@ import com.google.common.collect.Iterables;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -40,6 +48,18 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
       Errable.withError(new StackTracelessException("Unknown error in request cache"));
 
   private final CacheContainer cache = new CacheContainer();
+  private final KryonDefinitionRegistry kryonDefinitionRegistry;
+  private final boolean defaultMutatesStateVal;
+
+  public RequestLevelCache(KryonDefinitionRegistry kryonDefinitionRegistry) {
+    this(kryonDefinitionRegistry, true);
+  }
+
+  public RequestLevelCache(
+      KryonDefinitionRegistry kryonDefinitionRegistry, boolean defaultMutatesStateVal) {
+    this.kryonDefinitionRegistry = kryonDefinitionRegistry;
+    this.defaultMutatesStateVal = defaultMutatesStateVal;
+  }
 
   @Override
   public void addToConfig(KryonExecutorConfigBuilder configBuilder) {
@@ -83,13 +103,24 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
 
     @Override
     public CompletableFuture<KryonCommandResponse> executeCommand(KryonCommand kryonCommand) {
+
       if (kryonCommand instanceof ForwardReceive forwardBatch) {
-        return readFromCache(kryon, forwardBatch);
-      } else {
-        // Let all other commands just pass through. Request level cache is supposed to intercept
-        // ForwardBatch only.
-        return kryon.executeCommand(kryonCommand);
+        VajramID vajramID = kryonCommand.vajramID();
+        KryonDefinition kryonDefinition = kryonDefinitionRegistry.getOrThrow(vajramID);
+        boolean mutatesStateTransitive =
+            kryonDefinition
+                .tags()
+                .getAnnotationByType(MutatesState.class)
+                .map(MutatesState::value)
+                .orElse(UNKNOWN)
+                .asBoolean(defaultMutatesStateVal);
+        if (!mutatesStateTransitive) {
+          return readFromCache(kryon, forwardBatch);
+        }
       }
+      // Let all other commands just pass through. Request level cache is
+      // supposed to intercept ForwardBatch only, and only for eligible vajrams.
+      return kryon.executeCommand(kryonCommand);
     }
 
     @SuppressWarnings("FutureReturnValueIgnored")

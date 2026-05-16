@@ -2,7 +2,9 @@ package com.flipkart.krystal.vajramexecutor.krystex;
 
 import static com.flipkart.krystal.core.VajramID.vajramID;
 import static com.flipkart.krystal.facets.resolution.ResolverCommand.skip;
+import static com.flipkart.krystal.tags.ElementTags.detectConflictingAnnotation;
 import static com.flipkart.krystal.tags.ElementTags.emptyTags;
+import static com.flipkart.krystal.tags.ElementTags.resolveTagConflicts;
 import static com.flipkart.krystal.vajram.facets.FacetValidation.validateMandatoryFacet;
 import static com.flipkart.krystal.vajram.utils.VajramLoader.loadVajramsFromClassPath;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -12,6 +14,7 @@ import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 import static java.util.function.Function.identity;
 
+import com.flipkart.krystal.annos.Transitive;
 import com.flipkart.krystal.core.OutputLogicExecutionResults;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
@@ -42,6 +45,8 @@ import com.flipkart.krystal.krystex.resolution.Resolver;
 import com.flipkart.krystal.krystex.resolution.ResolverLogic;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
+import com.flipkart.krystal.tags.ElementTags;
+import com.flipkart.krystal.tags.ElementTags.ConflictResponse;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -316,6 +321,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
             createKryonDefinitionsForDependencies(vajramDefinition, loadingInProgress);
         OutputLogicDefinition<?> outputLogicDefinition =
             createKryonOutputLogic(vajramId, vajramDefinition, vajramDef);
+        ElementTags resolvedTags = getDerivedDependencyTags(vajramId);
         kryonDefinitionRegistry.newVajramKryonDefinition(
             vajramId.id(),
             facets,
@@ -328,7 +334,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                 ImmutableSet.of(),
                 emptyTags(),
                 vajramDef::facetsFromRequest),
-            vajramDefinition.vajramTags());
+            resolvedTags);
       }
       vajramExecutables.add(vajramId);
       if (vajramDefinition.isTrait()) {
@@ -342,6 +348,57 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
         }
       }
       return vajramId;
+    }
+  }
+
+  private final Map<VajramID, Boolean> tagParsingInProgress = new HashMap<>();
+  private final Map<VajramID, ElementTags> derivedTagsByVajram = new HashMap<>();
+
+  private ElementTags getDerivedDependencyTags(VajramID vajramID) {
+    if (tagParsingInProgress.getOrDefault(vajramID, false)) {
+      return emptyTags();
+    }
+    if (derivedTagsByVajram.containsKey(vajramID)) {
+      return derivedTagsByVajram.get(vajramID);
+    }
+    tagParsingInProgress.put(vajramID, true);
+    try {
+      VajramDefinition vajramDefinition = getVajramDefinition(vajramID);
+      List<ElementTags> depVajramTags =
+          vajramDefinition.facetSpecs().stream()
+              .filter(DependencySpec.class::isInstance)
+              .map(DependencySpec.class::cast)
+              .map(DependencySpec::onVajramID)
+              .distinct()
+              .map(this::getDerivedDependencyTags)
+              .map(tags -> tags.filter(ElementTags::isTransitive))
+              .toList();
+      ElementTags currentTransitiveTags =
+          ElementTags.of(
+              vajramDefinition.vajramTags().annotations().stream()
+                  .filter(
+                      annotation -> annotation.getClass().getAnnotation(Transitive.class) != null)
+                  .toList());
+      ElementTags resolvedTransitiveTags = resolveTagConflicts(depVajramTags);
+      @Nullable ConflictResponse conflictingAnnotation =
+          detectConflictingAnnotation(currentTransitiveTags, resolvedTransitiveTags);
+      if (conflictingAnnotation != null) {
+        throw new VajramDefinitionException(
+            """
+                The annotation %s present on vajram %s has lower precedence than the annotation %s found on one of its \
+                transitive dependencies. Please remove the annotation from %s or update the dependency annotation"""
+                .formatted(
+                    conflictingAnnotation.conflictingAnnotation(),
+                    vajramID,
+                    conflictingAnnotation.transitiveDepAnnotation(),
+                    vajramID));
+      }
+      ElementTags elementTags =
+          resolvedTransitiveTags.mergeTagsWithOverwrite(vajramDefinition.vajramTags());
+      derivedTagsByVajram.put(vajramID, elementTags);
+      return elementTags;
+    } finally {
+      tagParsingInProgress.remove(vajramID);
     }
   }
 
@@ -517,18 +574,18 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
       VajramDefinition vajramDefinition, Set<VajramID> loadingInProgress) {
     List<DependencySpec> dependencies = new ArrayList<>();
     for (Facet facet : vajramDefinition.facetSpecs()) {
-      if (facet instanceof DependencySpec definition) {
-        dependencies.add(definition);
+      if (facet instanceof DependencySpec dependencySpec) {
+        dependencies.add(dependencySpec);
       }
     }
     Map<Dependency, VajramID> depIdToProviderKryon = new HashMap<>();
     // Create and register sub graphs for dependencies of this vajram
     for (DependencySpec dependency : dependencies) {
-      var accessSpec = dependency.onVajramID();
-      VajramDefinition dependencyVajram = vajramDefinitions.get(accessSpec);
+      var vajramID = dependency.onVajramID();
+      VajramDefinition dependencyVajram = vajramDefinitions.get(vajramID);
       if (dependencyVajram == null) {
         throw new VajramDefinitionException(
-            "Unable to find vajram for vajramId %s".formatted(accessSpec));
+            "Unable to find vajram for vajramId %s".formatted(vajramID));
       }
       depIdToProviderKryon.put(
           dependency, loadKryonSubgraph(dependencyVajram.vajramId(), loadingInProgress));

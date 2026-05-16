@@ -3,8 +3,9 @@ package com.flipkart.krystal.vajram.samples.user;
 import static com.flipkart.krystal.datatypes.Trilean.TRUE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static java.util.Objects.requireNonNull;
+import static java.util.Objects.requireNonNullElse;
 
-import com.flipkart.krystal.core.MutatesState;
+import com.flipkart.krystal.data.MutatesState;
 import com.flipkart.krystal.krystex.caching.RequestLevelCacheConfig;
 import com.flipkart.krystal.krystex.caching.RequestLevelCacheInvalidator;
 import com.flipkart.krystal.model.IfAbsent;
@@ -14,8 +15,11 @@ import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.samples.user.response_pojos.UserProfile;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.LongAdder;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
 @Vajram
@@ -32,6 +36,8 @@ public abstract class UpdateUserProfile extends IOVajramDef<Boolean> {
     UserProfile userProfile;
   }
 
+  public static LongAdder CALL_COUNTER = new LongAdder();
+
   @SuppressWarnings("initialization.field.uninitialized")
   static class _InternalFacets {
     @Inject
@@ -40,17 +46,18 @@ public abstract class UpdateUserProfile extends IOVajramDef<Boolean> {
 
     @Inject
     @Named("UpdateUserProfile.shouldUpdate")
-    @IfAbsent(FAIL)
     boolean shouldUpdate;
   }
 
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   @Output
   static CompletableFuture<Boolean> updateProfile(
       String userProfileId,
       UserProfile userProfile,
       RequestLevelCacheInvalidator reqCacheInvalidator,
-      boolean shouldUpdate) {
-    if (!shouldUpdate) {
+      Optional<Boolean> shouldUpdate) {
+    CALL_COUNTER.increment();
+    if (!shouldUpdate.orElse(true)) {
       return CompletableFuture.completedFuture(false);
     }
     invalidateImpactedCacheKeys(userProfileId, reqCacheInvalidator);

@@ -1,9 +1,11 @@
-package com.flipkart.krystal.core;
+package com.flipkart.krystal.data;
 
 import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 import com.flipkart.krystal.annos.ApplicableToElements;
+import com.flipkart.krystal.annos.ElementTagUtility;
+import com.flipkart.krystal.annos.Transitive;
 import com.flipkart.krystal.core.KrystalElement.Vajram;
 import com.flipkart.krystal.datatypes.Trilean;
 import java.lang.annotation.Retention;
@@ -20,6 +22,8 @@ import java.lang.annotation.Target;
 @Target(TYPE)
 @Retention(RUNTIME)
 @ApplicableToElements(Vajram.class)
+@ElementTagUtility(MutatesStates.class)
+@Transitive
 public @interface MutatesState {
 
   /**

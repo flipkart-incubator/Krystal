@@ -130,4 +130,12 @@ public enum Trilean {
     }
     return value;
   }
+
+  public boolean asBoolean(boolean defaultValue) {
+    return switch (this) {
+      case TRUE -> true;
+      case FALSE -> false;
+      case UNKNOWN -> defaultValue;
+    };
+  }
 }

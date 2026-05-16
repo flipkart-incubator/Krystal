@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.samples.user;
 
 import static com.flipkart.krystal.vajram.samples.Util.TEST_TIMEOUT;
 import static com.google.inject.Guice.createInjector;
+import static com.google.inject.name.Names.named;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.InstanceOfAssertFactories.list;
 
@@ -15,6 +16,7 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutorExecutionInfo;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.guice.inputinjection.VajramGuiceInputInjector;
+import com.flipkart.krystal.vajram.samples.user.response_pojos.User;
 import com.flipkart.krystal.vajram.samples.user.response_pojos.UserWithProfile;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
@@ -24,13 +26,14 @@ import com.google.inject.name.Names;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class GetUserProfilesFromUserIdsTest {
+class UsersTest {
 
   private static SingleThreadExecutorsPool EXEC_POOL;
 
@@ -47,13 +50,7 @@ class GetUserProfilesFromUserIdsTest {
     this.executorLease = EXEC_POOL.lease();
     this.graph =
         VajramKryonGraph.builder()
-            .loadClasses(
-                GetUserProfilesFromUserIds.class,
-                GetUserWithProfile.class,
-                GetUser.class,
-                GetUserProfile.class,
-                UpdateUserProfile.class,
-                RunUserWorkflow.class)
+            .loadFromPackage("com.flipkart.krystal.vajram.samples.user")
             .build();
   }
 
@@ -62,6 +59,7 @@ class GetUserProfilesFromUserIdsTest {
     executorLease.close();
     graph.close();
     GetUserProfile.CALL_COUNTER.reset();
+    UpdateUserProfile.CALL_COUNTER.reset();
   }
 
   @AfterAll
@@ -95,7 +93,7 @@ class GetUserProfilesFromUserIdsTest {
   }
 
   @Test
-  void testAllCorrectInputs_success() throws Exception {
+  void testAllCorrectInputs_success() {
     CompletableFuture<List<UserWithProfile>> future;
     try (KrystexVajramExecutor executor =
         graph.createExecutor(
@@ -123,7 +121,7 @@ class GetUserProfilesFromUserIdsTest {
   }
 
   @Test
-  void testAllIncorrectInputs_success() throws Exception {
+  void testAllIncorrectInputs_success() {
     CompletableFuture<List<UserWithProfile>> future;
     try (KrystexVajramExecutor executor =
         graph.createExecutor(
@@ -150,7 +148,7 @@ class GetUserProfilesFromUserIdsTest {
 
   @Test
   void mutatingVajram_invalidatesCacheOfReadVajram() {
-    RequestLevelCache requestLevelCache = new RequestLevelCache();
+    RequestLevelCache requestLevelCache = new RequestLevelCache(graph.kryonDefinitionRegistry());
     KryonExecutorExecutionInfo executionInfo = new KryonExecutorExecutionInfo();
     RequestLevelCacheInvalidator cacheInvalidator =
         new RequestLevelCacheInvalidator(
@@ -165,9 +163,6 @@ class GetUserProfilesFromUserIdsTest {
                   @Override
                   protected void configure() {
                     bind(RequestLevelCacheInvalidator.class).toInstance(cacheInvalidator);
-                    bind(Boolean.class)
-                        .annotatedWith(Names.named("UpdateUserProfile.shouldUpdate"))
-                        .toInstance(true);
                   }
                 }));
     CompletableFuture<Boolean> future1;
@@ -203,7 +198,7 @@ class GetUserProfilesFromUserIdsTest {
 
   @Test
   void mutatingVajram_invalidationDisabling_leadsToCacheHit() {
-    RequestLevelCache requestLevelCache = new RequestLevelCache();
+    RequestLevelCache requestLevelCache = new RequestLevelCache(graph.kryonDefinitionRegistry());
     KryonExecutorExecutionInfo executionInfo = new KryonExecutorExecutionInfo();
     RequestLevelCacheInvalidator cacheInvalidator =
         new RequestLevelCacheInvalidator(
@@ -219,7 +214,7 @@ class GetUserProfilesFromUserIdsTest {
                   protected void configure() {
                     bind(RequestLevelCacheInvalidator.class).toInstance(cacheInvalidator);
                     bind(Boolean.class)
-                        .annotatedWith(Names.named("UpdateUserProfile.shouldUpdate"))
+                        .annotatedWith(named("UpdateUserProfile.shouldUpdate"))
                         .toInstance(false);
                   }
                 }));
@@ -252,5 +247,114 @@ class GetUserProfilesFromUserIdsTest {
     // UpdateUserProfile invalidation is disabled by the injected boolean, cache hit should prevent
     // the second call for each user id
     assertThat(GetUserProfile.CALL_COUNTER.sum()).isEqualTo(2);
+  }
+
+  @Test
+  void mutatingVajrams_areNotCached() {
+    RequestLevelCache requestLevelCache = new RequestLevelCache(graph.kryonDefinitionRegistry());
+    KryonExecutorExecutionInfo executionInfo = new KryonExecutorExecutionInfo();
+    RequestLevelCacheInvalidator cacheInvalidator =
+        new RequestLevelCacheInvalidator(
+            requestLevelCache,
+            graph::getVajramIdByVajramReqType,
+            vajramID -> graph.getVajramDefinition(vajramID).vajramTags(),
+            executionInfo);
+    VajramGuiceInputInjector guiceInputInjector =
+        new VajramGuiceInputInjector(
+            createInjector(
+                new AbstractModule() {
+                  @Override
+                  protected void configure() {
+                    bind(RequestLevelCacheInvalidator.class).toInstance(cacheInvalidator);
+                    bind(Boolean.class)
+                        .annotatedWith(named("UpdateUserProfile.shouldUpdate"))
+                        .toInstance(false);
+                  }
+                }));
+    CompletableFuture<Boolean> future1;
+    CompletableFuture<Boolean> future2;
+    try (KrystexVajramExecutor executor =
+        graph.createExecutor(
+            KrystexVajramExecutorConfig.builder()
+                .vajramKryonGraph(graph)
+                .requestId("all-correct-inputs-test")
+                .inputInjectionProvider(guiceInputInjector)
+                .kryonExecutorConfig(
+                    KryonExecutorConfig.builder()
+                        .singleThreadExecutor(executorLease.get())
+                        .configureWith(requestLevelCache)
+                        .executorInfo(executionInfo)
+                        .build())
+                .build())) {
+
+      future1 =
+          executor.execute(RunUserWorkflow_ReqImmutPojo._builder().userId("UserId_1")._build());
+      future2 =
+          executor.execute(RunUserWorkflow_ReqImmutPojo._builder().userId("UserId_1")._build());
+    }
+
+    assertThat(future1).succeedsWithin(TEST_TIMEOUT).isEqualTo(false);
+    assertThat(future2).succeedsWithin(TEST_TIMEOUT).isEqualTo(false);
+
+    // UpdateUserProfile must be called twice because it declares @MutatesState(TRUE)
+    // This means RunUserWorkflow has also been called twice since it transitively derives
+    // @MutatesState(TRUE) from UpdateUserProfile
+    assertThat(UpdateUserProfile.CALL_COUNTER.sum()).isEqualTo(2);
+    // GetUserProfile must be called only once due to cache hit because it is not a mutating vajram
+    // and
+    // cache invalidation has been disabled above
+    assertThat(GetUserProfile.CALL_COUNTER.sum()).isEqualTo(1);
+  }
+
+  @Test
+  void invalidatingCacheKeys_fromNonPermittedVajrams_fails() {
+    RequestLevelCache requestLevelCache = new RequestLevelCache(graph.kryonDefinitionRegistry());
+    KryonExecutorExecutionInfo executionInfo = new KryonExecutorExecutionInfo();
+    RequestLevelCacheInvalidator cacheInvalidator =
+        new RequestLevelCacheInvalidator(
+            requestLevelCache,
+            graph::getVajramIdByVajramReqType,
+            vajramID -> graph.getVajramDefinition(vajramID).vajramTags(),
+            executionInfo);
+    VajramGuiceInputInjector guiceInputInjector =
+        new VajramGuiceInputInjector(
+            createInjector(
+                new AbstractModule() {
+                  @Override
+                  protected void configure() {
+                    bind(RequestLevelCacheInvalidator.class).toInstance(cacheInvalidator);
+                    bind(Boolean.class)
+                        .annotatedWith(named("GetUser.shouldInvalidate"))
+                        .toInstance(true);
+                  }
+                }));
+    CompletableFuture<List<UserWithProfile>> future1;
+    try (KrystexVajramExecutor executor =
+        graph.createExecutor(
+            KrystexVajramExecutorConfig.builder()
+                .vajramKryonGraph(graph)
+                .requestId("all-correct-inputs-test")
+                .inputInjectionProvider(guiceInputInjector)
+                .kryonExecutorConfig(
+                    KryonExecutorConfig.builder()
+                        .singleThreadExecutor(executorLease.get())
+                        .configureWith(requestLevelCache)
+                        .executorInfo(executionInfo)
+                        .build())
+                .build())) {
+
+      future1 =
+          executor.execute(
+              GetUserProfilesFromUserIds_ReqImmutPojo._builder()
+                  .userIds(List.of("UserId_1"))
+                  ._build());
+    }
+
+    assertThat(future1)
+        .failsWithin(TEST_TIMEOUT)
+        .withThrowableOfType(ExecutionException.class)
+        .withCauseInstanceOf(IllegalStateException.class)
+        .withMessageContaining(
+            "@RequestLevelCacheConfig missing on Vajram v<GetUserProfilesFromUserIds> - this is mandatory for cache invalidation");
   }
 }

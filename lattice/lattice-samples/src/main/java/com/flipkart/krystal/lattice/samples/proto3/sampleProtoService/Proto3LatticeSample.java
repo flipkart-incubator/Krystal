@@ -1,11 +1,13 @@
 package com.flipkart.krystal.lattice.samples.proto3.sampleProtoService;
 
+import static com.flipkart.krystal.datatypes.Trilean.FALSE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.data.MutatesState;
 import com.flipkart.krystal.lattice.core.RemotelyInvocable;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.serial.ReservedSerialIds;
@@ -25,6 +27,7 @@ import java.util.Optional;
 @SupportedSerdeProtocols(Protobuf3.class)
 @ReservedSerialIds(8)
 @Vajram
+@MutatesState(FALSE)
 abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3LatticeSampleResponse> {
   static class _Inputs {
     @SerialId(1)

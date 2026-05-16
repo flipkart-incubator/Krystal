@@ -1,5 +1,11 @@
 package com.flipkart.krystal.tags;
 
+import static java.util.stream.Collectors.groupingBy;
+
+import com.flipkart.krystal.annos.ElementTagUtility;
+import com.flipkart.krystal.annos.ElementTagUtilityOf;
+import com.flipkart.krystal.annos.Transitive;
+import com.flipkart.krystal.core.ElementTagUtils;
 import com.google.auto.value.AutoAnnotation;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
@@ -8,15 +14,18 @@ import java.lang.annotation.Repeatable;
 import java.lang.reflect.AnnotatedElement;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Predicate;
 import lombok.EqualsAndHashCode;
+import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * A container for all tags assigned to an krystal graph element, like a facet, logic, vajram/kryon
+ * A container for all tags assigned to a krystal graph element, like a facet, logic, vajram/kryon
  * etc.
  *
  * <p>Tags are the primary way to annotate metadata to various application elements of the krystal
@@ -28,10 +37,14 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * AnnotatedElement#getAnnotations()}). The only exception to this rule is{@link NamedValueTag} (see
  * its documentation for more details)
  */
+@Slf4j
 @EqualsAndHashCode
 public final class ElementTags {
 
   private static final ElementTags EMPTY_TAGS = new ElementTags(List.of());
+
+  private static final Map<Class<? extends Annotation>, ElementTagUtils<Annotation>>
+      elementTagUtilsCache = new HashMap<>();
 
   private final ImmutableMap<Class<? extends Annotation>, Annotation> annotationTags;
   private final ImmutableMap<String, NamedValueTag> namedValueTags;
@@ -40,8 +53,11 @@ public final class ElementTags {
     ImmutableMap.Builder<Class<? extends Annotation>, Annotation> annos = ImmutableMap.builder();
     ImmutableMap.Builder<String, NamedValueTag> namedValueTags = ImmutableMap.builder();
     for (Annotation annotation : tags) {
+      validate(annotation);
       if (annotation instanceof NamedValueTag namedValueTag) {
         namedValueTags.put(namedValueTag.name(), namedValueTag);
+      } else if (annotation.annotationType().isAnnotationPresent(Repeatable.class)) {
+        log.error("Element tags does not support repeatable annotations apart from @NamedValueTag");
       } else {
         annos.put(annotation.annotationType(), annotation);
       }
@@ -55,6 +71,28 @@ public final class ElementTags {
       Map<String, NamedValueTag> namedValueTags) {
     this.annotationTags = ImmutableMap.copyOf(annotationTags);
     this.namedValueTags = ImmutableMap.copyOf(namedValueTags);
+  }
+
+  private void validate(Annotation annotation) {
+    Class<? extends Annotation> annotationType = annotation.annotationType();
+    ElementTagUtility elementTagUtility = annotationType.getAnnotation(ElementTagUtility.class);
+    if (elementTagUtility != null) {
+      Class<? extends ElementTagUtils<?>> elementTagUtilsClass = elementTagUtility.value();
+      ElementTagUtilityOf elementTagUtilityOf =
+          elementTagUtilsClass.getAnnotation(ElementTagUtilityOf.class);
+      if (elementTagUtilityOf == null) {
+        throw new IllegalStateException(
+            elementTagUtilsClass + " does not have a @ElementTagUtilityOf annotation");
+      }
+      if (elementTagUtilityOf.value() != annotationType) {
+        throw new IllegalStateException(
+            elementTagUtilityOf
+                + " on "
+                + elementTagUtilsClass
+                + " does not match annotationType "
+                + annotationType);
+      }
+    }
   }
 
   public static ElementTags of(Annotation... tags) {
@@ -89,10 +127,10 @@ public final class ElementTags {
     if (annotations.length == 0) {
       return this;
     }
-    return mergeFrom(new ElementTags(Arrays.stream(annotations).toList()));
+    return mergeTagsWithOverwrite(new ElementTags(Arrays.stream(annotations).toList()));
   }
 
-  private ElementTags mergeFrom(ElementTags otherTags) {
+  public ElementTags mergeTagsWithOverwrite(ElementTags otherTags) {
     LinkedHashMap<Class<? extends Annotation>, Annotation> merged =
         new LinkedHashMap<>(annotationTags);
     merged.putAll(otherTags.annotationTags);
@@ -101,7 +139,79 @@ public final class ElementTags {
     return new ElementTags(merged, merged2);
   }
 
+  public ElementTags filter(Predicate<Annotation> predicate) {
+    return ElementTags.of(annotations().stream().filter(predicate).toList());
+  }
+
+  public static boolean isTransitive(Annotation annotation) {
+    return annotation.annotationType().getAnnotation(Transitive.class) != null;
+  }
+
+  public static ElementTags resolveTagConflicts(Collection<ElementTags> tagsIterable) {
+    Map<? extends Class<? extends Annotation>, List<Annotation>> annotationsByType =
+        tagsIterable.stream()
+            .map(ElementTags::annotations)
+            .flatMap(Collection::stream)
+            .collect(groupingBy(Annotation::annotationType));
+    ElementTags resolvedTags =
+        ElementTags.of(
+            annotationsByType.entrySet().stream()
+                .map(
+                    listEntry -> {
+                      List<Annotation> annotationConflicts = listEntry.getValue();
+                      return getElementTagUtilsOrThrow(listEntry.getKey())
+                          .resolve(annotationConflicts);
+                    })
+                .toList());
+    return resolvedTags;
+  }
+
+  public static @Nullable ConflictResponse detectConflictingAnnotation(
+      ElementTags currentTransitiveTags, ElementTags resolvedDepTags) {
+    for (Annotation annotation : currentTransitiveTags.annotations()) {
+      Optional<? extends Annotation> depAnnotationOfSameType =
+          resolvedDepTags.getAnnotationByType(annotation.annotationType());
+      ElementTagUtils<Annotation> elementTagUtils =
+          getElementTagUtilsOrThrow(annotation.annotationType());
+      if (depAnnotationOfSameType.isEmpty()) {
+        continue;
+      }
+      int comparison = elementTagUtils.compare(annotation, depAnnotationOfSameType.get());
+      if (comparison < 0) {
+        return new ConflictResponse(annotation, depAnnotationOfSameType.get());
+      }
+    }
+    return null;
+  }
+
   public static @AutoAnnotation NamedValueTag namedValueTag(String name, String value) {
     return new AutoAnnotation_ElementTags_namedValueTag(name, value);
   }
+
+  private static ElementTagUtils<Annotation> getElementTagUtilsOrThrow(
+      Class<? extends Annotation> annotationType) {
+    ElementTagUtility elementTagUtility = annotationType.getAnnotation(ElementTagUtility.class);
+    if (elementTagUtility == null) {
+      throw new IllegalArgumentException(
+          "Cannot handle conflicts for annotation type "
+              + annotationType
+              + " as the annotation type does not have @ElementTagUtility");
+    }
+    return elementTagUtilsCache.computeIfAbsent(
+        annotationType,
+        etu -> {
+          try {
+            @SuppressWarnings("unchecked")
+            ElementTagUtils<Annotation> elementTagUtils =
+                (ElementTagUtils<Annotation>)
+                    elementTagUtility.value().getConstructor().newInstance();
+            return elementTagUtils;
+          } catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+        });
+  }
+
+  public record ConflictResponse(
+      @Nullable Annotation conflictingAnnotation, @Nullable Annotation transitiveDepAnnotation) {}
 }

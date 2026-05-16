@@ -4,6 +4,7 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
+import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -43,7 +44,14 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class TestRequestLevelCache extends RequestLevelCache {
   private static final Object NO_VALUE = new Object();
 
-  public TestRequestLevelCache() {}
+  public TestRequestLevelCache(KryonDefinitionRegistry kryonDefinitionRegistry) {
+    super(kryonDefinitionRegistry);
+  }
+
+  public TestRequestLevelCache(
+      KryonDefinitionRegistry kryonDefinitionRegistry, boolean defaultMutatesStateVal) {
+    super(kryonDefinitionRegistry, defaultMutatesStateVal);
+  }
 
   @Override
   public void primeCache(FacetValues facetValues, CompletableFuture<@Nullable Object> data) {

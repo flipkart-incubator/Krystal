@@ -1,9 +1,11 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice;
 
+import static com.flipkart.krystal.datatypes.Trilean.FALSE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.MutatesState;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -19,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.LongAdder;
 
 @Vajram
+@MutatesState(FALSE)
 public abstract class FriendsService extends IOVajramDef<Set<String>> {
   static class _Inputs {
     @IfAbsent(FAIL)

@@ -8,7 +8,7 @@ import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.traits.UseForPredicateDispatch;
 import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.TraitRoot;
-import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
+import com.flipkart.krystal.annos.CallGraphDelegationMode;
 
 /**
  * Sample trait demonstrating dynamic predicate dispatch capability of krystal
