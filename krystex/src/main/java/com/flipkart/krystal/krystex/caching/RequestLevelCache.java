@@ -1,11 +1,16 @@
 package com.flipkart.krystal.krystex.caching;
 
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
+import static com.flipkart.krystal.datatypes.Trilean.UNKNOWN;
 import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
 import static java.util.concurrent.CompletableFuture.allOf;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.data.ImmutableFacetValues;
+import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
+import com.flipkart.krystal.data.MutatesState;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardReceive;
@@ -13,6 +18,8 @@ import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.kryon.BatchResponse;
 import com.flipkart.krystal.krystex.kryon.Kryon;
 import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
+import com.flipkart.krystal.krystex.kryon.KryonDefinition;
+import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
 import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
@@ -37,7 +44,34 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
   private static final Errable<@Nullable Object> UNKNOWN_ERROR =
       Errable.withError(new StackTracelessException("Unknown error in request cache"));
 
-  private final Map<CacheKey, CompletableFuture<@Nullable Object>> cache = new LinkedHashMap<>();
+  private final CacheContainer cache = new CacheContainer();
+  private final KryonDefinitionRegistry kryonDefinitionRegistry;
+  private final boolean defaultMutatesStateVal;
+
+  /**
+   * If a vajram doesn't have a @MutatesState annotation, then it is assumed to mutate state, and
+   * caching is skipped.
+   *
+   * @param kryonDefinitionRegistry the Kryon Definition registry corresponding to the Krystal
+   *     executor for which this is a request level cache
+   */
+  public RequestLevelCache(KryonDefinitionRegistry kryonDefinitionRegistry) {
+    this(kryonDefinitionRegistry, true);
+  }
+
+  /**
+   * @param kryonDefinitionRegistry the Kryon Definition registry corresponding to the Krystal
+   *     executor for which this is a request level cache
+   * @param defaultMutatesStateVal If a vajram doesn't have a @MutatesState annotation, then this
+   *     value is used as the default. NOTE: Passing "false" here is not recommended as it can lead
+   *     to unexpected behavior. This has been provided to support legacy code, and would be removed
+   *     in a future release. Prefer using the other constructor which defaults to true.
+   */
+  public RequestLevelCache(
+      KryonDefinitionRegistry kryonDefinitionRegistry, boolean defaultMutatesStateVal) {
+    this.kryonDefinitionRegistry = kryonDefinitionRegistry;
+    this.defaultMutatesStateVal = defaultMutatesStateVal;
+  }
 
   @Override
   public void addToConfig(KryonExecutorConfigBuilder configBuilder) {
@@ -55,6 +89,10 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
   public Kryon<KryonCommand, KryonCommandResponse> decorateKryon(
       KryonDecorationInput decorationInput) {
     return new CachingDecoratedKryon(decorationInput.kryon());
+  }
+
+  CacheContainer cacheContainer() {
+    return cache;
   }
 
   private class CachingDecoratedKryon implements Kryon<KryonCommand, KryonCommandResponse> {
@@ -77,13 +115,24 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
 
     @Override
     public CompletableFuture<KryonCommandResponse> executeCommand(KryonCommand kryonCommand) {
+
       if (kryonCommand instanceof ForwardReceive forwardBatch) {
-        return readFromCache(kryon, forwardBatch);
-      } else {
-        // Let all other commands just pass through. Request level cache is supposed to intercept
-        // ForwardBatch only.
-        return kryon.executeCommand(kryonCommand);
+        VajramID vajramID = kryonCommand.vajramID();
+        KryonDefinition kryonDefinition = kryonDefinitionRegistry.getOrThrow(vajramID);
+        boolean mutatesStateTransitive =
+            kryonDefinition
+                .tags()
+                .getAnnotationByType(MutatesState.class)
+                .map(MutatesState::value)
+                .orElse(UNKNOWN)
+                .asBoolean(defaultMutatesStateVal);
+        if (!mutatesStateTransitive) {
+          return readFromCache(kryon, forwardBatch);
+        }
       }
+      // Let all other commands just pass through. Request level cache is
+      // supposed to intercept ForwardBatch only, and only for eligible vajrams.
+      return kryon.executeCommand(kryonCommand);
     }
 
     @SuppressWarnings("FutureReturnValueIgnored")
@@ -96,13 +145,13 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
           new LinkedHashMap<>();
       executableRequests.forEach(
           (requestId, facets) -> {
-            var cacheKey = new CacheKey(facets._build());
-            var cachedFuture = getCachedValue(cacheKey);
+            ImmutableFacetValues immutableFacetValues = facets._build();
+            var cachedFuture = getCachedValue(immutableFacetValues);
             if (cachedFuture == null) {
               var placeHolderFuture = new CompletableFuture<@Nullable Object>();
               newCacheEntries.put(requestId, placeHolderFuture);
-              cache.put(cacheKey, placeHolderFuture);
-              cacheMisses.put(requestId, facets._build());
+              cache.put(immutableFacetValues, placeHolderFuture);
+              cacheMisses.put(requestId, immutableFacetValues);
             } else {
               cacheHits.put(requestId, cachedFuture);
             }
@@ -160,11 +209,12 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
     }
   }
 
-  @Nullable CompletableFuture<@Nullable Object> getCachedValue(CacheKey cacheKey) {
+  @Nullable CompletableFuture<@Nullable Object> getCachedValue(
+      ImmutableFacetValuesContainer cacheKey) {
     return cache.get(cacheKey);
   }
 
-  void primeCache(FacetValues request, CompletableFuture<@Nullable Object> data) {
-    cache.put(new CacheKey(request._build()), data);
+  void primeCache(FacetValues facetValues, CompletableFuture<@Nullable Object> data) {
+    cache.put(facetValues._build(), data);
   }
 }

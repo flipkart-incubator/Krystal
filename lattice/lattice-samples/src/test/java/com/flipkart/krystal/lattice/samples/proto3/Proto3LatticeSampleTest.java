@@ -31,9 +31,9 @@ class Proto3LatticeSampleTest {
 
   private static SingleThreadExecutorsPool EXEC_POOL;
   private static final String REQUEST_ID = "protoExhaustiveTest";
-  private final TestRequestLevelCache requestLevelCache = new TestRequestLevelCache();
 
   private VajramKryonGraph graph;
+  private TestRequestLevelCache requestLevelCache;
   private Lease<SingleThreadExecutor> executorLease;
 
   @BeforeAll
@@ -50,6 +50,7 @@ class Proto3LatticeSampleTest {
   void setUp() throws LeaseUnavailableException {
     this.executorLease = EXEC_POOL.lease();
     this.graph = VajramKryonGraph.builder().loadClasses(Proto3LatticeSample.class).build();
+    this.requestLevelCache = new TestRequestLevelCache(this.graph.kryonDefinitionRegistry());
   }
 
   @AfterEach
