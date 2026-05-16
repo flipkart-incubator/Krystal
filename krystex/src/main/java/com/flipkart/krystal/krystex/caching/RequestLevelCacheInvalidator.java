@@ -1,8 +1,5 @@
 package com.flipkart.krystal.krystex.caching;
 
-import static com.flipkart.krystal.datatypes.Trilean.TRUE;
-
-import com.flipkart.krystal.data.MutatesState;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
@@ -58,10 +55,11 @@ public class RequestLevelCacheInvalidator {
       throw e;
     }
     ElementTags vajramTags = vajramTagsProvider.apply(activeVajram);
-    Optional<RequestLevelCacheConfig> requestLevelCacheConfig;
-    if (vajramTags == null
-        || (requestLevelCacheConfig = vajramTags.getAnnotationByType(RequestLevelCacheConfig.class))
-            .isEmpty()) {
+    Optional<RequestLevelCacheConfig> requestLevelCacheConfig = Optional.empty();
+    if (vajramTags != null) {
+      requestLevelCacheConfig = vajramTags.getAnnotationByType(RequestLevelCacheConfig.class);
+    }
+    if (vajramTags == null || requestLevelCacheConfig.isEmpty()) {
       IllegalStateException e =
           new IllegalStateException(
               "@RequestLevelCacheConfig missing on Vajram "

@@ -4,11 +4,11 @@ import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 import com.flipkart.krystal.core.KrystalElement.VajramRoot;
-import com.flipkart.krystal.data.MutatesStates;
+import com.google.auto.value.AutoAnnotation;
 import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import lombok.experimental.UtilityClass;
 
 /**
  * In Vajram code, app devs must not use this explicitly - it is auto-inferred by the platform.
@@ -42,4 +42,12 @@ import java.lang.annotation.Target;
 @ElementTagUtility(CallGraphDelegationModes.class)
 public @interface CallGraphDelegationMode {
   ComputeDelegationMode value();
+
+  @UtilityClass
+  final class Creator {
+    @AutoAnnotation
+    public static CallGraphDelegationMode create(ComputeDelegationMode value) {
+      return new AutoAnnotation_CallGraphDelegationMode_Creator_create(value);
+    }
+  }
 }

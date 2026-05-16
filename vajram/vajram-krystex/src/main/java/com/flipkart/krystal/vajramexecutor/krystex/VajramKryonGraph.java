@@ -14,7 +14,6 @@ import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 import static java.util.function.Function.identity;
 
-import com.flipkart.krystal.annos.Transitive;
 import com.flipkart.krystal.core.OutputLogicExecutionResults;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
@@ -367,7 +366,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
       List<ElementTags> depVajramTags =
           vajramDefinition.facetSpecs().stream()
               .filter(DependencySpec.class::isInstance)
-              .map(DependencySpec.class::cast)
+              .map(obj -> ((DependencySpec) obj))
               .map(DependencySpec::onVajramID)
               .distinct()
               .map(this::getDerivedDependencyTags)

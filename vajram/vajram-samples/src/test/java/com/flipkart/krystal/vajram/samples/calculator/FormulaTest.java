@@ -46,7 +46,6 @@ import com.flipkart.krystal.vajram.samples.calculator.divide.Divide_FacImmutPojo
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramKryonGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.batching.InputBatcherConfig;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;

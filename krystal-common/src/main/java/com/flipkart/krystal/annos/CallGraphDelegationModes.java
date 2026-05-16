@@ -1,7 +1,10 @@
 package com.flipkart.krystal.annos;
 
+import static com.flipkart.krystal.annos.CallGraphDelegationMode.Creator.create;
+import static com.flipkart.krystal.annos.ComputeDelegationMode.SYNC;
+import static java.util.Objects.requireNonNullElse;
+
 import com.flipkart.krystal.core.ElementTagUtils;
-import com.flipkart.krystal.data.MutatesState;
 import com.google.common.collect.Comparators;
 import java.lang.annotation.Annotation;
 import java.util.Collection;
@@ -21,7 +24,7 @@ public class CallGraphDelegationModes implements ElementTagUtils<CallGraphDelega
       }
       max = Comparators.max(max, current, this::compare);
     }
-    return max;
+    return requireNonNullElse(max, create(SYNC));
   }
 
   @Override
@@ -32,7 +35,7 @@ public class CallGraphDelegationModes implements ElementTagUtils<CallGraphDelega
 
   private int precedence(CallGraphDelegationMode callGraphDelegationMode) {
     return switch (callGraphDelegationMode.value()) {
-      //    case ASYNC -> 2; //When support is added
+        //    case ASYNC -> 2; //When support is added
       case SYNC -> 1;
       case NONE -> 0;
     };

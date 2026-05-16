@@ -218,5 +218,5 @@ public final class ElementTags {
   }
 
   public record ConflictResponse(
-      @Nullable Annotation conflictingAnnotation, @Nullable Annotation transitiveDepAnnotation) {}
+      Annotation conflictingAnnotation, Annotation transitiveDepAnnotation) {}
 }

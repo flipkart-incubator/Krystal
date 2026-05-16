@@ -8,8 +8,10 @@ import com.flipkart.krystal.annos.ElementTagUtility;
 import com.flipkart.krystal.annos.Transitive;
 import com.flipkart.krystal.core.KrystalElement.Vajram;
 import com.flipkart.krystal.datatypes.Trilean;
+import com.google.auto.value.AutoAnnotation;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
+import lombok.experimental.UtilityClass;
 
 /**
  * Indicates whether the vajram mutates some state of a system or not. The state of the system
@@ -41,4 +43,12 @@ public @interface MutatesState {
    * </ul>
    */
   Trilean value();
+
+  @UtilityClass
+  final class Creator {
+    @AutoAnnotation
+    public static MutatesState create(Trilean value) {
+      return new AutoAnnotation_MutatesState_Creator_create(value);
+    }
+  }
 }

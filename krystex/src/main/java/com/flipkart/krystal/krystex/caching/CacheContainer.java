@@ -2,11 +2,8 @@ package com.flipkart.krystal.krystex.caching;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;

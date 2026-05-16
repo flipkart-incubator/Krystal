@@ -1,5 +1,9 @@
 package com.flipkart.krystal.data;
 
+import static com.flipkart.krystal.data.MutatesState.Creator.create;
+import static com.flipkart.krystal.datatypes.Trilean.UNKNOWN;
+import static java.util.Objects.requireNonNullElse;
+
 import com.flipkart.krystal.annos.ElementTagUtilityOf;
 import com.flipkart.krystal.core.ElementTagUtils;
 import com.google.common.collect.Comparators;
@@ -20,7 +24,7 @@ public class MutatesStates implements ElementTagUtils<MutatesState> {
       }
       max = Comparators.max(max, current, this::compare);
     }
-    return max;
+    return requireNonNullElse(max, create(UNKNOWN));
   }
 
   @Override

@@ -1,7 +1,6 @@
 package com.flipkart.krystal.krystex.caching;
 
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
-import static com.flipkart.krystal.datatypes.Trilean.TRUE;
 import static com.flipkart.krystal.datatypes.Trilean.UNKNOWN;
 import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
 import static java.util.concurrent.CompletableFuture.allOf;
@@ -12,7 +11,6 @@ import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
 import com.flipkart.krystal.data.MutatesState;
-import com.flipkart.krystal.datatypes.Trilean;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardReceive;
@@ -33,7 +31,6 @@ import com.google.common.collect.Iterables;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;

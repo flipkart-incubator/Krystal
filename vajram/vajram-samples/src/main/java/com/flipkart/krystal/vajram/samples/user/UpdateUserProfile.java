@@ -2,8 +2,6 @@ package com.flipkart.krystal.vajram.samples.user;
 
 import static com.flipkart.krystal.datatypes.Trilean.TRUE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
-import static java.util.Objects.requireNonNull;
-import static java.util.Objects.requireNonNullElse;
 
 import com.flipkart.krystal.data.MutatesState;
 import com.flipkart.krystal.krystex.caching.RequestLevelCacheConfig;
@@ -19,7 +17,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.LongAdder;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
 @Vajram
