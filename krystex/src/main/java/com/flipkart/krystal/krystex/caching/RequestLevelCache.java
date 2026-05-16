@@ -51,10 +51,25 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
   private final KryonDefinitionRegistry kryonDefinitionRegistry;
   private final boolean defaultMutatesStateVal;
 
+  /**
+   * If a vajram doesn't have a @MutatesState annotation, then it is assumed to mutate state, and
+   * caching is skipped.
+   *
+   * @param kryonDefinitionRegistry the Kryon Definition registry corresponding to the Krystal
+   *     executor for which this is a request level cache
+   */
   public RequestLevelCache(KryonDefinitionRegistry kryonDefinitionRegistry) {
     this(kryonDefinitionRegistry, true);
   }
 
+  /**
+   * @param kryonDefinitionRegistry the Kryon Definition registry corresponding to the Krystal
+   *     executor for which this is a request level cache
+   * @param defaultMutatesStateVal If a vajram doesn't have a @MutatesState annotation, then this
+   *     value is used as the default. NOTE: Passing "false" here is not recommended as it can lead
+   *     to unexpected behavior. This has been provided to support legacy code, and would be removed
+   *     in a future release. Prefer using the other constructor which defaults to true.
+   */
   public RequestLevelCache(
       KryonDefinitionRegistry kryonDefinitionRegistry, boolean defaultMutatesStateVal) {
     this.kryonDefinitionRegistry = kryonDefinitionRegistry;

@@ -9,6 +9,10 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * This annotation is used to declare an {@link ElementTagUtils} implementation as THE utility for
+ * handling operations on that annotation.
+ */
 @Retention(RUNTIME)
 @Target(ANNOTATION_TYPE)
 public @interface ElementTagUtility {

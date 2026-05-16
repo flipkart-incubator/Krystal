@@ -6,6 +6,7 @@ import com.google.common.collect.Comparators;
 import java.lang.annotation.Annotation;
 import java.util.Collection;
 
+/** Element Tag Utility to handle @CallGraphDelegationMode annotations */
 @ElementTagUtilityOf(CallGraphDelegationMode.class)
 public class CallGraphDelegationModes implements ElementTagUtils<CallGraphDelegationMode> {
 

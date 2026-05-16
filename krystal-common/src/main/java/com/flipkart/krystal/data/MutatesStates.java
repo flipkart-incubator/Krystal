@@ -6,6 +6,7 @@ import com.google.common.collect.Comparators;
 import java.lang.annotation.Annotation;
 import java.util.Collection;
 
+/** Element Tag Utility to handle @MutatesState annotations */
 @ElementTagUtilityOf(MutatesState.class)
 public class MutatesStates implements ElementTagUtils<MutatesState> {
   @Override
