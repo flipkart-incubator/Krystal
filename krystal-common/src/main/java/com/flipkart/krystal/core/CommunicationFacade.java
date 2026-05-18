@@ -6,9 +6,9 @@ import com.flipkart.krystal.facets.Dependency;
 import java.util.List;
 
 public interface CommunicationFacade {
-  void triggerDependency(
+  <T> void triggerDependency(
       Dependency dependency,
-      List<? extends RequestResponseFuture<? extends Request<?>, ?>> responseFutures);
+      List<? extends RequestResponseFuture<? extends Request<T>, T>> responseFutures);
 
   void executeOutputLogic();
 }

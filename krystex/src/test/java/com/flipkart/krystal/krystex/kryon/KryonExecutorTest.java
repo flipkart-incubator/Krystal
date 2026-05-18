@@ -110,8 +110,8 @@ class KryonExecutorTest {
     this.executorLease = EXEC_POOL.lease();
     this.logicDefinitionRegistry = new LogicDefinitionRegistry();
     this.kryonDefinitionRegistry = new KryonDefinitionRegistry(logicDefinitionRegistry);
-    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
     this.requestLevelCache = new RequestLevelCache(kryonDefinitionRegistry, false);
+    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
   }
 
   @AfterEach

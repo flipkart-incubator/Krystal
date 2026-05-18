@@ -9,7 +9,7 @@ import static com.flipkart.krystal.vajram.samples.user.RunUserWorkflow_Fac.userI
 import static com.flipkart.krystal.vajram.samples.user.RunUserWorkflow_Fac.userProfile_n;
 import static com.flipkart.krystal.vajram.samples.user.RunUserWorkflow_Fac.userWithProfile_s;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableCollection;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@ExternallyInvocable
+@InvocableOutsideGraph
 @Vajram
 public abstract class RunUserWorkflow extends ComputeVajramDef<Boolean> {
   @SuppressWarnings("initialization.field.uninitialized")

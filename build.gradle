@@ -20,9 +20,9 @@ ext {
     lombok_version = '1.18.36'
 }
 
+group = 'com.flipkart.krystal'
+
 subprojects {
-    apply plugin: 'maven-publish'
-    apply plugin: 'signing'
     apply plugin: 'idea'
 
     group = 'com.flipkart.krystal'
@@ -30,6 +30,15 @@ subprojects {
         version = project.lattice_version
     } else {
         version = project.krystal_version
+    }
+
+    idea {
+        module {
+            // Disables the download of source JARs
+            downloadSources = false
+            // Optionally, disable Javadocs too
+            downloadJavadoc = false
+        }
     }
 }
 
@@ -42,25 +51,9 @@ configure(subprojects.findAll {
             // them a better representation of how clients should use krystal
             && !it.name.contains('sample')
 }) {
-    apply plugin: 'idea'
     apply plugin: 'maven-publish'
     apply plugin: 'signing'
     apply plugin: 'com.vanniktech.maven.publish'
-
-    group = 'com.flipkart.krystal'
-    if (project.path.startsWith(':lattice:')) {
-        version = project.lattice_version
-    } else {
-        version = project.krystal_version
-    }
-    idea {
-        module {
-            // Disables the download of source JARs
-            downloadSources = false
-            // Optionally, disable Javadocs too
-            downloadJavadoc = false
-        }
-    }
 
     mavenPublishing {
         publishToMavenCentral(true)
@@ -292,7 +285,7 @@ configure(subprojects.findAll {
         knownModule('com.flipkart.krystal:vajram-java-sdk', 'flipkart.krystal.vajram')
         knownModule('com.flipkart.krystal:krystal-codegen-common', 'flipkart.krystal.codegen.common')
         knownModule('com.flipkart.krystal:vajram-codegen-common', 'flipkart.krystal.vajram.codegen.common')
-        knownModule('com.flipkart.krystal:vajram-codegen', 'flipkart.krystal.vajram.codegen')
+        module('com.flipkart.krystal:vajram-codegen', 'flipkart.krystal.vajram.codegen')
     }
 }
 

@@ -3,11 +3,11 @@ package com.flipkart.krystal.vajram.samples.chess;
 import static com.flipkart.krystal.annos.ComputeDelegationMode.SYNC;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 
+import com.flipkart.krystal.annos.CallGraphDelegationMode;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.traits.UseForPredicateDispatch;
 import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.TraitDef;
-import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
 
 @Trait
 @CallGraphDelegationMode(SYNC)

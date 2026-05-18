@@ -10,7 +10,6 @@ dependencies {
     implementation project(':lattice:lattice-core')
     implementation project(':lattice:extensions:rest:lattice-rest')
     implementation project(':lattice:extensions:rest:lattice-rest-api')
-    implementation project(':lattice:lattice-vajram-sdk')
     implementation project(':vajram:extensions:graphql:vajram-graphql')
     implementation project(':vajram:extensions:json:vajram-json')
     implementation 'jakarta.ws.rs:jakarta.ws.rs-api'

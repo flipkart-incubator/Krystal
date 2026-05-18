@@ -526,8 +526,6 @@ public final class KryonExecutor implements KrystalExecutor {
     } catch (Throwable e) {
       kryonCommand.error(e);
       return failedFuture(e);
-    } finally {
-      executionInfo.activeKryon(null);
     }
   }
 

@@ -60,10 +60,11 @@ public final class DirectKryon
       try {
         CommunicationFacade communicationFacade =
             new CommunicationFacade() {
+              @SuppressWarnings("unchecked")
               @Override
-              public void triggerDependency(
+              public <T> void triggerDependency(
                   Dependency dependency,
-                  List<? extends RequestResponseFuture<? extends Request<?>, ?>>
+                  List<? extends RequestResponseFuture<? extends Request<T>, T>>
                       requestResponseFutureList) {
                 DependentChain extendedDependentChain = dependentChain.extend(vajramID, dependency);
                 DependencyInvocation<DirectResponse> kryonResponseDependencyInvocation =

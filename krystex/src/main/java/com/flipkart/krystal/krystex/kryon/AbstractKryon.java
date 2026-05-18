@@ -1,7 +1,12 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import com.flipkart.krystal.concurrent.Futures;
 import com.flipkart.krystal.core.VajramID;
+import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.data.RequestResponseFuture;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
+import com.flipkart.krystal.krystex.commands.ClientSideCommand;
+import com.flipkart.krystal.krystex.commands.DirectForwardSend;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.FlushCommand;
@@ -11,10 +16,13 @@ import com.flipkart.krystal.krystex.dependencydecoration.DependencyInvocation;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.google.common.collect.ImmutableMap;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.TreeSet;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 
@@ -125,11 +133,56 @@ abstract sealed class AbstractKryon<C extends KryonCommand<?>, R extends KryonCo
       DependentChain dependentChain,
       VajramID depVajramID,
       DependencyInvocation<R2> invocationToDecorate) {
+    invocationToDecorate = decorateWithExecutionInfoUpdater(invocationToDecorate);
     for (DependencyDecorator dependencyDecorator :
         getSortedDependencyDecorators(depVajramID, dependentChain)) {
       DependencyInvocation<R2> previousDecoratedInvocation = invocationToDecorate;
       invocationToDecorate = dependencyDecorator.decorateDependency(previousDecoratedInvocation);
     }
     return invocationToDecorate;
+  }
+
+  @SuppressWarnings("unchecked")
+  private <R2 extends KryonCommandResponse>
+      DependencyInvocation<R2> decorateWithExecutionInfoUpdater(
+          DependencyInvocation<R2> invocationToDecorate) {
+    return kryonCommand -> {
+      if (kryonCommand instanceof DirectForwardSend directForwardSend) {
+        @SuppressWarnings("unchecked")
+        List<? extends RequestResponseFuture<? extends Request<Object>, Object>>
+            executableRequests =
+                (List<? extends RequestResponseFuture<? extends Request<Object>, Object>>)
+                    directForwardSend.executableRequests();
+        List<RequestResponseFuture<? extends Request<Object>, Object>> newReqRespFutures =
+            new ArrayList<>(executableRequests.size());
+        CompletableFuture[] newFutures = new CompletableFuture[executableRequests.size()];
+        for (int i = 0; i < executableRequests.size(); i++) {
+          RequestResponseFuture<? extends Request<Object>, Object> executableRequest =
+              executableRequests.get(i);
+          CompletableFuture<Object> newFuture = new CompletableFuture<>();
+          newReqRespFutures.add(
+              new RequestResponseFuture<Request<Object>, Object>(
+                  executableRequest.request(), newFuture));
+          newFutures[i] = newFuture;
+        }
+        CompletableFuture.allOf(newFutures)
+            .whenComplete(
+                (unused, throwable) -> {
+                  kryonExecutor.executionInfo().activeKryon(vajramID);
+                  for (int i = 0; i < newFutures.length; i++) {
+                    Futures.linkFutures(
+                        newFutures[i],
+                        executableRequests.get(i).response(),
+                        kryonExecutor.commandQueue());
+                  }
+                });
+        return invocationToDecorate.invokeDependency(
+            (ClientSideCommand<R2>)
+                new DirectForwardSend(
+                    kryonCommand.vajramID(), newReqRespFutures, kryonCommand.dependentChain()));
+      } else {
+        return invocationToDecorate.invokeDependency(kryonCommand);
+      }
+    };
   }
 }
