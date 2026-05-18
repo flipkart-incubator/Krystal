@@ -36,7 +36,6 @@ import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph.VajramGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.KryonInputInjector;
 import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness;
 import com.google.common.collect.ImmutableSet;
@@ -67,10 +66,13 @@ class GreetTest {
     EXEC_POOL = new SingleThreadExecutorsPool("Test", 4);
   }
 
-  private VajramGraphBuilder graph;
+  private VajramGraph graph;
   private ObjectMapper objectMapper;
   private static final String USER_ID = "user@123";
+
+  @SuppressWarnings("SpellCheckingInspection")
   private static final String USER_NAME = "Ranchoddas Shamaldas Chanchad";
+
   private static final String REQUEST_ID = "greetingRequest1";
   private static final String PACKAGE_PATH = Greet.class.getPackageName();
 
@@ -85,9 +87,8 @@ class GreetTest {
   @BeforeEach
   void setUp() throws LeaseUnavailableException {
     this.executorLease = EXEC_POOL.lease();
-    injector = createInjector(new GuiceModule());
-    requestLevelCache = new TestRequestLevelCache();
-    decorationOrdering =
+    this.injector = createInjector(new GuiceModule());
+    this.decorationOrdering =
         new DecorationOrdering(
             ImmutableSet.<String>builder()
                 // Output logic decorators
@@ -96,9 +97,10 @@ class GreetTest {
                 .add(RequestLevelCache.DECORATOR_TYPE)
                 .add(KryonInputInjector.DECORATOR_TYPE)
                 .build());
-    graph = VajramGraph.builder().loadFromPackage(PACKAGE_PATH);
+    this.graph = VajramGraph.builder().loadFromPackage(PACKAGE_PATH).build();
+    this.requestLevelCache = new TestRequestLevelCache(graph.kryonDefinitionRegistry());
 
-    objectMapper =
+    this.objectMapper =
         new ObjectMapper()
             .registerModule(new JavaTimeModule())
             .registerModule(new Jdk8Module())
@@ -129,8 +131,7 @@ class GreetTest {
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
     RequestContext requestContext = new RequestContext(REQUEST_ID, USER_ID);
     assertThat(analyticsEventSink.events).isEmpty();
-    VajramGraph vajramGraph = graph.build();
-    KrystexGraphBuilder kGraph = KrystexGraph.builder().vajramGraph(vajramGraph);
+    KrystexGraphBuilder kGraph = KrystexGraph.builder().vajramGraph(graph);
     kGraph.injectionProvider(new VajramGuiceInputInjector(injector));
     try (KrystexVajramExecutor krystexVajramExecutor =
         kGraph
@@ -193,7 +194,7 @@ class GreetTest {
                     .graphTraversalStrategy(GraphTraversalStrategy.DEPTH)
                     .build());
     RequestContext requestContext = new RequestContext(REQUEST_ID, USER_ID);
-    VajramGraph vajramGraph = graph.build();
+    VajramGraph vajramGraph = graph;
     KrystexGraphBuilder kGraph = KrystexGraph.builder().vajramGraph(vajramGraph);
     kGraph.injectionProvider(new VajramGuiceInputInjector(injector));
     try (KrystexVajramExecutor krystexVajramExecutor =
@@ -222,7 +223,7 @@ class GreetTest {
                     .graphTraversalStrategy(GraphTraversalStrategy.DEPTH)
                     .build());
     RequestContext requestContext = new RequestContext(REQUEST_ID, USER_ID);
-    VajramGraph vajramGraph = graph.build();
+    VajramGraph vajramGraph = graph;
     KrystexGraphBuilder krystexGraph = KrystexGraph.builder().vajramGraph(vajramGraph);
     krystexGraph.injectionProvider(new VajramGuiceInputInjector(injector));
     try (KrystexVajramExecutor krystexVajramExecutor =

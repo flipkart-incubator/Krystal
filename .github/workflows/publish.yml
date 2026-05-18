@@ -30,6 +30,7 @@ jobs:
             echo "Manual workflow dispatch not allowed for non-SNAPSHOT versions" >&2
             exit 1
           fi
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         env:

@@ -150,6 +150,7 @@ public final class KryonExecutor implements KrystalExecutor {
   private final Map<String, Set<DependentChain>> dependentChainsPerKryon = new LinkedHashMap<>();
   private final RequestIdGenerator preferredReqGenerator;
   private final Set<DependentChain> depChainsDisabledInAllExecutions = new LinkedHashSet<>();
+  @Getter private final KryonExecutorExecutionInfo executionInfo;
 
   private volatile boolean closed;
   private boolean shutdownRequested;
@@ -165,6 +166,7 @@ public final class KryonExecutor implements KrystalExecutor {
     this.outputLogicDecoratorConfigs = executorConfig.outputLogicDecoratorConfigs();
     this.dependencyDecoratorConfigs = makeDependencyDecorConfigs(executorConfig);
     this.kryonDecoratorConfigs = executorConfig.kryonDecoratorConfigs();
+    this.executionInfo = executorConfig.executorInfo();
     this.kryonMetrics = new KryonExecutorMetrics();
     this.preferredReqGenerator =
         executorConfig.debug() ? new StringReqGenerator() : new IntReqGenerator();
@@ -543,6 +545,7 @@ public final class KryonExecutor implements KrystalExecutor {
       }
       VajramID vajramID = kryonCommand.vajramID();
       Kryon<KryonCommand<? extends R>, R> kryon = getDecoratedKryon(kryonCommand, vajramID);
+      executionInfo.activeKryon(kryon.getKryonDefinition().vajramID());
       return kryon.executeCommand(kryonCommand);
     } catch (Throwable e) {
       kryonCommand.error(e);

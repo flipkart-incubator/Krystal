@@ -5,6 +5,8 @@ plugins {
 
 description = "Provides capabilities that facilitate executing vajrams by invoking a GraphQl Query"
 
+description = 'Provides capabilities that facilitate executing vajrams by invoking a GraphQl Query'
+
 sourceSets {
     main {
         resources {

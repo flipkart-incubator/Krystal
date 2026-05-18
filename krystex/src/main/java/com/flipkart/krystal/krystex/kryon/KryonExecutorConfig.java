@@ -54,6 +54,7 @@ public record KryonExecutorConfig(
     @Singular ImmutableMap<String, OutputLogicDecoratorConfig> outputLogicDecoratorConfigs,
     @Singular ImmutableMap<String, KryonDecoratorConfig> kryonDecoratorConfigs,
     @Singular ImmutableMap<String, DependencyDecoratorConfig> dependencyDecoratorConfigs,
+    KryonExecutorExecutionInfo executorInfo,
     @NonNull SingleThreadExecutor executorService,
     Function<ExecutorService, ExecutorService> executorServiceTransformer,
     TraitDispatchDecorator traitDispatchDecorator,
@@ -85,6 +86,9 @@ public record KryonExecutorConfig(
     }
     if (outputLogicDecoratorConfigs == null) {
       outputLogicDecoratorConfigs = ImmutableMap.of();
+    }
+    if (executorInfo == null) {
+      executorInfo = new KryonExecutorExecutionInfo();
     }
     if (traitDispatchDecorator == null) {
       traitDispatchDecorator = DependencyDecorator.NO_OP::decorateDependency;

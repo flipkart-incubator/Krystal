@@ -108,9 +108,9 @@ class KryonExecutorTest {
   @BeforeEach
   void setUp() throws LeaseUnavailableException {
     this.executorLease = EXEC_POOL.lease();
-    this.requestLevelCache = new RequestLevelCache();
     this.logicDefinitionRegistry = new LogicDefinitionRegistry();
     this.kryonDefinitionRegistry = new KryonDefinitionRegistry(logicDefinitionRegistry);
+    this.requestLevelCache = new RequestLevelCache(kryonDefinitionRegistry, false);
     this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
   }
 

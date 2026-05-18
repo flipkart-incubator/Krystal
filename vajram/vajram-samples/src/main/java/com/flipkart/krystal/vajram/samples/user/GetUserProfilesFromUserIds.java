@@ -5,6 +5,7 @@ import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith
 import static com.flipkart.krystal.vajram.samples.user.GetUserProfilesFromUserIds_Fac.userProfiles_n;
 
 import com.flipkart.krystal.data.FanoutDepResponses;
+import com.flipkart.krystal.krystex.caching.RequestLevelCacheInvalidator;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -13,8 +14,11 @@ import com.flipkart.krystal.vajram.facets.FanoutCommand;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajram.samples.user.response_pojos.UserWithProfile;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Vajram
 public abstract class GetUserProfilesFromUserIds extends ComputeVajramDef<List<UserWithProfile>> {
@@ -27,6 +31,13 @@ public abstract class GetUserProfilesFromUserIds extends ComputeVajramDef<List<U
   interface _InternalFacets {
     @Dependency(onVajram = GetUserWithProfile.class, canFanout = true)
     UserWithProfile userProfiles();
+
+    @Inject
+    RequestLevelCacheInvalidator reqCacheInvalidator();
+
+    @Inject
+    @Named("GetUser.shouldInvalidate")
+    boolean shouldInvalidate();
   }
 
   @Resolve(dep = userProfiles_n, depInputs = GetUserWithProfile_Req.userId_n)
@@ -34,14 +45,23 @@ public abstract class GetUserProfilesFromUserIds extends ComputeVajramDef<List<U
     return executeFanoutWith(userIds);
   }
 
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   @Output
   static List<UserWithProfile> collectProfiles(
-      FanoutDepResponses<GetUserWithProfile_Req, UserWithProfile> userProfiles) {
+      FanoutDepResponses<GetUserWithProfile_Req, UserWithProfile> userProfiles,
+      Optional<RequestLevelCacheInvalidator> reqCacheInvalidator,
+      Optional<Boolean> shouldInvalidate) {
     List<UserWithProfile> results = new ArrayList<>();
 
     userProfiles
         .requestResponsePairs()
         .forEach(pair -> pair.response().valueOpt().ifPresent(results::add));
+
+    if (reqCacheInvalidator.isPresent() && shouldInvalidate.orElse(false)) {
+      reqCacheInvalidator
+          .get()
+          .invalidateCacheKeys(GetUserProfile_Req.class, getUserProfileReq -> true);
+    }
 
     return results;
   }
