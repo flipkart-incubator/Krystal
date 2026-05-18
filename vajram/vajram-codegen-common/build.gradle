@@ -7,6 +7,10 @@ dependencies {
     implementation 'com.squareup:javapoet'
 }
 
+publishToMavenLocal {
+    dependsOn ':krystal-codegen-common:publishToMavenLocal'
+    dependsOn ':vajram:vajram-java-sdk:publishToMavenLocal'
+}
 
 checkerFramework {
     extraJavacArgs += ['-AresolveReflection',]

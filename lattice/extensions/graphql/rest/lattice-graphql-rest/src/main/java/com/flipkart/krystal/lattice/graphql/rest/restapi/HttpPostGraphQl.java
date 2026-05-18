@@ -7,9 +7,9 @@ import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static java.util.Objects.requireNonNullElse;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
+import com.flipkart.krystal.annos.InvocableOutsideProcess;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.lattice.ext.rest.api.methods.POST;
-import com.flipkart.krystal.lattice.vajram.sdk.InvocableOutsideProcess;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocols;

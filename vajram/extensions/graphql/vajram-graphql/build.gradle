@@ -2,6 +2,8 @@ plugins {
     id 'com.flipkart.krystal' version "${krystal_version}"
 }
 
+description = 'Provides capabilities that facilitate executing vajrams by invoking a GraphQl Query'
+
 sourceSets {
     main {
         resources {

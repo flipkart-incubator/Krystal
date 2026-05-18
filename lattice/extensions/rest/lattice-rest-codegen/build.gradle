@@ -1,3 +1,5 @@
+description = "REST codegen extension for Lattice - Generates code that creates REST interfaces to Vajrams in Lattice Apps"
+
 dependencies {
     implementation project(':lattice:extensions:rest:lattice-rest')
     implementation project(':lattice:extensions:rest:lattice-rest-api')

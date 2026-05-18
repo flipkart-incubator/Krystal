@@ -16,12 +16,12 @@ public interface CodeGenType {
   TypeMirror javaModelType(ProcessingEnvironment processingEnv);
 
   /**
-   * Returns the raw type of this data type. For example, if this represents a {@link List}<{@link
-   * String}>,this will return {@link List}.
+   * Returns the raw type of this data type. For example, if this represents a {@link List}{@code
+   * <}{@link String}{@code >},this will return {@link List}.
    *
    * <p>If the data type is a type variable, this will return the raw type of the upperBound. For
-   * example, if this represents a type variable T extends {@link List}< U extends {@link String}>,
-   * this will return {@link List}<{@link String}>.
+   * example, if this represents a type variable T extends {@link List}{@code <U extends } {@link
+   * String}{@code >}, this will return {@link List}{@code <}{@link String}{@code >}.
    */
   CodeGenType rawType();
 

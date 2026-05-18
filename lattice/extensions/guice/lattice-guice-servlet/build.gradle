@@ -1,3 +1,5 @@
+description = "Guice servlet extension for Lattice - Facilitates using Guice Servlet as the DI framework in Lattice Apps"
+
 dependencies {
     api project(':lattice:extensions:guice:lattice-guice')
 

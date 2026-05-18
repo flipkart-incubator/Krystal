@@ -1,3 +1,5 @@
+description = "REST dropwizard codegen extension for Lattice - Generates Dropwizard specific code that can power Lattice Apps"
+
 dependencies {
     implementation project(':krystal-codegen-common')
     implementation project(':lattice:extensions:rest:lattice-rest-codegen')

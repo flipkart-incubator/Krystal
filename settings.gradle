@@ -1,18 +1,18 @@
 pluginManagement {
     repositories {
         mavenLocal()
-        mavenCentral()
-        maven { url = 'https://clojars.org/repo' }
         gradlePluginPortal()
+        mavenCentral()
+        maven { url = 'https://central.sonatype.com/repository/maven-snapshots/' }
+        maven { url = 'https://clojars.org/repo' }
     }
 }
 
 dependencyResolutionManagement {
     repositories {
-        mavenCentral()
         mavenLocal()
-        maven { url = 'https://clojars.org/repo' }
-        gradlePluginPortal()
+        mavenCentral()
+        maven { url = 'https://central.sonatype.com/repository/maven-snapshots/' }
     }
 }
 

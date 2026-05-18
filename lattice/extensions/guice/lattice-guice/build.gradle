@@ -1,3 +1,5 @@
+description = "Guice extension for Lattice - Facilitates using Guice as the DI framework in Lattice Apps"
+
 dependencies {
     api project(':lattice:lattice-core')
     api project(':vajram:extensions:guice:vajram-guice')

@@ -1,3 +1,5 @@
+description = "GraphQL codegen extension for Krystal - Generates code that connects GraphQL schemas to Vajrams"
+
 dependencies {
     api project(':vajram:vajram-java-sdk')
 
