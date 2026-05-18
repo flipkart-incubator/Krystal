@@ -1,3 +1,5 @@
+description = "Adds REST Service capabilities to Lattice Apps"
+
 dependencies {
     implementation project(':lattice:extensions:rest:lattice-rest-api')
     implementation project(':lattice:lattice-core')

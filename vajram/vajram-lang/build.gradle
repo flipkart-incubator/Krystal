@@ -2,6 +2,8 @@ plugins {
     id 'antlr'
 }
 
+description = "The language for an experimental programming language called 'vajram-lang' which embodies the design philosophy of Krystal"
+
 dependencies {
     antlr 'org.antlr:antlr4:4.12.0'
 }

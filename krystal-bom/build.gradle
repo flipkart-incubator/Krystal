@@ -1,6 +1,10 @@
+import com.vanniktech.maven.publish.JavaPlatform
+
 plugins {
     id 'java-platform'
 }
+
+description = "BOM for all Krystal modules excluding those related to lattice"
 
 dependencies {
     constraints {
@@ -23,13 +27,7 @@ dependencies {
     }
 }
 
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            groupId = project.group
-            artifactId = project.name
-            version = project.version
-            from components.javaPlatform
-        }
-    }
+
+mavenPublishing {
+    configure(new JavaPlatform())
 }

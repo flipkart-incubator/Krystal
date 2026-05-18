@@ -1,3 +1,6 @@
+import com.vanniktech.maven.publish.GradlePlugin
+import com.vanniktech.maven.publish.JavadocJar
+
 buildscript {
     repositories {
         mavenLocal()
@@ -9,7 +12,7 @@ plugins {
     id 'java-gradle-plugin'
 }
 
-//version = //inherited from root
+version = project['com.flipkart.krystal.currentVersion']
 
 description = '''Gradle plugin for projects using the Krystal framework. 
 Includes Vajram code generator and validator. 
@@ -24,13 +27,21 @@ gradlePlugin {
     }
 }
 
+mavenPublishing {
+    configure(
+            new GradlePlugin(
+                    new JavadocJar.Empty(),//Javadoc is not being generated on delombok-ed code - need to fix
+                    true))
+}
 
 dependencies {
-    api project(':vajram:vajram-java-sdk')
-    implementation project(':krystal-codegen-common')
     implementation project(':vajram:vajram-codegen-common')
     implementation 'com.squareup:javapoet'
     implementation 'org.projectlombok:lombok'
+}
+
+publishToMavenLocal {
+    dependsOn ':vajram:vajram-codegen-common:publishToMavenLocal'
 }
 
 checkerFramework {

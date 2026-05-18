@@ -1,3 +1,5 @@
+description = "Common codegen module for Lattice - Provides the common codegen functionality for Lattice Codegen modules and extensions"
+
 dependencies {
     api project(':krystal-codegen-common')
     api project(':vajram:vajram-codegen-common')
