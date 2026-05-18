@@ -9,7 +9,7 @@ plugins {
 }
 
 ext {
-    krystal_version = project['com.flipkart.krystal.currentVersion']
+    krystal_version = project['com.flipkart.krystal.previousVersion']
     lattice_version = project['com.flipkart.krystal.lattice.currentVersion']
 
     java_code_std_version = '5.3'
@@ -20,9 +20,9 @@ ext {
     lombok_version = '1.18.36'
 }
 
+group = 'com.flipkart.krystal'
+
 subprojects {
-    apply plugin: 'maven-publish'
-    apply plugin: 'signing'
     apply plugin: 'idea'
 
     group = 'com.flipkart.krystal'
@@ -30,6 +30,15 @@ subprojects {
         version = project.lattice_version
     } else {
         version = project.krystal_version
+    }
+
+    idea {
+        module {
+            // Disables the download of source JARs
+            downloadSources = false
+            // Optionally, disable Javadocs too
+            downloadJavadoc = false
+        }
     }
 }
 
@@ -42,25 +51,9 @@ configure(subprojects.findAll {
             // them a better representation of how clients should use krystal
             && !it.name.contains('sample')
 }) {
-    apply plugin: 'idea'
     apply plugin: 'maven-publish'
     apply plugin: 'signing'
     apply plugin: 'com.vanniktech.maven.publish'
-
-    group = 'com.flipkart.krystal'
-    if (project.path.startsWith(':lattice:')) {
-        version = project.lattice_version
-    } else {
-        version = project.krystal_version
-    }
-    idea {
-        module {
-            // Disables the download of source JARs
-            downloadSources = false
-            // Optionally, disable Javadocs too
-            downloadJavadoc = false
-        }
-    }
 
     mavenPublishing {
         publishToMavenCentral(true)

@@ -31,7 +31,7 @@ dependencies {
     krystalModelsGenProcessor 'com.flipkart.krystal:vajram-graphql-codegen'
 
     runtimeOnly 'jakarta.servlet:jakarta.servlet-api'
-    implementation 'com.google.inject.extensions:guice-servlet'
+//    implementation 'com.google.inject.extensions:guice-servlet'
     implementation 'jakarta.inject:jakarta.inject-api'
 
     compileOnly "org.projectlombok:lombok:$lombok_version"

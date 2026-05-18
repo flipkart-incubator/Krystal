@@ -1,4 +1,4 @@
-description = 'Codegen module for enabling support for protocol buffers in lattice'
+description = 'Codegen module for enabling support for protocol buffers in vajrams'
 
 dependencies {
     implementation project(':krystal-common')
@@ -8,4 +8,5 @@ dependencies {
 
     implementation 'com.google.protobuf:protobuf-java'
     implementation 'com.squareup:javapoet'
+    compileOnly 'org.projectlombok:lombok'
 }

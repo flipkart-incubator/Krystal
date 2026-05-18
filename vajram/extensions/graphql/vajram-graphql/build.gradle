@@ -26,5 +26,5 @@ dependencies {
 }
 
 extraJavaModuleInfo {
-    knownModule('com.flipkart.krystal:vajram-codegen', 'flipkart.krystal.vajram.codegen')
+    failOnMissingModuleInfo = false
 }

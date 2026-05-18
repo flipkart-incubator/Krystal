@@ -1,7 +1,6 @@
 description = "Core module for Lattice - Provides the core functionality for Lattice Apps"
 
 dependencies {
-    api project(':lattice:lattice-vajram-sdk')
     api project(':vajram:vajram-java-sdk')
     api project(':vajram:vajram-krystex')
     implementation project(':krystal-common')
