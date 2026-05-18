@@ -7,4 +7,6 @@ module flipkart.krystal.vajram.vajram_samples {
   requires jdk.compiler;
   requires com.google.auto.value.annotations;
   requires static lombok;
+  requires flipkart.krystal.krystex;
+  requires org.slf4j;
 }

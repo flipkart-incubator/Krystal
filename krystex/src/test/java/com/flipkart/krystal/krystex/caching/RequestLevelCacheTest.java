@@ -76,9 +76,9 @@ class RequestLevelCacheTest {
 
   @BeforeEach
   void setUp() throws LeaseUnavailableException {
-    this.requestLevelCache = new RequestLevelCache();
     this.logicDefinitionRegistry = new LogicDefinitionRegistry();
     this.kryonDefinitionRegistry = new KryonDefinitionRegistry(logicDefinitionRegistry);
+    this.requestLevelCache = new RequestLevelCache(kryonDefinitionRegistry, false);
     this.executorLease = EXEC_POOL.lease();
   }
 

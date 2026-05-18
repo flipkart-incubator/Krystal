@@ -517,7 +517,7 @@ class KrystexVajramExecutorTest {
             .decorationOrdering(decorationOrdering);
 
     kryonExecutorConfigBuilder
-        .configureWith(new RequestLevelCache())
+        .configureWith(new RequestLevelCache(graph.kryonDefinitionRegistry()))
         .configureWith(Resilience4JBulkhead.onePerIOVajram())
         .configureWith(Resilience4JCircuitBreaker.onePerIOVajram());
 
@@ -561,7 +561,7 @@ class KrystexVajramExecutorTest {
              TestUserServiceVajram is called via two dependantChains:
              ([Start]>MultiHelloFriends:hellos>HelloFriendsVajram:user_infos)
              ([Start]>MultiHelloFriends:hellos>HelloFriendsVajram:friend_infos)
-             Since we have skipped HelloFriendsVajram, we would not call TestUserSericeVajram
+             Since we have skipped HelloFriendsVajram, we would not call TestUserService
              so, the count should be 0.
             */
             0);

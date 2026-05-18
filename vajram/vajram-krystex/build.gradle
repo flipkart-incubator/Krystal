@@ -2,7 +2,7 @@ import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.FIN
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.CODEGEN_PHASE_KEY
 
 plugins {
-    id 'com.flipkart.krystal' version "${krystal_version}"
+    id 'com.flipkart.krystal.legacy' version "${krystal_version}"
 }
 
 description = 'An implementation of a vajram executor powered by the Krystex module.'
@@ -11,7 +11,7 @@ dependencies {
     api project(':vajram:vajram-java-sdk')
     api project(':krystex')
 
-    testAnnotationProcessor 'com.flipkart.krystal:vajram-codegen'
+    testAnnotationProcessor 'com.flipkart.krystal.legacy:vajram-codegen'
     testAnnotationProcessor project(':krystal-common')
     testAnnotationProcessor project(':vajram:vajram-codegen-common')
 

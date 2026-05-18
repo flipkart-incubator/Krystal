@@ -3,12 +3,12 @@ package com.flipkart.krystal.vajram.samples.customer_service;
 import static com.flipkart.krystal.annos.ComputeDelegationMode.NONE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 
+import com.flipkart.krystal.annos.CallGraphDelegationMode;
 import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.traits.UseForPredicateDispatch;
 import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.TraitRoot;
-import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
 
 /**
  * Sample trait demonstrating dynamic predicate dispatch capability of krystal

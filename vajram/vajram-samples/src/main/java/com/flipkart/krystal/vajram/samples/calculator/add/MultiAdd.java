@@ -3,12 +3,12 @@ package com.flipkart.krystal.vajram.samples.calculator.add;
 import static com.flipkart.krystal.annos.ComputeDelegationMode.SYNC;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 
+import com.flipkart.krystal.annos.CallGraphDelegationMode;
 import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.traits.UseForPredicateDispatch;
 import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.TraitRoot;
-import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
 import com.google.auto.value.AutoAnnotation;
 import jakarta.inject.Qualifier;
 import java.lang.annotation.ElementType;

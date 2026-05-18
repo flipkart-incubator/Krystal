@@ -1,5 +1,5 @@
 plugins {
-    id 'com.flipkart.krystal' version "${krystal_version}"
+    id 'com.flipkart.krystal.legacy' version "${krystal_version}"
     id 'com.google.protobuf' version '0.9.4'
 }
 
@@ -31,8 +31,8 @@ dependencies {
     implementation 'com.google.inject:guice'
 
     annotationProcessor project(':krystal-common')
-    annotationProcessor 'com.flipkart.krystal:vajram-protobuf-codegen'
-    annotationProcessor 'com.flipkart.krystal:vajram-codegen'
+    annotationProcessor 'com.flipkart.krystal.legacy:vajram-protobuf-codegen'
+    annotationProcessor 'com.flipkart.krystal.legacy:vajram-codegen'
 
     implementation 'com.google.protobuf:protobuf-java'
 

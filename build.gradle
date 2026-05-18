@@ -6,7 +6,7 @@ plugins {
 ext {
     clojarsusername = project.properties['clojarsusername'] ?: ""
     clojarspassword = project.properties['clojarspassword'] ?: ""
-    krystal_version = '9.8.6'
+    krystal_version = '9.10.0'
     lattice_version = '0.0.1-SNAPSHOT'
 
     protobuf_version = '4.30.2'
@@ -16,7 +16,7 @@ subprojects {
     apply plugin: 'maven-publish'
     apply plugin: 'idea'
 
-    group = 'com.flipkart.krystal'
+    group = 'com.flipkart.krystal.legacy'
     if (project.path.startsWith(":lattice:")) {
         version = project.lattice_version
     } else {
@@ -106,11 +106,11 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
             compileOnly 'com.google.auto.value:auto-value-annotations:1.11.0'
             annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
 
-            annotationProcessor "com.flipkart.krystal:vajram-codegen:$krystal_version"
-            testAnnotationProcessor "com.flipkart.krystal:vajram-codegen:$krystal_version"
+            annotationProcessor "com.flipkart.krystal.legacy:vajram-codegen:$krystal_version"
+            testAnnotationProcessor "com.flipkart.krystal.legacy:vajram-codegen:$krystal_version"
 
-            annotationProcessor "com.flipkart.krystal:vajram-protobuf-codegen:$krystal_version"
-            testAnnotationProcessor "com.flipkart.krystal:vajram-protobuf-codegen:$krystal_version"
+            annotationProcessor "com.flipkart.krystal.legacy:vajram-protobuf-codegen:$krystal_version"
+            testAnnotationProcessor "com.flipkart.krystal.legacy:vajram-protobuf-codegen:$krystal_version"
 
             String lombok_version = '1.18.36'
             implementation "org.projectlombok:lombok:$lombok_version"
@@ -157,7 +157,7 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
         module('org.antlr:antlr-runtime', 'org.antlr.antlr.runtime')
         module('org.hdrhistogram:HdrHistogram', 'org.hdrhistogram')
         module('org.latencyutils:LatencyUtils', 'org.latencyutils')
-        module('com.flipkart.krystal:vajram-codegen', 'com.flipkart.krystal.vajram.codegen')
+        module('com.flipkart.krystal.legacy:vajram-codegen', 'com.flipkart.krystal.vajram.codegen')
         module('org.slf4j:slf4j-reload4j', 'org.slf4j.reload4j')
         module('ch.qos.reload4j:reload4j', 'ch.qos.reload4j')
         //These already have a module name
@@ -174,10 +174,10 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
         knownModule('com.google.j2objc:j2objc-annotations', 'com.google.j2objc.annotations')
         knownModule('org.reflections:reflections', 'org.reflections')
 
-        knownModule('com.flipkart.krystal:vajram-java-sdk', 'flipkart.krystal.vajram')
-        knownModule('com.flipkart.krystal:krystal-common', 'flipkart.krystal.common')
-        knownModule('com.flipkart.krystal:vajram-codegen-common', 'flipkart.krystal.vajram.codegen.common')
-        knownModule('com.flipkart.krystal:krystal-visualization', 'flipkart.krystal.visualization')
+        knownModule('com.flipkart.krystal.legacy:vajram-java-sdk', 'flipkart.krystal.vajram')
+        knownModule('com.flipkart.krystal.legacy:krystal-common', 'flipkart.krystal.common')
+        knownModule('com.flipkart.krystal.legacy:vajram-codegen-common', 'flipkart.krystal.vajram.codegen.common')
+        knownModule('com.flipkart.krystal.legacy:krystal-visualization', 'flipkart.krystal.visualization')
     }
 }
 
