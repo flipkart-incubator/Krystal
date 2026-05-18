@@ -74,7 +74,7 @@ class UsersTest {
                 .vajramKryonGraph(graph)
                 .requestId("error-contaminated-test")
                 .kryonExecutorConfig(
-                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()).build())
+                    KryonExecutorConfig.builder().executorService(executorLease.get()).build())
                 .build())) {
 
       List<String> userIds = Arrays.asList("Incorrect_User_Id", "Correct_User_Id");
@@ -99,7 +99,7 @@ class UsersTest {
                 .vajramKryonGraph(graph)
                 .requestId("all-correct-inputs-test")
                 .kryonExecutorConfig(
-                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()).build())
+                    KryonExecutorConfig.builder().executorService(executorLease.get()).build())
                 .build())) {
 
       List<String> userIds =
@@ -127,7 +127,7 @@ class UsersTest {
                 .vajramKryonGraph(graph)
                 .requestId("all-fail-test")
                 .kryonExecutorConfig(
-                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()).build())
+                    KryonExecutorConfig.builder().executorService(executorLease.get()).build())
                 .build())) {
 
       List<String> userIds = Arrays.asList("Incorrect_User_Id", "Incorrect_User_Id");
@@ -173,7 +173,7 @@ class UsersTest {
                 .kryonExecutorConfig(
                     KryonExecutorConfig.builder()
                         .executorId("all-correct-inputs-test")
-                        .singleThreadExecutor(executorLease.get())
+                        .executorService(executorLease.get())
                         .configureWith(requestLevelCache)
                         .executorInfo(executionInfo)
                         .build())
@@ -226,7 +226,7 @@ class UsersTest {
                 .kryonExecutorConfig(
                     KryonExecutorConfig.builder()
                         .executorId("all-correct-inputs-test")
-                        .singleThreadExecutor(executorLease.get())
+                        .executorService(executorLease.get())
                         .configureWith(requestLevelCache)
                         .executorInfo(executionInfo)
                         .build())
@@ -279,7 +279,7 @@ class UsersTest {
                 .kryonExecutorConfig(
                     KryonExecutorConfig.builder()
                         .executorId("all-correct-inputs-test")
-                        .singleThreadExecutor(executorLease.get())
+                        .executorService(executorLease.get())
                         .configureWith(requestLevelCache)
                         .executorInfo(executionInfo)
                         .build())
@@ -335,7 +335,7 @@ class UsersTest {
                 .kryonExecutorConfig(
                     KryonExecutorConfig.builder()
                         .executorId("all-correct-inputs-test")
-                        .singleThreadExecutor(executorLease.get())
+                        .executorService(executorLease.get())
                         .configureWith(requestLevelCache)
                         .executorInfo(executionInfo)
                         .build())

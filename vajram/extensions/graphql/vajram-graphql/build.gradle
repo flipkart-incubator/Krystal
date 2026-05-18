@@ -24,7 +24,3 @@ dependencies {
     api 'com.graphql-java:graphql-java-extended-scalars'
     implementation 'org.reflections:reflections'
 }
-
-extraJavaModuleInfo {
-    failOnMissingModuleInfo = false
-}

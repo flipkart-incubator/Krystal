@@ -9,7 +9,7 @@ plugins {
 }
 
 ext {
-    krystal_version = project['com.flipkart.krystal.previousVersion']
+    krystal_version = project['com.flipkart.krystal.currentVersion']
     lattice_version = project['com.flipkart.krystal.lattice.currentVersion']
 
     java_code_std_version = '5.3'
@@ -285,7 +285,7 @@ configure(subprojects.findAll {
         knownModule('com.flipkart.krystal:vajram-java-sdk', 'flipkart.krystal.vajram')
         knownModule('com.flipkart.krystal:krystal-codegen-common', 'flipkart.krystal.codegen.common')
         knownModule('com.flipkart.krystal:vajram-codegen-common', 'flipkart.krystal.vajram.codegen.common')
-        knownModule('com.flipkart.krystal:vajram-codegen', 'flipkart.krystal.vajram.codegen')
+        module('com.flipkart.krystal:vajram-codegen', 'flipkart.krystal.vajram.codegen')
     }
 }
 
