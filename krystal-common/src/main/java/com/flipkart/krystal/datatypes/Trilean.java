@@ -126,8 +126,16 @@ public enum Trilean {
       if (value == FALSE) {
         return value;
       }
-      value = value.or(t);
+      value = value.and(t);
     }
     return value;
+  }
+
+  public boolean asBoolean(boolean defaultValue) {
+    return switch (this) {
+      case TRUE -> true;
+      case FALSE -> false;
+      case UNKNOWN -> defaultValue;
+    };
   }
 }

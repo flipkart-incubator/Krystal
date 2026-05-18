@@ -4,7 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.lang.Boolean.TRUE;
 
-import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
+import com.flipkart.krystal.annos.CallGraphDelegationMode;
 import com.flipkart.krystal.vajram.codegen.common.models.LogicMethods.OutputLogics;
 import com.flipkart.krystal.vajram.codegen.common.models.LogicMethods.OutputLogics.NoBatching;
 import com.flipkart.krystal.vajram.codegen.common.models.LogicMethods.OutputLogics.WithBatching;
