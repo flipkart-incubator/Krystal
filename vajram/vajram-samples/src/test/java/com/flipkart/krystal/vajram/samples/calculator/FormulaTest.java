@@ -92,7 +92,7 @@ class FormulaTest {
 
   private VajramGraph graph;
   private static final String REQUEST_ID = "formulaTest";
-  private final TestRequestLevelCache requestLevelCache = spy(new TestRequestLevelCache());
+  private TestRequestLevelCache requestLevelCache;
 
   private Lease<SingleThreadExecutor> executorLease;
 
@@ -100,6 +100,7 @@ class FormulaTest {
   void setUp() {
     this.executorLease = EXECUTOR_LEASES[0];
     this.graph = loadFromClasspath(Formula.class.getPackageName()).build();
+    this.requestLevelCache = spy(new TestRequestLevelCache(graph.kryonDefinitionRegistry()));
     Add.CALL_COUNTER.reset();
   }
 
@@ -220,7 +221,7 @@ class FormulaTest {
                     new FormulaRequestContext(100, 20, 5, "formulaTest");
                 for (int currentLoopCount :
                     range(coreCountStart, coreCountStart + loopCountPerExecutor).toArray()) {
-                  long iterStartTime = System.nanoTime();
+                  long iterationStartTime = System.nanoTime();
                   try (KrystexVajramExecutor krystexVajramExecutor =
                       kGraph
                           .build()
@@ -231,7 +232,7 @@ class FormulaTest {
                                           .executorId("formulaTest")
                                           .executorService(executor)
                                           .build()))) {
-                    timeToCreateExecutors.add(System.nanoTime() - iterStartTime);
+                    timeToCreateExecutors.add(System.nanoTime() - iterationStartTime);
                     long enqueueStart = System.nanoTime();
                     futures[currentLoopCount] =
                         executeVajram(krystexVajramExecutor, currentLoopCount, requestContext);
@@ -288,7 +289,7 @@ class FormulaTest {
                     new FormulaRequestContext(100, 20, 5, "formulaTest");
                 for (int currentLoopCount :
                     range(coreCountStart, coreCountStart + loopCountPerExecutor).toArray()) {
-                  long iterStartTime = System.nanoTime();
+                  long iterationStartTime = System.nanoTime();
                   try (KrystexVajramExecutor krystexVajramExecutor =
                       kGraph
                           .build()
@@ -300,7 +301,7 @@ class FormulaTest {
                                           .executorService(executor)
                                           .kryonExecStrategy(DIRECT)
                                           .build()))) {
-                    timeToCreateExecutors.add(System.nanoTime() - iterStartTime);
+                    timeToCreateExecutors.add(System.nanoTime() - iterationStartTime);
                     metrics[currentLoopCount] =
                         ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor())
                             .getKryonMetrics();
@@ -361,7 +362,7 @@ class FormulaTest {
     long timeToEnqueueVajram = 0;
     long startTime = System.nanoTime();
     for (int outer_i = 0; outer_i < outerLoopCount; outer_i++) {
-      long iterStartTime = System.nanoTime();
+      long iterationStartTime = System.nanoTime();
       FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, "formulaTest");
       try (KrystexVajramExecutor krystexVajramExecutor =
           kGraph
@@ -374,7 +375,7 @@ class FormulaTest {
                               .executorService(executor)
                               .kryonExecStrategy(DIRECT)
                               .build()))) {
-        timeToCreateExecutors += System.nanoTime() - iterStartTime;
+        timeToCreateExecutors += System.nanoTime() - iterationStartTime;
         metrics[outer_i] =
             ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
         for (int inner_i = 0; inner_i < innerLoopCount; inner_i++) {

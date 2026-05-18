@@ -9,4 +9,5 @@ dependencies {
 
     implementation 'com.google.protobuf:protobuf-java'
     implementation 'com.squareup:javapoet'
+    compileOnly 'org.projectlombok:lombok'
 }

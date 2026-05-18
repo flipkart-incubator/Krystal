@@ -129,7 +129,6 @@ configure(subprojects.findAll {
 }) {
     apply plugin: 'java-library'
     apply plugin: 'org.gradlex.extra-java-module-info'
-
     apply plugin: 'com.flipkart.java.code.standard'
 
     dependencies {
@@ -295,5 +294,6 @@ configure(subprojects.findAll {
         knownModule('com.flipkart.krystal:vajram-java-sdk', 'flipkart.krystal.vajram')
         knownModule('com.flipkart.krystal:krystal-codegen-common', 'flipkart.krystal.codegen.common')
         knownModule('com.flipkart.krystal:vajram-codegen-common', 'flipkart.krystal.vajram.codegen.common')
+        module('com.flipkart.krystal:vajram-codegen', 'flipkart.krystal.vajram.codegen')
     }
 }

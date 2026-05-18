@@ -50,9 +50,9 @@ class Proto2024eLatticeSampleTest {
 
   private static SingleThreadExecutorsPool EXEC_POOL;
   private static final String REQUEST_ID = "proto2024eExhaustiveTest";
-  private final TestRequestLevelCache requestLevelCache = new TestRequestLevelCache();
 
   private VajramGraph graph;
+  private TestRequestLevelCache requestLevelCache;
   private Lease<SingleThreadExecutor> executorLease;
   private KrystexGraphBuilder kGraph;
 
@@ -70,6 +70,7 @@ class Proto2024eLatticeSampleTest {
   void setUp() throws LeaseUnavailableException {
     this.executorLease = EXEC_POOL.lease();
     this.graph = VajramGraph.builder().loadClasses(Proto2024eLatticeSample.class).build();
+    this.requestLevelCache = new TestRequestLevelCache(graph.kryonDefinitionRegistry());
     this.kGraph = KrystexGraph.builder().vajramGraph(graph);
     this.kGraph.injectionProvider(
         new VajramGuiceInputInjector(

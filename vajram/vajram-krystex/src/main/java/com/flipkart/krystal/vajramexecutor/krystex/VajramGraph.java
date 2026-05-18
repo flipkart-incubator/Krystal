@@ -4,7 +4,9 @@ import static com.flipkart.krystal.core.VajramID.vajramID;
 import static com.flipkart.krystal.except.KrystalCompletionException.wrapAsCompletionException;
 import static com.flipkart.krystal.facets.resolution.ResolverCommand.skip;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
+import static com.flipkart.krystal.tags.ElementTags.detectConflictingAnnotation;
 import static com.flipkart.krystal.tags.ElementTags.emptyTags;
+import static com.flipkart.krystal.tags.ElementTags.resolveTagConflicts;
 import static com.flipkart.krystal.vajram.facets.FacetValidation.validateMandatoryFacet;
 import static com.flipkart.krystal.vajram.utils.VajramLoader.loadVajrams;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -35,6 +37,8 @@ import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
 import com.flipkart.krystal.krystex.resolution.Resolver;
 import com.flipkart.krystal.krystex.resolution.ResolverLogic;
 import com.flipkart.krystal.model.IfAbsent;
+import com.flipkart.krystal.tags.ElementTags;
+import com.flipkart.krystal.tags.ElementTags.ConflictResponse;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramDefRoot;
@@ -201,6 +205,7 @@ public final class VajramGraph {
       createKryonDefinitionsForDependencies(vajramDefinition, loadingInProgress);
       OutputLogicDefinition<?> outputLogicDefinition =
           createKryonOutputLogic(vajramId, vajramDefinition, vajramDef);
+      ElementTags resolvedTags = getDerivedDependencyTags(vajramId);
       kryonDefinitionRegistry.newVajramKryonDefinition(
           vajramId,
           facets,
@@ -213,9 +218,59 @@ public final class VajramGraph {
               emptyTags(),
               vajramDef::facetsFromRequest),
           vajramDef::executeGraph,
-          vajramDefinition.vajramTags());
+          resolvedTags);
     }
     vajramExecutables.add(vajramId);
+  }
+
+  private final Map<VajramID, Boolean> tagParsingInProgress = new HashMap<>();
+  private final Map<VajramID, ElementTags> derivedTagsByVajram = new HashMap<>();
+
+  private ElementTags getDerivedDependencyTags(VajramID vajramID) {
+    if (tagParsingInProgress.getOrDefault(vajramID, false)) {
+      return emptyTags();
+    }
+    if (derivedTagsByVajram.containsKey(vajramID)) {
+      return derivedTagsByVajram.get(vajramID);
+    }
+    tagParsingInProgress.put(vajramID, true);
+    try {
+      VajramDefinition vajramDefinition = getVajramDefinition(vajramID);
+      List<ElementTags> depVajramTags =
+          vajramDefinition.facetSpecs().stream()
+              .filter(DependencySpec.class::isInstance)
+              .map(obj -> ((DependencySpec) obj))
+              .map(DependencySpec::onVajramID)
+              .distinct()
+              .map(this::getDerivedDependencyTags)
+              .map(tags -> tags.filter(ElementTags::isTransitive))
+              .toList();
+      ElementTags currentTransitiveTags =
+          ElementTags.of(
+              vajramDefinition.vajramTags().annotations().stream()
+                  .filter(ElementTags::isTransitive)
+                  .toList());
+      ElementTags resolvedTransitiveTags = resolveTagConflicts(depVajramTags);
+      @Nullable ConflictResponse conflictingAnnotation =
+          detectConflictingAnnotation(currentTransitiveTags, resolvedTransitiveTags);
+      if (conflictingAnnotation != null) {
+        throw new VajramDefinitionException(
+            """
+                The annotation %s present on vajram %s has lower precedence than the annotation %s found on one of its \
+                transitive dependencies. Please remove the annotation from %s or update the dependency annotation"""
+                .formatted(
+                    conflictingAnnotation.conflictingAnnotation(),
+                    vajramID,
+                    conflictingAnnotation.transitiveDepAnnotation(),
+                    vajramID));
+      }
+      ElementTags elementTags =
+          resolvedTransitiveTags.mergeTagsWithOverwrite(vajramDefinition.vajramTags());
+      derivedTagsByVajram.put(vajramID, elementTags);
+      return elementTags;
+    } finally {
+      tagParsingInProgress.remove(vajramID);
+    }
   }
 
   private InputResolverCreationResult createKryonLogicsForInputResolvers(
@@ -376,17 +431,17 @@ public final class VajramGraph {
       VajramDefinition vajramDefinition, Set<VajramID> loadingInProgress) {
     List<DependencySpec> dependencies = new ArrayList<>();
     for (Facet facet : vajramDefinition.facetSpecs()) {
-      if (facet instanceof DependencySpec definition) {
-        dependencies.add(definition);
+      if (facet instanceof DependencySpec dependencySpec) {
+        dependencies.add(dependencySpec);
       }
     }
     // Create and register sub graphs for dependencies of this vajram
     for (DependencySpec dependency : dependencies) {
-      var accessSpec = dependency.onVajramID();
-      VajramDefinition dependencyVajram = vajramDefinitions.get(accessSpec);
+      var vajramID = dependency.onVajramID();
+      VajramDefinition dependencyVajram = vajramDefinitions.get(vajramID);
       if (dependencyVajram == null) {
         throw new VajramDefinitionException(
-            "Unable to find vajram for vajramId %s".formatted(accessSpec));
+            "Unable to find vajram for vajramId %s".formatted(vajramID));
       }
       loadKryonSubgraph(dependencyVajram.vajramId(), loadingInProgress);
     }
