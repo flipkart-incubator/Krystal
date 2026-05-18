@@ -2,7 +2,7 @@ import static com.flipkart.krystal.codegen.common.models.CodegenPhase.FINAL
 import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE_KEY
 
 plugins {
-    id 'com.flipkart.krystal.legacy' version "${krystal_version}"
+    id 'com.flipkart.krystal' version "${krystal_version}"
 }
 
 description = 'An implementation of a vajram executor powered by the Krystex module.'

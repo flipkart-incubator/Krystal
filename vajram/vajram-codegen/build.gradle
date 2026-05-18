@@ -18,7 +18,7 @@ Tasks from this plugin are added under the group "Krystal"'''
 gradlePlugin {
     plugins {
         simplePlugin {
-            id = 'com.flipkart.krystal.legacy'
+            id = 'com.flipkart.krystal'
             implementationClass = 'com.flipkart.krystal.vajram.codegen.plugin.VajramPlugin'
         }
     }

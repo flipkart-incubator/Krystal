@@ -3,10 +3,10 @@ package com.flipkart.krystal.vajram.graphql.api.traits;
 import static com.flipkart.krystal.annos.ComputeDelegationMode.SYNC;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 
+import com.flipkart.krystal.annos.CallGraphDelegationMode;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.TraitDef;
-import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
 import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject;
 import graphql.ExecutionInput;

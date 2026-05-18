@@ -35,7 +35,7 @@ public class CallGraphDelegationModes implements ElementTagUtils<CallGraphDelega
 
   private int precedence(CallGraphDelegationMode callGraphDelegationMode) {
     return switch (callGraphDelegationMode.value()) {
-        //    case ASYNC -> 2; //When support is added
+      //    case ASYNC -> 2; //When support is added
       case SYNC -> 1;
       case NONE -> 0;
     };

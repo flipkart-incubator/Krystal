@@ -1,8 +1,8 @@
 package com.flipkart.krystal.krystex.caching;
 
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
-import static com.flipkart.krystal.datatypes.Trilean.UNKNOWN;
 import static com.flipkart.krystal.concurrent.Futures.propagateCompletion;
+import static com.flipkart.krystal.datatypes.Trilean.UNKNOWN;
 import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
 import static java.util.concurrent.CompletableFuture.allOf;
 
@@ -146,7 +146,7 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
       List<ExecutionItem> cacheMisses = new ArrayList<>();
       for (ExecutionItem executionItem : command.executionItems()) {
         FacetValues facetValues = executionItem.facetValues();
-        var cacheKey = new CacheKey(facetValues._build());
+        var cacheKey = facetValues._build();
         var cachedFuture = getCachedValue(cacheKey);
         if (cachedFuture != null) {
           propagateCompletion(cachedFuture, executionItem.response());

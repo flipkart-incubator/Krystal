@@ -4,22 +4,22 @@ plugins {
 
 dependencies {
     constraints {
-        api 'com.flipkart.krystal.legacy:com.flipkart.krystal.gradle.plugin:' + project.krystal_version
-        api 'com.flipkart.krystal.legacy:krystal-common:' + project.krystal_version
-        api 'com.flipkart.krystal.legacy:krystal-visualization:' + project.krystal_version
-        api 'com.flipkart.krystal.legacy:vajram-codegen-common:' + project.krystal_version
-        api 'com.flipkart.krystal.legacy:krystal-codegen-common:' + project.krystal_version
-        api 'com.flipkart.krystal.legacy:vajram-codegen:' + project.krystal_version
-        api 'com.flipkart.krystal.legacy:vajram-codegen:' + project.krystal_version
-        api 'com.flipkart.krystal.legacy:vajram-guice:' + project.krystal_version
-        api 'com.flipkart.krystal.legacy:vajram-java-sdk:' + project.krystal_version
-        api 'com.flipkart.krystal.legacy:vajram-json-codegen:' + project.krystal_version
-        api 'com.flipkart.krystal.legacy:vajram-json:' + project.krystal_version
-        api 'com.flipkart.krystal.legacy:vajram-krystex:' + project.krystal_version
-        api 'com.flipkart.krystal.legacy:vajram-protobuf3-codegen:' + project.krystal_version
-        api 'com.flipkart.krystal.legacy:vajram-protobuf3:' + project.krystal_version
-        api 'com.flipkart.krystal.legacy:vajram-graphql:' + project.krystal_version
-        api 'com.flipkart.krystal.legacy:vajram-graphql-codegen:' + project.krystal_version
+        api 'com.flipkart.krystal:com.flipkart.krystal.gradle.plugin:' + project.krystal_version
+        api 'com.flipkart.krystal:krystal-common:' + project.krystal_version
+        api 'com.flipkart.krystal:krystal-visualization:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-codegen-common:' + project.krystal_version
+        api 'com.flipkart.krystal:krystal-codegen-common:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-codegen:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-codegen:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-guice:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-java-sdk:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-json-codegen:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-json:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-krystex:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-protobuf3-codegen:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-protobuf3:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-graphql:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-graphql-codegen:' + project.krystal_version
     }
 }
 

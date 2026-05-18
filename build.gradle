@@ -22,7 +22,7 @@ subprojects {
     apply plugin: 'maven-publish'
     apply plugin: 'idea'
 
-    group = 'com.flipkart.krystal.legacy'
+    group = 'com.flipkart.krystal'
     if (project.path.startsWith(':lattice:')) {
         version = project.lattice_version
     } else {
@@ -197,7 +197,7 @@ configure(subprojects.findAll {
         module('gradle-test-kit-8.14.3.jar', 'gradle.test.kit')
 
         module('ch.qos.reload4j:reload4j', 'ch.qos.reload4j')
-        module('com.flipkart.krystal.legacy:vajram-codegen', 'com.flipkart.krystal.vajram.codegen')
+        module('com.flipkart.krystal:vajram-codegen', 'com.flipkart.krystal.vajram.codegen')
         module('org.abego.treelayout:org.abego.treelayout.core', 'org.abego.treelayout.core')
         module('org.antlr:ST4', 'org.antlr.antlr.ST4')
         module('org.antlr:antlr-runtime', 'org.antlr.antlr.runtime')
@@ -223,9 +223,10 @@ configure(subprojects.findAll {
         knownModule('com.graphql-java:graphql-java-extended-scalars', 'com.graphqljava.extendedscalars')
         knownModule('org.yaml:snakeyaml', 'org.yaml.snakeyaml')
 
-        knownModule('com.flipkart.krystal.legacy:vajram-java-sdk', 'flipkart.krystal.vajram')
-        knownModule('com.flipkart.krystal.legacy:krystal-codegen-common', 'flipkart.krystal.codegen.common')
-        knownModule('com.flipkart.krystal.legacy:vajram-codegen-common', 'flipkart.krystal.vajram.codegen.common')
+        knownModule('com.flipkart.krystal:vajram-java-sdk', 'flipkart.krystal.vajram')
+        knownModule('com.flipkart.krystal:krystal-codegen-common', 'flipkart.krystal.codegen.common')
+        knownModule('com.flipkart.krystal:vajram-codegen-common', 'flipkart.krystal.vajram.codegen.common')
+        knownModule('com.flipkart.krystal:vajram-codegen', 'flipkart.krystal.vajram.codegen')
     }
 }
 
