@@ -22,6 +22,7 @@ ext {
 
 subprojects {
     apply plugin: 'maven-publish'
+    apply plugin: 'signing'
     apply plugin: 'idea'
 
     group = 'com.flipkart.krystal'
@@ -101,6 +102,23 @@ configure(subprojects.findAll {
                         url = 'https://github.com/flipkart-incubator/Krystal'
                     }
                 }
+                developers {
+                    developer {
+                        id = 'RamAnvesh'
+                        name = 'Ram Anvesh Reddy'
+                        email = '2082745+RamAnvesh@users.noreply.github.com'
+                        organization = 'Flipkart'
+                        organizationUrl = 'https://www.flipkart.com'
+                        roles = ['Developer', 'Maintainer', 'Architect']
+                        timezone = 'Asia/Kolkata'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git://github.com/flipkart-incubator/Krystal'
+                    developerConnection = 'scm:git:ssh://github.com/flipkart-incubator/Krystal'
+                    url = 'https://github.com/flipkart-incubator/Krystal'
+                }
+
             }
         }
 
@@ -112,7 +130,6 @@ configure(subprojects.findAll {
             required { System.getenv("CI") != null }
         }
     }
-
 }
 
 configure(subprojects.findAll {

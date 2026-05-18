@@ -29,6 +29,7 @@ dependencies {
     }
 }
 
+
 mavenPublishing {
     configure(new JavaPlatform())
 }
