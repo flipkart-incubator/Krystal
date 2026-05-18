@@ -577,20 +577,18 @@ class KrystexVajramExecutorTest {
 
   @Test
   void close_sequentialDependency_flushesBatcher(TestInfo testInfo) {
-    var graph =
-        getVajramGraphBuilder(
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2")
-            .build();
-    KrystexGraphBuilder kGraph = KrystexGraph.builder().vajramGraph(graph);
+    var kGraph =
+        loadFromClasspath(
+            ("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice"),
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2");
     kGraph.inputBatcherConfig(
         new InputBatcherConfig(
             ImmutableMap.of(
-                graph.getVajramIdByVajramDefType(TestUserService.class),
+                vGraph.getVajramIdByVajramDefType(TestUserService.class),
                     ImmutableList.of(DepChainBatcherConfig.simple(() -> new InputBatcherImpl(100))),
-                graph.getVajramIdByVajramDefType(FriendsService.class),
+                vGraph.getVajramIdByVajramDefType(FriendsService.class),
                     ImmutableList.of(
                         DepChainBatcherConfig.simple(() -> new InputBatcherImpl(100))))));
     CompletableFuture<String> multiHellos;
@@ -669,19 +667,17 @@ class KrystexVajramExecutorTest {
   void flush_skippingADependency_flushesCompleteCallGraph(TestInfo testInfo) {
     CompletableFuture<FlushCommand> friendServiceFlushCommand = new CompletableFuture<>();
     CompletableFuture<FlushCommand> userServiceFlushCommand = new CompletableFuture<>();
-    var graph =
-        getVajramGraphBuilder(
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2",
-                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2")
-            .build();
+    var kGraph =
+        loadFromClasspath(
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2");
 
-    KrystexGraphBuilder kGraph = KrystexGraph.builder().vajramGraph(graph);
     kGraph.inputBatcherConfig(
         new InputBatcherConfig(
             ImmutableMap.of(
-                graph.getVajramIdByVajramDefType(FriendsService.class),
+                vGraph.getVajramIdByVajramDefType(FriendsService.class),
                 ImmutableList.of(
                     new DepChainBatcherConfig(
                         _x -> true,
@@ -702,7 +698,7 @@ class KrystexVajramExecutorTest {
                                 }
                               }
                             })),
-                graph.getVajramIdByVajramDefType(TestUserService.class),
+                vGraph.getVajramIdByVajramDefType(TestUserService.class),
                 ImmutableList.of(
                     new DepChainBatcherConfig(
                         _x -> true,

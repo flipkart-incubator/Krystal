@@ -55,7 +55,9 @@ class UsersTest {
                 GetUserProfilesFromUserIds.class,
                 GetUserWithProfile.class,
                 GetUser.class,
-                GetUserProfile.class)
+                GetUserProfile.class,
+                RunUserWorkflow.class,
+                UpdateUserProfile.class)
             .build();
     this.kGraph = KrystexGraph.builder().vajramGraph(graph);
   }
