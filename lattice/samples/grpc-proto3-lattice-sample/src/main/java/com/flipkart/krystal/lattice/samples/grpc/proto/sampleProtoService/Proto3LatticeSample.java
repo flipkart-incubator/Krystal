@@ -1,5 +1,6 @@
 package com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService;
 
+import static com.flipkart.krystal.datatypes.Trilean.FALSE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
@@ -31,6 +32,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @SupportedModelProtocols({Protobuf3.class, PlainJavaObject.class})
 @ReservedSerialIds(8)
 @Vajram
+@MutatesState(FALSE)
 public abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3LatticeSampleResponse> {
   static class _Inputs {
     @SerialId(1)

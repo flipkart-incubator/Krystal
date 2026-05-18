@@ -22,3 +22,7 @@ dependencies {
     api 'com.graphql-java:graphql-java-extended-scalars'
     implementation 'org.reflections:reflections'
 }
+
+extraJavaModuleInfo {
+    knownModule('com.flipkart.krystal:vajram-codegen', 'flipkart.krystal.vajram.codegen')
+}
