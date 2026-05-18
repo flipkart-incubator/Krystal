@@ -68,7 +68,6 @@ include 'lattice:extensions:rest:lattice-rest-codegen'
 
 include 'lattice:extensions:quarkus:lattice-quarkus'
 
-include 'lattice:extensions:rest:dropwizard:lattice-rest-dropwizard'
 include 'lattice:extensions:rest:dropwizard:lattice-rest-dropwizard-codegen'
 
 include 'lattice:extensions:rest:quarkus:lattice-rest-quarkus'
