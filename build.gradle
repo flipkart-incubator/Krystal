@@ -102,23 +102,6 @@ configure(subprojects.findAll {
                         url = 'https://github.com/flipkart-incubator/Krystal'
                     }
                 }
-                developers {
-                    developer {
-                        id = 'RamAnvesh'
-                        name = 'Ram Anvesh Reddy'
-                        email = '2082745+RamAnvesh@users.noreply.github.com'
-                        organization = 'Flipkart'
-                        organizationUrl = 'https://www.flipkart.com'
-                        roles = ['Developer', 'Maintainer', 'Architect']
-                        timezone = 'Asia/Kolkata'
-                    }
-                }
-                scm {
-                    connection = 'scm:git:git://github.com/flipkart-incubator/Krystal'
-                    developerConnection = 'scm:git:ssh://github.com/flipkart-incubator/Krystal'
-                    url = 'https://github.com/flipkart-incubator/Krystal'
-                }
-
             }
         }
 
@@ -232,7 +215,7 @@ configure(subprojects.findAll {
     // Exclude modules which should not be published or have custom publishing config
     // vajram-codegen has the 'java-gradle-plugin'  applied - which itself publishes to maven.
     // So we need to disable it here - else it will lead to duplicate publishing
-    if (project.name !in ['vajram-lang'] && project.subprojects.isEmpty()) {
+    if (project.name !in ['vajram-lang', 'vajram-codegen'] && project.subprojects.isEmpty()) {
         mavenPublishing {
             configure(new JavaLibrary(new JavadocJar.Empty(),//Javadoc is not being generated on delombok-ed code - need to fix
                     true))

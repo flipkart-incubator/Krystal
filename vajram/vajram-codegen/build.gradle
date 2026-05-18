@@ -1,7 +1,6 @@
 import com.vanniktech.maven.publish.GradlePlugin
 import com.vanniktech.maven.publish.JavadocJar
 
-
 buildscript {
     repositories {
         mavenLocal()
