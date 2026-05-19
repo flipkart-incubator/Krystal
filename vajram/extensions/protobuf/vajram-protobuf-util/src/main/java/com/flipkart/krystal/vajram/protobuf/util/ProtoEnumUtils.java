@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajram.protobuf.util;
 
+import static java.util.Objects.requireNonNull;
+
 import com.flipkart.krystal.model.EnumModel;
 import com.google.protobuf.ProtocolMessageEnum;
 
@@ -26,7 +28,12 @@ public final class ProtoEnumUtils {
       return Enum.valueOf(enumClass, protoEnumName);
     } catch (IllegalArgumentException e) {
       // Fall back to first constant (ex: UNKNOWN)
-      return enumClass.getEnumConstants()[0];
+      E[] enumConstants = requireNonNull(enumClass.getEnumConstants());
+      if (enumConstants.length == 0) {
+        throw new IllegalArgumentException(
+            "Every enum class must have at least one enum constant - so that it can be used as the default value");
+      }
+      return enumConstants[0];
     }
   }
 

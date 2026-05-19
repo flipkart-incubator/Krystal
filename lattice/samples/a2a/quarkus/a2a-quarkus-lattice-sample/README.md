@@ -26,7 +26,7 @@ powered by Quarkus + the A2A Java SDK.
 
 The agent card will be available at:
 ```
-GET http://localhost:8080/.well-known/agent.json
+GET http://localhost:8080/.well-known/agent-card.json
 ```
 
 Send a task to the echo skill:

@@ -27,17 +27,18 @@ public record RequestResponseFuture<R extends Request<T>, T>(
 
   @SuppressWarnings("unchecked")
   public static <R extends Request<T>, B extends R, T>
-      List<RequestResponseFuture<R, T>> forRequestBuilders(List<B> requests) {
-    List<RequestResponseFuture<R, T>> list = new ArrayList<>();
+      List<RequestResponseFuture<B, T>> forRequestBuilders(List<B> requests) {
+    List<RequestResponseFuture<B, T>> list = new ArrayList<>();
     for (B r : requests) {
-      RequestResponseFuture<R, T> rrf = forRequestBuilder(r);
+      @SuppressWarnings("type.argument")
+      RequestResponseFuture<B, T> rrf = RequestResponseFuture.<R, B, T>forRequestBuilder(r);
       list.add(rrf);
     }
     return list;
   }
 
-  @SuppressWarnings("unchecked")
-  public static <R extends Request<T>, B extends R, T>
+  @SuppressWarnings({"unchecked", "type.argument"})
+  public static <R extends Request<@Nullable T>, B extends R, T>
       RequestResponseFuture<B, T> forRequestBuilder(B builder) {
     return new RequestResponseFuture<>(builder, new CompletableFuture<@Nullable T>());
   }

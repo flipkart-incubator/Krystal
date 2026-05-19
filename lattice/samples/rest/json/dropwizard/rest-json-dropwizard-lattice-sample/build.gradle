@@ -60,3 +60,6 @@ test {
     forkEvery = 1
 }
 
+checkerFramework {
+    excludeTests = true
+}

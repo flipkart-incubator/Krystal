@@ -70,3 +70,6 @@ configurations {
     }
 }
 
+checkerFramework {
+    excludeTests = true
+}

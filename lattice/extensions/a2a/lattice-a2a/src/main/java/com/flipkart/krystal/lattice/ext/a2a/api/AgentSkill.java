@@ -24,10 +24,10 @@ import java.lang.annotation.Retention;
  * relevant for cancellation). If omitted the runtime simply calls {@code emitter.cancel()}
  * immediately.
  *
- * <p>When multiple {@link AgentSkill} entries are declared on the same {@link A2AServer}, the
- * runtime routes each incoming task to the correct skill based on the {@code skillId} key in the
- * request metadata ({@code MessageSendParams.metadata()}). If no routing key is present, the first
- * declared agent is used as the default.
+ * <p>When multiple {@link AgentSkill} entries are declared on the same {@link Agent}, the runtime
+ * routes each incoming task to the correct skill based on the {@code skillId} key in the request
+ * metadata ({@code MessageSendParams.metadata()}). If no routing key is present, the first declared
+ * skill is used as the default.
  */
 @Retention(RUNTIME)
 public @interface AgentSkill {
@@ -42,5 +42,5 @@ public @interface AgentSkill {
    * The Vajram class whose {@code @Output} logic handles task cancellation. When omitted the
    * runtime responds with an immediate {@code cancel} without invoking any Vajram.
    */
-  Class<? extends VajramDefRoot<?>>[] canceller() default {};
+  Class<? extends VajramDefRoot> canceller() default VajramDefRoot.class;
 }

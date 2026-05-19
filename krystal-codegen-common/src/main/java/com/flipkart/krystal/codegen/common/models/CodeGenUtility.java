@@ -98,6 +98,7 @@ import lombok.SneakyThrows;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @SuppressWarnings("ClassWithTooManyMethods")
@@ -555,7 +556,7 @@ public class CodeGenUtility {
             processingEnv.getTypeUtils().asElement(getTypeFromAnnotationMember(supplier)));
   }
 
-  private TypeMirror getTypeFromAnnotationMember(Supplier<Class<?>> supplier) {
+  public TypeMirror getTypeFromAnnotationMember(Supplier<Class<?>> supplier) {
     try {
       var ignored = supplier.get();
       throw new AssertionError("Expected supplier to throw error");
@@ -1236,12 +1237,12 @@ public class CodeGenUtility {
             .collect(
                 toMap(c -> requireNonNull(c.getClass().getCanonicalName()), Function.identity()));
 
-    return getTypeElemsFromAnnotationMember(supportedModelProtocols::value).stream()
-        .map(element -> element.getQualifiedName().toString())
-        .filter(Objects::nonNull)
-        .map(availableModelProtocols::get)
-        .filter(Objects::nonNull)
-        .toList();
+    return (List<@NonNull ModelProtocol>)
+        getTypeElemsFromAnnotationMember(supportedModelProtocols::value).stream()
+            .map(element -> element.getQualifiedName().toString())
+            .map(availableModelProtocols::get)
+            .filter(Objects::nonNull)
+            .toList();
   }
 
   /**
@@ -1356,7 +1357,12 @@ public class CodeGenUtility {
 
   public Optional<ModelRootInfo> asModelRoot(TypeMirror javaModelType, Element... elements) {
     if (elements.length == 0) {
-      elements = new Element[] {typeUtils.asElement(javaModelType)};
+      elements =
+          new Element[] {
+            requireNonNull(
+                typeUtils.asElement(javaModelType),
+                "Not possible - javaModelType must always resolved to a TypeElement. Bug in the framework? Issue with project setup?")
+          };
     }
     ContainerType containerType = ContainerType.NO_CONTAINER;
     if (isOptional(javaModelType)) {

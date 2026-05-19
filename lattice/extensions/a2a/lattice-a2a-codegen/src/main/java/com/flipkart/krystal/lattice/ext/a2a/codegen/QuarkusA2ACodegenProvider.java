@@ -14,6 +14,7 @@ import com.flipkart.krystal.lattice.codegen.spi.LatticeCodeGeneratorProvider;
 import com.flipkart.krystal.lattice.ext.a2a.A2AServerDopant;
 import com.flipkart.krystal.lattice.ext.a2a.api.A2AServer;
 import com.flipkart.krystal.lattice.ext.a2a.api.AgentSkill;
+import com.flipkart.krystal.vajram.VajramDefRoot;
 import com.flipkart.krystal.vajram.codegen.common.models.FacetGenModel;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.google.auto.service.AutoService;
@@ -26,9 +27,7 @@ import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.TypeMirror;
 import lombok.extern.slf4j.Slf4j;
 import org.a2aproject.sdk.server.agentexecution.AgentExecutor;
@@ -145,12 +144,14 @@ public class QuarkusA2ACodegenProvider implements LatticeCodeGeneratorProvider {
       method.addCode(buildVajramExecutionBlock(ctx, util, agentSkills[0]));
     } else {
       // Route by skillId in request metadata
-      method.addStatement(
-          "$T $L = $L.getMetadata() != null ? $L.getMetadata().get($S) : null",
+      method.addCode(
+"""
+    var metadata = $L.getMetadata();
+    $T $L = metadata != null ? metadata.get($S) : null;
+""",
+          REQUEST_CONTEXT_PARAM,
           Object.class,
           "skillIdObj",
-          REQUEST_CONTEXT_PARAM,
-          REQUEST_CONTEXT_PARAM,
           "skillId");
       method.addStatement(
           "String $L = ($L instanceof String s) ? s : $S",
@@ -160,13 +161,12 @@ public class QuarkusA2ACodegenProvider implements LatticeCodeGeneratorProvider {
 
       CodeBlock.Builder switchBlock = CodeBlock.builder().beginControlFlow("switch (skillId)");
       for (AgentSkill agentSkill : agentSkills) {
-        switchBlock.add("case $S:\n", agentSkill.name());
+        switchBlock.add("case $S -> \n", agentSkill.name());
         switchBlock.indent();
         switchBlock.add(buildVajramExecutionBlock(ctx, util, agentSkill));
-        switchBlock.addStatement("break");
         switchBlock.unindent();
       }
-      switchBlock.add("default:\n");
+      switchBlock.add("default -> \n");
       switchBlock.indent();
       switchBlock.addStatement(
           "$L.fail($L.newAgentMessage($T.of(new $T(\"Unknown agent skill: \" + skillId)), $T.of()))",
@@ -211,13 +211,13 @@ public class QuarkusA2ACodegenProvider implements LatticeCodeGeneratorProvider {
 
       CodeBlock.Builder switchBlock = CodeBlock.builder().beginControlFlow("switch (skillId)");
       for (AgentSkill agentSkill : agentSkills) {
-        switchBlock.add("case $S:\n", agentSkill.name());
+        switchBlock.add("case $S -> \n", agentSkill.name());
         switchBlock.indent();
         switchBlock.add(buildCancelBlock(ctx, util, agentSkill));
         switchBlock.addStatement("break");
         switchBlock.unindent();
       }
-      switchBlock.add("default:\n");
+      switchBlock.add("default -> \n");
       switchBlock.indent();
       switchBlock.addStatement("$L.cancel()", EMITTER_PARAM);
       switchBlock.unindent();
@@ -228,24 +228,9 @@ public class QuarkusA2ACodegenProvider implements LatticeCodeGeneratorProvider {
     return method.build();
   }
 
-  /**
-   * Extracts the {@link TypeMirror} from a single-class annotation member (not an array). Must use
-   * the {@link MirroredTypeException} trick because accessing a Class-typed annotation member at
-   * annotation-processor time always throws.
-   */
-  @SuppressWarnings("ReturnValueIgnored")
-  private static TypeMirror getTypeFromAnnotationMember(Supplier<Class<?>> supplier) {
-    try {
-      supplier.get();
-      throw new AssertionError("Expected MirroredTypeException from annotation member access");
-    } catch (MirroredTypeException mte) {
-      return mte.getTypeMirror();
-    }
-  }
-
   private CodeBlock buildVajramExecutionBlock(
       LatticeCodegenContext ctx, CodeGenUtility util, AgentSkill agentSkill) {
-    TypeMirror executorType = getTypeFromAnnotationMember(agentSkill::executor);
+    TypeMirror executorType = util.getTypeFromAnnotationMember(agentSkill::executor);
     VajramInfo vajramInfo = ctx.codeGenUtility().computeVajramInfo(executorType);
     ClassName requestClass =
         ClassName.get(
@@ -285,15 +270,14 @@ public class QuarkusA2ACodegenProvider implements LatticeCodeGeneratorProvider {
 
   private CodeBlock buildCancelBlock(
       LatticeCodegenContext ctx, CodeGenUtility util, AgentSkill agentSkill) {
-    List<? extends TypeMirror> cancellerTypes =
-        util.getTypesFromAnnotationMember(agentSkill::canceller).stream().toList();
+    TypeMirror cancellerVajram = util.getTypeFromAnnotationMember(agentSkill::canceller);
 
-    if (cancellerTypes.isEmpty()) {
+    if (util.isSameRawType(cancellerVajram, VajramDefRoot.class)) {
       // No canceller declared – immediately acknowledge cancellation
       return CodeBlock.builder().addStatement("$L.cancel()", EMITTER_PARAM).build();
     }
 
-    VajramInfo vajramInfo = ctx.codeGenUtility().computeVajramInfo(cancellerTypes.get(0));
+    VajramInfo vajramInfo = ctx.codeGenUtility().computeVajramInfo(cancellerVajram);
     ClassName requestClass =
         ClassName.get(
             vajramInfo.lite().packageName(), vajramInfo.vajramName() + IMMUT_REQUEST_POJO_SUFFIX);

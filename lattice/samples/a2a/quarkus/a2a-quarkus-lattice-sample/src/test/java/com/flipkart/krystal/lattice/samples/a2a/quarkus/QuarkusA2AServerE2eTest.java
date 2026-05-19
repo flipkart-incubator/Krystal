@@ -1,5 +1,6 @@
 package com.flipkart.krystal.lattice.samples.a2a.quarkus;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.quarkus.runtime.Quarkus;
@@ -79,12 +80,13 @@ class QuarkusA2AServerE2eTest {
   @Test
   void agentCard_isServedAtWellKnownPath() throws Exception {
     HttpResponse<String> resp =
-        httpClient.send(
-            HttpRequest.newBuilder(URI.create(BASE_URL + "/.well-known/agent-card.json"))
-                .GET()
-                .header("Accept", "application/json")
-                .build(),
-            BodyHandlers.ofString());
+        requireNonNull(httpClient)
+            .send(
+                HttpRequest.newBuilder(URI.create(BASE_URL + "/.well-known/agent-card.json"))
+                    .GET()
+                    .header("Accept", "application/json")
+                    .build(),
+                BodyHandlers.ofString());
 
     assertThat(resp.statusCode()).as("agent-card status; body=%s", resp.body()).isEqualTo(200);
     assertThat(resp.body()).contains("Lattice A2A Sample Agent");
@@ -108,14 +110,15 @@ class QuarkusA2AServerE2eTest {
         """;
 
     HttpResponse<String> resp =
-        httpClient.send(
-            HttpRequest.newBuilder(URI.create(BASE_URL + "/message:send"))
-                .POST(BodyPublishers.ofString(requestBody))
-                .header("Content-Type", "application/json")
-                .header("Accept", "application/json")
-                .header("A2A-Version", "1.0")
-                .build(),
-            BodyHandlers.ofString());
+        requireNonNull(httpClient)
+            .send(
+                HttpRequest.newBuilder(URI.create(BASE_URL + "/message:send"))
+                    .POST(BodyPublishers.ofString(requestBody))
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
+                    .header("A2A-Version", "1.0")
+                    .build(),
+                BodyHandlers.ofString());
 
     assertThat(resp.statusCode()).as("echo status; body=%s", resp.body()).isEqualTo(200);
     assertThat(resp.body()).contains("Echo: Hello A2A!");
@@ -136,14 +139,15 @@ class QuarkusA2AServerE2eTest {
         """;
 
     HttpResponse<String> resp =
-        httpClient.send(
-            HttpRequest.newBuilder(URI.create(BASE_URL + "/message:send"))
-                .POST(BodyPublishers.ofString(requestBody))
-                .header("Content-Type", "application/json")
-                .header("Accept", "application/json")
-                .header("A2A-Version", "1.0")
-                .build(),
-            BodyHandlers.ofString());
+        requireNonNull(httpClient)
+            .send(
+                HttpRequest.newBuilder(URI.create(BASE_URL + "/message:send"))
+                    .POST(BodyPublishers.ofString(requestBody))
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
+                    .header("A2A-Version", "1.0")
+                    .build(),
+                BodyHandlers.ofString());
 
     assertThat(resp.statusCode()).as("reverse status; body=%s", resp.body()).isEqualTo(200);
     // "Hello" reversed is "olleH"
@@ -164,14 +168,15 @@ class QuarkusA2AServerE2eTest {
         """;
 
     HttpResponse<String> resp =
-        httpClient.send(
-            HttpRequest.newBuilder(URI.create(BASE_URL + "/message:send"))
-                .POST(BodyPublishers.ofString(requestBody))
-                .header("Content-Type", "application/json")
-                .header("Accept", "application/json")
-                .header("A2A-Version", "1.0")
-                .build(),
-            BodyHandlers.ofString());
+        requireNonNull(httpClient)
+            .send(
+                HttpRequest.newBuilder(URI.create(BASE_URL + "/message:send"))
+                    .POST(BodyPublishers.ofString(requestBody))
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
+                    .header("A2A-Version", "1.0")
+                    .build(),
+                BodyHandlers.ofString());
 
     assertThat(resp.statusCode()).as("default-skill status; body=%s", resp.body()).isEqualTo(200);
     // Default is "echo" (first declared agent)

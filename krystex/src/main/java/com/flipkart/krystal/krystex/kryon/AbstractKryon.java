@@ -25,6 +25,7 @@ import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
 abstract sealed class AbstractKryon<
@@ -160,7 +161,7 @@ abstract sealed class AbstractKryon<
         for (int i = 0; i < executableRequests.size(); i++) {
           RequestResponseFuture<? extends Request<Object>, Object> executableRequest =
               executableRequests.get(i);
-          CompletableFuture<Object> newFuture = new CompletableFuture<>();
+          CompletableFuture<@Nullable Object> newFuture = new CompletableFuture<>();
           newReqRespFutures.add(
               new RequestResponseFuture<Request<Object>, Object>(
                   executableRequest.request(), newFuture));
