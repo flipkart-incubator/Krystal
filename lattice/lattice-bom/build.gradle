@@ -35,6 +35,8 @@ dependencies {
         c.api 'com.flipkart.krystal:lattice-graphql-codegen:' + project.lattice_version
         c.api 'com.flipkart.krystal:lattice-mcp:' + project.lattice_version
         c.api 'com.flipkart.krystal:lattice-mcp-quarkus-codegen:' + project.lattice_version
+        c.api 'com.flipkart.krystal:lattice-a2a:' + project.lattice_version
+        c.api 'com.flipkart.krystal:lattice-a2a-codegen:' + project.lattice_version
     }
 }
 

@@ -1,0 +1,66 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'com.flipkart.krystal' version "${krystal_version}"
+    id 'com.flipkart.java.code.standard' version "${java_code_std_version}"
+    id 'io.quarkus' version "${quarkus_version}"
+}
+
+application {
+    mainClass = 'com.flipkart.krystal.lattice.samples.a2a.quarkus.QuarkusA2AServer_Impl'
+}
+
+dependencies {
+    implementation platform("com.flipkart.krystal:lattice-bom:${lattice_version}")
+    implementation platform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
+    krystalModelsGenProcessor platform("com.flipkart.krystal:lattice-bom:${lattice_version}")
+
+    implementation 'com.flipkart.krystal:lattice-core'
+    implementation 'com.flipkart.krystal:lattice-cdi'
+    implementation 'com.flipkart.krystal:vajram-java-sdk'
+    implementation 'com.flipkart.krystal:lattice-a2a'
+    implementation 'com.flipkart.krystal:lattice-quarkus'
+
+    implementation platform('org.a2aproject.sdk:a2a-java-sdk-reference-bom:1.0.0.CR1')
+    implementation 'org.a2aproject.sdk:a2a-java-sdk-reference-rest'
+    implementation 'org.a2aproject.sdk:a2a-java-sdk-reference-common'
+    implementation 'org.a2aproject.sdk:a2a-java-sdk-spec'
+    implementation 'org.a2aproject.sdk:a2a-java-sdk-server-common'
+
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:lattice-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:lattice-cdi-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:lattice-quarkus-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:lattice-a2a-codegen'
+
+    implementation 'jakarta.inject:jakarta.inject-api'
+    implementation 'io.quarkus:quarkus-arc'
+
+    compileOnly "org.projectlombok:lombok:$lombok_version"
+    implementation 'org.slf4j:slf4j-api'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+    testImplementation platform('org.assertj:assertj-bom:3.27.7')
+    testImplementation 'org.assertj:assertj-core'
+}
+
+test {
+    forkEvery = 1
+}
+
+extraJavaModuleInfo {
+    failOnMissingModuleInfo = false
+}
+
+configurations {
+    krystalModelsGenProcessorPath {
+        attributes {
+            attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.class, Category.LIBRARY));
+            attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.class, Usage.JAVA_RUNTIME));
+            attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.class, LibraryElements.JAR));
+            attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling.class, Bundling.EXTERNAL));
+            attribute(TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE, objects.named(TargetJvmEnvironment.class, TargetJvmEnvironment.STANDARD_JVM));
+        }
+    }
+}
