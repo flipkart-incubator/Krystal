@@ -18,6 +18,7 @@ import static java.util.Map.entry;
 import static javax.lang.model.element.Modifier.*;
 import static javax.lang.model.element.Modifier.FINAL;
 
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.data.Errable;
@@ -61,11 +62,18 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
   private final CodeGenUtility util;
   private final SchemaReaderUtil schemaReaderUtil;
   private final GraphQlCodeGenUtil graphQlCodeGenUtil;
+  private final javax.annotation.processing.RoundEnvironment roundEnv;
 
   public GraphQLObjectAggregateGen(CodeGenUtility util, File schemaFile) {
+    this(util, schemaFile, null);
+  }
+
+  public GraphQLObjectAggregateGen(
+      CodeGenUtility util, File schemaFile, javax.annotation.processing.RoundEnvironment roundEnv) {
     this.util = util;
     this.graphQlCodeGenUtil = new GraphQlCodeGenUtil(schemaFile);
     this.schemaReaderUtil = graphQlCodeGenUtil.schemaReaderUtil();
+    this.roundEnv = roundEnv;
   }
 
   public void generate() {
@@ -93,11 +101,14 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                     .addMethods(getInputResolvers(objectTypeName, typeDefinition))
                     .addMethod(outputLogic(objectTypeName));
             ObjectTypeDefinition queryType = schemaReaderUtil.queryType();
-            if (queryType != null && queryType.getName().equals(objectTypeName.value())) {
-              typeAggregator.addSuperinterface(
-                  ParameterizedTypeName.get(
-                      ClassName.get(GraphQlOperationAggregate.class),
-                      asVajramReturnType(objectTypeName)));
+            if (queryType != null
+                && GraphQLTypeName.of(queryType).value().equals(objectTypeName.value())) {
+              typeAggregator
+                  .addSuperinterface(
+                      ParameterizedTypeName.get(
+                          ClassName.get(GraphQlOperationAggregate.class),
+                          asVajramReturnType(objectTypeName)))
+                  .addAnnotation(InvocableOutsideGraph.class);
             }
             refToFieldMap.forEach(
                 (vajramClass, graphQlFieldSpecs) -> {
@@ -275,6 +286,40 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
     };
   }
 
+  /**
+   * Checks if a GraphQL type is an input type and returns its name, or null if it's not an input
+   * type.
+   */
+  @Nullable
+  private String getInputTypeName(Type type) {
+    // Unwrap NonNullType if present
+    Type unwrappedType = type;
+    if (type instanceof NonNullType nonNullType) {
+      unwrappedType = nonNullType.getType();
+    }
+
+    // Unwrap ListType if present
+    if (unwrappedType instanceof ListType listType) {
+      unwrappedType = listType.getType();
+      // Unwrap NonNullType inside ListType if present
+      if (unwrappedType instanceof NonNullType nonNullType) {
+        unwrappedType = nonNullType.getType();
+      }
+    }
+
+    // Check if it's a TypeName (input type name)
+    if (unwrappedType instanceof graphql.language.TypeName typeName) {
+      String name = typeName.getName();
+      // Check if this type exists as an input type in the registry
+      if (schemaReaderUtil.typeDefinitionRegistry().getType(name).orElse(null)
+          instanceof InputObjectTypeDefinition) {
+        return name;
+      }
+    }
+
+    return null;
+  }
+
   private TypeName getFetcherResponseType(
       VajramFetcher fetcher, List<GraphQlFieldSpec> fieldsDeRef) {
     ClassName fetcherClassName = fetcher.vajramClassName();
@@ -285,8 +330,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
       Optional<TypeDefinition> typeDefinition =
           schemaReaderUtil.typeDefinitionRegistry().getType(fieldDefinition.getType());
       if (typeDefinition.isPresent() && schemaReaderUtil.hasEntityId(typeDefinition.get())) {
-        ClassName entityIdClassName =
-            schemaReaderUtil.entityIdClassName(GraphQLTypeName.of(typeDefinition.get()));
+        GraphQLTypeName entityTypeName = GraphQLTypeName.of(typeDefinition.get());
         GraphQlTypeDecorator innerType = fieldSpec.fieldType();
         boolean isInnerNonNull = false;
         if (innerType.isNonNull()) {
@@ -300,16 +344,42 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
         if (innerType.isNonNull()) {
           isInnerNonNull = true;
         }
-        if (isList) {
-          responseType =
-              ParameterizedTypeName.get(
-                  ClassName.get(List.class),
-                  isInnerNonNull
-                      ? entityIdClassName
-                      : entityIdClassName.annotated(
-                          AnnotationSpec.builder(Nullable.class).build()));
+
+        // For @dataFetcher fields, return the entity builder type, not the entity ID
+        // ID fetchers return entity IDs, but data fetchers return full entities
+        GraphQlFetcherType fetcherType = fetcher.type();
+        boolean isDataFetcher =
+            fetcherType == GraphQlFetcherType.SINGLE_FIELD_DATA_FETCHER
+                || fetcherType == GraphQlFetcherType.MULTI_FIELD_DATA_FETCHER;
+
+        if (isDataFetcher) {
+          // Data fetcher returns the full entity builder
+          ClassName entityBuilderType = asVajramReturnType(entityTypeName);
+          if (isList) {
+            responseType =
+                ParameterizedTypeName.get(
+                    ClassName.get(List.class),
+                    isInnerNonNull
+                        ? entityBuilderType
+                        : entityBuilderType.annotated(
+                            AnnotationSpec.builder(Nullable.class).build()));
+          } else {
+            responseType = entityBuilderType;
+          }
         } else {
-          responseType = entityIdClassName;
+          // ID fetcher or other types return entity ID
+          ClassName entityIdClassName = schemaReaderUtil.entityIdClassName(entityTypeName);
+          if (isList) {
+            responseType =
+                ParameterizedTypeName.get(
+                    ClassName.get(List.class),
+                    isInnerNonNull
+                        ? entityIdClassName
+                        : entityIdClassName.annotated(
+                            AnnotationSpec.builder(Nullable.class).build()));
+          } else {
+            responseType = entityIdClassName;
+          }
         }
       } else {
         responseType = graphQlCodeGenUtil.toTypeNameForField(fieldSpec.fieldType(), fieldSpec);
@@ -520,17 +590,80 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
               ".$L($L)", schemaReaderUtil.getEntityIdFieldName(parentTypeDef), Facets.ENTITY_ID));
     }
 
+    // Add GraphQL execution context fields for @dataFetcher Vajrams.
+    // - Always add for operation-level data fetchers (Query/Mutation/Subscription)
+    // - For entity-level data fetchers: only add if the Vajram declares these fields in its _Req
+    // interface or is whitelisted
+    GraphQlFetcherType fetcherType = fetcher.type();
+    boolean isDataFetcher =
+        fetcherType == GraphQlFetcherType.SINGLE_FIELD_DATA_FETCHER
+            || fetcherType == GraphQlFetcherType.MULTI_FIELD_DATA_FETCHER;
+
+    boolean shouldAddExecutionContextFields = false;
+
+    if (isDataFetcher && isParentOpType) {
+      // Always add for operation-level data fetchers
+      shouldAddExecutionContextFields = true;
+    } else if (isDataFetcher && !isParentOpType) {
+      // For entity-level data fetchers, check if the Vajram actually declares execution context
+      // fields in its _Inputs class. The Vajram class is available at codegen time, so we check
+      // it directly rather than relying on the _Req interface which might not be generated yet.
+      shouldAddExecutionContextFields =
+          hasExecutionContextFieldsInVajram(fetcher.vajramClassName());
+    }
+
+    if (shouldAddExecutionContextFields) {
+      // These are required by Vajrams that use @dataFetcher directive
+      depInputNames.add(CodeBlock.of("$T.$L_n", vajramReqClass, "graphqlExecutionContext_vg"));
+      depInputSetterCode.add(
+          CodeBlock.of(".$L($L)", "graphqlExecutionContext_vg", "graphql_executionContext"));
+      depInputNames.add(
+          CodeBlock.of("$T.$L_n", vajramReqClass, "graphqlExecutionStrategyParams_vg"));
+      // Use graphql_executionStrategyParams_new if it exists (for single field), otherwise use
+      // graphql_executionStrategyParams
+      String executionParamsVar =
+          fields.size() == 1
+              ? "graphql_executionStrategyParams_new"
+              : "graphql_executionStrategyParams";
+      depInputSetterCode.add(
+          CodeBlock.of(".$L($L)", "graphqlExecutionStrategyParams_vg", executionParamsVar));
+    }
+
     if (fields.size() == 1) {
       for (InputValueDefinition inputValueDefinition :
           fields.get(0).fieldDefinition().getInputValueDefinitions()) {
         String argName = inputValueDefinition.getName();
         depInputNames.add(CodeBlock.of("$T.$L_n", vajramReqClass, argName));
-        depInputSetterCode.add(
-            CodeBlock.of(
-                ".$L($L.getExecutionStepInfo().getArgument($S))",
-                argName,
-                Facets.EXECUTION_STRATEGY_PARAMS + "_new",
-                argName));
+
+        // Check if this argument is an input type and coerce it
+        Type argType = inputValueDefinition.getType();
+        String inputTypeName = getInputTypeName(argType);
+
+        if (inputTypeName != null) {
+          // For input types, manually coerce using GraphQlInputTypeCoercing
+          ClassName inputTypeClass =
+              ClassName.get(
+                  schemaReaderUtil.rootPackageName() + ".input",
+                  inputTypeName + "_ImmutGQlInputJson");
+          depInputSetterCode.add(
+              CodeBlock.of(
+                  ".$L(($T) $T.coerceInputType($L.getExecutionStepInfo().getArgument($S), $T.class))",
+                  argName,
+                  ClassName.get(schemaReaderUtil.rootPackageName() + ".input", inputTypeName),
+                  ClassName.get(
+                      "com.flipkart.krystal.vajram.graphql.api.schema", "GraphQlInputTypeCoercing"),
+                  Facets.EXECUTION_STRATEGY_PARAMS + "_new",
+                  argName,
+                  inputTypeClass));
+        } else {
+          // For non-input types, use getArgument directly
+          depInputSetterCode.add(
+              CodeBlock.of(
+                  ".$L($L.getExecutionStepInfo().getArgument($S))",
+                  argName,
+                  Facets.EXECUTION_STRATEGY_PARAMS + "_new",
+                  argName));
+        }
       }
     }
 
@@ -605,6 +738,73 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
 
   private static ClassName getRequestClassName(ClassName vajramClass) {
     return ClassName.get(vajramClass.packageName(), vajramClass.simpleName() + "_Req");
+  }
+
+  /**
+   * Checks if a Vajram class declares execution context fields in its _Inputs nested class. Returns
+   * true if the fields exist, false otherwise (safe default).
+   *
+   * <p>This checks the Vajram's _Inputs nested class directly, which is available at codegen time,
+   * rather than relying on the _Req interface which might not be generated yet due to multi-round
+   * processing.
+   */
+  private boolean hasExecutionContextFieldsInVajram(ClassName vajramClass) {
+    if (roundEnv == null) {
+      // No RoundEnvironment available - can't check, return false to be safe
+      return false;
+    }
+
+    try {
+      String vajramFullClassName = vajramClass.canonicalName();
+      javax.lang.model.element.TypeElement vajramTypeElement = null;
+
+      // Method 1: Try to find via RoundEnvironment using @Vajram annotation (most reliable)
+      for (javax.lang.model.element.Element element :
+          roundEnv.getElementsAnnotatedWith(Vajram.class)) {
+        if (element.getKind() == javax.lang.model.element.ElementKind.CLASS
+            && element instanceof javax.lang.model.element.TypeElement) {
+          javax.lang.model.element.TypeElement typeElement =
+              (javax.lang.model.element.TypeElement) element;
+          if (typeElement.getQualifiedName().toString().equals(vajramFullClassName)) {
+            vajramTypeElement = typeElement;
+            break;
+          }
+        }
+      }
+
+      // Method 2: Try ElementUtils (works for compiled classes)
+      if (vajramTypeElement == null) {
+        vajramTypeElement =
+            util.processingEnv().getElementUtils().getTypeElement(vajramFullClassName);
+      }
+
+      if (vajramTypeElement == null) {
+        // Vajram class not found in current round - return false to be safe
+        return false;
+      }
+
+      // Look for _Inputs nested class and check for execution context fields
+      for (javax.lang.model.element.Element enclosed : vajramTypeElement.getEnclosedElements()) {
+        if (enclosed.getKind() == javax.lang.model.element.ElementKind.CLASS
+            && enclosed.getSimpleName().toString().equals("_Inputs")) {
+          // Check if _Inputs has fields for execution context
+          for (javax.lang.model.element.Element field : enclosed.getEnclosedElements()) {
+            if (field.getKind() == javax.lang.model.element.ElementKind.FIELD) {
+              String fieldName = field.getSimpleName().toString();
+              if (fieldName.equals("graphqlExecutionContext_vg")
+                  || fieldName.equals("graphqlExecutionStrategyParams_vg")) {
+                return true;
+              }
+            }
+          }
+        }
+      }
+
+      return false;
+    } catch (Exception e) {
+      // If we can't check, return false to be safe
+      return false;
+    }
   }
 
   private static ClassName getFacetClassName(ClassName aggregatorName) {
@@ -706,6 +906,65 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
         ClassName.get(
             depReqImmutType.packageName(),
             depReqImmutType.simpleName() + POJO.modelClassesSuffix());
+    // Generate code to store field arguments in GraphQL context for entity-level data fetchers
+    CodeBlock.Builder fieldArgsStorageBuilder = CodeBlock.builder();
+    for (InputValueDefinition argDef : fieldSpec.fieldDefinition().getInputValueDefinitions()) {
+      String argName = argDef.getName();
+      Type argType = argDef.getType();
+      String inputTypeName = getInputTypeName(argType);
+
+      if (inputTypeName != null) {
+        // For input types, coerce and store in context
+        ClassName inputTypeClass =
+            ClassName.get(
+                schemaReaderUtil.rootPackageName() + ".input",
+                inputTypeName + "_ImmutGQlInputJson");
+        ClassName inputTypeInterface =
+            ClassName.get(schemaReaderUtil.rootPackageName() + ".input", inputTypeName);
+        fieldArgsStorageBuilder.add(
+            """
+            Object $L_arg = graphql_executionStrategyParams_new.getExecutionStepInfo().getArgument($S);
+            if ($L_arg != null) {
+              try {
+                $T $L_coerced = ($T) $T.coerceInputType($L_arg, $T.class);
+                graphql_executionContext.getGraphQLContext().put($S + "_" + $S, $L_coerced);
+              } catch (Exception e) {
+                // Ignore coercion errors - entity-level fetchers can handle null
+              }
+            }
+            """,
+            argName,
+            argName,
+            argName,
+            inputTypeInterface,
+            argName,
+            inputTypeInterface,
+            ClassName.get(
+                "com.flipkart.krystal.vajram.graphql.api.schema", "GraphQlInputTypeCoercing"),
+            argName,
+            inputTypeClass,
+            fieldName,
+            argName,
+            argName);
+      } else {
+        // For non-input types, store directly
+        fieldArgsStorageBuilder.add(
+            """
+            Object $L_arg = graphql_executionStrategyParams_new.getExecutionStepInfo().getArgument($S);
+            if ($L_arg != null) {
+              graphql_executionContext.getGraphQLContext().put($S + "_" + $S, $L_arg);
+            }
+            """,
+            argName,
+            argName,
+            argName,
+            fieldName,
+            argName,
+            argName);
+      }
+    }
+    CodeBlock fieldArgsStorage = fieldArgsStorageBuilder.build();
+
     Map<String, Object> args =
         Map.ofEntries(
             entry("graphqlUtils", GraphQLUtils.class),
@@ -721,6 +980,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
             entry("reqPojoType", depReqImmutPojoType),
             entry("facet_entityId", Facets.ENTITY_ID),
             entry("throwable", Throwable.class),
+            entry("fieldArgsStorage", fieldArgsStorage),
             entry(
                 "forLoopStart",
                 entityIdAccessCode != null
@@ -816,6 +1076,9 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                     graphql_executionContext,
                     graphql_executionStrategyParams,
                     graphql_executionStrategyParams.getFields().getSubField($fieldName:S));
+            // Store query field arguments in GraphQL context for entity-level data fetchers to access
+            // Format: "{fieldName}_{argName}" (e.g., "sellerDetails_input")
+            $fieldArgsStorage:L
             $forLoopStart:L
             var _req = $reqPojoType:T._builder()
                 .$facet_entityId:L(_entityId)
