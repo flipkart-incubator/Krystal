@@ -1,0 +1,6 @@
+dopants:
+  - krystal.lattice.threadingStrategy:
+      maxApplicationThreads: 400
+  - krystal.lattice.restService:
+      applicationServer:
+        name: rest-fory-lattice-sample-application

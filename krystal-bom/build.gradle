@@ -26,6 +26,8 @@ dependencies {
         api 'com.flipkart.krystal:vajram-protobuf3:' + project.krystal_version
         api 'com.flipkart.krystal:vajram-protobuf2024e:' + project.krystal_version
         api 'com.flipkart.krystal:vajram-protobuf2024e-codegen:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-fory:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-fory-codegen:' + project.krystal_version
         api 'com.flipkart.krystal:vajram-graphql:' + project.krystal_version
         api 'com.flipkart.krystal:vajram-graphql-codegen:' + project.krystal_version
         api 'com.flipkart.krystal:vajram-sql:' + project.krystal_version

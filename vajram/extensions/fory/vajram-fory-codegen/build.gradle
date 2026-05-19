@@ -1,0 +1,15 @@
+description = 'Codegen module for enabling support for Apache Fory in Krystal'
+
+dependencies {
+    implementation project(':krystal-codegen-common')
+    implementation project(':vajram:vajram-codegen-common')
+    implementation project(':krystal-common')
+    implementation project(':vajram:extensions:fory:vajram-fory')
+
+    implementation 'com.squareup:javapoet'
+    implementation 'org.apache.fory:fory-core'
+}
+
+checkerFramework {
+    extraJavacArgs += ['-AresolveReflection',]
+}
