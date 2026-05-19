@@ -6,12 +6,12 @@ import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
+import com.flipkart.krystal.annos.CallGraphDelegationMode;
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.traits.UseForPredicateDispatch;
 import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.TraitDef;
-import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
 import com.google.auto.value.AutoAnnotation;
 import jakarta.inject.Qualifier;
 import java.lang.annotation.Retention;

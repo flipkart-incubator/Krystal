@@ -1,11 +1,13 @@
 package com.flipkart.krystal.lattice.samples.grpc.proto3.sampleProtoService;
 
+import static com.flipkart.krystal.datatypes.Trilean.FALSE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.annos.InvocableOutsideProcess;
+import com.flipkart.krystal.data.MutatesState;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocols;
@@ -28,6 +30,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @InvocableOutsideGraph
 @InvocableOutsideProcess
 @Vajram
+@MutatesState(FALSE)
 public abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3LatticeSampleResponse> {
 
   @SupportedModelProtocols({Protobuf3.class, PlainJavaObject.class})
