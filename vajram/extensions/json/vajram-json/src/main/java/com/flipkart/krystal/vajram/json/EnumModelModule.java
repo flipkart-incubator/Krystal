@@ -50,7 +50,16 @@ final class EnumModelModule extends SimpleModule {
     @SuppressWarnings("unchecked")
     EnumModelDeserializer(Class<? extends Enum> enumClass, JsonDeserializer<?> delegate) {
       this.delegate = delegate;
-      this.firstEnumConstant = ((Class<E>) enumClass).getEnumConstants()[0];
+      E[] enumConstants = ((Class<E>) enumClass).getEnumConstants();
+      if (enumConstants == null) {
+        throw new IllegalArgumentException(
+            "Expect enum class but received a non-enum class: " + enumClass);
+      }
+      if (enumConstants.length == 0) {
+        throw new IllegalArgumentException(
+            "Every enum class must have at least one enum constant - so that it can be used as the default value");
+      }
+      this.firstEnumConstant = enumConstants[0];
     }
 
     @Override

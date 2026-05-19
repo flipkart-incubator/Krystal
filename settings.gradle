@@ -106,6 +106,7 @@ include 'lattice:samples:grpc-proto3-lattice-sample'
 include 'lattice:samples:grpc-proto2024e-lattice-sample'
 include 'lattice:samples:graphql-rest-json-lattice-sample'
 include 'lattice:samples:mcp:quarkus:mcp-quarkus-lattice-sample'
+include 'lattice:samples:a2a:quarkus:a2a-quarkus-lattice-sample'
 /* ******** SAMPLE PROJECTS : END *********** */
 
 

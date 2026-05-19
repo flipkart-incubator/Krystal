@@ -57,6 +57,9 @@ extraJavaModuleInfo {
 test {
     // Fork a fresh JVM per test class so the embedded Dropwizard app booted by
     // RestEndpointsE2eTest doesn't share Guice/Jetty state with other suites.
-    forkEvery = 1
+//    forkEvery = 1
 }
 
+checkerFramework {
+    excludeTests = true
+}

@@ -2,7 +2,6 @@ package com.flipkart.krystal.datatypes;
 
 import static com.flipkart.krystal.datatypes.TypeUtils.dataTypeMappings;
 import static com.flipkart.krystal.datatypes.TypeUtils.getJavaType;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
@@ -16,6 +15,7 @@ import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.checker.nullness.qual.PolyNull;
 
 @EqualsAndHashCode(of = {"canonicalClassName", "typeParameters"})
 public final class JavaType<T> implements DataType<T> {
@@ -89,15 +89,19 @@ public final class JavaType<T> implements DataType<T> {
     if (type == null) {
       @SuppressWarnings("unchecked")
       Class<T> clazz =
-          (Class<T>) checkNotNull(this.getClass().getClassLoader()).loadClass(canonicalClassName());
+          (Class<T>)
+              requireNonNull(this.getClass().getClassLoader()).loadClass(canonicalClassName());
 
       this.type = toJavaType(clazz, this.typeParameters);
     }
     return type;
   }
 
-  private static <T> Type toJavaType(Class<T> type, List<DataType<?>> typeParameters)
-      throws ClassNotFoundException {
+  private static <T> @PolyNull Type toJavaType(
+      @PolyNull Class<T> type, List<DataType<?>> typeParameters) throws ClassNotFoundException {
+    if (type == null) {
+      return null;
+    }
     List<Type> list = new ArrayList<>();
     for (DataType<?> typeParameter : typeParameters) {
       Type javaReflectType = typeParameter.javaReflectType();

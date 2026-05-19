@@ -1,0 +1,3 @@
+dopants:
+  - krystal.lattice.threadingStrategy:
+      maxApplicationThreads: 400
