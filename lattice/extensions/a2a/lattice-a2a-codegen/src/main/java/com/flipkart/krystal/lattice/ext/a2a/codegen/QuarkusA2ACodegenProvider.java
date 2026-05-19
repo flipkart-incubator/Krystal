@@ -214,7 +214,6 @@ public class QuarkusA2ACodegenProvider implements LatticeCodeGeneratorProvider {
         switchBlock.add("case $S -> \n", agentSkill.name());
         switchBlock.indent();
         switchBlock.add(buildCancelBlock(ctx, util, agentSkill));
-        switchBlock.addStatement("break");
         switchBlock.unindent();
       }
       switchBlock.add("default -> \n");
