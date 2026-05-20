@@ -1,6 +1,8 @@
 package com.flipkart.krystal.vajram.fory;
 
 import com.flipkart.krystal.serial.SerdeProtocol;
+import java.util.ServiceLoader;
+import org.apache.fory.ThreadSafeFory;
 import org.apache.fory.config.Language;
 
 /**
@@ -20,20 +22,21 @@ public final class Fory implements SerdeProtocol {
 
   public static final Fory FORY = new Fory();
 
-  private static final org.apache.fory.Fory FORY_INSTANCE =
+  private static final ThreadSafeFory FORY_INSTANCE =
       org.apache.fory.Fory.builder()
           .withLanguage(Language.JAVA)
           // Allow serializing types that are not explicitly registered.
           // Generated _ImmutFory classes register themselves for performance,
           // but this keeps the framework flexible.
           .requireClassRegistration(false)
-          .build();
+          .registerGuavaTypes(true)
+          .buildThreadSafeFory();
 
   /**
    * Returns the shared Fory instance used for Krystal model serialization. Krystal models are not
    * thread-safe by design, so no thread-safety overhead is added here.
    */
-  public static org.apache.fory.Fory foryInstance() {
+  public static ThreadSafeFory foryInstance() {
     return FORY_INSTANCE;
   }
 
@@ -47,5 +50,12 @@ public final class Fory implements SerdeProtocol {
     return "application/x-fory";
   }
 
-  private Fory() {}
+  private Fory() {
+    ServiceLoader.load(ForyClassProvider.class)
+        .forEach(provider -> FORY_INSTANCE.register(provider.getForyClass()));
+  }
+
+  public interface ForyClassProvider {
+    Class<? extends SerializableForyModel> getForyClass();
+  }
 }

@@ -28,6 +28,7 @@ import com.flipkart.krystal.model.map.ModelsMapBuilder;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.vajram.codegen.common.generators.SerdeModelValidator;
 import com.flipkart.krystal.vajram.fory.Fory;
+import com.flipkart.krystal.vajram.fory.Fory.ForyClassProvider;
 import com.flipkart.krystal.vajram.fory.SerializableForyModel;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -48,6 +49,7 @@ import java.util.stream.Collectors;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
+import org.apache.fory.ThreadSafeFory;
 
 /**
  * Code generator that produces {@code _ImmutFory} wrapper classes for models that declare Apache
@@ -109,7 +111,7 @@ final class ForyModelsGen implements CodeGenerator {
 
     // Static Fory field — Krystal models are not thread-safe by design
     classBuilder.addField(
-        FieldSpec.builder(org.apache.fory.Fory.class, "_FORY", PRIVATE, STATIC, FINAL)
+        FieldSpec.builder(ThreadSafeFory.class, "_FORY", PRIVATE, STATIC, FINAL)
             .initializer("$T.foryInstance()", Fory.class)
             .build());
 
@@ -219,6 +221,15 @@ final class ForyModelsGen implements CodeGenerator {
         .addMethod(copyCtor(modelRootType, util))
         .addMethods(methods)
         .addType(builderClass)
+        .addType(
+            TypeSpec.classBuilder("_ForyImmutClassProvider")
+                .addSuperinterface(ForyClassProvider.class)
+                .addMethod(
+                    MethodSpec.overriding(
+                            util.getMethod(() -> ForyClassProvider.class.getMethod("getForyClass")))
+                        .addStatement("return $T.class", immutableForyModelName)
+                        .build())
+                .build())
         .build();
   }
 

@@ -24,6 +24,7 @@ dependencies {
     implementation 'com.flipkart.krystal:vajram-json'
     implementation 'com.flipkart.krystal:vajram-java-sdk'
     implementation 'io.quarkus:quarkus-smallrye-context-propagation'
+    implementation 'com.google.auto.service:auto-service-annotations:1.1.1'
 
     krystalModelsGenProcessor 'com.flipkart.krystal:vajram-codegen'
     krystalModelsGenProcessor 'com.flipkart.krystal:lattice-codegen'
@@ -44,6 +45,7 @@ dependencies {
 
     compileOnly "org.projectlombok:lombok:$lombok_version"
     compileOnly 'com.google.auto.value:auto-value-annotations:1.11.0'
+    annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
     annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
 
     testImplementation 'org.junit.jupiter:junit-jupiter-api'

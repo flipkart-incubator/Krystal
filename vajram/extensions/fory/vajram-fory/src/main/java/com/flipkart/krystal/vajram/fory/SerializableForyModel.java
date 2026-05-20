@@ -18,9 +18,4 @@ public interface SerializableForyModel extends SerializableModel {
   default SerdeProtocol _serdeProtocol() {
     return FORY;
   }
-
-  @Override
-  default byte[] _serialize() throws Exception {
-    return new byte[0];
-  }
 }
