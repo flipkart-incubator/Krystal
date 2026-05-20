@@ -20,8 +20,6 @@ import org.apache.fory.config.Language;
  */
 public final class Fory implements SerdeProtocol {
 
-  public static final Fory FORY = new Fory();
-
   private static final ThreadSafeFory FORY_INSTANCE =
       org.apache.fory.Fory.builder()
           .withLanguage(Language.JAVA)
@@ -31,6 +29,8 @@ public final class Fory implements SerdeProtocol {
           .requireClassRegistration(false)
           .registerGuavaTypes(true)
           .buildThreadSafeFory();
+  
+  public static final Fory FORY = new Fory();
 
   /**
    * Returns the shared Fory instance used for Krystal model serialization. Krystal models are not

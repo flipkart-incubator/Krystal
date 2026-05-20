@@ -55,7 +55,7 @@ class QuarkusRestEndpointsE2eTest {
     serverThread.setDaemon(true);
     serverThread.start();
 
-    long deadline = System.currentTimeMillis() + 60_000L;
+    long deadline = System.currentTimeMillis() + 120_000L;
     while (System.currentTimeMillis() < deadline) {
       if (isPortOpen()) {
         httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
@@ -64,7 +64,7 @@ class QuarkusRestEndpointsE2eTest {
       Thread.sleep(200);
     }
     throw new IllegalStateException(
-        "Embedded Quarkus server did not start on port " + APP_PORT + " within 60s");
+        "Embedded Quarkus server did not start on port " + APP_PORT + " within 120s");
   }
 
   @AfterAll

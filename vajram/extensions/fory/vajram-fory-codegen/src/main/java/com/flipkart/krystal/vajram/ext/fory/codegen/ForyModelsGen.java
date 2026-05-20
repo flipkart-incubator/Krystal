@@ -30,10 +30,12 @@ import com.flipkart.krystal.vajram.codegen.common.generators.SerdeModelValidator
 import com.flipkart.krystal.vajram.fory.Fory;
 import com.flipkart.krystal.vajram.fory.Fory.ForyClassProvider;
 import com.flipkart.krystal.vajram.fory.SerializableForyModel;
+import com.google.auto.service.AutoService;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
@@ -157,7 +159,6 @@ final class ForyModelsGen implements CodeGenerator {
     List<MethodSpec> methods = new ArrayList<>();
 
     for (ExecutableElement method : modelMethods) {
-      Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType(), method);
       MethodSpec pojoGetterMethod =
           getterMethod(method, false, FORY, util, immutableForyModelName, modelRoot)
               .addAnnotation(Override.class)
@@ -222,7 +223,12 @@ final class ForyModelsGen implements CodeGenerator {
         .addMethods(methods)
         .addType(builderClass)
         .addType(
-            TypeSpec.classBuilder("_ForyImmutClassProvider")
+            TypeSpec.classBuilder("_ForyImmutClassProvider2")
+                .addAnnotation(
+                    AnnotationSpec.builder(AutoService.class)
+                        .addMember("value", "$T.class", ForyClassProvider.class)
+                        .build())
+                .addModifiers(PUBLIC, STATIC)
                 .addSuperinterface(ForyClassProvider.class)
                 .addMethod(
                     MethodSpec.overriding(
