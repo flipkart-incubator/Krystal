@@ -43,6 +43,8 @@ include 'vajram:extensions:protobuf:vajram-protobuf3-codegen'
 include 'vajram:extensions:protobuf:vajram-protobuf3'
 include 'vajram:extensions:protobuf:vajram-protobuf2024e'
 include 'vajram:extensions:protobuf:vajram-protobuf2024e-codegen'
+include 'vajram:extensions:fory:vajram-fory'
+include 'vajram:extensions:fory:vajram-fory-codegen'
 include 'vajram:extensions:resilience4j:vajram-resilience4j'
 
 include 'vajram:extensions:graphql:vajram-graphql'
@@ -107,6 +109,7 @@ include 'lattice:samples:grpc-proto2024e-lattice-sample'
 include 'lattice:samples:graphql-rest-json-lattice-sample'
 include 'lattice:samples:mcp:quarkus:mcp-quarkus-lattice-sample'
 include 'lattice:samples:a2a:quarkus:a2a-quarkus-lattice-sample'
+include 'lattice:samples:rest:fory:quarkus:rest-fory-quarkus-lattice-sample'
 /* ******** SAMPLE PROJECTS : END *********** */
 
 

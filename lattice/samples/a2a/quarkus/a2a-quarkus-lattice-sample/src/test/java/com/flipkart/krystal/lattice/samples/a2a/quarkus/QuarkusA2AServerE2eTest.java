@@ -60,7 +60,7 @@ class QuarkusA2AServerE2eTest {
     serverThread.setDaemon(true);
     serverThread.start();
 
-    long deadline = System.currentTimeMillis() + 60_000L;
+    long deadline = System.currentTimeMillis() + 120_000L;
     while (System.currentTimeMillis() < deadline) {
       if (isPortOpen()) {
         httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();

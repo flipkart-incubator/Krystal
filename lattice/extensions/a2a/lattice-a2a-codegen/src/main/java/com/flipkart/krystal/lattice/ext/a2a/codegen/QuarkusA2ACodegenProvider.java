@@ -96,7 +96,7 @@ public class QuarkusA2ACodegenProvider implements LatticeCodeGeneratorProvider {
     }
 
     String packageName = util.getPackageName(latticeAppTypeElement);
-    String className = latticeAppTypeElement.getSimpleName() + "_QuarkusA2AAgentExecutor";
+    String className = latticeAppTypeElement.getSimpleName() + "_A2AAgentExecutor";
     ClassName executorClassName = ClassName.get(packageName, className);
 
     TypeSpec.Builder classBuilder =

@@ -20,6 +20,7 @@ ext {
 
     protobuf_version = '4.34.1'
     grpc_version = '1.81.0'
+    fory_version = '0.17.0'
     quarkus_version = '3.35.3'
     lombok_version = '1.18.46'
     kordamp_jandex_version = '2.3.0'
@@ -186,6 +187,8 @@ configure(subprojects.findAll {
             c.implementation 'io.smallrye.reactive:mutiny:3.1.0'
             c.implementation 'com.google.googlejavaformat:google-java-format:1.28.0'
 
+            c.api 'org.apache.fory:fory-core:' + fory_version
+
             c.runtimeOnly 'jakarta.servlet:jakarta.servlet-api:6.1.0'
             c.implementation 'jakarta.enterprise:jakarta.enterprise.cdi-api:4.1.0'
 
@@ -290,6 +293,8 @@ configure(subprojects.findAll {
         knownModule('com.graphql-java:graphql-java-extended-scalars', 'com.graphqljava.extendedscalars')
         knownModule('org.yaml:snakeyaml', 'org.yaml.snakeyaml')
         knownModule('com.google.googlejavaformat:google-java-format', 'com.google.googlejavaformat')
+
+        module('org.apache.fory:fory-core', 'org.apache.fory.core')
 
         knownModule('com.flipkart.krystal:vajram-java-sdk', 'flipkart.krystal.vajram')
         knownModule('com.flipkart.krystal:krystal-codegen-common', 'flipkart.krystal.codegen.common')
