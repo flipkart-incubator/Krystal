@@ -1,15 +1,18 @@
 package com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.logic;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
+import static java.util.Objects.requireNonNullElseGet;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.annos.InvocableOutsideProcess;
+import com.flipkart.krystal.lattice.core.di.ByContentType;
 import com.flipkart.krystal.lattice.ext.rest.api.Path;
 import com.flipkart.krystal.lattice.ext.rest.api.PathParam;
 import com.flipkart.krystal.lattice.ext.rest.api.QueryParam;
 import com.flipkart.krystal.lattice.ext.rest.api.methods.GET;
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.JsonResponse;
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.JsonResponse_Immut;
+import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.JsonResponse_ImmutJson;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -43,7 +46,7 @@ public abstract class RestGetMappingLatticeSample extends ComputeVajramDef<JsonR
 
   interface _InternalFacets {
     @Inject
-    @IfAbsent(FAIL)
+    @ByContentType
     JsonResponse_Immut.Builder responseBuilder();
 
     @Inject
@@ -57,8 +60,8 @@ public abstract class RestGetMappingLatticeSample extends ComputeVajramDef<JsonR
       @Nullable String name,
       @Nullable String age,
       UriInfo uriInfo,
-      JsonResponse_Immut.Builder responseBuilder) {
-    return responseBuilder
+      JsonResponse_Immut.@Nullable Builder responseBuilder) {
+    return requireNonNullElseGet(responseBuilder, JsonResponse_ImmutJson::_builder)
         .path(fullPath)
         .qp_name(name)
         .qp_age(age)

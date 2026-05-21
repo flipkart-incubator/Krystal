@@ -27,8 +27,6 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
  * every vajram-backed endpoint via HTTP, and let the daemon server thread die with the forked test
  * JVM. Run with {@code ./gradlew
  * :lattice:samples:rest:json:quarkus:rest-json-quarkus-lattice-sample:test -PunsafeCompile=true}.
- * The build is configured with {@code forkEvery = 1} so each test class gets a fresh JVM, isolating
- * Quarkus state.
  */
 @TestInstance(Lifecycle.PER_CLASS)
 class QuarkusRestEndpointsE2eTest {

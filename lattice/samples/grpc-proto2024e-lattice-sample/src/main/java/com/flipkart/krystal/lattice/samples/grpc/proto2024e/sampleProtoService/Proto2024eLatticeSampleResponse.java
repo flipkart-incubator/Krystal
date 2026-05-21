@@ -18,7 +18,7 @@ import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Response model for {@link Proto2024eLatticeSample} */
-@ModelRoot(type = {RESPONSE})
+@ModelRoot(type = RESPONSE)
 @SupportedModelProtocol(PlainJavaObject.class)
 @SupportedModelProtocol(value = Protobuf2024e.class, isDefault = true)
 public interface Proto2024eLatticeSampleResponse extends Model {

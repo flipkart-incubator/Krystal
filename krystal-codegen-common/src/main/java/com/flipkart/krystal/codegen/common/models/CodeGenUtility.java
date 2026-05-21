@@ -1222,8 +1222,7 @@ public class CodeGenUtility {
    * {@code @SupportedModelProtocol} annotations on the given element (the one with {@code isDefault
    * = true}). Returns {@code null} if no default is declared.
    */
-  public @org.checkerframework.checker.nullness.qual.Nullable TypeElement
-      getDefaultProtocolTypeElement(Element element) {
+  public @Nullable TypeElement getDefaultProtocolTypeElement(Element element) {
     SupportedModelProtocol[] protocols = element.getAnnotationsByType(SupportedModelProtocol.class);
     for (SupportedModelProtocol protocol : protocols) {
       if (protocol.isDefault()) {

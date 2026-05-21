@@ -50,10 +50,6 @@ dependencies {
     testImplementation 'org.assertj:assertj-core'
 }
 
-test {
-//    forkEvery = 1
-}
-
 extraJavaModuleInfo {
     failOnMissingModuleInfo = false
 }

@@ -1,9 +1,11 @@
 package com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.logic;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
+import static java.util.Objects.requireNonNullElseGet;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.annos.InvocableOutsideProcess;
+import com.flipkart.krystal.lattice.core.di.ByContentType;
 import com.flipkart.krystal.lattice.ext.rest.api.Body;
 import com.flipkart.krystal.lattice.ext.rest.api.Path;
 import com.flipkart.krystal.lattice.ext.rest.api.PathParam;
@@ -11,11 +13,13 @@ import com.flipkart.krystal.lattice.ext.rest.api.methods.POST;
 import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.models.JsonRequest;
 import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.models.JsonResponse;
 import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.models.JsonResponse_Immut;
+import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.models.JsonResponse_ImmutJson;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
 import jakarta.inject.Inject;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A sample vajram to demonstrate integration between rest and vajrams. This vajram can be invoked
@@ -52,7 +56,7 @@ public abstract class RestPostComplexPathMatching extends ComputeVajramDef<JsonR
 
   interface _InternalFacets {
     @Inject
-    @IfAbsent(FAIL)
+    @ByContentType
     JsonResponse_Immut.Builder responseBuilder();
   }
 
@@ -63,8 +67,8 @@ public abstract class RestPostComplexPathMatching extends ComputeVajramDef<JsonR
       String name,
       String threePaths,
       int id,
-      JsonResponse_Immut.Builder responseBuilder) {
-    return responseBuilder
+      JsonResponse_Immut.@Nullable Builder responseBuilder) {
+    return requireNonNullElseGet(responseBuilder, JsonResponse_ImmutJson::_builder)
         .string(
             """
               $$ context: %s $$

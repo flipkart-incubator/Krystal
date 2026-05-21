@@ -10,6 +10,7 @@ import com.flipkart.krystal.lattice.codegen.spi.di.Binding;
 import com.flipkart.krystal.lattice.codegen.spi.di.BindingsContainer;
 import com.flipkart.krystal.lattice.codegen.spi.di.BindingsProvider;
 import com.flipkart.krystal.lattice.codegen.spi.di.ProviderMethod;
+import com.flipkart.krystal.lattice.core.di.ByContentType;
 import com.flipkart.krystal.lattice.core.headers.Header;
 import com.flipkart.krystal.lattice.core.headers.StandardHeaderNames;
 import com.flipkart.krystal.model.Model;
@@ -93,53 +94,60 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
           ClassName.get(immutClassName.packageName(), immutClassName.simpleName(), "Builder");
       TypeElement defaultSerializationProtocol =
           util.codegenUtil().getDefaultProtocolTypeElement(responseElement);
+      List<CodeBlock> providingLogicBlocks = new ArrayList<>();
       if (defaultSerializationProtocol == null) {
-        throw util.codegenUtil()
-            .errorAndThrow(
+        util.codegenUtil()
+            .note(
                 "Could not determine default Serialization protocol for response type "
                     + responseElement
-                    + ". Add isDefault=true to one of its @SupportedModelProtocol annotations.",
+                    + ". Add isDefault=true to one of its @SupportedModelProtocol annotations if needed.",
                 responseElement);
-      }
-      List<CodeBlock> providingLogics = new ArrayList<>();
-      if (!supportedModelProtocolElems.contains(defaultSerializationProtocol)) {
-        throw util.codegenUtil()
-            .errorAndThrow(
-                "Response type "
-                    + responseElement
-                    + " of vajram(s): "
-                    + responseToVajramsMapping.get(responseCanonicalName)
-                    + " does not support the default serialization protocol "
-                    + defaultSerializationProtocol,
-                responseElement);
+        providingLogicBlocks.add(
+            CodeBlock.of(
+"""
+    var acceptHeaderValues = acceptHeader != null ? new $T<>(acceptHeader.values()) : $T.of();
+""",
+                LinkedHashSet.class,
+                Set.class));
       } else {
+        if (!supportedModelProtocolElems.contains(defaultSerializationProtocol)) {
+          throw util.codegenUtil()
+              .errorAndThrow(
+                  "Response type "
+                      + responseElement
+                      + " of vajram(s): "
+                      + responseToVajramsMapping.get(responseCanonicalName)
+                      + " does not support the default serialization protocol "
+                      + defaultSerializationProtocol,
+                  responseElement);
+        }
         ModelProtocolConfig defaultConfig =
             configs.get(defaultSerializationProtocol.getQualifiedName().toString());
         if (defaultConfig == null) {
           throw util.codegenUtil()
               .errorAndThrow(
                   """
-              Unrecognized Serde protocol: %s. \
-              Please check if the relevant protocol \
-              specific libraries are added to the annotationProcessor \
-              classpath of the project."""
+            Unrecognized Serde protocol: %s. \
+            Please check if the relevant protocol \
+            specific libraries are added to the annotationProcessor \
+            classpath of the project."""
                       .formatted(defaultSerializationProtocol),
                   context.latticeAppTypeElement());
         }
 
         ClassName defaultModelBuilderName =
             util.codegenUtil().getImmutClassName(responseElement, defaultConfig.modelProtocol());
-        providingLogics.add(
+        providingLogicBlocks.add(
             CodeBlock.of(
                 """
-                if (null == acceptHeader || acceptHeader.values().isEmpty()){
-                  return $T._builder();
-                }
-                var acceptHeaderValues = new $T<>(acceptHeader.values());
-                if (acceptHeaderValues.contains("*/*")){
-                  return $T._builder();
-                }
-                """,
+              if (null == acceptHeader || acceptHeader.values().isEmpty()){
+                return $T._builder();
+              }
+              var acceptHeaderValues = new $T<>(acceptHeader.values());
+              if (acceptHeaderValues.contains("*/*")){
+                return $T._builder();
+              }
+              """,
                 defaultModelBuilderName,
                 LinkedHashSet.class,
                 defaultModelBuilderName));
@@ -164,23 +172,24 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
           continue;
         }
         configs.put(requireNonNull(serdeProtocol.getClass().getCanonicalName()), config);
-        providingLogics.add(
+        providingLogicBlocks.add(
             CodeBlock.of(
                 """
                 if(acceptHeaderValues.contains($S)) {
                   return $T._builder();
-                }""",
+                } else \
+                """,
                 serdeProtocol.defaultContentType(),
                 util.codegenUtil().getImmutClassName(responseElement, serdeProtocol)));
       }
-      providingLogics.add(
+      providingLogicBlocks.add(
           CodeBlock.of(
               """
               {
                 throw new $T($S + acceptHeader.values());
               }
               """,
-              IllegalStateException.class,
+              IllegalArgumentException.class,
               "Response type "
                   + responseCanonicalName
                   + " of vajrams: "
@@ -203,7 +212,8 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
                                       .build()),
                           "acceptHeader")
                       .build()),
-              providingLogics.stream().collect(CodeBlock.joining(" else ")),
+              providingLogicBlocks.stream().collect(CodeBlock.joining(" ")),
+              List.of(AnnotationSpec.builder(ByContentType.class).build()),
               null));
     }
 

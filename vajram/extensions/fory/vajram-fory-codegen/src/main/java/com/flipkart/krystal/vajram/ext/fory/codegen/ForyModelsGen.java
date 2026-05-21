@@ -222,7 +222,7 @@ final class ForyModelsGen implements CodeGenerator {
         .addMethods(methods)
         .addType(builderClass)
         .addType(
-            TypeSpec.classBuilder("_ForyImmutClassProvider2")
+            TypeSpec.classBuilder("_ForyImmutClassProvider")
                 .addAnnotation(
                     AnnotationSpec.builder(AutoService.class)
                         .addMember("value", "$T.class", ForyClassProvider.class)

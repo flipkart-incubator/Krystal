@@ -4,10 +4,12 @@ import static com.flipkart.krystal.datatypes.Trilean.FALSE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
+import static java.util.Objects.requireNonNullElseGet;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.annos.InvocableOutsideProcess;
 import com.flipkart.krystal.data.MutatesState;
+import com.flipkart.krystal.lattice.core.di.ByContentType;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocol;
@@ -73,9 +75,7 @@ public abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3Lattice
   }
 
   static class _InternalFacets {
-    @Inject
-    @IfAbsent(FAIL)
-    Proto3LatticeSampleResponse_Immut.Builder responseBuilder;
+    @Inject @ByContentType Proto3LatticeSampleResponse_Immut.Builder responseBuilder;
   }
 
   @Output
@@ -88,8 +88,8 @@ public abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3Lattice
       Long mandatoryLongInput,
       @Nullable ByteArray optionalByteString,
       ByteArray defaultByteString,
-      Proto3LatticeSampleResponse_Immut.Builder responseBuilder) {
-    return responseBuilder
+      Proto3LatticeSampleResponse_Immut.@Nullable Builder responseBuilder) {
+    return requireNonNullElseGet(responseBuilder, Proto3LatticeSampleResponse_ImmutProto3::_builder)
         .string(
             """
               Ding Ding Ding

@@ -10,7 +10,6 @@ import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.vajram.fory.Fory;
-import com.flipkart.krystal.vajram.json.Json;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -18,7 +17,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 @ModelRoot(type = RESPONSE, pure = false)
 @SupportedModelProtocol(PlainJavaObject.class)
-@SupportedModelProtocol(value = Json.class, isDefault = true)
 @SupportedModelProtocol(Fory.class)
 public interface ForyResponse extends Model {
 

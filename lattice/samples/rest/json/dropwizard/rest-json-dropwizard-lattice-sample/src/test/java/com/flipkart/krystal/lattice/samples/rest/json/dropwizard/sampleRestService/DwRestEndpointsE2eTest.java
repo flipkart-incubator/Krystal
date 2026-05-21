@@ -24,8 +24,7 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
  * exercise every vajram-backed endpoint via HTTP, and let the daemon server thread die with the
  * forked test JVM. Run with {@code ./gradlew
  * :lattice:samples:rest:json:dropwizard:rest-json-dropwizard-lattice-sample:test
- * -PunsafeCompile=true}. The build is configured with {@code forkEvery = 1} so each test class gets
- * a fresh JVM, isolating Guice/Jetty state.
+ * -PunsafeCompile=true}.
  */
 @TestInstance(Lifecycle.PER_CLASS)
 class DwRestEndpointsE2eTest {

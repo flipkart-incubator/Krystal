@@ -27,7 +27,6 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
  * End-to-end tests that boot the Quarkus REST server on port 18083, exercise Fory-backed endpoints
  * via HTTP, and verify serialization/deserialization round-trips. Run with {@code ./gradlew
  * :lattice:samples:rest:fory:quarkus:rest-fory-quarkus-lattice-sample:test -PunsafeCompile=true}.
- * The build is configured with {@code forkEvery = 1} so each test class gets a fresh JVM.
  */
 @TestInstance(Lifecycle.PER_CLASS)
 class ForyQuarkusE2eTest {
