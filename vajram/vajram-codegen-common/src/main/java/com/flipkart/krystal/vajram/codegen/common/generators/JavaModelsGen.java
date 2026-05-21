@@ -41,7 +41,7 @@ import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.ModelRoot.ModelType;
 import com.flipkart.krystal.model.ModelUtils;
 import com.flipkart.krystal.model.PlainJavaObject;
-import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.model.list.ModelsListBuilder;
 import com.flipkart.krystal.model.list.ModelsListView;
 import com.flipkart.krystal.model.list.UnmodifiableModelsList;
@@ -120,8 +120,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *       above. This Builder interface only extends {@link Builder}.
  * </ul>
  *
- * In addition, if the Model Root has the {@link SupportedModelProtocols} annotation and {@link
- * SupportedModelProtocols#value()} contains {@link PlainJavaObject}, then this generator also
+ * In addition, if the Model Root has the {@link SupportedModelProtocol} annotation and {@link
+ * SupportedModelProtocol#value()} contains {@link PlainJavaObject}, then this generator also
  * generates the following classes in the same package as the model root:
  *
  * <ul>
@@ -377,13 +377,12 @@ public final class JavaModelsGen implements CodeGenerator {
    */
   private void validateNoEnumMapKeysForSerdeProtocols(
       TypeElement modelRootType, List<ExecutableElement> modelMethods) {
-    SupportedModelProtocols supportedModelProtocols =
-        modelRootType.getAnnotation(SupportedModelProtocols.class);
-    if (supportedModelProtocols == null) {
+    List<TypeElement> protocolElems = util.getSupportedProtocolTypeElements(modelRootType);
+    if (protocolElems.isEmpty()) {
       return;
     }
     boolean hasSerdeProtocol =
-        util.getTypeElemsFromAnnotationMember(supportedModelProtocols::value).stream()
+        protocolElems.stream()
             .anyMatch(tm -> util.isRawAssignable(tm.asType(), SerdeProtocol.class));
     if (!hasSerdeProtocol) {
       return;

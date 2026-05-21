@@ -16,7 +16,6 @@ import com.flipkart.krystal.lattice.codegen.spi.LatticeCodeGeneratorProvider;
 import com.flipkart.krystal.lattice.ext.mcp.McpServerDopant;
 import com.flipkart.krystal.lattice.ext.mcp.api.McpServer;
 import com.flipkart.krystal.model.Model;
-import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.vajram.codegen.common.models.FacetGenModel;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.json.Json;
@@ -42,7 +41,6 @@ import jakarta.ws.rs.core.UriBuilder;
 import java.net.URI;
 import java.util.List;
 import javax.lang.model.element.Modifier;
-import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
@@ -342,17 +340,6 @@ return $T.createFrom()
       return false;
     }
 
-    SupportedModelProtocols supportedModelProtocols =
-        responseTypeElement.getAnnotation(SupportedModelProtocols.class);
-
-    if (supportedModelProtocols == null) {
-      return false;
-    }
-
-    return util.getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
-        .map(typeUtils::asElement)
-        .filter(elem -> elem instanceof QualifiedNameable)
-        .map(element -> requireNonNull((QualifiedNameable) element).getQualifiedName().toString())
-        .anyMatch(Json.class.getCanonicalName()::equals);
+    return util.typeExplicitlySupportsProtocol(responseTypeElement, Json.class);
   }
 }

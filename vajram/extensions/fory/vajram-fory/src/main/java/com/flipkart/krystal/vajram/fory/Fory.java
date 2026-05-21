@@ -14,7 +14,7 @@ import org.apache.fory.config.Language;
  * runtime. This makes Fory ideal for same-language high-throughput pipelines where schema evolution
  * is managed at the application level.
  *
- * <p>Usage: annotate a {@code @ModelRoot} with {@code @SupportedModelProtocols(Fory.class)} and the
+ * <p>Usage: annotate a {@code @ModelRoot} with {@code @SupportedModelProtocol(Fory.class)} and the
  * Krystal codegen will produce an {@code _ImmutFory} wrapper whose {@code _serialize()} /
  * constructor-from-bytes round-trip through this protocol.
  */
@@ -29,7 +29,7 @@ public final class Fory implements SerdeProtocol {
           .requireClassRegistration(false)
           .registerGuavaTypes(true)
           .buildThreadSafeFory();
-  
+
   public static final Fory FORY = new Fory();
 
   /**

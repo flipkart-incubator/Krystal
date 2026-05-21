@@ -29,7 +29,6 @@ import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
-import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.model.list.ModelsListBuilder;
 import com.flipkart.krystal.model.map.ModelsMapBuilder;
 import com.flipkart.krystal.serial.SerializableModel;
@@ -531,15 +530,6 @@ this.$L = $L == null
    * @return true if JSON is supported, false otherwise
    */
   private boolean isJsonSerdeSupported() {
-    TypeElement modelRootType = codeGenContext.modelRootType();
-    SupportedModelProtocols supportedModelProtocols =
-        modelRootType.getAnnotation(SupportedModelProtocols.class);
-    if (supportedModelProtocols == null) {
-      return false;
-    }
-    // Check if JSON is mentioned in the annotation value
-    return util.getTypeElemsFromAnnotationMember(supportedModelProtocols::value).stream()
-        .map(element -> element.getQualifiedName().toString())
-        .anyMatch(Json.class.getCanonicalName()::equals);
+    return util.typeExplicitlySupportsProtocol(codeGenContext.modelRootType(), Json.class);
   }
 }

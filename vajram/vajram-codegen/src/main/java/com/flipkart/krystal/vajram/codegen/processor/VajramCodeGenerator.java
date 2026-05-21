@@ -88,7 +88,7 @@ import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.ModelRoot.ModelType;
 import com.flipkart.krystal.model.PlainJavaObject;
-import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.serial.ReservedSerialIds;
 import com.flipkart.krystal.serial.SerialId;
 import com.flipkart.krystal.vajram.IOVajramDef;
@@ -311,7 +311,7 @@ public class VajramCodeGenerator implements CodeGenerator {
                     ? TraitRequestRoot.class
                     : VajramRequestRoot.class)
             .addAnnotation(buildReqModelRootAnnotation())
-            .addAnnotation(buildReqSupportedModelProtocols())
+            .addAnnotations(buildReqSupportedModelProtocols())
             .addAnnotations(getModelClassAnnotations())
             .addSuperinterfaces(currentVajramInfo.requestInterfaceSuperTypes());
 
@@ -370,28 +370,31 @@ public class VajramCodeGenerator implements CodeGenerator {
         .build();
   }
 
-  private AnnotationSpec buildReqSupportedModelProtocols() {
+  private List<AnnotationSpec> buildReqSupportedModelProtocols() {
     Element protocolSource = getInputsAnnotationSource();
-    SupportedModelProtocols protocols = protocolSource.getAnnotation(SupportedModelProtocols.class);
-    AnnotationSpec.Builder builder = AnnotationSpec.builder(SupportedModelProtocols.class);
-    builder.addMember("value", "$T.class", PlainJavaObject.class);
-    if (protocols != null) {
-      util.getTypesFromAnnotationMember(protocols::value).stream()
-          .filter(
-              tm -> {
-                Element elem = util.processingEnv().getTypeUtils().asElement(tm);
-                return elem instanceof QualifiedNameable qn
-                    && !qn.getQualifiedName()
-                        .contentEquals(PlainJavaObject.class.getCanonicalName());
-              })
-          .forEach(tm -> builder.addMember("value", "$T.class", TypeName.get(tm)));
+    SupportedModelProtocol[] protocols =
+        protocolSource.getAnnotationsByType(SupportedModelProtocol.class);
+    List<AnnotationSpec> annotations = new java.util.ArrayList<>();
+    annotations.add(
+        AnnotationSpec.builder(SupportedModelProtocol.class)
+            .addMember("value", "$T.class", PlainJavaObject.class)
+            .build());
+    for (SupportedModelProtocol protocol : protocols) {
+      javax.lang.model.element.TypeElement te =
+          util.getTypeElemFromAnnotationMember(protocol::value);
+      if (!te.getQualifiedName().contentEquals(PlainJavaObject.class.getCanonicalName())) {
+        annotations.add(
+            AnnotationSpec.builder(SupportedModelProtocol.class)
+                .addMember("value", "$T.class", TypeName.get(te.asType()))
+                .build());
+      }
     }
-    return builder.build();
+    return annotations;
   }
 
   /**
    * Returns the {@code _Inputs} element from which request-specific annotations like {@link
-   * SupportedModelProtocols} and {@link ReservedSerialIds} should be read. If the {@code _Inputs}
+   * SupportedModelProtocol} and {@link ReservedSerialIds} should be read. If the {@code _Inputs}
    * element is not present, returns the vajram class element as a fallback (which should not have
    * these annotations).
    */
@@ -2538,7 +2541,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                     .addMember("pure", "false")
                     .build())
             .addAnnotation(
-                AnnotationSpec.builder(SupportedModelProtocols.class)
+                AnnotationSpec.builder(SupportedModelProtocol.class)
                     .addMember("value", "$T.class", PlainJavaObject.class)
                     .build());
 

@@ -10,7 +10,7 @@ import com.flipkart.krystal.annos.InvocableOutsideProcess;
 import com.flipkart.krystal.data.MutatesState;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.PlainJavaObject;
-import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.model.array.ByteArray;
 import com.flipkart.krystal.serial.ReservedSerialIds;
 import com.flipkart.krystal.serial.SerialId;
@@ -34,7 +34,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public abstract class Proto2024eLatticeSample
     extends ComputeVajramDef<Proto2024eLatticeSampleResponse> {
 
-  @SupportedModelProtocols({Protobuf2024e.class, PlainJavaObject.class})
+  @SupportedModelProtocol(Protobuf2024e.class)
+  @SupportedModelProtocol(PlainJavaObject.class)
   @ReservedSerialIds(8)
   interface _Inputs {
     @SerialId(1)

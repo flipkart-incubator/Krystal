@@ -8,11 +8,12 @@ import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.PlainJavaObject;
-import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.vajram.json.Json;
 
 @ModelRoot(type = {REQUEST, RESPONSE})
-@SupportedModelProtocols({PlainJavaObject.class, Json.class})
+@SupportedModelProtocol(PlainJavaObject.class)
+@SupportedModelProtocol(Json.class)
 public interface InnerData extends Model {
   @IfAbsent(FAIL)
   String value();

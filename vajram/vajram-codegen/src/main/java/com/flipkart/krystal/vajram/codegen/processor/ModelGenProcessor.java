@@ -3,7 +3,6 @@ package com.flipkart.krystal.vajram.codegen.processor;
 import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
 import static com.flipkart.krystal.codegen.common.models.Constants.MODULE_ROOT_PATH_KEY;
 import static java.lang.System.lineSeparator;
-import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toSet;
 import static java.util.stream.StreamSupport.stream;
@@ -15,7 +14,7 @@ import com.flipkart.krystal.codegen.common.spi.ModelsCodeGeneratorProvider;
 import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.PlainJavaObject;
-import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.google.auto.service.AutoService;
 import com.google.common.base.Throwables;
 import java.util.List;
@@ -29,7 +28,6 @@ import javax.annotation.processing.SupportedOptions;
 import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.ElementKind;
-import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
 
 @SupportedAnnotationTypes("com.flipkart.krystal.model.ModelRoot")
@@ -93,16 +91,14 @@ public final class ModelGenProcessor extends AbstractKrystalAnnoProcessor {
 
   private Set<Class<? extends ModelProtocol>> getSupportedModelProtocols(
       TypeElement modelRootType, CodeGenUtility util) {
-    SupportedModelProtocols supportedModelProtocols =
-        modelRootType.getAnnotation(SupportedModelProtocols.class);
-    if (supportedModelProtocols == null) {
+    SupportedModelProtocol[] protocols =
+        modelRootType.getAnnotationsByType(SupportedModelProtocol.class);
+    if (protocols.length == 0) {
       return Set.of(PlainJavaObject.class);
     }
-    // Check if JSON is mentioned in the annotation value
-    return util.getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
-        .map(typeMirror -> util.processingEnv().getTypeUtils().asElement(typeMirror))
-        .filter(elem -> elem instanceof QualifiedNameable)
-        .map(element -> requireNonNull((QualifiedNameable) element).getQualifiedName().toString())
+    return java.util.Arrays.stream(protocols)
+        .map(p -> util.getTypeElemFromAnnotationMember(p::value))
+        .map(element -> element.getQualifiedName().toString())
         .map(
             s -> {
               try {

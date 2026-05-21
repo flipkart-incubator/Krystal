@@ -8,14 +8,14 @@ import static com.flipkart.krystal.model.ModelRoot.ModelType.RESPONSE;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
-import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.serial.SerialId;
 import com.flipkart.krystal.vajram.protobuf2024e.Protobuf2024e;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @ModelRoot(type = RESPONSE, builderExtendsModelRoot = true)
-@SupportedModelProtocols(Protobuf2024e.class)
+@SupportedModelProtocol(Protobuf2024e.class)
 public interface SubMessage extends Model {
   @SerialId(1)
   @IfAbsent(FAIL)

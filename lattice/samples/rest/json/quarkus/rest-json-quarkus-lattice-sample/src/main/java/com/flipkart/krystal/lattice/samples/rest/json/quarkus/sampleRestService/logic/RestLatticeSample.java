@@ -10,7 +10,7 @@ import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.JsonResponse_Immut;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.PlainJavaObject;
-import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.model.array.ByteArray;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -29,7 +29,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @InvocableOutsideProcess
 @Vajram
 public abstract class RestLatticeSample extends ComputeVajramDef<JsonResponse> {
-  @SupportedModelProtocols({Json.class, PlainJavaObject.class})
+  @SupportedModelProtocol(Json.class)
+  @SupportedModelProtocol(PlainJavaObject.class)
   interface _Inputs {
 
     int optionalInput();

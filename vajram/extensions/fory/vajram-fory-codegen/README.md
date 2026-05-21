@@ -6,13 +6,13 @@
 
 This module plugs into the Krystal codegen pipeline via the
 `ModelsCodeGeneratorProvider` SPI.  When the annotation processor detects a
-`@ModelRoot` annotated with `@SupportedModelProtocols(Fory.class)`, this
+`@ModelRoot` annotated with `@SupportedModelProtocol(Fory.class)`, this
 generator produces an `_ImmutFory` wrapper class for that model.
 
 ## Architecture
 
 ```
-@ModelRoot + @SupportedModelProtocols(Fory.class)
+@ModelRoot + @SupportedModelProtocol(Fory.class)
         │
         ▼
   ForyModelGenProvider  (SPI — discovered via AutoService)

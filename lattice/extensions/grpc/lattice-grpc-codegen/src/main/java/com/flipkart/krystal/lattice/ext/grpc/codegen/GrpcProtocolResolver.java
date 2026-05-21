@@ -67,7 +67,7 @@ final class GrpcProtocolResolver {
       codegenUtil.error(
           "Could not determine a common ProtobufProtocol across all rpc vajram response models. "
               + "All response models in a @GrpcServer must declare exactly one common "
-              + "ProtobufProtocol (e.g. Protobuf3 or Protobuf2024e) in @SupportedModelProtocols.",
+              + "ProtobufProtocol (e.g. Protobuf3 or Protobuf2024e) in @SupportedModelProtocol.",
           errorAnchor);
       return null;
     }

@@ -156,7 +156,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
                   .error(
                       "Response type of a vajram added to a gRPC service must either be a '"
                           + Model.class
-                          + "' with annotation @SupportedModelProtocols({..., <a ProtobufProtocol>.class, ...}) or it must be a "
+                          + "' with annotation @SupportedModelProtocol(<a ProtobufProtocol>.class) or it must be a "
                           + MessageLite.class,
                       vajramInfoLite.vajramOrReqClass());
             }
@@ -234,7 +234,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
     }
 
     /**
-     * Returns the {@link ProtobufProtocol} declared in the given model's @SupportedModelProtocols.
+     * Returns the {@link ProtobufProtocol} declared in the given model's @SupportedModelProtocol.
      * Errors out if zero or multiple are declared - a grpc-exposed model must commit to exactly one
      * protobuf protocol so the dopant can wire request/response types unambiguously.
      */
@@ -251,7 +251,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
                 "Model '"
                     + modelType.getQualifiedName()
                     + "' used in a gRPC service must declare a ProtobufProtocol "
-                    + "(e.g. Protobuf3 or Protobuf2024e) in @SupportedModelProtocols",
+                    + "(e.g. Protobuf3 or Protobuf2024e) in @SupportedModelProtocol",
                 vajramInfoLite.vajramOrReqClass());
       } else if (matches.size() > 1) {
         throw util.codegenUtil()
@@ -260,7 +260,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
                     + modelType.getQualifiedName()
                     + "' declares multiple ProtobufProtocols ("
                     + matches.stream().map(p -> p.getClass().getSimpleName()).toList()
-                    + ") in @SupportedModelProtocols; grpc-exposed models must use exactly one",
+                    + ") in @SupportedModelProtocol; grpc-exposed models must use exactly one",
                 vajramInfoLite.vajramOrReqClass());
       } else {
         return matches.get(0);

@@ -3,7 +3,7 @@ package com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestServ
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.annos.InvocableOutsideProcess;
 import com.flipkart.krystal.model.PlainJavaObject;
-import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
@@ -23,7 +23,8 @@ import org.glassfish.jersey.server.ChunkedOutput;
 @Vajram
 @Produces(MediaType.TEXT_PLAIN)
 public abstract class RestStreamingSample extends ComputeVajramDef<ChunkedOutput<String>> {
-  @SupportedModelProtocols({Json.class, PlainJavaObject.class})
+  @SupportedModelProtocol(Json.class)
+  @SupportedModelProtocol(PlainJavaObject.class)
   interface _Inputs {}
 
   private static int count;

@@ -9,7 +9,7 @@ import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.PlainJavaObject;
-import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.serial.SerialId;
 import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
 import java.util.List;
@@ -19,7 +19,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Response model for {@link Proto3LatticeSample} */
 @ModelRoot(type = {RESPONSE})
-@SupportedModelProtocols({PlainJavaObject.class, Protobuf3.class})
+@SupportedModelProtocol(PlainJavaObject.class)
+@SupportedModelProtocol(value = Protobuf3.class, isDefault = true)
 public interface Proto3LatticeSampleResponse extends Model {
   @SerialId(1)
   @IfAbsent(FAIL)
