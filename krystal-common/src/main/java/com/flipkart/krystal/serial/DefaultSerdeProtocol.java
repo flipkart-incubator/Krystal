@@ -12,6 +12,10 @@ import java.lang.annotation.Target;
  * not specified any protocol explicitly (using Http Accept header, for example). If a ModelRoot
  * does not specify a DefaultSerdeProtocol, then handling defaulting behaviour is left the
  * application logic which can chose to default or even throw an error.
+ *
+ * <p>Note: Changing the DefaultSerdeProtocol of a ModelRoot can be a backward-incompatible change
+ * since client who were receiving data in one format will suddenly start receiving data in a
+ * different format. So such a change should be done with extreme caution.
  */
 @Target(TYPE)
 @Retention(CLASS)

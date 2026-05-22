@@ -17,6 +17,7 @@ import com.flipkart.krystal.lattice.ext.rest.dropwizard.DropwizardServerDopantSp
 import com.flipkart.krystal.lattice.krystex.KrystexDopantSpec;
 import com.flipkart.krystal.lattice.krystex.KrystexDopantSpec.KrystexDopantSpecBuilder;
 import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.logic.RestGetMappingLatticeSample;
+import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.logic.RestGetMappingLatticeSample2;
 import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.logic.RestHeadMappingLatticeSample;
 import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.logic.RestLatticeSample;
 import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.logic.RestPostComplexPathMatching;
@@ -36,7 +37,8 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
       RestPostMappingLatticeSample.class,
       RestPostComplexPathMatching.class,
       RestHeadMappingLatticeSample.class,
-      RestStreamingSample.class
+      RestStreamingSample.class,
+      RestGetMappingLatticeSample2.class,
     })
 public abstract class RestfulDropWizardApp extends LatticeApplication {
 
