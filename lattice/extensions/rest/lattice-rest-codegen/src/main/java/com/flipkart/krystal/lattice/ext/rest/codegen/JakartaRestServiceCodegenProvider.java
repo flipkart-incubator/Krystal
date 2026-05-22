@@ -25,7 +25,6 @@ import com.flipkart.krystal.lattice.ext.rest.api.PathParam;
 import com.flipkart.krystal.lattice.ext.rest.api.QueryParam;
 import com.flipkart.krystal.lattice.ext.rest.api.methods.RestMethod;
 import com.flipkart.krystal.model.ModelProtocol;
-import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.serial.SerdeConfig;
 import com.flipkart.krystal.serial.SerdeProtocol;
 import com.flipkart.krystal.vajram.codegen.common.models.FacetGenModel;
@@ -357,51 +356,45 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
           // body into the vajram request object
           !explicitPath) {
 
-        SupportedModelProtocols supportedModelProtocols;
+        Element protocolSource;
         Map<Element, SerdeConfig> serdeConfigsMap = new HashMap<>();
         if (bodyFacet != null) {
           Map<@NonNull Element, SerdeConfig> collect =
               Arrays.stream(bodyFacet.facetElement().getAnnotationsByType(SerdeConfig.class))
                   .collect(toMap(s -> util.getTypeElemFromAnnotationMember(s::protocol), s -> s));
           serdeConfigsMap.putAll(collect);
-          Element bodyTypeElem =
+          protocolSource =
               requireNonNull(
                   util.processingEnv()
                       .getTypeUtils()
                       .asElement(bodyFacet.dataType().typeMirror(util.processingEnv())));
-          for (SerdeConfig serdeConfig : bodyTypeElem.getAnnotationsByType(SerdeConfig.class)) {
+          for (SerdeConfig serdeConfig : protocolSource.getAnnotationsByType(SerdeConfig.class)) {
             serdeConfigsMap.putIfAbsent(
                 util.getTypeElemFromAnnotationMember(serdeConfig::protocol), serdeConfig);
           }
-          supportedModelProtocols = bodyTypeElem.getAnnotation(SupportedModelProtocols.class);
         } else {
-          Element annotationSource =
+          protocolSource =
               vajramInfo.inputsElement() != null ? vajramInfo.inputsElement() : vajramElem;
-          supportedModelProtocols = annotationSource.getAnnotation(SupportedModelProtocols.class);
           Map<@NonNull Element, SerdeConfig> collect =
-              Arrays.stream(annotationSource.getAnnotationsByType(SerdeConfig.class))
+              Arrays.stream(protocolSource.getAnnotationsByType(SerdeConfig.class))
                   .collect(toMap(s -> util.getTypeElemFromAnnotationMember(s::protocol), s -> s));
           serdeConfigsMap.putAll(collect);
         }
+        List<TypeElement> allProtocolElems = util.getSupportedProtocolTypeElements(protocolSource);
         ImmutableList<TypeElement> requestSerdeProtocols = ImmutableList.of();
-        if (supportedModelProtocols == null) {
+        if (allProtocolElems.isEmpty()) {
           util.error(
               "Rest request body doesn't support any ModelProtocol.",
               bodyFacet == null ? vajramElem : bodyFacet.facetElement());
         } else {
           requestSerdeProtocols =
-              util.getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
-                  .filter(t -> util.isRawAssignable(t, SerdeProtocol.class))
-                  .<@NonNull TypeElement>map(
-                      typeMirror ->
-                          requireNonNull(
-                              (TypeElement)
-                                  util.processingEnv().getTypeUtils().asElement(typeMirror)))
+              allProtocolElems.stream()
+                  .filter(te -> util.isRawAssignable(te.asType(), SerdeProtocol.class))
                   .collect(toImmutableList());
           if (requestSerdeProtocols.isEmpty()) {
             util.error(
                 "Rest request Body facet doesn't support any SerdeProtocols. Found: "
-                    + Arrays.toString(supportedModelProtocols.value()),
+                    + allProtocolElems,
                 bodyFacet == null ? vajramElem : bodyFacet.facetElement());
           }
         }

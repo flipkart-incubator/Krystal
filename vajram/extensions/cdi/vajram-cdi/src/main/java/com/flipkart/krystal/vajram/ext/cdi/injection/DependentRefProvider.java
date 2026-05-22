@@ -15,6 +15,9 @@ final class DependentRefProvider implements CloseableProvider {
   private boolean closed;
 
   static Provider<?> newProvider(Bean<?> bean, Type type, BeanContainer beanContainer) {
+    if (bean == null) {
+      return () -> null;
+    }
     if (bean.getScope().equals(Dependent.class)) {
       // Only @Dependent beans need manual lifecycle management (calling release()/destroy())
       return new DependentRefProvider(bean, type, beanContainer);

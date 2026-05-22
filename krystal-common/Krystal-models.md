@@ -12,7 +12,7 @@ implementations, builders, and serde wrappers.
 ```java
 
 @ModelRoot(type = RESPONSE)
-@SupportedModelProtocols({PlainJavaObject.class, Protobuf3.class})
+@SupportedModelProtocol({PlainJavaObject.class, Protobuf3.class})
 public interface OrderResponse extends Model {
 
   @SerialId(1)
@@ -145,7 +145,7 @@ For fields whose value type is a nested model root (not an enum), the builder al
 
 #### 3. `<ModelRoot>_ImmutPojo` — The POJO Implementation
 
-Generated only if `PlainJavaObject` is explicitly listed in `@SupportedModelProtocols`.
+Generated only if `PlainJavaObject` is explicitly listed in `@SupportedModelProtocol`.
 This is a `final` class that implements `_Immut` with one field
 per accessor. It includes:
 
@@ -160,7 +160,7 @@ Its inner `Builder` class implements `_Immut.Builder`, validates `@IfAbsent` con
 ### Serde Implementations — The `FINAL` Phase
 
 During the **`FINAL`** phase, serde-specific code generators produce additional implementations
-based on the model's `@SupportedModelProtocols`:
+based on the model's `@SupportedModelProtocol`:
 
 | Protocol          | Generated class | Description                                                                                                                                                                                                                                                                          |
 |-------------------|-----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -171,12 +171,12 @@ based on the model's `@SupportedModelProtocols`:
 Each serde implementation provides its own `Builder` inner class that also implements
 `_Immut.Builder`, so all implementations share the same builder contract.
 
-### `@SupportedModelProtocols`
+### `@SupportedModelProtocol`
 
 Lists which `ModelProtocol` implementations the model supports:
 
 ```java
-@SupportedModelProtocols({PlainJavaObject.class, Json.class, Protobuf3.class})
+@SupportedModelProtocol({PlainJavaObject.class, Json.class, Protobuf3.class})
 ```
 
 - If absent or empty, only the `_Immut` interface is generated (no POJO, no serde implementations).
@@ -326,10 +326,10 @@ For a model root `MyModel`:
 |----------------------------------------------|--------|----------------------------------------------------------------|
 | `MyModel_Immut` (interface)                  | MODELS | Always                                                         |
 | `MyModel_Immut.Builder` (interface)          | MODELS | Always                                                         |
-| `MyModel_ImmutPojo` (class + inner Builder)  | MODELS | `PlainJavaObject` explicitly in `@SupportedModelProtocols`     |
-| `MyModel_ImmutJson` (class + inner Builder)  | FINAL  | `Json` in `@SupportedModelProtocols`                           |
-| `MyModel_ImmutProto` (class + inner Builder) | FINAL  | `Protobuf3` in `@SupportedModelProtocols`                      |
-| `MyModel_Proto.proto` (schema)               | FINAL  | `Protobuf3` in `@SupportedModelProtocols`                      |
+| `MyModel_ImmutPojo` (class + inner Builder)  | MODELS | `PlainJavaObject` explicitly in `@SupportedModelProtocol`     |
+| `MyModel_ImmutJson` (class + inner Builder)  | FINAL  | `Json` in `@SupportedModelProtocol`                           |
+| `MyModel_ImmutProto` (class + inner Builder) | FINAL  | `Protobuf3` in `@SupportedModelProtocol`                      |
+| `MyModel_Proto.proto` (schema)               | FINAL  | `Protobuf3` in `@SupportedModelProtocol`                      |
 
 ## Enum ModelRoots
 
@@ -341,7 +341,7 @@ annotated with `@ModelRoot` that implements the `EnumModel` marker interface.
 ```java
 
 @ModelRoot
-@SupportedModelProtocols({PlainJavaObject.class, Json.class, Protobuf3.class})
+@SupportedModelProtocol({PlainJavaObject.class, Json.class, Protobuf3.class})
 public enum Priority implements EnumModel {
   @SerialId(0) UNKNOWN,
   @SerialId(1) LOW,
@@ -390,7 +390,7 @@ Enum models can be used as fields in other `@ModelRoot` models:
 ```java
 
 @ModelRoot
-@SupportedModelProtocols({PlainJavaObject.class, Json.class, Protobuf3.class})
+@SupportedModelProtocol({PlainJavaObject.class, Json.class, Protobuf3.class})
 public interface Task extends Model {
 
   @SerialId(1)

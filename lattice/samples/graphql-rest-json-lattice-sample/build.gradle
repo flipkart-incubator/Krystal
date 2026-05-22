@@ -44,10 +44,6 @@ dependencies {
 
 }
 
-test {
-//    forkEvery = 1
-}
-
 tasks.withType(JavaCompile).configureEach {
     source(files('src/main/graphqls'))
 }

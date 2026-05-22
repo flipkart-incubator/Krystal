@@ -214,13 +214,13 @@ It defines the shape of data returned by a SELECT query — which columns to inc
 them. Each method in the selection corresponds to a column in the underlying table.
 
 To be instantiable at runtime the selection must also carry
-`@SupportedModelProtocols(PlainJavaObject.class)` so that Krystal generates a concrete `_ImmutPojo`
+`@SupportedModelProtocol(PlainJavaObject.class)` so that Krystal generates a concrete `_ImmutPojo`
 implementation.
 
 ```java
 
 @ModelRoot
-@SupportedModelProtocols(PlainJavaObject.class)
+@SupportedModelProtocol(PlainJavaObject.class)
 @Selection(from = User.class)
 public interface UserInfo extends Model {
 
@@ -275,7 +275,7 @@ condition from the `@ForeignKey` relationship between the two tables.
 ```java
 
 @ModelRoot
-@SupportedModelProtocols(PlainJavaObject.class)
+@SupportedModelProtocol(PlainJavaObject.class)
 @Selection(over = User.class)
 public interface UserNameAndOrders extends Model {
 
@@ -293,7 +293,7 @@ public interface UserNameAndOrders extends Model {
 ```java
 
 @ModelRoot
-@SupportedModelProtocols(PlainJavaObject.class)
+@SupportedModelProtocol(PlainJavaObject.class)
 @Selection(over = Order.class)
 public interface OrderWithItems extends Model {
 
@@ -308,7 +308,7 @@ public interface OrderWithItems extends Model {
 }
 
 @ModelRoot
-@SupportedModelProtocols(PlainJavaObject.class)
+@SupportedModelProtocol(PlainJavaObject.class)
 @Selection(over = User.class)
 public interface UserWithOrdersAndItems extends Model {
 
@@ -467,7 +467,7 @@ method in the interface maps to a `col = $N` positional placeholder in the gener
 ```java
 
 @ModelRoot
-@SupportedModelProtocols(PlainJavaObject.class)
+@SupportedModelProtocol(PlainJavaObject.class)
 @WHERE(inTable = User.class)
 public interface UserIdEquals extends WhereClause {
 
@@ -537,7 +537,7 @@ case, not the table.
 ```java
 
 @ModelRoot
-@SupportedModelProtocols(PlainJavaObject.class)
+@SupportedModelProtocol(PlainJavaObject.class)
 @Selection(over = User.class)
 public interface UserSummary extends Model {
 
@@ -552,7 +552,7 @@ public interface UserSummary extends Model {
 ```java
 
 @ModelRoot
-@SupportedModelProtocols(PlainJavaObject.class)
+@SupportedModelProtocol(PlainJavaObject.class)
 @Selection(over = User.class)
 public interface UserWithRecentOrders extends Model {
 
@@ -573,7 +573,7 @@ group is the norm.
 ```java
 
 @ModelRoot
-@SupportedModelProtocols(PlainJavaObject.class)
+@SupportedModelProtocol(PlainJavaObject.class)
 @WHERE(inTable = User.class)
 public interface UserIdEquals extends WhereClause {
 

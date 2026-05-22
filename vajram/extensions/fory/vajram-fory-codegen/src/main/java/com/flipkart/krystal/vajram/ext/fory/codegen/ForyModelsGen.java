@@ -22,7 +22,6 @@ import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
-import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.model.list.ModelsListBuilder;
 import com.flipkart.krystal.model.map.ModelsMapBuilder;
 import com.flipkart.krystal.serial.SerializableModel;
@@ -55,7 +54,7 @@ import org.apache.fory.ThreadSafeFory;
 
 /**
  * Code generator that produces {@code _ImmutFory} wrapper classes for models that declare Apache
- * Fory as a supported serde protocol via {@code @SupportedModelProtocols(Fory.class)}.
+ * Fory as a supported serde protocol via {@code @SupportedModelProtocol(Fory.class)}.
  *
  * <p>Generated classes follow the same lazy-deserialization pattern as the JSON module: a
  * constructor from {@code byte[]} stores the payload and defers deserialization until the first
@@ -223,7 +222,7 @@ final class ForyModelsGen implements CodeGenerator {
         .addMethods(methods)
         .addType(builderClass)
         .addType(
-            TypeSpec.classBuilder("_ForyImmutClassProvider2")
+            TypeSpec.classBuilder("_ForyImmutClassProvider")
                 .addAnnotation(
                     AnnotationSpec.builder(AutoService.class)
                         .addMember("value", "$T.class", ForyClassProvider.class)
@@ -456,14 +455,6 @@ final class ForyModelsGen implements CodeGenerator {
   }
 
   private boolean isForySerdeSupported() {
-    TypeElement modelRootType = codeGenContext.modelRootType();
-    SupportedModelProtocols supportedModelProtocols =
-        modelRootType.getAnnotation(SupportedModelProtocols.class);
-    if (supportedModelProtocols == null) {
-      return false;
-    }
-    return util.getTypeElemsFromAnnotationMember(supportedModelProtocols::value).stream()
-        .map(element -> element.getQualifiedName().toString())
-        .anyMatch(Fory.class.getCanonicalName()::equals);
+    return util.typeExplicitlySupportsProtocol(codeGenContext.modelRootType(), Fory.class);
   }
 }

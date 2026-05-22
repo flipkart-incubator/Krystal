@@ -69,7 +69,7 @@ class QuarkusA2AServerE2eTest {
       Thread.sleep(200);
     }
     throw new IllegalStateException(
-        "Embedded Quarkus A2A server did not start on port " + APP_PORT + " within 60s");
+        "Embedded Quarkus A2A server did not start on port " + APP_PORT + " within 120s");
   }
 
   @AfterAll

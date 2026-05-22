@@ -7,9 +7,15 @@ public sealed interface KrystalElement {
 
   record Trait() implements VajramRoot {}
 
-  sealed interface Facet extends KrystalElement {
-    record Dependency() implements Facet {}
-  }
+  // **************************************************//
+
+  sealed interface Facet extends KrystalElement {}
+
+  record Dependency() implements Facet {}
+
+  record Injection() implements Facet {}
+
+  // **************************************************//
 
   record Logic() implements KrystalElement {}
 }

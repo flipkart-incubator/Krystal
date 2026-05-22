@@ -12,7 +12,7 @@ and response serialization.
 
 ## What This Demonstrates
 
-1. **Model declarations** — `@SupportedModelProtocols({Fory.class, PlainJavaObject.class})`
+1. **Model declarations** — `@SupportedModelProtocol({Fory.class, PlainJavaObject.class})`
    on `@ModelRoot` interfaces triggers generation of `_ImmutFory` wrapper classes.
 2. **GET endpoint** (`ForyGetSample`) — accepts path/query params and returns
    a `ForyResponse` serialized via Fory binary.

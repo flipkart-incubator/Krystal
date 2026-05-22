@@ -8,12 +8,13 @@ import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.PlainJavaObject;
-import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.vajram.fory.Fory;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-@SupportedModelProtocols({Fory.class, PlainJavaObject.class})
+@SupportedModelProtocol(Fory.class)
+@SupportedModelProtocol(PlainJavaObject.class)
 @ModelRoot(type = {REQUEST})
 public interface ForyRequest extends Model {
 

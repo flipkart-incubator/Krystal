@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.graphql.codegen;
 
 import static com.flipkart.krystal.vajram.graphql.codegen.CodeGenConstants.RESERVED_GRAPHQL_FIELDS_PREFIX;
-import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -19,7 +18,6 @@ import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Failure;
-import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.vajram.graphql.api.errors.DefaultGraphQLErrorInfo;
 import com.flipkart.krystal.vajram.graphql.api.errors.ErrorCollector;
@@ -51,7 +49,6 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
@@ -60,7 +57,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Generates GraphQL response model implementations (e.g., Order_ImmutGQlRespJson) for entities
- * annotated with @SupportedModelProtocols(GraphQlResponseJson.class).
+ * annotated with @SupportedModelProtocol(GraphQlResponseJson.class).
  *
  * <p>These models wrap field values in {@code Errable<T>} to support partial failures in GraphQL
  * responses, and include GraphQL execution context for proper query resolution.
@@ -1388,21 +1385,10 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
       return false;
     }
 
-    // Check if the type has @SupportedModelProtocols(GraphQlResponseJson.class)
+    // Check if the type has @SupportedModelProtocol(GraphQlResponseJson.class)
     // This is a more reliable check than interface checking during code generation
-    SupportedModelProtocols supportedModelProtocols =
-        typeElement.getAnnotation(SupportedModelProtocols.class);
-    if (supportedModelProtocols != null) {
-      for (TypeMirror typeMirror :
-          util.getTypesFromAnnotationMember(supportedModelProtocols::value)) {
-        Element elem = util.processingEnv().getTypeUtils().asElement(typeMirror);
-        if (elem instanceof QualifiedNameable qualifiedNameable) {
-          String qualifiedName = requireNonNull(qualifiedNameable).getQualifiedName().toString();
-          if (qualifiedName.equals(GraphQlResponseJson.class.getCanonicalName())) {
-            return true;
-          }
-        }
-      }
+    if (util.typeExplicitlySupportsProtocol(typeElement, GraphQlResponseJson.class)) {
+      return true;
     }
 
     // Fallback: Check interfaces
@@ -1446,22 +1432,8 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
       return false;
     }
 
-    CodeGenUtility util = codeGenContext.util();
-    SupportedModelProtocols supportedModelProtocols =
-        codeGenContext.modelRootType().getAnnotation(SupportedModelProtocols.class);
-    // Check if GraphQlResponseJson is mentioned in the annotation value
-    if (supportedModelProtocols != null) {
-      for (TypeMirror typeMirror :
-          util.getTypesFromAnnotationMember(supportedModelProtocols::value)) {
-        Element elem = util.processingEnv().getTypeUtils().asElement(typeMirror);
-        if (elem instanceof QualifiedNameable qualifiedNameable) {
-          String qualifiedName = requireNonNull(qualifiedNameable).getQualifiedName().toString();
-          if (qualifiedName.equals(GraphQlResponseJson.class.getCanonicalName())) {
-            return true;
-          }
-        }
-      }
-    }
-    return false;
+    return codeGenContext
+        .util()
+        .typeExplicitlySupportsProtocol(codeGenContext.modelRootType(), GraphQlResponseJson.class);
   }
 }

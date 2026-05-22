@@ -2,11 +2,11 @@ package com.flipkart.krystal.vajram.json;
 
 import static com.flipkart.krystal.vajram.json.Json.JSON;
 
-import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.serial.SerdeProtocol;
 import com.flipkart.krystal.serial.SerializableModel;
 
-@SupportedModelProtocols(Json.class)
+@SupportedModelProtocol(Json.class)
 public interface SerializableJsonModel extends SerializableModel {
 
   @Override

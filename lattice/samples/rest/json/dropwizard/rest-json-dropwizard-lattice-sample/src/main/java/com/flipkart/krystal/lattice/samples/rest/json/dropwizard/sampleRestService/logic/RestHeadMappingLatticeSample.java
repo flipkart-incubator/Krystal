@@ -1,15 +1,18 @@
 package com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.logic;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
+import static java.util.Objects.requireNonNullElseGet;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.annos.InvocableOutsideProcess;
+import com.flipkart.krystal.lattice.core.di.ByContentType;
 import com.flipkart.krystal.lattice.ext.rest.api.Path;
 import com.flipkart.krystal.lattice.ext.rest.api.PathParam;
 import com.flipkart.krystal.lattice.ext.rest.api.QueryParam;
 import com.flipkart.krystal.lattice.ext.rest.api.methods.HEAD;
 import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.models.JsonResponse;
 import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.models.JsonResponse_Immut;
+import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.models.JsonResponse_ImmutJson;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -43,7 +46,7 @@ public abstract class RestHeadMappingLatticeSample extends ComputeVajramDef<Json
 
   interface _InternalFacets {
     @Inject
-    @IfAbsent(FAIL)
+    @ByContentType
     JsonResponse_Immut.Builder responseBuilder();
 
     @Inject
@@ -57,7 +60,10 @@ public abstract class RestHeadMappingLatticeSample extends ComputeVajramDef<Json
       @Nullable String name,
       @Nullable String age,
       UriInfo uriInfo,
-      JsonResponse_Immut.Builder responseBuilder) {
-    return responseBuilder.string("").mandatoryInt(0)._build();
+      JsonResponse_Immut.@Nullable Builder responseBuilder) {
+    return requireNonNullElseGet(responseBuilder, JsonResponse_ImmutJson::_builder)
+        .string("")
+        .mandatoryInt(0)
+        ._build();
   }
 }

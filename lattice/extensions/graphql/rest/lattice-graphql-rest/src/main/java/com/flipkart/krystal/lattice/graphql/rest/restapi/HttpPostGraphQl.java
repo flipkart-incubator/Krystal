@@ -12,7 +12,7 @@ import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.lattice.ext.rest.api.methods.POST;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.PlainJavaObject;
-import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
@@ -34,7 +34,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @Vajram
 public abstract class HttpPostGraphQl extends ComputeVajramDef<Response> {
 
-  @SupportedModelProtocols({Json.class, PlainJavaObject.class})
+  @SupportedModelProtocol(Json.class)
+  @SupportedModelProtocol(PlainJavaObject.class)
   interface _Inputs {
     @IfAbsent(FAIL)
     String query();

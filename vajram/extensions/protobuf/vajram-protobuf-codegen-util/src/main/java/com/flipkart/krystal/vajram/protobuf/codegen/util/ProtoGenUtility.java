@@ -25,7 +25,6 @@ import com.flipkart.krystal.annos.InvocableOutsideProcess;
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.model.ModelProtocol;
-import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.protobuf.codegen.util.types.EnumFieldType;
@@ -49,7 +48,6 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Protocol-agnostic helpers shared across the protobuf codegen pipeline. */
 @Slf4j
@@ -162,10 +160,8 @@ public final class ProtoGenUtility {
 
     Element annotationSource =
         vajramInfo.inputsElement() != null ? vajramInfo.inputsElement() : vajramClass;
-    SupportedModelProtocols supportedSerdeProtocols =
-        annotationSource.getAnnotation(SupportedModelProtocols.class);
     List<? extends TypeMirror> serializationProtocols =
-        getSerializationProtocols(supportedSerdeProtocols, util);
+        getSerializationProtocols(annotationSource, util);
     if (serializationProtocols.stream()
         .noneMatch(
             serializationProtocol ->
@@ -320,11 +316,10 @@ public final class ProtoGenUtility {
             util.processingEnv()
                 .getTypeUtils()
                 .asElement(returnType.typeMirror(util.processingEnv())));
-    SupportedModelProtocols supportedModelProtocols =
-        typeElement.getAnnotation(SupportedModelProtocols.class);
-    if (supportedModelProtocols == null
-        || util.getTypeElemsFromAnnotationMember(supportedModelProtocols::value).stream()
-            .noneMatch(t -> util.isSameRawType(t.asType(), protocolClass))) {
+    List<javax.lang.model.element.TypeElement> protocolElems =
+        util.getSupportedProtocolTypeElements(typeElement);
+    if (protocolElems.isEmpty()
+        || protocolElems.stream().noneMatch(t -> util.isSameRawType(t.asType(), protocolClass))) {
       util.error(
           String.format(
               "Vajram '%s' has return type '%s' which is not a supported model protocol. "
@@ -335,10 +330,10 @@ public final class ProtoGenUtility {
   }
 
   public static List<? extends TypeMirror> getSerializationProtocols(
-      @Nullable SupportedModelProtocols supportedSerdeProtocols, VajramCodeGenUtility util) {
-    return supportedSerdeProtocols == null
-        ? List.of()
-        : util.codegenUtil().getTypesFromAnnotationMember(supportedSerdeProtocols::value);
+      Element annotationSource, VajramCodeGenUtility util) {
+    return util.codegenUtil().getSupportedProtocolTypeElements(annotationSource).stream()
+        .map(TypeElement::asType)
+        .toList();
   }
 
   /** Validates the Vajram for protobuf compatibility. Throws compile errors if validations fail. */

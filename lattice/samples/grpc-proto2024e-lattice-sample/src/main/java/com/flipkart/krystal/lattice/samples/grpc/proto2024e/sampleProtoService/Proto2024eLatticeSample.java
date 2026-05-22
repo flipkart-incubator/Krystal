@@ -4,13 +4,15 @@ import static com.flipkart.krystal.datatypes.Trilean.FALSE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
+import static java.util.Objects.requireNonNullElseGet;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.annos.InvocableOutsideProcess;
 import com.flipkart.krystal.data.MutatesState;
+import com.flipkart.krystal.lattice.core.di.ByContentType;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.PlainJavaObject;
-import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.model.array.ByteArray;
 import com.flipkart.krystal.serial.ReservedSerialIds;
 import com.flipkart.krystal.serial.SerialId;
@@ -34,7 +36,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public abstract class Proto2024eLatticeSample
     extends ComputeVajramDef<Proto2024eLatticeSampleResponse> {
 
-  @SupportedModelProtocols({Protobuf2024e.class, PlainJavaObject.class})
+  @SupportedModelProtocol(Protobuf2024e.class)
+  @SupportedModelProtocol(PlainJavaObject.class)
   @ReservedSerialIds(8)
   interface _Inputs {
     @SerialId(1)
@@ -73,9 +76,7 @@ public abstract class Proto2024eLatticeSample
   }
 
   static class _InternalFacets {
-    @Inject
-    @IfAbsent(FAIL)
-    Proto2024eLatticeSampleResponse_Immut.Builder responseBuilder;
+    @Inject @ByContentType Proto2024eLatticeSampleResponse_Immut.Builder responseBuilder;
   }
 
   @Output
@@ -88,8 +89,9 @@ public abstract class Proto2024eLatticeSample
       Long mandatoryLongInput,
       @Nullable ByteArray optionalByteString,
       ByteArray defaultByteString,
-      Proto2024eLatticeSampleResponse_Immut.Builder responseBuilder) {
-    return responseBuilder
+      Proto2024eLatticeSampleResponse_Immut.@Nullable Builder responseBuilder) {
+    return requireNonNullElseGet(
+            responseBuilder, Proto2024eLatticeSampleResponse_ImmutProto::_builder)
         .string(
             """
               Ding Ding Ding

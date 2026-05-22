@@ -25,7 +25,7 @@ import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.ModelRoot.ModelType;
-import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.model.array.PrimitiveArray;
 import com.flipkart.krystal.model.list.ModelsListBuilder;
 import com.flipkart.krystal.model.map.ModelsMapBuilder;
@@ -1205,27 +1205,55 @@ public class CodeGenUtility {
     return false;
   }
 
+  /**
+   * Returns the list of TypeElements representing ModelProtocol classes from the repeatable
+   * {@code @SupportedModelProtocol} annotations on the given element.
+   */
+  public List<TypeElement> getSupportedProtocolTypeElements(Element element) {
+    SupportedModelProtocol[] protocols = element.getAnnotationsByType(SupportedModelProtocol.class);
+    if (protocols.length == 0) {
+      return List.of();
+    }
+    return stream(protocols).map(p -> getTypeElemFromAnnotationMember(p::value)).toList();
+  }
+
+  /**
+   * Returns the TypeElement of the default ModelProtocol from the repeatable
+   * {@code @SupportedModelProtocol} annotations on the given element (the one with {@code isDefault
+   * = true}). Returns {@code null} if no default is declared.
+   */
+  public @Nullable TypeElement getDefaultProtocolTypeElement(Element element) {
+    SupportedModelProtocol[] protocols = element.getAnnotationsByType(SupportedModelProtocol.class);
+    for (SupportedModelProtocol protocol : protocols) {
+      if (protocol.isDefault()) {
+        return getTypeElemFromAnnotationMember(protocol::value);
+      }
+    }
+    return null;
+  }
+
   /** Returns true if the model root type supports the given model protocol. */
   public boolean typeExplicitlySupportsProtocol(
       Element modelRootType, Class<? extends ModelProtocol> modelProtocol) {
-    SupportedModelProtocols supportedModelProtocols =
-        modelRootType.getAnnotation(SupportedModelProtocols.class);
-    if (supportedModelProtocols == null) {
+    SupportedModelProtocol[] protocols =
+        modelRootType.getAnnotationsByType(SupportedModelProtocol.class);
+    if (protocols.length == 0) {
       return false;
     }
-    return getTypeElemsFromAnnotationMember(supportedModelProtocols::value).stream()
+    return stream(protocols)
+        .map(p -> getTypeElemFromAnnotationMember(p::value))
         .map(element -> element.getQualifiedName().toString())
         .anyMatch(s -> Objects.equals(s, modelProtocol.getCanonicalName()));
   }
 
   /**
-   * Returns the list of SerdeProtocol TypeMirrors from the @SupportedModelProtocols annotation on
+   * Returns the list of SerdeProtocol TypeMirrors from the @SupportedModelProtocol annotations on
    * the given element. Only protocols that extend SerdeProtocol are included.
    */
   public List<ModelProtocol> getModelProtocols(Element modelRootType) {
-    SupportedModelProtocols supportedModelProtocols =
-        modelRootType.getAnnotation(SupportedModelProtocols.class);
-    if (supportedModelProtocols == null) {
+    SupportedModelProtocol[] protocols =
+        modelRootType.getAnnotationsByType(SupportedModelProtocol.class);
+    if (protocols.length == 0) {
       return List.of();
     }
     Map<String, ModelProtocol> availableModelProtocols =
@@ -1238,7 +1266,8 @@ public class CodeGenUtility {
                 toMap(c -> requireNonNull(c.getClass().getCanonicalName()), Function.identity()));
 
     return (List<@NonNull ModelProtocol>)
-        getTypeElemsFromAnnotationMember(supportedModelProtocols::value).stream()
+        stream(protocols)
+            .map(p -> getTypeElemFromAnnotationMember(p::value))
             .map(element -> element.getQualifiedName().toString())
             .map(availableModelProtocols::get)
             .filter(Objects::nonNull)
@@ -1246,16 +1275,17 @@ public class CodeGenUtility {
   }
 
   /**
-   * Returns true if the given element's @SupportedModelProtocols contains the protocol represented
-   * by the given TypeMirror.
+   * Returns true if the given element's @SupportedModelProtocol annotations contain the protocol
+   * represented by the given TypeMirror.
    */
   public boolean typeSupportsProtocolByMirror(Element modelRootType, TypeMirror protocolMirror) {
-    SupportedModelProtocols supportedModelProtocols =
-        modelRootType.getAnnotation(SupportedModelProtocols.class);
-    if (supportedModelProtocols == null) {
+    SupportedModelProtocol[] protocols =
+        modelRootType.getAnnotationsByType(SupportedModelProtocol.class);
+    if (protocols.length == 0) {
       return false;
     }
-    return getTypeElemsFromAnnotationMember(supportedModelProtocols::value).stream()
+    return stream(protocols)
+        .map(p -> getTypeElemFromAnnotationMember(p::value))
         .anyMatch(
             typeElement ->
                 typeUtils.isSameType(typeElement.asType(), typeUtils.erasure(protocolMirror)));

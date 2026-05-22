@@ -1,14 +1,11 @@
 package com.flipkart.krystal.lattice.core.headers;
 
-import com.google.common.collect.ImmutableList;
-import lombok.Getter;
+import java.util.List;
 
-@Getter
-public final class SingleValueHeader extends HeaderImpl {
-  String value;
+public record SingleValueHeader(String name, String value) implements Header {
 
-  public SingleValueHeader(String name, String value) {
-    super(name, ImmutableList.of(value));
-    this.value = value;
+  @Override
+  public List<String> values() {
+    return List.of(value);
   }
 }

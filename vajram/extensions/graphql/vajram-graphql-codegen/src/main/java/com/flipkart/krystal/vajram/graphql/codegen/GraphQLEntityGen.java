@@ -15,7 +15,7 @@ import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.ModelRoot.ModelType;
-import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.vajram.graphql.api.Constants.Directives;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlEntityId;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlObject;
@@ -161,7 +161,7 @@ class GraphQLEntityGen implements CodeGenerator {
                           .addMember("pure", "false")
                           .build())
                   .addAnnotation(
-                      AnnotationSpec.builder(SupportedModelProtocols.class)
+                      AnnotationSpec.builder(SupportedModelProtocol.class)
                           .addMember("value", "$T.class", GraphQlResponseJson.class)
                           .build())
                   .addModifiers(PUBLIC)

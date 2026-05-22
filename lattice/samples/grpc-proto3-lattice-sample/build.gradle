@@ -56,10 +56,6 @@ dependencies {
 
 }
 
-test {
-//    forkEvery = 1
-}
-
 sourceSets {
     main {
         proto {

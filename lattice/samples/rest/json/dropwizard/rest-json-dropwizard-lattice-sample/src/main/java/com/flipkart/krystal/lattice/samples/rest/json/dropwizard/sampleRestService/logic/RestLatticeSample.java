@@ -3,14 +3,17 @@ package com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestServ
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
+import static java.util.Objects.requireNonNullElseGet;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.annos.InvocableOutsideProcess;
+import com.flipkart.krystal.lattice.core.di.ByContentType;
 import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.models.JsonResponse;
 import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.models.JsonResponse_Immut;
+import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.models.JsonResponse_ImmutJson;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.PlainJavaObject;
-import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.model.array.ByteArray;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -29,7 +32,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @InvocableOutsideProcess
 @Vajram
 public abstract class RestLatticeSample extends ComputeVajramDef<JsonResponse> {
-  @SupportedModelProtocols({Json.class, PlainJavaObject.class})
+  @SupportedModelProtocol(Json.class)
+  @SupportedModelProtocol(PlainJavaObject.class)
   interface _Inputs {
 
     int optionalInput();
@@ -59,7 +63,7 @@ public abstract class RestLatticeSample extends ComputeVajramDef<JsonResponse> {
 
   interface _InternalFacets {
     @Inject
-    @IfAbsent(FAIL)
+    @ByContentType
     JsonResponse_Immut.Builder responseBuilder();
   }
 
@@ -73,8 +77,8 @@ public abstract class RestLatticeSample extends ComputeVajramDef<JsonResponse> {
       Long mandatoryLongInput,
       @Nullable ByteArray optionalByteString,
       ByteArray defaultByteString,
-      JsonResponse_Immut.Builder responseBuilder) {
-    return responseBuilder
+      JsonResponse_Immut.@Nullable Builder responseBuilder) {
+    return requireNonNullElseGet(responseBuilder, JsonResponse_ImmutJson::_builder)
         .string(
             """
               Ding Ding Ding
