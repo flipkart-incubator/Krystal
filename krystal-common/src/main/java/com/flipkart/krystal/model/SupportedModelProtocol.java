@@ -13,8 +13,6 @@ import java.lang.annotation.Target;
 public @interface SupportedModelProtocol {
   Class<? extends ModelProtocol> value();
 
-  boolean isDefault() default false;
-
   @Target(TYPE)
   @Retention(CLASS)
   @interface SupportedModelProtocols {

@@ -85,6 +85,18 @@ class DwRestEndpointsE2eTest {
   }
 
   @Test
+  void getMapping_noAcceptHeader_throwError() throws Exception {
+    HttpResponse<String> resp =
+        httpClient.send(
+            HttpRequest.newBuilder(URI.create(BASE_URL + "/no_default_serde_protocol_for_response"))
+                .GET()
+                .build(),
+            BodyHandlers.ofString());
+    assertThat(resp.statusCode()).isEqualTo(500);
+    assertThat(resp.body()).contains("There was an error processing your request");
+  }
+
+  @Test
   void postMapping_returnsResponseEchoingBodyAndPath() throws Exception {
     String body =
         """

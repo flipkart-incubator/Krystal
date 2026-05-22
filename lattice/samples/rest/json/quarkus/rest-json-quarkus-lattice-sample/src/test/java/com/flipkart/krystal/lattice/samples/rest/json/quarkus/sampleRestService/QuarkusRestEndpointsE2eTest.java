@@ -1,8 +1,14 @@
 package com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService;
 
+import static java.net.http.HttpResponse.BodyHandlers.ofString;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.app.RestfulQuarkusApp_Impl;
+import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.JsonRequest_ImmutJson;
+import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.JsonResponse;
+import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.JsonResponse_ImmutJson;
+import com.flipkart.krystal.model.array.SimpleByteArray;
 import io.quarkus.runtime.Quarkus;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -13,7 +19,11 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.net.http.HttpResponse.BodySubscriber;
+import java.net.http.HttpResponse.BodySubscribers;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.concurrent.CompletionStage;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -33,6 +43,7 @@ class QuarkusRestEndpointsE2eTest {
 
   private static final int APP_PORT = 18082;
   private static final String BASE_URL = "http://localhost:" + APP_PORT;
+  private static final Duration TIMEOUT = Duration.ofSeconds(1);
 
   private @MonotonicNonNull HttpClient httpClient;
 
@@ -72,41 +83,50 @@ class QuarkusRestEndpointsE2eTest {
 
   @Test
   void getMapping_returnsResponseWithQueryParams() throws Exception {
-    HttpResponse<String> resp =
+    HttpResponse<CompletionStage<JsonResponse_ImmutJson>> resp =
         httpClient.send(
             HttpRequest.newBuilder(URI.create(BASE_URL + "/foo/bar?name=alice&age=42"))
                 .GET()
                 .header("Accept", "application/json")
                 .build(),
-            BodyHandlers.ofString());
+            BodyHandlers.fromSubscriber(
+                BodySubscribers.mapping(BodySubscribers.ofByteArray(), JsonResponse_ImmutJson::new),
+                BodySubscriber::getBody));
     assertThat(resp.statusCode()).isEqualTo(200);
-    assertThat(resp.body()).contains("\"path\":\"foo/bar\"");
-    assertThat(resp.body()).contains("\"qp_name\":\"alice\"");
-    assertThat(resp.body()).contains("\"qp_age\":\"42\"");
+    JsonResponse_ImmutJson respBody = assertThat(resp.body()).succeedsWithin(TIMEOUT).actual();
+    assertThat(respBody.path()).isEqualTo("foo/bar");
+    assertThat(respBody.qp_name()).isEqualTo("alice");
+    assertThat(respBody.qp_age()).isEqualTo("42");
   }
 
   @Test
   void postMapping_returnsResponseEchoingBodyAndPath() throws Exception {
-    String body =
-        """
-        {
-          "mandatoryInput": 7,
-          "mandatoryLongInput": 99,
-          "defaultByteString": "AA=="
-        }
-        """;
-    HttpResponse<String> resp =
+    var body =
+        JsonRequest_ImmutJson._builder()
+            .mandatoryInput(7)
+            .mandatoryLongInput(99L)
+            .defaultByteString(SimpleByteArray.copyOf("\0".getBytes(StandardCharsets.UTF_8)))
+            ._build();
+
+    HttpResponse<CompletionStage<JsonResponse_ImmutJson>> resp =
         httpClient.send(
             HttpRequest.newBuilder(URI.create(BASE_URL + "/foo/bar"))
-                .POST(BodyPublishers.ofString(body))
+                .POST(BodyPublishers.ofByteArray(body._serialize()))
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")
                 .build(),
-            BodyHandlers.ofString());
+            BodyHandlers.fromSubscriber(
+                BodySubscribers.mapping(BodySubscribers.ofByteArray(), JsonResponse_ImmutJson::new),
+                BodySubscriber::getBody));
     assertThat(resp.statusCode()).isEqualTo(200);
-    assertThat(resp.body()).contains("PATH: foo/bar");
-    assertThat(resp.body()).contains("mandatoryInput: 7");
-    assertThat(resp.body()).contains("mandatoryLongInput: 99");
+    var stringInResp =
+        assertThat(resp.body())
+            .succeedsWithin(TIMEOUT)
+            .extracting(JsonResponse::string)
+            .asInstanceOf(STRING);
+    stringInResp.contains("PATH: foo/bar");
+    stringInResp.contains("mandatoryInput: 7");
+    stringInResp.contains("mandatoryLongInput: 99");
   }
 
   @Test
@@ -116,7 +136,7 @@ class QuarkusRestEndpointsE2eTest {
             HttpRequest.newBuilder(URI.create(BASE_URL + "/foo/bar?name=alice&age=42"))
                 .method("HEAD", BodyPublishers.noBody())
                 .build(),
-            BodyHandlers.ofString());
+            ofString());
     assertThat(resp.statusCode()).isEqualTo(200);
     assertThat(resp.body()).isEmpty();
   }
@@ -148,7 +168,7 @@ class QuarkusRestEndpointsE2eTest {
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")
                 .build(),
-            BodyHandlers.ofString());
+            ofString());
     assertThat(resp.statusCode()).isEqualTo(200);
     assertThat(resp.body()).contains("context: ctxA");
     assertThat(resp.body()).contains("name: nameA");

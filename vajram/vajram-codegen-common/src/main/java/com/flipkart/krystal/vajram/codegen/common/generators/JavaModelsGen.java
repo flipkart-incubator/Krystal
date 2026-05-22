@@ -205,9 +205,6 @@ public final class JavaModelsGen implements CodeGenerator {
     // Validate @SerialId all-or-none consistency
     validateSerialIdConsistency(modelMethods);
 
-    // Validate at most one @SupportedModelProtocol has isDefault=true
-    validateSingleDefaultProtocol(modelRootType);
-
     // Validate pure model constraints (nested Models must also be pure)
     if (modelRoot.pure()) {
       validatePureModel(modelMethods);
@@ -511,28 +508,6 @@ public final class JavaModelsGen implements CodeGenerator {
     if (!extendsModel(modelRootType, util)) {
       util.error(
           "Interface with @ModelRoot annotation must extend " + Model.class.getCanonicalName(),
-          modelRootType);
-    }
-  }
-
-  /**
-   * Validates that at most one {@link SupportedModelProtocol} annotation on a type has {@code
-   * isDefault = true}.
-   */
-  private void validateSingleDefaultProtocol(TypeElement modelRootType) {
-    SupportedModelProtocol[] protocols =
-        modelRootType.getAnnotationsByType(SupportedModelProtocol.class);
-    long defaultCount = 0;
-    for (SupportedModelProtocol protocol : protocols) {
-      if (protocol.isDefault()) {
-        defaultCount++;
-      }
-    }
-    if (defaultCount > 1) {
-      util.error(
-          "Model '%s' has %d @SupportedModelProtocol annotations with isDefault=true."
-              + " At most one protocol can be marked as the default."
-                  .formatted(modelRootType.getQualifiedName(), defaultCount),
           modelRootType);
     }
   }
