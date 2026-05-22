@@ -10,6 +10,7 @@ import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.model.array.ByteArray;
+import com.flipkart.krystal.serial.DefaultSerdeProtocol;
 import com.flipkart.krystal.vajram.json.Json;
 import java.util.List;
 import java.util.Map;
@@ -18,7 +19,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 @ModelRoot(type = RESPONSE)
 @SupportedModelProtocol(PlainJavaObject.class)
-@SupportedModelProtocol(value = Json.class, isDefault = true)
+@SupportedModelProtocol(Json.class)
+@DefaultSerdeProtocol(Json.class)
 public interface JsonResponse extends Model {
 
   @IfAbsent(WILL_NEVER_FAIL)

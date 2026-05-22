@@ -29,6 +29,7 @@ import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.model.array.PrimitiveArray;
 import com.flipkart.krystal.model.list.ModelsListBuilder;
 import com.flipkart.krystal.model.map.ModelsMapBuilder;
+import com.flipkart.krystal.serial.DefaultSerdeProtocol;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.googlejavaformat.java.GoogleJavaFormatTool;
@@ -1223,13 +1224,11 @@ public class CodeGenUtility {
    * = true}). Returns {@code null} if no default is declared.
    */
   public @Nullable TypeElement getDefaultProtocolTypeElement(Element element) {
-    SupportedModelProtocol[] protocols = element.getAnnotationsByType(SupportedModelProtocol.class);
-    for (SupportedModelProtocol protocol : protocols) {
-      if (protocol.isDefault()) {
-        return getTypeElemFromAnnotationMember(protocol::value);
-      }
+    DefaultSerdeProtocol defaultSerdeProtocol = element.getAnnotation(DefaultSerdeProtocol.class);
+    if (defaultSerdeProtocol == null) {
+      return null;
     }
-    return null;
+    return getTypeElemFromAnnotationMember(defaultSerdeProtocol::value);
   }
 
   /** Returns true if the model root type supports the given model protocol. */
