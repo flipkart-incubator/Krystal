@@ -177,7 +177,7 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
                 """
                 if(acceptHeaderValues.contains($S)) {
                   return $T._builder();
-                } else \
+                }
                 """,
                 serdeProtocol.defaultContentType(),
                 util.codegenUtil().getImmutClassName(responseElement, serdeProtocol)));
@@ -186,7 +186,7 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
           CodeBlock.of(
               """
               {
-                throw new $T($S + acceptHeader.values());
+                throw new $T($S + acceptHeader);
               }
               """,
               IllegalArgumentException.class,

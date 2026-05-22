@@ -11,7 +11,7 @@ generator produces an `_ImmutFory` wrapper class for that model.
 
 ## Architecture
 
-```
+```text
 @ModelRoot + @SupportedModelProtocol(Fory.class)
         │
         ▼
@@ -35,7 +35,7 @@ wrapper classes in FINAL).
 
 For a model `Foo`:
 
-```
+```text
 Foo_ImmutFory
 ├── static final ThreadSafeFory _FORY      // shared Fory instance
 ├── transient byte[] _serializedPayload    // cached serialized form
@@ -77,7 +77,7 @@ Foo_ImmutFory
 
 ## Module Coordinates
 
-```
+```text
 com.flipkart.krystal:vajram-fory-codegen
 ```
 

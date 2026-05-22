@@ -38,7 +38,8 @@ serialization target.
 
 ```java
 @ModelRoot(type = RESPONSE)
-@SupportedModelProtocol({Fory.class, PlainJavaObject.class})
+@SupportedModelProtocol(Fory.class)
+@SupportedModelProtocol(PlainJavaObject.class)
 public interface MyResponse extends Model {
     String greeting();
     int count();

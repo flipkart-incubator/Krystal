@@ -1,5 +1,6 @@
 package com.flipkart.krystal.lattice.core.headers;
 
+import com.google.common.collect.ImmutableList;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -15,7 +16,7 @@ public interface Header {
     if (value.size() == 1) {
       return new SingleValueHeader(name, value.get(0));
     } else {
-      return new HeaderImpl(name, value);
+      return new HeaderImpl(name, ImmutableList.copyOf(value));
     }
   }
 }
