@@ -41,7 +41,7 @@ public class SqlAnnotationProcessor extends AbstractKrystalAnnoProcessor {
   protected boolean processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     try {
       VajramCodeGenUtility vajramUtil = new VajramCodeGenUtility(codeGenUtil());
-      SqlModelParser parser = new SqlModelParser(vajramUtil);
+      SqlModelParser parser = new SqlModelParser(vajramUtil, paramIndex -> "$" + paramIndex);
       parser.validateTableAndWhereElements(roundEnv);
       List<TypeElement> sqlTraits = getSqlTraits(roundEnv);
       this.sqlTraits.addAll(sqlTraits);

@@ -93,18 +93,19 @@ public final class SqlQueryModel {
    * @param dbColumnName actual DB column name (from {@code @Column} or the method name)
    * @param operator SQL comparison operator (e.g., {@code "="} from {@code @IsEqualTo})
    */
-  public record WhereColumn(String accessorMethod, String dbColumnName, String operator) {}
+  public record WhereColumn(String accessorMethod, String dbColumnName, WhereOperator operator) {}
 
   /**
    * A leaf WHERE predicate: an AND group of column comparisons from a single {@link
    * com.flipkart.krystal.vajram.ext.sql.lang.SelectionPredicate}.
    *
-   * @param accessorPrefix full Java accessor prefix for parameter binding (e.g., {@code "where"} or
-   *     {@code "where.orWithUserId()"})
+   * @param javaAccessorPrefix full Java accessor prefix for parameter binding (e.g., {@code
+   *     "where"} or {@code "where.orWithUserId()"})
    * @param inTableName SQL table name from {@code @WHERE(inTable = ...)}
    * @param columns columns in this predicate, AND-ed together
    */
-  public record WhereLeaf(String accessorPrefix, String inTableName, List<WhereColumn> columns) {}
+  public record WhereLeaf(
+      String javaAccessorPrefix, String inTableName, List<WhereColumn> columns) {}
 
   /**
    * Complete WHERE specification for one {@code _Inputs} method.

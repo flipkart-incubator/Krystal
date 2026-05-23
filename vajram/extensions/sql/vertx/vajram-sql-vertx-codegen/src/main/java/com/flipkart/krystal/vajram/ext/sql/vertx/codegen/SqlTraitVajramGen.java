@@ -361,7 +361,7 @@ public class SqlTraitVajramGen implements CodeGenerator {
     for (WhereInput wi : whereInputs) {
       for (WhereLeaf leaf : wi.leaves()) {
         for (WhereColumn col : leaf.columns()) {
-          args.add(leaf.accessorPrefix() + "." + col.accessorMethod() + "()");
+          args.addAll(col.operator().toJavaParams(leaf, col));
         }
       }
     }

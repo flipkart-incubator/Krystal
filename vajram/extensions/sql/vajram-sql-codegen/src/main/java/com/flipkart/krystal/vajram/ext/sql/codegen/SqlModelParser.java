@@ -21,7 +21,11 @@ import com.flipkart.krystal.vajram.ext.sql.lang.ORDER;
 import com.flipkart.krystal.vajram.ext.sql.lang.ORDER.Direction;
 import com.flipkart.krystal.vajram.ext.sql.lang.SqlWherePredicate;
 import com.flipkart.krystal.vajram.ext.sql.lang.WHERE;
+import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.GreaterThan;
+import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.GreaterThanOrEqual;
 import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.IsEqualTo;
+import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.LesserThan;
+import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.LesserThanOrEqual;
 import com.flipkart.krystal.vajram.ext.sql.lang.operators.logical.SqlOrPredicate;
 import com.flipkart.krystal.vajram.ext.sql.model.Column;
 import com.flipkart.krystal.vajram.ext.sql.model.ForeignKey;
@@ -41,6 +45,7 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -55,9 +60,11 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class SqlModelParser {
 
   private final CodeGenUtility util;
+  private final SqlParameterPrinter sqlParamPrinter;
 
-  public SqlModelParser(VajramCodeGenUtility vajramUtil) {
+  public SqlModelParser(VajramCodeGenUtility vajramUtil, SqlParameterPrinter sqlParamPrinter) {
     this.util = vajramUtil.codegenUtil();
+    this.sqlParamPrinter = sqlParamPrinter;
   }
 
   // ─── Trait result type ────────────────────────────────────────────────────────
@@ -199,23 +206,82 @@ public final class SqlModelParser {
     for (ExecutableElement method : util.extractAndValidateModelMethods(predicateElem)) {
       String fieldName = method.getSimpleName().toString();
       String dbCol = resolveColumnName(method, false);
-      String operator = resolveComparisonOperator(method);
+      WhereOperator operator = resolveComparisonOperator(method);
       columns.add(new WhereColumn(fieldName, dbCol, operator));
     }
     return new WhereLeaf(accessorPrefix, inTableName, columns);
   }
 
   /**
-   * Returns the SQL comparison operator for a predicate method based on its annotations. Currently
-   * supports {@code @IsEqualTo} ({@code "="}). Defaults to {@code "="} if no operator annotation is
-   * present.
+   * Returns the SQL comparison operator for a predicate method based on its annotations. Supports
+   * {@code @IsEqualTo} ({@code "="}), {@code @GreaterThan} ({@code ">"}),
+   * {@code @GreaterThanOrEqual} ({@code ">="}), {@code @LesserThan} ({@code "<"}), and
+   * {@code @LesserThanOrEqual} ({@code "<="}).
+   *
+   * <p>Ordering operators ({@code >}, {@code >=}, {@code <}, {@code <=}) are only valid on
+   * comparable types: numeric primitives and their boxed equivalents, and temporal types.
    */
-  public String resolveComparisonOperator(ExecutableElement method) {
+  public WhereOperator resolveComparisonOperator(ExecutableElement method) {
     if (method.getAnnotation(IsEqualTo.class) != null) {
-      return "=";
+      return new SimpleWhereOperator("=", sqlParamPrinter);
     }
-    util.error("No Comparison operator annotation such as @IsEqualTo has been found", method);
-    return "<UNKNOWN_OPERATOR>";
+    if (method.getAnnotation(GreaterThan.class) != null) {
+      validateComparableType(method, "@GreaterThan");
+      return new SimpleWhereOperator(">", sqlParamPrinter);
+    }
+    if (method.getAnnotation(GreaterThanOrEqual.class) != null) {
+      validateComparableType(method, "@GreaterThanOrEqual");
+      return new SimpleWhereOperator(">=", sqlParamPrinter);
+    }
+    if (method.getAnnotation(LesserThan.class) != null) {
+      validateComparableType(method, "@LesserThan");
+      return new SimpleWhereOperator("<", sqlParamPrinter);
+    }
+    if (method.getAnnotation(LesserThanOrEqual.class) != null) {
+      validateComparableType(method, "@LesserThanOrEqual");
+      return new SimpleWhereOperator("<=", sqlParamPrinter);
+    }
+    util.error(
+        "No comparison operator annotation such as @IsEqualTo, @GreaterThan, @LesserThan, etc. has been found",
+        method);
+    return new SimpleWhereOperator("<UNKNOWN_OPERATOR>", sqlParamPrinter);
+  }
+
+  private static final Set<TypeKind> COMPARABLE_PRIMITIVES =
+      Set.of(TypeKind.INT, TypeKind.LONG, TypeKind.SHORT, TypeKind.FLOAT, TypeKind.DOUBLE);
+
+  private static final Set<String> COMPARABLE_DECLARED_TYPES =
+      Set.of(
+          "java.lang.Integer",
+          "java.lang.Long",
+          "java.lang.Short",
+          "java.lang.Float",
+          "java.lang.Double",
+          "java.time.LocalDate",
+          "java.time.LocalDateTime",
+          "java.time.OffsetDateTime");
+
+  /**
+   * Validates that the return type of a predicate method is a comparable type suitable for ordering
+   * operators ({@code >}, {@code >=}, {@code <}, {@code <=}). Reports a compile-time error if the
+   * type is not numeric or temporal.
+   */
+  private void validateComparableType(ExecutableElement method, String annotationName) {
+    TypeMirror returnType = method.getReturnType();
+    if (COMPARABLE_PRIMITIVES.contains(returnType.getKind())) {
+      return;
+    }
+    if (returnType instanceof DeclaredType dt
+        && dt.asElement() instanceof TypeElement te
+        && COMPARABLE_DECLARED_TYPES.contains(te.getQualifiedName().toString())) {
+      return;
+    }
+    util.error(
+        annotationName
+            + " is only supported on comparable types (numeric primitives, boxed numerics,"
+            + " LocalDate, LocalDateTime, OffsetDateTime). Found: "
+            + returnType,
+        method);
   }
 
   // ─── Internal helpers ────────────────────────────────────────────────────────

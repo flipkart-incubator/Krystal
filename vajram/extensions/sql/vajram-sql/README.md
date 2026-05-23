@@ -488,8 +488,20 @@ than just `id = $1`).
 
 #### Comparison Operators
 
-By default, each method in a `@WHERE` interface generates an `=` comparison. You can make the
-operator explicit using the `@IsEqualTo` annotation:
+Each method in a `@WHERE` predicate must carry a comparison operator annotation. The following
+operators are available:
+
+| Annotation             | SQL operator | Allowed types                                                        |
+|------------------------|--------------|----------------------------------------------------------------------|
+| `@IsEqualTo`           | `=`          | All types                                                            |
+| `@GreaterThan`         | `>`          | Numeric primitives/boxed (`int`, `long`, …), temporal (`LocalDate`, `LocalDateTime`, `OffsetDateTime`) |
+| `@GreaterThanOrEqual`  | `>=`         | Same as `@GreaterThan`                                               |
+| `@LesserThan`          | `<`          | Same as `@GreaterThan`                                               |
+| `@LesserThanOrEqual`   | `<=`         | Same as `@GreaterThan`                                               |
+
+Ordering operators (`>`, `>=`, `<`, `<=`) enforce a **compile-time type check**: the annotated
+method's return type must be a comparable type. Using them on `String`, `boolean`, or other
+non-comparable types produces a compile-time error.
 
 ```java
 
@@ -501,6 +513,20 @@ public interface UserIdPredicate extends SelectionPredicate {
   @Column("id")
   @IsEqualTo
   long idIs();   // → "id = $1"
+}
+
+@ModelRoot
+@SupportedModelProtocol(PlainJavaObject.class)
+@WHERE(inTable = Order.class)
+public interface RecentOrdersPredicate extends SelectionPredicate {
+
+  @Column("orderTime")
+  @GreaterThanOrEqual
+  long orderTimeFrom();   // → "orderTime >= $1"
+
+  @Column("orderTime")
+  @LesserThan
+  long orderTimeTo();     // → "orderTime < $2"
 }
 ```
 

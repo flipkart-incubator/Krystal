@@ -74,7 +74,7 @@ class ForyQuarkusE2eTest {
   void getMapping_returnsResponseWithQueryParams() throws Exception {
     HttpResponse<byte[]> resp =
         httpClient.send(
-            HttpRequest.newBuilder(URI.create(BASE_URL + "/foo/bar?name=alice&age=42"))
+            HttpRequest.newBuilder(URI.create(BASE_URL + "/foo/bar?name=Alisha&age=42"))
                 .GET()
                 .header("Accept", "application/x-fory")
                 .build(),
@@ -83,7 +83,7 @@ class ForyQuarkusE2eTest {
 
     ForyResponse_ImmutFory response = new ForyResponse_ImmutFory(resp.body());
     assertThat(response.path()).isEqualTo("foo/bar");
-    assertThat(response.queryName()).isEqualTo("alice");
+    assertThat(response.queryName()).isEqualTo("Alisha");
     assertThat(response.queryAge()).isEqualTo("42");
     assertThat(response.message()).isEqualTo("GET response via Fory serde");
   }

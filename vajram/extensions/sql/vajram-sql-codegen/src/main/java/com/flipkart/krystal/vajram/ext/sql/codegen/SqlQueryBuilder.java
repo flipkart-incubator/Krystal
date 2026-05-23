@@ -10,6 +10,7 @@ import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereLeaf;
 import com.flipkart.krystal.vajram.ext.sql.lang.ORDER;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Builds SQL query strings from parsed {@link SqlQueryModel} records.
@@ -296,7 +297,7 @@ public final class SqlQueryBuilder {
   private static void appendWhere(
       StringBuilder sql, List<WhereInput> whereInputs, boolean qualified) {
     List<String> topLevelClauses = new ArrayList<>();
-    int idx = 1;
+    AtomicInteger idx = new AtomicInteger();
     for (WhereInput wi : whereInputs) {
       if (wi.isOr()) {
         List<String> orBranches = new ArrayList<>();
@@ -305,7 +306,7 @@ public final class SqlQueryBuilder {
           for (WhereColumn col : leaf.columns()) {
             String colRef =
                 qualified ? leaf.inTableName() + "." + col.dbColumnName() : col.dbColumnName();
-            andClauses.add(colRef + " " + col.operator() + " $" + idx++);
+            andClauses.add(col.operator().toSql(colRef, idx));
           }
           orBranches.add(
               andClauses.size() == 1
@@ -318,7 +319,7 @@ public final class SqlQueryBuilder {
           for (WhereColumn col : leaf.columns()) {
             String colRef =
                 qualified ? leaf.inTableName() + "." + col.dbColumnName() : col.dbColumnName();
-            topLevelClauses.add(colRef + " " + col.operator() + " $" + idx++);
+            topLevelClauses.add(col.operator().toSql(colRef, idx));
           }
         }
       }

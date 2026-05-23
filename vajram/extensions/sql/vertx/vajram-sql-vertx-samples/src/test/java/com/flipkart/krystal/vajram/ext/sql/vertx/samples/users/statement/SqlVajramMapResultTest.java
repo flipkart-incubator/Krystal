@@ -33,16 +33,16 @@ class SqlVajramMapResultTest {
   void getUserInfoById_mapsColumnsFromSingleRow() {
     Row row = mockRow();
     stubLong(row, "id", 1L);
-    stubString(row, "name", "Alice");
-    stubString(row, "contactEmail", "alice@example.com");
+    stubString(row, "name", "Alisha");
+    stubString(row, "contactEmail", "Alisha@example.com");
     stubString(row, "phoneNumber", "+1-555-0100");
 
     UserInfo result = GetUserInfoById_VertxSql.mapResult(rowSetOf(row));
 
     assertThat(result).isNotNull();
     assertThat(result.id()).isEqualTo(1L);
-    assertThat(result.name()).isEqualTo("Alice");
-    assertThat(result.contactEmail()).isEqualTo("alice@example.com");
+    assertThat(result.name()).isEqualTo("Alisha");
+    assertThat(result.contactEmail()).isEqualTo("Alisha@example.com");
     assertThat(result.phoneNumber()).contains("+1-555-0100");
   }
 
@@ -190,7 +190,7 @@ class SqlVajramMapResultTest {
     // Two order rows for the same user
     Row r1 = mockRow();
     stubObject(r1, "users_id", 1L);
-    stubString(r1, "users_name", "Bob");
+    stubString(r1, "users_name", "Babu");
     stubObject(r1, "orders_orderId", 20L);
     stubLong(r1, "orders_orderId", 20L);
     stubLong(r1, "orders_userId", 1L);
@@ -198,7 +198,7 @@ class SqlVajramMapResultTest {
 
     Row r2 = mockRow();
     stubObject(r2, "users_id", 1L);
-    stubString(r2, "users_name", "Bob");
+    stubString(r2, "users_name", "Babu");
     stubObject(r2, "orders_orderId", 21L);
     stubLong(r2, "orders_orderId", 21L);
     stubLong(r2, "orders_userId", 1L);
@@ -207,7 +207,7 @@ class SqlVajramMapResultTest {
     UserNameAndOrders result = GetUserOrdersByUserName_VertxSql.mapResult(rowSetOf(r1, r2));
 
     assertThat(result).isNotNull();
-    assertThat(result.name()).isEqualTo("Bob");
+    assertThat(result.name()).isEqualTo("Babu");
     assertThat(result.orders()).hasSize(2);
     assertThat(result.orders().get(0).orderId()).isEqualTo(20L);
     assertThat(result.orders().get(1).orderId()).isEqualTo(21L);
@@ -263,13 +263,13 @@ class SqlVajramMapResultTest {
   @Test
   void getUserByIdWithOrdersAndItems_mapsNestedRows() {
     // 2 orders for user 1; order 30 has 2 items, order 31 has 1 item
-    Row r1 = orderItemRow(1L, "Alice", 30L, 9000L, 0L, 100L, "Widget A", 999L);
-    Row r2 = orderItemRow(1L, "Alice", 30L, 9000L, 0L, 101L, "Widget B", 1999L);
-    Row r3 = orderItemRow(1L, "Alice", 31L, 4000L, 0L, 102L, "Gadget", 4999L);
+    Row r1 = orderItemRow(1L, "Alisha", 30L, 9000L, 0L, 100L, "Widget A", 999L);
+    Row r2 = orderItemRow(1L, "Alisha", 30L, 9000L, 0L, 101L, "Widget B", 1999L);
+    Row r3 = orderItemRow(1L, "Alisha", 31L, 4000L, 0L, 102L, "Gadget", 4999L);
     // order 32 exists but has no items (LEFT JOIN null)
     Row r4 = mockRow();
     stubObject(r4, "users_id", 1L);
-    stubString(r4, "users_name", "Alice");
+    stubString(r4, "users_name", "Alisha");
     stubObject(r4, "orders_orderId", 32L);
     stubLong(r4, "orders_orderId", 32L);
     stubLong(r4, "orders_amountCents", 0L);
@@ -280,7 +280,7 @@ class SqlVajramMapResultTest {
         GetUserByIdWithOrdersAndItems_VertxSql.mapResult(rowSetOf(r1, r2, r3, r4));
 
     assertThat(result).isNotNull();
-    assertThat(result.name()).isEqualTo("Alice");
+    assertThat(result.name()).isEqualTo("Alisha");
     assertThat(result.orders()).hasSize(3);
 
     OrderWithItems order30 = result.orders().get(0);

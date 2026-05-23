@@ -9,7 +9,7 @@ reuse.
 
 ## Architecture
 
-```
+```text
 vajram-sql  (annotations + marker interfaces — developer-facing)
     ↓
 vajram-sql-codegen  ← this module (parsing + SQL building)
@@ -75,7 +75,7 @@ This class is **framework-agnostic** — it does not reference Vert.x or any spe
 | `collectWhereInputs`            | `VajramInfo`              | `List<WhereInput>` | Scans `_Inputs` facets for `@WHERE`-annotated or `SqlOrPredicate` types; returns parsed WHERE specs      |
 | `parseScalarColumns`            | `TypeElement` (selection) | `List<ScalarColumn>` | Extracts scalar columns from a `@Selection` interface                                                   |
 | `resolveColumnName`             | `ExecutableElement`       | `String`           | Returns `@Column.value()` or falls back to the method name                                               |
-| `resolveComparisonOperator`     | `ExecutableElement`       | `String`           | Returns the SQL operator from annotations like `@IsEqualTo` (`=`)                                        |
+| `resolveComparisonOperator`     | `ExecutableElement`       | `String`           | Returns the SQL operator from annotations (`@IsEqualTo`→`=`, `@GreaterThan`→`>`, `@GreaterThanOrEqual`→`>=`, `@LesserThan`→`<`, `@LesserThanOrEqual`→`<=`); validates comparable type for ordering operators |
 | `getTableName`                  | `TypeElement` (table)     | `String`           | Returns `@Table(name = "...")` value                                                                     |
 | `findPkColumn`                  | `TypeElement` (table)     | `String`           | Finds the `@PrimaryKey` column name                                                                      |
 | `findFkColumnInChildForParent`  | child table, parent table | `String`           | Finds the `@ForeignKey` column in the child that references the parent                                   |

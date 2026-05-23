@@ -11,8 +11,11 @@ import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.vajram.ext.sql.vertx.ExecuteVertxSql;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderAmountGtPredicate;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderAmountLtePredicate;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderInfo;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderItemInfo;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderTimeRangePredicate;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderUserIdEquals;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderWithItems;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserIdPredicate;
@@ -98,11 +101,11 @@ class SqlTraitIntegrationTest {
             + "itemPriceCents BIGINT NOT NULL, "
             + "orderId BIGINT NOT NULL)");
 
-    // Alice (id=1): 6 orders so that @LIMIT(3) on orders AND @LIMIT(5) on the recent-orders list
+    // Alisha (id=1): 6 orders so that @LIMIT(3) on orders AND @LIMIT(5) on the recent-orders list
     // are both exceeded, proving each cap is enforced independently at every nesting level.
     // Each order carries 6 items (prices 100–600) so that @LIMIT(5) on orderItems is also
     // exercised.
-    runSql("INSERT INTO users VALUES (1, 'Alice', 'alice@example.com', '+1-555-0100')");
+    runSql("INSERT INTO users VALUES (1, 'Alisha', 'Alisha@example.com', '+1-555-0100')");
     for (int i = 0; i < 6; i++) {
       int orderId = 10 + i;
       runSql("INSERT INTO orders VALUES (" + orderId + ", 1, 5000, " + ((i + 1) * 1000) + ")");
@@ -122,9 +125,9 @@ class SqlTraitIntegrationTest {
       }
     }
 
-    // Bob (id=2): 11 orders so that @LIMIT(10) on the orders list trait is exceeded.
+    // Babu (id=2): 11 orders so that @LIMIT(10) on the orders list trait is exceeded.
     // Each order also carries 6 items so that @LIMIT(5) on orderItems is exercised per order.
-    runSql("INSERT INTO users VALUES (2, 'Bob', 'bob@example.com', null)");
+    runSql("INSERT INTO users VALUES (2, 'Babu', 'Babu@example.com', null)");
     for (int i = 0; i < 11; i++) {
       int orderId = 20 + i;
       runSql("INSERT INTO orders VALUES (" + orderId + ", 2, 10000, " + ((i + 1) * 1000) + ")");
@@ -178,8 +181,8 @@ class SqlTraitIntegrationTest {
             user -> {
               assertThat(user).isNotNull();
               assertThat(user.id()).isEqualTo(1L);
-              assertThat(user.name()).isEqualTo("Alice");
-              assertThat(user.contactEmail()).isEqualTo("alice@example.com");
+              assertThat(user.name()).isEqualTo("Alisha");
+              assertThat(user.contactEmail()).isEqualTo("Alisha@example.com");
               assertThat(user.phoneNumber()).contains("+1-555-0100");
             });
   }
@@ -213,7 +216,7 @@ class SqlTraitIntegrationTest {
         .succeedsWithin(TIMEOUT)
         .satisfies(
             orders -> {
-              // @LIMIT(NO_LIMIT) — all 6 of Alice's orders are returned
+              // @LIMIT(NO_LIMIT) — all 6 of Alisha's orders are returned
               assertThat(orders).hasSize(6);
               assertThat(orders.stream().mapToLong(OrderInfo::orderId).boxed())
                   .containsExactlyInAnyOrder(10L, 11L, 12L, 13L, 14L, 15L);
@@ -246,7 +249,7 @@ class SqlTraitIntegrationTest {
       future =
           executor.execute(
               GetUserOrdersByUserName_Req._builder()
-                  .where(UserNamePredicate._builder().nameIs("Alice")._build())
+                  .where(UserNamePredicate._builder().nameIs("Alisha")._build())
                   ._build(),
               KryonExecutionConfig.builder().executionId("getUserOrdersByUserName_exec").build());
     }
@@ -255,7 +258,7 @@ class SqlTraitIntegrationTest {
         .satisfies(
             result -> {
               assertThat(result).isNotNull();
-              assertThat(result.name()).isEqualTo("Alice");
+              assertThat(result.name()).isEqualTo("Alisha");
               // @LIMIT(10) not exceeded — all 6 orders returned, newest first
               assertThat(result.orders()).hasSize(6);
               assertThat(result.orders().stream().mapToLong(OrderInfo::orderId).boxed())
@@ -299,8 +302,8 @@ class SqlTraitIntegrationTest {
         .satisfies(
             result -> {
               assertThat(result).isNotNull();
-              assertThat(result.name()).isEqualTo("Alice");
-              // Alice has 6 orders; @LIMIT(3) must cap at exactly 3
+              assertThat(result.name()).isEqualTo("Alisha");
+              // Alisha has 6 orders; @LIMIT(3) must cap at exactly 3
               assertThat(result.orders()).hasSize(3);
               // @ORDER(by = "orderTime", direction = DESC) — newest 3: orderId 15, 14, 13
               assertThat(result.orders().stream().mapToLong(OrderWithItems::orderId).boxed())
@@ -327,7 +330,7 @@ class SqlTraitIntegrationTest {
       future =
           executor.execute(
               GetUserByNameWithOrdersAndItems_Req._builder()
-                  .where(UserNamePredicate._builder().nameIs("Alice")._build())
+                  .where(UserNamePredicate._builder().nameIs("Alisha")._build())
                   ._build(),
               KryonExecutionConfig.builder()
                   .executionId("getUserByNameWithOrdersAndItems_exec")
@@ -338,8 +341,8 @@ class SqlTraitIntegrationTest {
         .satisfies(
             result -> {
               assertThat(result).isNotNull();
-              assertThat(result.name()).isEqualTo("Alice");
-              // Alice has 6 orders; @LIMIT(3) must cap at exactly 3, newest first
+              assertThat(result.name()).isEqualTo("Alisha");
+              // Alisha has 6 orders; @LIMIT(3) must cap at exactly 3, newest first
               assertThat(result.orders()).hasSize(3);
               assertThat(result.orders().get(0).orderId()).isEqualTo(15L);
               assertThat(result.orders().get(1).orderId()).isEqualTo(14L);
@@ -358,7 +361,7 @@ class SqlTraitIntegrationTest {
 
   @Test
   void getUserByNameWithOrdersAndItems_respectsOrderAndItemLimitsIndependently() {
-    // Bob has 11 orders each with 6 items.
+    // Babu has 11 orders each with 6 items.
     // @LIMIT(3) on orders caps at 3 (not 11); @LIMIT(5) on items caps at 5 per order (not 6).
     // Both limits are verified to be independent of each other.
     CompletableFuture<UserWithOrdersAndItems> future;
@@ -367,7 +370,7 @@ class SqlTraitIntegrationTest {
       future =
           executor.execute(
               GetUserByNameWithOrdersAndItems_Req._builder()
-                  .where(UserNamePredicate._builder().nameIs("Bob")._build())
+                  .where(UserNamePredicate._builder().nameIs("Babu")._build())
                   ._build(),
               KryonExecutionConfig.builder()
                   .executionId("getUserByNameWithOrdersAndItems_limits_exec")
@@ -378,8 +381,8 @@ class SqlTraitIntegrationTest {
         .satisfies(
             result -> {
               assertThat(result).isNotNull();
-              assertThat(result.name()).isEqualTo("Bob");
-              // Bob has 11 orders; @LIMIT(3) must cap at exactly 3
+              assertThat(result.name()).isEqualTo("Babu");
+              // Babu has 11 orders; @LIMIT(3) must cap at exactly 3
               assertThat(result.orders()).hasSize(3);
               // @ORDER(by = "orderTime", direction = DESC) — newest 3: orderId 30, 29, 28
               assertThat(result.orders().stream().mapToLong(OrderWithItems::orderId).boxed())
@@ -433,7 +436,7 @@ class SqlTraitIntegrationTest {
         .succeedsWithin(TIMEOUT)
         .satisfies(
             orders -> {
-              // @LIMIT(10) not exceeded — all 6 of Alice's orders returned, newest first
+              // @LIMIT(10) not exceeded — all 6 of Alisha's orders returned, newest first
               assertThat(orders).hasSize(6);
               assertThat(orders.stream().mapToLong(OrderWithItems::orderId).boxed())
                   .containsExactly(15L, 14L, 13L, 12L, 11L, 10L);
@@ -451,7 +454,7 @@ class SqlTraitIntegrationTest {
 
   @Test
   void getOrdersWithItemsByUserId_respectsOrderAndItemLimitsIndependently() {
-    // Bob (id=2) has 11 orders each with 6 items.
+    // Babu (id=2) has 11 orders each with 6 items.
     // @LIMIT(10) on the list trait caps orders at 10 (not 11); @LIMIT(5) on orderItems caps items
     // at 5 per order (not 6). Both limits are verified independently.
     CompletableFuture<List<OrderWithItems>> future;
@@ -469,7 +472,7 @@ class SqlTraitIntegrationTest {
         .succeedsWithin(TIMEOUT)
         .satisfies(
             orders -> {
-              // Bob has 11 orders; @LIMIT(10) must cap at exactly 10
+              // Babu has 11 orders; @LIMIT(10) must cap at exactly 10
               assertThat(orders).hasSize(10);
               // @ORDER(by = "orderTime", direction = DESC) — newest 10: orderId 30..21
               assertThat(orders.stream().mapToLong(OrderWithItems::orderId).boxed())
@@ -526,7 +529,7 @@ class SqlTraitIntegrationTest {
             user -> {
               assertThat(user).isNotNull();
               assertThat(user.id()).isEqualTo(1L);
-              assertThat(user.name()).isEqualTo("Alice");
+              assertThat(user.name()).isEqualTo("Alisha");
             });
   }
 
@@ -540,7 +543,7 @@ class SqlTraitIntegrationTest {
                   .where(
                       UserOrPredicate._builder()
                           .orWithUserId(UserIdPredicate._builder().idIs(999L))
-                          .orWithUserName(UserNamePredicate._builder().nameIs("Bob"))
+                          .orWithUserName(UserNamePredicate._builder().nameIs("Babu"))
                           ._build())
                   ._build(),
               KryonExecutionConfig.builder().executionId("getUserByIdOrName_byName_exec").build());
@@ -551,7 +554,7 @@ class SqlTraitIntegrationTest {
             user -> {
               assertThat(user).isNotNull();
               assertThat(user.id()).isEqualTo(2L);
-              assertThat(user.name()).isEqualTo("Bob");
+              assertThat(user.name()).isEqualTo("Babu");
             });
   }
 
@@ -574,6 +577,140 @@ class SqlTraitIntegrationTest {
     assertThat(future).succeedsWithin(TIMEOUT).isNull();
   }
 
+  // ─── GetOrdersByTimeRange (@GreaterThanOrEqual + @LesserThan) ─────────────────
+
+  @Test
+  void getOrdersByTimeRange_returnsOrdersInHalfOpenRange() {
+    // Alisha's orders: orderTime 1000,2000,3000,4000,5000,6000
+    // Babu's orders:   orderTime 1000,2000,...,11000
+    // Range [3000, 6000) should match orderTime 3000,4000,5000 for both users
+    CompletableFuture<List<OrderInfo>> future;
+    try (KrystexVajramExecutor executor = createExecutor("getOrdersByTimeRange")) {
+      future =
+          executor.execute(
+              GetOrdersByTimeRange_Req._builder()
+                  .where(
+                      OrderTimeRangePredicate._builder()
+                          .orderTimeFrom(3000L)
+                          .orderTimeTo(6000L)
+                          ._build())
+                  ._build(),
+              KryonExecutionConfig.builder().executionId("getOrdersByTimeRange_exec").build());
+    }
+    assertThat(future)
+        .succeedsWithin(TIMEOUT)
+        .satisfies(
+            orders -> {
+              // Alisha: orderId 12(3000), 13(4000), 14(5000) + Babu: orderId 22(3000), 23(4000),
+              // 24(5000)
+              assertThat(orders).hasSize(6);
+              // @ORDER(by = "orderTime", direction = ASC)
+              assertThat(orders.stream().mapToLong(OrderInfo::orderId).boxed())
+                  .containsExactly(12L, 22L, 13L, 23L, 14L, 24L);
+            });
+  }
+
+  @Test
+  void getOrdersByTimeRange_returnsEmptyWhenNoOrdersInRange() {
+    CompletableFuture<List<OrderInfo>> future;
+    try (KrystexVajramExecutor executor = createExecutor("getOrdersByTimeRange_empty")) {
+      future =
+          executor.execute(
+              GetOrdersByTimeRange_Req._builder()
+                  .where(
+                      OrderTimeRangePredicate._builder()
+                          .orderTimeFrom(99000L)
+                          .orderTimeTo(100000L)
+                          ._build())
+                  ._build(),
+              KryonExecutionConfig.builder()
+                  .executionId("getOrdersByTimeRange_empty_exec")
+                  .build());
+    }
+    assertThat(future).succeedsWithin(TIMEOUT).satisfies(orders -> assertThat(orders).isEmpty());
+  }
+
+  // ─── GetOrdersByMinAmount (@GreaterThan) ────────────────────────────────────
+
+  @Test
+  void getOrdersByMinAmount_returnsOrdersAboveThreshold() {
+    // Alisha's orders: amountCents=5000, Babu's orders: amountCents=10000
+    // amountCents > 5000 should return only Babu's 11 orders
+    CompletableFuture<List<OrderInfo>> future;
+    try (KrystexVajramExecutor executor = createExecutor("getOrdersByMinAmount")) {
+      future =
+          executor.execute(
+              GetOrdersByMinAmount_Req._builder()
+                  .where(OrderAmountGtPredicate._builder().amountGreaterThan(5000L)._build())
+                  ._build(),
+              KryonExecutionConfig.builder().executionId("getOrdersByMinAmount_exec").build());
+    }
+    assertThat(future)
+        .succeedsWithin(TIMEOUT)
+        .satisfies(
+            orders -> {
+              assertThat(orders).hasSize(11);
+              // All should be Babu's orders (amountCents=10000)
+              assertThat(orders).allSatisfy(o -> assertThat(o.amountCents()).isEqualTo(10000L));
+            });
+  }
+
+  @Test
+  void getOrdersByMinAmount_returnsEmptyWhenNoneAboveThreshold() {
+    CompletableFuture<List<OrderInfo>> future;
+    try (KrystexVajramExecutor executor = createExecutor("getOrdersByMinAmount_empty")) {
+      future =
+          executor.execute(
+              GetOrdersByMinAmount_Req._builder()
+                  .where(OrderAmountGtPredicate._builder().amountGreaterThan(99999L)._build())
+                  ._build(),
+              KryonExecutionConfig.builder()
+                  .executionId("getOrdersByMinAmount_empty_exec")
+                  .build());
+    }
+    assertThat(future).succeedsWithin(TIMEOUT).satisfies(orders -> assertThat(orders).isEmpty());
+  }
+
+  // ─── GetOrdersByMaxAmount (@LesserThanOrEqual) ──────────────────────────────
+
+  @Test
+  void getOrdersByMaxAmount_returnsOrdersAtOrBelowThreshold() {
+    // Alisha's orders: amountCents=5000, Babu's orders: amountCents=10000
+    // amountCents <= 5000 should return only Alisha's 6 orders
+    CompletableFuture<List<OrderInfo>> future;
+    try (KrystexVajramExecutor executor = createExecutor("getOrdersByMaxAmount")) {
+      future =
+          executor.execute(
+              GetOrdersByMaxAmount_Req._builder()
+                  .where(OrderAmountLtePredicate._builder().amountAtMost(5000L)._build())
+                  ._build(),
+              KryonExecutionConfig.builder().executionId("getOrdersByMaxAmount_exec").build());
+    }
+    assertThat(future)
+        .succeedsWithin(TIMEOUT)
+        .satisfies(
+            orders -> {
+              assertThat(orders).hasSize(6);
+              // All should be Alisha's orders (amountCents=5000)
+              assertThat(orders).allSatisfy(o -> assertThat(o.amountCents()).isEqualTo(5000L));
+            });
+  }
+
+  @Test
+  void getOrdersByMaxAmount_returnsAllWhenThresholdIsHigh() {
+    // amountCents <= 99999 should return all 17 orders (6 Alisha + 11 Babu)
+    CompletableFuture<List<OrderInfo>> future;
+    try (KrystexVajramExecutor executor = createExecutor("getOrdersByMaxAmount_all")) {
+      future =
+          executor.execute(
+              GetOrdersByMaxAmount_Req._builder()
+                  .where(OrderAmountLtePredicate._builder().amountAtMost(99999L)._build())
+                  ._build(),
+              KryonExecutionConfig.builder().executionId("getOrdersByMaxAmount_all_exec").build());
+    }
+    assertThat(future).succeedsWithin(TIMEOUT).satisfies(orders -> assertThat(orders).hasSize(17));
+  }
+
   // ─── GetRecentOrdersByUserId ──────────────────────────────────────────────────
 
   @Test
@@ -591,7 +728,7 @@ class SqlTraitIntegrationTest {
         .succeedsWithin(TIMEOUT)
         .satisfies(
             orders -> {
-              // Alice has 6 orders; @LIMIT(5) must cap at exactly 5
+              // Alisha has 6 orders; @LIMIT(5) must cap at exactly 5
               assertThat(orders).hasSize(5);
               // @ORDER(by = "orderTime", direction = DESC) — newest 5: orderId 15..11
               assertThat(orders.stream().mapToLong(OrderInfo::orderId).boxed())
@@ -630,6 +767,15 @@ class SqlTraitIntegrationTest {
         .bindTrait(GetOrdersWithItemsByUserId_Req.class)
         .to(GetOrdersWithItemsByUserId_VertxSql_Req.class);
     traitBinder.bindTrait(GetUserByIdOrName_Req.class).to(GetUserByIdOrName_VertxSql_Req.class);
+    traitBinder
+        .bindTrait(GetOrdersByTimeRange_Req.class)
+        .to(GetOrdersByTimeRange_VertxSql_Req.class);
+    traitBinder
+        .bindTrait(GetOrdersByMinAmount_Req.class)
+        .to(GetOrdersByMinAmount_VertxSql_Req.class);
+    traitBinder
+        .bindTrait(GetOrdersByMaxAmount_Req.class)
+        .to(GetOrdersByMaxAmount_VertxSql_Req.class);
 
     kGraph.traitDispatchPolicies(
         TraitDispatchPolicies.builder()
@@ -642,7 +788,10 @@ class SqlTraitIntegrationTest {
                         GetUserByNameWithOrdersAndItems_Req._VAJRAM_ID,
                         GetRecentOrdersByUserId_Req._VAJRAM_ID,
                         GetOrdersWithItemsByUserId_Req._VAJRAM_ID,
-                        GetUserByIdOrName_Req._VAJRAM_ID)
+                        GetUserByIdOrName_Req._VAJRAM_ID,
+                        GetOrdersByTimeRange_Req._VAJRAM_ID,
+                        GetOrdersByMinAmount_Req._VAJRAM_ID,
+                        GetOrdersByMaxAmount_Req._VAJRAM_ID)
                     .map(
                         vajramID ->
                             new StaticDispatchPolicyImpl(vajramGraph, vajramID, traitBinder))
