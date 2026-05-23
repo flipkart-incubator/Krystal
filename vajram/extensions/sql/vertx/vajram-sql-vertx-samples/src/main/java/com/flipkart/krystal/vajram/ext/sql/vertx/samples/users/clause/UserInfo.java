@@ -1,15 +1,17 @@
 package com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause;
 
+import static com.flipkart.krystal.model.ModelRoot.ModelType.RESPONSE;
+
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocol;
-import com.flipkart.krystal.vajram.ext.sql.statement.Column;
-import com.flipkart.krystal.vajram.ext.sql.statement.Selection;
+import com.flipkart.krystal.vajram.ext.sql.model.Column;
+import com.flipkart.krystal.vajram.ext.sql.model.Selection;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.User;
 import java.util.Optional;
 
-@ModelRoot
+@ModelRoot(type = RESPONSE)
 @SupportedModelProtocol(PlainJavaObject.class)
 @Selection(from = User.class)
 public interface UserInfo extends Model {

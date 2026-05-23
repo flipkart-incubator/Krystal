@@ -13,12 +13,13 @@ import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.vajram.ext.sql.vertx.ExecuteVertxSql;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderInfo;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderItemInfo;
-import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderUserIdEquals_ImmutPojo;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderUserIdEquals;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderWithItems;
-import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserIdEquals_ImmutPojo;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserIdPredicate;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserInfo;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserNameAndOrders;
-import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserNameEquals_ImmutPojo;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserNamePredicate;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserOrPredicate;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserWithOrdersAndItems;
 import com.flipkart.krystal.vajram.guice.injection.VajramGuiceInputInjector;
 import com.flipkart.krystal.vajram.guice.traitbinding.StaticDispatchPolicyImpl;
@@ -145,9 +146,9 @@ class SqlTraitIntegrationTest {
   }
 
   @AfterAll
-  static void afterAll() throws Exception {
-    pool.close().toCompletionStage().toCompletableFuture().get();
-    vertx.close().toCompletionStage().toCompletableFuture().get();
+  static void afterAll() {
+    pool.close().toCompletionStage().toCompletableFuture().join();
+    vertx.close().toCompletionStage().toCompletableFuture().join();
   }
 
   @BeforeEach
@@ -168,7 +169,7 @@ class SqlTraitIntegrationTest {
     try (KrystexVajramExecutor executor = createExecutor("getUserInfoById")) {
       future =
           executor.execute(
-              new GetUserInfoById_ReqImmutPojo(new UserIdEquals_ImmutPojo(1)),
+              GetUserInfoById_Req._builder().where(UserIdPredicate._builder().idIs(1L))._build(),
               KryonExecutionConfig.builder().executionId("getUserInfoById_exec").build());
     }
     assertThat(future)
@@ -189,9 +190,7 @@ class SqlTraitIntegrationTest {
     try (KrystexVajramExecutor executor = createExecutor("getUserInfoById_missing")) {
       future =
           executor.execute(
-              GetUserInfoById_ReqImmutPojo._builder()
-                  .where(new UserIdEquals_ImmutPojo(999))
-                  ._build(),
+              GetUserInfoById_Req._builder().where(UserIdPredicate._builder().idIs(999L))._build(),
               KryonExecutionConfig.builder().executionId("getUserInfoById_missing_exec").build());
     }
     assertThat(future).succeedsWithin(TIMEOUT).isNull();
@@ -205,8 +204,8 @@ class SqlTraitIntegrationTest {
     try (KrystexVajramExecutor executor = createExecutor("getOrderInfoByUserId")) {
       future =
           executor.execute(
-              GetOrderInfoByUserId_ReqImmutPojo._builder()
-                  .where(OrderUserIdEquals_ImmutPojo._builder().userId(1L)._build())
+              GetOrderInfoByUserId_Req._builder()
+                  .where(OrderUserIdEquals._builder().userIdIs(1L)._build())
                   ._build(),
               KryonExecutionConfig.builder().executionId("getOrderInfoByUserId_exec").build());
     }
@@ -228,8 +227,8 @@ class SqlTraitIntegrationTest {
     try (KrystexVajramExecutor executor = createExecutor("getOrderInfoByUserId_empty")) {
       future =
           executor.execute(
-              GetOrderInfoByUserId_ReqImmutPojo._builder()
-                  .where(OrderUserIdEquals_ImmutPojo._builder().userId(999L)._build())
+              GetOrderInfoByUserId_Req._builder()
+                  .where(OrderUserIdEquals._builder().userIdIs(999L)._build())
                   ._build(),
               KryonExecutionConfig.builder()
                   .executionId("getOrderInfoByUserId_empty_exec")
@@ -246,8 +245,8 @@ class SqlTraitIntegrationTest {
     try (KrystexVajramExecutor executor = createExecutor("getUserOrdersByUserName")) {
       future =
           executor.execute(
-              GetUserOrdersByUserName_ReqImmutPojo._builder()
-                  .where(UserNameEquals_ImmutPojo._builder().name("Alice")._build())
+              GetUserOrdersByUserName_Req._builder()
+                  .where(UserNamePredicate._builder().nameIs("Alice")._build())
                   ._build(),
               KryonExecutionConfig.builder().executionId("getUserOrdersByUserName_exec").build());
     }
@@ -270,8 +269,8 @@ class SqlTraitIntegrationTest {
     try (KrystexVajramExecutor executor = createExecutor("getUserOrdersByUserName_missing")) {
       future =
           executor.execute(
-              GetUserOrdersByUserName_ReqImmutPojo._builder()
-                  .where(UserNameEquals_ImmutPojo._builder().name("NoSuchUser")._build())
+              GetUserOrdersByUserName_Req._builder()
+                  .where(UserNamePredicate._builder().nameIs("NoSuchUser")._build())
                   ._build(),
               KryonExecutionConfig.builder()
                   .executionId("getUserOrdersByUserName_missing_exec")
@@ -288,8 +287,8 @@ class SqlTraitIntegrationTest {
     try (KrystexVajramExecutor executor = createExecutor("getUserByIdWithOrdersAndItems")) {
       future =
           executor.execute(
-              GetUserByIdWithOrdersAndItems_ReqImmutPojo._builder()
-                  .where(UserIdEquals_ImmutPojo._builder().id(1L)._build())
+              GetUserByIdWithOrdersAndItems_Req._builder()
+                  .where(UserIdPredicate._builder().idIs(1L)._build())
                   ._build(),
               KryonExecutionConfig.builder()
                   .executionId("getUserByIdWithOrdersAndItems_exec")
@@ -327,8 +326,8 @@ class SqlTraitIntegrationTest {
     try (KrystexVajramExecutor executor = createExecutor("getUserByNameWithOrdersAndItems")) {
       future =
           executor.execute(
-              GetUserByNameWithOrdersAndItems_ReqImmutPojo._builder()
-                  .where(UserNameEquals_ImmutPojo._builder().name("Alice")._build())
+              GetUserByNameWithOrdersAndItems_Req._builder()
+                  .where(UserNamePredicate._builder().nameIs("Alice")._build())
                   ._build(),
               KryonExecutionConfig.builder()
                   .executionId("getUserByNameWithOrdersAndItems_exec")
@@ -367,8 +366,8 @@ class SqlTraitIntegrationTest {
         createExecutor("getUserByNameWithOrdersAndItems_limits")) {
       future =
           executor.execute(
-              GetUserByNameWithOrdersAndItems_ReqImmutPojo._builder()
-                  .where(UserNameEquals_ImmutPojo._builder().name("Bob")._build())
+              GetUserByNameWithOrdersAndItems_Req._builder()
+                  .where(UserNamePredicate._builder().nameIs("Bob")._build())
                   ._build(),
               KryonExecutionConfig.builder()
                   .executionId("getUserByNameWithOrdersAndItems_limits_exec")
@@ -405,8 +404,8 @@ class SqlTraitIntegrationTest {
         createExecutor("getUserByNameWithOrdersAndItems_missing")) {
       future =
           executor.execute(
-              GetUserByNameWithOrdersAndItems_ReqImmutPojo._builder()
-                  .where(UserNameEquals_ImmutPojo._builder().name("NoSuchUser")._build())
+              GetUserByNameWithOrdersAndItems_Req._builder()
+                  .where(UserNamePredicate._builder().nameIs("NoSuchUser")._build())
                   ._build(),
               KryonExecutionConfig.builder()
                   .executionId("getUserByNameWithOrdersAndItems_missing_exec")
@@ -423,8 +422,8 @@ class SqlTraitIntegrationTest {
     try (KrystexVajramExecutor executor = createExecutor("getOrdersWithItemsByUserId")) {
       future =
           executor.execute(
-              GetOrdersWithItemsByUserId_ReqImmutPojo._builder()
-                  .where(OrderUserIdEquals_ImmutPojo._builder().userId(1L)._build())
+              GetOrdersWithItemsByUserId_Req._builder()
+                  .where(OrderUserIdEquals._builder().userIdIs(1L)._build())
                   ._build(),
               KryonExecutionConfig.builder()
                   .executionId("getOrdersWithItemsByUserId_exec")
@@ -459,8 +458,8 @@ class SqlTraitIntegrationTest {
     try (KrystexVajramExecutor executor = createExecutor("getOrdersWithItemsByUserId_joinLimit")) {
       future =
           executor.execute(
-              GetOrdersWithItemsByUserId_ReqImmutPojo._builder()
-                  .where(OrderUserIdEquals_ImmutPojo._builder().userId(2L)._build())
+              GetOrdersWithItemsByUserId_Req._builder()
+                  .where(OrderUserIdEquals._builder().userIdIs(2L)._build())
                   ._build(),
               KryonExecutionConfig.builder()
                   .executionId("getOrdersWithItemsByUserId_joinLimit_exec")
@@ -493,14 +492,86 @@ class SqlTraitIntegrationTest {
     try (KrystexVajramExecutor executor = createExecutor("getOrdersWithItemsByUserId_empty")) {
       future =
           executor.execute(
-              GetOrdersWithItemsByUserId_ReqImmutPojo._builder()
-                  .where(OrderUserIdEquals_ImmutPojo._builder().userId(999L)._build())
+              GetOrdersWithItemsByUserId_Req._builder()
+                  .where(OrderUserIdEquals._builder().userIdIs(999L)._build())
                   ._build(),
               KryonExecutionConfig.builder()
                   .executionId("getOrdersWithItemsByUserId_empty_exec")
                   .build());
     }
     assertThat(future).succeedsWithin(TIMEOUT).satisfies(orders -> assertThat(orders).isEmpty());
+  }
+
+  // ─── GetUserByIdOrName ────────────────────────────────────────────────────────
+
+  @Test
+  void getUserByIdOrName_matchesById() {
+    CompletableFuture<UserInfo> future;
+    try (KrystexVajramExecutor executor = createExecutor("getUserByIdOrName_byId")) {
+      future =
+          executor.execute(
+              GetUserByIdOrName_Req._builder()
+                  .where(
+                      UserOrPredicate._builder()
+                          .orWithUserId(UserIdPredicate._builder().idIs(1L)._build())
+                          .orWithUserName(
+                              UserNamePredicate._builder().nameIs("NoSuchUser")._build())
+                          ._build())
+                  ._build(),
+              KryonExecutionConfig.builder().executionId("getUserByIdOrName_byId_exec").build());
+    }
+    assertThat(future)
+        .succeedsWithin(TIMEOUT)
+        .satisfies(
+            user -> {
+              assertThat(user).isNotNull();
+              assertThat(user.id()).isEqualTo(1L);
+              assertThat(user.name()).isEqualTo("Alice");
+            });
+  }
+
+  @Test
+  void getUserByIdOrName_matchesByName() {
+    CompletableFuture<UserInfo> future;
+    try (KrystexVajramExecutor executor = createExecutor("getUserByIdOrName_byName")) {
+      future =
+          executor.execute(
+              GetUserByIdOrName_Req._builder()
+                  .where(
+                      UserOrPredicate._builder()
+                          .orWithUserId(UserIdPredicate._builder().idIs(999L))
+                          .orWithUserName(UserNamePredicate._builder().nameIs("Bob"))
+                          ._build())
+                  ._build(),
+              KryonExecutionConfig.builder().executionId("getUserByIdOrName_byName_exec").build());
+    }
+    assertThat(future)
+        .succeedsWithin(TIMEOUT)
+        .satisfies(
+            user -> {
+              assertThat(user).isNotNull();
+              assertThat(user.id()).isEqualTo(2L);
+              assertThat(user.name()).isEqualTo("Bob");
+            });
+  }
+
+  @Test
+  void getUserByIdOrName_returnsNullWhenNeitherMatches() {
+    CompletableFuture<UserInfo> future;
+    try (KrystexVajramExecutor executor = createExecutor("getUserByIdOrName_noMatch")) {
+      future =
+          executor.execute(
+              GetUserByIdOrName_Req._builder()
+                  .where(
+                      UserOrPredicate._builder()
+                          .orWithUserId(UserIdPredicate._builder().idIs(999L)._build())
+                          .orWithUserName(
+                              UserNamePredicate._builder().nameIs("NoSuchUser")._build())
+                          ._build())
+                  ._build(),
+              KryonExecutionConfig.builder().executionId("getUserByIdOrName_noMatch_exec").build());
+    }
+    assertThat(future).succeedsWithin(TIMEOUT).isNull();
   }
 
   // ─── GetRecentOrdersByUserId ──────────────────────────────────────────────────
@@ -511,8 +582,8 @@ class SqlTraitIntegrationTest {
     try (KrystexVajramExecutor executor = createExecutor("getRecentOrdersByUserId")) {
       future =
           executor.execute(
-              GetRecentOrdersByUserId_ReqImmutPojo._builder()
-                  .where(OrderUserIdEquals_ImmutPojo._builder().userId(1L)._build())
+              GetRecentOrdersByUserId_Req._builder()
+                  .where(OrderUserIdEquals._builder().userIdIs(1L)._build())
                   ._build(),
               KryonExecutionConfig.builder().executionId("getRecentOrdersByUserId_exec").build());
     }
@@ -558,6 +629,7 @@ class SqlTraitIntegrationTest {
     traitBinder
         .bindTrait(GetOrdersWithItemsByUserId_Req.class)
         .to(GetOrdersWithItemsByUserId_VertxSql_Req.class);
+    traitBinder.bindTrait(GetUserByIdOrName_Req.class).to(GetUserByIdOrName_VertxSql_Req.class);
 
     kGraph.traitDispatchPolicies(
         TraitDispatchPolicies.builder()
@@ -569,7 +641,8 @@ class SqlTraitIntegrationTest {
                         GetUserByIdWithOrdersAndItems_Req._VAJRAM_ID,
                         GetUserByNameWithOrdersAndItems_Req._VAJRAM_ID,
                         GetRecentOrdersByUserId_Req._VAJRAM_ID,
-                        GetOrdersWithItemsByUserId_Req._VAJRAM_ID)
+                        GetOrdersWithItemsByUserId_Req._VAJRAM_ID,
+                        GetUserByIdOrName_Req._VAJRAM_ID)
                     .map(
                         vajramID ->
                             new StaticDispatchPolicyImpl(vajramGraph, vajramID, traitBinder))

@@ -486,6 +486,103 @@ than just `id = $1`).
 - A `@WHERE` interface **must** extend `WhereClause`; omitting it produces:
   `[vajram-sql] @WHERE interface '...' must extend WhereClause.`
 
+#### Comparison Operators
+
+By default, each method in a `@WHERE` interface generates an `=` comparison. You can make the
+operator explicit using the `@IsEqualTo` annotation:
+
+```java
+
+@ModelRoot
+@SupportedModelProtocol(PlainJavaObject.class)
+@WHERE(inTable = User.class)
+public interface UserIdPredicate extends SelectionPredicate {
+
+  @Column("id")
+  @IsEqualTo
+  long idIs();   // → "id = $1"
+}
+```
+
+When `@Column` is present, its value is used as the DB column name in the WHERE clause (just like in
+selections). Otherwise the method name is used directly.
+
+#### OR Predicates
+
+Multiple methods within a single `@WHERE` interface are combined with `AND`. To express an `OR`
+condition across different column predicates, use `SqlOrPredicate`:
+
+1. Define individual predicates as `SelectionPredicate` interfaces:
+
+```java
+
+@ModelRoot
+@SupportedModelProtocol(PlainJavaObject.class)
+@WHERE(inTable = User.class)
+public interface UserIdPredicate extends SelectionPredicate {
+  @Column("id")
+  @IsEqualTo
+  long idIs();
+}
+
+@ModelRoot
+@SupportedModelProtocol(PlainJavaObject.class)
+@WHERE(inTable = User.class)
+public interface UserNamePredicate extends SelectionPredicate {
+  @Column("name")
+  @IsEqualTo
+  String nameIs();
+}
+```
+
+2. Combine them in an `SqlOrPredicate` interface:
+
+```java
+
+@ModelRoot
+@SupportedModelProtocol(PlainJavaObject.class)
+public interface UserOrPredicate extends SqlOrPredicate {
+  UserIdPredicate orWithUserId();
+  UserNamePredicate orWithUserName();
+}
+```
+
+3. Use the OR predicate as the WHERE input in a trait:
+
+```java
+
+@SQL
+@SELECT
+@Trait
+@CallGraphDelegationMode(SYNC)
+public interface GetUserByIdOrName extends TraitDef<@LIMIT(1) UserInfo> {
+  interface _Inputs {
+    @IfAbsent(FAIL)
+    UserOrPredicate where();
+  }
+}
+```
+
+This generates:
+```sql
+SELECT id, name, email AS contactEmail, phoneNumber
+FROM users
+WHERE (id = $1 OR name = $2)
+LIMIT 1
+```
+
+Each child of the `SqlOrPredicate` becomes one branch of the `OR`. If a child predicate has
+multiple methods (columns), those columns are combined with `AND` within that branch:
+`(col1 = $1 AND col2 = $2) OR (col3 = $3)`.
+
+**Invariants:**
+
+- An `SqlOrPredicate` must have `@ModelRoot` and `@SupportedModelProtocol(PlainJavaObject.class)`.
+- Each method in an `SqlOrPredicate` must return a `SelectionPredicate` type (with `@WHERE`).
+- All child predicates must reference the same table via their `@WHERE(inTable = ...)` attribute.
+- OR predicates cannot guarantee single-row results, so the trait **must** declare `@LIMIT(1)` if
+  the result type is not a `List`.
+
 ---
 
 ### INSERT / UPDATE / DELETE (planned)
@@ -567,19 +664,38 @@ public interface UserWithRecentOrders extends Model {
 
 ### Step 3 — Define the WHERE clause input(s)
 
-Create a `@WHERE` interface for each group of WHERE predicates. One interface per equality condition
-group is the norm.
+Create a `@WHERE` interface for each group of WHERE predicates. Use `SelectionPredicate` with
+`@IsEqualTo` and `@Column` annotations for explicit operator and column mapping.
+
+**Simple AND predicate:**
 
 ```java
 
 @ModelRoot
 @SupportedModelProtocol(PlainJavaObject.class)
 @WHERE(inTable = User.class)
-public interface UserIdEquals extends WhereClause {
+public interface UserIdPredicate extends SelectionPredicate {
 
-  long id();
+  @Column("id")
+  @IsEqualTo
+  long idIs();   // → "id = $1"
 }
 ```
+
+**OR predicate (combine multiple predicates with OR):**
+
+```java
+
+@ModelRoot
+@SupportedModelProtocol(PlainJavaObject.class)
+public interface UserOrPredicate extends SqlOrPredicate {
+  UserIdPredicate orWithUserId();
+  UserNamePredicate orWithUserName();
+}
+// → generates "WHERE (id = $1 OR name = $2)"
+```
+
+See the [OR Predicates](#or-predicates) section for full details.
 
 ### Step 4 — Declare the SELECT Trait
 

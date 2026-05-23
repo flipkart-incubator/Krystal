@@ -7,18 +7,17 @@ import com.flipkart.krystal.vajram.ext.sql.lang.SelectionPredicate;
 import com.flipkart.krystal.vajram.ext.sql.lang.WHERE;
 import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.IsEqualTo;
 import com.flipkart.krystal.vajram.ext.sql.model.Column;
-import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.Order;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.User;
 
 @ModelRoot
 @SupportedModelProtocol(PlainJavaObject.class)
-@WHERE(inTable = Order.class)
-public interface OrderUserIdEquals extends SelectionPredicate {
-
-  @Column("userId")
+@WHERE(inTable = User.class)
+public interface UserNamePredicate extends SelectionPredicate {
+  @Column("name")
   @IsEqualTo
-  long userIdIs();
+  String nameIs();
 
-  static OrderUserIdEquals_ImmutPojo.Builder _builder() {
-    return OrderUserIdEquals_ImmutPojo._builder();
+  static UserNamePredicate_Immut.Builder _builder() {
+    return UserNamePredicate_ImmutPojo._builder();
   }
 }

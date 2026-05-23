@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.ext.sql.statement;
+package com.flipkart.krystal.vajram.ext.sql.lang;
 
 import com.flipkart.krystal.model.Model;
 

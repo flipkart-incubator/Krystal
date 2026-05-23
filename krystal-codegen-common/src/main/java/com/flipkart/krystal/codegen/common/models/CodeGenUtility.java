@@ -3,6 +3,7 @@ package com.flipkart.krystal.codegen.common.models;
 import static com.flipkart.krystal.codegen.common.models.Constants.IMMUT_SUFFIX;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.WILL_NEVER_FAIL;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.squareup.javapoet.CodeBlock.joining;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -256,9 +257,14 @@ public class CodeGenUtility {
     return stream(annotations).map(aClass -> AnnotationSpec.builder(aClass).build()).toList();
   }
 
-  public IfAbsent getIfAbsent(Element element, @Nullable ModelRoot modelRoot) {
-    // Check if the element has the @IfAbsent annotation
-    IfAbsent ifAbsent = element.getAnnotation(IfAbsent.class);
+  public IfAbsent getIfAbsent(Element modelElement, @Nullable ModelRoot modelRoot) {
+    TypeMirror returnType =
+        modelElement instanceof ExecutableElement executableElement
+            ? executableElement.getReturnType()
+            : modelElement.asType();
+    boolean optOrNullable = isOptional(returnType) || isAnyNullable(returnType, modelElement);
+    // Check if the modelElement has the @IfAbsent annotation
+    IfAbsent ifAbsent = modelElement.getAnnotation(IfAbsent.class);
     if (ifAbsent == null) {
       Set<ModelType> types = modelRoot == null ? Set.of() : Set.of(modelRoot.type());
       boolean isRequest = types.contains(ModelType.REQUEST);
@@ -267,12 +273,14 @@ public class CodeGenUtility {
         // For models with both REQUEST and RESPONSE, @IfAbsent is mandatory
         error(
             "Field '%s' in model with both REQUEST and RESPONSE types must have an explicit @IfAbsent annotation."
-                .formatted(element.getSimpleName()),
-            element);
+                .formatted(modelElement.getSimpleName()),
+            modelElement);
         // Fallback to FAIL to continue processing
         ifAbsent = IfAbsent.Creator.create(FAIL);
       } else if (isRequest) {
         ifAbsent = IfAbsent.Creator.create(MAY_FAIL_CONDITIONALLY);
+      } else if (optOrNullable) {
+        ifAbsent = IfAbsent.Creator.create(WILL_NEVER_FAIL);
       } else {
         ifAbsent = IfAbsent.Creator.create(FAIL);
       }
@@ -1309,16 +1317,15 @@ public class CodeGenUtility {
   public static TypeName asTypeNameWithTypes(
       TypeName className, List<? extends TypeMirror> typeParams) {
     TypeNameVisitor typeNameVisitor = new TypeNameVisitor(true);
-    List<? extends TypeName> typeNameStream =
-        typeParams.stream().map(typeNameVisitor::visit).toList();
-    return asTypeName(className, typeNameStream);
+    List<? extends TypeName> typeNames = typeParams.stream().map(typeNameVisitor::visit).toList();
+    return asTypeName(className, typeNames);
   }
 
-  public static TypeName asTypeName(TypeName typeName, List<? extends TypeName> typeNameStream) {
-    if (typeNameStream.isEmpty()) {
+  public static TypeName asTypeName(TypeName typeName, List<? extends TypeName> typeNames) {
+    if (typeNames.isEmpty()) {
       return typeName;
     } else if (typeName instanceof ClassName className) {
-      return ParameterizedTypeName.get(className, typeNameStream.toArray(TypeName[]::new));
+      return ParameterizedTypeName.get(className, typeNames.toArray(TypeName[]::new));
     } else {
       throw new IllegalArgumentException(
           "If there are type names, the TypeName should be a ClassName");

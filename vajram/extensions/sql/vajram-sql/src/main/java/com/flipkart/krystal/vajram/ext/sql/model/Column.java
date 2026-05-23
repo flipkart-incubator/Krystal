@@ -1,4 +1,6 @@
-package com.flipkart.krystal.vajram.ext.sql.statement;
+package com.flipkart.krystal.vajram.ext.sql.model;
+
+import com.flipkart.krystal.vajram.ext.sql.lang.SELECT;
 
 /**
  * Annotation to mark a field in a @{@link SELECT} interface as a column in the SELECT statement. If

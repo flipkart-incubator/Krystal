@@ -4,8 +4,10 @@ import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.JoinRelation;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.JoinSqlResult;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.ScalarColumn;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.SelectionInfo;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereColumn;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereInput;
-import com.flipkart.krystal.vajram.ext.sql.statement.ORDER;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereLeaf;
+import com.flipkart.krystal.vajram.ext.sql.lang.ORDER;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -287,21 +289,42 @@ public final class SqlQueryBuilder {
   // ─── Shared helpers ──────────────────────────────────────────────────────────
 
   /**
-   * Appends {@code WHERE col = $N AND ...} clauses. When {@code qualified} is {@code true}, column
-   * names are prefixed with the table name from {@link WhereInput#inTableName()}.
+   * Appends {@code WHERE ...} clauses. Supports simple AND predicates and OR-grouped predicates.
+   * When {@code qualified} is {@code true}, column names are prefixed with the table name from
+   * {@link WhereLeaf#inTableName()}.
    */
   private static void appendWhere(
       StringBuilder sql, List<WhereInput> whereInputs, boolean qualified) {
-    List<String> clauses = new ArrayList<>();
+    List<String> topLevelClauses = new ArrayList<>();
     int idx = 1;
     for (WhereInput wi : whereInputs) {
-      for (String field : wi.fields()) {
-        String colRef = qualified ? wi.inTableName() + "." + field : field;
-        clauses.add(colRef + " = $" + idx++);
+      if (wi.isOr()) {
+        List<String> orBranches = new ArrayList<>();
+        for (WhereLeaf leaf : wi.leaves()) {
+          List<String> andClauses = new ArrayList<>();
+          for (WhereColumn col : leaf.columns()) {
+            String colRef =
+                qualified ? leaf.inTableName() + "." + col.dbColumnName() : col.dbColumnName();
+            andClauses.add(colRef + " " + col.operator() + " $" + idx++);
+          }
+          orBranches.add(
+              andClauses.size() == 1
+                  ? andClauses.get(0)
+                  : "(" + String.join(" AND ", andClauses) + ")");
+        }
+        topLevelClauses.add("(" + String.join(" OR ", orBranches) + ")");
+      } else {
+        for (WhereLeaf leaf : wi.leaves()) {
+          for (WhereColumn col : leaf.columns()) {
+            String colRef =
+                qualified ? leaf.inTableName() + "." + col.dbColumnName() : col.dbColumnName();
+            topLevelClauses.add(colRef + " " + col.operator() + " $" + idx++);
+          }
+        }
       }
     }
-    if (!clauses.isEmpty()) {
-      sql.append(" WHERE ").append(String.join(" AND ", clauses));
+    if (!topLevelClauses.isEmpty()) {
+      sql.append(" WHERE ").append(String.join(" AND ", topLevelClauses));
     }
   }
 

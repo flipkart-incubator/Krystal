@@ -1,8 +1,8 @@
-package com.flipkart.krystal.vajram.ext.sql.statement;
+package com.flipkart.krystal.vajram.ext.sql.lang;
 
 import static java.lang.annotation.ElementType.TYPE_USE;
 
-import com.flipkart.krystal.vajram.ext.sql.statement.ORDER.ORDER_Clauses;
+import com.flipkart.krystal.vajram.ext.sql.lang.ORDER.ORDER_Clauses;
 import com.google.auto.value.AutoAnnotation;
 import java.lang.annotation.Repeatable;
 import java.lang.annotation.Target;

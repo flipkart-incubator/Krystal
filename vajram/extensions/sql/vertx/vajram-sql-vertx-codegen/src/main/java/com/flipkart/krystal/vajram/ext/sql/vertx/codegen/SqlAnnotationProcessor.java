@@ -12,7 +12,7 @@ import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlModelParser;
-import com.flipkart.krystal.vajram.ext.sql.statement.SQL;
+import com.flipkart.krystal.vajram.ext.sql.lang.SQL;
 import com.google.auto.service.AutoService;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -28,7 +28,7 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 
-@SupportedAnnotationTypes("com.flipkart.krystal.vajram.ext.sql.statement.SQL")
+@SupportedAnnotationTypes("com.flipkart.krystal.vajram.ext.sql.lang.SQL")
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 @AutoService(Processor.class)
 @SupportedOptions({CODEGEN_PHASE_KEY, MODULE_ROOT_PATH_KEY})

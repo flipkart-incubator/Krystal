@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.ext.sql.vertx.codegen;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
-import static com.flipkart.krystal.vajram.ext.sql.statement.LIMIT.NO_LIMIT;
+import static com.flipkart.krystal.vajram.ext.sql.lang.LIMIT.NO_LIMIT;
 import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -21,11 +21,13 @@ import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.JoinSqlResult;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.ScalarColumn;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.SelectionInfo;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.TraitResultType;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereColumn;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereInput;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereLeaf;
+import com.flipkart.krystal.vajram.ext.sql.lang.LIMIT;
+import com.flipkart.krystal.vajram.ext.sql.lang.LIMIT.Creator;
+import com.flipkart.krystal.vajram.ext.sql.lang.ORDER;
 import com.flipkart.krystal.vajram.ext.sql.model.Table;
-import com.flipkart.krystal.vajram.ext.sql.statement.LIMIT;
-import com.flipkart.krystal.vajram.ext.sql.statement.LIMIT.Creator;
-import com.flipkart.krystal.vajram.ext.sql.statement.ORDER;
 import com.flipkart.krystal.vajram.ext.sql.vertx.ExecuteVertxSql;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Output;
@@ -357,8 +359,10 @@ public class SqlTraitVajramGen implements CodeGenerator {
     }
     List<String> args = new ArrayList<>();
     for (WhereInput wi : whereInputs) {
-      for (String field : wi.fields()) {
-        args.add(wi.paramName() + "." + field + "()");
+      for (WhereLeaf leaf : wi.leaves()) {
+        for (WhereColumn col : leaf.columns()) {
+          args.add(leaf.accessorPrefix() + "." + col.accessorMethod() + "()");
+        }
       }
     }
     if (args.isEmpty()) {

@@ -226,7 +226,10 @@ public final class JavaModelsGen implements CodeGenerator {
     // Write the immutable interface to a file
     util.writeJavaFile(packageName, immutableInterface, modelRootType);
 
-    if (util.typeExplicitlySupportsProtocol(modelRootType, PlainJavaObject.class)) {
+    if (util.typeExplicitlySupportsProtocol(modelRootType, PlainJavaObject.class)
+        // If no SupportedModelProtocol annotation is present, then we assume PlainJavaObject as a
+        // sane default
+        || modelRootType.getAnnotationsByType(SupportedModelProtocol.class).length == 0) {
       // Generate the POJO class only if PlainJavaObject is explicitly supported
       util.writeJavaFile(
           packageName, generateImmutablePojo(modelRootType, modelMethods), modelRootType);

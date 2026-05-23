@@ -182,6 +182,7 @@ import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.type.TypeVariable;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import lombok.EqualsAndHashCode;
@@ -329,6 +330,28 @@ public class VajramCodeGenerator implements CodeGenerator {
         overriding(util.getMethod(FacetValuesContainer.class, "_vajramID", 0))
             .addModifiers(DEFAULT)
             .addStatement("return " + VAJRAM_ID_CONSTANT_NAME)
+            .build());
+
+    // Add static _builder() method for easy access to immut pojo builder
+    requestInterface.addMethod(
+        MethodSpec.methodBuilder("_builder")
+            .addModifiers(PUBLIC, STATIC)
+            .addTypeVariables(
+                currentVajramInfo.lite().typeArguments().stream()
+                    .filter(TypeVariable.class::isInstance)
+                    .map(TypeVariable.class::cast)
+                    .map(TypeVariableName::get)
+                    .toList())
+            .returns(currentVajramInfo.lite().reqBuilderInterfaceType())
+            .addStatement(
+                "return $T.$L_builder()",
+                currentVajramInfo.lite().reqImmutPojoClassName(),
+                currentVajramInfo.lite().typeArguments().isEmpty()
+                    ? EMPTY_CODE_BLOCK
+                    : currentVajramInfo.lite().typeArguments().stream()
+                        .map(new TypeNameVisitor(true)::visit)
+                        .map(t -> CodeBlock.of("$T", t))
+                        .collect(CodeBlock.joining(", ", "<", ">")))
             .build());
 
     facetConstants(requestInterface, inputs, CodeGenParams.builder().isRequest(true).build());

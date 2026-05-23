@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.ext.sql.codegen;
 
-import static com.flipkart.krystal.vajram.ext.sql.statement.LIMIT.Creator.create;
+import static com.flipkart.krystal.vajram.ext.sql.lang.LIMIT.Creator.create;
 import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
@@ -13,20 +13,24 @@ import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.JoinRelation;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.ScalarColumn;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.SelectionInfo;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereColumn;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereInput;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereLeaf;
+import com.flipkart.krystal.vajram.ext.sql.lang.LIMIT;
+import com.flipkart.krystal.vajram.ext.sql.lang.ORDER;
+import com.flipkart.krystal.vajram.ext.sql.lang.ORDER.Direction;
+import com.flipkart.krystal.vajram.ext.sql.lang.SqlWherePredicate;
+import com.flipkart.krystal.vajram.ext.sql.lang.WHERE;
+import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.IsEqualTo;
+import com.flipkart.krystal.vajram.ext.sql.lang.operators.logical.SqlOrPredicate;
+import com.flipkart.krystal.vajram.ext.sql.model.Column;
 import com.flipkart.krystal.vajram.ext.sql.model.ForeignKey;
 import com.flipkart.krystal.vajram.ext.sql.model.IncomingForeignKey;
 import com.flipkart.krystal.vajram.ext.sql.model.PrimaryKey;
+import com.flipkart.krystal.vajram.ext.sql.model.Selection;
 import com.flipkart.krystal.vajram.ext.sql.model.Table;
 import com.flipkart.krystal.vajram.ext.sql.model.TableModel;
 import com.flipkart.krystal.vajram.ext.sql.model.UniqueKey;
-import com.flipkart.krystal.vajram.ext.sql.statement.Column;
-import com.flipkart.krystal.vajram.ext.sql.statement.LIMIT;
-import com.flipkart.krystal.vajram.ext.sql.statement.ORDER;
-import com.flipkart.krystal.vajram.ext.sql.statement.ORDER.Direction;
-import com.flipkart.krystal.vajram.ext.sql.statement.Selection;
-import com.flipkart.krystal.vajram.ext.sql.statement.WHERE;
-import com.flipkart.krystal.vajram.ext.sql.statement.WhereClause;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -104,13 +108,30 @@ public final class SqlModelParser {
   // ─── WHERE inputs ─────────────────────────────────────────────────────────────
 
   /**
-   * Collects {@link WhereInput} records from the given list of trait {@code _Inputs} methods. Only
-   * methods whose return type is annotated with {@code @WHERE} are included.
+   * Collects {@link WhereInput} records from the given list of trait {@code _Inputs} methods.
+   *
+   * <p>Supports two patterns:
+   *
+   * <ul>
+   *   <li><b>Simple predicate</b> — the input type is annotated with {@code @WHERE} and extends
+   *       {@code SelectionPredicate}. A single {@link WhereLeaf} is produced.
+   *   <li><b>OR predicate</b> — the input type extends {@code SqlOrPredicate}. Each method of the
+   *       OR interface returns a {@code SelectionPredicate} sub-type annotated with {@code @WHERE};
+   *       these are collected as multiple {@link WhereLeaf}s joined by {@code OR}.
+   * </ul>
+   *
+   * <p>{@code @Column} and {@code @IsEqualTo} annotations on predicate methods are respected for
+   * column name resolution and comparison operator selection.
    */
   public List<WhereInput> collectWhereInputs(@MonotonicNonNull VajramInfo vajramInfo) {
     List<DefaultFacetModel> inputs =
         vajramInfo.givenFacets().stream().filter(fd -> fd.facetType() == FacetType.INPUT).toList();
     util.note("Input facets on " + vajramInfo.lite().vajramId() + " : " + vajramInfo.givenFacets());
+
+    TypeElement sqlOrPredicateType =
+        util.processingEnv()
+            .getElementUtils()
+            .getTypeElement(SqlOrPredicate.class.getCanonicalName());
 
     List<WhereInput> result = new ArrayList<>();
     for (DefaultFacetModel input : inputs) {
@@ -122,21 +143,79 @@ public final class SqlModelParser {
       if (!(dt.asElement() instanceof TypeElement typeElem)) {
         continue;
       }
+
+      String paramName = input.name();
+
+      // ── SqlOrPredicate path ────────────────────────────────────────────────────
+      if (sqlOrPredicateType != null
+          && util.processingEnv()
+              .getTypeUtils()
+              .isAssignable(typeElem.asType(), sqlOrPredicateType.asType())) {
+        List<WhereLeaf> leaves = new ArrayList<>();
+        for (ExecutableElement orMethod : util.extractAndValidateModelMethods(typeElem)) {
+          TypeMirror childType = orMethod.getReturnType();
+          if (!(childType instanceof DeclaredType childDt)) {
+            continue;
+          }
+          if (!(childDt.asElement() instanceof TypeElement childTypeElem)) {
+            continue;
+          }
+          WHERE childWhere = childTypeElem.getAnnotation(WHERE.class);
+          if (childWhere == null) {
+            continue;
+          }
+          String accessorPrefix = paramName + "." + orMethod.getSimpleName() + "()";
+          leaves.add(parseWhereLeaf(childTypeElem, childWhere, accessorPrefix));
+        }
+        if (!leaves.isEmpty()) {
+          result.add(new WhereInput(paramName, /* isOr= */ true, leaves));
+        }
+        continue;
+      }
+
+      // ── Simple SelectionPredicate path ─────────────────────────────────────────
       WHERE whereAnno = typeElem.getAnnotation(WHERE.class);
       if (whereAnno == null) {
         continue;
       }
-
-      TypeElement inTable = util.getTypeElemFromAnnotationMember(whereAnno::inTable);
-      String inTableName = inTable != null ? getTableName(inTable) : "";
-
-      List<String> fields = new ArrayList<>();
-      for (ExecutableElement wm : util.extractAndValidateModelMethods(typeElem)) {
-        fields.add(wm.getSimpleName().toString());
-      }
-      result.add(new WhereInput(input.name(), typeElem, inTable, inTableName, fields));
+      WhereLeaf leaf = parseWhereLeaf(typeElem, whereAnno, paramName);
+      result.add(new WhereInput(paramName, /* isOr= */ false, List.of(leaf)));
     }
     return result;
+  }
+
+  /**
+   * Parses a single {@code @WHERE}-annotated {@code SelectionPredicate} into a {@link WhereLeaf}.
+   * Each method in the predicate interface becomes a {@link WhereColumn} with resolved DB column
+   * name (via {@code @Column}) and comparison operator (via {@code @IsEqualTo}, defaulting to
+   * {@code "="}).
+   */
+  private WhereLeaf parseWhereLeaf(
+      TypeElement predicateElem, WHERE whereAnno, String accessorPrefix) {
+    TypeElement inTable = util.getTypeElemFromAnnotationMember(whereAnno::inTable);
+    String inTableName = inTable != null ? getTableName(inTable) : "";
+
+    List<WhereColumn> columns = new ArrayList<>();
+    for (ExecutableElement method : util.extractAndValidateModelMethods(predicateElem)) {
+      String fieldName = method.getSimpleName().toString();
+      String dbCol = resolveColumnName(method, false);
+      String operator = resolveComparisonOperator(method);
+      columns.add(new WhereColumn(fieldName, dbCol, operator));
+    }
+    return new WhereLeaf(accessorPrefix, inTableName, columns);
+  }
+
+  /**
+   * Returns the SQL comparison operator for a predicate method based on its annotations. Currently
+   * supports {@code @IsEqualTo} ({@code "="}). Defaults to {@code "="} if no operator annotation is
+   * present.
+   */
+  public String resolveComparisonOperator(ExecutableElement method) {
+    if (method.getAnnotation(IsEqualTo.class) != null) {
+      return "=";
+    }
+    util.error("No Comparison operator annotation such as @IsEqualTo has been found", method);
+    return "<UNKNOWN_OPERATOR>";
   }
 
   // ─── Internal helpers ────────────────────────────────────────────────────────
@@ -280,9 +359,18 @@ public final class SqlModelParser {
 
   /** Resolves the DB column name from {@code @Column("name")} or falls back to the method name. */
   public String resolveColumnName(ExecutableElement method) {
+    return resolveColumnName(method, true);
+  }
+
+  public String resolveColumnName(ExecutableElement method, boolean defaultToMethodName) {
     Column columnAnno = method.getAnnotation(Column.class);
     if (columnAnno == null) {
-      return method.getSimpleName().toString();
+      if (defaultToMethodName) {
+        return method.getSimpleName().toString();
+      } else {
+        util.error("Could not find @Column annotation on method", method);
+        return "<UNKNOWN_COLUMN>";
+      }
     } else {
       return columnAnno.value();
     }
@@ -403,7 +491,9 @@ public final class SqlModelParser {
     TypeElement tableModelType =
         util.processingEnv().getElementUtils().getTypeElement(TableModel.class.getCanonicalName());
     TypeElement whereClauseType =
-        util.processingEnv().getElementUtils().getTypeElement(WhereClause.class.getCanonicalName());
+        util.processingEnv()
+            .getElementUtils()
+            .getTypeElement(SqlWherePredicate.class.getCanonicalName());
 
     for (Element element : roundEnv.getElementsAnnotatedWith(Table.class)) {
       if (!(element instanceof TypeElement te)) {
@@ -459,8 +549,14 @@ public final class SqlModelParser {
    */
   public boolean whereClauseCoversSingleRow(
       TypeElement tableElement, List<WhereInput> whereInputs) {
+    // OR predicates widen the result set, so they cannot guarantee a single row.
     Set<String> whereFields =
-        whereInputs.stream().flatMap(wi -> wi.fields().stream()).collect(Collectors.toSet());
+        whereInputs.stream()
+            .filter(wi -> !wi.isOr())
+            .flatMap(wi -> wi.leaves().stream())
+            .flatMap(leaf -> leaf.columns().stream())
+            .map(WhereColumn::dbColumnName)
+            .collect(Collectors.toSet());
 
     String pkCol = findPkColumn(tableElement);
     if (pkCol != null && whereFields.contains(pkCol)) {

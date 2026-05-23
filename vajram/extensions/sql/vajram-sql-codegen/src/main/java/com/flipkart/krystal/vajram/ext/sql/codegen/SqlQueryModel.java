@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.ext.sql.codegen;
 
-import com.flipkart.krystal.vajram.ext.sql.statement.ORDER;
+import com.flipkart.krystal.vajram.ext.sql.lang.ORDER;
 import java.util.List;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
@@ -87,20 +87,38 @@ public final class SqlQueryModel {
   public record TraitResultType(TypeElement selectionElement, boolean isList) {}
 
   /**
-   * A single {@code @WHERE}-annotated input parameter from a trait's {@code _Inputs} interface.
+   * A single column comparison within a WHERE predicate.
+   *
+   * @param accessorMethod Java method name used to get the value (e.g., {@code "idIs"})
+   * @param dbColumnName actual DB column name (from {@code @Column} or the method name)
+   * @param operator SQL comparison operator (e.g., {@code "="} from {@code @IsEqualTo})
+   */
+  public record WhereColumn(String accessorMethod, String dbColumnName, String operator) {}
+
+  /**
+   * A leaf WHERE predicate: an AND group of column comparisons from a single {@link
+   * com.flipkart.krystal.vajram.ext.sql.lang.SelectionPredicate}.
+   *
+   * @param accessorPrefix full Java accessor prefix for parameter binding (e.g., {@code "where"} or
+   *     {@code "where.orWithUserId()"})
+   * @param inTableName SQL table name from {@code @WHERE(inTable = ...)}
+   * @param columns columns in this predicate, AND-ed together
+   */
+  public record WhereLeaf(String accessorPrefix, String inTableName, List<WhereColumn> columns) {}
+
+  /**
+   * Complete WHERE specification for one {@code _Inputs} method.
+   *
+   * <p>For a simple {@link com.flipkart.krystal.vajram.ext.sql.lang.SelectionPredicate} input,
+   * {@code isOr} is {@code false} and {@code leaves} has a single entry. For an {@link
+   * com.flipkart.krystal.vajram.ext.sql.lang.operators.logical.SqlOrPredicate} input, {@code isOr}
+   * is {@code true} and {@code leaves} contains one entry per OR branch.
    *
    * @param paramName method name in the trait's {@code _Inputs}
-   * @param typeElement the {@code @WHERE} interface type
-   * @param inTable the table referenced by {@code @WHERE(inTable = ...)}
-   * @param inTableName SQL name of {@code inTable}
-   * @param fields method names of the {@code @WHERE} interface (one per WHERE predicate)
+   * @param isOr {@code true} when the input type extends {@code SqlOrPredicate}
+   * @param leaves leaf predicates — OR-joined when {@code isOr}, otherwise a single leaf
    */
-  public record WhereInput(
-      String paramName,
-      TypeElement typeElement,
-      TypeElement inTable,
-      String inTableName,
-      List<String> fields) {}
+  public record WhereInput(String paramName, boolean isOr, List<WhereLeaf> leaves) {}
 
   /**
    * Result of {@link SqlQueryBuilder#buildJoinSql}.
