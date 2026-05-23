@@ -382,7 +382,7 @@ public interface GetUserInfoById extends TraitDef<@LIMIT(1) UserInfo> {
   interface _Inputs {
 
     @IfAbsent(FAIL)
-    UserIdEquals where();
+    UserIdPredicate where();
   }
 }
 ```
@@ -469,8 +469,10 @@ method in the interface maps to a `col = $N` positional placeholder in the gener
 @ModelRoot
 @SupportedModelProtocol(PlainJavaObject.class)
 @WHERE(inTable = User.class)
-public interface UserIdEquals extends WhereClause {
+public interface UserIdPredicate extends WhereClause {
 
+  @Column("id")
+  @IsEqualTo
   long id();   // → "id = $1" in the WHERE clause
 }
 ```
@@ -739,7 +741,7 @@ public interface GetUserSummaryById extends TraitDef<@LIMIT(1) UserSummary> {
   interface _Inputs {
 
     @IfAbsent(FAIL)
-    UserIdEquals userIdEquals();
+    UserIdPredicate where();
   }
 }
 
@@ -780,7 +782,7 @@ public interface GetUserWithRecentOrders extends TraitDef<@LIMIT(1) UserWithRece
   interface _Inputs {
 
     @IfAbsent(FAIL)
-    UserIdEquals userIdEquals();
+    UserIdPredicate where();
   }
 }
 ```

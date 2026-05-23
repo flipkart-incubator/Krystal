@@ -169,6 +169,7 @@ public final class SqlModelParser {
           }
           WHERE childWhere = childTypeElem.getAnnotation(WHERE.class);
           if (childWhere == null) {
+            util.error("SqlPredicate model must have a @WHERE annotation.", childTypeElem);
             continue;
           }
           String accessorPrefix = paramName + "." + orMethod.getSimpleName() + "()";
