@@ -7,11 +7,17 @@ import java.lang.annotation.Target;
 
 /**
  * Range comparison operator where a column value is verified to lie within the lower bound and
- * upper bound of a {@link Range}. This supports closed, open, and half-open/half-closed ranges.
+ * upper bound of a {@link Range}. This supports closed, open, openClosed, closedOpen and
+ * half-open/half-closed ranges.
  *
  * <p>The annotated method must return {@code Range<T>} where {@code T} is a comparable type:
  * numeric primitives/boxed ({@code int}, {@code long}, …), or temporal types ({@code LocalDate},
  * {@code LocalDateTime}, {@code OffsetDateTime}).
+ *
+ * <p>This annotation should be used only if the SQL Trait design intends to give complete control
+ * of configuring the range to the calling client vajrams. This means the range can be arbitrarily
+ * long, or even unbounded. If giving this level of control to clients is not desirable, consider
+ * using {@link IsLessThanOrEqual}, {@link IsGreaterThanOrEqual} etc. instead.
  *
  * <p>At runtime, the {@link Range} object determines which SQL operators are used:
  *

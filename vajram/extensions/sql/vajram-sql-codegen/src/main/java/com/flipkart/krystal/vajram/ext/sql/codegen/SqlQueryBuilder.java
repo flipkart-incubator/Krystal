@@ -335,7 +335,9 @@ public final class SqlQueryBuilder {
       newList.add(codeBlocks.get(i));
       newList.add(separator);
     }
-    newList.add(codeBlocks.get(codeBlocks.size() - 1));
+    if (!codeBlocks.isEmpty()) {
+      newList.add(codeBlocks.get(codeBlocks.size() - 1));
+    }
     return CodeBlock.join(newList, " + ");
   }
 

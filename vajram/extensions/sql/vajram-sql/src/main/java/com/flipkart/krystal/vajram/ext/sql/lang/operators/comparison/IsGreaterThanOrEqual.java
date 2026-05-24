@@ -14,7 +14,7 @@ import java.lang.annotation.Target;
  * <p>Usage:
  *
  * <pre>{@code
- * @GreaterThanOrEqual
+ * @IsGreaterThanOrEqual
  * long minAge();
  * }</pre>
  */

@@ -493,14 +493,14 @@ than just `id = $1`).
 Each method in a `@WHERE` predicate must carry a comparison operator annotation. The following
 operators are available:
 
-| Annotation             | SQL operator | Allowed types                                                        |
-|------------------------|--------------|----------------------------------------------------------------------|
-| `@IsEqualTo`           | `=`          | All types                                                            |
-| `@GreaterThan`         | `>`          | Numeric primitives/boxed (`int`, `long`, …), temporal (`LocalDate`, `LocalDateTime`, `OffsetDateTime`) |
-| `@GreaterThanOrEqual`  | `>=`         | Same as `@GreaterThan`                                               |
-| `@LesserThan`          | `<`          | Same as `@GreaterThan`                                               |
-| `@LesserThanOrEqual`   | `<=`         | Same as `@GreaterThan`                                               |
-| `@IsInRange`           | `>` / `>=` + `<` / `<=` | `Range<T>` where `T` is a boxed numeric or temporal type    |
+| Annotation              | SQL operator | Allowed types                                                                                          |
+|-------------------------|--------------|--------------------------------------------------------------------------------------------------------|
+| `@IsEqualTo`            | `=`          | All types                                                                                              |
+| `@IsGreaterThan`        | `>`          | Numeric primitives/boxed (`int`, `long`, …), temporal (`LocalDate`, `LocalDateTime`, `OffsetDateTime`) |
+| `@IsGreaterThanOrEqual` | `>=`         | Same as `@IsGreaterThan`                                                                               |
+| `@IsLessThan`           | `<`          | Same as `@GIsreaterThan`                                                                               |
+| `@IsLessThanOrEqual`     | `<=`         | Same as `@IsGreaterThan`                                                                               |
+| `@IsInRange`            | `>` / `>=` + `<` / `<=` | `Range<T>` where `T` is a boxed numeric or temporal type                                               |
 
 Ordering operators (`>`, `>=`, `<`, `<=`) enforce a **compile-time type check**: the annotated
 method's return type must be a comparable type. Using them on `String`, `boolean`, or other
@@ -524,11 +524,11 @@ public interface UserIdPredicate extends SelectionPredicate {
 public interface RecentOrdersPredicate extends SelectionPredicate {
 
   @Column("orderTime")
-  @GreaterThanOrEqual
+  @IsGreaterThanOrEqual
   long orderTimeFrom();   // → "orderTime >= $1"
 
   @Column("orderTime")
-  @LesserThan
+  @IsLessThan
   long orderTimeTo();     // → "orderTime < $2"
 }
 ```
@@ -569,7 +569,7 @@ public interface OrderTimeIsInRange extends SelectionPredicate {
 ```
 
 This is equivalent to — but more concise than — declaring two separate methods with
-`@GreaterThanOrEqual` / `@LesserThan` (or any other pair). The `@IsInRange` approach is preferred
+`@IsGreaterThanOrEqual` / `@IsLessThan` (or any other pair). The `@IsInRange` approach is preferred
 when the caller provides a `Range` object directly.
 
 #### OR Predicates

@@ -216,9 +216,9 @@ public final class SqlModelParser {
 
   /**
    * Returns the SQL comparison operator for a predicate method based on its annotations. Supports
-   * {@code @IsEqualTo} ({@code "="}), {@code @GreaterThan} ({@code ">"}),
-   * {@code @GreaterThanOrEqual} ({@code ">="}), {@code @LesserThan} ({@code "<"}), and
-   * {@code @LesserThanOrEqual} ({@code "<="}).
+   * {@code @IsEqualTo} ({@code "="}), {@code @IsGreaterThan} ({@code ">"}),
+   * {@code @IsGreaterThanOrEqual} ({@code ">="}), {@code @IsLessThan} ({@code "<"}), and
+   * {@code @IsLessThanOrEqual} ({@code "<="}).
    *
    * <p>Ordering operators ({@code >}, {@code >=}, {@code <}, {@code <=}) are only valid on
    * comparable types: numeric primitives and their boxed equivalents, and temporal types.
@@ -228,19 +228,19 @@ public final class SqlModelParser {
       return new SimpleWhereOperator("=", sqlParamPrinter);
     }
     if (method.getAnnotation(IsGreaterThan.class) != null) {
-      validateComparableType(method, "@GreaterThan");
+      validateComparableType(method, "@IsGreaterThan");
       return new SimpleWhereOperator(">", sqlParamPrinter);
     }
     if (method.getAnnotation(IsGreaterThanOrEqual.class) != null) {
-      validateComparableType(method, "@GreaterThanOrEqual");
+      validateComparableType(method, "@IsGreaterThanOrEqual");
       return new SimpleWhereOperator(">=", sqlParamPrinter);
     }
     if (method.getAnnotation(IsLessThan.class) != null) {
-      validateComparableType(method, "@LesserThan");
+      validateComparableType(method, "@IsLessThan");
       return new SimpleWhereOperator("<", sqlParamPrinter);
     }
     if (method.getAnnotation(IsLessThanOrEqual.class) != null) {
-      validateComparableType(method, "@LesserThanOrEqual");
+      validateComparableType(method, "@IsLessThanOrEqual");
       return new SimpleWhereOperator("<=", sqlParamPrinter);
     }
     if (method.getAnnotation(IsInRange.class) != null) {
@@ -248,7 +248,7 @@ public final class SqlModelParser {
       return new RangeWhereOperator(sqlParamPrinter);
     }
     util.error(
-        "No comparison operator annotation such as @IsEqualTo, @GreaterThan, @LesserThan, @IsInRange, etc. has been found",
+        "No comparison operator annotation such as @IsEqualTo, @IsGreaterThan, @IsLessThan, @IsInRange, etc. has been found",
         method);
     return new SimpleWhereOperator("<UNKNOWN_OPERATOR>", sqlParamPrinter);
   }

@@ -8,28 +8,33 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * WHERE operator for {@code @IsInRange} comparisons. A single {@code Range<T>} field produces two
- * SQL conditions (lower bound and upper bound) with two positional parameters:
+ * {@link WhereOperator} implementation for {@code @IsInRange} comparisons.
  *
- * <ol>
- *   <li>{@code $N} — lower endpoint value
- *   <li>{@code $N+1} — upper endpoint value
- * </ol>
- *
- * <p>The comparison operators ({@code >} vs {@code >=}, {@code <} vs {@code <=}) are determined at
- * runtime based on the Range's bound types. The SQL template embeds sentinel tokens that the code
- * generator replaces with runtime ternary expressions:
+ * <p>A single {@code Range<T>} field expands into two positional SQL parameters — one for the lower
+ * bound and one for the upper bound — and delegates SQL generation entirely to {@link
+ * OperatorUtils#rangeComparisonSql} at runtime:
  *
  * <pre>{@code
- * col __RANGE_LOP_1__ $1 AND col __RANGE_UOP_2__ $2
+ * OperatorUtils.rangeComparisonSql(column, range, "$N", "$N+1")
  * }</pre>
  *
- * <p>At runtime this resolves to, for example:
+ * <p>{@code rangeComparisonSql} inspects the {@link com.google.common.collect.BoundType} of each
+ * endpoint to choose the correct operator ({@code >} vs {@code >=} for the lower bound, {@code <}
+ * vs {@code <=} for the upper bound), producing output such as:
  *
  * <pre>{@code
  * col >= $1 AND col < $2          (closedOpen)
  * col > $1 AND col <= $2          (openClosed)
+ * col >= $1 AND col <= $2         (closedClosed)
+ * col > $1 AND col < $2          (openOpen)
+ * TRUE                            (unbounded)
  * }</pre>
+ *
+ * <p>Bounds that are absent (e.g. an unbounded upper end) are omitted from the generated SQL.
+ * {@link #getJavaParamAccessors} correspondingly returns two accessors — {@link
+ * OperatorUtils#lowerBoundSqlParam} and {@link OperatorUtils#upperBoundSqlParam} — which return
+ * {@link com.flipkart.krystal.data.Errable#nil()} for absent endpoints so the parameter slot is
+ * safely skipped.
  */
 final class RangeWhereOperator implements WhereOperator {
 
@@ -41,31 +46,21 @@ final class RangeWhereOperator implements WhereOperator {
 
   @Override
   public CodeBlock toSql(String columnRef, WhereLeaf leaf, WhereColumn col, AtomicInteger argIdx) {
-    CodeBlock rangeAccessor = getRangeAccessor(leaf, col);
-
-    String lowerParam = sqlParamPrinter.getParamPlaceholder(argIdx.incrementAndGet());
-    String upperParam = sqlParamPrinter.getParamPlaceholder(argIdx.incrementAndGet());
-
-    CodeBlock lowerBoundOperator =
-        CodeBlock.of("$T.lowerBoundOperator($L)", OperatorUtils.class, rangeAccessor);
-    CodeBlock upperBoundOperator =
-        CodeBlock.of("$T.upperBoundOperator($L)", OperatorUtils.class, rangeAccessor);
-
     return CodeBlock.of(
-        "$S + $L + $S + $L + $S",
-        CodeBlock.of("$L ", columnRef),
-        lowerBoundOperator,
-        CodeBlock.of(" $L AND $L ", lowerParam, columnRef),
-        upperBoundOperator,
-        CodeBlock.of(" $L", upperParam));
+        "$T.rangeComparisonSql($S, $L, $S, $S)",
+        OperatorUtils.class,
+        columnRef,
+        getRangeAccessor(leaf, col),
+        sqlParamPrinter.getParamPlaceholder(argIdx.incrementAndGet()),
+        sqlParamPrinter.getParamPlaceholder(argIdx.incrementAndGet()));
   }
 
   @Override
   public List<CodeBlock> getJavaParamAccessors(WhereLeaf leaf, WhereColumn col) {
     CodeBlock rangeAccessor = getRangeAccessor(leaf, col);
     return List.of(
-        CodeBlock.of("$L.lowerEndpoint()", rangeAccessor),
-        CodeBlock.of("$L.upperEndpoint()", rangeAccessor));
+        CodeBlock.of("$T.lowerBoundSqlParam($L)", OperatorUtils.class, rangeAccessor),
+        CodeBlock.of("$T.upperBoundSqlParam($L)", OperatorUtils.class, rangeAccessor));
   }
 
   private static CodeBlock getRangeAccessor(WhereLeaf leaf, WhereColumn col) {

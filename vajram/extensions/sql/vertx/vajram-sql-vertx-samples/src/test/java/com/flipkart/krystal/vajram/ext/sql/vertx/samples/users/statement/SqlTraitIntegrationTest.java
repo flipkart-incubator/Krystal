@@ -579,7 +579,7 @@ class SqlTraitIntegrationTest {
     assertThat(future).succeedsWithin(TIMEOUT).isNull();
   }
 
-  // ─── GetOrdersByTimeRange (@GreaterThanOrEqual + @LesserThan) ─────────────────
+  // ─── GetOrdersByTimeRange (@IsGreaterThanOrEqual + @IsLessThan) ─────────────────
 
   @Test
   void getOrdersByTimeRange_returnsOrdersInHalfOpenRange() {
@@ -632,7 +632,7 @@ class SqlTraitIntegrationTest {
     assertThat(future).succeedsWithin(TIMEOUT).satisfies(orders -> assertThat(orders).isEmpty());
   }
 
-  // ─── GetOrdersByMinAmount (@GreaterThan) ────────────────────────────────────
+  // ─── GetOrdersByMinAmount (@IsGreaterThan) ────────────────────────────────────
 
   @Test
   void getOrdersByMinAmount_returnsOrdersAboveThreshold() {
@@ -673,7 +673,7 @@ class SqlTraitIntegrationTest {
     assertThat(future).succeedsWithin(TIMEOUT).satisfies(orders -> assertThat(orders).isEmpty());
   }
 
-  // ─── GetOrdersByMaxAmount (@LesserThanOrEqual) ──────────────────────────────
+  // ─── GetOrdersByMaxAmount (@IsLessThanOrEqual) ──────────────────────────────
 
   @Test
   void getOrdersByMaxAmount_returnsOrdersAtOrBelowThreshold() {

@@ -12,7 +12,7 @@ import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.Order;
 
 /**
  * WHERE predicate for a half-open time range: {@code orderTime >= $1 AND orderTime < $2}. Tests
- * both {@code @GreaterThanOrEqual} and {@code @LesserThan}.
+ * both {@code @IsGreaterThanOrEqual} and {@code @IsLessThan}.
  */
 @ModelRoot
 @SupportedModelProtocol(PlainJavaObject.class)

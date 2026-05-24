@@ -9,7 +9,7 @@ import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.IsLessThanO
 import com.flipkart.krystal.vajram.ext.sql.model.Column;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.Order;
 
-/** WHERE predicate: {@code amountCents <= $1}. Tests {@code @LesserThanOrEqual}. */
+/** WHERE predicate: {@code amountCents <= $1}. Demonstrates {@code @IsLessThanOrEqual}. */
 @ModelRoot
 @SupportedModelProtocol(PlainJavaObject.class)
 @WHERE(inTable = Order.class)

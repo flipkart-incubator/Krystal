@@ -14,7 +14,7 @@ import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderAmoun
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderInfo;
 import java.util.List;
 
-/** Fetches orders with {@code amountCents <= threshold}. Tests {@code @LesserThanOrEqual}. */
+/** Fetches orders with {@code amountCents <= threshold}. Tests {@code @IsLessThanOrEqual}. */
 @SQL
 @SELECT
 @Trait
