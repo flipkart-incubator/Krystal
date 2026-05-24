@@ -7,5 +7,4 @@ module krystal.lattice.ext.mcp {
   requires org.checkerframework.checker.qual;
   requires static lombok;
   requires jakarta.inject;
-  requires org.jspecify;
 }

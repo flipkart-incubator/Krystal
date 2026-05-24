@@ -73,14 +73,14 @@ class DwRestEndpointsE2eTest {
   void getMapping_returnsResponseWithQueryParams() throws Exception {
     HttpResponse<String> resp =
         httpClient.send(
-            HttpRequest.newBuilder(URI.create(BASE_URL + "/foo/bar?name=alice&age=42"))
+            HttpRequest.newBuilder(URI.create(BASE_URL + "/foo/bar?name=Alisha&age=42"))
                 .GET()
                 .header("Accept", "application/json")
                 .build(),
             BodyHandlers.ofString());
     assertThat(resp.statusCode()).isEqualTo(200);
     assertThat(resp.body()).contains("\"path\":\"foo/bar\"");
-    assertThat(resp.body()).contains("\"qp_name\":\"alice\"");
+    assertThat(resp.body()).contains("\"qp_name\":\"Alisha\"");
     assertThat(resp.body()).contains("\"qp_age\":\"42\"");
   }
 
@@ -149,7 +149,7 @@ class DwRestEndpointsE2eTest {
   void headMapping_returns200WithoutBody() throws Exception {
     HttpResponse<String> resp =
         httpClient.send(
-            HttpRequest.newBuilder(URI.create(BASE_URL + "/foo/bar?name=alice&age=42"))
+            HttpRequest.newBuilder(URI.create(BASE_URL + "/foo/bar?name=Alisha&age=42"))
                 .method("HEAD", BodyPublishers.noBody())
                 .build(),
             BodyHandlers.ofString());

@@ -12,11 +12,10 @@ import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlModelParser;
-import com.flipkart.krystal.vajram.ext.sql.statement.SQL;
+import com.flipkart.krystal.vajram.ext.sql.lang.SQL;
 import com.google.auto.service.AutoService;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import javax.annotation.processing.Processor;
@@ -28,23 +27,20 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 
-@SupportedAnnotationTypes("com.flipkart.krystal.vajram.ext.sql.statement.SQL")
+@SupportedAnnotationTypes("com.flipkart.krystal.vajram.ext.sql.lang.SQL")
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 @AutoService(Processor.class)
 @SupportedOptions({CODEGEN_PHASE_KEY, MODULE_ROOT_PATH_KEY})
 @RunOnlyWhenCodegenPhaseIs(MODELS)
-public class SqlAnnotationProcessor extends AbstractKrystalAnnoProcessor {
-
-  private final List<TypeElement> sqlTraits = new LinkedList<>();
+public class VertxSqlAnnoProcessor extends AbstractKrystalAnnoProcessor {
 
   @Override
   protected boolean processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     try {
       VajramCodeGenUtility vajramUtil = new VajramCodeGenUtility(codeGenUtil());
-      SqlModelParser parser = new SqlModelParser(vajramUtil);
+      SqlModelParser parser = new SqlModelParser(vajramUtil, paramIndex -> "$" + paramIndex);
       parser.validateTableAndWhereElements(roundEnv);
       List<TypeElement> sqlTraits = getSqlTraits(roundEnv);
-      this.sqlTraits.addAll(sqlTraits);
       Iterator<TypeElement> iterator = sqlTraits.iterator();
       while (iterator.hasNext()) {
         TypeElement vajramElement = iterator.next();

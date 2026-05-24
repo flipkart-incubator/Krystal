@@ -5,4 +5,5 @@ dependencies {
     api project(':krystal-codegen-common')
     api project(':vajram:vajram-codegen-common')
     implementation project(':vajram:vajram-java-sdk')
+    implementation 'com.squareup:javapoet'
 }

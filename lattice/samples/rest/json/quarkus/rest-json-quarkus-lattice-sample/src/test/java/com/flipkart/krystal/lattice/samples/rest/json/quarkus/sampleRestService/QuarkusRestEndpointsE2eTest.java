@@ -85,7 +85,7 @@ class QuarkusRestEndpointsE2eTest {
   void getMapping_returnsResponseWithQueryParams() throws Exception {
     HttpResponse<CompletionStage<JsonResponse_ImmutJson>> resp =
         httpClient.send(
-            HttpRequest.newBuilder(URI.create(BASE_URL + "/foo/bar?name=alice&age=42"))
+            HttpRequest.newBuilder(URI.create(BASE_URL + "/foo/bar?name=Alisha&age=42"))
                 .GET()
                 .header("Accept", "application/json")
                 .build(),
@@ -95,7 +95,7 @@ class QuarkusRestEndpointsE2eTest {
     assertThat(resp.statusCode()).isEqualTo(200);
     JsonResponse_ImmutJson respBody = assertThat(resp.body()).succeedsWithin(TIMEOUT).actual();
     assertThat(respBody.path()).isEqualTo("foo/bar");
-    assertThat(respBody.qp_name()).isEqualTo("alice");
+    assertThat(respBody.qp_name()).isEqualTo("Alisha");
     assertThat(respBody.qp_age()).isEqualTo("42");
   }
 
@@ -133,7 +133,7 @@ class QuarkusRestEndpointsE2eTest {
   void headMapping_returns200WithoutBody() throws Exception {
     HttpResponse<String> resp =
         httpClient.send(
-            HttpRequest.newBuilder(URI.create(BASE_URL + "/foo/bar?name=alice&age=42"))
+            HttpRequest.newBuilder(URI.create(BASE_URL + "/foo/bar?name=Alisha&age=42"))
                 .method("HEAD", BodyPublishers.noBody())
                 .build(),
             ofString());

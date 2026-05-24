@@ -7,10 +7,10 @@ import com.flipkart.krystal.annos.CallGraphDelegationMode;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.TraitDef;
-import com.flipkart.krystal.vajram.ext.sql.statement.LIMIT;
-import com.flipkart.krystal.vajram.ext.sql.statement.SELECT;
-import com.flipkart.krystal.vajram.ext.sql.statement.SQL;
-import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserNameEquals;
+import com.flipkart.krystal.vajram.ext.sql.lang.LIMIT;
+import com.flipkart.krystal.vajram.ext.sql.lang.SELECT;
+import com.flipkart.krystal.vajram.ext.sql.lang.SQL;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserNamePredicate;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserWithOrdersAndItems;
 
 /**
@@ -25,6 +25,6 @@ public interface GetUserByNameWithOrdersAndItems
     extends TraitDef<@LIMIT(1) UserWithOrdersAndItems> {
   interface _Inputs {
     @IfAbsent(FAIL)
-    UserNameEquals where();
+    UserNamePredicate where();
   }
 }

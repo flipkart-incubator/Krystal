@@ -12,7 +12,6 @@ import com.flipkart.krystal.lattice.vajram.VajramRequestExecutionContext;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.util.concurrent.CompletionStage;
-import org.jspecify.annotations.NonNull;
 
 @Singleton
 @DopantType(McpServerDopant.MCP_SERVER_DOPANT_TYPE)
@@ -31,7 +30,7 @@ public final class McpServerDopant implements Dopant<McpServer, NoConfiguration>
     return executeVajram(vajramRequest);
   }
 
-  private <T> @NonNull CompletionStage<T> executeVajram(ImmutableRequest<T> vajramRequest) {
+  private <T> CompletionStage<T> executeVajram(ImmutableRequest<T> vajramRequest) {
     try {
       return krystexDopant.executeRequest(
           VajramRequestExecutionContext.<T>builder().vajramRequest(vajramRequest).build());

@@ -1,7 +1,9 @@
 package com.flipkart.krystal.vajram.ext.sql.vertx.codegen;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
-import static com.flipkart.krystal.vajram.ext.sql.statement.LIMIT.NO_LIMIT;
+import static com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryBuilder.buildJoinSql;
+import static com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryBuilder.buildSimpleSql;
+import static com.flipkart.krystal.vajram.ext.sql.lang.LIMIT.NO_LIMIT;
 import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -21,11 +23,13 @@ import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.JoinSqlResult;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.ScalarColumn;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.SelectionInfo;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.TraitResultType;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereColumn;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereInput;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereLeaf;
+import com.flipkart.krystal.vajram.ext.sql.lang.LIMIT;
+import com.flipkart.krystal.vajram.ext.sql.lang.LIMIT.Creator;
+import com.flipkart.krystal.vajram.ext.sql.lang.ORDER;
 import com.flipkart.krystal.vajram.ext.sql.model.Table;
-import com.flipkart.krystal.vajram.ext.sql.statement.LIMIT;
-import com.flipkart.krystal.vajram.ext.sql.statement.LIMIT.Creator;
-import com.flipkart.krystal.vajram.ext.sql.statement.ORDER;
 import com.flipkart.krystal.vajram.ext.sql.vertx.ExecuteVertxSql;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Output;
@@ -42,8 +46,8 @@ import io.vertx.sqlclient.Pool;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowSet;
 import io.vertx.sqlclient.Tuple;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -55,6 +59,7 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Generates a {@code @Vajram} ComputeVajram for each {@code @SQL @SELECT @Trait} interface.
@@ -70,20 +75,14 @@ public class SqlTraitVajramGen implements CodeGenerator {
   private static final String SQL_RESULT_FACET = "sqlResult";
   static final String VERTX_SQL_POOL_FACET = "vertxSql_pool";
 
-  private static final ClassName INJECT = ClassName.get("jakarta.inject", "Inject");
-  private static final ClassName NAMED = ClassName.get("jakarta.inject", "Named");
-  private static final ClassName NULLABLE =
-      ClassName.get("org.checkerframework.checker.nullness.qual", "Nullable");
-  private static final ClassName EXECUTE_VERTX_SQL = ClassName.get(ExecuteVertxSql.class);
-  private static final ClassName EXECUTE_VERTX_SQL_REQ =
-      ClassName.get("com.flipkart.krystal.vajram.ext.sql.vertx", "ExecuteVertxSql_Req");
   private static final ParameterizedTypeName ROW_SET_OF_ROW =
-      ParameterizedTypeName.get(ClassName.get(RowSet.class), ClassName.get(Row.class));
+      ParameterizedTypeName.get(RowSet.class, Row.class);
 
   private final CodeGenUtility util;
   private final VajramInfo vajramInfo;
   private final SqlModelParser parser;
   private final VajramCodeGenUtility vajramUtil;
+  private final VajramInfo executSqlVajram;
 
   public SqlTraitVajramGen(
       VajramCodeGenUtility vajramUtil, VajramInfo vajramInfo, SqlModelParser parser) {
@@ -91,6 +90,7 @@ public class SqlTraitVajramGen implements CodeGenerator {
     this.vajramInfo = vajramInfo;
     this.parser = parser;
     this.vajramUtil = vajramUtil;
+    this.executSqlVajram = vajramUtil.computeVajramInfo(ExecuteVertxSql.class);
   }
 
   // ─── Entry point ─────────────────────────────────────────────────────────────
@@ -195,16 +195,15 @@ public class SqlTraitVajramGen implements CodeGenerator {
     // LIMIT 1 at the outer query level would truncate child rows, breaking the grouping in
     // mapResult.
     // For list-result JOIN queries, trait-level ORDER BY/LIMIT are applied to the parent table.
-    final String sql;
+    final CodeBlock.Builder sql = CodeBlock.builder();
     final String parentPkAlias;
     if (hasJoins) {
       JoinSqlResult joinResult =
-          SqlQueryBuilder.buildJoinSql(
-              selection, whereInputs, traitOrderBys, limit.value(), resultType.isList());
-      sql = joinResult.sql();
+          buildJoinSql(selection, whereInputs, traitOrderBys, limit.value(), resultType.isList());
+      sql.add(joinResult.sql());
       parentPkAlias = joinResult.parentPkAlias();
     } else {
-      sql = SqlQueryBuilder.buildSimpleSql(selection, whereInputs, traitOrderBys, limit.value());
+      sql.add(buildSimpleSql(selection, whereInputs, traitOrderBys, limit.value()));
       parentPkAlias = null;
     }
 
@@ -230,7 +229,7 @@ public class SqlTraitVajramGen implements CodeGenerator {
             .addSuperinterface(traitClass)
             .addType(buildInputsInterface(traitInputMethods))
             .addType(buildInternalFacetsInterface())
-            .addMethod(buildResolveSqlMethod(facClass, sql))
+            .addMethod(buildResolveSqlMethod(facClass, sql.build(), traitInputMethods))
             .addMethod(buildResolveParamsMethod(facClass, whereInputs, traitInputMethods))
             .addMethod(buildResolvePoolMethod(facClass))
             .addMethod(
@@ -303,9 +302,9 @@ public class SqlTraitVajramGen implements CodeGenerator {
             .returns(ClassName.get(Pool.class))
             .addModifiers(PUBLIC, ABSTRACT)
             .addAnnotation(ifAbsentFail)
-            .addAnnotation(INJECT)
+            .addAnnotation(Inject.class)
             .addAnnotation(
-                AnnotationSpec.builder(NAMED)
+                AnnotationSpec.builder(Named.class)
                     .addMember("value", "$S", VERTX_SQL_POOL_FACET)
                     .build())
             .build();
@@ -316,7 +315,7 @@ public class SqlTraitVajramGen implements CodeGenerator {
             .addAnnotation(ifAbsentFail)
             .addAnnotation(
                 AnnotationSpec.builder(Dependency.class)
-                    .addMember("onVajram", "$T.class", EXECUTE_VERTX_SQL)
+                    .addMember("onVajram", "$T.class", ExecuteVertxSql.class)
                     .build())
             .build();
     return TypeSpec.interfaceBuilder("_InternalFacets")
@@ -328,17 +327,29 @@ public class SqlTraitVajramGen implements CodeGenerator {
 
   // ─── @Resolve methods ────────────────────────────────────────────────────────
 
-  private MethodSpec buildResolveSqlMethod(ClassName facClass, String sql) {
-    return MethodSpec.methodBuilder("resolveSql")
-        .addModifiers(STATIC)
-        .addAnnotation(
-            AnnotationSpec.builder(Resolve.class)
-                .addMember("dep", "$T.$L", facClass, SQL_RESULT_FACET + "_n")
-                .addMember("depInputs", "$T.$L", EXECUTE_VERTX_SQL_REQ, "sql_n")
-                .build())
-        .returns(String.class)
-        .addStatement("return $S", sql)
-        .build();
+  private MethodSpec buildResolveSqlMethod(
+      ClassName facClass, CodeBlock sql, List<ExecutableElement> traitInputMethods) {
+
+    MethodSpec.Builder method =
+        MethodSpec.methodBuilder("resolveSql")
+            .addModifiers(STATIC)
+            .addAnnotation(
+                AnnotationSpec.builder(Resolve.class)
+                    .addMember("dep", "$T.$L", facClass, SQL_RESULT_FACET + "_n")
+                    .addMember("depInputs", "$T.$L", getExecuteVertxSqlReq(), "sql_n")
+                    .build())
+            .returns(String.class);
+
+    for (ExecutableElement input : traitInputMethods) {
+      method.addParameter(TypeName.get(input.getReturnType()), input.getSimpleName().toString());
+    }
+
+    method.addStatement("return $L", sql);
+    return method.build();
+  }
+
+  private TypeName getExecuteVertxSqlReq() {
+    return executSqlVajram.lite().requestInterfaceTypeName();
   }
 
   private MethodSpec buildResolveParamsMethod(
@@ -349,16 +360,18 @@ public class SqlTraitVajramGen implements CodeGenerator {
             .addAnnotation(
                 AnnotationSpec.builder(Resolve.class)
                     .addMember("dep", "$T.$L", facClass, SQL_RESULT_FACET + "_n")
-                    .addMember("depInputs", "$T.$L", EXECUTE_VERTX_SQL_REQ, "params_n")
+                    .addMember("depInputs", "$T.$L", getExecuteVertxSqlReq(), "params_n")
                     .build())
             .returns(ClassName.get(Tuple.class));
     for (ExecutableElement input : traitInputMethods) {
       method.addParameter(TypeName.get(input.getReturnType()), input.getSimpleName().toString());
     }
-    List<String> args = new ArrayList<>();
+    List<CodeBlock> args = new ArrayList<>();
     for (WhereInput wi : whereInputs) {
-      for (String field : wi.fields()) {
-        args.add(wi.paramName() + "." + field + "()");
+      for (WhereLeaf leaf : wi.leaves()) {
+        for (WhereColumn col : leaf.columns()) {
+          args.addAll(col.operator().getJavaParamAccessors(leaf, col));
+        }
       }
     }
     if (args.isEmpty()) {
@@ -368,7 +381,7 @@ public class SqlTraitVajramGen implements CodeGenerator {
           "return $T.from($T.of($L))",
           ClassName.get(Tuple.class),
           List.class,
-          String.join(", ", args));
+          args.stream().collect(CodeBlock.joining(", ")));
     }
     return method.build();
   }
@@ -379,7 +392,7 @@ public class SqlTraitVajramGen implements CodeGenerator {
         .addAnnotation(
             AnnotationSpec.builder(Resolve.class)
                 .addMember("dep", "$T.$L", facClass, SQL_RESULT_FACET + "_n")
-                .addMember("depInputs", "$T.$L", EXECUTE_VERTX_SQL_REQ, "pool_n")
+                .addMember("depInputs", "$T.$L", getExecuteVertxSqlReq(), "pool_n")
                 .build())
         .addParameter(ClassName.get(Pool.class), VERTX_SQL_POOL_FACET)
         .returns(ClassName.get(Pool.class))
@@ -419,7 +432,7 @@ public class SqlTraitVajramGen implements CodeGenerator {
         MethodSpec.methodBuilder("mapResult")
             .addModifiers(STATIC)
             .addAnnotation(Output.class)
-            .addAnnotation(NULLABLE)
+            .addAnnotation(Nullable.class)
             .returns(ClassName.get(resultPkg, resultName))
             .addParameter(ROW_SET_OF_ROW, SQL_RESULT_FACET);
 
@@ -761,7 +774,7 @@ public class SqlTraitVajramGen implements CodeGenerator {
         MethodSpec.methodBuilder("mapResult")
             .addModifiers(STATIC)
             .addAnnotation(Output.class)
-            .addAnnotation(NULLABLE)
+            .addAnnotation(Nullable.class)
             .returns(ClassName.get(resultPkg, resultName))
             .addParameter(ROW_SET_OF_ROW, SQL_RESULT_FACET);
 
@@ -1122,11 +1135,5 @@ public class SqlTraitVajramGen implements CodeGenerator {
       case "java.util.UUID" -> rowVar + ".getUUID(" + q + ")";
       default -> rowVar + ".getValue(" + q + ")";
     };
-  }
-
-  private static String stackTrace(Exception e) {
-    StringWriter sw = new StringWriter();
-    e.printStackTrace(new PrintWriter(sw));
-    return sw.toString();
   }
 }

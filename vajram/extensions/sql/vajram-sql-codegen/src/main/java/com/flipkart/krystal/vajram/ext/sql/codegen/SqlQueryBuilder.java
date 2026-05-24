@@ -1,13 +1,19 @@
 package com.flipkart.krystal.vajram.ext.sql.codegen;
 
+import static com.flipkart.krystal.codegen.common.models.Constants.EMPTY_CODE_BLOCK;
+
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.JoinRelation;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.JoinSqlResult;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.ScalarColumn;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.SelectionInfo;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereColumn;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereInput;
-import com.flipkart.krystal.vajram.ext.sql.statement.ORDER;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereLeaf;
+import com.flipkart.krystal.vajram.ext.sql.lang.ORDER;
+import com.squareup.javapoet.CodeBlock;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Builds SQL query strings from parsed {@link SqlQueryModel} records.
@@ -36,29 +42,28 @@ public final class SqlQueryBuilder {
    * @param orderBys trait-level ORDER BY terms; empty list means no ORDER BY is appended
    * @param limit trait-level LIMIT value; {@code -1} means no LIMIT is appended
    */
-  public static String buildSimpleSql(
+  public static CodeBlock buildSimpleSql(
       SelectionInfo proj, List<WhereInput> whereInputs, List<ORDER> orderBys, int limit) {
     List<String> cols = new ArrayList<>();
     for (ScalarColumn col : proj.scalars()) {
       cols.add(colExpr(col.dbColumnName(), col.methodName()));
     }
-    StringBuilder sql =
-        new StringBuilder("SELECT ")
-            .append(String.join(", ", cols))
-            .append(" FROM ")
-            .append(proj.tableName());
-    appendWhere(sql, whereInputs, /* qualified= */ false);
+    CodeBlock.Builder sql = CodeBlock.builder();
+    sql.add(
+        "$S + $L",
+        CodeBlock.of("SELECT $L FROM $L", String.join(", ", cols), proj.tableName()),
+        getWhere(whereInputs, false));
     if (!orderBys.isEmpty()) {
       List<String> parts = new ArrayList<>();
       for (ORDER ob : orderBys) {
         parts.add(ob.by() + " " + ob.direction());
       }
-      sql.append(" ORDER BY ").append(String.join(", ", parts));
+      sql.add("+ $S", CodeBlock.of(" ORDER BY $L", String.join(", ", parts)));
     }
     if (limit > 0) {
-      sql.append(" LIMIT ").append(limit);
+      sql.add("+ $S", CodeBlock.of(" LIMIT $L", limit));
     }
-    return sql.toString();
+    return sql.build();
   }
 
   // ─── JOIN SELECT ─────────────────────────────────────────────────────────────
@@ -161,34 +166,33 @@ public final class SqlQueryBuilder {
     // rows. Instead, wrap the parent table in a subquery so the LIMIT and ORDER BY apply only to
     // parent rows before the join expands them.
     if (traitLimit > 0) {
-      StringBuilder inner = new StringBuilder("SELECT * FROM ").append(selection.tableName());
-      // Unqualified WHERE inside the subquery — only one table in scope.
-      appendWhere(inner, whereInputs, /* qualified= */ false);
+      CodeBlock.Builder inner =
+          CodeBlock.builder()
+              .add(
+                  "$S + $L",
+                  CodeBlock.of("SELECT * FROM $L", selection.tableName()),
+                  getWhere(whereInputs, false));
       if (!traitOrderBys.isEmpty()) {
         List<String> parts = new ArrayList<>();
         for (ORDER ob : traitOrderBys) {
           parts.add(ob.by() + " " + ob.direction());
         }
-        inner.append(" ORDER BY ").append(String.join(", ", parts));
+        inner.add(CodeBlock.of(" + $S", CodeBlock.of(" ORDER BY $L", String.join(", ", parts))));
       }
-      inner.append(" LIMIT ").append(traitLimit);
+      inner.add(CodeBlock.of(" + $S", CodeBlock.of(" LIMIT $L", traitLimit)));
 
-      StringBuilder sql =
-          new StringBuilder("SELECT ")
-              .append(selectCols)
-              .append(" FROM (")
-              .append(inner)
-              .append(") ")
-              .append(selection.tableName());
+      CodeBlock.Builder sql =
+          CodeBlock.builder()
+              .add(CodeBlock.of("$S", CodeBlock.of("SELECT $L FROM ", selectCols)))
+              .add(" + $S + $L + $S ", "(", inner.build(), ") ")
+              .add(" + $S", selection.tableName());
 
       // In the subquery path the parent is always multi-row, so every top-level join uses
       // ROW_NUMBER. Nested joins always use ROW_NUMBER regardless.
       for (JoinRelation join : level1Joins) {
-        sql.append(" ")
-            .append(buildJoinClause(join, selection.tableName(), /* useRowNumber= */ true));
+        sql.add(" + $L", buildJoinClause(join, selection.tableName(), /* useRowNumber= */ true));
         for (JoinRelation nested : join.nestedJoins()) {
-          sql.append(" ")
-              .append(buildJoinClause(nested, join.tableName(), /* useRowNumber= */ true));
+          sql.add(" + $L", buildJoinClause(nested, join.tableName(), /* useRowNumber= */ true));
         }
       }
 
@@ -209,10 +213,10 @@ public final class SqlQueryBuilder {
         }
       }
       if (!outerOrderBys.isEmpty()) {
-        sql.append(" ORDER BY ").append(String.join(", ", outerOrderBys));
+        sql.add(" + $S", CodeBlock.of(" ORDER BY $L", String.join(", ", outerOrderBys)));
       }
 
-      return new JoinSqlResult(sql.toString(), parentPkAlias);
+      return new JoinSqlResult(sql.build(), parentPkAlias);
     }
 
     // ── Standard approach when traitLimit <= 0 (NO_LIMIT or absent) ─────────────
@@ -224,28 +228,26 @@ public final class SqlQueryBuilder {
     //     total result rows, not the number of level-1 children; each level-1 row expands into
     //     multiple rows due to level-2 joins, so outer LIMIT N would cut off mid-entity)
     //   - isListTrait=false, join has NO nested joins → plain LIMIT N at the outer query
-    //     (valid because there is exactly one parent, so no per-parent partitioning is needed,
-    //     and there is only one level of child rows so LIMIT N == first N children)
+    //     (Valid because there is exactly one parent, so no per-parent partitioning is needed,
+    //     and there is only one level of child rows so LIMIT N == first N children).
     //
     // Nested (level-2) joins always use ROW_NUMBER because their immediate parent is multi-row.
-    StringBuilder sql =
-        new StringBuilder("SELECT ")
-            .append(selectCols)
-            .append(" FROM ")
-            .append(selection.tableName());
+    CodeBlock.Builder sql =
+        CodeBlock.builder()
+            .add("$S", CodeBlock.of("SELECT $L FROM $L", selectCols, selection.tableName()));
 
     for (JoinRelation join : level1Joins) {
       // ROW_NUMBER is required whenever there is more than one parent (list trait) OR there are
       // multiple level1 Joins (outer LIMIT would truncate sibling cross product rows) OR whenever
       // this join has nested joins (outer LIMIT would truncate grandchild rows).
       boolean useRowNumber = isListTrait || !join.nestedJoins().isEmpty() || level1Joins.size() > 1;
-      sql.append(" ").append(buildJoinClause(join, selection.tableName(), useRowNumber));
+      sql.add(" + $L", buildJoinClause(join, selection.tableName(), useRowNumber));
       for (JoinRelation nested : join.nestedJoins()) {
-        sql.append(" ").append(buildJoinClause(nested, join.tableName(), /* useRowNumber= */ true));
+        sql.add(" + $L", buildJoinClause(nested, join.tableName(), /* useRowNumber= */ true));
       }
     }
 
-    appendWhere(sql, whereInputs, /* qualified= */ true);
+    sql.add(" + $L", getWhere(whereInputs, true));
 
     // ORDER BY: trait-level (parent table) first, then join-level (child tables).
     List<String> orderByParts = new ArrayList<>();
@@ -263,7 +265,7 @@ public final class SqlQueryBuilder {
       }
     }
     if (!orderByParts.isEmpty()) {
-      sql.append(" ORDER BY ").append(String.join(", ", orderByParts));
+      sql.add(" + $S", CodeBlock.of(" ORDER BY $L", String.join(", ", orderByParts)));
     }
 
     // For a single-parent trait whose has one level-1 join with NO nested joins, express the join's
@@ -276,33 +278,67 @@ public final class SqlQueryBuilder {
       if (level1Joins.size() == 1) {
         JoinRelation join = level1Joins.get(0);
         if (join.limit() > 0 && join.nestedJoins().isEmpty()) {
-          sql.append(" LIMIT ").append(join.limit());
+          sql.add(" + $S", CodeBlock.of(" LIMIT $L", join.limit()));
         }
       }
     }
 
-    return new JoinSqlResult(sql.toString(), parentPkAlias);
+    return new JoinSqlResult(sql.build(), parentPkAlias);
   }
 
   // ─── Shared helpers ──────────────────────────────────────────────────────────
 
   /**
-   * Appends {@code WHERE col = $N AND ...} clauses. When {@code qualified} is {@code true}, column
-   * names are prefixed with the table name from {@link WhereInput#inTableName()}.
+   * Appends {@code WHERE ...} clauses. Supports simple AND predicates and OR-grouped predicates.
+   * When {@code qualified} is {@code true}, column names are prefixed with the table name from
+   * {@link WhereLeaf#inTableName()}.
    */
-  private static void appendWhere(
-      StringBuilder sql, List<WhereInput> whereInputs, boolean qualified) {
-    List<String> clauses = new ArrayList<>();
-    int idx = 1;
+  private static CodeBlock getWhere(List<WhereInput> whereInputs, boolean qualified) {
+    List<CodeBlock> topLevelClauses = new ArrayList<>();
+    AtomicInteger idx = new AtomicInteger();
     for (WhereInput wi : whereInputs) {
-      for (String field : wi.fields()) {
-        String colRef = qualified ? wi.inTableName() + "." + field : field;
-        clauses.add(colRef + " = $" + idx++);
+      if (wi.isOr()) {
+        List<CodeBlock> orBranches = new ArrayList<>();
+        for (WhereLeaf leaf : wi.leaves()) {
+          List<CodeBlock> andClauses = new ArrayList<>();
+          for (WhereColumn col : leaf.columns()) {
+            String colRef =
+                qualified ? leaf.inTableName() + "." + col.dbColumnName() : col.dbColumnName();
+            andClauses.add(col.operator().toSql(colRef, leaf, col, idx));
+          }
+          orBranches.add(
+              CodeBlock.of("($L)", joinSqlCodeBlocks(andClauses, CodeBlock.of("$S", " AND "))));
+        }
+        topLevelClauses.add(
+            CodeBlock.of("($L)", joinSqlCodeBlocks(orBranches, CodeBlock.of("$S", " OR "))));
+      } else {
+        for (WhereLeaf leaf : wi.leaves()) {
+          for (WhereColumn col : leaf.columns()) {
+            String colRef =
+                qualified ? leaf.inTableName() + "." + col.dbColumnName() : col.dbColumnName();
+            topLevelClauses.add(col.operator().toSql(colRef, leaf, col, idx));
+          }
+        }
       }
     }
-    if (!clauses.isEmpty()) {
-      sql.append(" WHERE ").append(String.join(" AND ", clauses));
+    if (!topLevelClauses.isEmpty()) {
+      return CodeBlock.of(
+          "$S + $L", " WHERE ", joinSqlCodeBlocks(topLevelClauses, CodeBlock.of("$S", " AND ")));
+    } else {
+      return EMPTY_CODE_BLOCK;
     }
+  }
+
+  private static CodeBlock joinSqlCodeBlocks(List<CodeBlock> codeBlocks, CodeBlock separator) {
+    List<CodeBlock> newList = new ArrayList<>();
+    for (int i = 0; i < codeBlocks.size() - 1; i++) {
+      newList.add(codeBlocks.get(i));
+      newList.add(separator);
+    }
+    if (!codeBlocks.isEmpty()) {
+      newList.add(codeBlocks.get(codeBlocks.size() - 1));
+    }
+    return CodeBlock.join(newList, " + ");
   }
 
   /** Returns {@code "colName"} or {@code "colName AS alias"} as appropriate. */
@@ -330,8 +366,9 @@ public final class SqlQueryBuilder {
    *
    * <p>Without a positive limit a plain {@code LEFT JOIN <child> ON …} is always emitted.
    */
-  private static String buildJoinClause(
+  private static CodeBlock buildJoinClause(
       JoinRelation join, String parentTableName, boolean useRowNumber) {
+    String joinClause;
     if (join.limit() > 0 && useRowNumber) {
       StringBuilder overClause = new StringBuilder("PARTITION BY ").append(join.childJoinColumn());
       if (!join.orderBys().isEmpty()) {
@@ -341,34 +378,38 @@ public final class SqlQueryBuilder {
         }
         overClause.append(" ORDER BY ").append(String.join(", ", parts));
       }
-      return "LEFT JOIN (SELECT *, ROW_NUMBER() OVER ("
-          + overClause
-          + ") AS _rn FROM "
-          + join.tableName()
-          + ") "
-          + join.methodName()
-          + " ON "
-          + parentTableName
-          + "."
-          + join.parentJoinColumn()
-          + " = "
-          + join.tableName()
-          + "."
-          + join.childJoinColumn()
-          + " AND "
-          + join.tableName()
-          + "._rn <= "
-          + join.limit();
+      joinClause =
+          " LEFT JOIN (SELECT *, ROW_NUMBER() OVER ("
+              + overClause
+              + ") AS _rn FROM "
+              + join.tableName()
+              + ") "
+              + join.methodName()
+              + " ON "
+              + parentTableName
+              + "."
+              + join.parentJoinColumn()
+              + " = "
+              + join.tableName()
+              + "."
+              + join.childJoinColumn()
+              + " AND "
+              + join.tableName()
+              + "._rn <= "
+              + join.limit();
+    } else {
+      joinClause =
+          " LEFT JOIN "
+              + join.tableName()
+              + " ON "
+              + parentTableName
+              + "."
+              + join.parentJoinColumn()
+              + " = "
+              + join.tableName()
+              + "."
+              + join.childJoinColumn();
     }
-    return "LEFT JOIN "
-        + join.tableName()
-        + " ON "
-        + parentTableName
-        + "."
-        + join.parentJoinColumn()
-        + " = "
-        + join.tableName()
-        + "."
-        + join.childJoinColumn();
+    return CodeBlock.of("$S", joinClause);
   }
 }

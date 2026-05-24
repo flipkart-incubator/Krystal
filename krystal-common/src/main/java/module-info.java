@@ -27,5 +27,4 @@ module flipkart.krystal.common {
   requires jakarta.inject;
   requires static lombok;
   requires static org.jetbrains.annotations;
-  requires org.jspecify;
 }

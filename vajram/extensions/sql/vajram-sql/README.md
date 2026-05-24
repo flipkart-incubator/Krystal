@@ -382,7 +382,7 @@ public interface GetUserInfoById extends TraitDef<@LIMIT(1) UserInfo> {
   interface _Inputs {
 
     @IfAbsent(FAIL)
-    UserIdEquals where();
+    UserIdPredicate where();
   }
 }
 ```
@@ -469,8 +469,10 @@ method in the interface maps to a `col = $N` positional placeholder in the gener
 @ModelRoot
 @SupportedModelProtocol(PlainJavaObject.class)
 @WHERE(inTable = User.class)
-public interface UserIdEquals extends WhereClause {
+public interface UserIdPredicate extends WhereClause {
 
+  @Column("id")
+  @IsEqualTo
   long id();   // → "id = $1" in the WHERE clause
 }
 ```
@@ -485,6 +487,166 @@ than just `id = $1`).
   `[vajram-sql] @WHERE interface '...' must also be annotated with @ModelRoot.`
 - A `@WHERE` interface **must** extend `WhereClause`; omitting it produces:
   `[vajram-sql] @WHERE interface '...' must extend WhereClause.`
+
+#### Comparison Operators
+
+Each method in a `@WHERE` predicate must carry a comparison operator annotation. The following
+operators are available:
+
+| Annotation              | SQL operator | Allowed types                                                                                          |
+|-------------------------|--------------|--------------------------------------------------------------------------------------------------------|
+| `@IsEqualTo`            | `=`          | All types                                                                                              |
+| `@IsGreaterThan`        | `>`          | Numeric primitives/boxed (`int`, `long`, …), temporal (`LocalDate`, `LocalDateTime`, `OffsetDateTime`) |
+| `@IsGreaterThanOrEqual` | `>=`         | Same as `@IsGreaterThan`                                                                               |
+| `@IsLessThan`           | `<`          | Same as `@GIsreaterThan`                                                                               |
+| `@IsLessThanOrEqual`     | `<=`         | Same as `@IsGreaterThan`                                                                               |
+| `@IsInRange`            | `>` / `>=` + `<` / `<=` | `Range<T>` where `T` is a boxed numeric or temporal type                                               |
+
+Ordering operators (`>`, `>=`, `<`, `<=`) enforce a **compile-time type check**: the annotated
+method's return type must be a comparable type. Using them on `String`, `boolean`, or other
+non-comparable types produces a compile-time error.
+
+```java
+
+@ModelRoot
+@SupportedModelProtocol(PlainJavaObject.class)
+@WHERE(inTable = User.class)
+public interface UserIdPredicate extends SelectionPredicate {
+
+  @Column("id")
+  @IsEqualTo
+  long idIs();   // → "id = $1"
+}
+
+@ModelRoot
+@SupportedModelProtocol(PlainJavaObject.class)
+@WHERE(inTable = Order.class)
+public interface RecentOrdersPredicate extends SelectionPredicate {
+
+  @Column("orderTime")
+  @IsGreaterThanOrEqual
+  long orderTimeFrom();   // → "orderTime >= $1"
+
+  @Column("orderTime")
+  @IsLessThan
+  long orderTimeTo();     // → "orderTime < $2"
+}
+```
+
+When `@Column` is present, its value is used as the DB column name in the WHERE clause (just like in
+selections). Otherwise the method name is used directly.
+
+#### Range Predicates (`@IsInRange`)
+
+The `@IsInRange` operator replaces a pair of comparison methods with a single method that returns a
+Guava `Range<T>`. The generated SQL adapts the comparison operators at runtime based on the range's
+bound types:
+
+| Range factory                | Generated SQL pattern                      |
+|------------------------------|--------------------------------------------|
+| `Range.closed(a, b)`        | `column >= $1 AND column <= $2`            |
+| `Range.open(a, b)`          | `column > $1 AND column < $2`             |
+| `Range.closedOpen(a, b)`    | `column >= $1 AND column < $2`            |
+| `Range.openClosed(a, b)`    | `column > $1 AND column <= $2`            |
+
+**Compile-time invariants:**
+
+- The annotated method must return `Range<T>` where `T` is a boxed numeric type (`Long`, `Integer`,
+  `Short`, `Float`, `Double`) or a temporal type (`LocalDate`, `LocalDateTime`, `OffsetDateTime`).
+- Primitive return types and raw `Range` are rejected at compile time.
+
+```java
+
+@ModelRoot
+@SupportedModelProtocol(PlainJavaObject.class)
+@WHERE(inTable = Order.class)
+public interface OrderTimeIsInRange extends SelectionPredicate {
+
+  @Column("orderTime")
+  @IsInRange
+  Range<Long> orderTimeRange();   // → runtime-adapted range comparison on orderTime
+}
+```
+
+This is equivalent to — but more concise than — declaring two separate methods with
+`@IsGreaterThanOrEqual` / `@IsLessThan` (or any other pair). The `@IsInRange` approach is preferred
+when the caller provides a `Range` object directly.
+
+#### OR Predicates
+
+Multiple methods within a single `@WHERE` interface are combined with `AND`. To express an `OR`
+condition across different column predicates, use `SqlOrPredicate`:
+
+1. Define individual predicates as `SelectionPredicate` interfaces:
+
+```java
+
+@ModelRoot
+@SupportedModelProtocol(PlainJavaObject.class)
+@WHERE(inTable = User.class)
+public interface UserIdPredicate extends SelectionPredicate {
+  @Column("id")
+  @IsEqualTo
+  long idIs();
+}
+
+@ModelRoot
+@SupportedModelProtocol(PlainJavaObject.class)
+@WHERE(inTable = User.class)
+public interface UserNamePredicate extends SelectionPredicate {
+  @Column("name")
+  @IsEqualTo
+  String nameIs();
+}
+```
+
+2. Combine them in an `SqlOrPredicate` interface:
+
+```java
+
+@ModelRoot
+@SupportedModelProtocol(PlainJavaObject.class)
+public interface UserOrPredicate extends SqlOrPredicate {
+  UserIdPredicate orWithUserId();
+  UserNamePredicate orWithUserName();
+}
+```
+
+3. Use the OR predicate as the WHERE input in a trait:
+
+```java
+
+@SQL
+@SELECT
+@Trait
+@CallGraphDelegationMode(SYNC)
+public interface GetUserByIdOrName extends TraitDef<@LIMIT(1) UserInfo> {
+  interface _Inputs {
+    @IfAbsent(FAIL)
+    UserOrPredicate where();
+  }
+}
+```
+
+This generates:
+```sql
+SELECT id, name, email AS contactEmail, phoneNumber
+FROM users
+WHERE (id = $1 OR name = $2)
+LIMIT 1
+```
+
+Each child of the `SqlOrPredicate` becomes one branch of the `OR`. If a child predicate has
+multiple methods (columns), those columns are combined with `AND` within that branch:
+`(col1 = $1 AND col2 = $2) OR (col3 = $3)`.
+
+**Invariants:**
+
+- An `SqlOrPredicate` must have `@ModelRoot` and `@SupportedModelProtocol(PlainJavaObject.class)`.
+- Each method in an `SqlOrPredicate` must return a `SelectionPredicate` type (with `@WHERE`).
+- All child predicates must reference the same table via their `@WHERE(inTable = ...)` attribute.
+- OR predicates cannot guarantee single-row results, so the trait **must** declare `@LIMIT(1)` if
+  the result type is not a `List`.
 
 ---
 
@@ -567,19 +729,38 @@ public interface UserWithRecentOrders extends Model {
 
 ### Step 3 — Define the WHERE clause input(s)
 
-Create a `@WHERE` interface for each group of WHERE predicates. One interface per equality condition
-group is the norm.
+Create a `@WHERE` interface for each group of WHERE predicates. Use `SelectionPredicate` with
+`@IsEqualTo` and `@Column` annotations for explicit operator and column mapping.
+
+**Simple AND predicate:**
 
 ```java
 
 @ModelRoot
 @SupportedModelProtocol(PlainJavaObject.class)
 @WHERE(inTable = User.class)
-public interface UserIdEquals extends WhereClause {
+public interface UserIdPredicate extends SelectionPredicate {
 
-  long id();
+  @Column("id")
+  @IsEqualTo
+  long idIs();   // → "id = $1"
 }
 ```
+
+**OR predicate (combine multiple predicates with OR):**
+
+```java
+
+@ModelRoot
+@SupportedModelProtocol(PlainJavaObject.class)
+public interface UserOrPredicate extends SqlOrPredicate {
+  UserIdPredicate orWithUserId();
+  UserNamePredicate orWithUserName();
+}
+// → generates "WHERE (id = $1 OR name = $2)"
+```
+
+See the [OR Predicates](#or-predicates) section for full details.
 
 ### Step 4 — Declare the SELECT Trait
 
@@ -597,7 +778,7 @@ public interface GetUserSummaryById extends TraitDef<@LIMIT(1) UserSummary> {
   interface _Inputs {
 
     @IfAbsent(FAIL)
-    UserIdEquals userIdEquals();
+    UserIdPredicate where();
   }
 }
 
@@ -638,7 +819,7 @@ public interface GetUserWithRecentOrders extends TraitDef<@LIMIT(1) UserWithRece
   interface _Inputs {
 
     @IfAbsent(FAIL)
-    UserIdEquals userIdEquals();
+    UserIdPredicate where();
   }
 }
 ```

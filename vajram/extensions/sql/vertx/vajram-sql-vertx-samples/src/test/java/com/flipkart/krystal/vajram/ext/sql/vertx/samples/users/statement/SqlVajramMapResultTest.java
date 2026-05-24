@@ -7,9 +7,12 @@ import static org.mockito.Mockito.when;
 
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderInfo;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderItemInfo;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderUserIdEquals;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderWithItems;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserIdPredicate;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserInfo;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserNameAndOrders;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserNamePredicate;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserWithOrdersAndItems;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowIterator;
@@ -33,16 +36,16 @@ class SqlVajramMapResultTest {
   void getUserInfoById_mapsColumnsFromSingleRow() {
     Row row = mockRow();
     stubLong(row, "id", 1L);
-    stubString(row, "name", "Alice");
-    stubString(row, "contactEmail", "alice@example.com");
+    stubString(row, "name", "Alisha");
+    stubString(row, "contactEmail", "Alisha@example.com");
     stubString(row, "phoneNumber", "+1-555-0100");
 
     UserInfo result = GetUserInfoById_VertxSql.mapResult(rowSetOf(row));
 
     assertThat(result).isNotNull();
     assertThat(result.id()).isEqualTo(1L);
-    assertThat(result.name()).isEqualTo("Alice");
-    assertThat(result.contactEmail()).isEqualTo("alice@example.com");
+    assertThat(result.name()).isEqualTo("Alisha");
+    assertThat(result.contactEmail()).isEqualTo("Alisha@example.com");
     assertThat(result.phoneNumber()).contains("+1-555-0100");
   }
 
@@ -53,7 +56,7 @@ class SqlVajramMapResultTest {
 
   @Test
   void getUserInfoById_sql_isCorrect() {
-    assertThat(GetUserInfoById_VertxSql.resolveSql())
+    assertThat(GetUserInfoById_VertxSql.resolveSql(mock(UserIdPredicate.class)))
         .isEqualTo(
             "SELECT id, name, email AS contactEmail, phoneNumber FROM users WHERE id = $1 LIMIT 1");
   }
@@ -88,7 +91,7 @@ class SqlVajramMapResultTest {
 
   @Test
   void getOrderInfoByUserId_sql_isCorrect() {
-    assertThat(GetOrderInfoByUserId_VertxSql.resolveSql())
+    assertThat(GetOrderInfoByUserId_VertxSql.resolveSql(mock(OrderUserIdEquals.class)))
         .isEqualTo("SELECT orderId, userId, amountCents FROM orders WHERE userId = $1");
   }
 
@@ -115,7 +118,7 @@ class SqlVajramMapResultTest {
 
   @Test
   void getRecentOrdersByUserId_sql_isCorrect() {
-    assertThat(GetRecentOrdersByUserId_VertxSql.resolveSql())
+    assertThat(GetRecentOrdersByUserId_VertxSql.resolveSql(mock(OrderUserIdEquals.class)))
         .isEqualTo(
             "SELECT orderId, userId, amountCents FROM orders WHERE userId = $1"
                 + " ORDER BY orderTime DESC LIMIT 5");
@@ -168,7 +171,7 @@ class SqlVajramMapResultTest {
 
   @Test
   void getOrdersWithItemsByUserId_sql_isCorrect() {
-    String sql = GetOrdersWithItemsByUserId_VertxSql.resolveSql();
+    String sql = GetOrdersWithItemsByUserId_VertxSql.resolveSql(mock(OrderUserIdEquals.class));
     // LIMIT(10) on the root List<T> type scopes to parent rows via a subquery.
     assertThat(sql)
         .contains("FROM (SELECT * FROM orders WHERE userId = $1 ORDER BY orderTime DESC LIMIT 10)")
@@ -190,7 +193,7 @@ class SqlVajramMapResultTest {
     // Two order rows for the same user
     Row r1 = mockRow();
     stubObject(r1, "users_id", 1L);
-    stubString(r1, "users_name", "Bob");
+    stubString(r1, "users_name", "Babu");
     stubObject(r1, "orders_orderId", 20L);
     stubLong(r1, "orders_orderId", 20L);
     stubLong(r1, "orders_userId", 1L);
@@ -198,7 +201,7 @@ class SqlVajramMapResultTest {
 
     Row r2 = mockRow();
     stubObject(r2, "users_id", 1L);
-    stubString(r2, "users_name", "Bob");
+    stubString(r2, "users_name", "Babu");
     stubObject(r2, "orders_orderId", 21L);
     stubLong(r2, "orders_orderId", 21L);
     stubLong(r2, "orders_userId", 1L);
@@ -207,7 +210,7 @@ class SqlVajramMapResultTest {
     UserNameAndOrders result = GetUserOrdersByUserName_VertxSql.mapResult(rowSetOf(r1, r2));
 
     assertThat(result).isNotNull();
-    assertThat(result.name()).isEqualTo("Bob");
+    assertThat(result.name()).isEqualTo("Babu");
     assertThat(result.orders()).hasSize(2);
     assertThat(result.orders().get(0).orderId()).isEqualTo(20L);
     assertThat(result.orders().get(1).orderId()).isEqualTo(21L);
@@ -246,7 +249,7 @@ class SqlVajramMapResultTest {
 
   @Test
   void getUserOrdersByUserName_sql_isCorrect() {
-    assertThat(GetUserOrdersByUserName_VertxSql.resolveSql())
+    assertThat(GetUserOrdersByUserName_VertxSql.resolveSql(mock(UserNamePredicate.class)))
         .startsWith("SELECT users.id AS users_id, users.name AS users_name")
         // @LIMIT(1) on type arg → parent wrapped in a subquery with LIMIT 1
         .contains("FROM (SELECT * FROM users WHERE name = $1 LIMIT 1) users")
@@ -263,13 +266,13 @@ class SqlVajramMapResultTest {
   @Test
   void getUserByIdWithOrdersAndItems_mapsNestedRows() {
     // 2 orders for user 1; order 30 has 2 items, order 31 has 1 item
-    Row r1 = orderItemRow(1L, "Alice", 30L, 9000L, 0L, 100L, "Widget A", 999L);
-    Row r2 = orderItemRow(1L, "Alice", 30L, 9000L, 0L, 101L, "Widget B", 1999L);
-    Row r3 = orderItemRow(1L, "Alice", 31L, 4000L, 0L, 102L, "Gadget", 4999L);
+    Row r1 = orderItemRow(1L, "Alisha", 30L, 9000L, 0L, 100L, "Widget A", 999L);
+    Row r2 = orderItemRow(1L, "Alisha", 30L, 9000L, 0L, 101L, "Widget B", 1999L);
+    Row r3 = orderItemRow(1L, "Alisha", 31L, 4000L, 0L, 102L, "Gadget", 4999L);
     // order 32 exists but has no items (LEFT JOIN null)
     Row r4 = mockRow();
     stubObject(r4, "users_id", 1L);
-    stubString(r4, "users_name", "Alice");
+    stubString(r4, "users_name", "Alisha");
     stubObject(r4, "orders_orderId", 32L);
     stubLong(r4, "orders_orderId", 32L);
     stubLong(r4, "orders_amountCents", 0L);
@@ -280,7 +283,7 @@ class SqlVajramMapResultTest {
         GetUserByIdWithOrdersAndItems_VertxSql.mapResult(rowSetOf(r1, r2, r3, r4));
 
     assertThat(result).isNotNull();
-    assertThat(result.name()).isEqualTo("Alice");
+    assertThat(result.name()).isEqualTo("Alisha");
     assertThat(result.orders()).hasSize(3);
 
     OrderWithItems order30 = result.orders().get(0);
@@ -311,7 +314,7 @@ class SqlVajramMapResultTest {
 
   @Test
   void getUserByIdWithOrdersAndItems_sql_isCorrect() {
-    assertThat(GetUserByIdWithOrdersAndItems_VertxSql.resolveSql())
+    assertThat(GetUserByIdWithOrdersAndItems_VertxSql.resolveSql(mock(UserIdPredicate.class)))
         // No @LIMIT on type arg → standard path; WHERE goes directly on the outer query.
         // orders has @LIMIT(3) AND nested orderItems → ROW_NUMBER required (outer LIMIT would
         // truncate grandchild rows instead of bounding the number of orders per user).
@@ -334,7 +337,7 @@ class SqlVajramMapResultTest {
 
   @Test
   void getUserByNameWithOrdersAndItems_sql_isCorrect() {
-    assertThat(GetUserByNameWithOrdersAndItems_VertxSql.resolveSql())
+    assertThat(GetUserByNameWithOrdersAndItems_VertxSql.resolveSql(mock(UserNamePredicate.class)))
         // @LIMIT(1) on type arg → parent wrapped in LIMIT 1 subquery
         .contains("FROM (SELECT * FROM users WHERE name = $1 LIMIT 1) users")
         // orders has @LIMIT(3) → ROW_NUMBER per user (subquery path forces useRowNumber)

@@ -12,7 +12,6 @@ import com.flipkart.krystal.lattice.vajram.VajramRequestExecutionContext;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.util.concurrent.CompletionStage;
-import org.jspecify.annotations.NonNull;
 
 /**
  * Dopant that bridges A2A agent skill invocations to the Krystal Vajram execution engine.
@@ -44,7 +43,7 @@ public final class A2AServerDopant implements Dopant<A2AServer, NoConfiguration>
     return executeVajram(vajramRequest);
   }
 
-  private <T> @NonNull CompletionStage<T> executeVajram(ImmutableRequest<T> vajramRequest) {
+  private <T> CompletionStage<T> executeVajram(ImmutableRequest<T> vajramRequest) {
     try {
       return krystexDopant.executeRequest(
           VajramRequestExecutionContext.<T>builder().vajramRequest(vajramRequest).build());

@@ -15,5 +15,4 @@ module flipkart.krystal.vajram.codegen.common {
   requires com.google.errorprone.annotations;
   requires flipkart.krystal.codegen.common;
   requires com.google.auto.service;
-  requires org.jspecify;
 }
