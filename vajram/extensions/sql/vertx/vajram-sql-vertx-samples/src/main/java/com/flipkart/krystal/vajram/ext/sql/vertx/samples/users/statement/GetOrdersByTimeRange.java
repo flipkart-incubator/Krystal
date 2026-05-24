@@ -18,7 +18,7 @@ import java.util.List;
 
 /**
  * Fetches orders within a half-open time range {@code [from, to)}, sorted ascending. Tests
- * {@code @IdGreaterThanOrEqual} and {@code @IsLessThan} operators.
+ * {@code @IsGreaterThanOrEqual} and {@code @IsLessThan} operators.
  */
 @SQL
 @SELECT
