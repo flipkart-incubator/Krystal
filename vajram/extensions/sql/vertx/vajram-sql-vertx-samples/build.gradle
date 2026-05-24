@@ -20,6 +20,7 @@ dependencies {
     implementation 'jakarta.inject:jakarta.inject-api:2.0.1'
     implementation 'org.slf4j:slf4j-api'
     implementation 'org.checkerframework:checker-qual:3.48.4'
+    implementation 'com.google.guava:guava:33.6.0-jre'
 
     testImplementation platform('org.mockito:mockito-bom:5.17.0')
     testImplementation 'org.mockito:mockito-core'

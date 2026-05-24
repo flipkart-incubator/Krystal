@@ -5,7 +5,7 @@ import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.vajram.ext.sql.lang.SelectionPredicate;
 import com.flipkart.krystal.vajram.ext.sql.lang.WHERE;
-import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.LesserThanOrEqual;
+import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.IsLessThanOrEqual;
 import com.flipkart.krystal.vajram.ext.sql.model.Column;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.Order;
 
@@ -16,7 +16,7 @@ import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.Order;
 public interface OrderAmountLtePredicate extends SelectionPredicate {
 
   @Column("amountCents")
-  @LesserThanOrEqual
+  @IsLessThanOrEqual
   long amountAtMost();
 
   static OrderAmountLtePredicate_ImmutPojo.Builder _builder() {

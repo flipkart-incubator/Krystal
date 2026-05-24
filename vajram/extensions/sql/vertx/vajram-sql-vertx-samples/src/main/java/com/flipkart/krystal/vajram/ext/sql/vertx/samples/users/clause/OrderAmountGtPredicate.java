@@ -5,7 +5,7 @@ import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.vajram.ext.sql.lang.SelectionPredicate;
 import com.flipkart.krystal.vajram.ext.sql.lang.WHERE;
-import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.GreaterThan;
+import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.IsGreaterThan;
 import com.flipkart.krystal.vajram.ext.sql.model.Column;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.Order;
 
@@ -16,7 +16,7 @@ import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.Order;
 public interface OrderAmountGtPredicate extends SelectionPredicate {
 
   @Column("amountCents")
-  @GreaterThan
+  @IsGreaterThan
   long amountGreaterThan();
 
   static OrderAmountGtPredicate_ImmutPojo.Builder _builder() {

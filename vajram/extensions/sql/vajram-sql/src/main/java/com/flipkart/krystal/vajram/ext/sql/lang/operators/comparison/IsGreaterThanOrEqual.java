@@ -19,4 +19,4 @@ import java.lang.annotation.Target;
  * }</pre>
  */
 @Target(METHOD)
-public @interface GreaterThanOrEqual {}
+public @interface IsGreaterThanOrEqual {}

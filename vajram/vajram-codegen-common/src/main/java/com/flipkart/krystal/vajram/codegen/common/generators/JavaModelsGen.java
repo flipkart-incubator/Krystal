@@ -284,6 +284,10 @@ public final class JavaModelsGen implements CodeGenerator {
       checkModelIsPure(method, type, fieldName);
       return;
     }
+    if (isRangeType(type)) {
+      validatePureRangeTypeArg(method, type, fieldName);
+      return;
+    }
     if (util.isListType(type)) {
       TypeMirror elementType = util.getContentType(type);
       validatePureListElementType(method, elementType, fieldName);
@@ -370,6 +374,33 @@ public final class JavaModelsGen implements CodeGenerator {
         "Field '%s' in pure model '%s' has Map with disallowed value type '%s'. "
                 .formatted(fieldName, codeGenContext.modelRootType().getQualifiedName(), valueType)
             + "Map values in pure models must be primitives, boxed primitives, String, enums, or pure Models.",
+        method);
+  }
+
+  private static final String GUAVA_RANGE_FQN = "com.google.common.collect.Range";
+
+  private boolean isRangeType(TypeMirror type) {
+    if (type instanceof DeclaredType declaredType) {
+      Element element = declaredType.asElement();
+      if (element instanceof TypeElement typeElement) {
+        return typeElement.getQualifiedName().contentEquals(GUAVA_RANGE_FQN);
+      }
+    }
+    return false;
+  }
+
+  private void validatePureRangeTypeArg(
+      ExecutableElement method, TypeMirror type, String fieldName) {
+    if (type instanceof DeclaredType declaredType && !declaredType.getTypeArguments().isEmpty()) {
+      TypeMirror typeArg = declaredType.getTypeArguments().get(0);
+      if (util.isPrimitiveOrBoxed(typeArg) || util.isString(typeArg)) {
+        return;
+      }
+    }
+    util.error(
+        "Field '%s' in pure model '%s' has Range with disallowed type argument '%s'. "
+                .formatted(fieldName, codeGenContext.modelRootType().getQualifiedName(), type)
+            + "Range type arguments in pure models must be boxed primitives or String.",
         method);
   }
 

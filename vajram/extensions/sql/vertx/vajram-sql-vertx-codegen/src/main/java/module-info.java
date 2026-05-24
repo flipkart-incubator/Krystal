@@ -12,4 +12,5 @@ module krystal.vajram.ext.sql.vertx.codegen {
   requires java.compiler;
   requires static lombok;
   requires org.checkerframework.checker.qual;
+  requires jakarta.inject;
 }

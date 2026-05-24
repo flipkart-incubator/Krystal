@@ -15,6 +15,7 @@ import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderAmoun
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderAmountLtePredicate;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderInfo;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderItemInfo;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderTimeIsInRange;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderTimeRangePredicate;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderUserIdEquals;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderWithItems;
@@ -31,6 +32,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
+import com.google.common.collect.Range;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -711,6 +713,153 @@ class SqlTraitIntegrationTest {
     assertThat(future).succeedsWithin(TIMEOUT).satisfies(orders -> assertThat(orders).hasSize(17));
   }
 
+  // ─── GetOrdersByTimeInRange (@IsInRange — closed range) ────────────────────────
+
+  @Test
+  void getOrdersByTimeInRange_closedRange_returnsOrdersIncludingBothEndpoints() {
+    // Alisha's orders: orderTime 1000,2000,3000,4000,5000,6000
+    // Babu's orders:   orderTime 1000,2000,...,11000
+    // Range.closed(3000, 5000) should match orderTime 3000, 4000, 5000 for both users
+    CompletableFuture<List<OrderInfo>> future;
+    try (KrystexVajramExecutor executor = createExecutor("getOrdersByTimeInRange_closed")) {
+      future =
+          executor.execute(
+              GetOrdersByTimeInRange_Req._builder()
+                  .where(
+                      OrderTimeIsInRange._builder()
+                          .orderTimeRange(Range.closed(3000L, 5000L))
+                          ._build())
+                  ._build(),
+              KryonExecutionConfig.builder()
+                  .executionId("getOrdersByTimeInRange_closed_exec")
+                  .build());
+    }
+    assertThat(future)
+        .succeedsWithin(TIMEOUT)
+        .satisfies(
+            orders -> {
+              // Alisha: orderId 12(3000), 13(4000), 14(5000)
+              // Babu:   orderId 22(3000), 23(4000), 24(5000)
+              assertThat(orders).hasSize(6);
+              // @ORDER(by = "orderTime", direction = ASC)
+              assertThat(orders.stream().mapToLong(OrderInfo::orderId).boxed())
+                  .containsExactly(12L, 22L, 13L, 23L, 14L, 24L);
+            });
+  }
+
+  // ─── GetOrdersByTimeInRange (@IsInRange — open range) ──────────────────────────
+
+  @Test
+  void getOrdersByTimeInRange_openRange_excludesBothEndpoints() {
+    // Range.open(3000, 6000) should match orderTime 4000, 5000 (excludes 3000 and 6000)
+    CompletableFuture<List<OrderInfo>> future;
+    try (KrystexVajramExecutor executor = createExecutor("getOrdersByTimeInRange_open")) {
+      future =
+          executor.execute(
+              GetOrdersByTimeInRange_Req._builder()
+                  .where(
+                      OrderTimeIsInRange._builder()
+                          .orderTimeRange(Range.open(3000L, 6000L))
+                          ._build())
+                  ._build(),
+              KryonExecutionConfig.builder()
+                  .executionId("getOrdersByTimeInRange_open_exec")
+                  .build());
+    }
+    assertThat(future)
+        .succeedsWithin(TIMEOUT)
+        .satisfies(
+            orders -> {
+              // Alisha: orderId 13(4000), 14(5000)
+              // Babu:   orderId 23(4000), 24(5000)
+              assertThat(orders).hasSize(4);
+              assertThat(orders.stream().mapToLong(OrderInfo::orderId).boxed())
+                  .containsExactly(13L, 23L, 14L, 24L);
+            });
+  }
+
+  // ─── GetOrdersByTimeInRange (@IsInRange — closedOpen range) ────────────────────
+
+  @Test
+  void getOrdersByTimeInRange_closedOpenRange_includesLowerExcludesUpper() {
+    // Range.closedOpen(3000, 6000) should match orderTime 3000, 4000, 5000 (excludes 6000)
+    CompletableFuture<List<OrderInfo>> future;
+    try (KrystexVajramExecutor executor = createExecutor("getOrdersByTimeInRange_closedOpen")) {
+      future =
+          executor.execute(
+              GetOrdersByTimeInRange_Req._builder()
+                  .where(
+                      OrderTimeIsInRange._builder()
+                          .orderTimeRange(Range.closedOpen(3000L, 6000L))
+                          ._build())
+                  ._build(),
+              KryonExecutionConfig.builder()
+                  .executionId("getOrdersByTimeInRange_closedOpen_exec")
+                  .build());
+    }
+    assertThat(future)
+        .succeedsWithin(TIMEOUT)
+        .satisfies(
+            orders -> {
+              // Same as the existing half-open range test: 3000, 4000, 5000 for both users
+              assertThat(orders).hasSize(6);
+              assertThat(orders.stream().mapToLong(OrderInfo::orderId).boxed())
+                  .containsExactly(12L, 22L, 13L, 23L, 14L, 24L);
+            });
+  }
+
+  // ─── GetOrdersByTimeInRange (@IsInRange — openClosed range) ────────────────────
+
+  @Test
+  void getOrdersByTimeInRange_openClosedRange_excludesLowerIncludesUpper() {
+    // Range.openClosed(3000, 6000) should match orderTime 4000, 5000, 6000 (excludes 3000)
+    CompletableFuture<List<OrderInfo>> future;
+    try (KrystexVajramExecutor executor = createExecutor("getOrdersByTimeInRange_openClosed")) {
+      future =
+          executor.execute(
+              GetOrdersByTimeInRange_Req._builder()
+                  .where(
+                      OrderTimeIsInRange._builder()
+                          .orderTimeRange(Range.openClosed(3000L, 6000L))
+                          ._build())
+                  ._build(),
+              KryonExecutionConfig.builder()
+                  .executionId("getOrdersByTimeInRange_openClosed_exec")
+                  .build());
+    }
+    assertThat(future)
+        .succeedsWithin(TIMEOUT)
+        .satisfies(
+            orders -> {
+              // Alisha: orderId 13(4000), 14(5000), 15(6000)
+              // Babu:   orderId 23(4000), 24(5000), 25(6000)
+              assertThat(orders).hasSize(6);
+              assertThat(orders.stream().mapToLong(OrderInfo::orderId).boxed())
+                  .containsExactly(13L, 23L, 14L, 24L, 15L, 25L);
+            });
+  }
+
+  // ─── GetOrdersByTimeInRange (@IsInRange — empty result) ────────────────────────
+
+  @Test
+  void getOrdersByTimeInRange_returnsEmptyWhenNoOrdersInRange() {
+    CompletableFuture<List<OrderInfo>> future;
+    try (KrystexVajramExecutor executor = createExecutor("getOrdersByTimeInRange_empty")) {
+      future =
+          executor.execute(
+              GetOrdersByTimeInRange_Req._builder()
+                  .where(
+                      OrderTimeIsInRange._builder()
+                          .orderTimeRange(Range.closed(99000L, 100000L))
+                          ._build())
+                  ._build(),
+              KryonExecutionConfig.builder()
+                  .executionId("getOrdersByTimeInRange_empty_exec")
+                  .build());
+    }
+    assertThat(future).succeedsWithin(TIMEOUT).satisfies(orders -> assertThat(orders).isEmpty());
+  }
+
   // ─── GetRecentOrdersByUserId ──────────────────────────────────────────────────
 
   @Test
@@ -776,6 +925,9 @@ class SqlTraitIntegrationTest {
     traitBinder
         .bindTrait(GetOrdersByMaxAmount_Req.class)
         .to(GetOrdersByMaxAmount_VertxSql_Req.class);
+    traitBinder
+        .bindTrait(GetOrdersByTimeInRange_Req.class)
+        .to(GetOrdersByTimeInRange_VertxSql_Req.class);
 
     kGraph.traitDispatchPolicies(
         TraitDispatchPolicies.builder()
@@ -791,7 +943,8 @@ class SqlTraitIntegrationTest {
                         GetUserByIdOrName_Req._VAJRAM_ID,
                         GetOrdersByTimeRange_Req._VAJRAM_ID,
                         GetOrdersByMinAmount_Req._VAJRAM_ID,
-                        GetOrdersByMaxAmount_Req._VAJRAM_ID)
+                        GetOrdersByMaxAmount_Req._VAJRAM_ID,
+                        GetOrdersByTimeInRange_Req._VAJRAM_ID)
                     .map(
                         vajramID ->
                             new StaticDispatchPolicyImpl(vajramGraph, vajramID, traitBinder))

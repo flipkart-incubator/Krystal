@@ -16,7 +16,6 @@ import com.flipkart.krystal.vajram.ext.sql.lang.SQL;
 import com.google.auto.service.AutoService;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import javax.annotation.processing.Processor;
@@ -33,9 +32,7 @@ import javax.lang.model.element.TypeElement;
 @AutoService(Processor.class)
 @SupportedOptions({CODEGEN_PHASE_KEY, MODULE_ROOT_PATH_KEY})
 @RunOnlyWhenCodegenPhaseIs(MODELS)
-public class SqlAnnotationProcessor extends AbstractKrystalAnnoProcessor {
-
-  private final List<TypeElement> sqlTraits = new LinkedList<>();
+public class VertxSqlAnnoProcessor extends AbstractKrystalAnnoProcessor {
 
   @Override
   protected boolean processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -44,7 +41,6 @@ public class SqlAnnotationProcessor extends AbstractKrystalAnnoProcessor {
       SqlModelParser parser = new SqlModelParser(vajramUtil, paramIndex -> "$" + paramIndex);
       parser.validateTableAndWhereElements(roundEnv);
       List<TypeElement> sqlTraits = getSqlTraits(roundEnv);
-      this.sqlTraits.addAll(sqlTraits);
       Iterator<TypeElement> iterator = sqlTraits.iterator();
       while (iterator.hasNext()) {
         TypeElement vajramElement = iterator.next();

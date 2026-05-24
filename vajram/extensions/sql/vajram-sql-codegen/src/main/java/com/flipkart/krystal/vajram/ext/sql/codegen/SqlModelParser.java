@@ -21,11 +21,12 @@ import com.flipkart.krystal.vajram.ext.sql.lang.ORDER;
 import com.flipkart.krystal.vajram.ext.sql.lang.ORDER.Direction;
 import com.flipkart.krystal.vajram.ext.sql.lang.SqlWherePredicate;
 import com.flipkart.krystal.vajram.ext.sql.lang.WHERE;
-import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.GreaterThan;
-import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.GreaterThanOrEqual;
 import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.IsEqualTo;
-import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.LesserThan;
-import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.LesserThanOrEqual;
+import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.IsGreaterThan;
+import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.IsGreaterThanOrEqual;
+import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.IsInRange;
+import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.IsLessThan;
+import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.IsLessThanOrEqual;
 import com.flipkart.krystal.vajram.ext.sql.lang.operators.logical.SqlOrPredicate;
 import com.flipkart.krystal.vajram.ext.sql.model.Column;
 import com.flipkart.krystal.vajram.ext.sql.model.ForeignKey;
@@ -60,9 +61,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class SqlModelParser {
 
   private final CodeGenUtility util;
-  private final SqlParameterPrinter sqlParamPrinter;
+  private final SqlDriverConfig sqlParamPrinter;
 
-  public SqlModelParser(VajramCodeGenUtility vajramUtil, SqlParameterPrinter sqlParamPrinter) {
+  public SqlModelParser(VajramCodeGenUtility vajramUtil, SqlDriverConfig sqlParamPrinter) {
     this.util = vajramUtil.codegenUtil();
     this.sqlParamPrinter = sqlParamPrinter;
   }
@@ -226,24 +227,28 @@ public final class SqlModelParser {
     if (method.getAnnotation(IsEqualTo.class) != null) {
       return new SimpleWhereOperator("=", sqlParamPrinter);
     }
-    if (method.getAnnotation(GreaterThan.class) != null) {
+    if (method.getAnnotation(IsGreaterThan.class) != null) {
       validateComparableType(method, "@GreaterThan");
       return new SimpleWhereOperator(">", sqlParamPrinter);
     }
-    if (method.getAnnotation(GreaterThanOrEqual.class) != null) {
+    if (method.getAnnotation(IsGreaterThanOrEqual.class) != null) {
       validateComparableType(method, "@GreaterThanOrEqual");
       return new SimpleWhereOperator(">=", sqlParamPrinter);
     }
-    if (method.getAnnotation(LesserThan.class) != null) {
+    if (method.getAnnotation(IsLessThan.class) != null) {
       validateComparableType(method, "@LesserThan");
       return new SimpleWhereOperator("<", sqlParamPrinter);
     }
-    if (method.getAnnotation(LesserThanOrEqual.class) != null) {
+    if (method.getAnnotation(IsLessThanOrEqual.class) != null) {
       validateComparableType(method, "@LesserThanOrEqual");
       return new SimpleWhereOperator("<=", sqlParamPrinter);
     }
+    if (method.getAnnotation(IsInRange.class) != null) {
+      validateRangeType(method);
+      return new RangeWhereOperator(sqlParamPrinter);
+    }
     util.error(
-        "No comparison operator annotation such as @IsEqualTo, @GreaterThan, @LesserThan, etc. has been found",
+        "No comparison operator annotation such as @IsEqualTo, @GreaterThan, @LesserThan, @IsInRange, etc. has been found",
         method);
     return new SimpleWhereOperator("<UNKNOWN_OPERATOR>", sqlParamPrinter);
   }
@@ -261,6 +266,39 @@ public final class SqlModelParser {
           "java.time.LocalDate",
           "java.time.LocalDateTime",
           "java.time.OffsetDateTime");
+
+  /**
+   * Validates that the return type of a predicate method annotated with {@code @IsInRange} is
+   * {@code Range<T>} where {@code T} is a comparable type (numeric boxed types or temporal types).
+   */
+  private void validateRangeType(ExecutableElement method) {
+    TypeMirror returnType = method.getReturnType();
+    if (!(returnType instanceof DeclaredType dt)) {
+      util.error("@IsInRange requires a return type of Range<T>, but found: " + returnType, method);
+      return;
+    }
+    if (!(dt.asElement() instanceof TypeElement te)
+        || !te.getQualifiedName().contentEquals("com.google.common.collect.Range")) {
+      util.error("@IsInRange requires a return type of Range<T>, but found: " + returnType, method);
+      return;
+    }
+    if (dt.getTypeArguments().isEmpty()) {
+      util.error("@IsInRange requires a parameterized Range<T>, but found raw Range.", method);
+      return;
+    }
+    TypeMirror typeArg = dt.getTypeArguments().get(0);
+    if (typeArg instanceof DeclaredType argDt
+        && argDt.asElement() instanceof TypeElement argTe
+        && COMPARABLE_DECLARED_TYPES.contains(argTe.getQualifiedName().toString())) {
+      return;
+    }
+    util.error(
+        "@IsInRange requires Range<T> where T is a comparable type (boxed numerics or temporal"
+            + " types like Long, Integer, LocalDate, etc.). Found Range<"
+            + typeArg
+            + ">.",
+        method);
+  }
 
   /**
    * Validates that the return type of a predicate method is a comparable type suitable for ordering

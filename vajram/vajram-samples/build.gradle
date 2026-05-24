@@ -20,7 +20,7 @@ dependencies {
     krystalModelsGenProcessor 'com.flipkart.krystal:vajram-codegen'
     /** END: Krystal dependencies **/
 
-    implementation 'com.google.guava:guava:33.4.8-jre'
+    implementation 'com.google.guava:guava:33.6.0-jre'
     implementation 'jakarta.inject:jakarta.inject-api'
     implementation 'org.slf4j:slf4j-api'
 

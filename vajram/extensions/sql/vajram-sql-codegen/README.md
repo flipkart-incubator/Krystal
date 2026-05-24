@@ -20,11 +20,14 @@ vajram-sql-vertx-codegen  (Vert.x-specific JavaPoet code generation)
 The module exports a single package — `com.flipkart.krystal.vajram.ext.sql.codegen` — containing
 three classes:
 
-| Class              | Responsibility                                                                     |
-|--------------------|------------------------------------------------------------------------------------|
-| `SqlQueryModel`    | Immutable data records that represent a parsed SQL query                            |
-| `SqlModelParser`   | Reads annotations from source elements and produces `SqlQueryModel` records         |
-| `SqlQueryBuilder`  | Accepts `SqlQueryModel` records and produces SQL query strings                      |
+| Class                  | Responsibility                                                                     |
+|------------------------|------------------------------------------------------------------------------------|
+| `SqlQueryModel`        | Immutable data records that represent a parsed SQL query                            |
+| `SqlModelParser`       | Reads annotations from source elements and produces `SqlQueryModel` records         |
+| `SqlQueryBuilder`      | Accepts `SqlQueryModel` records and produces SQL query strings                      |
+| `WhereOperator`        | Interface for WHERE clause operators — `toSql` for SQL generation, `toJavaParams` for runtime parameter extraction |
+| `SimpleWhereOperator`  | Implements `WhereOperator` for simple comparisons (`=`, `>`, `>=`, `<`, `<=`)      |
+| `RangeWhereOperator`   | Implements `WhereOperator` for `@IsInRange` — generates dual-bound SQL with runtime-adaptive open/closed comparison |
 
 ---
 
@@ -75,7 +78,7 @@ This class is **framework-agnostic** — it does not reference Vert.x or any spe
 | `collectWhereInputs`            | `VajramInfo`              | `List<WhereInput>` | Scans `_Inputs` facets for `@WHERE`-annotated or `SqlOrPredicate` types; returns parsed WHERE specs      |
 | `parseScalarColumns`            | `TypeElement` (selection) | `List<ScalarColumn>` | Extracts scalar columns from a `@Selection` interface                                                   |
 | `resolveColumnName`             | `ExecutableElement`       | `String`           | Returns `@Column.value()` or falls back to the method name                                               |
-| `resolveComparisonOperator`     | `ExecutableElement`       | `String`           | Returns the SQL operator from annotations (`@IsEqualTo`→`=`, `@GreaterThan`→`>`, `@GreaterThanOrEqual`→`>=`, `@LesserThan`→`<`, `@LesserThanOrEqual`→`<=`); validates comparable type for ordering operators |
+| `resolveComparisonOperator`     | `ExecutableElement`       | `WhereOperator`    | Returns the SQL operator from annotations (`@IsEqualTo`→`=`, `@GreaterThan`→`>`, `@GreaterThanOrEqual`→`>=`, `@LesserThan`→`<`, `@LesserThanOrEqual`→`<=`, `@IsInRange`→range comparison); validates comparable type for ordering operators and `Range<T>` for `@IsInRange` |
 | `getTableName`                  | `TypeElement` (table)     | `String`           | Returns `@Table(name = "...")` value                                                                     |
 | `findPkColumn`                  | `TypeElement` (table)     | `String`           | Finds the `@PrimaryKey` column name                                                                      |
 | `findFkColumnInChildForParent`  | child table, parent table | `String`           | Finds the `@ForeignKey` column in the child that references the parent                                   |

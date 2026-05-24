@@ -500,6 +500,7 @@ operators are available:
 | `@GreaterThanOrEqual`  | `>=`         | Same as `@GreaterThan`                                               |
 | `@LesserThan`          | `<`          | Same as `@GreaterThan`                                               |
 | `@LesserThanOrEqual`   | `<=`         | Same as `@GreaterThan`                                               |
+| `@IsInRange`           | `>` / `>=` + `<` / `<=` | `Range<T>` where `T` is a boxed numeric or temporal type    |
 
 Ordering operators (`>`, `>=`, `<`, `<=`) enforce a **compile-time type check**: the annotated
 method's return type must be a comparable type. Using them on `String`, `boolean`, or other
@@ -534,6 +535,42 @@ public interface RecentOrdersPredicate extends SelectionPredicate {
 
 When `@Column` is present, its value is used as the DB column name in the WHERE clause (just like in
 selections). Otherwise the method name is used directly.
+
+#### Range Predicates (`@IsInRange`)
+
+The `@IsInRange` operator replaces a pair of comparison methods with a single method that returns a
+Guava `Range<T>`. The generated SQL adapts the comparison operators at runtime based on the range's
+bound types:
+
+| Range factory                | Generated SQL pattern                      |
+|------------------------------|--------------------------------------------|
+| `Range.closed(a, b)`        | `column >= $1 AND column <= $2`            |
+| `Range.open(a, b)`          | `column > $1 AND column < $2`             |
+| `Range.closedOpen(a, b)`    | `column >= $1 AND column < $2`            |
+| `Range.openClosed(a, b)`    | `column > $1 AND column <= $2`            |
+
+**Compile-time invariants:**
+
+- The annotated method must return `Range<T>` where `T` is a boxed numeric type (`Long`, `Integer`,
+  `Short`, `Float`, `Double`) or a temporal type (`LocalDate`, `LocalDateTime`, `OffsetDateTime`).
+- Primitive return types and raw `Range` are rejected at compile time.
+
+```java
+
+@ModelRoot
+@SupportedModelProtocol(PlainJavaObject.class)
+@WHERE(inTable = Order.class)
+public interface OrderTimeIsInRange extends SelectionPredicate {
+
+  @Column("orderTime")
+  @IsInRange
+  Range<Long> orderTimeRange();   // → runtime-adapted range comparison on orderTime
+}
+```
+
+This is equivalent to — but more concise than — declaring two separate methods with
+`@GreaterThanOrEqual` / `@LesserThan` (or any other pair). The `@IsInRange` approach is preferred
+when the caller provides a `Range` object directly.
 
 #### OR Predicates
 

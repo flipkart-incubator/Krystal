@@ -7,9 +7,12 @@ import static org.mockito.Mockito.when;
 
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderInfo;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderItemInfo;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderUserIdEquals;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderWithItems;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserIdPredicate;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserInfo;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserNameAndOrders;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserNamePredicate;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserWithOrdersAndItems;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowIterator;
@@ -53,7 +56,7 @@ class SqlVajramMapResultTest {
 
   @Test
   void getUserInfoById_sql_isCorrect() {
-    assertThat(GetUserInfoById_VertxSql.resolveSql())
+    assertThat(GetUserInfoById_VertxSql.resolveSql(mock(UserIdPredicate.class)))
         .isEqualTo(
             "SELECT id, name, email AS contactEmail, phoneNumber FROM users WHERE id = $1 LIMIT 1");
   }
@@ -88,7 +91,7 @@ class SqlVajramMapResultTest {
 
   @Test
   void getOrderInfoByUserId_sql_isCorrect() {
-    assertThat(GetOrderInfoByUserId_VertxSql.resolveSql())
+    assertThat(GetOrderInfoByUserId_VertxSql.resolveSql(mock(OrderUserIdEquals.class)))
         .isEqualTo("SELECT orderId, userId, amountCents FROM orders WHERE userId = $1");
   }
 
@@ -115,7 +118,7 @@ class SqlVajramMapResultTest {
 
   @Test
   void getRecentOrdersByUserId_sql_isCorrect() {
-    assertThat(GetRecentOrdersByUserId_VertxSql.resolveSql())
+    assertThat(GetRecentOrdersByUserId_VertxSql.resolveSql(mock(OrderUserIdEquals.class)))
         .isEqualTo(
             "SELECT orderId, userId, amountCents FROM orders WHERE userId = $1"
                 + " ORDER BY orderTime DESC LIMIT 5");
@@ -168,7 +171,7 @@ class SqlVajramMapResultTest {
 
   @Test
   void getOrdersWithItemsByUserId_sql_isCorrect() {
-    String sql = GetOrdersWithItemsByUserId_VertxSql.resolveSql();
+    String sql = GetOrdersWithItemsByUserId_VertxSql.resolveSql(mock(OrderUserIdEquals.class));
     // LIMIT(10) on the root List<T> type scopes to parent rows via a subquery.
     assertThat(sql)
         .contains("FROM (SELECT * FROM orders WHERE userId = $1 ORDER BY orderTime DESC LIMIT 10)")
@@ -246,7 +249,7 @@ class SqlVajramMapResultTest {
 
   @Test
   void getUserOrdersByUserName_sql_isCorrect() {
-    assertThat(GetUserOrdersByUserName_VertxSql.resolveSql())
+    assertThat(GetUserOrdersByUserName_VertxSql.resolveSql(mock(UserNamePredicate.class)))
         .startsWith("SELECT users.id AS users_id, users.name AS users_name")
         // @LIMIT(1) on type arg → parent wrapped in a subquery with LIMIT 1
         .contains("FROM (SELECT * FROM users WHERE name = $1 LIMIT 1) users")
@@ -311,7 +314,7 @@ class SqlVajramMapResultTest {
 
   @Test
   void getUserByIdWithOrdersAndItems_sql_isCorrect() {
-    assertThat(GetUserByIdWithOrdersAndItems_VertxSql.resolveSql())
+    assertThat(GetUserByIdWithOrdersAndItems_VertxSql.resolveSql(mock(UserIdPredicate.class)))
         // No @LIMIT on type arg → standard path; WHERE goes directly on the outer query.
         // orders has @LIMIT(3) AND nested orderItems → ROW_NUMBER required (outer LIMIT would
         // truncate grandchild rows instead of bounding the number of orders per user).
@@ -334,7 +337,7 @@ class SqlVajramMapResultTest {
 
   @Test
   void getUserByNameWithOrdersAndItems_sql_isCorrect() {
-    assertThat(GetUserByNameWithOrdersAndItems_VertxSql.resolveSql())
+    assertThat(GetUserByNameWithOrdersAndItems_VertxSql.resolveSql(mock(UserNamePredicate.class)))
         // @LIMIT(1) on type arg → parent wrapped in LIMIT 1 subquery
         .contains("FROM (SELECT * FROM users WHERE name = $1 LIMIT 1) users")
         // orders has @LIMIT(3) → ROW_NUMBER per user (subquery path forces useRowNumber)

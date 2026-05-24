@@ -5,7 +5,7 @@ import static java.lang.annotation.ElementType.METHOD;
 import java.lang.annotation.Target;
 
 /**
- * The SQL {@code <=} operator which checks if a value is less than or equal to another.
+ * The SQL {@code >} operator which checks if a value is strictly greater than another.
  *
  * <p>This operator is only valid on comparable types: numeric primitives and their boxed
  * equivalents ({@code int}, {@code long}, {@code short}, {@code float}, {@code double}), and
@@ -14,9 +14,9 @@ import java.lang.annotation.Target;
  * <p>Usage:
  *
  * <pre>{@code
- * @LesserThanOrEqual
- * long maxAge();
+ * @GreaterThan
+ * long minAge();
  * }</pre>
  */
 @Target(METHOD)
-public @interface LesserThanOrEqual {}
+public @interface IsGreaterThan {}

@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.ext.sql.codegen;
 
 import com.flipkart.krystal.vajram.ext.sql.lang.ORDER;
+import com.squareup.javapoet.CodeBlock;
 import java.util.List;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
@@ -128,5 +129,5 @@ public final class SqlQueryModel {
    * @param parentPkAlias the alias of the parent PK column in the SELECT (e.g. {@code "users_id"});
    *     used by the code generator to emit per-row parent identity validation
    */
-  public record JoinSqlResult(String sql, String parentPkAlias) {}
+  public record JoinSqlResult(CodeBlock sql, String parentPkAlias) {}
 }

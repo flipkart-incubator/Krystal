@@ -194,6 +194,17 @@ public class VajramCodeGenUtility {
     return computeVajramInfo(vajramClass);
   }
 
+  public VajramInfo computeVajramInfo(Class<? extends VajramDefRoot<?>> vajramClass) {
+    return computeVajramInfo(
+        requireNonNull(
+            processingEnv()
+                .getElementUtils()
+                .getTypeElement(requireNonNull(vajramClass.getCanonicalName())),
+            "Could not find vajram class"
+                + vajramClass
+                + ". Please make sure it is in the class path."));
+  }
+
   public VajramInfo computeVajramInfo(TypeElement vajramClass) {
     VajramInfoLite vajramInfoLite = computeVajramInfoLiteWithExactTypeArgs(vajramClass.asType());
     VajramInfoLite conformsToTraitInfo = getConformToTraitInfoFromVajram(vajramClass);

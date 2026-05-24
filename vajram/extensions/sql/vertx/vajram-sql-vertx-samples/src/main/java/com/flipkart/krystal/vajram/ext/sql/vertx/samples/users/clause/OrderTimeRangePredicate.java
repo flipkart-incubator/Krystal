@@ -5,8 +5,8 @@ import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.vajram.ext.sql.lang.SelectionPredicate;
 import com.flipkart.krystal.vajram.ext.sql.lang.WHERE;
-import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.GreaterThanOrEqual;
-import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.LesserThan;
+import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.IsGreaterThanOrEqual;
+import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.IsLessThan;
 import com.flipkart.krystal.vajram.ext.sql.model.Column;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.Order;
 
@@ -20,11 +20,11 @@ import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.Order;
 public interface OrderTimeRangePredicate extends SelectionPredicate {
 
   @Column("orderTime")
-  @GreaterThanOrEqual
+  @IsGreaterThanOrEqual
   long orderTimeFrom();
 
   @Column("orderTime")
-  @LesserThan
+  @IsLessThan
   long orderTimeTo();
 
   static OrderTimeRangePredicate_ImmutPojo.Builder _builder() {
