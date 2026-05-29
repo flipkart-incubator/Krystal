@@ -4,11 +4,14 @@ import com.flipkart.krystal.lattice.core.doping.DopantConfig.NoAnnotation;
 import com.flipkart.krystal.lattice.core.doping.DopantSpec;
 import com.flipkart.krystal.lattice.core.doping.DopantSpecBuilderWithConfig;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import lombok.Builder;
 
 @DopantType(DropwizardServerDopant.DOPANT_TYPE)
 @Builder(buildMethodName = "_buildSpec")
-public final class DropwizardServerDopantSpec
+public record DropwizardServerDopantSpec(List<EnvironmentEnricher> environmentEnrichers)
     implements DopantSpec<NoAnnotation, DropwizardServerDopantConfig, DropwizardServerDopant> {
 
   @Override
@@ -28,5 +31,19 @@ public final class DropwizardServerDopantSpec
 
   public static final class DropwizardServerDopantSpecBuilder
       extends DopantSpecBuilderWithConfig<
-          DropwizardServerDopantConfig, DropwizardServerDopantSpec> {}
+          DropwizardServerDopantConfig, DropwizardServerDopantSpec> {
+
+    @SuppressWarnings("MismatchedQueryAndUpdateOfCollection") // Used in generated build method
+    private final List<EnvironmentEnricher> environmentEnrichers = new ArrayList<>();
+
+    public DropwizardServerDopantSpecBuilder environmentEnrichers(
+        EnvironmentEnricher... environmentEnricher) {
+      this.environmentEnrichers.addAll(Arrays.asList(environmentEnricher));
+      return this;
+    }
+
+    public void environmentEnrichers(List<EnvironmentEnricher> environmentEnrichers) {
+      this.environmentEnrichers.addAll(environmentEnrichers);
+    }
+  }
 }

@@ -15,11 +15,9 @@ import com.flipkart.krystal.lattice.samples.rest.fory.quarkus.sampleForyService.
 import com.flipkart.krystal.lattice.samples.rest.fory.quarkus.sampleForyService.models.ForyResponse_Immut;
 import com.flipkart.krystal.lattice.samples.rest.fory.quarkus.sampleForyService.models.ForyResponse_ImmutFory;
 import com.flipkart.krystal.model.IfAbsent;
-import com.flipkart.krystal.serial.SerdeConfig;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.fory.Fory;
 import jakarta.inject.Inject;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -36,7 +34,6 @@ public abstract class ForyPostSample extends ComputeVajramDef<ForyResponse> {
   interface _Inputs {
     @IfAbsent(FAIL)
     @Body
-    @SerdeConfig(protocol = Fory.class)
     ForyRequest foryRequest();
 
     @IfAbsent(FAIL)

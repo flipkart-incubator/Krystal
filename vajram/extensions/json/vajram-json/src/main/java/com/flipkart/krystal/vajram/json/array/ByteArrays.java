@@ -6,25 +6,35 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
-import com.flipkart.krystal.model.array.SimpleByteArray;
+import com.flipkart.krystal.model.array.ByteArray;
 import java.io.IOException;
 
 public class ByteArrays {
-  /** Serializes {@link SimpleByteArray} as a Base64-encoded string in JSON. */
-  public static final class ByteArraySerializer extends JsonSerializer<SimpleByteArray> {
+  /** Serializes {@link JsonByteArray} as a Base64-encoded string in JSON. */
+  public static final class ByteArraySerializer extends JsonSerializer<ByteArray> {
     @Override
-    public void serialize(SimpleByteArray value, JsonGenerator gen, SerializerProvider serializers)
+    public void serialize(ByteArray value, JsonGenerator gen, SerializerProvider serializers)
         throws IOException {
-      gen.writeBinary(value.newInputStream(), value.length());
+      if (value instanceof JsonByteArray jsonByteArray) {
+        // Performant since there is no data copy involved
+        jsonByteArray.writeBase64ToJson(gen);
+        return;
+      } else {
+        // Less performant because bytes from input stream are copied into a new array before
+        // deserialization
+        gen.writeBinary(value.newInputStream(), value.length());
+      }
     }
   }
 
-  /** Deserializes a Base64-encoded JSON string into {@link SimpleByteArray}. */
-  public static final class ByteArrayDeserializer extends JsonDeserializer<SimpleByteArray> {
+  /** Deserializes a Base64-encoded JSON string into {@link JsonByteArray}. */
+  public static final class ByteArrayDeserializer extends JsonDeserializer<JsonByteArray> {
     @Override
-    public SimpleByteArray deserialize(JsonParser p, DeserializationContext context)
+    public JsonByteArray deserialize(JsonParser p, DeserializationContext context)
         throws IOException {
-      return SimpleByteArray.copyOf(p.getBinaryValue());
+      // Avoid copying of bytes by using of() instead of copyOf() - the binary value byte array
+      // should not be modified after this
+      return JsonByteArray.of(p.getBinaryValue());
     }
   }
 }

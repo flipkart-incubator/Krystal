@@ -1,25 +1,18 @@
 package com.flipkart.krystal.model.array;
 
-import static com.flipkart.krystal.model.array.ByteArray.areEqual;
-import static java.util.Collections.unmodifiableList;
-
-import com.google.common.primitives.Bytes;
-import java.io.ByteArrayInputStream;
 import java.util.Arrays;
-import java.util.List;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A JSON-serializable implementation of {@link ByteArray} that wraps a {@code byte[]}. Bytes are
  * serialized directly as a Base64-encoded string in JSON.
  */
-public final class SimpleByteArray implements ByteArray {
+public final class SimpleByteArray extends ByteArrayBase {
 
   private static final SimpleByteArray EMPTY = new SimpleByteArray(new byte[0]);
-
   private final byte[] data;
 
   private SimpleByteArray(byte[] data) {
+    super(data);
     this.data = data;
   }
 
@@ -27,96 +20,25 @@ public final class SimpleByteArray implements ByteArray {
     return EMPTY;
   }
 
+  /** Wraps a cloned copy of the provided byte array into a {@link SimpleByteArray}. */
   public static SimpleByteArray copyOf(byte... data) {
-    return new SimpleByteArray(data.clone());
+    return of(data.clone());
   }
 
-  @Override
-  public byte valueAt(int index) {
-    return data[index];
-  }
-
-  @Override
-  public boolean contains(byte target) {
-    for (byte b : data) {
-      if (b == target) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  @Override
-  public void forEach(ByteConsumer consumer) {
-    for (byte b : data) {
-      consumer.accept(b);
-    }
-  }
-
-  @Override
-  public int indexOf(byte target) {
-    for (int i = 0; i < data.length; i++) {
-      if (data[i] == target) {
-        return i;
-      }
-    }
-    return -1;
-  }
-
-  @Override
-  public int lastIndexOf(byte target) {
-    for (int i = data.length - 1; i >= 0; i--) {
-      if (data[i] == target) {
-        return i;
-      }
-    }
-    return -1;
-  }
-
-  @Override
-  public byte[] toArray() {
-    return data.clone();
+  /**
+   * Wraps the provided byte array into a {@link SimpleByteArray}. The provided array is not copied.
+   * If a copy is needed, use {@link #copyOf(byte...)}.
+   *
+   * <p>Call this method only if you need to avoid copying the bytes for performance reasons and are
+   * 100% sure that the passed bytes are not modified after passing it to this method. Otherwise,
+   * use {@link #copyOf(byte...)}.
+   */
+  public static SimpleByteArray of(byte... data) {
+    return new SimpleByteArray(data);
   }
 
   @Override
   public ByteArray subArray(int startIndexInclusive, int endIndexExclusive) {
     return new SimpleByteArray(Arrays.copyOfRange(data, startIndexInclusive, endIndexExclusive));
-  }
-
-  @Override
-  public List<Byte> asList() {
-    return unmodifiableList(Bytes.asList(data));
-  }
-
-  @Override
-  public boolean isEmpty() {
-    return data.length == 0;
-  }
-
-  @Override
-  public int length() {
-    return data.length;
-  }
-
-  @Override
-  public boolean equals(@Nullable Object obj) {
-    if (!(obj instanceof ByteArray other)) {
-      return false;
-    }
-    return areEqual(this, other);
-  }
-
-  public ByteArrayInputStream newInputStream() {
-    return new ByteArrayInputStream(data);
-  }
-
-  @Override
-  public int hashCode() {
-    return Arrays.hashCode(data);
-  }
-
-  @Override
-  public String toString() {
-    return Arrays.toString(data);
   }
 }

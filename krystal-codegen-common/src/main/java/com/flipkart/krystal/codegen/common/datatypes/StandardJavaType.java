@@ -6,7 +6,9 @@ import com.flipkart.krystal.model.array.ByteArray;
 import com.flipkart.krystal.model.array.SimpleByteArray;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Range;
 import com.squareup.javapoet.CodeBlock;
+import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -16,6 +18,7 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import lombok.Getter;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Getter
 public enum StandardJavaType implements CodeGenType {
@@ -67,6 +70,13 @@ public enum StandardJavaType implements CodeGenType {
   STRING(TypeKind.DECLARED, CodeBlock.of("$S", ""), String.class.getCanonicalName()),
   LIST_RAW(TypeKind.DECLARED, CodeBlock.of("$T.of()", List.class), List.class.getCanonicalName()),
   MAP_RAW(TypeKind.DECLARED, CodeBlock.of("$T.of()", Map.class), Map.class.getCanonicalName()),
+  RANGE_RAW(
+      TypeKind.DECLARED,
+      // There is no sensible default for range because Range class has no none() static factory
+      // method. Using Range.all() as default can have surprising
+      // consequences for devs - so we force them to specify their own default as needed.
+      null,
+      Range.class.getCanonicalName()),
   BYTE_ARRAY(
       TypeKind.DECLARED,
       CodeBlock.of("$T.of()", SimpleByteArray.class),
@@ -78,7 +88,7 @@ public enum StandardJavaType implements CodeGenType {
       TypeKind.DECLARED,
       CodeBlock.of("$T.parse(\"1970-01-01T00:00:00\")", LocalDateTime.class),
       LocalDateTime.class.getCanonicalName()),
-  ;
+  URL(TypeKind.DECLARED, null, URL.class.getCanonicalName());
 
   static final ImmutableMap<String, StandardJavaType> standardTypesByCanonicalName;
 
@@ -93,7 +103,7 @@ public enum StandardJavaType implements CodeGenType {
   }
 
   @SuppressWarnings("ImmutableEnumChecker")
-  private final CodeBlock defaultValueExpr;
+  private final @Nullable CodeBlock defaultValueExpr;
 
   @SuppressWarnings("ImmutableEnumChecker")
   private final Function<ProcessingEnvironment, TypeMirror> getJavaModelType;
@@ -103,7 +113,7 @@ public enum StandardJavaType implements CodeGenType {
 
   StandardJavaType(
       TypeKind typeKind,
-      CodeBlock defaultValueExpr,
+      @Nullable CodeBlock defaultValueExpr,
       String defaultCanonicalClassName,
       String... canonicalClassNames) {
     this(
@@ -124,7 +134,7 @@ public enum StandardJavaType implements CodeGenType {
   }
 
   StandardJavaType(
-      CodeBlock defaultValueExpr,
+      @Nullable CodeBlock defaultValueExpr,
       Function<ProcessingEnvironment, TypeMirror> getJavaModelType,
       String defaultCanonicalClassName,
       String... otherCanonicalClassNames) {
@@ -154,7 +164,11 @@ public enum StandardJavaType implements CodeGenType {
   }
 
   @Override
-  public CodeBlock defaultValueExpr(ProcessingEnvironment processingEnv) {
+  public @Nullable CodeBlock defaultValueExpr(ProcessingEnvironment processingEnv) {
     return defaultValueExpr;
+  }
+
+  public static @Nullable StandardJavaType fromCanonicalClassName(String canonicalClassName) {
+    return standardTypesByCanonicalName.get(canonicalClassName);
   }
 }

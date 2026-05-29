@@ -1,10 +1,8 @@
 package com.flipkart.krystal.serial;
 
 import static java.lang.annotation.ElementType.TYPE;
-import static java.lang.annotation.RetentionPolicy.CLASS;
 
 import com.flipkart.krystal.model.ModelRoot;
-import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
 /**
@@ -18,7 +16,6 @@ import java.lang.annotation.Target;
  * different format. So such a change should be done with extreme caution.
  */
 @Target(TYPE)
-@Retention(CLASS)
 public @interface DefaultSerdeProtocol {
   Class<? extends SerdeProtocol> value();
 }

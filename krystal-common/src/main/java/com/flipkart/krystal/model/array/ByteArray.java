@@ -1,5 +1,7 @@
 package com.flipkart.krystal.model.array;
 
+import java.io.InputStream;
+
 public non-sealed interface ByteArray extends PrimitiveArray<Byte> {
   byte valueAt(int index);
 
@@ -14,6 +16,8 @@ public non-sealed interface ByteArray extends PrimitiveArray<Byte> {
   byte[] toArray();
 
   ByteArray subArray(int startIndexInclusive, int endIndexExclusive);
+
+  InputStream newInputStream();
 
   static boolean areEqual(ByteArray a, ByteArray b) {
     if (a == b) {

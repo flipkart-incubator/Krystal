@@ -4,6 +4,7 @@ import com.flipkart.krystal.model.array.ByteArray;
 import com.flipkart.krystal.model.array.ByteConsumer;
 import com.google.common.primitives.Bytes;
 import com.google.protobuf.ByteString;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -94,6 +95,11 @@ public final class ProtoByteArray implements ByteArray {
   @Override
   public ByteArray subArray(int startIndexInclusive, int endIndexExclusive) {
     return new ProtoByteArray(byteString.substring(startIndexInclusive, endIndexExclusive));
+  }
+
+  @Override
+  public InputStream newInputStream() {
+    return byteString.newInput();
   }
 
   @Override

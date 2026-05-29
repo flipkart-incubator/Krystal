@@ -35,7 +35,6 @@ dependencies {
 
     /** END: Lattice dependencies **/
 
-
     runtimeOnly 'jakarta.servlet:jakarta.servlet-api'
     compileOnly "org.projectlombok:lombok:$lombok_version"
 

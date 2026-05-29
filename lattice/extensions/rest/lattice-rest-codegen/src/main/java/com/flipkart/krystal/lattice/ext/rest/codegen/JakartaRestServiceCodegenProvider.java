@@ -85,13 +85,6 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
     CodeGenUtility util = context.codeGenUtility().codegenUtil();
     for (TypeElement vajramElem :
         JakartaRestServiceResourceGen.getRestResourceVajramElems(latticeAppElem, util)) {
-      Path path = vajramElem.getAnnotation(Path.class);
-      if (path != null) {
-        if (path.value().startsWith("/") || path.value().endsWith("/")) {
-          //          util.error("Path value in @Path annotation cannot start or end with '/'",
-          // vajramElem);
-        }
-      }
       VajramInfo vajramInfo = context.codeGenUtility().computeVajramInfo(vajramElem);
       ClassName jaxRsResourceName = getJaxRsResourceName(vajramInfo, vajramElem);
       resourceClasses.add(jaxRsResourceName);
@@ -409,13 +402,20 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
                 bodyFacet.facetElement());
           }
         }
+        TypeElement defaultProtocolTypeElement = util.getDefaultProtocolTypeElement(protocolSource);
         for (TypeElement serdeProtocolType : requestSerdeProtocols) {
+          boolean isDefaultProtocol =
+              defaultProtocolTypeElement != null
+                  && defaultProtocolTypeElement
+                      .getQualifiedName()
+                      .contentEquals(serdeProtocolType.getQualifiedName());
           ModelProtocol modelProtocol =
               configProviders.get(serdeProtocolType.getQualifiedName().toString());
           if (modelProtocol == null) {
             util.note(
                 "Ignoring %s for model %s since model protocol config not found"
                     .formatted(serdeProtocolType, vajramInfo.vajramName()));
+            continue;
           }
           String[] contentTypes;
           SerdeConfig serdeConfig = serdeConfigsMap.get(serdeProtocolType);
@@ -441,7 +441,9 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
                       .addMember(
                           "value",
                           "{$L}",
-                          Stream.concat(Arrays.stream(contentTypes), Stream.of("*/*"))
+                          Stream.concat(
+                                  Arrays.stream(contentTypes),
+                                  isDefaultProtocol ? Stream.of("*/*") : Stream.of())
                               .map(c -> CodeBlock.of("$S", c))
                               .collect(CodeBlock.joining(", ")))
                       .build())

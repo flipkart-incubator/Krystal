@@ -16,8 +16,11 @@ import static com.flipkart.krystal.datatypes.JavaTypes.VOID;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.joining;
 
+import java.io.UncheckedIOException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -69,6 +72,14 @@ public final class TypeUtils {
     dataTypeMappings.put(
         Set.class.getName(),
         typeParams -> typeParams.length == 0 ? MAP_RAW : new JavaType<>(Set.class, typeParams));
+  }
+
+  public static URL stringToUrl(String url) {
+    try {
+      return new URL(url);
+    } catch (MalformedURLException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 
   static Type getJavaType(Class<?> rawType, Type... typeParameters) {
