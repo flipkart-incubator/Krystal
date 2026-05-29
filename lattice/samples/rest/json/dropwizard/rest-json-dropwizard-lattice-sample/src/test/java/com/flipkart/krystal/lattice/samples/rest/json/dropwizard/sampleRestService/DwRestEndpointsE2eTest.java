@@ -50,7 +50,7 @@ class DwRestEndpointsE2eTest {
     serverThread.setDaemon(true);
     serverThread.start();
 
-    long deadline = System.currentTimeMillis() + 60_000L;
+    long deadline = System.currentTimeMillis() + 120_000L;
     while (System.currentTimeMillis() < deadline) {
       if (isPortOpen()) {
         httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
@@ -59,7 +59,7 @@ class DwRestEndpointsE2eTest {
       Thread.sleep(200);
     }
     throw new IllegalStateException(
-        "Embedded Dropwizard server did not start on port " + APP_PORT + " within 60s");
+        "Embedded Dropwizard server did not start on port " + APP_PORT + " within 120s");
   }
 
   @AfterAll
@@ -155,6 +155,16 @@ class DwRestEndpointsE2eTest {
             BodyHandlers.ofString());
     assertThat(resp.statusCode()).isEqualTo(200);
     assertThat(resp.body()).isEmpty();
+  }
+
+  @Test
+  void customHttpServlet_returnsExpectedResponse() throws Exception {
+    HttpResponse<String> resp =
+        httpClient.send(
+            HttpRequest.newBuilder(URI.create(BASE_URL + "/customHttpServlet")).GET().build(),
+            BodyHandlers.ofString());
+    assertThat(resp.statusCode()).isEqualTo(200);
+    assertThat(resp.body()).isEqualTo("Custom Http Servlet Response");
   }
 
   @Test

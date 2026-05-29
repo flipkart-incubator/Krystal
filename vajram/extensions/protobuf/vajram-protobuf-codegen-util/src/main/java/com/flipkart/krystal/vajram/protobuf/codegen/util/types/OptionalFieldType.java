@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.protobuf.codegen.util.types;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
+import java.util.Set;
 import javax.lang.model.element.Element;
 
 public record OptionalFieldType(ProtoFieldType elementType, CodeGenUtility util, Element element)
@@ -13,9 +14,8 @@ public record OptionalFieldType(ProtoFieldType elementType, CodeGenUtility util,
   }
 
   @Override
-  public String typeInProtoFile() {
-
-    return "optional " + elementType.typeInProtoFile();
+  public String typeInProtoFile(String fieldContainingPackage) {
+    return "optional " + elementType.typeInProtoFile(fieldContainingPackage);
   }
 
   @Override
@@ -25,6 +25,11 @@ public record OptionalFieldType(ProtoFieldType elementType, CodeGenUtility util,
 
   @Override
   public String toString() {
-    return typeInProtoFile();
+    return "optional " + elementType;
+  }
+
+  @Override
+  public Set<String> imports() {
+    return elementType.imports();
   }
 }

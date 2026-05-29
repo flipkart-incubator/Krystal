@@ -1,9 +1,10 @@
 package com.flipkart.krystal.vajram.protobuf.codegen.util.types;
 
-import java.util.List;
+import java.util.Set;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public interface ProtoFieldType {
-  String typeInProtoFile();
+  String typeInProtoFile(String fieldContainingPackage);
 
   default boolean canBeMapKey() {
     return false;
@@ -21,7 +22,11 @@ public interface ProtoFieldType {
     return false;
   }
 
-  default List<String> imports() {
-    return List.of();
+  default @Nullable String packageName() {
+    return null;
+  }
+
+  default Set<String> imports() {
+    return Set.of();
   }
 }

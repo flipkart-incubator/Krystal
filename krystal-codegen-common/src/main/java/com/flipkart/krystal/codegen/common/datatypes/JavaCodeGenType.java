@@ -10,8 +10,11 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.ElementFilter;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
@@ -52,12 +55,37 @@ public final class JavaCodeGenType implements CodeGenType {
   @Override
   public CodeBlock defaultValueExpr(ProcessingEnvironment processingEnv)
       throws CodeGenerationException {
+    if (isEnum(processingEnv)) {
+      Element element = processingEnv.getTypeUtils().asElement(typeMirror);
+      List<VariableElement> fields = ElementFilter.fieldsIn(element.getEnclosedElements());
+      for (VariableElement field : fields) {
+        // Filter specifically for ENUM_CONSTANT
+        if (field.getKind() == ElementKind.ENUM_CONSTANT) {
+          return CodeBlock.of("$T.$L", typeMirror, field.getSimpleName());
+        }
+      }
+      throw new CodeGenerationException(
+          "No default value for enum type since enum is empty - at least one value is needed to default to '%s'"
+              .formatted(this));
+    }
+
     StandardJavaType standardTypeInfo = standardTypesByCanonicalName.get(canonicalClassName);
     if (standardTypeInfo != null) {
-      return standardTypeInfo.defaultValueExpr(processingEnv);
+      CodeBlock defaultValueExpr = standardTypeInfo.defaultValueExpr(processingEnv);
+      if (defaultValueExpr != null) {
+        return defaultValueExpr;
+      }
     }
     throw new CodeGenerationException(
-        "No default value for non standard type '%s'".formatted(this));
+        "No default value expression available for type '%s'".formatted(this));
+  }
+
+  private boolean isEnum(ProcessingEnvironment processingEnv) {
+    Element element = processingEnv.getTypeUtils().asElement(typeMirror);
+    if (element == null) {
+      return false;
+    }
+    return ElementKind.ENUM.equals(element.getKind());
   }
 
   @Override

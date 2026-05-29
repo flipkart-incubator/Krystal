@@ -8,6 +8,7 @@ import static java.util.Objects.requireNonNull;
 import com.flipkart.krystal.codegen.common.models.AbstractKrystalAnnoProcessor;
 import com.flipkart.krystal.lattice.codegen.spi.LatticeCodeGeneratorProvider;
 import com.flipkart.krystal.lattice.core.LatticeApp;
+import com.flipkart.krystal.lattice.core.LatticeApplication;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.google.auto.service.AutoService;
 import java.util.List;
@@ -43,6 +44,18 @@ public class LatticeAnnotationProcessor extends AbstractKrystalAnnoProcessor {
           "Lattice detected by %s: %s"
               .formatted(getClass().getSimpleName(), latticeAppTypeElement.getQualifiedName());
       util.codegenUtil().note(message);
+
+      if (!util.codegenUtil()
+          .isRawAssignable(latticeAppTypeElement.asType(), LatticeApplication.class)) {
+        util.codegenUtil()
+            .error(
+                """
+                    Class '%s' is annotated with @LatticeApp but does not extend LatticeApplication. \
+                    Classes annotated with @LatticeApp must extend LatticeApplication."""
+                    .formatted(latticeAppTypeElement.getQualifiedName()),
+                latticeAppTypeElement);
+        continue;
+      }
 
       LatticeCodegenContext codegenContext =
           new LatticeCodegenContext(

@@ -14,12 +14,17 @@ public enum ProtoScalarType implements ProtoFieldType {
   STRING_P("string", true),
   BYTES_P("bytes", false);
 
-  @Getter private final String typeInProtoFile;
+  private final String typeInProtoFile;
   @Getter private final boolean canBeMapKey;
 
   ProtoScalarType(String typeInProtoFile, boolean canBeMapKey) {
     this.typeInProtoFile = typeInProtoFile;
     this.canBeMapKey = canBeMapKey;
+  }
+
+  @Override
+  public String typeInProtoFile(String fieldContainingPackage) {
+    return typeInProtoFile;
   }
 
   @Override
@@ -34,6 +39,6 @@ public enum ProtoScalarType implements ProtoFieldType {
 
   @Override
   public String toString() {
-    return typeInProtoFile();
+    return typeInProtoFile;
   }
 }

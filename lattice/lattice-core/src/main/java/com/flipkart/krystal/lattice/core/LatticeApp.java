@@ -9,6 +9,5 @@ import java.lang.annotation.Target;
 public @interface LatticeApp {
   String description();
 
-  Class<? extends DependencyInjectionFramework> dependencyInjectionFramework() default
-      DependencyInjectionFramework.class;
+  Class<? extends DependencyInjectionFramework> dependencyInjectionFramework();
 }

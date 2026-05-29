@@ -33,6 +33,7 @@ import com.flipkart.krystal.model.map.ModelsMapBuilder;
 import com.flipkart.krystal.serial.DefaultSerdeProtocol;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Range;
 import com.google.googlejavaformat.java.GoogleJavaFormatTool;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
@@ -100,7 +101,6 @@ import lombok.SneakyThrows;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @SuppressWarnings("ClassWithTooManyMethods")
@@ -118,6 +118,7 @@ public class CodeGenUtility {
   @Getter private final DataTypeRegistry dataTypeRegistry;
   @Getter private final @Nullable Path moduleRootPath;
   private final GoogleJavaFormatTool codeFormatter;
+  private final TypeMirror objectType;
 
   public CodeGenUtility(
       ProcessingEnvironment processingEnv,
@@ -132,6 +133,10 @@ public class CodeGenUtility {
     String moduleRootOption = processingEnv.getOptions().get(Constants.MODULE_ROOT_PATH_KEY);
     this.moduleRootPath = moduleRootOption != null ? Paths.get(moduleRootOption) : null;
     this.codeFormatter = new GoogleJavaFormatTool();
+    this.objectType =
+        requireNonNull(
+                processingEnv.getElementUtils().getTypeElement(Object.class.getCanonicalName()))
+            .asType();
   }
 
   public static String capitalizeFirstChar(String str) {
@@ -144,6 +149,10 @@ public class CodeGenUtility {
 
   public boolean isListType(TypeMirror type) {
     return isRawAssignable(type, List.class);
+  }
+
+  public boolean isRangeType(TypeMirror type) {
+    return isRawAssignable(type, Range.class);
   }
 
   public boolean isMapType(TypeMirror type) {
@@ -176,9 +185,7 @@ public class CodeGenUtility {
         && declaredType.getTypeArguments().size() >= 2) {
       return declaredType.getTypeArguments().get(1);
     }
-    return requireNonNull(
-            processingEnv().getElementUtils().getTypeElement(Object.class.getCanonicalName()))
-        .asType();
+    return objectType;
   }
 
   public TypeMirror getMapKeyType(TypeMirror typeMirror) {
@@ -189,9 +196,7 @@ public class CodeGenUtility {
         && declaredType.getTypeArguments().size() >= 2) {
       return declaredType.getTypeArguments().get(0);
     }
-    return requireNonNull(
-            processingEnv().getElementUtils().getTypeElement(Object.class.getCanonicalName()))
-        .asType();
+    return objectType;
   }
 
   public String getPackageName(Element element) {
@@ -441,28 +446,22 @@ public class CodeGenUtility {
         && !declaredType.getTypeArguments().isEmpty()) {
       return declaredType.getTypeArguments().get(0);
     }
-    return requireNonNull(
-            processingEnv().getElementUtils().getTypeElement(Object.class.getCanonicalName()))
-        .asType();
+    return objectType;
   }
 
   public TypeMirror getContentType(TypeMirror typeMirror) {
-    if (isListType(typeMirror)) {
+    if (isListType(typeMirror) || isRangeType(typeMirror)) {
       if (typeMirror instanceof DeclaredType declaredType
           && !declaredType.getTypeArguments().isEmpty()) {
         return declaredType.getTypeArguments().get(0);
       }
-      return requireNonNull(
-              processingEnv().getElementUtils().getTypeElement(Object.class.getCanonicalName()))
-          .asType();
+      return objectType;
     } else if (isMapType(typeMirror)) {
       if (typeMirror instanceof DeclaredType declaredType
           && declaredType.getTypeArguments().size() == 2) {
         return declaredType.getTypeArguments().get(1);
       }
-      return requireNonNull(
-              processingEnv().getElementUtils().getTypeElement(Object.class.getCanonicalName()))
-          .asType();
+      return objectType;
     } else {
       return typeMirror;
     }
@@ -655,6 +654,12 @@ public class CodeGenUtility {
   public CodeValidationException errorAndThrow(String message, @Nullable Element... elements) {
     _error(message, elements);
     return new CodeValidationException(message);
+  }
+
+  public CodeValidationException errorAndThrow(
+      String message, Throwable cause, @Nullable Element... elements) {
+    _error(message + " Cause: " + cause.getMessage(), elements);
+    return new CodeValidationException(message, cause);
   }
 
   public void error(String message, @Nullable Element... elements) {
@@ -1272,13 +1277,12 @@ public class CodeGenUtility {
             .collect(
                 toMap(c -> requireNonNull(c.getClass().getCanonicalName()), Function.identity()));
 
-    return (List<@NonNull ModelProtocol>)
-        stream(protocols)
-            .map(p -> getTypeElemFromAnnotationMember(p::value))
-            .map(element -> element.getQualifiedName().toString())
-            .map(availableModelProtocols::get)
-            .filter(Objects::nonNull)
-            .toList();
+    return stream(protocols)
+        .map(p -> getTypeElemFromAnnotationMember(p::value))
+        .map(element -> element.getQualifiedName().toString())
+        .map(availableModelProtocols::get)
+        .filter(Objects::nonNull)
+        .toList();
   }
 
   /**
@@ -1443,7 +1447,10 @@ public class CodeGenUtility {
    * Returns true if the given TypeElement is an enum that implements {@link
    * com.flipkart.krystal.model.EnumModel}.
    */
-  public boolean isEnumModel(TypeElement typeElement) {
+  public boolean isEnumModel(@Nullable Element typeElement) {
+    if (typeElement == null) {
+      return false;
+    }
     return typeElement.getKind() == ElementKind.ENUM;
   }
 
@@ -1454,7 +1461,7 @@ public class CodeGenUtility {
   public boolean isEnumModelType(TypeMirror type) {
     Element element = processingEnv().getTypeUtils().asElement(type);
     if (element instanceof TypeElement typeElement) {
-      return isEnumModel(typeElement) && typeElement.getAnnotation(ModelRoot.class) != null;
+      return isEnumModel(typeElement);
     }
     return false;
   }

@@ -1,12 +1,16 @@
 package com.flipkart.krystal.vajram.protobuf.codegen.util;
 
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.BOOLEAN;
+import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.BYTE;
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.BYTE_ARRAY;
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.DOUBLE;
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.FLOAT;
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.INT;
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.LONG;
+import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.SHORT;
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.STRING;
+import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.URL;
+import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.capitalizeFirstChar;
 import static com.flipkart.krystal.vajram.protobuf.codegen.util.types.ProtoScalarType.BOOL_P;
 import static com.flipkart.krystal.vajram.protobuf.codegen.util.types.ProtoScalarType.BYTES_P;
 import static com.flipkart.krystal.vajram.protobuf.codegen.util.types.ProtoScalarType.DOUBLE_P;
@@ -18,12 +22,16 @@ import static com.google.common.base.CaseFormat.LOWER_UNDERSCORE;
 import static com.google.common.base.CaseFormat.UPPER_CAMEL;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.nio.file.Files.createDirectories;
+import static java.util.Map.entry;
 import static java.util.Objects.requireNonNull;
+import static java.util.function.UnaryOperator.identity;
 import static lombok.AccessLevel.PRIVATE;
 
 import com.flipkart.krystal.annos.InvocableOutsideProcess;
+import com.flipkart.krystal.codegen.common.datatypes.AnnotatedStandardJavaType;
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
+import com.flipkart.krystal.datatypes.TypeUtils;
 import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
@@ -33,16 +41,21 @@ import com.flipkart.krystal.vajram.protobuf.codegen.util.types.MessageFieldType;
 import com.flipkart.krystal.vajram.protobuf.codegen.util.types.ProtoFieldType;
 import com.flipkart.krystal.vajram.protobuf.codegen.util.types.ProtoScalarType;
 import com.flipkart.krystal.vajram.protobuf.codegen.util.types.RepeatedFieldType;
+import com.flipkart.krystal.vajram.protobuf.util.ProtoByteArray;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.primitives.Shorts;
+import com.google.protobuf.ByteString;
 import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.TypeName;
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
@@ -55,19 +68,35 @@ import lombok.extern.slf4j.Slf4j;
 public final class ProtoGenUtility {
 
   /** Map of Java DataType objects to their Protocol Buffers scalar-type mapping. */
-  private static final Map<String, ProtoScalarType> JAVA_TO_PROTO_SCALAR_TYPES;
+  private static final Map<CodeGenType, ProtoScalarType> JAVA_TO_PROTO_SCALAR_TYPES =
+      Map.ofEntries(
+          entry(BOOLEAN, BOOL_P),
+          entry(SHORT, SINT32_P),
+          entry(INT, SINT32_P),
+          entry(LONG, SINT64_P),
+          entry(FLOAT, FLOAT_P),
+          entry(DOUBLE, DOUBLE_P),
+          entry(STRING, STRING_P),
+          entry(BYTE_ARRAY, BYTES_P),
+          entry(URL, STRING_P));
 
-  static {
-    ImmutableMap.Builder<String, ProtoScalarType> builder = ImmutableMap.builder();
-    BOOLEAN.canonicalClassNames().forEach(s -> builder.put(s, BOOL_P));
-    INT.canonicalClassNames().forEach(s -> builder.put(s, SINT32_P));
-    LONG.canonicalClassNames().forEach(s -> builder.put(s, SINT64_P));
-    FLOAT.canonicalClassNames().forEach(s -> builder.put(s, FLOAT_P));
-    DOUBLE.canonicalClassNames().forEach(s -> builder.put(s, DOUBLE_P));
-    STRING.canonicalClassNames().forEach(s -> builder.put(s, STRING_P));
-    BYTE_ARRAY.canonicalClassNames().forEach(s -> builder.put(s, BYTES_P));
-    JAVA_TO_PROTO_SCALAR_TYPES = builder.build();
-  }
+  private static final Map<CodeGenType, UnaryOperator<CodeBlock>> PROTO_TO_JAVA_CONVERSION_CODE =
+      Map.of(
+          SHORT,
+          c -> CodeBlock.of("$T.checkedCast($L)", Shorts.class, c),
+          BYTE_ARRAY,
+          c -> CodeBlock.of("new $T($L)", ProtoByteArray.class, c),
+          URL,
+          c -> CodeBlock.of("$T.stringToUrl($L)", TypeUtils.class, c));
+
+  private static final Map<CodeGenType, UnaryOperator<CodeBlock>> JAVA_TO_PROTO_CONVERSION_CODE =
+      Map.of(
+          BYTE,
+          c -> CodeBlock.of("$T.copyFrom(new byte[]{$L})", ByteString.class, c),
+          BYTE_ARRAY,
+          c -> CodeBlock.of("$T.toByteString($L)", ProtoByteArray.class, c),
+          URL,
+          c -> CodeBlock.of("$L.toExternalForm()", c));
 
   public static String getSimpleClassName(String canonicalClassName) {
     String typeName = canonicalClassName;
@@ -223,13 +252,10 @@ public final class ProtoGenUtility {
 
   /** Returns true iff the given data type maps to a protobuf scalar type. */
   public static boolean isProtoTypeScalar(CodeGenType dataType, CodeGenUtility util) {
-    if (util.isSameRawType(
-        util.processingEnv().getTypeUtils().erasure(dataType.typeMirror(util.processingEnv())),
-        Optional.class)) {
-      CodeGenType innerType = dataType.typeParameters().get(0);
-      return isProtoTypeScalar(innerType, util);
+    if (util.isOptional(dataType.typeMirror(util.processingEnv()))) {
+      return isProtoTypeScalar(dataType.typeParameters().get(0), util);
     }
-    return JAVA_TO_PROTO_SCALAR_TYPES.containsKey(dataType.canonicalClassName());
+    return JAVA_TO_PROTO_SCALAR_TYPES.containsKey(dataType);
   }
 
   public static boolean isProtoTypeRepeated(CodeGenType dataType) {
@@ -270,17 +296,28 @@ public final class ProtoGenUtility {
           getProtobufType(typeParameters.get(1), util, element, config),
           util,
           element);
-    } else if (JAVA_TO_PROTO_SCALAR_TYPES.containsKey(dataType.canonicalClassName())) {
-      return JAVA_TO_PROTO_SCALAR_TYPES.get(dataType.canonicalClassName());
+    } else if (JAVA_TO_PROTO_SCALAR_TYPES.containsKey(dataType)) {
+      return JAVA_TO_PROTO_SCALAR_TYPES.get(dataType);
+    } else if (dataType instanceof AnnotatedStandardJavaType annotatedStandardJavaType
+        && JAVA_TO_PROTO_SCALAR_TYPES.containsKey(annotatedStandardJavaType.standardJavaType())) {
+      return JAVA_TO_PROTO_SCALAR_TYPES.get(annotatedStandardJavaType.standardJavaType());
+    } else if (TypeName.get(dataType.typeMirror(util.processingEnv()))
+            instanceof ClassName modelRootName
+        && util.isEnumModelType(javaModelType)) {
+      return new EnumFieldType(
+          modelRootName.packageName(),
+          // Strip underscores from the model name for the protobuf type reference - proto
+          // messages and enums must be TitleCase. The file name keeps the original Java simple
+          // name since the file path doesn't have to obey TitleCase.
+          toTitleCaseProtoName(modelRootName.simpleName()) + config.messageSuffix(),
+          modelRootName.simpleName(),
+          config.fileSuffix());
     } else {
       Element javaElement = util.processingEnv().getTypeUtils().asElement(javaModelType);
       if (javaElement != null
           && util.typeExplicitlySupportsProtocol(javaElement, config.protocolClass())
           && TypeName.get(dataType.typeMirror(util.processingEnv()))
               instanceof ClassName modelRootName) {
-        // Strip underscores from the model name for the proto type reference - proto messages and
-        // enums must be TitleCase. The file name keeps the original Java simple name since the
-        // file path doesn't have to obey TitleCase.
         String protoTypeName =
             toTitleCaseProtoName(modelRootName.simpleName()) + config.messageSuffix();
         if (util.isEnumModelType(javaModelType)) {
@@ -340,5 +377,28 @@ public final class ProtoGenUtility {
   public static void validateProtobufCompatibility(
       VajramInfo vajramInfo, CodeGenUtility util, Class<? extends ModelProtocol> protocolClass) {
     validateReturnTypeForProtobuf(vajramInfo, util, protocolClass);
+  }
+
+  /**
+   * Given the name of the datatype of a field, generates code which converts the value retrieved
+   * from proto-generated java code to the required java type.
+   */
+  static CodeBlock convertProtoToJavaCode(CodeGenType dataType, String fieldName) {
+    return PROTO_TO_JAVA_CONVERSION_CODE
+        .getOrDefault(dataType.unAnnotated(), identity())
+        .apply(CodeBlock.of("_proto().get$L()", capitalizeFirstChar(fieldName)));
+  }
+
+  /**
+   * Given the name of the datatype of a field, generates code which converts the java value to the
+   * required proto value which can be set in the proto builder.
+   */
+  static CodeBlock convertJavaToProtoCode(CodeGenType dataType, String fieldName) {
+    return CodeBlock.of(
+        "_proto.set$L($L)",
+        capitalizeFirstChar(fieldName),
+        JAVA_TO_PROTO_CONVERSION_CODE
+            .getOrDefault(dataType.unAnnotated(), identity())
+            .apply(CodeBlock.of("$L", fieldName)));
   }
 }

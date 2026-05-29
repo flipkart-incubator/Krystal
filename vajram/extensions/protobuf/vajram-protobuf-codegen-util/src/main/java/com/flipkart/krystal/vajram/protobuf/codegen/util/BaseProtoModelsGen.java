@@ -1,11 +1,11 @@
 package com.flipkart.krystal.vajram.protobuf.codegen.util;
 
-import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.BYTE;
-import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.BYTE_ARRAY;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType.LIST;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType.MAP;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.capitalizeFirstChar;
 import static com.flipkart.krystal.vajram.protobuf.codegen.util.BaseProtoSchemaGen.validateModelType;
+import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.convertJavaToProtoCode;
+import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.convertProtoToJavaCode;
 import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.isProtoTypeMap;
 import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.isProtoTypeRepeated;
 import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.toTitleCaseProtoName;
@@ -33,14 +33,12 @@ import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.list.UnmodifiableModelsList;
 import com.flipkart.krystal.model.map.UnmodifiableModelsMap;
 import com.flipkart.krystal.serial.SerializableModel;
-import com.flipkart.krystal.vajram.protobuf.util.ProtoByteArray;
 import com.flipkart.krystal.vajram.protobuf.util.ProtoListBuilder;
 import com.flipkart.krystal.vajram.protobuf.util.ProtoMapBuilder;
 import com.flipkart.krystal.vajram.protobuf.util.SerializableProtoModel;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.protobuf.ByteString;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ClassName;
@@ -677,10 +675,9 @@ return _serializedPayload;
     }
     TypeMirror rawReturnType =
         isOptionalReturnType ? util.getOptionalInnerType(methodReturnType) : methodReturnType;
-    boolean isEnumModelField = util.isEnumModelType(rawReturnType);
 
     CodeBlock creatorCode;
-    if (isEnumModelField) {
+    if (util.isEnumModelType(rawReturnType)) {
       TypeElement enumElement = (TypeElement) processingEnv.getTypeUtils().asElement(rawReturnType);
       creatorCode =
           CodeBlock.of(
@@ -696,14 +693,7 @@ return _serializedPayload;
                           "new $T(_proto().get$L())",
                           util.getImmutClassName(_m.element(), config.protocolInstance()),
                           capitalizeFirstChar(fieldName)))
-              .orElseGet(
-                  () ->
-                      dataType.isSameType(BYTE_ARRAY, processingEnv)
-                          ? CodeBlock.of(
-                              "new $T(_proto().get$L())",
-                              ProtoByteArray.class,
-                              capitalizeFirstChar(fieldName))
-                          : CodeBlock.of("_proto().get$L()", capitalizeFirstChar(fieldName)));
+              .orElseGet(() -> convertProtoToJavaCode(dataType, fieldName));
     }
 
     if (isOptionalReturnType) {
@@ -738,6 +728,7 @@ return _serializedPayload;
 
     builderClassBuilder.addMethod(
         MethodSpec.constructorBuilder()
+            .addModifiers(PUBLIC)
             .addParameter(protoMsgBuilderClassName, "_proto")
             .addStatement("this._proto = _proto")
             .build());
@@ -933,21 +924,7 @@ return _serializedPayload;
                 getProtoUtilsClassName(enumElement),
                 fieldName);
           } else {
-            setterBuilder.addStatement(
-                dataType.equals(BYTE)
-                    ? CodeBlock.of(
-                        "_proto.set$L($T.copyFrom(new byte[]{$L}))",
-                        capitalizeFirstChar(fieldName),
-                        ByteString.class,
-                        fieldName)
-                    : dataType.isSameType(BYTE_ARRAY, processingEnv)
-                        ? CodeBlock.of(
-                            "_proto.set$L($T.toByteString($L))",
-                            capitalizeFirstChar(fieldName),
-                            ProtoByteArray.class,
-                            fieldName)
-                        : CodeBlock.of(
-                            "_proto.set$L($L)", capitalizeFirstChar(fieldName), fieldName));
+            setterBuilder.addStatement(convertJavaToProtoCode(dataType, fieldName));
           }
         }
       }

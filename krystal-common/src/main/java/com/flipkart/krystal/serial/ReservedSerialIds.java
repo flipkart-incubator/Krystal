@@ -18,8 +18,8 @@ import java.lang.annotation.Target;
  * href="https://protobuf.dev/programming-guides/proto3/#fieldreserved">"reserved fields"</a>
  * feature of protobuf
  */
-@Retention(SOURCE)
 @Target(TYPE)
+@Retention(SOURCE)
 public @interface ReservedSerialIds {
   int[] value();
 }

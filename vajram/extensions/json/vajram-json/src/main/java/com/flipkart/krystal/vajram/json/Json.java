@@ -14,10 +14,10 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import com.flipkart.krystal.model.array.ByteArray;
-import com.flipkart.krystal.model.array.SimpleByteArray;
 import com.flipkart.krystal.serial.SerdeProtocol;
 import com.flipkart.krystal.vajram.json.array.ByteArrays.ByteArrayDeserializer;
 import com.flipkart.krystal.vajram.json.array.ByteArrays.ByteArraySerializer;
+import com.flipkart.krystal.vajram.json.array.JsonByteArray;
 
 public final class Json implements SerdeProtocol {
 
@@ -51,9 +51,9 @@ public final class Json implements SerdeProtocol {
 
   private static SimpleModule byteArrayModule() {
     return new SimpleModule("KrystalByteArrayModule")
-        .addAbstractTypeMapping(ByteArray.class, SimpleByteArray.class)
-        .addSerializer(SimpleByteArray.class, new ByteArraySerializer())
-        .addDeserializer(SimpleByteArray.class, new ByteArrayDeserializer());
+        .addAbstractTypeMapping(ByteArray.class, JsonByteArray.class)
+        .addSerializer(ByteArray.class, new ByteArraySerializer())
+        .addDeserializer(JsonByteArray.class, new ByteArrayDeserializer());
   }
 
   private Json() {}

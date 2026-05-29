@@ -9,4 +9,8 @@ public class CodeValidationException extends RuntimeException {
   public CodeValidationException(String message) {
     super(message);
   }
+
+  public CodeValidationException(String message, Throwable cause) {
+    super(message, cause);
+  }
 }

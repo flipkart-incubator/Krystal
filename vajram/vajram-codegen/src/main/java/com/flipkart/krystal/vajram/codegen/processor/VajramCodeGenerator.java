@@ -89,6 +89,8 @@ import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.ModelRoot.ModelType;
 import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocol;
+import com.flipkart.krystal.model.SupportedModelProtocol.SupportedModelProtocols;
+import com.flipkart.krystal.serial.DefaultSerdeProtocol;
 import com.flipkart.krystal.serial.ReservedSerialIds;
 import com.flipkart.krystal.serial.SerialId;
 import com.flipkart.krystal.vajram.IOVajramDef;
@@ -205,7 +207,11 @@ public class VajramCodeGenerator implements CodeGenerator {
 
   private static final ImmutableSet<String> MODEL_CLASS_ANNOTATIONS =
       ImmutableSet.<@NonNull String>copyOf(
-          Stream.of(ReservedSerialIds.class)
+          Stream.of(
+                  ReservedSerialIds.class,
+                  SupportedModelProtocol.class,
+                  SupportedModelProtocols.class,
+                  DefaultSerdeProtocol.class)
               .<@NonNull String>map(aClass -> requireNonNull(aClass.getCanonicalName()))
               .toList());
 
@@ -312,7 +318,6 @@ public class VajramCodeGenerator implements CodeGenerator {
                     ? TraitRequestRoot.class
                     : VajramRequestRoot.class)
             .addAnnotation(buildReqModelRootAnnotation())
-            .addAnnotations(buildReqSupportedModelProtocols())
             .addAnnotations(getModelClassAnnotations())
             .addSuperinterfaces(currentVajramInfo.requestInterfaceSuperTypes());
 
@@ -380,7 +385,7 @@ public class VajramCodeGenerator implements CodeGenerator {
   }
 
   private AnnotationSpec buildReqModelRootAnnotation() {
-    Element protocolSource = getInputsAnnotationSource();
+    Element protocolSource = currentVajramInfo.inputsElement();
     return AnnotationSpec.builder(ModelRoot.class)
         .addMember("type", CodeBlock.of("{$T.$L}", ModelType.class, ModelType.REQUEST.name()))
         .addMember("suffixSeparator", CodeBlock.of("$S", ""))
@@ -388,42 +393,10 @@ public class VajramCodeGenerator implements CodeGenerator {
         .addMember(
             "pure",
             "$L",
-            util.getModelProtocols(protocolSource).stream()
-                .anyMatch(ModelProtocol::modelsNeedToBePure))
+            protocolSource == null
+                || util.getModelProtocols(protocolSource).stream()
+                    .anyMatch(ModelProtocol::modelsNeedToBePure))
         .build();
-  }
-
-  private List<AnnotationSpec> buildReqSupportedModelProtocols() {
-    Element protocolSource = getInputsAnnotationSource();
-    SupportedModelProtocol[] protocols =
-        protocolSource.getAnnotationsByType(SupportedModelProtocol.class);
-    List<AnnotationSpec> annotations = new java.util.ArrayList<>();
-    annotations.add(
-        AnnotationSpec.builder(SupportedModelProtocol.class)
-            .addMember("value", "$T.class", PlainJavaObject.class)
-            .build());
-    for (SupportedModelProtocol protocol : protocols) {
-      javax.lang.model.element.TypeElement te =
-          util.getTypeElemFromAnnotationMember(protocol::value);
-      if (!te.getQualifiedName().contentEquals(PlainJavaObject.class.getCanonicalName())) {
-        annotations.add(
-            AnnotationSpec.builder(SupportedModelProtocol.class)
-                .addMember("value", "$T.class", TypeName.get(te.asType()))
-                .build());
-      }
-    }
-    return annotations;
-  }
-
-  /**
-   * Returns the {@code _Inputs} element from which request-specific annotations like {@link
-   * SupportedModelProtocol} and {@link ReservedSerialIds} should be read. If the {@code _Inputs}
-   * element is not present, returns the vajram class element as a fallback (which should not have
-   * these annotations).
-   */
-  private Element getInputsAnnotationSource() {
-    Element inputsElement = currentVajramInfo.inputsElement();
-    return inputsElement != null ? inputsElement : currentVajramInfo.vajramClassElem();
   }
 
   /**
@@ -431,8 +404,11 @@ public class VajramCodeGenerator implements CodeGenerator {
    * _Inputs} element.
    */
   private List<AnnotationSpec> getModelClassAnnotations() {
-    Element source = getInputsAnnotationSource();
-    return source.getAnnotationMirrors().stream()
+    Element source = currentVajramInfo.inputsElement();
+    if (source == null) {
+      return List.of();
+    }
+    return util.processingEnv().getElementUtils().getAllAnnotationMirrors(source).stream()
         .filter(
             annotationMirror ->
                 MODEL_CLASS_ANNOTATIONS.contains(
@@ -2262,8 +2238,11 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
    * compatibility reasons.
    */
   private void validateSerialIdReservations() {
-    ReservedSerialIds reservedSerialIds =
-        getInputsAnnotationSource().getAnnotation(ReservedSerialIds.class);
+    Element inputsElement = currentVajramInfo.inputsElement();
+    if (inputsElement == null) {
+      return;
+    }
+    ReservedSerialIds reservedSerialIds = inputsElement.getAnnotation(ReservedSerialIds.class);
 
     // If there's no ReservedSerialIds annotation, there's nothing to validate
     if (reservedSerialIds == null) {

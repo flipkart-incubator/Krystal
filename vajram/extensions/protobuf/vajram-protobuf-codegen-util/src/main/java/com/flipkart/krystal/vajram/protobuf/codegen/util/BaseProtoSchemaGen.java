@@ -108,7 +108,9 @@ public abstract class BaseProtoSchemaGen implements CodeGenerator {
 
     if (!util.isRawAssignable(modelRootType.asType(), Model.class)) {
       util.error(
-          "Model root '%s' must implement Model interface".formatted(modelRootType), modelRootType);
+          "Model root '%s' must inherit from com.flipkart.krystal.model.Model"
+              .formatted(modelRootType),
+          modelRootType);
     }
   }
 
@@ -273,7 +275,8 @@ public abstract class BaseProtoSchemaGen implements CodeGenerator {
 
     Set<String> imports = new LinkedHashSet<>();
 
-    StringBuilder protoMessageBody = generateMessageBodyAndCollectImports(modelRootType, imports);
+    StringBuilder protoMessageBody =
+        generateMessageBodyAndCollectImports(modelRootType, packageName, imports);
 
     for (String anImport : imports) {
       protoBuilder.append("import ").append('"').append(anImport).append('"').append(";\n");
@@ -302,7 +305,7 @@ public abstract class BaseProtoSchemaGen implements CodeGenerator {
   }
 
   private StringBuilder generateMessageBodyAndCollectImports(
-      TypeElement modelRootType, Set<String> imports) {
+      TypeElement modelRootType, String packageName, Set<String> imports) {
     String modelRootName = modelRootType.getSimpleName().toString();
     List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
 
@@ -392,7 +395,7 @@ public abstract class BaseProtoSchemaGen implements CodeGenerator {
       // happen to round-trip back to the original camelCase, so downstream Java code is
       // unaffected by this rename.
       protoMessageBody
-          .append(protobufType.typeInProtoFile())
+          .append(protobufType.typeInProtoFile(packageName))
           .append(" ")
           .append(toSnakeCase(method.getSimpleName().toString()))
           .append(" = ")

@@ -1,6 +1,10 @@
 package com.flipkart.krystal.vajram.protobuf.codegen.util.types;
 
+import static java.util.stream.Collectors.toSet;
+
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
+import java.util.Set;
+import java.util.stream.Stream;
 import javax.lang.model.element.Element;
 
 public record MapFieldType(
@@ -20,8 +24,12 @@ public record MapFieldType(
   }
 
   @Override
-  public String typeInProtoFile() {
-    return "map<" + keyType.typeInProtoFile() + ", " + valueType.typeInProtoFile() + ">";
+  public String typeInProtoFile(String fieldContainingPackage) {
+    return "map<"
+        + keyType.typeInProtoFile(fieldContainingPackage)
+        + ", "
+        + valueType.typeInProtoFile(fieldContainingPackage)
+        + ">";
   }
 
   @Override
@@ -31,6 +39,11 @@ public record MapFieldType(
 
   @Override
   public String toString() {
-    return typeInProtoFile();
+    return "map<" + keyType + ", " + valueType + ">";
+  }
+
+  @Override
+  public Set<String> imports() {
+    return Stream.concat(keyType.imports().stream(), valueType.imports().stream()).collect(toSet());
   }
 }

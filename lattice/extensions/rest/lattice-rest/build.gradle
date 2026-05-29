@@ -11,6 +11,7 @@ dependencies {
     implementation project(':krystal-visualization')
 
     api 'jakarta.ws.rs:jakarta.ws.rs-api'
+    api 'jakarta.servlet:jakarta.servlet-api'
 
     implementation 'jakarta.enterprise:jakarta.enterprise.cdi-api'
     implementation 'io.smallrye.reactive:mutiny'

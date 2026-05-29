@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.protobuf.codegen.util.types;
 
-import java.util.List;
+import java.util.Set;
 
 /**
  * Represents an enum field type in a protobuf schema. Similar to {@link MessageFieldType} but for
@@ -10,7 +10,10 @@ public record EnumFieldType(String packageName, String enumName, String fileName
     implements ProtoFieldType {
 
   @Override
-  public String typeInProtoFile() {
+  public String typeInProtoFile(String fieldContainingPackage) {
+    if (packageName != null && !fieldContainingPackage.equals(packageName)) {
+      return packageName + "." + enumName;
+    }
     return enumName;
   }
 
@@ -30,7 +33,7 @@ public record EnumFieldType(String packageName, String enumName, String fileName
   }
 
   @Override
-  public List<String> imports() {
-    return List.of(packageName.replace('.', '/') + "/" + fileName + fileSuffix);
+  public Set<String> imports() {
+    return Set.of(packageName.replace('.', '/') + "/" + fileName + fileSuffix);
   }
 }

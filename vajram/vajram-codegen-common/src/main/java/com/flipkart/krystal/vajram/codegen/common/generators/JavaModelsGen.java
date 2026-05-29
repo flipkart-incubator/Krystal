@@ -20,6 +20,7 @@ import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
+import com.flipkart.krystal.codegen.common.datatypes.StandardJavaType;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility.ModelFieldTypeInfo;
@@ -28,6 +29,7 @@ import com.flipkart.krystal.codegen.common.models.CodeGenerationException;
 import com.flipkart.krystal.codegen.common.models.DeclaredTypeVisitor;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
+import com.flipkart.krystal.model.DefaultValue;
 import com.flipkart.krystal.model.EnumModel;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
@@ -66,6 +68,7 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeVariableName;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -261,147 +264,74 @@ public final class JavaModelsGen implements CodeGenerator {
     }
   }
 
-  private void validatePureFieldType(ExecutableElement method, TypeMirror type) {
-    String fieldName = method.getSimpleName().toString();
+  private boolean validatePureFieldType(Element method, TypeMirror type) {
+    CodeGenType codeGenType = new DeclaredTypeVisitor(util, method).visit(type);
+    StandardJavaType standardJavaType =
+        StandardJavaType.fromCanonicalClassName(codeGenType.canonicalClassName());
+    if (standardJavaType != null) {
+      return true;
+    }
 
-    if (util.isPrimitiveOrBoxed(type)) {
-      return;
-    }
-    if (util.isString(type)) {
-      return;
-    }
-    if (util.isPrimitiveArray(type)) {
-      return;
-    }
     // Only enums with @ModelRoot annotation are allowed in pure models
-    Element typeElement = util.processingEnv().getTypeUtils().asElement(type);
-    if (typeElement != null
-        && typeElement.getKind() == ElementKind.ENUM
-        && typeElement.getAnnotation(ModelRoot.class) != null) {
-      return;
+    if (util.isEnumModelType(type)) {
+      return true;
     }
     if (util.isRawAssignable(type, Model.class)) {
-      checkModelIsPure(method, type, fieldName);
-      return;
+      return checkModelIsPure(method, type);
     }
-    if (isRangeType(type)) {
-      validatePureRangeTypeArg(method, type, fieldName);
-      return;
-    }
-    if (util.isListType(type)) {
+    if (util.isRangeType(type) || util.isListType(type)) {
       TypeMirror elementType = util.getContentType(type);
-      validatePureListElementType(method, elementType, fieldName);
-      return;
+      boolean isValid = validatePureFieldType(method, elementType);
+      if (!isValid) {
+        util.error(
+            "Field in pure model '%s' has container with type argument '%s' that is not allowed in pure models. "
+                .formatted(codeGenContext.modelRootType().getQualifiedName(), type),
+            method);
+      }
+      return isValid;
     }
     if (util.isMapType(type)) {
-      TypeMirror keyType = util.getMapKeyType(type);
-      TypeMirror valueType = util.getMapValueType(type);
-      validatePureMapTypes(method, keyType, valueType, fieldName);
-      return;
+      if (!validatePureFieldType(method, util.getMapKeyType(type))) {
+        util.error("Key Type of Map in pure model needs to be pure", method);
+        return false;
+      }
+      if (!validatePureFieldType(method, util.getMapValueType(type))) {
+        util.error("Value Type of Map in pure model needs to be pure", method);
+        return false;
+      }
+      return true;
     }
 
     util.error(
-        "Field '%s' in pure model '%s' has disallowed type '%s'. "
-                .formatted(fieldName, codeGenContext.modelRootType().getQualifiedName(), type)
-            + "Pure models only allow primitives, boxed primitives, String, enums, PrimitiveArray subtypes, pure Models, "
-            + "Lists of these, or Maps with primitive/String/enum keys and primitive/String/enum/pure Model values.",
+        "Field in pure model '%s' has disallowed type '%s'. "
+                .formatted(codeGenContext.modelRootType().getQualifiedName(), type)
+            + "Pure models only allow, pure Models, Standard Java Types (%s) or Containers (List, Map, Range) of these."
+                .formatted((Object) StandardJavaType.values()),
         method);
+    return false;
   }
 
-  private void checkModelIsPure(ExecutableElement method, TypeMirror type, String fieldName) {
+  private boolean checkModelIsPure(Element method, TypeMirror type) {
     Element element = util.processingEnv().getTypeUtils().asElement(type);
     if (element instanceof TypeElement typeElement) {
       ModelRoot fieldModelRoot = typeElement.getAnnotation(ModelRoot.class);
       if (fieldModelRoot == null) {
         util.error(
-            "Field '%s' in pure model '%s' references type '%s' which extends Model but does not have @ModelRoot annotation."
+            "Field in pure model '%s' references type '%s' which extends Model but does not have @ModelRoot annotation."
                 .formatted(
-                    fieldName,
                     codeGenContext.modelRootType().getQualifiedName(),
                     typeElement.getQualifiedName()),
             method);
       } else if (!fieldModelRoot.pure()) {
         util.error(
-            "Field '%s' in pure model '%s' references model '%s' which is not pure (pure = false). All Model fields in a pure model must themselves be pure."
+            "Field in pure model '%s' references model '%s' which is not pure (pure = false). All Model fields in a pure model must themselves be pure."
                 .formatted(
-                    fieldName,
                     codeGenContext.modelRootType().getQualifiedName(),
                     typeElement.getQualifiedName()),
             method);
       }
     }
-  }
-
-  private void validatePureListElementType(
-      ExecutableElement method, TypeMirror elementType, String fieldName) {
-    if (util.isPrimitiveOrBoxed(elementType) || util.isString(elementType)) {
-      return;
-    }
-    Element elemElement = util.processingEnv().getTypeUtils().asElement(elementType);
-    if (elemElement != null
-        && elemElement.getKind() == ElementKind.ENUM
-        && elemElement.getAnnotation(ModelRoot.class) != null) {
-      return;
-    }
-    if (util.isRawAssignable(elementType, Model.class)) {
-      checkModelIsPure(method, elementType, fieldName);
-      return;
-    }
-    util.error(
-        "Field '%s' in pure model '%s' has List with disallowed element type '%s'. "
-                .formatted(
-                    fieldName, codeGenContext.modelRootType().getQualifiedName(), elementType)
-            + "List elements in pure models must be primitives, boxed primitives, String, enums, or pure Models.",
-        method);
-  }
-
-  private void validatePureMapTypes(
-      ExecutableElement method, TypeMirror keyType, TypeMirror valueType, String fieldName) {
-    if (util.isPrimitiveOrBoxed(valueType) || util.isString(valueType)) {
-      return;
-    }
-    Element valElement = util.processingEnv().getTypeUtils().asElement(valueType);
-    if (valElement != null
-        && valElement.getKind() == ElementKind.ENUM
-        && valElement.getAnnotation(ModelRoot.class) != null) {
-      return;
-    }
-    if (util.isRawAssignable(valueType, Model.class)) {
-      checkModelIsPure(method, valueType, fieldName);
-      return;
-    }
-    util.error(
-        "Field '%s' in pure model '%s' has Map with disallowed value type '%s'. "
-                .formatted(fieldName, codeGenContext.modelRootType().getQualifiedName(), valueType)
-            + "Map values in pure models must be primitives, boxed primitives, String, enums, or pure Models.",
-        method);
-  }
-
-  private static final String GUAVA_RANGE_FQN = "com.google.common.collect.Range";
-
-  private boolean isRangeType(TypeMirror type) {
-    if (type instanceof DeclaredType declaredType) {
-      Element element = declaredType.asElement();
-      if (element instanceof TypeElement typeElement) {
-        return typeElement.getQualifiedName().contentEquals(GUAVA_RANGE_FQN);
-      }
-    }
-    return false;
-  }
-
-  private void validatePureRangeTypeArg(
-      ExecutableElement method, TypeMirror type, String fieldName) {
-    if (type instanceof DeclaredType declaredType && !declaredType.getTypeArguments().isEmpty()) {
-      TypeMirror typeArg = declaredType.getTypeArguments().get(0);
-      if (util.isPrimitiveOrBoxed(typeArg) || util.isString(typeArg)) {
-        return;
-      }
-    }
-    util.error(
-        "Field '%s' in pure model '%s' has Range with disallowed type argument '%s'. "
-                .formatted(fieldName, codeGenContext.modelRootType().getQualifiedName(), type)
-            + "Range type arguments in pure models must be boxed primitives or String.",
-        method);
+    return true;
   }
 
   /**
@@ -541,7 +471,8 @@ public final class JavaModelsGen implements CodeGenerator {
 
     if (!extendsModel(modelRootType, util)) {
       util.error(
-          "Interface with @ModelRoot annotation must extend " + Model.class.getCanonicalName(),
+          "Interface with @ModelRoot annotation must inherit from "
+              + Model.class.getCanonicalName(),
           modelRootType);
     }
   }
@@ -589,10 +520,35 @@ public final class JavaModelsGen implements CodeGenerator {
 
     // Validate UNKNOWN is the first constant
     VariableElement firstConstant = enumConstants.get(0);
-    if (!firstConstant.getSimpleName().contentEquals("UNKNOWN")) {
+    String firstConstantName = firstConstant.getSimpleName().toString();
+    if (firstConstant.getAnnotation(DefaultValue.class) == null) {
       util.error(
-          "Enum '%s' with @ModelRoot annotation must have 'UNKNOWN' as the first constant, but found '%s'"
-              .formatted(enumType.getQualifiedName(), firstConstant.getSimpleName()),
+          "Enum '%s' with @ModelRoot annotation must have @%s on its first constant '%s'"
+              .formatted(
+                  enumType.getQualifiedName(),
+                  DefaultValue.class.getSimpleName(),
+                  firstConstantName),
+          firstConstant);
+    }
+
+    for (int i = 1; i < enumConstants.size(); i++) {
+      VariableElement enumConstant = enumConstants.get(i);
+      if (enumConstant.getAnnotation(DefaultValue.class) != null) {
+        util.error(
+            "Only the first constant of enum '%s' with @ModelRoot annotation can have @%s. But found it on %s"
+                .formatted(
+                    enumType.getQualifiedName(),
+                    DefaultValue.class.getSimpleName(),
+                    enumConstant.getSimpleName()),
+            enumConstant);
+      }
+    }
+
+    if (Arrays.stream(firstConstant.getAnnotationsByType(SerialId.class))
+        .anyMatch(a -> a.value() != 0)) {
+      util.error(
+          "The 'VALUE_MISSING' enum constant of enum '%s' with @ModelRoot annotation MUST have SerialId of 0"
+              .formatted(enumType.getQualifiedName()),
           firstConstant);
     }
 
@@ -1084,8 +1040,7 @@ public final class JavaModelsGen implements CodeGenerator {
       String fieldName = method.getSimpleName().toString();
       asBuilderMethodBuilder.addCode(".$L($L)", fieldName, fieldName);
     }
-    asBuilderMethodBuilder.addCode(";");
-    return asBuilderMethodBuilder;
+    return asBuilderMethodBuilder.addCode(";");
   }
 
   private static MethodSpec.Builder allArgCtor(
@@ -1263,7 +1218,7 @@ this.$L = $L == null
                       "$T.<$T, $T>empty().asModelsView()",
                       ModelsListView.class,
                       TypeName.get(fieldModelRootInfo.get().type()),
-                      util.getImmutInterfaceName(fieldModelRootInfo.get().element()))
+                      util.getImmutTypeName(fieldModelRootInfo.get().type(), modelProtocol))
                   : fieldModelRootInfo.isPresent()
                           && !util.isEnumModel(fieldModelRootInfo.get().element())
                           && ContainerType.MAP.equals(fieldModelRootInfo.get().containerType())
@@ -1272,7 +1227,7 @@ this.$L = $L == null
                           ModelsMapView.class,
                           TypeName.get(util.getMapKeyType(specifiedReturnType)),
                           TypeName.get(fieldModelRootInfo.get().type()),
-                          util.getImmutInterfaceName(fieldModelRootInfo.get().element()))
+                          util.getImmutTypeName(fieldModelRootInfo.get().type(), modelProtocol))
                       : new DeclaredTypeVisitor(util, method)
                           .visit(specifiedReturnType)
                           .defaultValueExpr(util.processingEnv()));
@@ -1283,6 +1238,7 @@ this.$L = $L == null
                 Either the relevant type was not configured properly in a DataTypeFactory \
                 or the @IfAbsent() annotation is incorrectly specified."""
                   .formatted(specifiedReturnType),
+              e,
               method);
         }
       }
@@ -1477,6 +1433,7 @@ this.$L = $L == null
         throw util.errorAndThrow(
             "Could not find default value expression for type '%s'. Please check if @IfAbsent(ASSUME_DEFAULT_VALUE) is appropriate for this type."
                 .formatted(dataType),
+            e,
             modelMethod);
       }
     } else {

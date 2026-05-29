@@ -189,7 +189,7 @@ configure(subprojects.findAll {
 
             c.api 'org.apache.fory:fory-core:' + fory_version
 
-            c.runtimeOnly 'jakarta.servlet:jakarta.servlet-api:6.1.0'
+            c.implementation 'jakarta.servlet:jakarta.servlet-api:6.1.0'
             c.implementation 'jakarta.enterprise:jakarta.enterprise.cdi-api:4.1.0'
 
             c.compileOnly "org.projectlombok:lombok:$lombok_version"

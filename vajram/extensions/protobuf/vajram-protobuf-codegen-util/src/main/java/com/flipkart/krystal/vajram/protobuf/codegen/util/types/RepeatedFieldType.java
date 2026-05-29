@@ -1,7 +1,9 @@
 package com.flipkart.krystal.vajram.protobuf.codegen.util.types;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
+import java.util.Set;
 import javax.lang.model.element.Element;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public record RepeatedFieldType(ProtoFieldType elementType, CodeGenUtility util, Element element)
     implements ProtoFieldType {
@@ -13,8 +15,8 @@ public record RepeatedFieldType(ProtoFieldType elementType, CodeGenUtility util,
   }
 
   @Override
-  public String typeInProtoFile() {
-    return "repeated " + elementType.typeInProtoFile();
+  public String typeInProtoFile(String fieldContainingPackage) {
+    return "repeated " + elementType.typeInProtoFile(fieldContainingPackage);
   }
 
   @Override
@@ -24,6 +26,16 @@ public record RepeatedFieldType(ProtoFieldType elementType, CodeGenUtility util,
 
   @Override
   public String toString() {
-    return typeInProtoFile();
+    return "repeated " + elementType;
+  }
+
+  @Override
+  public @Nullable String packageName() {
+    return elementType.packageName();
+  }
+
+  @Override
+  public Set<String> imports() {
+    return elementType.imports();
   }
 }

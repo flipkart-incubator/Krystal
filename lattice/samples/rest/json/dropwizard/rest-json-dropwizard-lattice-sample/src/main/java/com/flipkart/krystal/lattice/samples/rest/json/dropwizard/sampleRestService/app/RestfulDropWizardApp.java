@@ -16,6 +16,8 @@ import com.flipkart.krystal.lattice.ext.rest.dropwizard.DropwizardServerDopantSp
 import com.flipkart.krystal.lattice.ext.rest.dropwizard.DropwizardServerDopantSpec.DropwizardServerDopantSpecBuilder;
 import com.flipkart.krystal.lattice.krystex.KrystexDopantSpec;
 import com.flipkart.krystal.lattice.krystex.KrystexDopantSpec.KrystexDopantSpecBuilder;
+import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.logic.CustomHttpServlet;
+import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.logic.CustomManaged;
 import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.logic.RestGetMappingLatticeSample;
 import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.logic.RestGetMappingLatticeSample2;
 import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.logic.RestHeadMappingLatticeSample;
@@ -67,13 +69,19 @@ public abstract class RestfulDropWizardApp extends LatticeApplication {
   }
 
   @DopeWith
-  public static RestServiceDopantSpecBuilder rest() {
-    return RestServiceDopantSpec.builder();
+  public static RestServiceDopantSpecBuilder rest(CustomHttpServlet customHttpServlet) {
+    return RestServiceDopantSpec.builder()
+        .servletContextEnrichers(
+            servletContext ->
+                servletContext
+                    .addServlet(CustomHttpServlet.class.getSimpleName(), customHttpServlet)
+                    .addMapping("/customHttpServlet"));
   }
 
   @DopeWith
-  public static DropwizardServerDopantSpecBuilder dropwizardServer() {
-    return DropwizardServerDopantSpec.builder();
+  public static DropwizardServerDopantSpecBuilder dropwizard(CustomManaged customManaged) {
+    return DropwizardServerDopantSpec.builder()
+        .environmentEnrichers(environment -> environment.lifecycle().manage(customManaged));
   }
 
   @Override
