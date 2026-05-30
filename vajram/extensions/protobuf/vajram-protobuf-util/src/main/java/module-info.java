@@ -6,4 +6,5 @@ module flipkart.krystal.vajram.ext.protobuf.util {
   requires static lombok;
   requires com.google.common;
   requires org.checkerframework.checker.qual;
+  requires jdk.sctp;
 }

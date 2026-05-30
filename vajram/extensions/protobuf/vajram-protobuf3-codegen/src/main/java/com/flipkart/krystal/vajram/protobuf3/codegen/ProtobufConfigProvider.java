@@ -9,6 +9,6 @@ import com.google.auto.service.AutoService;
 public class ProtobufConfigProvider implements ModelProtocolConfigProvider {
   @Override
   public ModelProtocolConfig getConfig() {
-    return new ModelProtocolConfig(PROTOBUF_3);
+    return () -> PROTOBUF_3;
   }
 }

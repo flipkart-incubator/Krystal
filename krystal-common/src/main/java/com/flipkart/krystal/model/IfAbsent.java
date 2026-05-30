@@ -97,8 +97,8 @@ public @interface IfAbsent {
      *   <li>collections and arrays: empty collection/array
      *   <li>map: empty map
      *   <li>boolean: false
-     *   <li>Enums: the first enum value (hence at least one value must be present in an enum to use
-     *       this strategy)
+     *   <li>Enums: the enum constant with @{@link DefaultValue} annotation (hence at least one
+     *       value must be present in an enum to use this strategy)
      * </ul>
      */
     ASSUME_DEFAULT_VALUE(true);

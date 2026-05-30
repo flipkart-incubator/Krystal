@@ -1,6 +1,6 @@
 # vajram-sql-vertx-codegen
 
-Annotation processor that reads `@SQL @SELECT @Trait` interfaces and generates a complete Vert.x-backed Compute Vajram for each one. The generated vajram delegates SQL execution to [`ExecuteVertxSql`](../vajram-sql-vertx/src/main/java/com/flipkart/krystal/vajram/ext/sql/vertx/ExecuteVertxSql.java) (the IO Vajram), keeping IO isolated from business logic and enabling future batching support.
+Annotation processor that reads `@SQL @SELECT @Trait` and `@SQL @INSERT @Trait` interfaces and generates a complete Vert.x-backed Compute Vajram for each one. The generated vajram delegates SQL execution to [`ExecuteVertxSql`](../vajram-sql-vertx/src/main/java/com/flipkart/krystal/vajram/ext/sql/vertx/ExecuteVertxSql.java) (the IO Vajram), keeping IO isolated from business logic and enabling future batching support.
 
 ## What Gets Generated
 
@@ -581,3 +581,100 @@ ORDER BY orders.orderTime DESC, orderItems.itemPriceCents DESC
 ```
 
 Result: a `List<OrderWithItems>` with at most 10 parent orders (sorted by `orderTime DESC`), each with at most 5 line items sorted by `itemPriceCents DESC`.
+
+---
+
+## INSERT Support
+
+For each `@SQL @INSERT @Trait` interface the processor generates a `<TraitName>_VertxSql` class that inserts `@Table`-annotated model objects into the database.
+
+### INSERT trait requirements
+
+- The trait must return `Integer` (the number of rows inserted)
+- `_Inputs` must contain **exactly one** input of type `@Table` or `List<@Table>`
+- `@IncomingForeignKey` methods on the table are excluded from the INSERT (not real columns)
+- `@ForeignKey` columns are plain scalars (type matches the target table's PK) — their value is used directly
+- DB column names are resolved via `@Column` (falling back to method name)
+
+### Generated INSERT class structure
+
+| Member | Description |
+|---|---|
+| `_Inputs` | Mirrors the trait's `_Inputs` — the `@Table` objects to insert |
+| `_InternalFacets` | Declares the injected pool and `ExecuteVertxSql` dependency |
+| `@Resolve resolveSql(...)` | Returns the INSERT SQL — static for single-row, dynamic for `List<@Table>` |
+| `@Resolve resolveParams(...)` | Extracts column values from the Table objects into a `Tuple` |
+| `@Resolve resolvePool(Pool)` | Passes the injected pool |
+| `@Output mapResult(RowSet<Row>)` | Returns `sqlResult.rowCount()` |
+
+### Single-row INSERT example
+
+```java
+@SQL @INSERT @Trait
+public interface InsertUser extends TraitDef<Integer> {
+    interface _Inputs {
+        @IfAbsent(FAIL) User user();
+    }
+}
+```
+
+Generated SQL:
+```sql
+INSERT INTO users (id, name, email, phoneNumber) VALUES ($1, $2, $3, $4)
+```
+
+Generated `resolveParams`:
+```java
+static Tuple resolveParams(User user) {
+    return Tuple.from(Arrays.asList(user.id(), user.name(), user.email(), user.phoneNumber().orElse(null)));
+}
+```
+
+### FK column handling
+
+`@ForeignKey` columns return the same type as the target table's `@PrimaryKey` and are accessed directly as plain scalars:
+
+```java
+// Order.userId() returns long (matching User.id() PK type)
+static Tuple resolveParams(Order order) {
+    return Tuple.from(Arrays.asList(order.orderId(), order.userId(), order.amountCents(), order.orderTime()));
+}
+```
+
+If the method name differs from the DB column name, use `@Column("dbColumnName")` alongside `@ForeignKey`.
+
+### Batch INSERT (List input)
+
+When the input is `List<@Table>`, the SQL and parameters are built dynamically at runtime:
+
+```java
+@SQL @INSERT @Trait
+public interface InsertUsers extends TraitDef<Integer> {
+    interface _Inputs {
+        @IfAbsent(FAIL) List<User> users();
+    }
+}
+```
+
+Generated `resolveSql` builds a multi-row INSERT:
+```java
+static String resolveSql(List<User> users) {
+    StringBuilder _sb = new StringBuilder("INSERT INTO users (id, name, email, phoneNumber) VALUES ");
+    int _paramIdx = 1;
+    for (int _i = 0; _i < users.size(); _i++) {
+        if (_i > 0) _sb.append(", ");
+        _sb.append("(");
+        _sb.append("$").append(_paramIdx++);  // id
+        _sb.append(", ").append("$").append(_paramIdx++);  // name
+        _sb.append(", ").append("$").append(_paramIdx++);  // email
+        _sb.append(", ").append("$").append(_paramIdx++);  // phoneNumber
+        _sb.append(")");
+    }
+    return _sb.toString();
+}
+```
+
+For 2 users this produces:
+```sql
+INSERT INTO users (id, name, email, phoneNumber) VALUES ($1, $2, $3, $4), ($5, $6, $7, $8)
+```

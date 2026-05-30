@@ -8,7 +8,7 @@ public record MessageFieldType(
 
   @Override
   public String typeInProtoFile(String fieldContainingPackage) {
-    if (packageName != null && !fieldContainingPackage.equals(packageName)) {
+    if (!fieldContainingPackage.equals(packageName)) {
       return packageName + "." + messageName;
     }
     return messageName;

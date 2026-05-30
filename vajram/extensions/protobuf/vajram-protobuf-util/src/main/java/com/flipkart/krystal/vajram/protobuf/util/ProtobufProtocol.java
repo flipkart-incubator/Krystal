@@ -1,6 +1,16 @@
 package com.flipkart.krystal.vajram.protobuf.util;
 
+import com.flipkart.krystal.annos.NoAnnotation;
+import com.flipkart.krystal.model.Model;
+import com.flipkart.krystal.model.array.ByteArray;
 import com.flipkart.krystal.serial.SerdeProtocol;
+import com.flipkart.krystal.serial.SerializableModel;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.MessageLite;
+import com.google.protobuf.Parser;
+import java.util.function.Function;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Marker interface for SerdeProtocols that represent a protobuf flavour (proto3, edition 2024,
@@ -11,7 +21,7 @@ import com.flipkart.krystal.serial.SerdeProtocol;
  * file suffix) so downstream codegen can compose schemas without taking a hard dependency on a
  * particular protobuf module.
  */
-public interface ProtobufProtocol extends SerdeProtocol {
+public interface ProtobufProtocol extends SerdeProtocol<NoAnnotation, SerializableModel> {
 
   /**
    * Header line that opens a {@code .proto} file for this protocol. Examples: {@code syntax =
@@ -43,5 +53,49 @@ public interface ProtobufProtocol extends SerdeProtocol {
    */
   default boolean emitJavaMultipleFiles() {
     return true;
+  }
+
+  @Override
+  default ByteArray serialize(
+      Object object,
+      Function<Model, SerializableModel> modelMapper,
+      @Nullable NoAnnotation customConfig) {
+    if (object instanceof MessageLite.Builder builder) {
+      object = builder.build();
+    }
+    if (!(object instanceof MessageLite message)) {
+      throw new IllegalArgumentException("Object is not a protobuf message");
+    }
+    return new ProtoByteArray(message.toByteString());
+  }
+
+  /**
+   * @param payload the payload to deserialize - supported types are byte[], {@link ByteArray},
+   *     {@link ByteString}
+   * @param typeInfo a protobuf parser for the deserialization type
+   * @param customConfig not used
+   * @return
+   * @param <T>
+   */
+  @SuppressWarnings("unchecked")
+  @Override
+  default <T> T deserialize(Object payload, Object typeInfo, @Nullable NoAnnotation customConfig) {
+    try {
+      if (typeInfo instanceof Parser<?> parser) {
+        if (payload instanceof byte[] bytes) {
+          return (T) parser.parseFrom(bytes);
+        } else if (payload instanceof ProtoByteArray protoByteArray) {
+          return (T) parser.parseFrom(protoByteArray.toByteString());
+        } else if (payload instanceof ByteString bytesString) {
+          return (T) parser.parseFrom(bytesString);
+        } else if (payload instanceof ByteArray byteArray) {
+          return (T) parser.parseFrom(byteArray.toArray());
+        }
+      }
+    } catch (InvalidProtocolBufferException e) {
+      throw new RuntimeException(e);
+    }
+    throw new IllegalArgumentException(
+        "Cannot deserialize payload of type " + payload.getClass() + " for typeInfo " + typeInfo);
   }
 }

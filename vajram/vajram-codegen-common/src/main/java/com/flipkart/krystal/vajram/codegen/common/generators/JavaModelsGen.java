@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.codegen.common.generators;
 
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType.LIST;
+import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType.MAP;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType.NO_CONTAINER;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.asClassName;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.asTypeNameWithTypes;
@@ -70,6 +71,7 @@ import com.squareup.javapoet.TypeVariableName;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -1167,7 +1169,7 @@ this.$L = $L == null
                 && fieldModelRootInfo.isPresent()
                 && !util.isEnumModel(fieldModelRootInfo.get().element())
             ? switch (modelFieldType.containerType()) {
-              case NO_CONTAINER -> TypeName.get(specifiedReturnType);
+              case NO_CONTAINER, RANGE -> TypeName.get(specifiedReturnType);
               case LIST ->
                   ParameterizedTypeName.get(
                       ClassName.get(UnmodifiableModelsList.class),
@@ -1221,7 +1223,7 @@ this.$L = $L == null
                       util.getImmutTypeName(fieldModelRootInfo.get().type(), modelProtocol))
                   : fieldModelRootInfo.isPresent()
                           && !util.isEnumModel(fieldModelRootInfo.get().element())
-                          && ContainerType.MAP.equals(fieldModelRootInfo.get().containerType())
+                          && MAP.equals(fieldModelRootInfo.get().containerType())
                       ? CodeBlock.of(
                           "$T.<$T, $T, $T>empty().asModelsView()",
                           ModelsMapView.class,
@@ -1305,6 +1307,7 @@ this.$L = $L == null
                         fieldName,
                         util.getImmutInterfaceName(fieldModelRootInfo.get().element()));
             case LIST, MAP -> CodeBlock.of("$L.unmodifiableModelsView()", fieldName);
+            case RANGE -> CodeBlock.of("$L", fieldName);
           };
     }
     return fieldAccessorCode;
@@ -1333,12 +1336,20 @@ this.$L = $L == null
       String fieldName = method.getSimpleName().toString();
       TypeName fieldType = util.getModelFieldType(method, true, null).fieldType();
       FieldSpec.Builder fieldBuilder = FieldSpec.builder(fieldType, fieldName, PRIVATE);
-      Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType(), method);
+      TypeMirror methodReturnType = method.getReturnType();
+      Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(methodReturnType, method);
+      ContainerType containerType = util.getContainerType(methodReturnType);
       if (fieldModelRootInfo.isPresent() && !util.isEnumModel(fieldModelRootInfo.get().element())) {
-        if (LIST.equals(fieldModelRootInfo.get().containerType())) {
+        if (LIST.equals(containerType)) {
           fieldBuilder.initializer("$T.empty()", ModelsListBuilder.class);
-        } else if (ContainerType.MAP.equals(fieldModelRootInfo.get().containerType())) {
+        } else if (MAP.equals(fieldModelRootInfo.get().containerType())) {
           fieldBuilder.initializer("$T.empty()", ModelsMapBuilder.class);
+        }
+      } else if (containerType.isContainer()) {
+        if (LIST.equals(containerType)) {
+          fieldBuilder.initializer("new $T<>()", ArrayList.class);
+        } else if (MAP.equals(containerType)) {
+          fieldBuilder.initializer("new $T<>()", LinkedHashMap.class);
         }
       }
       fields.add(fieldBuilder.build());
@@ -1508,8 +1519,7 @@ this.$L = $L == null
                       .map(
                           containerType ->
                               switch (containerType) {
-                                case NO_CONTAINER ->
-                                    CodeBlock.of("this.$L = $L;", methodName, methodName);
+                                case NO_CONTAINER, RANGE -> null;
                                 case LIST, MAP ->
                                     CodeBlock.of(
                                         """

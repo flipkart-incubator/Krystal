@@ -18,7 +18,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -31,7 +30,6 @@ import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.list.ModelsListBuilder;
 import com.flipkart.krystal.model.map.ModelsMapBuilder;
-import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.vajram.codegen.common.generators.SerdeModelValidator;
 import com.flipkart.krystal.vajram.json.Json;
 import com.flipkart.krystal.vajram.json.SerializableJsonModel;
@@ -136,8 +134,8 @@ final class JsonModelsGen implements CodeGenerator {
 
     // Add _serialize method from Serializable interface with lazy initialization
     classBuilder.addMethod(
-        MethodSpec.overriding(util.getMethod(SerializableModel.class, "_serialize", 0))
-            .addException(JsonProcessingException.class)
+        MethodSpec.overriding(
+                util.getMethod(() -> SerializableJsonModel.class.getMethod("_serialize")))
             .addCode(
 """
 if (_serializedPayload == null) {
@@ -280,6 +278,7 @@ return _serializedPayload;
           yield CodeBlock.of("this.$L = $L;", fieldName, fieldName);
         }
       }
+      case RANGE -> CodeBlock.of("this.$L = $L;", fieldName, fieldName);
       case LIST -> {
         if (fieldModelRootInfo.isPresent()
             && !util.isEnumModel(fieldModelRootInfo.get().element())) {

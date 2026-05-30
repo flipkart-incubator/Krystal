@@ -16,6 +16,4 @@ public interface DopantConfig {
       return "lattice.NoConfiguration";
     }
   }
-
-  @interface NoAnnotation {}
 }

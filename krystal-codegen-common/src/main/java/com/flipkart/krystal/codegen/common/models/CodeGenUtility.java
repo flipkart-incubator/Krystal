@@ -45,6 +45,7 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeSpec.Builder;
 import com.squareup.javapoet.TypeVariableName;
+import com.squareup.javapoet.WildcardTypeName;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -145,6 +146,17 @@ public class CodeGenUtility {
 
   public static String lowerCaseFirstChar(String str) {
     return str.isEmpty() ? str : Character.toLowerCase(str.charAt(0)) + str.substring(1);
+  }
+
+  public TypeName replaceTypeWith(TypeMirror typeMirror, TypeName replacement) {
+    return switch (getContainerType(typeMirror)) {
+      case NO_CONTAINER -> replacement;
+      case LIST -> ParameterizedTypeName.get(ClassName.get(List.class), replacement);
+      case RANGE -> ParameterizedTypeName.get(ClassName.get(Range.class), replacement);
+      case MAP ->
+          ParameterizedTypeName.get(
+              ClassName.get(Map.class), TypeName.get(getMapKeyType(typeMirror)), replacement);
+    };
   }
 
   public boolean isListType(TypeMirror type) {
@@ -983,9 +995,9 @@ public class CodeGenUtility {
   }
 
   public <T> T getAnnotationElement(
-      AnnotationMirror parentModelRootAnno, String annoElement, Class<T> type) {
+      AnnotationMirror annotationMirror, String annoElement, Class<T> type) {
     return type.cast(
-        elementUtils.getElementValuesWithDefaults(parentModelRootAnno).entrySet().stream()
+        elementUtils.getElementValuesWithDefaults(annotationMirror).entrySet().stream()
             .filter(e -> e.getKey().getSimpleName().contentEquals(annoElement))
             .findAny()
             .map(Entry::getValue)
@@ -1125,6 +1137,7 @@ public class CodeGenUtility {
             }
             yield typeName;
           }
+          case RANGE -> typeName;
           case LIST -> {
             if (isBuilder) {
               if (fieldModelRootInfo.isPresent()
@@ -1194,7 +1207,20 @@ public class CodeGenUtility {
     if (isBuilder && inferredType instanceof PrimitiveType primitiveType) {
       inferredType = typeUtils.boxedClass(primitiveType).asType();
     }
-    TypeName typeName = inferredType.accept(new TypeNameVisitor(), null);
+
+    TypeName typeName;
+    Optional<ModelRootInfo> modelRootInfo = asModelRoot(inferredType, method);
+    if (modelRootInfo.isPresent()
+        && modelRootInfo.get().containerType().isContainer()
+        && !isEnumModel(modelRootInfo.get().element())) {
+      typeName =
+          replaceTypeWith(
+              inferredType,
+              WildcardTypeName.subtypeOf(
+                  getContentType(inferredType).accept(new TypeNameVisitor(), null)));
+    } else {
+      typeName = inferredType.accept(new TypeNameVisitor(), null);
+    }
 
     // Add @Nullable annotation for Optional types or methods with @Nullable annotation
     if (isOptional || isNullable || isBuilder) {
@@ -1336,6 +1362,22 @@ public class CodeGenUtility {
     }
   }
 
+  public <T extends Annotation> @Nullable AnnotationMirror getAnnotationMirror(
+      AnnotatedConstruct annotatedElement, Class<T> annoClass) {
+    return getAnnotationMirror(annotatedElement, requireNonNull(annoClass.getCanonicalName()));
+  }
+
+  public @Nullable AnnotationMirror getAnnotationMirror(
+      AnnotatedConstruct annotatedElement, String annoClassCanonicalName) {
+    return annotatedElement.getAnnotationMirrors().stream()
+        .filter(
+            annotationMirror ->
+                annotationMirror.getAnnotationType().asElement() instanceof QualifiedNameable q
+                    && q.getQualifiedName().contentEquals(annoClassCanonicalName))
+        .findAny()
+        .orElse(null);
+  }
+
   public <T extends Annotation> @Nullable AnnotationInfo<T> getAnnotationInfo(
       AnnotatedConstruct annotatedElement, Class<T> annoClass) {
     T annotation = annotatedElement.getAnnotation(annoClass);
@@ -1358,7 +1400,14 @@ public class CodeGenUtility {
       Class<T> annoClass,
       Function<Map<String, AnnotationValue>, T> annoCreator) {
     // annotatedType.getAnnotation(annoClass) always returns null - we need to use AnnotationMirror
-    return annotatedType.getAnnotationMirrors().stream()
+    return getAnnotationInfos(annotatedType.getAnnotationMirrors(), annoClass, annoCreator);
+  }
+
+  public <T extends Annotation> List<AnnotationInfo<T>> getAnnotationInfos(
+      List<? extends AnnotationMirror> annotationMirrors,
+      Class<T> annoClass,
+      Function<Map<String, AnnotationValue>, T> annoCreator) {
+    return annotationMirrors.stream()
         .filter(
             annotationMirror ->
                 annotationMirror.getAnnotationType().asElement() instanceof QualifiedNameable q
@@ -1368,7 +1417,7 @@ public class CodeGenUtility {
         .toList();
   }
 
-  private <T extends Annotation> T annotationFromMirror(
+  public <T extends Annotation> T annotationFromMirror(
       AnnotationMirror mirror, Function<Map<String, AnnotationValue>, T> annoCreator) {
 
     Map<String, AnnotationValue> elementValuesWithDefaults = new LinkedHashMap<>();
@@ -1396,14 +1445,6 @@ public class CodeGenUtility {
   }
 
   public Optional<ModelRootInfo> asModelRoot(TypeMirror javaModelType, Element... elements) {
-    if (elements.length == 0) {
-      elements =
-          new Element[] {
-            requireNonNull(
-                typeUtils.asElement(javaModelType),
-                "Not possible - javaModelType must always resolved to a TypeElement. Bug in the framework? Issue with project setup?")
-          };
-    }
     ContainerType containerType = ContainerType.NO_CONTAINER;
     if (isOptional(javaModelType)) {
       javaModelType = getOptionalInnerType(javaModelType);
@@ -1475,6 +1516,7 @@ public class CodeGenUtility {
     NO_CONTAINER,
     LIST,
     MAP,
+    RANGE,
     ;
 
     public boolean isContainer() {

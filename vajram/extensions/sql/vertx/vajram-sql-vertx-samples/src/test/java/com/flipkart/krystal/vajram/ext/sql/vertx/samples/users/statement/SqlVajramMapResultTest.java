@@ -58,7 +58,7 @@ class SqlVajramMapResultTest {
   void getUserInfoById_sql_isCorrect() {
     assertThat(GetUserInfoById_VertxSql.resolveSql(mock(UserIdPredicate.class)))
         .isEqualTo(
-            "SELECT id, name, email AS contactEmail, phoneNumber FROM users WHERE id = $1 LIMIT 1");
+            "SELECT id, name, email AS contactEmail, phoneNumber FROM UserEntity WHERE id = $1 LIMIT 1");
   }
 
   // ─── GetOrderInfoByUserId (multi-row, simple projection) ─────────────────────
@@ -92,7 +92,7 @@ class SqlVajramMapResultTest {
   @Test
   void getOrderInfoByUserId_sql_isCorrect() {
     assertThat(GetOrderInfoByUserId_VertxSql.resolveSql(mock(OrderUserIdEquals.class)))
-        .isEqualTo("SELECT orderId, userId, amountCents FROM orders WHERE userId = $1");
+        .isEqualTo("SELECT orderId, userId, amountCents FROM OrderEntity WHERE userId = $1");
   }
 
   // ─── GetRecentOrdersByUserId (@ORDER_BY + @LIMIT on list trait) ───────────────
@@ -120,7 +120,7 @@ class SqlVajramMapResultTest {
   void getRecentOrdersByUserId_sql_isCorrect() {
     assertThat(GetRecentOrdersByUserId_VertxSql.resolveSql(mock(OrderUserIdEquals.class)))
         .isEqualTo(
-            "SELECT orderId, userId, amountCents FROM orders WHERE userId = $1"
+            "SELECT orderId, userId, amountCents FROM OrderEntity WHERE userId = $1"
                 + " ORDER BY orderTime DESC LIMIT 5");
   }
 
@@ -135,10 +135,10 @@ class SqlVajramMapResultTest {
     Row r3 = orderRow(1L, 11L, 4000L, 1000L, 102L, "Gadget", 4999L);
     // Order 12: no items (LEFT JOIN null)
     Row r4 = mockRow();
-    stubObject(r4, "orders_orderId", 12L);
-    stubLong(r4, "orders_orderId", 12L);
-    stubLong(r4, "orders_amountCents", 500L);
-    stubLong(r4, "orders_orderTime", 500L);
+    stubObject(r4, "OrderEntity_orderId", 12L);
+    stubLong(r4, "OrderEntity_orderId", 12L);
+    stubLong(r4, "OrderEntity_amountCents", 500L);
+    stubLong(r4, "OrderEntity_orderTime", 500L);
     stubObject(r4, "orderItems_orderItemId", null);
 
     List<OrderWithItems> result =
@@ -174,16 +174,17 @@ class SqlVajramMapResultTest {
     String sql = GetOrdersWithItemsByUserId_VertxSql.resolveSql(mock(OrderUserIdEquals.class));
     // LIMIT(10) on the root List<T> type scopes to parent rows via a subquery.
     assertThat(sql)
-        .contains("FROM (SELECT * FROM orders WHERE userId = $1 ORDER BY orderTime DESC LIMIT 10)")
+        .contains(
+            "FROM (SELECT * FROM OrderEntity WHERE userId = $1 ORDER BY orderTime DESC LIMIT 10)")
         // Per-order item limit uses ROW_NUMBER for H2/PostgreSQL compatibility
         .contains(
             "LEFT JOIN (SELECT *, ROW_NUMBER() OVER (PARTITION BY orderId"
-                + " ORDER BY itemPriceCents DESC) AS _rn FROM orderItems) orderItems"
-                + " ON orders.orderId = orderItems.orderId AND orderItems._rn <= 5")
+                + " ORDER BY itemPriceCents DESC) AS _rn FROM OrderItem) orderItems"
+                + " ON OrderEntity.orderId = orderItems.orderId AND orderItems._rn <= 5")
         // WHERE clause is inside the subquery — must NOT appear at the outer level
-        .doesNotContain("WHERE orders.userId")
+        .doesNotContain("WHERE OrderEntity.userId")
         // Outer ORDER BY preserves parent ordering and sorts children by price
-        .contains("ORDER BY orders.orderTime DESC, orderItems.itemPriceCents DESC");
+        .contains("ORDER BY OrderEntity.orderTime DESC, orderItems.itemPriceCents DESC");
   }
 
   // ─── GetUserOrdersByUserName (single-level LEFT JOIN) ────────────────────────
@@ -192,16 +193,16 @@ class SqlVajramMapResultTest {
   void getUserOrdersByUserName_mapsParentAndChildRows() {
     // Two order rows for the same user
     Row r1 = mockRow();
-    stubObject(r1, "users_id", 1L);
-    stubString(r1, "users_name", "Babu");
+    stubObject(r1, "UserEntity_id", 1L);
+    stubString(r1, "UserEntity_name", "Babu");
     stubObject(r1, "orders_orderId", 20L);
     stubLong(r1, "orders_orderId", 20L);
     stubLong(r1, "orders_userId", 1L);
     stubLong(r1, "orders_amountCents", 8000L);
 
     Row r2 = mockRow();
-    stubObject(r2, "users_id", 1L);
-    stubString(r2, "users_name", "Babu");
+    stubObject(r2, "UserEntity_id", 1L);
+    stubString(r2, "UserEntity_name", "Babu");
     stubObject(r2, "orders_orderId", 21L);
     stubLong(r2, "orders_orderId", 21L);
     stubLong(r2, "orders_userId", 1L);
@@ -219,8 +220,8 @@ class SqlVajramMapResultTest {
   @Test
   void getUserOrdersByUserName_returnsParentWithEmptyListWhenNoChildRows() {
     Row r1 = mockRow();
-    stubObject(r1, "users_id", 1L);
-    stubString(r1, "users_name", "Carol");
+    stubObject(r1, "UserEntity_id", 1L);
+    stubString(r1, "UserEntity_name", "Carol");
     stubObject(r1, "orders_orderId", null); // LEFT JOIN with no matching orders
 
     UserNameAndOrders result = GetUserOrdersByUserName_VertxSql.mapResult(rowSetOf(r1));
@@ -233,13 +234,13 @@ class SqlVajramMapResultTest {
   @Test
   void getUserOrdersByUserName_throwsWhenMultipleParentsDetected() {
     Row r1 = mockRow();
-    stubObject(r1, "users_id", 1L);
-    stubString(r1, "users_name", "Dan");
+    stubObject(r1, "UserEntity_id", 1L);
+    stubString(r1, "UserEntity_name", "Dan");
     stubObject(r1, "orders_orderId", null);
 
     Row r2 = mockRow();
-    stubObject(r2, "users_id", 2L); // different parent PK — should trigger the guard
-    stubString(r2, "users_name", "Eve");
+    stubObject(r2, "UserEntity_id", 2L); // different parent PK — should trigger the guard
+    stubString(r2, "UserEntity_name", "Eve");
     stubObject(r2, "orders_orderId", null);
 
     assertThatThrownBy(() -> GetUserOrdersByUserName_VertxSql.mapResult(rowSetOf(r1, r2)))
@@ -250,14 +251,14 @@ class SqlVajramMapResultTest {
   @Test
   void getUserOrdersByUserName_sql_isCorrect() {
     assertThat(GetUserOrdersByUserName_VertxSql.resolveSql(mock(UserNamePredicate.class)))
-        .startsWith("SELECT users.id AS users_id, users.name AS users_name")
+        .startsWith("SELECT UserEntity.id AS UserEntity_id, UserEntity.name AS UserEntity_name")
         // @LIMIT(1) on type arg → parent wrapped in a subquery with LIMIT 1
-        .contains("FROM (SELECT * FROM users WHERE name = $1 LIMIT 1) users")
+        .contains("FROM (SELECT * FROM UserEntity WHERE name = $1 LIMIT 1) UserEntity")
         // orders has @LIMIT(10) → ROW_NUMBER (parent is multi-row in subquery path)
         .contains(
             "LEFT JOIN (SELECT *, ROW_NUMBER() OVER (PARTITION BY userId"
-                + " ORDER BY orderTime DESC) AS _rn FROM orders) orders"
-                + " ON users.id = orders.userId AND orders._rn <= 10")
+                + " ORDER BY orderTime DESC) AS _rn FROM OrderEntity) orders"
+                + " ON UserEntity.id = orders.userId AND orders._rn <= 10")
         .contains("ORDER BY orders.orderTime DESC");
   }
 
@@ -271,8 +272,8 @@ class SqlVajramMapResultTest {
     Row r3 = orderItemRow(1L, "Alisha", 31L, 4000L, 0L, 102L, "Gadget", 4999L);
     // order 32 exists but has no items (LEFT JOIN null)
     Row r4 = mockRow();
-    stubObject(r4, "users_id", 1L);
-    stubString(r4, "users_name", "Alisha");
+    stubObject(r4, "UserEntity_id", 1L);
+    stubString(r4, "UserEntity_name", "Alisha");
     stubObject(r4, "orders_orderId", 32L);
     stubLong(r4, "orders_orderId", 32L);
     stubLong(r4, "orders_amountCents", 0L);
@@ -320,14 +321,14 @@ class SqlVajramMapResultTest {
         // truncate grandchild rows instead of bounding the number of orders per user).
         .contains(
             "LEFT JOIN (SELECT *, ROW_NUMBER() OVER (PARTITION BY userId"
-                + " ORDER BY orderTime DESC) AS _rn FROM orders) orders"
-                + " ON users.id = orders.userId AND orders._rn <= 3")
+                + " ORDER BY orderTime DESC) AS _rn FROM OrderEntity) orders"
+                + " ON UserEntity.id = orders.userId AND orders._rn <= 3")
         // orderItems is a nested join (level-2) → always ROW_NUMBER
         .contains(
             "LEFT JOIN (SELECT *, ROW_NUMBER() OVER (PARTITION BY orderId"
-                + " ORDER BY itemPriceCents DESC) AS _rn FROM orderItems) orderItems"
+                + " ORDER BY itemPriceCents DESC) AS _rn FROM OrderItem) orderItems"
                 + " ON orders.orderId = orderItems.orderId AND orderItems._rn <= 5")
-        .contains("WHERE users.id = $1")
+        .contains("WHERE UserEntity.id = $1")
         .contains("ORDER BY orders.orderTime DESC, orderItems.itemPriceCents DESC")
         // No outer LIMIT — ROW_NUMBER is used instead
         .doesNotContain("LIMIT 3");
@@ -339,16 +340,16 @@ class SqlVajramMapResultTest {
   void getUserByNameWithOrdersAndItems_sql_isCorrect() {
     assertThat(GetUserByNameWithOrdersAndItems_VertxSql.resolveSql(mock(UserNamePredicate.class)))
         // @LIMIT(1) on type arg → parent wrapped in LIMIT 1 subquery
-        .contains("FROM (SELECT * FROM users WHERE name = $1 LIMIT 1) users")
+        .contains("FROM (SELECT * FROM UserEntity WHERE name = $1 LIMIT 1) UserEntity")
         // orders has @LIMIT(3) → ROW_NUMBER per user (subquery path forces useRowNumber)
         .contains(
             "LEFT JOIN (SELECT *, ROW_NUMBER() OVER (PARTITION BY userId"
-                + " ORDER BY orderTime DESC) AS _rn FROM orders) orders"
-                + " ON users.id = orders.userId AND orders._rn <= 3")
+                + " ORDER BY orderTime DESC) AS _rn FROM OrderEntity) orders"
+                + " ON UserEntity.id = orders.userId AND orders._rn <= 3")
         // orderItems has @LIMIT(5) → ROW_NUMBER per order (nested, always ROW_NUMBER)
         .contains(
             "LEFT JOIN (SELECT *, ROW_NUMBER() OVER (PARTITION BY orderId"
-                + " ORDER BY itemPriceCents DESC) AS _rn FROM orderItems) orderItems"
+                + " ORDER BY itemPriceCents DESC) AS _rn FROM OrderItem) orderItems"
                 + " ON orders.orderId = orderItems.orderId AND orderItems._rn <= 5")
         .contains("ORDER BY orders.orderTime DESC, orderItems.itemPriceCents DESC");
   }
@@ -412,10 +413,10 @@ class SqlVajramMapResultTest {
       String itemName,
       long itemPriceCents) {
     Row row = mockRow();
-    stubObject(row, "orders_orderId", orderId);
-    stubLong(row, "orders_orderId", orderId);
-    stubLong(row, "orders_amountCents", amountCents);
-    stubLong(row, "orders_orderTime", orderTime);
+    stubObject(row, "OrderEntity_orderId", orderId);
+    stubLong(row, "OrderEntity_orderId", orderId);
+    stubLong(row, "OrderEntity_amountCents", amountCents);
+    stubLong(row, "OrderEntity_orderTime", orderTime);
     stubObject(row, "orderItems_orderItemId", itemId);
     stubLong(row, "orderItems_orderItemId", itemId);
     stubString(row, "orderItems_itemName", itemName);
@@ -434,8 +435,8 @@ class SqlVajramMapResultTest {
       String itemName,
       long itemPriceCents) {
     Row row = mockRow();
-    stubObject(row, "users_id", userId);
-    stubString(row, "users_name", userName);
+    stubObject(row, "UserEntity_id", userId);
+    stubString(row, "UserEntity_name", userName);
     stubObject(row, "orders_orderId", orderId);
     stubLong(row, "orders_orderId", orderId);
     stubLong(row, "orders_amountCents", amountCents);

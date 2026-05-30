@@ -128,14 +128,14 @@ public interface User extends TableModel {
 | `@PrimaryKey`                       | method    | Marks the column as the primary key                                                                            |
 | `@UniqueKey(name)`                  | method    | Single-column unique constraint                                                                                |
 | `@UniqueKey(name, columns = {...})` | interface | Composite unique key across multiple columns                                                                   |
-| `@ForeignKey`                       | method    | Outgoing FK — the method name is the FK column name; the return type must be the referenced table's model type |
+| `@ForeignKey`                       | method    | Outgoing FK — the method name is the FK column name; the return type **must match** the `@PrimaryKey` type of the referenced table |
 | `@IncomingForeignKey`               | method    | Models the reverse side of a FK that lives on another table; **not** a real DB column                          |
 
 #### Foreign Keys
 
 `@ForeignKey` is declared on the owning side (the table that holds the FK column). The method return
-type is the referenced table model — this is what lets the codegen discover join conditions
-automatically.
+type must match the `@PrimaryKey` return type of the referenced table — this is enforced at compile
+time.
 
 ```java
 
@@ -146,8 +146,8 @@ public interface Order extends TableModel {
   @PrimaryKey
   long orderId();
 
-  @ForeignKey
-  User userId();          // FK column "userId" → users.id
+  @ForeignKey(toTable = User.class)
+  long userId();          // FK column "userId" → users.id (both long)
 
   long amountCents();
 
@@ -161,7 +161,7 @@ to be valid:
 ```java
 
 @IncomingForeignKey
-List<Order> orders();       // reverse of Order.userId — not a real DB column
+List<Order> orders();       // reverse of Order.userId — child inferred from List<Order>
 ```
 
 **Bidirectional-FK invariant (enforced at compile time):** a `List<@Selection>` join in a
@@ -170,15 +170,15 @@ List<Order> orders();       // reverse of Order.userId — not a real DB column
 - The **child** table must have a `@ForeignKey`-annotated method whose return type is the **parent**
   table model.
 - The **parent** table must have an `@IncomingForeignKey`-annotated method whose return type is
-  `List<ChildTable>` or `ChildTable`.
+  `List<ChildTable>` or `ChildTable`. The child table is inferred from the return type.
 
 If either annotation is absent the code generator reports a compile-time error pointing to the
 `List<@Selection>` method that triggered the join.
 
 **Additional invariants:**
 
-- A `@ForeignKey` method's return type **must** be a `@Table`-annotated model interface. Referencing
-  a non-table type will prevent the codegen from discovering the join condition.
+- A `@ForeignKey` method's return type **must match** the `@PrimaryKey` return type of the
+  referenced table. A type mismatch produces a compile-time error.
 - An `@IncomingForeignKey` method must **not** represent a real DB column. It models the reverse
   side of a relationship that is physically stored on another table.
 
@@ -650,11 +650,44 @@ multiple methods (columns), those columns are combined with `AND` within that br
 
 ---
 
-### INSERT / UPDATE / DELETE (planned)
+### INSERT
 
-[`@INSERT`](src/main/java/com/flipkart/krystal/vajram/ext/sql/statement/INSERT.java), [
-`@UPDATE`](src/main/java/com/flipkart/krystal/vajram/ext/sql/statement/UPDATE.java), and [
-`@DELETE`](src/main/java/com/flipkart/krystal/vajram/ext/sql/statement/DELETE.java) annotations
+[`@INSERT`](src/main/java/com/flipkart/krystal/vajram/ext/sql/lang/INSERT.java) traits declare an
+insert operation on a `@Table`-annotated model. The trait must have **exactly one input** whose type
+is either a single `@Table` model (for single-row inserts) or `List<@Table>` (for multi-row batch
+inserts). The codegen generates the appropriate parameterized INSERT SQL which atomically inserts all the rows.
+
+```java
+// Single-row insert
+@SQL @INSERT @Trait @CallGraphDelegationMode(SYNC)
+public interface InsertUser extends TraitDef<Integer> {
+  interface _Inputs {
+    @IfAbsent(FAIL) User user();
+  }
+}
+
+// Multi-row batch insert
+@SQL @INSERT @Trait @CallGraphDelegationMode(SYNC)
+public interface InsertUsers extends TraitDef<Integer> {
+  interface _Inputs {
+    @IfAbsent(FAIL) List<User> users();
+  }
+}
+```
+
+**Structural invariants (enforced at compile time):**
+
+- The trait must have exactly one input
+- That input must be a `@Table`-annotated type or `List<@Table>`
+- `@IncomingForeignKey` methods are excluded (not real DB columns)
+- `@ForeignKey` columns are treated as plain scalars
+- DB column names are resolved via `@Column` (falling back to method name)
+- The trait return type must be `Integer` (the number of rows inserted)
+
+### UPDATE / DELETE (planned)
+
+[`@UPDATE`](src/main/java/com/flipkart/krystal/vajram/ext/sql/lang/UPDATE.java) and [
+`@DELETE`](src/main/java/com/flipkart/krystal/vajram/ext/sql/lang/DELETE.java) annotations
 exist and follow the same design principle but codegen support is not yet implemented.
 
 ---
@@ -685,7 +718,7 @@ public interface User extends TableModel {
   Optional<String> phoneNumber();
 
   @IncomingForeignKey
-  List<Order> orders();   // required for any JOIN that starts from users
+  List<Order> orders();   // child table inferred from List<Order>
 }
 ```
 

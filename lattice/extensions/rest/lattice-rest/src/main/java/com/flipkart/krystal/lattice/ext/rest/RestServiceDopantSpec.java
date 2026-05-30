@@ -8,6 +8,7 @@ import com.flipkart.krystal.lattice.core.doping.DopantSpecBuilder;
 import com.flipkart.krystal.lattice.core.execution.ThreadingStrategySpec.ThreadingStrategySpecBuilder;
 import com.flipkart.krystal.lattice.ext.rest.config.RestServiceDopantConfig;
 import com.flipkart.krystal.lattice.ext.rest.jakarta.ServletContextEnricher;
+import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -16,6 +17,10 @@ import lombok.Builder;
 @Builder(buildMethodName = "_buildSpec")
 public record RestServiceDopantSpec(List<ServletContextEnricher> servletContextEnrichers)
     implements DopantSpec<RestService, RestServiceDopantConfig, RestServiceDopant> {
+
+  public RestServiceDopantSpec {
+    servletContextEnrichers = ImmutableList.copyOf(servletContextEnrichers);
+  }
 
   @Override
   public Class<RestServiceDopant> dopantClass() {

@@ -77,6 +77,7 @@ public final class ProtoGenUtility {
           entry(FLOAT, FLOAT_P),
           entry(DOUBLE, DOUBLE_P),
           entry(STRING, STRING_P),
+          entry(BYTE, BYTES_P),
           entry(BYTE_ARRAY, BYTES_P),
           entry(URL, STRING_P));
 
@@ -84,6 +85,8 @@ public final class ProtoGenUtility {
       Map.of(
           SHORT,
           c -> CodeBlock.of("$T.checkedCast($L)", Shorts.class, c),
+          BYTE,
+          c -> CodeBlock.of("$L.byteAt(0)", c),
           BYTE_ARRAY,
           c -> CodeBlock.of("new $T($L)", ProtoByteArray.class, c),
           URL,

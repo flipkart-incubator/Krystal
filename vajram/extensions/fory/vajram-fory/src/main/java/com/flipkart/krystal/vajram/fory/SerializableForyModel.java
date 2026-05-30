@@ -3,7 +3,6 @@ package com.flipkart.krystal.vajram.fory;
 import static com.flipkart.krystal.vajram.fory.Fory.FORY;
 
 import com.flipkart.krystal.model.SupportedModelProtocol;
-import com.flipkart.krystal.serial.SerdeProtocol;
 import com.flipkart.krystal.serial.SerializableModel;
 
 /**
@@ -15,7 +14,7 @@ import com.flipkart.krystal.serial.SerializableModel;
 public interface SerializableForyModel extends SerializableModel {
 
   @Override
-  default SerdeProtocol _serdeProtocol() {
+  default Fory _serdeProtocol() {
     return FORY;
   }
 }

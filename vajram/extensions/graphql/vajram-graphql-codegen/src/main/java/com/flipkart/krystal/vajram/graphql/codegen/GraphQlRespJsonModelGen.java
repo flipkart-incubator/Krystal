@@ -502,13 +502,12 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
     // Add getters for each model method - extract values from Errable fields
     for (ExecutableElement method : modelMethods) {
       String methodName = method.getSimpleName().toString();
-      TypeName returnType = codeGenContext.util().getVariableType(method, false);
 
       MethodSpec.Builder getter =
           MethodSpec.methodBuilder(methodName)
               .addAnnotation(Override.class)
               .addModifiers(PUBLIC)
-              .returns(returnType);
+              .returns(TypeName.get(method.getReturnType()));
 
       if (methodName.startsWith(RESERVED_GRAPHQL_FIELDS_PREFIX)) {
         classBuilder.addMethod(getter.addStatement("return $L", methodName).build());

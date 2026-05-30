@@ -24,10 +24,18 @@ import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserInfo;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserNameAndOrders;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserNamePredicate;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserOrPredicate;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserWithAddress;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserWithOrdersAndItems;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.Address;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.Address_ImmutJson;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.Order;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.Order_ImmutPojo;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.User;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.User_ImmutPojo;
 import com.flipkart.krystal.vajram.guice.injection.VajramGuiceInputInjector;
 import com.flipkart.krystal.vajram.guice.traitbinding.StaticDispatchPolicyImpl;
 import com.flipkart.krystal.vajram.guice.traitbinding.TraitBinder;
+import com.flipkart.krystal.vajram.json.Json;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
@@ -85,68 +93,113 @@ class SqlTraitIntegrationTest {
             new PoolOptions().setMaxSize(4));
 
     runSql(
-        "CREATE TABLE users ("
+        "CREATE TABLE UserEntity ("
             + "id BIGINT PRIMARY KEY, "
             + "name VARCHAR(255) NOT NULL, "
             + "email VARCHAR(255), "
-            + "phoneNumber VARCHAR(255))");
+            + "phoneNumber VARCHAR(255), "
+            + "address CLOB, "
+            + "secondaryAddresses CLOB)");
     runSql(
-        "CREATE TABLE orders ("
+        "CREATE TABLE OrderEntity ("
             + "orderId BIGINT PRIMARY KEY, "
             + "userId BIGINT NOT NULL, "
             + "amountCents BIGINT NOT NULL, "
             + "orderTime BIGINT NOT NULL)");
     runSql(
-        "CREATE TABLE orderItems ("
+        "CREATE TABLE OrderItem ("
             + "orderItemId BIGINT PRIMARY KEY, "
             + "itemName VARCHAR(255) NOT NULL, "
             + "itemPriceCents BIGINT NOT NULL, "
             + "orderId BIGINT NOT NULL)");
 
-    // Alisha (id=1): 6 orders so that @LIMIT(3) on orders AND @LIMIT(5) on the recent-orders list
-    // are both exceeded, proving each cap is enforced independently at every nesting level.
-    // Each order carries 6 items (prices 100–600) so that @LIMIT(5) on orderItems is also
-    // exercised.
-    runSql("INSERT INTO users VALUES (1, 'Alisha', 'Alisha@example.com', '+1-555-0100')");
-    for (int i = 0; i < 6; i++) {
-      int orderId = 10 + i;
-      runSql("INSERT INTO orders VALUES (" + orderId + ", 1, 5000, " + ((i + 1) * 1000) + ")");
-      for (int j = 0; j < 6; j++) {
-        int itemId = orderId * 100 + j;
-        int price = (j + 1) * 100;
-        runSql(
-            "INSERT INTO orderItems VALUES ("
-                + itemId
-                + ", 'Item-"
-                + price
-                + "', "
-                + price
-                + ", "
-                + orderId
-                + ")");
-      }
-    }
+    // Seed user and order data via INSERT vajrams; order items remain as raw SQL (no vajram).
+    Lease<SingleThreadExecutor> seedLease = EXEC_POOL.lease();
+    try {
+      SingleThreadExecutor seedExec = seedLease.get();
 
-    // Babu (id=2): 11 orders so that @LIMIT(10) on the orders list trait is exceeded.
-    // Each order also carries 6 items so that @LIMIT(5) on orderItems is exercised per order.
-    runSql("INSERT INTO users VALUES (2, 'Babu', 'Babu@example.com', null)");
-    for (int i = 0; i < 11; i++) {
-      int orderId = 20 + i;
-      runSql("INSERT INTO orders VALUES (" + orderId + ", 2, 10000, " + ((i + 1) * 1000) + ")");
-      for (int j = 0; j < 6; j++) {
-        int itemId = orderId * 100 + j;
-        int price = (j + 1) * 100;
-        runSql(
-            "INSERT INTO orderItems VALUES ("
-                + itemId
-                + ", 'Item-"
-                + price
-                + "', "
-                + price
-                + ", "
-                + orderId
-                + ")");
+      // Alisha (id=1): 6 orders so that @LIMIT(3) on orders AND @LIMIT(5) on the recent-orders
+      // list are both exceeded, proving each cap is enforced independently at every nesting level.
+      // Each order carries 6 items (prices 100–600) so that @LIMIT(5) on orderItems is also
+      // exercised.
+      runInsertUser(
+          User_ImmutPojo._builder()
+              .id(1L)
+              .name("Alisha")
+              .email("Alisha@example.com")
+              .phoneNumber("+1-555-0100")
+              .address(Address_ImmutJson._builder().city("NYC").zip("10001")._build())
+              .secondaryAddresses(List.of())
+              .orders(List.of())
+              ._build(),
+          seedExec);
+      for (int i = 0; i < 6; i++) {
+        int orderId = 10 + i;
+        runInsertOrder(
+            Order_ImmutPojo._builder()
+                .orderId((long) orderId)
+                .userId(1L)
+                .amountCents(5000L)
+                .orderTime((long) ((i + 1) * 1000))
+                .orderItems(List.of())
+                ._build(),
+            seedExec);
+        for (int j = 0; j < 6; j++) {
+          int itemId = orderId * 100 + j;
+          int price = (j + 1) * 100;
+          runSql(
+              "INSERT INTO OrderItem VALUES ("
+                  + itemId
+                  + ", 'Item-"
+                  + price
+                  + "', "
+                  + price
+                  + ", "
+                  + orderId
+                  + ")");
+        }
       }
+
+      // Babu (id=2): 11 orders so that @LIMIT(10) on the orders list trait is exceeded.
+      // Each order also carries 6 items so that @LIMIT(5) on orderItems is exercised per order.
+      runInsertUser(
+          User_ImmutPojo._builder()
+              .id(2L)
+              .name("Babu")
+              .email("Babu@example.com")
+              .address(Address_ImmutJson._builder().city("SFO").zip("94105")._build())
+              .secondaryAddresses(List.of())
+              .orders(List.of())
+              ._build(),
+          seedExec);
+      for (int i = 0; i < 11; i++) {
+        int orderId = 20 + i;
+        runInsertOrder(
+            Order_ImmutPojo._builder()
+                .orderId((long) orderId)
+                .userId(2L)
+                .amountCents(10000L)
+                .orderTime((long) ((i + 1) * 1000))
+                .orderItems(List.of())
+                ._build(),
+            seedExec);
+        for (int j = 0; j < 6; j++) {
+          int itemId = orderId * 100 + j;
+          int price = (j + 1) * 100;
+          runSql(
+              "INSERT INTO OrderItem VALUES ("
+                  + itemId
+                  + ", 'Item-"
+                  + price
+                  + "', "
+                  + price
+                  + ", "
+                  + orderId
+                  + ")");
+        }
+      }
+    } finally {
+      seedLease.close();
     }
   }
 
@@ -164,6 +217,98 @@ class SqlTraitIntegrationTest {
   @AfterEach
   void tearDown() {
     executorLease.close();
+  }
+
+  // ─── GetUserWithAddressById (SELECT with @SerdeWith deserialization) ─────────
+
+  @Test
+  void getUserWithAddressById_returnsDeserializedAddress() {
+    CompletableFuture<UserWithAddress> future;
+    try (KrystexVajramExecutor executor = createExecutor("getUserWithAddressById")) {
+      future =
+          executor.execute(
+              GetUserWithAddressById_Req._builder()
+                  .where(UserIdPredicate._builder().idIs(1L))
+                  ._build(),
+              KryonExecutionConfig.builder().executionId("getUserWithAddressById_exec").build());
+    }
+    assertThat(future)
+        .succeedsWithin(TIMEOUT)
+        .satisfies(
+            user -> {
+              assertThat(user).isNotNull();
+              assertThat(user.id()).isEqualTo(1L);
+              assertThat(user.name()).isEqualTo("Alisha");
+              // Verify JSON deserialization of address column
+              Address addr = user.address();
+              assertThat(addr).isNotNull();
+              assertThat(addr.city()).isEqualTo("NYC");
+              assertThat(addr.zip()).isEqualTo("10001");
+            });
+  }
+
+  @Test
+  void getUserWithAddressById_returnsDeserializedSecondaryAddresses() throws Exception {
+    // Insert a user with non-null secondaryAddresses via InsertUser vajram
+    CompletableFuture<Integer> insertFuture;
+    try (KrystexVajramExecutor insertExec = createExecutor("insertTestSerdeUser")) {
+      insertFuture =
+          insertExec.execute(
+              InsertUser_Req._builder()
+                  .user(
+                      User_ImmutPojo._builder()
+                          .id(100L)
+                          .name("TestSerde")
+                          .email("serde@example.com")
+                          .address(Address_ImmutJson._builder().city("LA").zip("90001")._build())
+                          .secondaryAddresses(
+                              List.of(
+                                  Address_ImmutJson._builder()
+                                      .city("Chicago")
+                                      .zip("60601")
+                                      ._build(),
+                                  Address_ImmutJson._builder()
+                                      .city("Boston")
+                                      .zip("02101")
+                                      ._build()))
+                          .orders(List.of())
+                          ._build())
+                  ._build(),
+              KryonExecutionConfig.builder().executionId("insertTestSerdeUser_exec").build());
+    }
+    assertThat(insertFuture).succeedsWithin(TIMEOUT).isEqualTo(1);
+    try {
+      CompletableFuture<UserWithAddress> future;
+      try (KrystexVajramExecutor executor = createExecutor("getUserWithAddressByIdSecondary")) {
+        future =
+            executor.execute(
+                GetUserWithAddressById_Req._builder()
+                    .where(UserIdPredicate._builder().idIs(100L))
+                    ._build(),
+                KryonExecutionConfig.builder()
+                    .executionId("getUserWithAddressByIdSecondary_exec")
+                    .build());
+      }
+      assertThat(future)
+          .succeedsWithin(TIMEOUT)
+          .satisfies(
+              user -> {
+                assertThat(user).isNotNull();
+                assertThat(user.id()).isEqualTo(100L);
+                assertThat(user.name()).isEqualTo("TestSerde");
+                // Verify primary address
+                assertThat(user.address().city()).isEqualTo("LA");
+                assertThat(user.address().zip()).isEqualTo("90001");
+                // Verify List<Address> deserialization
+                assertThat(user.secondaryAddresses()).hasSize(2);
+                assertThat(user.secondaryAddresses().get(0).city()).isEqualTo("Chicago");
+                assertThat(user.secondaryAddresses().get(0).zip()).isEqualTo("60601");
+                assertThat(user.secondaryAddresses().get(1).city()).isEqualTo("Boston");
+                assertThat(user.secondaryAddresses().get(1).zip()).isEqualTo("02101");
+              });
+    } finally {
+      runSql("DELETE FROM UserEntity WHERE id = 100");
+    }
   }
 
   // ─── GetUserInfoById ──────────────────────────────────────────────────────────
@@ -885,9 +1030,221 @@ class SqlTraitIntegrationTest {
             });
   }
 
+  // ─── InsertUser ──────────────────────────────────────────────────────────────
+
+  @Test
+  void insertUser_insertsOneRowAndReturnsRowCount() throws Exception {
+    CompletableFuture<Integer> future;
+    User newUser =
+        User_ImmutPojo._builder()
+            .id(100L)
+            .name("Charulatha")
+            .email("charulatha@example.com")
+            .phoneNumber("+91-555-0300")
+            .address(Address_ImmutJson._builder().city("BLR").zip("560001")._build())
+            .secondaryAddresses(List.of())
+            .orders(List.of())
+            ._build();
+    try (KrystexVajramExecutor executor = createExecutor("insertUser")) {
+      future =
+          executor.execute(
+              InsertUser_Req._builder().user(newUser)._build(),
+              KryonExecutionConfig.builder().executionId("insertUser_exec").build());
+    }
+    assertThat(future).succeedsWithin(TIMEOUT).isEqualTo(1);
+
+    // Verify the row was actually inserted by reading it back
+    CompletableFuture<UserInfo> verifyFuture;
+    try (KrystexVajramExecutor executor = createExecutor("insertUser_verify")) {
+      verifyFuture =
+          executor.execute(
+              GetUserInfoById_Req._builder().where(UserIdPredicate._builder().idIs(100L))._build(),
+              KryonExecutionConfig.builder().executionId("insertUser_verify_exec").build());
+    }
+    assertThat(verifyFuture)
+        .succeedsWithin(TIMEOUT)
+        .satisfies(
+            user -> {
+              assertThat(user).isNotNull();
+              assertThat(user.id()).isEqualTo(100L);
+              assertThat(user.name()).isEqualTo("Charulatha");
+              assertThat(user.contactEmail()).isEqualTo("charulatha@example.com");
+              assertThat(user.phoneNumber()).contains("+91-555-0300");
+            });
+
+    // Cleanup
+    runSql("DELETE FROM UserEntity WHERE id = 100");
+  }
+
+  @Test
+  void insertUser_insertsUserWithNullPhoneNumber() throws Exception {
+    CompletableFuture<Integer> future;
+    User newUser =
+        User_ImmutPojo._builder()
+            .id(101L)
+            .name("Danayya")
+            .email("danayya@example.com")
+            .address(Address_ImmutJson._builder().city("HYD").zip("500001")._build())
+            .secondaryAddresses(List.of())
+            .orders(List.of())
+            ._build();
+    try (KrystexVajramExecutor executor = createExecutor("insertUser_nullable")) {
+      future =
+          executor.execute(
+              InsertUser_Req._builder().user(newUser)._build(),
+              KryonExecutionConfig.builder().executionId("insertUser_nullable_exec").build());
+    }
+    assertThat(future).succeedsWithin(TIMEOUT).isEqualTo(1);
+
+    // Verify null phoneNumber
+    CompletableFuture<UserInfo> verifyFuture;
+    try (KrystexVajramExecutor executor = createExecutor("insertUser_nullable_verify")) {
+      verifyFuture =
+          executor.execute(
+              GetUserInfoById_Req._builder().where(UserIdPredicate._builder().idIs(101L))._build(),
+              KryonExecutionConfig.builder()
+                  .executionId("insertUser_nullable_verify_exec")
+                  .build());
+    }
+    assertThat(verifyFuture)
+        .succeedsWithin(TIMEOUT)
+        .satisfies(
+            user -> {
+              assertThat(user).isNotNull();
+              assertThat(user.id()).isEqualTo(101L);
+              assertThat(user.name()).isEqualTo("Danayya");
+              assertThat(user.phoneNumber()).isEmpty();
+            });
+
+    // Cleanup
+    runSql("DELETE FROM UserEntity WHERE id = 101");
+  }
+
+  // ─── InsertOrder ────────────────────────────────────────────────────────────
+
+  @Test
+  void insertOrder_insertsOrderWithForeignKey() throws Exception {
+    CompletableFuture<Integer> future;
+    Order newOrder =
+        Order_ImmutPojo._builder()
+            .orderId(999L)
+            .userId(1L)
+            .amountCents(7500L)
+            .orderTime(99000L)
+            .orderItems(List.of())
+            ._build();
+    try (KrystexVajramExecutor executor = createExecutor("insertOrder")) {
+      future =
+          executor.execute(
+              InsertOrder_Req._builder().order(newOrder)._build(),
+              KryonExecutionConfig.builder().executionId("insertOrder_exec").build());
+    }
+    assertThat(future).succeedsWithin(TIMEOUT).isEqualTo(1);
+
+    // Verify the order was inserted with the correct FK value
+    CompletableFuture<List<OrderInfo>> verifyFuture;
+    try (KrystexVajramExecutor executor = createExecutor("insertOrder_verify")) {
+      verifyFuture =
+          executor.execute(
+              GetOrderInfoByUserId_Req._builder()
+                  .where(OrderUserIdEquals._builder().userIdIs(1L)._build())
+                  ._build(),
+              KryonExecutionConfig.builder().executionId("insertOrder_verify_exec").build());
+    }
+    assertThat(verifyFuture)
+        .succeedsWithin(TIMEOUT)
+        .satisfies(
+            orders -> {
+              assertThat(orders.stream().filter(o -> o.orderId() == 999L).findFirst())
+                  .isPresent()
+                  .hasValueSatisfying(
+                      o -> {
+                        assertThat(o.userId()).isEqualTo(1L);
+                        assertThat(o.amountCents()).isEqualTo(7500L);
+                      });
+            });
+
+    // Cleanup
+    runSql("DELETE FROM OrderEntity WHERE orderId = 999");
+  }
+
+  // ─── InsertUsers (batch / List<User>) ───────────────────────────────────────
+
+  @Test
+  void insertUsers_insertsMultipleUsersAndReturnsRowCount() throws Exception {
+    CompletableFuture<Integer> future;
+    List<User> newUsers =
+        List.of(
+            User_ImmutPojo._builder()
+                .id(200L)
+                .name("Eve")
+                .email("eve@example.com")
+                .phoneNumber("+1-555-0500")
+                .address(Address_ImmutJson._builder().city("LON").zip("E1")._build())
+                .secondaryAddresses(List.of())
+                .orders(List.of())
+                ._build(),
+            User_ImmutPojo._builder()
+                .id(201L)
+                .name("Frank")
+                .email("frank@example.com")
+                .address(Address_ImmutJson._builder().city("PAR").zip("75001")._build())
+                .secondaryAddresses(List.of())
+                .orders(List.of())
+                ._build());
+    try (KrystexVajramExecutor executor = createExecutor("insertUsers")) {
+      future =
+          executor.execute(
+              InsertUsers_Req._builder().users(newUsers)._build(),
+              KryonExecutionConfig.builder().executionId("insertUsers_exec").build());
+    }
+    assertThat(future).succeedsWithin(TIMEOUT).isEqualTo(2);
+
+    // Verify both users were inserted
+    CompletableFuture<UserInfo> verifyEve;
+    try (KrystexVajramExecutor executor = createExecutor("insertUsers_verify_eve")) {
+      verifyEve =
+          executor.execute(
+              GetUserInfoById_Req._builder().where(UserIdPredicate._builder().idIs(200L))._build(),
+              KryonExecutionConfig.builder().executionId("insertUsers_verify_eve_exec").build());
+    }
+    assertThat(verifyEve)
+        .succeedsWithin(TIMEOUT)
+        .satisfies(
+            user -> {
+              assertThat(user).isNotNull();
+              assertThat(user.name()).isEqualTo("Eve");
+              assertThat(user.phoneNumber()).contains("+1-555-0500");
+            });
+
+    CompletableFuture<UserInfo> verifyFrank;
+    try (KrystexVajramExecutor executor = createExecutor("insertUsers_verify_frank")) {
+      verifyFrank =
+          executor.execute(
+              GetUserInfoById_Req._builder().where(UserIdPredicate._builder().idIs(201L))._build(),
+              KryonExecutionConfig.builder().executionId("insertUsers_verify_frank_exec").build());
+    }
+    assertThat(verifyFrank)
+        .succeedsWithin(TIMEOUT)
+        .satisfies(
+            user -> {
+              assertThat(user).isNotNull();
+              assertThat(user.name()).isEqualTo("Frank");
+              assertThat(user.phoneNumber()).isEmpty();
+            });
+
+    // Cleanup
+    runSql("DELETE FROM UserEntity WHERE id IN (200, 201)");
+  }
+
   // ─── Helpers ─────────────────────────────────────────────────────────────────
 
   private KrystexVajramExecutor createExecutor(String executorId) {
+    return createExecutor(executorId, executorLease.get());
+  }
+
+  private static KrystexVajramExecutor createExecutor(
+      String executorId, SingleThreadExecutor executor) {
     VajramGraph vajramGraph =
         VajramGraph.builder()
             .loadClasses(ExecuteVertxSql.class)
@@ -928,6 +1285,12 @@ class SqlTraitIntegrationTest {
     traitBinder
         .bindTrait(GetOrdersByTimeInRange_Req.class)
         .to(GetOrdersByTimeInRange_VertxSql_Req.class);
+    traitBinder.bindTrait(InsertUser_Req.class).to(InsertUser_VertxSql_Req.class);
+    traitBinder.bindTrait(InsertOrder_Req.class).to(InsertOrder_VertxSql_Req.class);
+    traitBinder.bindTrait(InsertUsers_Req.class).to(InsertUsers_VertxSql_Req.class);
+    traitBinder
+        .bindTrait(GetUserWithAddressById_Req.class)
+        .to(GetUserWithAddressById_VertxSql_Req.class);
 
     kGraph.traitDispatchPolicies(
         TraitDispatchPolicies.builder()
@@ -944,7 +1307,11 @@ class SqlTraitIntegrationTest {
                         GetOrdersByTimeRange_Req._VAJRAM_ID,
                         GetOrdersByMinAmount_Req._VAJRAM_ID,
                         GetOrdersByMaxAmount_Req._VAJRAM_ID,
-                        GetOrdersByTimeInRange_Req._VAJRAM_ID)
+                        GetOrdersByTimeInRange_Req._VAJRAM_ID,
+                        InsertUser_Req._VAJRAM_ID,
+                        InsertOrder_Req._VAJRAM_ID,
+                        InsertUsers_Req._VAJRAM_ID,
+                        GetUserWithAddressById_Req._VAJRAM_ID)
                     .map(
                         vajramID ->
                             new StaticDispatchPolicyImpl(vajramGraph, vajramID, traitBinder))
@@ -957,8 +1324,35 @@ class SqlTraitIntegrationTest {
                 .kryonExecutorConfig(
                     KryonExecutorConfig.builder()
                         .executorId(executorId)
-                        .executorService(executorLease.get())
+                        .executorService(executor)
                         .build()));
+  }
+
+  private static void runInsertUser(User user, SingleThreadExecutor executor) throws Exception {
+    CompletableFuture<Integer> future;
+    try (KrystexVajramExecutor exec = createExecutor("seed_insertUser_" + user.id(), executor)) {
+      future =
+          exec.execute(
+              InsertUser_Req._builder().user(user)._build(),
+              KryonExecutionConfig.builder()
+                  .executionId("seed_insertUser_" + user.id() + "_exec")
+                  .build());
+    }
+    future.get();
+  }
+
+  private static void runInsertOrder(Order order, SingleThreadExecutor executor) throws Exception {
+    CompletableFuture<Integer> future;
+    try (KrystexVajramExecutor exec =
+        createExecutor("seed_insertOrder_" + order.orderId(), executor)) {
+      future =
+          exec.execute(
+              InsertOrder_Req._builder().order(order)._build(),
+              KryonExecutionConfig.builder()
+                  .executionId("seed_insertOrder_" + order.orderId() + "_exec")
+                  .build());
+    }
+    future.get();
   }
 
   private static void runSql(String sql) throws Exception {
@@ -971,6 +1365,12 @@ class SqlTraitIntegrationTest {
     @Named("vertxSql_pool")
     public Pool providePool() {
       return pool;
+    }
+
+    @Provides
+    @Singleton
+    public Json provideJsonProtocol() {
+      return Json.JSON;
     }
   }
 }

@@ -2,7 +2,6 @@ package com.flipkart.krystal.vajram.protobuf2024e;
 
 import static com.flipkart.krystal.vajram.protobuf2024e.Protobuf2024e.PROTOBUF_2024E;
 
-import com.flipkart.krystal.serial.SerdeProtocol;
 import com.flipkart.krystal.vajram.protobuf.util.SerializableProtoModel;
 import com.google.protobuf.Message;
 
@@ -10,7 +9,7 @@ import com.google.protobuf.Message;
 public interface SerializableProto2024eModel<P extends Message> extends SerializableProtoModel<P> {
 
   @Override
-  default SerdeProtocol _serdeProtocol() {
+  default Protobuf2024e _serdeProtocol() {
     return PROTOBUF_2024E;
   }
 }

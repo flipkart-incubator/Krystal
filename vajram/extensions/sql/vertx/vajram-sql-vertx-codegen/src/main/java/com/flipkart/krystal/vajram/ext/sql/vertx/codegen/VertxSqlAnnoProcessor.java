@@ -11,7 +11,9 @@ import com.flipkart.krystal.codegen.common.models.RunOnlyWhenCodegenPhaseIs;
 import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
+import com.flipkart.krystal.vajram.ext.sql.codegen.InsertModelParser;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlModelParser;
+import com.flipkart.krystal.vajram.ext.sql.lang.INSERT;
 import com.flipkart.krystal.vajram.ext.sql.lang.SQL;
 import com.google.auto.service.AutoService;
 import java.util.ArrayList;
@@ -40,13 +42,18 @@ public class VertxSqlAnnoProcessor extends AbstractKrystalAnnoProcessor {
       VajramCodeGenUtility vajramUtil = new VajramCodeGenUtility(codeGenUtil());
       SqlModelParser parser = new SqlModelParser(vajramUtil, paramIndex -> "$" + paramIndex);
       parser.validateTableAndWhereElements(roundEnv);
+      InsertModelParser insertParser = new InsertModelParser(vajramUtil, parser);
       List<TypeElement> sqlTraits = getSqlTraits(roundEnv);
       Iterator<TypeElement> iterator = sqlTraits.iterator();
       while (iterator.hasNext()) {
         TypeElement vajramElement = iterator.next();
         try {
           VajramInfo vajramInfo = vajramUtil.computeVajramInfo(vajramElement);
-          new SqlTraitVajramGen(vajramUtil, vajramInfo, parser).generate();
+          if (vajramElement.getAnnotation(INSERT.class) != null) {
+            new SqlInsertVajramGen(vajramUtil, vajramInfo, insertParser).generate();
+          } else {
+            new SqlSelectVajramGen(vajramUtil, vajramInfo, parser).generate();
+          }
           iterator.remove();
         } catch (Exception e) {
           if (e instanceof CodeGenShortCircuitException) {

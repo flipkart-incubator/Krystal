@@ -1,6 +1,6 @@
 package com.flipkart.krystal.lattice.core.doping;
 
-import com.flipkart.krystal.lattice.core.doping.DopantConfig.NoAnnotation;
+import com.flipkart.krystal.annos.NoAnnotation;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public abstract class DopantSpecBuilderWithConfig<

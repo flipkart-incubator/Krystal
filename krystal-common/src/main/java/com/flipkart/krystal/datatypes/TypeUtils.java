@@ -16,7 +16,6 @@ import static com.flipkart.krystal.datatypes.JavaTypes.VOID;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.joining;
 
-import java.io.UncheckedIOException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.MalformedURLException;
@@ -78,7 +77,7 @@ public final class TypeUtils {
     try {
       return new URL(url);
     } catch (MalformedURLException e) {
-      throw new UncheckedIOException(e);
+      throw new IllegalArgumentException(e);
     }
   }
 

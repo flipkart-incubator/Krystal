@@ -200,7 +200,7 @@ public class VajramCodeGenUtility {
             processingEnv()
                 .getElementUtils()
                 .getTypeElement(requireNonNull(vajramClass.getCanonicalName())),
-            "Could not find vajram class"
+            "Could not find vajram class "
                 + vajramClass
                 + ". Please make sure it is in the class path."));
   }

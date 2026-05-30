@@ -5,14 +5,17 @@ import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility.AnnotationInfo;
+import com.flipkart.krystal.codegen.common.models.CodeGenUtility.ModelRootInfo;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.model.ModelRoot;
+import com.flipkart.krystal.serial.SerdeProtocol;
 import com.flipkart.krystal.vajram.codegen.common.models.DefaultFacetModel;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.JoinRelation;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.ScalarColumn;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.SelectionInfo;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.SerdeColumnInfo;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereColumn;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereInput;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereLeaf;
@@ -33,6 +36,7 @@ import com.flipkart.krystal.vajram.ext.sql.model.ForeignKey;
 import com.flipkart.krystal.vajram.ext.sql.model.IncomingForeignKey;
 import com.flipkart.krystal.vajram.ext.sql.model.PrimaryKey;
 import com.flipkart.krystal.vajram.ext.sql.model.Selection;
+import com.flipkart.krystal.vajram.ext.sql.model.SerdeWith;
 import com.flipkart.krystal.vajram.ext.sql.model.Table;
 import com.flipkart.krystal.vajram.ext.sql.model.TableModel;
 import com.flipkart.krystal.vajram.ext.sql.model.UniqueKey;
@@ -42,6 +46,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.processing.RoundEnvironment;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
@@ -103,9 +108,11 @@ public final class SqlModelParser {
       } else {
         boolean isOpt = util.isOptional(returnType);
         TypeMirror actualType = util.getOptionalInnerType(returnType);
+        String dbColumnName = resolveColumnName(method);
+        SerdeColumnInfo serdeInfo = resolveSerdeInfoFromTable(dbColumnName, tableElement);
         scalars.add(
             new ScalarColumn(
-                method.getSimpleName().toString(), resolveColumnName(method), actualType, isOpt));
+                method.getSimpleName().toString(), dbColumnName, actualType, isOpt, serdeInfo));
       }
     }
 
@@ -124,7 +131,7 @@ public final class SqlModelParser {
    *   <li><b>Simple predicate</b> — the input type is annotated with {@code @WHERE} and extends
    *       {@code SelectionPredicate}. A single {@link WhereLeaf} is produced.
    *   <li><b>OR predicate</b> — the input type extends {@code SqlOrPredicate}. Each method of the
-   *       OR interface returns a {@code SelectionPredicate} sub-type annotated with {@code @WHERE};
+   *       OR interface returns a {@code SelectionPredicate} subtype annotated with {@code @WHERE};
    *       these are collected as multiple {@link WhereLeaf}s joined by {@code OR}.
    * </ul>
    *
@@ -268,7 +275,7 @@ public final class SqlModelParser {
           "java.time.OffsetDateTime");
 
   /**
-   * Validates that the return type of a predicate method annotated with {@code @IsInRange} is
+   * Validates that the return-type of a predicate method annotated with {@code @IsInRange} is
    * {@code Range<T>} where {@code T} is a comparable type (numeric boxed types or temporal types).
    */
   private void validateRangeType(ExecutableElement method) {
@@ -293,7 +300,7 @@ public final class SqlModelParser {
       return;
     }
     util.error(
-        "@IsInRange requires Range<T> where T is a comparable type (boxed numerics or temporal"
+        "@IsInRange requires Range<T> where T is a comparable type (boxed numerals or temporal"
             + " types like Long, Integer, LocalDate, etc.). Found Range<"
             + typeArg
             + ">.",
@@ -301,7 +308,7 @@ public final class SqlModelParser {
   }
 
   /**
-   * Validates that the return type of a predicate method is a comparable type suitable for ordering
+   * Validates that the return-type of a predicate method is a comparable type suitable for ordering
    * operators ({@code >}, {@code >=}, {@code <}, {@code <=}). Reports a compile-time error if the
    * type is not numeric or temporal.
    */
@@ -317,7 +324,7 @@ public final class SqlModelParser {
     }
     util.error(
         annotationName
-            + " is only supported on comparable types (numeric primitives, boxed numerics,"
+            + " is only supported on comparable types (numeric primitives, boxed numerals,"
             + " LocalDate, LocalDateTime, OffsetDateTime). Found: "
             + returnType,
         method);
@@ -332,11 +339,11 @@ public final class SqlModelParser {
    * underlying tables have a <em>bidirectional</em> FK relationship:
    *
    * <ul>
-   *   <li>The child table must have a {@code @ForeignKey}-annotated method whose return type is the
-   *       parent table model type — this is the actual FK column in the DB schema.
+   *   <li>The child table must have a {@code @ForeignKey(toTable = ParentTable.class)}-annotated
+   *       method — this is the actual FK column in the DB schema.
    *   <li>The parent table must have an {@code @IncomingForeignKey}-annotated method whose return
-   *       type is {@code List<ChildTable>} (or {@code ChildTable}) — this models the reverse side
-   *       of the relationship and is not a real DB column.
+   *       type is {@code List<ChildTable>} or {@code ChildTable} — this models the reverse side of
+   *       the relationship and is not a real DB column.
    * </ul>
    *
    * <p>A compile-time error is reported if either annotation is absent, making the constraint
@@ -415,7 +422,7 @@ public final class SqlModelParser {
       limit = LIMIT.Creator.create(1);
     }
 
-    List<ScalarColumn> columns = parseScalarColumns(childSelectionElem);
+    List<ScalarColumn> columns = parseScalarColumns(childSelectionElem, childTableElem);
     List<ORDER> orderBys = parseOrderBys(method.getReturnType());
 
     // Recursively parse nested joins from the child selection's List<Selection> methods
@@ -445,7 +452,8 @@ public final class SqlModelParser {
   }
 
   /** Parses all scalar (non-join) columns from a selection interface. */
-  public List<ScalarColumn> parseScalarColumns(TypeElement selectionElement) {
+  public List<ScalarColumn> parseScalarColumns(
+      TypeElement selectionElement, TypeElement tableElement) {
     List<ScalarColumn> result = new ArrayList<>();
     for (ExecutableElement m : util.extractAndValidateModelMethods(selectionElement)) {
       TypeMirror rt = m.getReturnType();
@@ -454,8 +462,11 @@ public final class SqlModelParser {
       }
       boolean isOpt = util.isOptional(rt);
       TypeMirror actualType = util.getOptionalInnerType(rt);
+      String dbColumnName = resolveColumnName(m);
+      SerdeColumnInfo serdeInfo = resolveSerdeInfoFromTable(dbColumnName, tableElement);
       result.add(
-          new ScalarColumn(m.getSimpleName().toString(), resolveColumnName(m), actualType, isOpt));
+          new ScalarColumn(
+              m.getSimpleName().toString(), dbColumnName, actualType, isOpt, serdeInfo));
     }
     return result;
   }
@@ -469,25 +480,41 @@ public final class SqlModelParser {
 
   public String resolveColumnName(ExecutableElement method, boolean defaultToMethodName) {
     Column columnAnno = method.getAnnotation(Column.class);
+    String name;
     if (columnAnno == null) {
       if (defaultToMethodName) {
-        return method.getSimpleName().toString();
+        name = method.getSimpleName().toString();
       } else {
         util.error("Could not find @Column annotation on method", method);
         return "<UNKNOWN_COLUMN>";
       }
     } else {
-      return columnAnno.value();
+      name = columnAnno.value();
     }
+    validateNotReservedKeyword(name, "Column name", method);
+    return name;
   }
 
-  /** Returns the SQL table name from {@code @Table(name = "...")} on a table model element. */
+  /**
+   * Returns the SQL table name from {@code @Table(name = "...")} on a table model element.
+   *
+   * <p>If the {@code name} attribute is blank, the interface's simple name is used.
+   *
+   * <p>A compile-time error is raised if the resolved name is a SQL reserved keyword.
+   */
   public String getTableName(TypeElement tableElement) {
     Table tableAnno = tableElement.getAnnotation(Table.class);
     if (tableAnno == null) {
-      return tableElement.getSimpleName().toString().toLowerCase();
+      throw new IllegalArgumentException(tableElement + " does not have @Table annotation");
     }
-    return tableAnno.name();
+    String name;
+    if (tableAnno.name().isBlank()) {
+      name = tableElement.getSimpleName().toString();
+    } else {
+      name = tableAnno.name();
+    }
+    validateNotReservedKeyword(name, "Table name", tableElement);
+    return name;
   }
 
   /**
@@ -495,19 +522,10 @@ public final class SqlModelParser {
    * {@code @Selection}. Returns {@code null} otherwise.
    */
   public @Nullable TypeElement getListElementSelection(TypeMirror returnType) {
-    if (!(returnType instanceof DeclaredType dt)) {
+    if (!util.isListType(returnType)) {
       return null;
     }
-    if (!(dt.asElement() instanceof TypeElement te)) {
-      return null;
-    }
-    if (!te.getQualifiedName().contentEquals("java.util.List")) {
-      return null;
-    }
-    if (dt.getTypeArguments().isEmpty()) {
-      return null;
-    }
-    TypeMirror inner = dt.getTypeArguments().get(0);
+    TypeMirror inner = util.getContentType(returnType);
     TypeElement innerElem = (TypeElement) util.processingEnv().getTypeUtils().asElement(inner);
     if (innerElem != null && innerElem.getAnnotation(Selection.class) != null) {
       return innerElem;
@@ -515,20 +533,20 @@ public final class SqlModelParser {
     return null;
   }
 
-  /** Finds the FK column name in {@code childTable} whose type references {@code parentTable}. */
+  /**
+   * Finds the FK column name in {@code childTable} whose {@code @ForeignKey(toTable = ...)} points
+   * to {@code parentTable}.
+   */
   public String findFkColumnInChildForParent(TypeElement childTable, TypeElement parentTable) {
     for (ExecutableElement method : util.extractAndValidateModelMethods(childTable)) {
-      if (method.getAnnotation(ForeignKey.class) == null) {
+      ForeignKey fkAnno = method.getAnnotation(ForeignKey.class);
+      if (fkAnno == null) {
         continue;
       }
-      if (!(method.getReturnType() instanceof DeclaredType dt)) {
-        continue;
-      }
-      if (!(dt.asElement() instanceof TypeElement refElem)) {
-        continue;
-      }
-      if (refElem.getQualifiedName().equals(parentTable.getQualifiedName())) {
-        return method.getSimpleName().toString();
+      TypeElement referencedTable = util.getTypeElemFromAnnotationMember(fkAnno::toTable);
+      if (referencedTable != null
+          && referencedTable.getQualifiedName().equals(parentTable.getQualifiedName())) {
+        return resolveColumnName(method);
       }
     }
     return null;
@@ -536,9 +554,18 @@ public final class SqlModelParser {
 
   /** Returns the name of the {@code @PrimaryKey}-annotated column in the given table. */
   public String findPkColumn(TypeElement tableElement) {
+    ExecutableElement pkMethod = findPkMethod(tableElement);
+    return pkMethod.getSimpleName().toString();
+  }
+
+  /**
+   * Returns the {@code @PrimaryKey}-annotated method in the given table, or throws a compile-time
+   * error if none is found.
+   */
+  public ExecutableElement findPkMethod(TypeElement tableElement) {
     for (ExecutableElement method : util.extractAndValidateModelMethods(tableElement)) {
       if (method.getAnnotation(PrimaryKey.class) != null) {
-        return method.getSimpleName().toString();
+        return method;
       }
     }
     throw util.errorAndThrow(
@@ -550,19 +577,64 @@ public final class SqlModelParser {
 
   /**
    * Returns {@code true} when {@code parentTable} has at least one {@code @IncomingForeignKey}
-   * method whose return type is {@code ChildTable} or {@code List<ChildTable>}.
+   * method whose return type (unwrapped from {@code List<>} if present) is the {@code childTable}.
    */
   public boolean hasIncomingFkForChild(TypeElement parentTable, TypeElement childTable) {
     for (ExecutableElement method : util.extractAndValidateModelMethods(parentTable)) {
-      if (method.getAnnotation(IncomingForeignKey.class) == null) {
+      IncomingForeignKey ifkAnno = method.getAnnotation(IncomingForeignKey.class);
+      if (ifkAnno == null) {
         continue;
       }
-      TypeElement refType = extractSingleOrListType(method.getReturnType());
-      if (refType != null && refType.getQualifiedName().equals(childTable.getQualifiedName())) {
+      TypeElement inferredChild = extractSingleOrListType(method.getReturnType());
+      if (inferredChild != null
+          && inferredChild.getQualifiedName().equals(childTable.getQualifiedName())) {
         return true;
       }
     }
     return false;
+  }
+
+  /**
+   * Validates that every {@code @ForeignKey}-annotated method in a table has a return type matching
+   * the {@code @PrimaryKey} return type of the referenced table.
+   */
+  private void validateForeignKeyTypes(TypeElement tableElement) {
+    for (ExecutableElement method : util.extractAndValidateModelMethods(tableElement)) {
+      ForeignKey fkAnno = method.getAnnotation(ForeignKey.class);
+      if (fkAnno == null) {
+        continue;
+      }
+      TypeElement targetTable = util.getTypeElemFromAnnotationMember(fkAnno::toTable);
+      if (targetTable == null) {
+        continue;
+      }
+      ExecutableElement pkMethod;
+      try {
+        pkMethod = findPkMethod(targetTable);
+      } catch (RuntimeException e) {
+        // PK not found — already reported by findPkMethod
+        continue;
+      }
+      TypeMirror fkType = method.getReturnType();
+      TypeMirror pkType = pkMethod.getReturnType();
+      if (!util.processingEnv().getTypeUtils().isSameType(fkType, pkType)) {
+        util.error(
+            "[vajram-sql] @ForeignKey method '"
+                + method.getSimpleName()
+                + "()' in '"
+                + tableElement.getSimpleName()
+                + "' has return type '"
+                + fkType
+                + "', but the @PrimaryKey '"
+                + pkMethod.getSimpleName()
+                + "()' in target table '"
+                + targetTable.getSimpleName()
+                + "' has type '"
+                + pkType
+                + "'. The FK column type must match the target table's PK type.",
+            method);
+      }
+    }
   }
 
   /**
@@ -574,7 +646,7 @@ public final class SqlModelParser {
       case NO_CONTAINER -> (TypeElement) util.processingEnv().getTypeUtils().asElement(rt);
       case LIST ->
           (TypeElement) util.processingEnv().getTypeUtils().asElement(util.getContentType(rt));
-      case MAP -> null;
+      case MAP, RANGE -> null;
     };
   }
 
@@ -619,6 +691,9 @@ public final class SqlModelParser {
             "[vajram-sql] @Table interface '" + te.getQualifiedName() + "' must extend TableModel.",
             te);
       }
+
+      // Validate FK column types match the target table's PK type
+      validateForeignKeyTypes(te);
     }
 
     for (Element element : roundEnv.getElementsAnnotatedWith(WHERE.class)) {
@@ -697,7 +772,7 @@ public final class SqlModelParser {
     Set<String> tableColumns =
         util.extractAndValidateModelMethods(tableElement).stream()
             .filter(m -> m.getAnnotation(IncomingForeignKey.class) == null)
-            .map(m -> m.getSimpleName().toString())
+            .map(this::resolveColumnName)
             .collect(Collectors.toSet());
 
     List<String> invalid = new ArrayList<>();
@@ -738,5 +813,179 @@ public final class SqlModelParser {
             annoParamValues ->
                 create((Integer) requireNonNull(annoParamValues.get("value")).getValue()));
     return annotationInfos.isEmpty() ? null : annotationInfos.get(0).annotation();
+  }
+
+  // ─── Reserved keyword validation ─────────────────────────────────────────────
+
+  /**
+   * SQL reserved keywords (SQL:2016 core + common vendor extensions). Checked at compile time to
+   * prevent table or column names from clashing with SQL syntax.
+   */
+  private static final Set<String> SQL_RESERVED_KEYWORDS =
+      Set.of(
+          "ADD",
+          "ALL",
+          "ALTER",
+          "AND",
+          "ANY",
+          "AS",
+          "ASC",
+          "BETWEEN",
+          "BY",
+          "CASE",
+          "CAST",
+          "CHECK",
+          "COLUMN",
+          "CONSTRAINT",
+          "CREATE",
+          "CROSS",
+          "CURRENT",
+          "CURRENT_DATE",
+          "CURRENT_TIME",
+          "CURRENT_TIMESTAMP",
+          "CURRENT_USER",
+          "DATABASE",
+          "DEFAULT",
+          "DELETE",
+          "DESC",
+          "DISTINCT",
+          "DROP",
+          "ELSE",
+          "END",
+          "ESCAPE",
+          "EXCEPT",
+          "EXISTS",
+          "FALSE",
+          "FETCH",
+          "FOR",
+          "FOREIGN",
+          "FROM",
+          "FULL",
+          "GRANT",
+          "GROUP",
+          "HAVING",
+          "IF",
+          "IN",
+          "INDEX",
+          "INNER",
+          "INSERT",
+          "INTERSECT",
+          "INTO",
+          "IS",
+          "JOIN",
+          "KEY",
+          "LEFT",
+          "LIKE",
+          "LIMIT",
+          "NATURAL",
+          "NOT",
+          "NULL",
+          "OFFSET",
+          "ON",
+          "OR",
+          "ORDER",
+          "OUTER",
+          "PRIMARY",
+          "REFERENCES",
+          "REVOKE",
+          "RIGHT",
+          "ROLLBACK",
+          "SELECT",
+          "SET",
+          "TABLE",
+          "THEN",
+          "TO",
+          "TRUE",
+          "TRUNCATE",
+          "UNION",
+          "UNIQUE",
+          "UPDATE",
+          "USER",
+          "USING",
+          "VALUES",
+          "VIEW",
+          "WHEN",
+          "WHERE",
+          "WITH");
+
+  // ─── Serde resolution ──────────────────────────────────────────────────────
+
+  /**
+   * Looks up the table method corresponding to {@code dbColumnName} and resolves {@code @SerdeWith}
+   * on it. Returns {@code null} if the column has no serde annotation.
+   */
+  public @Nullable SerdeColumnInfo resolveSerdeInfoFromTable(
+      String dbColumnName, TypeElement tableElement) {
+    for (ExecutableElement tableMethod : util.extractAndValidateModelMethods(tableElement)) {
+      if (tableMethod.getAnnotation(IncomingForeignKey.class) != null) {
+        continue;
+      }
+      if (resolveColumnName(tableMethod).equals(dbColumnName)) {
+        TypeMirror actualType = util.getOptionalInnerType(tableMethod.getReturnType());
+        return resolveSerdeInfo(tableMethod, actualType);
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Checks whether the method's return type has a {@code @SerdeWith} annotation. If so, validates
+   * that the specified protocol is a {@link SerdeProtocol} and that the model type (the column's
+   * element type) has a matching {@code @SupportedModelProtocol}.
+   */
+  public @Nullable SerdeColumnInfo resolveSerdeInfo(
+      ExecutableElement method, TypeMirror actualType) {
+    @Nullable AnnotationMirror serdeWith =
+        util.getAnnotationMirror(method.getReturnType(), SerdeWith.class);
+
+    if (serdeWith == null) {
+      return null;
+    }
+
+    TypeMirror protocolType = util.getAnnotationElement(serdeWith, "value", TypeMirror.class);
+    TypeElement protocolTypeElement =
+        (TypeElement) util.processingEnv().getTypeUtils().asElement(protocolType);
+
+    // Determine the model type element for validation.
+    // For List<T>/Optional<T>, we validate on the element type T.
+    TypeElement modelTypeElement =
+        util.asModelRoot(actualType).map(ModelRootInfo::element).orElse(null);
+    if (modelTypeElement != null) {
+      List<? extends Element> supportedProtocolTypeElements =
+          util.getSupportedProtocolTypeElements(modelTypeElement);
+      // Validate that the model type has @SupportedModelProtocol for this protocol
+      if (!supportedProtocolTypeElements.contains(protocolTypeElement)) {
+        util.error(
+            "[vajram-sql] @SerdeWith("
+                + protocolTypeElement.getSimpleName()
+                + ".class) on column '"
+                + method.getSimpleName()
+                + "()' but the model type '"
+                + modelTypeElement.getQualifiedName()
+                + "' does not have a matching @SupportedModelProtocol("
+                + protocolTypeElement.getSimpleName()
+                + ".class) annotation.",
+            method);
+        return null;
+      }
+    }
+
+    return new SerdeColumnInfo(protocolTypeElement, method.getReturnType());
+  }
+
+  /**
+   * Raises a compile-time error when {@code name} (case-insensitive) matches a SQL reserved
+   * keyword.
+   */
+  private void validateNotReservedKeyword(String name, String kind, Element element) {
+    if (SQL_RESERVED_KEYWORDS.contains(name.toUpperCase())) {
+      util.error(
+          kind
+              + " '"
+              + name
+              + "' is a SQL reserved keyword. Use an annotation like @Table(name = \"...\") or"
+              + " @Column(\"...\") to specify a non-reserved name.",
+          element);
+    }
   }
 }

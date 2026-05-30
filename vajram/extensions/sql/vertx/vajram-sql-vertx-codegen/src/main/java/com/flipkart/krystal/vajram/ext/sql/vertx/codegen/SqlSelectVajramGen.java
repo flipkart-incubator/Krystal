@@ -4,12 +4,15 @@ import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryBuilder.buildJoinSql;
 import static com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryBuilder.buildSimpleSql;
 import static com.flipkart.krystal.vajram.ext.sql.lang.LIMIT.NO_LIMIT;
+import static com.flipkart.krystal.vajram.ext.sql.vertx.codegen.VertxSqlUtil.loadProtocolConfig;
+import static com.flipkart.krystal.vajram.ext.sql.vertx.codegen.VertxSqlUtil.varArgsToList;
 import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
+import com.flipkart.krystal.codegen.common.models.Constants;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
@@ -44,7 +47,6 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import io.vertx.sqlclient.Pool;
 import io.vertx.sqlclient.Row;
-import io.vertx.sqlclient.RowSet;
 import io.vertx.sqlclient.Tuple;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -68,15 +70,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * vajram-sql-codegen} module ({@link SqlModelParser}, {@link SqlQueryBuilder}). This class handles
  * only the Vert.x-specific JavaPoet code generation.
  */
-public class SqlTraitVajramGen implements CodeGenerator {
-
-  private static final String SQL_VAJRAM_SUFFIX = "_VertxSql";
-  private static final String IMMUT_POJO_SUFFIX = "_ImmutPojo";
-  private static final String SQL_RESULT_FACET = "sqlResult";
-  static final String VERTX_SQL_POOL_FACET = "vertxSql_pool";
-
-  private static final ParameterizedTypeName ROW_SET_OF_ROW =
-      ParameterizedTypeName.get(RowSet.class, Row.class);
+public class SqlSelectVajramGen implements CodeGenerator {
 
   private final CodeGenUtility util;
   private final VajramInfo vajramInfo;
@@ -84,7 +78,7 @@ public class SqlTraitVajramGen implements CodeGenerator {
   private final VajramCodeGenUtility vajramUtil;
   private final VajramInfo executSqlVajram;
 
-  public SqlTraitVajramGen(
+  public SqlSelectVajramGen(
       VajramCodeGenUtility vajramUtil, VajramInfo vajramInfo, SqlModelParser parser) {
     this.util = vajramUtil.codegenUtil();
     this.vajramInfo = vajramInfo;
@@ -104,7 +98,7 @@ public class SqlTraitVajramGen implements CodeGenerator {
             .getQualifiedName()
             .toString();
     String traitName = sqlTraitElement.getSimpleName().toString();
-    String vajramName = traitName + SQL_VAJRAM_SUFFIX;
+    String vajramName = traitName + VertxSqlUtil.SQL_VAJRAM_SUFFIX;
 
     VajramInfo vajramInfo = vajramUtil.computeVajramInfo(sqlTraitElement);
     TraitResultType resultType = parseTraitResultType(vajramInfo);
@@ -298,19 +292,19 @@ public class SqlTraitVajramGen implements CodeGenerator {
             .addMember("value", "$T.$L", FAIL.getDeclaringClass(), "FAIL")
             .build();
     MethodSpec poolField =
-        MethodSpec.methodBuilder(VERTX_SQL_POOL_FACET)
+        MethodSpec.methodBuilder(VertxSqlUtil.VERTX_SQL_POOL_FACET)
             .returns(ClassName.get(Pool.class))
             .addModifiers(PUBLIC, ABSTRACT)
             .addAnnotation(ifAbsentFail)
             .addAnnotation(Inject.class)
             .addAnnotation(
                 AnnotationSpec.builder(Named.class)
-                    .addMember("value", "$S", VERTX_SQL_POOL_FACET)
+                    .addMember("value", "$S", VertxSqlUtil.VERTX_SQL_POOL_FACET)
                     .build())
             .build();
     MethodSpec sqlResultField =
-        MethodSpec.methodBuilder(SQL_RESULT_FACET)
-            .returns(ROW_SET_OF_ROW)
+        MethodSpec.methodBuilder(VertxSqlUtil.SQL_RESULT_FACET)
+            .returns(VertxSqlUtil.ROW_SET_OF_ROW)
             .addModifiers(PUBLIC, ABSTRACT)
             .addAnnotation(ifAbsentFail)
             .addAnnotation(
@@ -318,11 +312,13 @@ public class SqlTraitVajramGen implements CodeGenerator {
                     .addMember("onVajram", "$T.class", ExecuteVertxSql.class)
                     .build())
             .build();
-    return TypeSpec.interfaceBuilder("_InternalFacets")
-        .addModifiers(STATIC)
-        .addMethod(poolField)
-        .addMethod(sqlResultField)
-        .build();
+    TypeSpec.Builder builder =
+        TypeSpec.interfaceBuilder("_InternalFacets")
+            .addModifiers(STATIC)
+            .addMethod(poolField)
+            .addMethod(sqlResultField);
+
+    return builder.build();
   }
 
   // ─── @Resolve methods ────────────────────────────────────────────────────────
@@ -335,7 +331,7 @@ public class SqlTraitVajramGen implements CodeGenerator {
             .addModifiers(STATIC)
             .addAnnotation(
                 AnnotationSpec.builder(Resolve.class)
-                    .addMember("dep", "$T.$L", facClass, SQL_RESULT_FACET + "_n")
+                    .addMember("dep", "$T.$L", facClass, VertxSqlUtil.SQL_RESULT_FACET + "_n")
                     .addMember("depInputs", "$T.$L", getExecuteVertxSqlReq(), "sql_n")
                     .build())
             .returns(String.class);
@@ -359,7 +355,7 @@ public class SqlTraitVajramGen implements CodeGenerator {
             .addModifiers(STATIC)
             .addAnnotation(
                 AnnotationSpec.builder(Resolve.class)
-                    .addMember("dep", "$T.$L", facClass, SQL_RESULT_FACET + "_n")
+                    .addMember("dep", "$T.$L", facClass, VertxSqlUtil.SQL_RESULT_FACET + "_n")
                     .addMember("depInputs", "$T.$L", getExecuteVertxSqlReq(), "params_n")
                     .build())
             .returns(ClassName.get(Tuple.class));
@@ -374,15 +370,7 @@ public class SqlTraitVajramGen implements CodeGenerator {
         }
       }
     }
-    if (args.isEmpty()) {
-      method.addStatement("return $T.tuple()", ClassName.get(Tuple.class));
-    } else {
-      method.addStatement(
-          "return $T.from($T.of($L))",
-          ClassName.get(Tuple.class),
-          List.class,
-          args.stream().collect(CodeBlock.joining(", ")));
-    }
+    method.addStatement("return $T.from($L)", ClassName.get(Tuple.class), varArgsToList(args));
     return method.build();
   }
 
@@ -391,12 +379,12 @@ public class SqlTraitVajramGen implements CodeGenerator {
         .addModifiers(STATIC)
         .addAnnotation(
             AnnotationSpec.builder(Resolve.class)
-                .addMember("dep", "$T.$L", facClass, SQL_RESULT_FACET + "_n")
+                .addMember("dep", "$T.$L", facClass, VertxSqlUtil.SQL_RESULT_FACET + "_n")
                 .addMember("depInputs", "$T.$L", getExecuteVertxSqlReq(), "pool_n")
                 .build())
-        .addParameter(ClassName.get(Pool.class), VERTX_SQL_POOL_FACET)
+        .addParameter(ClassName.get(Pool.class), VertxSqlUtil.VERTX_SQL_POOL_FACET)
         .returns(ClassName.get(Pool.class))
-        .addStatement("return $L", VERTX_SQL_POOL_FACET)
+        .addStatement("return $L", VertxSqlUtil.VERTX_SQL_POOL_FACET)
         .build();
   }
 
@@ -426,7 +414,7 @@ public class SqlTraitVajramGen implements CodeGenerator {
   /** Maps the first row to the result type; returns {@code null} when the result set is empty. */
   private MethodSpec buildSingleMapResultMethod(
       SelectionInfo proj, String resultPkg, String resultName) {
-    ClassName resultImmutPojo = ClassName.get(resultPkg, resultName + IMMUT_POJO_SUFFIX);
+    ClassName resultImmutPojo = ClassName.get(resultPkg, resultName + Constants.IMMUT_POJO_SUFFIX);
 
     MethodSpec.Builder method =
         MethodSpec.methodBuilder("mapResult")
@@ -434,10 +422,13 @@ public class SqlTraitVajramGen implements CodeGenerator {
             .addAnnotation(Output.class)
             .addAnnotation(Nullable.class)
             .returns(ClassName.get(resultPkg, resultName))
-            .addParameter(ROW_SET_OF_ROW, SQL_RESULT_FACET);
+            .addParameter(VertxSqlUtil.ROW_SET_OF_ROW, VertxSqlUtil.SQL_RESULT_FACET);
 
     method.addStatement(
-        "$T<$T> _it = $L.iterator()", java.util.Iterator.class, Row.class, SQL_RESULT_FACET);
+        "$T<$T> _it = $L.iterator()",
+        java.util.Iterator.class,
+        Row.class,
+        VertxSqlUtil.SQL_RESULT_FACET);
     method.beginControlFlow("if (!_it.hasNext())");
     method.addStatement("return null");
     method.endControlFlow();
@@ -445,8 +436,7 @@ public class SqlTraitVajramGen implements CodeGenerator {
 
     CodeBlock.Builder chain = CodeBlock.builder().add("return $T._builder()", resultImmutPojo);
     for (ScalarColumn col : proj.scalars()) {
-      chain.add(
-          "\n    .$L($L)", col.methodName(), rowGetter("_row", col.methodName(), col.javaType()));
+      chain.add("\n    .$L($L)", col.methodName(), columnExpression("_row", col.methodName(), col));
     }
     chain.add("\n    ._build()");
     method.addStatement(chain.build());
@@ -457,7 +447,7 @@ public class SqlTraitVajramGen implements CodeGenerator {
   /** Maps all rows to a {@code List<result>}. */
   private MethodSpec buildListMapResultMethod(
       SelectionInfo proj, String resultPkg, String resultName, TypeName outputReturnTypeName) {
-    ClassName resultImmutPojo = ClassName.get(resultPkg, resultName + IMMUT_POJO_SUFFIX);
+    ClassName resultImmutPojo = ClassName.get(resultPkg, resultName + Constants.IMMUT_POJO_SUFFIX);
     ClassName resultClass = ClassName.get(resultPkg, resultName);
 
     MethodSpec.Builder method =
@@ -465,15 +455,14 @@ public class SqlTraitVajramGen implements CodeGenerator {
             .addModifiers(STATIC)
             .addAnnotation(Output.class)
             .returns(outputReturnTypeName)
-            .addParameter(ROW_SET_OF_ROW, SQL_RESULT_FACET);
+            .addParameter(VertxSqlUtil.ROW_SET_OF_ROW, VertxSqlUtil.SQL_RESULT_FACET);
 
     method.addStatement("$T<$T> _result = new $T<>()", List.class, resultClass, ArrayList.class);
-    method.beginControlFlow("for ($T _row : $L)", Row.class, SQL_RESULT_FACET);
+    method.beginControlFlow("for ($T _row : $L)", Row.class, VertxSqlUtil.SQL_RESULT_FACET);
 
     CodeBlock.Builder chain = CodeBlock.builder().add("_result.add($T._builder()", resultImmutPojo);
     for (ScalarColumn col : proj.scalars()) {
-      chain.add(
-          "\n    .$L($L)", col.methodName(), rowGetter("_row", col.methodName(), col.javaType()));
+      chain.add("\n    .$L($L)", col.methodName(), columnExpression("_row", col.methodName(), col));
     }
     chain.add("\n    ._build())");
     method.addStatement(chain.build());
@@ -499,16 +488,17 @@ public class SqlTraitVajramGen implements CodeGenerator {
       String resultName,
       TypeName outputReturnTypeName,
       String parentPkAlias) {
-    ClassName resultImmutPojo = ClassName.get(resultPkg, resultName + IMMUT_POJO_SUFFIX);
+    ClassName resultImmutPojo = ClassName.get(resultPkg, resultName + Constants.IMMUT_POJO_SUFFIX);
     ClassName resultClass = ClassName.get(resultPkg, resultName);
-    ClassName builderClass = ClassName.get(resultPkg, resultName + IMMUT_POJO_SUFFIX, "Builder");
+    ClassName builderClass =
+        ClassName.get(resultPkg, resultName + Constants.IMMUT_POJO_SUFFIX, "Builder");
 
     MethodSpec.Builder method =
         MethodSpec.methodBuilder("mapResult")
             .addModifiers(STATIC)
             .addAnnotation(Output.class)
             .returns(outputReturnTypeName)
-            .addParameter(ROW_SET_OF_ROW, SQL_RESULT_FACET);
+            .addParameter(VertxSqlUtil.ROW_SET_OF_ROW, VertxSqlUtil.SQL_RESULT_FACET);
 
     // Pre-loop: LinkedHashMap<Object, Builder> for parent rows, keyed by parent PK
     method.addStatement(
@@ -524,7 +514,8 @@ public class SqlTraitVajramGen implements CodeGenerator {
       String joinSelectionName = join.childSelectionElement().getSimpleName().toString();
       ClassName joinClass = ClassName.get(joinSelectionPkg, joinSelectionName);
       ClassName joinBuilderClass =
-          ClassName.get(joinSelectionPkg, joinSelectionName + IMMUT_POJO_SUFFIX, "Builder");
+          ClassName.get(
+              joinSelectionPkg, joinSelectionName + Constants.IMMUT_POJO_SUFFIX, "Builder");
 
       if (join.nestedJoins().isEmpty()) {
         // Simple: LinkedHashMap<Object, List<JoinType>> — outer key = parent PK
@@ -567,7 +558,7 @@ public class SqlTraitVajramGen implements CodeGenerator {
       }
     }
 
-    method.beginControlFlow("for ($T _row : $L)", Row.class, SQL_RESULT_FACET);
+    method.beginControlFlow("for ($T _row : $L)", Row.class, VertxSqlUtil.SQL_RESULT_FACET);
 
     // Parent key
     method.addStatement("$T _parentKey = _row.getValue($S)", Object.class, parentPkAlias);
@@ -578,7 +569,7 @@ public class SqlTraitVajramGen implements CodeGenerator {
         CodeBlock.builder().add("_parentBuilders.put(_parentKey, $T._builder()", resultImmutPojo);
     for (ScalarColumn col : selection.scalars()) {
       String alias = selection.tableName() + "_" + col.methodName();
-      parentChain.add("\n    .$L($L)", col.methodName(), rowGetter("_row", alias, col.javaType()));
+      parentChain.add("\n    .$L($L)", col.methodName(), columnExpression("_row", alias, col));
     }
     parentChain.add(")");
     method.addStatement(parentChain.build());
@@ -604,23 +595,23 @@ public class SqlTraitVajramGen implements CodeGenerator {
     for (JoinRelation join : selection.joins()) {
       String joinProjPkg = projPkg(join);
       String joinProjName = join.childSelectionElement().getSimpleName().toString();
-      ClassName joinImmutPojo = ClassName.get(joinProjPkg, joinProjName + IMMUT_POJO_SUFFIX);
+      ClassName joinImmutPojo =
+          ClassName.get(joinProjPkg, joinProjName + Constants.IMMUT_POJO_SUFFIX);
 
       if (join.nestedJoins().isEmpty()) {
         String sentinelMethodName = findSentinelMethodName(join);
         if (sentinelMethodName == null) {
           return method.build();
         }
-        String sentinelAlias = join.tableName() + "_" + sentinelMethodName;
+        String sentinelAlias = join.methodName() + "_" + sentinelMethodName;
         method.beginControlFlow(
             "if (_parentKey != null && _row.getValue($S) != null)", sentinelAlias);
         CodeBlock.Builder childChain =
             CodeBlock.builder()
                 .add("_$L.get(_parentKey).add($T._builder()", join.methodName(), joinImmutPojo);
         for (ScalarColumn col : join.columns()) {
-          String alias = join.tableName() + "_" + col.methodName();
-          childChain.add(
-              "\n    .$L($L)", col.methodName(), rowGetter("_row", alias, col.javaType()));
+          String alias = join.methodName() + "_" + col.methodName();
+          childChain.add("\n    .$L($L)", col.methodName(), columnExpression("_row", alias, col));
         }
         childChain.add("\n    ._build())");
         method.addStatement(childChain.build());
@@ -631,7 +622,7 @@ public class SqlTraitVajramGen implements CodeGenerator {
         if (childPkMethodName == null) {
           return method.build();
         }
-        String childPkAlias = join.tableName() + "_" + childPkMethodName;
+        String childPkAlias = join.methodName() + "_" + childPkMethodName;
         method.addStatement(
             "$T _$LKey = _row.getValue($S)", Object.class, join.methodName(), childPkAlias);
         method.beginControlFlow(
@@ -648,8 +639,8 @@ public class SqlTraitVajramGen implements CodeGenerator {
                     join.methodName(),
                     joinImmutPojo);
         for (ScalarColumn col : join.columns()) {
-          String alias = join.tableName() + "_" + col.methodName();
-          l1Chain.add("\n    .$L($L)", col.methodName(), rowGetter("_row", alias, col.javaType()));
+          String alias = join.methodName() + "_" + col.methodName();
+          l1Chain.add("\n    .$L($L)", col.methodName(), columnExpression("_row", alias, col));
         }
         l1Chain.add(")");
         method.addStatement(l1Chain.build());
@@ -667,12 +658,12 @@ public class SqlTraitVajramGen implements CodeGenerator {
           String nestedProjPkg = projPkg(nested);
           String nestedProjName = nested.childSelectionElement().getSimpleName().toString();
           ClassName nestedImmutPojo =
-              ClassName.get(nestedProjPkg, nestedProjName + IMMUT_POJO_SUFFIX);
+              ClassName.get(nestedProjPkg, nestedProjName + Constants.IMMUT_POJO_SUFFIX);
           String nestedSentinelMethodName = findSentinelMethodName(nested);
           if (nestedSentinelMethodName == null) {
             return method.build();
           }
-          String nestedSentinelAlias = nested.tableName() + "_" + nestedSentinelMethodName;
+          String nestedSentinelAlias = nested.methodName() + "_" + nestedSentinelMethodName;
           method.beginControlFlow(
               "if (_parentKey != null && _$LKey != null && _row.getValue($S) != null)",
               join.methodName(),
@@ -686,9 +677,8 @@ public class SqlTraitVajramGen implements CodeGenerator {
                       join.methodName(),
                       nestedImmutPojo);
           for (ScalarColumn col : nested.columns()) {
-            String alias = nested.tableName() + "_" + col.methodName();
-            l2Chain.add(
-                "\n    .$L($L)", col.methodName(), rowGetter("_row", alias, col.javaType()));
+            String alias = nested.methodName() + "_" + col.methodName();
+            l2Chain.add("\n    .$L($L)", col.methodName(), columnExpression("_row", alias, col));
           }
           l2Chain.add("\n    ._build())");
           method.addStatement(l2Chain.build());
@@ -767,8 +757,9 @@ public class SqlTraitVajramGen implements CodeGenerator {
       String resultName,
       String vajramName,
       String parentPkAlias) {
-    ClassName resultImmutPojo = ClassName.get(resultPkg, resultName + IMMUT_POJO_SUFFIX);
-    ClassName builderClass = ClassName.get(resultPkg, resultName + IMMUT_POJO_SUFFIX, "Builder");
+    ClassName resultImmutPojo = ClassName.get(resultPkg, resultName + Constants.IMMUT_POJO_SUFFIX);
+    ClassName builderClass =
+        ClassName.get(resultPkg, resultName + Constants.IMMUT_POJO_SUFFIX, "Builder");
 
     MethodSpec.Builder method =
         MethodSpec.methodBuilder("mapResult")
@@ -776,7 +767,7 @@ public class SqlTraitVajramGen implements CodeGenerator {
             .addAnnotation(Output.class)
             .addAnnotation(Nullable.class)
             .returns(ClassName.get(resultPkg, resultName))
-            .addParameter(ROW_SET_OF_ROW, SQL_RESULT_FACET);
+            .addParameter(VertxSqlUtil.ROW_SET_OF_ROW, VertxSqlUtil.SQL_RESULT_FACET);
 
     method.addStatement("$T _parent = null", builderClass);
 
@@ -791,7 +782,7 @@ public class SqlTraitVajramGen implements CodeGenerator {
       String joinProjName = join.childSelectionElement().getSimpleName().toString();
       ClassName joinClass = ClassName.get(joinProjPkg, joinProjName);
       ClassName joinBuilderClass =
-          ClassName.get(joinProjPkg, joinProjName + IMMUT_POJO_SUFFIX, "Builder");
+          ClassName.get(joinProjPkg, joinProjName + Constants.IMMUT_POJO_SUFFIX, "Builder");
 
       if (join.nestedJoins().isEmpty()) {
         // Simple: accumulate into a List
@@ -824,7 +815,7 @@ public class SqlTraitVajramGen implements CodeGenerator {
       }
     }
 
-    method.beginControlFlow("for ($T _row : $L)", Row.class, SQL_RESULT_FACET);
+    method.beginControlFlow("for ($T _row : $L)", Row.class, VertxSqlUtil.SQL_RESULT_FACET);
 
     // Parent initialisation / identity validation
     if (hasValidation) {
@@ -839,7 +830,7 @@ public class SqlTraitVajramGen implements CodeGenerator {
         CodeBlock.builder().add("_parent = $T._builder()", resultImmutPojo);
     for (ScalarColumn col : proj.scalars()) {
       String alias = proj.tableName() + "_" + col.methodName();
-      parentChain.add("\n    .$L($L)", col.methodName(), rowGetter("_row", alias, col.javaType()));
+      parentChain.add("\n    .$L($L)", col.methodName(), columnExpression("_row", alias, col));
     }
     method.addStatement(parentChain.build());
 
@@ -866,7 +857,8 @@ public class SqlTraitVajramGen implements CodeGenerator {
     for (JoinRelation join : proj.joins()) {
       String joinProjPkg = projPkg(join);
       String joinProjName = join.childSelectionElement().getSimpleName().toString();
-      ClassName joinImmutPojo = ClassName.get(joinProjPkg, joinProjName + IMMUT_POJO_SUFFIX);
+      ClassName joinImmutPojo =
+          ClassName.get(joinProjPkg, joinProjName + Constants.IMMUT_POJO_SUFFIX);
 
       if (join.nestedJoins().isEmpty()) {
         // Simple: sentinel-null-check then append to list
@@ -874,14 +866,13 @@ public class SqlTraitVajramGen implements CodeGenerator {
         if (sentinelMethodName == null) {
           return method.build();
         }
-        String sentinelAlias = join.tableName() + "_" + sentinelMethodName;
+        String sentinelAlias = join.methodName() + "_" + sentinelMethodName;
         method.beginControlFlow("if (_row.getValue($S) != null)", sentinelAlias);
         CodeBlock.Builder childChain =
             CodeBlock.builder().add("_$L.add($T._builder()", join.methodName(), joinImmutPojo);
         for (ScalarColumn col : join.columns()) {
-          String alias = join.tableName() + "_" + col.methodName();
-          childChain.add(
-              "\n    .$L($L)", col.methodName(), rowGetter("_row", alias, col.javaType()));
+          String alias = join.methodName() + "_" + col.methodName();
+          childChain.add("\n    .$L($L)", col.methodName(), columnExpression("_row", alias, col));
         }
         childChain.add("\n    ._build())");
         method.addStatement(childChain.build());
@@ -892,7 +883,7 @@ public class SqlTraitVajramGen implements CodeGenerator {
         if (childPkMethodName == null) {
           return method.build();
         }
-        String childPkAlias = join.tableName() + "_" + childPkMethodName;
+        String childPkAlias = join.methodName() + "_" + childPkMethodName;
         method.addStatement(
             "$T _$LKey = _row.getValue($S)", Object.class, join.methodName(), childPkAlias);
         method.beginControlFlow(
@@ -909,8 +900,8 @@ public class SqlTraitVajramGen implements CodeGenerator {
                     join.methodName(),
                     joinImmutPojo);
         for (ScalarColumn col : join.columns()) {
-          String alias = join.tableName() + "_" + col.methodName();
-          l1Chain.add("\n    .$L($L)", col.methodName(), rowGetter("_row", alias, col.javaType()));
+          String alias = join.methodName() + "_" + col.methodName();
+          l1Chain.add("\n    .$L($L)", col.methodName(), columnExpression("_row", alias, col));
         }
         l1Chain.add(")");
         method.addStatement(l1Chain.build());
@@ -930,12 +921,12 @@ public class SqlTraitVajramGen implements CodeGenerator {
           String nestedProjPkg = projPkg(nested);
           String nestedProjName = nested.childSelectionElement().getSimpleName().toString();
           ClassName nestedImmutPojo =
-              ClassName.get(nestedProjPkg, nestedProjName + IMMUT_POJO_SUFFIX);
+              ClassName.get(nestedProjPkg, nestedProjName + Constants.IMMUT_POJO_SUFFIX);
           String nestedSentinelMethodName = findSentinelMethodName(nested);
           if (nestedSentinelMethodName == null) {
             return method.build();
           }
-          String nestedSentinelAlias = nested.tableName() + "_" + nestedSentinelMethodName;
+          String nestedSentinelAlias = nested.methodName() + "_" + nestedSentinelMethodName;
           method.beginControlFlow(
               "if (_$LKey != null && _row.getValue($S) != null)",
               join.methodName(),
@@ -949,9 +940,8 @@ public class SqlTraitVajramGen implements CodeGenerator {
                       join.methodName(),
                       nestedImmutPojo);
           for (ScalarColumn col : nested.columns()) {
-            String alias = nested.tableName() + "_" + col.methodName();
-            l2Chain.add(
-                "\n    .$L($L)", col.methodName(), rowGetter("_row", alias, col.javaType()));
+            String alias = nested.methodName() + "_" + col.methodName();
+            l2Chain.add("\n    .$L($L)", col.methodName(), columnExpression("_row", alias, col));
           }
           l2Chain.add("\n    ._build())");
           method.addStatement(l2Chain.build());
@@ -1135,5 +1125,28 @@ public class SqlTraitVajramGen implements CodeGenerator {
       case "java.util.UUID" -> rowVar + ".getUUID(" + q + ")";
       default -> rowVar + ".getValue(" + q + ")";
     };
+  }
+
+  // ─── Serde deserialization helpers ──────────────────────────────────────────
+
+  /**
+   * Returns a {@link CodeBlock} for extracting a column value from a row. For columns with serde
+   * info, this generates a deserialization call; otherwise it delegates to {@link #rowGetter}.
+   */
+  private CodeBlock columnExpression(String rowVar, String alias, ScalarColumn col) {
+    if (col.serdeInfo() != null) {
+      return deserializeExpression(rowVar, alias, col);
+    }
+    return CodeBlock.of("$L", rowGetter(rowVar, alias, col.javaType()));
+  }
+
+  /**
+   * Generates a deserialization expression: {@code facet.deserialize(row.getValue(alias), typeInfo,
+   * config)} with a null guard so that SQL NULL values are passed through as {@code null}.
+   */
+  private CodeBlock deserializeExpression(String rowVar, String alias, ScalarColumn col) {
+    return loadProtocolConfig(requireNonNull(col.serdeInfo()).protocolTypeElement())
+        .createDeserializationExpression(
+            CodeBlock.of("$L.getValue($S)", rowVar, alias), col.javaType(), util);
   }
 }

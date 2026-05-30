@@ -1,11 +1,16 @@
 package com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model;
 
+import static com.flipkart.krystal.vajram.json.JsonConfig.SerdeOutputType.STRING;
+
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.vajram.ext.sql.model.IncomingForeignKey;
 import com.flipkart.krystal.vajram.ext.sql.model.PrimaryKey;
+import com.flipkart.krystal.vajram.ext.sql.model.SerdeWith;
 import com.flipkart.krystal.vajram.ext.sql.model.Table;
 import com.flipkart.krystal.vajram.ext.sql.model.TableModel;
 import com.flipkart.krystal.vajram.ext.sql.model.UniqueKey;
+import com.flipkart.krystal.vajram.json.Json;
+import com.flipkart.krystal.vajram.json.JsonConfig;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,7 +27,7 @@ import java.util.Optional;
  * </ul>
  */
 @ModelRoot
-@Table(name = "users")
+@Table(name = "UserEntity")
 public interface User extends TableModel {
 
   @PrimaryKey
@@ -34,6 +39,14 @@ public interface User extends TableModel {
   String email();
 
   Optional<String> phoneNumber();
+
+  @SerdeWith(Json.class)
+  @JsonConfig(serializeAs = STRING)
+  Address address();
+
+  @SerdeWith(Json.class)
+  @JsonConfig(serializeAs = STRING)
+  List<Address> secondaryAddresses();
 
   /**
    * Reverse side of the FK declared on {@link Order#userId()}. This is not a real column in the

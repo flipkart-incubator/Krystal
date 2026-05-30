@@ -5,6 +5,7 @@ import com.squareup.javapoet.CodeBlock;
 import java.util.List;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Data model types shared between {@link SqlModelParser} and {@link SqlQueryBuilder} — and by
@@ -25,7 +26,11 @@ public final class SqlQueryModel {
    * @param isOptional {@code true} when the selection method returns {@code Optional<T>}
    */
   public record ScalarColumn(
-      String methodName, String dbColumnName, TypeMirror javaType, boolean isOptional) {}
+      String methodName,
+      String dbColumnName,
+      TypeMirror javaType,
+      boolean isOptional,
+      @Nullable SerdeColumnInfo serdeInfo) {}
 
   /** A single {@code ORDER BY col [ASC|DESC]} term. */
   public record OrderByClause(String columnName, ORDER.Direction direction) {}
@@ -130,4 +135,12 @@ public final class SqlQueryModel {
    *     used by the code generator to emit per-row parent identity validation
    */
   public record JoinSqlResult(CodeBlock sql, String parentPkAlias) {}
+
+  /**
+   * Serialization/deserialization info for a column annotated with {@code @SerdeWith}.
+   *
+   * @param protocolTypeElement the {@code SerdeProtocol} implementation (e.g. {@code Json})
+   * @param columnType
+   */
+  public record SerdeColumnInfo(TypeElement protocolTypeElement, TypeMirror columnType) {}
 }

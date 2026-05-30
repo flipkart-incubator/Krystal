@@ -269,6 +269,7 @@ final class ForyModelsGen implements CodeGenerator {
           yield CodeBlock.of("this.$L = $L;", fieldName, fieldName);
         }
       }
+      case RANGE -> CodeBlock.of("this.$L = $L;", fieldName, fieldName);
       case LIST -> {
         if (fieldModelRootInfo.isPresent()
             && !util.isEnumModel(fieldModelRootInfo.get().element())) {

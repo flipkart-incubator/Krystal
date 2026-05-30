@@ -3,6 +3,7 @@ package com.flipkart.krystal.codegen.common.datatypes;
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.standardTypesByCanonicalName;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenerationException;
+import com.flipkart.krystal.model.DefaultValue;
 import com.google.common.collect.ImmutableList;
 import com.squareup.javapoet.CodeBlock;
 import java.util.List;
@@ -60,12 +61,13 @@ public final class JavaCodeGenType implements CodeGenType {
       List<VariableElement> fields = ElementFilter.fieldsIn(element.getEnclosedElements());
       for (VariableElement field : fields) {
         // Filter specifically for ENUM_CONSTANT
-        if (field.getKind() == ElementKind.ENUM_CONSTANT) {
+        if (field.getKind() == ElementKind.ENUM_CONSTANT
+            && field.getAnnotation(DefaultValue.class) != null) {
           return CodeBlock.of("$T.$L", typeMirror, field.getSimpleName());
         }
       }
       throw new CodeGenerationException(
-          "No default value for enum type since enum is empty - at least one value is needed to default to '%s'"
+          "No default value for enum type '%s' - at least one value with @DefaultValue is needed for default value expression"
               .formatted(this));
     }
 

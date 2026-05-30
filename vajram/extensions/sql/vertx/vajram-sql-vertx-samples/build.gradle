@@ -12,8 +12,10 @@ dependencies {
 
     implementation 'com.flipkart.krystal:vajram-sql'
     implementation 'com.flipkart.krystal:vajram-sql-vertx'
+    implementation 'com.flipkart.krystal:vajram-json'
     krystalModelsGenProcessor 'com.flipkart.krystal:vajram-codegen'
     krystalModelsGenProcessor 'com.flipkart.krystal:vajram-sql-vertx-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-json-codegen'
 
     compileOnly "org.projectlombok:lombok:${lombok_version}"
     annotationProcessor "org.projectlombok:lombok:${lombok_version}"
