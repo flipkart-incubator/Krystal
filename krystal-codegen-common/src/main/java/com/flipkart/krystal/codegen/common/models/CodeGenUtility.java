@@ -21,7 +21,9 @@ import com.flipkart.krystal.codegen.common.datatypes.DataTypeRegistry;
 import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider;
 import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider.ModelProtocolConfig;
 import com.flipkart.krystal.datatypes.JavaType;
+import com.flipkart.krystal.model.EnumModel;
 import com.flipkart.krystal.model.IfAbsent;
+import com.flipkart.krystal.model.IfAbsent.Creator;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
@@ -45,6 +47,7 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeSpec.Builder;
 import com.squareup.javapoet.TypeVariableName;
+import com.squareup.javapoet.WildcardTypeName;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -65,6 +68,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.ServiceLoader;
+import java.util.ServiceLoader.Provider;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
@@ -145,6 +149,17 @@ public class CodeGenUtility {
 
   public static String lowerCaseFirstChar(String str) {
     return str.isEmpty() ? str : Character.toLowerCase(str.charAt(0)) + str.substring(1);
+  }
+
+  public TypeName replaceTypeWith(TypeMirror typeMirror, TypeName replacement) {
+    return switch (getContainerType(typeMirror)) {
+      case NO_CONTAINER -> replacement;
+      case LIST -> ParameterizedTypeName.get(ClassName.get(List.class), replacement);
+      case RANGE -> ParameterizedTypeName.get(ClassName.get(Range.class), replacement);
+      case MAP ->
+          ParameterizedTypeName.get(
+              ClassName.get(Map.class), TypeName.get(getMapKeyType(typeMirror)), replacement);
+    };
   }
 
   public boolean isListType(TypeMirror type) {
@@ -281,13 +296,13 @@ public class CodeGenUtility {
                 .formatted(modelElement.getSimpleName()),
             modelElement);
         // Fallback to FAIL to continue processing
-        ifAbsent = IfAbsent.Creator.create(FAIL);
+        ifAbsent = Creator.create(FAIL);
       } else if (isRequest) {
-        ifAbsent = IfAbsent.Creator.create(MAY_FAIL_CONDITIONALLY);
+        ifAbsent = Creator.create(MAY_FAIL_CONDITIONALLY);
       } else if (optOrNullable) {
-        ifAbsent = IfAbsent.Creator.create(WILL_NEVER_FAIL);
+        ifAbsent = Creator.create(WILL_NEVER_FAIL);
       } else {
-        ifAbsent = IfAbsent.Creator.create(FAIL);
+        ifAbsent = Creator.create(FAIL);
       }
     }
     return ifAbsent;
@@ -983,9 +998,9 @@ public class CodeGenUtility {
   }
 
   public <T> T getAnnotationElement(
-      AnnotationMirror parentModelRootAnno, String annoElement, Class<T> type) {
+      AnnotationMirror annotationMirror, String annoElement, Class<T> type) {
     return type.cast(
-        elementUtils.getElementValuesWithDefaults(parentModelRootAnno).entrySet().stream()
+        elementUtils.getElementValuesWithDefaults(annotationMirror).entrySet().stream()
             .filter(e -> e.getKey().getSimpleName().contentEquals(annoElement))
             .findAny()
             .map(Entry::getValue)
@@ -1125,6 +1140,7 @@ public class CodeGenUtility {
             }
             yield typeName;
           }
+          case RANGE -> typeName;
           case LIST -> {
             if (isBuilder) {
               if (fieldModelRootInfo.isPresent()
@@ -1194,7 +1210,20 @@ public class CodeGenUtility {
     if (isBuilder && inferredType instanceof PrimitiveType primitiveType) {
       inferredType = typeUtils.boxedClass(primitiveType).asType();
     }
-    TypeName typeName = inferredType.accept(new TypeNameVisitor(), null);
+
+    TypeName typeName;
+    Optional<ModelRootInfo> modelRootInfo = asModelRoot(inferredType, method);
+    if (modelRootInfo.isPresent()
+        && modelRootInfo.get().containerType().isContainer()
+        && !isEnumModel(modelRootInfo.get().element())) {
+      typeName =
+          replaceTypeWith(
+              inferredType,
+              WildcardTypeName.subtypeOf(
+                  getContentType(inferredType).accept(new TypeNameVisitor(), null)));
+    } else {
+      typeName = inferredType.accept(new TypeNameVisitor(), null);
+    }
 
     // Add @Nullable annotation for Optional types or methods with @Nullable annotation
     if (isOptional || isNullable || isBuilder) {
@@ -1271,7 +1300,7 @@ public class CodeGenUtility {
     Map<String, ModelProtocol> availableModelProtocols =
         ServiceLoader.load(ModelProtocolConfigProvider.class, this.getClass().getClassLoader())
             .stream()
-            .map(ServiceLoader.Provider::get)
+            .map(Provider::get)
             .map(ModelProtocolConfigProvider::getConfig)
             .map(ModelProtocolConfig::modelProtocol)
             .collect(
@@ -1282,6 +1311,7 @@ public class CodeGenUtility {
         .map(element -> element.getQualifiedName().toString())
         .map(availableModelProtocols::get)
         .filter(Objects::nonNull)
+        .map(Objects::requireNonNull)
         .toList();
   }
 
@@ -1336,6 +1366,23 @@ public class CodeGenUtility {
     }
   }
 
+  public <T extends Annotation> @Nullable AnnotationMirror getAnnotationMirror(
+      AnnotatedConstruct annotatedElement, Class<T> annoClass) {
+    return getAnnotationMirror(annotatedElement, requireNonNull(annoClass.getCanonicalName()));
+  }
+
+  public @Nullable AnnotationMirror getAnnotationMirror(
+      AnnotatedConstruct annotatedElement, String annoClassCanonicalName) {
+    Optional<? extends AnnotationMirror> any =
+        annotatedElement.getAnnotationMirrors().stream()
+            .filter(
+                annotationMirror ->
+                    annotationMirror.getAnnotationType().asElement() instanceof QualifiedNameable q
+                        && q.getQualifiedName().contentEquals(annoClassCanonicalName))
+            .findAny();
+    return any.isPresent() ? any.get() : null;
+  }
+
   public <T extends Annotation> @Nullable AnnotationInfo<T> getAnnotationInfo(
       AnnotatedConstruct annotatedElement, Class<T> annoClass) {
     T annotation = annotatedElement.getAnnotation(annoClass);
@@ -1358,7 +1405,14 @@ public class CodeGenUtility {
       Class<T> annoClass,
       Function<Map<String, AnnotationValue>, T> annoCreator) {
     // annotatedType.getAnnotation(annoClass) always returns null - we need to use AnnotationMirror
-    return annotatedType.getAnnotationMirrors().stream()
+    return getAnnotationInfos(annotatedType.getAnnotationMirrors(), annoClass, annoCreator);
+  }
+
+  public <T extends Annotation> List<AnnotationInfo<T>> getAnnotationInfos(
+      List<? extends AnnotationMirror> annotationMirrors,
+      Class<T> annoClass,
+      Function<Map<String, AnnotationValue>, T> annoCreator) {
+    return annotationMirrors.stream()
         .filter(
             annotationMirror ->
                 annotationMirror.getAnnotationType().asElement() instanceof QualifiedNameable q
@@ -1368,7 +1422,7 @@ public class CodeGenUtility {
         .toList();
   }
 
-  private <T extends Annotation> T annotationFromMirror(
+  public <T extends Annotation> T annotationFromMirror(
       AnnotationMirror mirror, Function<Map<String, AnnotationValue>, T> annoCreator) {
 
     Map<String, AnnotationValue> elementValuesWithDefaults = new LinkedHashMap<>();
@@ -1384,69 +1438,49 @@ public class CodeGenUtility {
     return asModelRoot(javaModelType, elements).isPresent();
   }
 
-  public ContainerType getContainerType(TypeMirror javaModelType) {
-    boolean isOptional = isOptional(javaModelType);
-    if (isOptional) {
-      javaModelType = getOptionalInnerType(javaModelType);
-    }
-    boolean isListType = isListType(javaModelType);
-    return isListType
-        ? ContainerType.LIST
-        : isMapType(javaModelType) ? ContainerType.MAP : ContainerType.NO_CONTAINER;
-  }
-
-  public Optional<ModelRootInfo> asModelRoot(TypeMirror javaModelType, Element... elements) {
-    if (elements.length == 0) {
-      elements =
-          new Element[] {
-            requireNonNull(
-                typeUtils.asElement(javaModelType),
-                "Not possible - javaModelType must always resolved to a TypeElement. Bug in the framework? Issue with project setup?")
-          };
-    }
-    ContainerType containerType = ContainerType.NO_CONTAINER;
+  public ContainerType getContainerType(TypeMirror javaModelType, Element... elements) {
+    javaModelType = getOptionalInnerType(javaModelType);
     if (isOptional(javaModelType)) {
-      javaModelType = getOptionalInnerType(javaModelType);
-      if (isOptional(javaModelType)) {
-        error(
-            "Optional of Optional (Optional<Optional<..>>) is not supported by Krystal Modelling framework",
-            elements);
-      }
+      error(
+          "Optional of Optional (Optional<Optional<..>>) is not supported by Krystal Modelling framework",
+          elements);
     }
     if (isListType(javaModelType)) {
-      javaModelType = getContentType(javaModelType);
-      if (isListType(javaModelType)) {
+      if (isListType(getContentType(javaModelType))) {
         error(
             "List of Lists (List<List<..>>) is not supported by Krystal Modelling protocol",
             elements);
       }
-      containerType = ContainerType.LIST;
+      return ContainerType.LIST;
     } else if (isMapType(javaModelType)) {
-      javaModelType = getMapValueType(javaModelType);
-      if (isMapType(javaModelType)) {
+      if (isMapType(getContentType(javaModelType))) {
         error(
             "Map of Maps (Map<K, Map<..>>) is not supported by Krystal Modelling protocol",
             elements);
       }
-      containerType = ContainerType.MAP;
+      return ContainerType.MAP;
+    } else if (isRangeType(javaModelType)) {
+      return ContainerType.RANGE;
     }
-    if (!isRawAssignable(javaModelType, Model.class)) {
+    return ContainerType.NO_CONTAINER;
+  }
+
+  public Optional<ModelRootInfo> asModelRoot(TypeMirror javaModelType, Element... elements) {
+    TypeMirror contentType = getContentType(getOptionalInnerType(javaModelType));
+    if (!isRawAssignable(contentType, Model.class)) {
       return Optional.empty();
     }
-    if (typeUtils.asElement(javaModelType) instanceof TypeElement typeElement) {
+    ContainerType containerType = getContainerType(javaModelType, elements);
+    if (typeUtils.asElement(contentType) instanceof TypeElement typeElement) {
       ModelRoot annotation = typeElement.getAnnotation(ModelRoot.class);
       if (annotation != null) {
-        return Optional.of(
-            new ModelRootInfo(typeElement, javaModelType, annotation, containerType));
+        return Optional.of(new ModelRootInfo(typeElement, contentType, annotation, containerType));
       }
     }
     return Optional.empty();
   }
 
-  /**
-   * Returns true if the given TypeElement is an enum that implements {@link
-   * com.flipkart.krystal.model.EnumModel}.
-   */
+  /** Returns true if the given TypeElement is an enum that implements {@link EnumModel}. */
   public boolean isEnumModel(@Nullable Element typeElement) {
     if (typeElement == null) {
       return false;
@@ -1456,7 +1490,7 @@ public class CodeGenUtility {
 
   /**
    * Returns true if the given TypeMirror is an enum type annotated with {@link ModelRoot} and
-   * implementing {@link com.flipkart.krystal.model.EnumModel}.
+   * implementing {@link EnumModel}.
    */
   public boolean isEnumModelType(TypeMirror type) {
     Element element = processingEnv().getTypeUtils().asElement(type);
@@ -1475,6 +1509,7 @@ public class CodeGenUtility {
     NO_CONTAINER,
     LIST,
     MAP,
+    RANGE,
     ;
 
     public boolean isContainer() {

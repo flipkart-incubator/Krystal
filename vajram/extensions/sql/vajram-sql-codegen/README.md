@@ -18,16 +18,26 @@ vajram-sql-vertx-codegen  (Vert.x-specific JavaPoet code generation)
 ```
 
 The module exports a single package — `com.flipkart.krystal.vajram.ext.sql.codegen` — containing
-three classes:
+these classes:
+
+### SELECT support
 
 | Class                  | Responsibility                                                                     |
 |------------------------|------------------------------------------------------------------------------------|
-| `SqlQueryModel`        | Immutable data records that represent a parsed SQL query                            |
+| `SqlQueryModel`        | Immutable data records that represent a parsed SQL SELECT query                    |
 | `SqlModelParser`       | Reads annotations from source elements and produces `SqlQueryModel` records         |
-| `SqlQueryBuilder`      | Accepts `SqlQueryModel` records and produces SQL query strings                      |
+| `SqlQueryBuilder`      | Accepts `SqlQueryModel` records and produces SQL SELECT query strings               |
 | `WhereOperator`        | Interface for WHERE clause operators — `toSql` for SQL generation, `toJavaParams` for runtime parameter extraction |
 | `SimpleWhereOperator`  | Implements `WhereOperator` for simple comparisons (`=`, `>`, `>=`, `<`, `<=`)      |
 | `RangeWhereOperator`   | Implements `WhereOperator` for `@IsInRange` — generates dual-bound SQL with runtime-adaptive open/closed comparison |
+
+### INSERT support
+
+| Class                  | Responsibility                                                                     |
+|------------------------|------------------------------------------------------------------------------------|
+| `InsertQueryModel`     | Immutable data records that represent a parsed SQL INSERT trait                     |
+| `InsertModelParser`    | Reads `@INSERT` trait inputs, validates `@Table` types, extracts columns (respects `@Column` for DB column names) |
+| `InsertQueryBuilder`   | Accepts `InsertQueryModel` records and produces parameterized SQL INSERT strings    |
 
 ---
 
@@ -81,8 +91,8 @@ This class is **framework-agnostic** — it does not reference Vert.x or any spe
 | `resolveComparisonOperator`     | `ExecutableElement`       | `WhereOperator`    | Returns the SQL operator from annotations (`@IsEqualTo`→`=`, `@IsGreaterThan`→`>`, `@IsGreaterThanOrEqual`→`>=`, `@IsLessThan`→`<`, `@IsLessThanOrEqual`→`<=`, `@IsInRange`→range comparison); validates comparable type for ordering operators and `Range<T>` for `@IsInRange` |
 | `getTableName`                  | `TypeElement` (table)     | `String`           | Returns `@Table(name = "...")` value                                                                                                                                                                                                                                            |
 | `findPkColumn`                  | `TypeElement` (table)     | `String`           | Finds the `@PrimaryKey` column name                                                                                                                                                                                                                                             |
-| `findFkColumnInChildForParent`  | child table, parent table | `String`           | Finds the `@ForeignKey` column in the child that references the parent                                                                                                                                                                                                          |
-| `hasIncomingFkForChild`         | parent table, child table | `boolean`          | Checks for `@IncomingForeignKey` on the parent side                                                                                                                                                                                                                             |
+| `findFkColumnInChildForParent`  | child table, parent table | `String`           | Finds the `@ForeignKey(toTable = ...)` column in the child that references the parent; respects `@Column` for DB name                                                                                                                                                           |
+| `hasIncomingFkForChild`         | parent table, child table | `boolean`          | Checks for `@IncomingForeignKey` on the parent side whose return type (unwrapped from `List<>`) matches the child table                                                                                                                                                         |
 | `whereClauseCoversSingleRow`    | table, `List<WhereInput>` | `boolean`          | Returns `true` if the WHERE columns match a PK or unique key (OR predicates always return `false`)                                                                                                                                                                              |
 | `findInvalidSelectionColumns`   | selection, table          | `List<String>`     | Lists selection methods that don't correspond to real table columns                                                                                                                                                                                                             |
 | `validateTableAndWhereElements` | `RoundEnvironment`        | void               | Compile-time validation of `@Table` and `@WHERE` structural invariants                                                                                                                                                                                                          |
@@ -152,6 +162,62 @@ The private `appendWhere` method handles both simple and OR predicates:
 
 When `qualified` is `true` (JOIN queries), column names are prefixed with the table name from
 `WhereLeaf.inTableName()` (e.g. `users.id = $1`).
+
+---
+
+## InsertQueryModel
+
+Data records for parsed `@SQL @INSERT @Trait` interfaces.
+
+| Field            | Purpose                                                                                   |
+|------------------|-------------------------------------------------------------------------------------------|
+| `tableElement`   | The `@Table`-annotated type element                                                       |
+| `tableName`      | The SQL table name from `@Table(name = ...)`                                              |
+| `columns`        | List of `InsertColumn` records — the table's insertable columns                           |
+| `inputParamName` | The method name of the single input in `_Inputs`                                          |
+| `isList`         | `true` if the input type is `List<@Table>`, `false` for a single `@Table`                 |
+
+### InsertColumn
+
+| Field              | Purpose                                                                 |
+|--------------------|-------------------------------------------------------------------------|
+| `columnName`       | DB column name (from `@Column` or the method name)                      |
+| `javaType`         | Java type of the column (unwrapped if `Optional`)                       |
+| `accessorMethodName` | Method name on the Table model to call                                |
+| `isOptional`       | `true` if the column's return type is `Optional<T>`                     |
+
+---
+
+## InsertModelParser
+
+Reads `@INSERT` trait inputs and validates their structure.
+
+### Key public methods
+
+| Method              | Input        | Output             | Description                                                                                    |
+|---------------------|--------------|--------------------|------------------------------------------------------------------------------------------------|
+| `parseInsertInputs` | `VajramInfo` | `InsertQueryModel` | Validates the trait has exactly one input of type `@Table` or `List<@Table>`; extracts columns (FK columns are plain scalars) |
+
+### Validation rules
+
+- The trait must have **exactly one** input
+- That input must be a `@Table`-annotated type or `List<@Table>`
+- `@IncomingForeignKey` methods are excluded (not real DB columns)
+- `@ForeignKey` columns are treated as plain scalars (their `String` return type is the FK value)
+- DB column names are resolved via `@Column` annotation (falling back to method name)
+
+---
+
+## InsertQueryBuilder
+
+Stateless utility that builds parameterized INSERT SQL strings.
+
+```
+InsertQueryBuilder.buildInsertSql(model, config)
+→ "INSERT INTO users (id, name, email, phoneNumber) VALUES ($1, $2, $3, $4)"
+```
+
+The `SqlDriverConfig` provides driver-specific placeholder syntax (e.g. `$1` for PostgreSQL/Vert.x).
 
 ---
 

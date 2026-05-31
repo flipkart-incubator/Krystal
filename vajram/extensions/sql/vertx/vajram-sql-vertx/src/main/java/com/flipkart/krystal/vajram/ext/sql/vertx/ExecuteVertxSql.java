@@ -22,7 +22,6 @@ import java.util.concurrent.CompletableFuture;
  * <p>The query is executed as a prepared statement to prevent SQL injection.
  */
 @Vajram
-@SuppressWarnings("initialization.field.uninitialized")
 public abstract class ExecuteVertxSql extends IOVajramDef<RowSet<Row>> {
 
   interface _Inputs {

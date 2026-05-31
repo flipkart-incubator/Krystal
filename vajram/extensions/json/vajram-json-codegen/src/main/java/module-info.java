@@ -8,4 +8,5 @@ module flipkart.krystal.vajram.ext.json.codegen {
   requires com.google.auto.service;
   requires com.google.common;
   requires flipkart.krystal.vajram.codegen.common;
+  requires jdk.jshell;
 }

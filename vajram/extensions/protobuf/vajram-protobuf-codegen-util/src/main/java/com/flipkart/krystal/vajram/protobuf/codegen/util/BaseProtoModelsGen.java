@@ -808,10 +808,10 @@ return _serializedPayload;
                   util.getImmutClassName(
                       fieldModelRoot.get().element(), config.protocolInstance()));
         } else {
-          TypeMirror listElemType = util.getContentType(returnType);
-          if (listElemType != null && util.isEnumModelType(listElemType)) {
+          TypeMirror contentType = util.getContentType(returnType);
+          if (contentType != null && util.isEnumModelType(contentType)) {
             TypeElement enumElement =
-                (TypeElement) processingEnv.getTypeUtils().asElement(listElemType);
+                (TypeElement) processingEnv.getTypeUtils().asElement(contentType);
             addAllArg =
                 CodeBlock.of(
                     "\n          $T.transform($L, $T::javaToProto)\n",

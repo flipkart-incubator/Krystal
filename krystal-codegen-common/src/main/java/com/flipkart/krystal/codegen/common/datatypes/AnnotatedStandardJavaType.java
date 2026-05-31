@@ -59,7 +59,7 @@ public record AnnotatedStandardJavaType(StandardJavaType standardJavaType, TypeM
 
   @Override
   public CodeBlock defaultValueExpr(ProcessingEnvironment processingEnv) {
-    return standardJavaType.defaultValueExpr();
+    return standardJavaType.defaultValueExpr(processingEnv);
   }
 
   @Override

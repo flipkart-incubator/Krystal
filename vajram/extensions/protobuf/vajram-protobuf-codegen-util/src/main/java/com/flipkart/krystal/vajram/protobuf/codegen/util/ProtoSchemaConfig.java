@@ -5,6 +5,7 @@ import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.serial.SerdeProtocol;
 import com.flipkart.krystal.vajram.protobuf.codegen.util.types.OptionalFieldType;
 import com.flipkart.krystal.vajram.protobuf.codegen.util.types.ProtoFieldType;
+import com.flipkart.krystal.vajram.protobuf.util.ProtobufProtocol;
 import com.flipkart.krystal.vajram.protobuf.util.SerializableProtoModel;
 import javax.lang.model.element.Element;
 
@@ -37,7 +38,7 @@ import javax.lang.model.element.Element;
  */
 public record ProtoSchemaConfig(
     Class<? extends ModelProtocol> protocolClass,
-    SerdeProtocol protocolInstance,
+    ProtobufProtocol protocolInstance,
     String schemaHeader,
     String fileSuffix,
     String outerClassSuffix,

@@ -9,14 +9,14 @@ import java.lang.annotation.Target;
  * relationship declared with {@link ForeignKey} on the other table. This method is NOT a real
  * database column — it exists only to model the relationship bidirectionally.
  *
- * <p>The method's return type should be {@code List<ChildTable>} (one-to-many) or {@code
- * ChildTable} (one-to-one), where {@code ChildTable} is the table that holds the {@link
- * ForeignKey}.
+ * <p>The child table is inferred from the method's return type: {@code List<ChildTable>} for
+ * one-to-many relationships, or {@code ChildTable} for one-to-one. The child table must itself be a
+ * {@code @Table}-annotated model with a {@code @ForeignKey} pointing back to this table.
  *
  * <p><b>Bidirectional-FK invariant:</b> every {@code @ForeignKey} on a child table must be paired
  * with a corresponding {@code @IncomingForeignKey} on the parent table, and vice versa. The code
- * generator enforces this at compile time: a {@code List<@Projection>} join in a
- * {@code @Projection} interface is rejected unless both annotations are present.
+ * generator enforces this at compile time: a {@code List<@Selection>} join in a {@code @Selection}
+ * interface is rejected unless both annotations are present.
  *
  * <p>Benefits of modelling both directions:
  *
@@ -35,7 +35,7 @@ import java.lang.annotation.Target;
  * @Table(name = "users")
  * public interface User extends TableModel {
  *   @IncomingForeignKey
- *   List<Order> orders();   // reverse of Order.userId() → users.id
+ *   List<Order> orders();   // reverse of Order.userId() → users.id; child inferred from List<Order>
  * }
  * }</pre>
  */

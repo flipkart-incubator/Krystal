@@ -2,7 +2,7 @@ package com.flipkart.krystal.lattice.core.execution;
 
 import static com.flipkart.krystal.lattice.core.execution.ThreadingStrategyDopant.DOPANT_TYPE;
 
-import com.flipkart.krystal.lattice.core.doping.DopantConfig.NoAnnotation;
+import com.flipkart.krystal.annos.NoAnnotation;
 import com.flipkart.krystal.lattice.core.doping.DopantSpec;
 import com.flipkart.krystal.lattice.core.doping.DopantSpecBuilderWithConfig;
 import com.flipkart.krystal.lattice.core.doping.DopantType;

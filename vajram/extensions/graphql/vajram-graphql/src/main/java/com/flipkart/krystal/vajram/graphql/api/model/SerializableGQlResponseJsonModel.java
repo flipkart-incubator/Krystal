@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.graphql.api.model;
 
 import com.flipkart.krystal.model.SupportedModelProtocol;
-import com.flipkart.krystal.serial.SerdeProtocol;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.vajram.json.Json;
 
@@ -9,7 +8,7 @@ import com.flipkart.krystal.vajram.json.Json;
 public interface SerializableGQlResponseJsonModel extends SerializableModel {
 
   @Override
-  default SerdeProtocol _serdeProtocol() {
+  default GraphQlResponseJson _serdeProtocol() {
     return GraphQlResponseJson.INSTANCE;
   }
 }

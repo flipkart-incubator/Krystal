@@ -48,10 +48,19 @@ class FkJavaCodeStandardPlugin implements Plugin<Project> {
                                      "org.checkerframework.checker.calledmethods.CalledMethodsChecker",
                                      "org.checkerframework.checker.optional.OptionalChecker",]
 
-        def stubsDir = "${project.rootDir}/config/checker/stubs"
-        if (project.file(stubsDir).exists()) {
-            checkerFramework.extraJavacArgs.add("-Astubs=${stubsDir}")
+        def rootStubsDir = "${project.rootDir}/config/checker/stubs"
+        def projectStubsDir = "${project.projectDir}/config/checker/stubs"
+        List<String> stubsDirs = []
+        if (project.file(rootStubsDir).exists()) {
+            stubsDirs.add(rootStubsDir)
         }
+        if (project.file(projectStubsDir).exists()) {
+            stubsDirs.add(projectStubsDir)
+        }
+        if (!stubsDirs.isEmpty()) {
+            checkerFramework.extraJavacArgs.add("-Astubs=${String.join(File.pathSeparator, stubsDirs)}")
+        }
+
         checkerFramework.extraJavacArgs.add("-AskipFiles=/build/generated/")
         project.dependencies.add('checkerFramework', "org.checkerframework:checker:${checker_version}")
 

@@ -10,6 +10,7 @@ import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.STATIC;
 
+import com.flipkart.krystal.annos.NoAnnotation;
 import com.flipkart.krystal.lattice.codegen.spi.di.Binding;
 import com.flipkart.krystal.lattice.codegen.spi.di.BindingsContainer;
 import com.flipkart.krystal.lattice.codegen.spi.di.BindingsProvider;
@@ -20,7 +21,6 @@ import com.flipkart.krystal.lattice.core.LatticeDopantSet;
 import com.flipkart.krystal.lattice.core.di.Produces;
 import com.flipkart.krystal.lattice.core.di.Produces.NoScope;
 import com.flipkart.krystal.lattice.core.doping.AutoConfigure;
-import com.flipkart.krystal.lattice.core.doping.DopantConfig.NoAnnotation;
 import com.flipkart.krystal.lattice.core.doping.DopantConfig.NoConfiguration;
 import com.flipkart.krystal.lattice.core.doping.DopantSpec;
 import com.flipkart.krystal.lattice.core.doping.DopantSpecBuilder;

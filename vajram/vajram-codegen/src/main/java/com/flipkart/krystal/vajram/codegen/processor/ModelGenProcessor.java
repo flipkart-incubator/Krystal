@@ -37,7 +37,7 @@ import javax.lang.model.element.TypeElement;
 public final class ModelGenProcessor extends AbstractKrystalAnnoProcessor {
 
   @Override
-  protected boolean processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+  protected void processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     CodeGenUtility util = codeGenUtil();
     List<TypeElement> modelRoots =
         roundEnv.getElementsAnnotatedWith(ModelRoot.class).stream()
@@ -86,7 +86,7 @@ public final class ModelGenProcessor extends AbstractKrystalAnnoProcessor {
         }
       }
     }
-    return false;
+    return;
   }
 
   private Set<Class<? extends ModelProtocol>> getSupportedModelProtocols(

@@ -2,6 +2,7 @@ package com.flipkart.krystal.codegen.common.datatypes;
 
 import static java.util.Objects.requireNonNull;
 
+import com.flipkart.krystal.codegen.common.models.CodeGenerationException;
 import com.flipkart.krystal.model.array.ByteArray;
 import com.flipkart.krystal.model.array.SimpleByteArray;
 import com.google.common.collect.ImmutableList;
@@ -164,7 +165,11 @@ public enum StandardJavaType implements CodeGenType {
   }
 
   @Override
-  public @Nullable CodeBlock defaultValueExpr(ProcessingEnvironment processingEnv) {
+  public CodeBlock defaultValueExpr(ProcessingEnvironment processingEnv) {
+    if (defaultValueExpr == null) {
+      throw new CodeGenerationException(
+          "No default value expression available for type '%s'".formatted(this));
+    }
     return defaultValueExpr;
   }
 

@@ -1,9 +1,10 @@
 package com.flipkart.krystal.lattice.ext.rest.dropwizard;
 
-import com.flipkart.krystal.lattice.core.doping.DopantConfig.NoAnnotation;
+import com.flipkart.krystal.annos.NoAnnotation;
 import com.flipkart.krystal.lattice.core.doping.DopantSpec;
 import com.flipkart.krystal.lattice.core.doping.DopantSpecBuilderWithConfig;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
+import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -13,6 +14,10 @@ import lombok.Builder;
 @Builder(buildMethodName = "_buildSpec")
 public record DropwizardServerDopantSpec(List<EnvironmentEnricher> environmentEnrichers)
     implements DopantSpec<NoAnnotation, DropwizardServerDopantConfig, DropwizardServerDopant> {
+
+  public DropwizardServerDopantSpec {
+    environmentEnrichers = ImmutableList.copyOf(environmentEnrichers);
+  }
 
   @Override
   public Class<? extends DropwizardServerDopant> dopantClass() {
@@ -42,8 +47,10 @@ public record DropwizardServerDopantSpec(List<EnvironmentEnricher> environmentEn
       return this;
     }
 
-    public void environmentEnrichers(List<EnvironmentEnricher> environmentEnrichers) {
+    public DropwizardServerDopantSpecBuilder environmentEnrichers(
+        List<EnvironmentEnricher> environmentEnrichers) {
       this.environmentEnrichers.addAll(environmentEnrichers);
+      return this;
     }
   }
 }

@@ -15,22 +15,22 @@ import java.util.List;
  * modelling the reverse side of the FK from {@link OrderItem}.
  */
 @ModelRoot
-@Table(name = "orders")
+@Table(name = "OrderEntity")
 public interface Order extends TableModel {
 
   @PrimaryKey
   long orderId();
 
-  /** FK to {@code users.id}. The field type matches the referenced table's model type. */
-  @ForeignKey
-  User userId();
+  /** FK to {@code users.id}. The return type matches the PK type of the referenced table. */
+  @ForeignKey(toTable = User.class)
+  long userId();
 
   long amountCents();
 
   long orderTime();
 
   /**
-   * Reverse side of the FK declared on {@link OrderItem#orderId()}. Not a real column — models the
+   * Reverse side of the FK declared on {@link OrderItem#order()}. Not a real column — models the
    * one-to-many relationship for convenience.
    */
   @IncomingForeignKey

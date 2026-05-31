@@ -192,7 +192,7 @@ public final class SqlQueryBuilder {
       for (JoinRelation join : level1Joins) {
         sql.add(" + $L", buildJoinClause(join, selection.tableName(), /* useRowNumber= */ true));
         for (JoinRelation nested : join.nestedJoins()) {
-          sql.add(" + $L", buildJoinClause(nested, join.tableName(), /* useRowNumber= */ true));
+          sql.add(" + $L", buildJoinClause(nested, join.methodName(), /* useRowNumber= */ true));
         }
       }
 
@@ -204,11 +204,11 @@ public final class SqlQueryBuilder {
       }
       for (JoinRelation join : level1Joins) {
         for (ORDER ob : join.orderBys()) {
-          outerOrderBys.add(join.tableName() + "." + ob.by() + " " + ob.direction());
+          outerOrderBys.add(join.methodName() + "." + ob.by() + " " + ob.direction());
         }
         for (JoinRelation nested : join.nestedJoins()) {
           for (ORDER ob : nested.orderBys()) {
-            outerOrderBys.add(nested.tableName() + "." + ob.by() + " " + ob.direction());
+            outerOrderBys.add(nested.methodName() + "." + ob.by() + " " + ob.direction());
           }
         }
       }
@@ -243,7 +243,7 @@ public final class SqlQueryBuilder {
       boolean useRowNumber = isListTrait || !join.nestedJoins().isEmpty() || level1Joins.size() > 1;
       sql.add(" + $L", buildJoinClause(join, selection.tableName(), useRowNumber));
       for (JoinRelation nested : join.nestedJoins()) {
-        sql.add(" + $L", buildJoinClause(nested, join.tableName(), /* useRowNumber= */ true));
+        sql.add(" + $L", buildJoinClause(nested, join.methodName(), /* useRowNumber= */ true));
       }
     }
 
@@ -256,11 +256,11 @@ public final class SqlQueryBuilder {
     }
     for (JoinRelation join : level1Joins) {
       for (ORDER ob : join.orderBys()) {
-        orderByParts.add(join.tableName() + "." + ob.by() + " " + ob.direction());
+        orderByParts.add(join.methodName() + "." + ob.by() + " " + ob.direction());
       }
       for (JoinRelation nested : join.nestedJoins()) {
         for (ORDER ob : nested.orderBys()) {
-          orderByParts.add(nested.tableName() + "." + ob.by() + " " + ob.direction());
+          orderByParts.add(nested.methodName() + "." + ob.by() + " " + ob.direction());
         }
       }
     }
@@ -390,23 +390,25 @@ public final class SqlQueryBuilder {
               + "."
               + join.parentJoinColumn()
               + " = "
-              + join.tableName()
+              + join.methodName()
               + "."
               + join.childJoinColumn()
               + " AND "
-              + join.tableName()
+              + join.methodName()
               + "._rn <= "
               + join.limit();
     } else {
       joinClause =
           " LEFT JOIN "
               + join.tableName()
+              + " "
+              + join.methodName()
               + " ON "
               + parentTableName
               + "."
               + join.parentJoinColumn()
               + " = "
-              + join.tableName()
+              + join.methodName()
               + "."
               + join.childJoinColumn();
     }

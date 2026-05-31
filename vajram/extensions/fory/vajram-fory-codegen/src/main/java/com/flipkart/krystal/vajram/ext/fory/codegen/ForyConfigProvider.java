@@ -9,6 +9,6 @@ import com.google.auto.service.AutoService;
 public class ForyConfigProvider implements ModelProtocolConfigProvider {
   @Override
   public ModelProtocolConfig getConfig() {
-    return new ModelProtocolConfig(FORY);
+    return () -> FORY;
   }
 }
