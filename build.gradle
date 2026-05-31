@@ -136,6 +136,7 @@ configure(subprojects.findAll {
         api 'com.google.guava:guava'
         implementation 'org.slf4j:slf4j-api'
         implementation 'jakarta.inject:jakarta.inject-api'
+        compileOnly 'com.google.auto.service:auto-service-annotations'
         implementation 'com.google.auto.service:auto-service-annotations'
         annotationProcessor 'com.google.auto.service:auto-service'
 

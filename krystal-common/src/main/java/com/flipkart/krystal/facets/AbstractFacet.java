@@ -7,7 +7,6 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public abstract class AbstractFacet implements Facet {
-  private final int id;
   private final String name;
   private final VajramID ofVajramID;
   private final FacetType facetType;

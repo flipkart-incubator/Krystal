@@ -205,7 +205,7 @@ class KryonExecutorTest {
   @Test
   void requestExecution_unboundInputs_success() {
     VajramID kryonName = vajramID("requestExecution_noDependencies_success_nodeName");
-    ImmutableSet<SimpleFacet> inputDefs = ImmutableSet.of(input(1), input(2), input(3));
+    ImmutableSet<SimpleFacet> inputDefs = ImmutableSet.of(input(), input(), input());
     VajramID vajramID =
         kryonDefinitionRegistry
             .newVajramKryonDefinition(
@@ -213,14 +213,18 @@ class KryonExecutorTest {
                 inputDefs,
                 newComputeLogic(
                         kryonName,
-                        Set.of(input(1), input(2), input(3)),
+                        Set.of(input(), input(), input()),
                         facets ->
                             "computed_values: a=%s;b=%s;c=%s"
                                 .formatted(
-                                    ((FacetValuesMap) facets)._getOne2OneResponse(1).valueOrThrow(),
-                                    ((FacetValuesMap) facets)._getOne2OneResponse(2).valueOrThrow(),
                                     ((FacetValuesMap) facets)
-                                        ._getOne2OneResponse(3)
+                                        ._getOne2OneResponse("facet1")
+                                        .valueOrThrow(),
+                                    ((FacetValuesMap) facets)
+                                        ._getOne2OneResponse("facet2")
+                                        .valueOrThrow(),
+                                    ((FacetValuesMap) facets)
+                                        ._getOne2OneResponse("facet3")
                                         .valueOrThrow()))
                     .kryonLogicId(),
                 ImmutableMap.of(),
@@ -233,7 +237,8 @@ class KryonExecutorTest {
         kryonExecutor.executeKryon(
             new SimpleRequestBuilder<>(
                     inputDefs,
-                    ImmutableMap.of(1, withValue(1), 2, withValue(2), 3, withValue("3")),
+                    ImmutableMap.of(
+                        "facet1", withValue(1), "facet2", withValue(2), "facet3", withValue("3")),
                     vajramID)
                 ._build(),
             KryonExecutionConfig.builder().executionId("r").build());
@@ -255,7 +260,7 @@ class KryonExecutorTest {
         emptyTags());
 
     VajramID n2ID = vajramID("n2");
-    SimpleDep n1DependsOnN1 = dependency(1, n2ID, n1ID);
+    SimpleDep n1DependsOnN1 = dependency("facet1", n2ID, n1ID);
     Set<SimpleDep> allFacets = Set.of(n1DependsOnN1);
     VajramKryonDefinition n2 =
         kryonDefinitionRegistry.newVajramKryonDefinition(
@@ -265,7 +270,7 @@ class KryonExecutorTest {
                     n2ID,
                     allFacets,
                     facets ->
-                        ((FacetValuesMap) facets)._getOne2OneResponse(1).valueOrThrow()
+                        ((FacetValuesMap) facets)._getOne2OneResponse("facet1").valueOrThrow()
                             + ":computed_value")
                 .kryonLogicId(),
             ImmutableMap.of(),
@@ -285,7 +290,7 @@ class KryonExecutorTest {
                         (o, throwable) ->
                             ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
                                 ._set(
-                                    n1DependsOnN1.id(),
+                                    n1DependsOnN1.name(),
                                     new RequestResponse(n1Req, errableFrom(o, throwable)))));
               }
               CompletableFuture.allOf(list.toArray(CompletableFuture[]::new))
@@ -317,7 +322,7 @@ class KryonExecutorTest {
         emptyTags());
 
     VajramID l2Dep = vajramID("requestExecution_multiLevelDependencies_level2");
-    Dependency l2DependsOnL1 = dependency(1, l2Dep, l1Dep);
+    Dependency l2DependsOnL1 = dependency("facet1", l2Dep, l1Dep);
     Set<Dependency> l2Facets = Set.of(l2DependsOnL1);
     kryonDefinitionRegistry.newVajramKryonDefinition(
         l2Dep,
@@ -325,7 +330,8 @@ class KryonExecutorTest {
         newComputeLogic(
                 l2Dep,
                 l2Facets,
-                facets -> ((FacetValuesMap) facets)._getOne2OneResponse(1).valueOrThrow() + ":l2")
+                facets ->
+                    ((FacetValuesMap) facets)._getOne2OneResponse("facet1").valueOrThrow() + ":l2")
             .kryonLogicId(),
         ImmutableMap.of(),
         newCreateNewRequestLogic(l2Dep, emptySet()),
@@ -344,7 +350,7 @@ class KryonExecutorTest {
                     (result, throwable) ->
                         ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
                             ._set(
-                                l2DependsOnL1.id(),
+                                l2DependsOnL1.name(),
                                 new RequestResponse(
                                     l1Req, Errable.errableFrom(result, throwable)))));
           }
@@ -355,7 +361,7 @@ class KryonExecutorTest {
         emptyTags());
 
     VajramID l3Dep = vajramID("requestExecution_multiLevelDependencies_level3");
-    Dependency l3DependsOnL2 = dependency(1, l3Dep, l2Dep);
+    Dependency l3DependsOnL2 = dependency("facet1", l3Dep, l2Dep);
     Set<Dependency> l3Facets = Set.of(l3DependsOnL2);
 
     kryonDefinitionRegistry.newVajramKryonDefinition(
@@ -364,7 +370,8 @@ class KryonExecutorTest {
         newComputeLogic(
                 l3Dep,
                 l3Facets,
-                facets -> ((FacetValuesMap) facets)._getOne2OneResponse(1).valueOrThrow() + ":l3")
+                facets ->
+                    ((FacetValuesMap) facets)._getOne2OneResponse("facet1").valueOrThrow() + ":l3")
             .kryonLogicId(),
         ImmutableMap.of(),
         newCreateNewRequestLogic(l3Dep, emptySet()),
@@ -383,7 +390,8 @@ class KryonExecutorTest {
                     (o, throwable) ->
                         ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
                             ._set(
-                                1, new RequestResponse(l2Req, Errable.errableFrom(o, throwable)))));
+                                "facet1",
+                                new RequestResponse(l2Req, Errable.errableFrom(o, throwable)))));
           }
           CompletableFuture.allOf(list.toArray(CompletableFuture[]::new))
               .whenComplete(
@@ -392,7 +400,7 @@ class KryonExecutorTest {
         emptyTags());
 
     VajramID l4Dep = vajramID("requestExecution_multiLevelDependencies_level4");
-    Dependency l4DepOnL3 = dependency(1, l4Dep, l3Dep);
+    Dependency l4DepOnL3 = dependency("facet1", l4Dep, l3Dep);
     Set<Facet> l4Facets = Set.of(l4DepOnL3);
     kryonDefinitionRegistry.newVajramKryonDefinition(
         l4Dep,
@@ -400,7 +408,8 @@ class KryonExecutorTest {
         newComputeLogic(
                 l4Dep,
                 l4Facets,
-                facets -> ((FacetValuesMap) facets)._getOne2OneResponse(1).valueOrThrow() + ":l4")
+                facets ->
+                    ((FacetValuesMap) facets)._getOne2OneResponse("facet1").valueOrThrow() + ":l4")
             .kryonLogicId(),
         ImmutableMap.of(),
         newCreateNewRequestLogic(l4Dep, emptySet()),
@@ -419,7 +428,7 @@ class KryonExecutorTest {
                     (o, throwable) ->
                         ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
                             ._set(
-                                l4DepOnL3.id(),
+                                l4DepOnL3.name(),
                                 new RequestResponse(l3Req, errableFrom(o, throwable)))));
           }
           CompletableFuture.allOf(list.toArray(CompletableFuture[]::new))
@@ -429,7 +438,7 @@ class KryonExecutorTest {
         ElementTags.of(List.of(InvocableOutsideGraph.Creator.create())));
 
     VajramID finalKryon = vajramID("requestExecution_multiLevelDependencies_final");
-    Dependency finalDepOnL4 = dependency(1, finalKryon, l4Dep);
+    Dependency finalDepOnL4 = dependency("facet1", finalKryon, l4Dep);
     Set<Facet> finalFacets = Set.of(finalDepOnL4);
     kryonDefinitionRegistry.newVajramKryonDefinition(
         finalKryon,
@@ -438,7 +447,8 @@ class KryonExecutorTest {
                 finalKryon,
                 finalFacets,
                 facets ->
-                    ((FacetValuesMap) facets)._getOne2OneResponse(1).valueOrThrow() + ":final")
+                    ((FacetValuesMap) facets)._getOne2OneResponse("facet1").valueOrThrow()
+                        + ":final")
             .kryonLogicId(),
         ImmutableMap.of(),
         newCreateNewRequestLogic(finalKryon, emptySet()),
@@ -457,7 +467,7 @@ class KryonExecutorTest {
                     (o, throwable) ->
                         ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
                             ._set(
-                                finalDepOnL4.id(),
+                                finalDepOnL4.name(),
                                 new RequestResponse(l4Req, errableFrom(o, throwable)))));
           }
           CompletableFuture.allOf(list.toArray(CompletableFuture[]::new))
@@ -522,8 +532,8 @@ class KryonExecutorTest {
     VajramID kryonName =
         vajramID(
             "executeKryon_dependenciesWithReturnInstantly_executeComputeExecutedExactlyOnce_final");
-    Dependency dep1 = dependency(1, kryonName, dep1ID);
-    Dependency dep2 = dependency(2, kryonName, dep2ID);
+    Dependency dep1 = dependency("facet1", kryonName, dep1ID);
+    Dependency dep2 = dependency("facet2", kryonName, dep2ID);
     Set<Facet> allFacets = Set.of(dep1, dep2);
     VajramID vajramID =
         kryonDefinitionRegistry
@@ -535,9 +545,13 @@ class KryonExecutorTest {
                         allFacets,
                         facets -> {
                           numberOfExecutions.increment();
-                          return ((FacetValuesMap) facets)._getOne2OneResponse(1).valueOrThrow()
+                          return ((FacetValuesMap) facets)
+                                  ._getOne2OneResponse("facet1")
+                                  .valueOrThrow()
                               + ":"
-                              + ((FacetValuesMap) facets)._getOne2OneResponse(2).valueOrThrow()
+                              + ((FacetValuesMap) facets)
+                                  ._getOne2OneResponse("facet2")
+                                  .valueOrThrow()
                               + ":final";
                         })
                     .kryonLogicId(),
@@ -557,13 +571,13 @@ class KryonExecutorTest {
                         (o, throwable) ->
                             ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
                                 ._set(
-                                    dep1.id(),
+                                    dep1.name(),
                                     new RequestResponse(dep1Req, errableFrom(o, throwable))));
                     dep2Future.whenComplete(
                         (o, throwable) ->
                             ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
                                 ._set(
-                                    dep2.id(),
+                                    dep2.name(),
                                     new RequestResponse(dep2Req, errableFrom(o, throwable))));
                     _graphExecData
                         .communicationFacade()
@@ -587,11 +601,11 @@ class KryonExecutorTest {
                                       (FacetValuesMapBuilder)
                                           executionItem.facetValues()._asBuilder();
                                   f._set(
-                                      dep1.id(),
+                                      dep1.name(),
                                       new RequestResponse(
                                           dep1Req, errableFrom(dep1Future.join(), throwable)));
                                   f._set(
-                                      dep2.id(),
+                                      dep2.name(),
                                       new RequestResponse(
                                           dep2Req, errableFrom(dep2Future.join(), throwable)));
                                 }));
@@ -641,7 +655,7 @@ class KryonExecutorTest {
 
     CountDownLatch countDownLatch = new CountDownLatch(1);
     VajramID n2Id = vajramID("n2");
-    SimpleDep n2DepOnN1 = dependency(1, n2Id, n1ID);
+    SimpleDep n2DepOnN1 = dependency("facet1", n2Id, n1ID);
     Set<SimpleDep> allFacets = Set.of(n2DepOnN1);
     VajramKryonDefinition n2 =
         kryonDefinitionRegistry.newVajramKryonDefinition(
@@ -665,7 +679,7 @@ class KryonExecutorTest {
                             .handle(
                                 (unused, throwable) ->
                                     ((FacetValuesMap) facets)
-                                            ._getOne2OneResponse(1)
+                                            ._getOne2OneResponse("facet1")
                                             .valueOpt()
                                             .orElseThrow()
                                         + ":computed_value"))

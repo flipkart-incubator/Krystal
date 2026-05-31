@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.FacetType;
 import com.google.common.collect.ImmutableSet;
 import java.util.EnumSet;
@@ -11,13 +12,15 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Represents any face which is "given" to the vajram from outside - like client provided inputs and
- * platform provided injections
+ * platform provided injections.
+ *
+ * @param vajramId the vajram that this facet belongs to
  */
 @Builder
 public record DefaultFacetModel(
     int id,
     @NonNull String name,
-    @NonNull VajramInfoLite vajramInfo,
+    @NonNull VajramID vajramId,
     @NonNull CodeGenType dataType,
     @Nullable String documentation,
     FacetType facetType,

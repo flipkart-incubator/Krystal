@@ -1,13 +1,13 @@
 package com.flipkart.krystal.model;
 
 import static java.lang.annotation.ElementType.TYPE;
-import static java.lang.annotation.ElementType.TYPE_USE;
 
+import com.flipkart.krystal.model.SupportedModelProtocol.SupportedModelProtocols;
 import java.lang.annotation.Repeatable;
 import java.lang.annotation.Target;
 
-@Repeatable(SupportedModelProtocol.SupportedModelProtocols.class)
-@Target({TYPE, TYPE_USE})
+@Repeatable(SupportedModelProtocols.class)
+@Target(TYPE)
 public @interface SupportedModelProtocol {
   Class<? extends ModelProtocol> value();
 

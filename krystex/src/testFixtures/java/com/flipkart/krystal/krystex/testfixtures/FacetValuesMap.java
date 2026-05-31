@@ -9,10 +9,10 @@ import com.google.common.collect.ImmutableMap;
 public sealed interface FacetValuesMap extends FacetValues
     permits FacetValuesMapBuilder, ImmutableFacetValuesMap {
 
-  Errable<?> _getOne2OneResponse(int facetId);
+  Errable<?> _getOne2OneResponse(String facetId);
 
   @SuppressWarnings("unchecked")
-  FanoutDepResponses<?, ?> _getDepResponses(int facetId);
+  FanoutDepResponses<?, ?> _getDepResponses(String facetId);
 
-  ImmutableMap<Integer, FacetValue> _asMap();
+  ImmutableMap<String, FacetValue> _asMap();
 }

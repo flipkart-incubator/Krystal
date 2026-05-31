@@ -20,7 +20,7 @@ public final class ImmutableFacetValuesMap implements FacetValuesMap, ImmutableF
   private final VajramID _vajramID;
 
   private final SimpleImmutRequest<Object> _request;
-  private final ImmutableMap<Integer, FacetValue> otherFacetValues;
+  private final ImmutableMap<String, FacetValue> otherFacetValues;
 
   public ImmutableFacetValuesMap(
       SimpleRequestBuilder<Object> _request, Set<? extends Facet> _facets, VajramID vajramID) {
@@ -30,7 +30,7 @@ public final class ImmutableFacetValuesMap implements FacetValuesMap, ImmutableF
   public ImmutableFacetValuesMap(
       SimpleRequestBuilder<Object> _request,
       Set<? extends Facet> _facets,
-      ImmutableMap<Integer, FacetValue> otherFacetValues,
+      ImmutableMap<String, FacetValue> otherFacetValues,
       VajramID vajramID) {
     this._request = _request._build();
     this._facets = ImmutableSet.copyOf(_facets);
@@ -38,7 +38,7 @@ public final class ImmutableFacetValuesMap implements FacetValuesMap, ImmutableF
     this._vajramID = vajramID;
   }
 
-  public FacetValue _get(int facetId) {
+  public FacetValue _get(String facetId) {
     if (_request._hasValue(facetId)) {
       ErrableFacetValue<Object> v = _request._get(facetId);
       if (v != null) {
@@ -51,7 +51,7 @@ public final class ImmutableFacetValuesMap implements FacetValuesMap, ImmutableF
   }
 
   @Override
-  public Errable<?> _getOne2OneResponse(int facetId) {
+  public Errable<?> _getOne2OneResponse(String facetId) {
     if (_request._hasValue(facetId)) {
       return _request._get(facetId).asErrable();
     } else {
@@ -68,7 +68,7 @@ public final class ImmutableFacetValuesMap implements FacetValuesMap, ImmutableF
 
   @SuppressWarnings("unchecked")
   @Override
-  public FanoutDepResponses _getDepResponses(int facetId) {
+  public FanoutDepResponses _getDepResponses(String facetId) {
     FacetValue datum = otherFacetValues.getOrDefault(facetId, ErrableFacetValue.nil());
     if (datum instanceof FanoutDepResponses errable) {
       return errable;
@@ -79,14 +79,14 @@ public final class ImmutableFacetValuesMap implements FacetValuesMap, ImmutableF
   }
 
   @Override
-  public ImmutableMap<Integer, FacetValue> _asMap() {
-    return ImmutableMap.<Integer, FacetValue>builder()
+  public ImmutableMap<String, FacetValue> _asMap() {
+    return ImmutableMap.<String, FacetValue>builder()
         .putAll(_request._asMap())
         .putAll(otherFacetValues)
         .build();
   }
 
-  public boolean _hasValue(int facetId) {
+  public boolean _hasValue(String facetId) {
     return _request._hasValue(facetId) || otherFacetValues.containsKey(facetId);
   }
 

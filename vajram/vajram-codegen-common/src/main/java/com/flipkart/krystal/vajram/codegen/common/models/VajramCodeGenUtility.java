@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.asTypeNameWithTypes;
+import static com.flipkart.krystal.codegen.common.models.Constants.SHARED_MODELS_SUB_PACKAGE;
 import static com.flipkart.krystal.core.VajramID.vajramID;
 import static com.flipkart.krystal.facets.FacetType.INJECTION;
 import static com.flipkart.krystal.facets.FacetType.INPUT;
@@ -31,6 +32,7 @@ import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.FacetType;
+import com.flipkart.krystal.facets.InputsForVajram;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.IOVajramDef;
@@ -54,8 +56,8 @@ import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
 import com.google.common.base.Splitter;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Streams;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
@@ -206,7 +208,8 @@ public class VajramCodeGenUtility {
   }
 
   public VajramInfo computeVajramInfo(TypeElement vajramClass) {
-    VajramInfoLite vajramInfoLite = computeVajramInfoLiteWithExactTypeArgs(vajramClass.asType());
+    VajramInfoLite vajramInfoLite = computeVajramInfoLite(vajramClass, List.of());
+    var vajramPackageName = elementUtils.getPackageOf(vajramClass).getQualifiedName().toString();
     VajramInfoLite conformsToTraitInfo = getConformToTraitInfoFromVajram(vajramClass);
     String parentClassName = null;
     if (vajramInfoLite.isVajram()) {
@@ -217,11 +220,10 @@ public class VajramCodeGenUtility {
               .getQualifiedName()
               .toString();
     }
-    Optional<Element> inputsClass = getInputsClass(vajramClass);
+    Optional<TypeElement> inputsClass = getInputsClass(vajramClass);
     Optional<Element> internalFacetsClass = getInternalFacetsClass(vajramClass);
     BiMap<String, Integer> givenIdsByName = HashBiMap.create();
     Set<Integer> takenFacetIds = givenIdsByName.values();
-    List<Element> inputFacetElements = extractFacetElements(inputsClass.orElse(null));
     List<Element> internalFacetElements = extractFacetElements(internalFacetsClass.orElse(null));
     List<Element> dependencyElements =
         internalFacetElements.stream()
@@ -240,21 +242,19 @@ public class VajramCodeGenUtility {
       throw codegenUtil.errorAndThrow(
           "Unknown vajram parent class " + parentClassName, vajramClass);
     }
+    ImmutableList<DefaultFacetModel> givenFacets =
+        Stream.concat(
+                vajramInfoLite.inputsInfo().inputs().stream(),
+                internalFacetElements.stream()
+                    .map(facetElement -> toGivenFacetModel(facetElement, vajramInfoLite.vajramId()))
+                    .filter(Optional::isPresent)
+                    .map(Optional::get))
+            .collect(toImmutableList());
     VajramInfo vajramInfo =
         new VajramInfo(
             vajramInfoLite,
-            Streams.concat(inputFacetElements.stream(), internalFacetElements.stream())
-                .map(
-                    facetElement ->
-                        toGivenFacetModel(
-                            facetElement,
-                            givenIdsByName,
-                            takenFacetIds,
-                            nextFacetId,
-                            vajramInfoLite))
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .collect(toImmutableList()),
+            vajramPackageName,
+            givenFacets,
             dependencyElements.stream()
                 .map(
                     depElement ->
@@ -288,7 +288,7 @@ public class VajramCodeGenUtility {
         .map(element -> typeUtils.asElement(element.asType()));
   }
 
-  private Optional<Element> getInputsClass(TypeElement vajramClass) {
+  private Optional<TypeElement> getInputsClass(TypeElement vajramClass) {
     return vajramClass.getEnclosedElements().stream()
         .filter(
             element ->
@@ -296,7 +296,7 @@ public class VajramCodeGenUtility {
                     || element.getKind() == ElementKind.INTERFACE)
         .filter(element -> element.getSimpleName().contentEquals(Constants._INPUTS_CLASS))
         .findFirst()
-        .map(element -> typeUtils.asElement(element.asType()));
+        .map(TypeElement.class::cast);
   }
 
   private void validateVajramInfo(VajramInfo vajramInfo) {
@@ -335,12 +335,12 @@ public class VajramCodeGenUtility {
     for (ExecutableElement method : ElementFilter.methodsIn(enclosed)) {
       if (method.getModifiers().contains(ABSTRACT)
           && method.getParameters().isEmpty()
-          && method.getReturnType().getKind() != TypeKind.VOID) {
+          && method.getReturnType().getKind() != TypeKind.VOID
+          && !method.getSimpleName().toString().startsWith("_")) {
         result.add(method);
       } else {
-        codegenUtil.error(
-            "Facet methods must be abstract have a return a value and accept zero parameters",
-            method);
+        codegenUtil.note(
+            "Facet methods must be abstract have a return a value and accept zero parameters");
       }
     }
     return Collections.unmodifiableList(result);
@@ -357,25 +357,16 @@ public class VajramCodeGenUtility {
     return element.asType();
   }
 
-  private Optional<DefaultFacetModel> toGivenFacetModel(
-      Element facetElement,
-      BiMap<String, Integer> givenIdsByName,
-      Set<Integer> takenFacetIds,
-      AtomicInteger nextFacetId,
-      VajramInfoLite vajramInfoLite) {
+  private Optional<DefaultFacetModel> toGivenFacetModel(Element facetElement, VajramID vajramID) {
     DefaultFacetModelBuilder facetBuilder = DefaultFacetModel.builder().facetElement(facetElement);
     String facetName = facetElement.getSimpleName().toString();
-    facetBuilder.id(
-        requireNonNullElseGet(
-            givenIdsByName.get(facetName),
-            () -> getNextAvailableFacetId(takenFacetIds, nextFacetId)));
     facetBuilder.name(facetName);
     facetBuilder.documentation(elementUtils.getDocComment(facetElement));
     TypeMirror facetElementType = getFacetElementType(facetElement);
     if (TypeKind.ERROR.equals(facetElementType.getKind())) {
       throw new CodeGenShortCircuitException(
           "Vajram Id : "
-              + vajramInfoLite.vajramId()
+              + vajramID
               + " facet : "
               + facetName
               + " has an error type: "
@@ -390,9 +381,7 @@ public class VajramCodeGenUtility {
     if (facetType == null) {
       return Optional.empty();
     }
-    DefaultFacetModel facetModel =
-        facetBuilder.facetType(facetType).vajramInfo(vajramInfoLite).build();
-    givenIdsByName.putIfAbsent(facetName, facetModel.id());
+    DefaultFacetModel facetModel = facetBuilder.facetType(facetType).vajramId(vajramID).build();
     return Optional.of(facetModel);
   }
 
@@ -480,7 +469,7 @@ public class VajramCodeGenUtility {
       VajramInfoLite depVajramInfoLite =
           computeVajramInfoLiteWithUpperBoundTypeArgs(vajramOrReqElement);
       depBuilder
-          .depVajramInfo(depVajramInfoLite)
+          .depVajramInfo(depVajramInfoLite.inputsInfo())
           .depReqType(getVajramReqTypeName(vajramOrReqElement))
           .canFanout(dependency.canFanout());
       if (!processingEnv
@@ -495,7 +484,10 @@ public class VajramCodeGenUtility {
                 depField);
       }
       DependencyModel depModel =
-          depBuilder.dataType(declaredFieldDataType).vajramInfo(vajramInfo).build();
+          depBuilder
+              .dataType(declaredFieldDataType)
+              .vajramId(vajramInfo.inputsInfo().vajramId())
+              .build();
       givenIdsByName.putIfAbsent(facetName, depModel.id());
       return depModel;
     }
@@ -531,7 +523,9 @@ public class VajramCodeGenUtility {
     String vajramClassSimpleName = vajramOrReqClass.getSimpleName().toString();
     VajramID vajramId;
     CodeGenType responseType;
-    String packageName = elementUtils.getPackageOf(vajramOrReqClass).getQualifiedName().toString();
+    String requestPackageName =
+        elementUtils.getPackageOf(vajramOrReqClass).getQualifiedName().toString();
+    ImmutableList<DefaultFacetModel> inputs;
     if (codegenUtil().isRawAssignable(vajramOrReqClass.asType(), Request.class)) {
       TypeMirror responseTypeMirror = getVajramResponseType(vajramOrReqClass, Request.class);
       vajramId =
@@ -541,6 +535,12 @@ public class VajramCodeGenUtility {
       responseType =
           responseTypeMirror.accept(
               new DeclaredTypeVisitor(codegenUtil, vajramOrReqClass, DISALLOWED_FACET_TYPES), null);
+      inputs =
+          extractFacetElements(vajramOrReqClass).stream()
+              .map(facetElement -> toGivenFacetModel(facetElement, vajramId))
+              .filter(Optional::isPresent)
+              .map(Optional::get)
+              .collect(toImmutableList());
     } else if (codegenUtil().isRawAssignable(vajramOrReqClass.asType(), VajramDefRoot.class)) {
       Vajram vajram = vajramOrReqClass.getAnnotation(Vajram.class);
       Trait trait = vajramOrReqClass.getAnnotation(Trait.class);
@@ -556,17 +556,35 @@ public class VajramCodeGenUtility {
       responseType =
           responseTypeMirror.accept(
               new DeclaredTypeVisitor(codegenUtil, vajramOrReqClass, DISALLOWED_FACET_TYPES), null);
+      TypeElement inputsElement = getInputsClass(vajramOrReqClass).orElse(null);
+      Element externalInputsElement = getExternalInputsElement(inputsElement);
+      if (externalInputsElement != null) {
+        requestPackageName += "." + SHARED_MODELS_SUB_PACKAGE;
+      }
+
+      inputs =
+          extractFacetElements(inputsElement).stream()
+              .map(facetElement -> toGivenFacetModel(facetElement, vajramId))
+              .filter(Optional::isPresent)
+              .map(Optional::get)
+              .collect(toImmutableList());
     } else {
       throw new IllegalArgumentException(
           "Unknown class hierarchy of vajram class %s. Expected %s or %s"
               .formatted(vajramOrReqClass, VajramDef.class, ImmutableRequest.class));
     }
+    boolean isTrait = vajramOrReqClass.getAnnotation(Trait.class) != null;
+    VajramInputsInfo inputsInfo =
+        new VajramInputsInfo(
+            vajramId,
+            responseType,
+            requestPackageName,
+            inputs,
+            Collections.unmodifiableList(typeArguments),
+            isTrait);
     return new VajramInfoLite(
-        vajramId,
-        responseType,
-        packageName,
+        inputsInfo,
         vajramOrReqClass,
-        Collections.unmodifiableList(typeArguments),
         codegenUtil.processingEnv().getElementUtils().getDocComment(vajramOrReqClass),
         this);
   }
@@ -769,5 +787,25 @@ public class VajramCodeGenUtility {
             .map(Entry::getValue)
             .orElseThrow(AssertionError::new)
             .getValue());
+  }
+
+  @Nullable
+  public Element getExternalInputsElement(TypeElement inputsElement) {
+    if (inputsElement == null) {
+      return null;
+    }
+    List<? extends TypeMirror> interfaces = inputsElement.getInterfaces();
+    List<Element> externalInputsElements =
+        interfaces.stream()
+            .map(typeUtils::asElement)
+            .filter(element -> element.getAnnotation(InputsForVajram.class) != null)
+            .toList();
+    if (externalInputsElements.size() > 1) {
+      codegenUtil()
+          .error("Multiple external inputs found for vajram. Max one allowed.", inputsElement);
+    }
+    Element externalInputsElement =
+        externalInputsElements.isEmpty() ? null : externalInputsElements.get(0);
+    return externalInputsElement;
   }
 }

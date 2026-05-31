@@ -102,7 +102,7 @@ public abstract sealed class FacetJavaType {
               FacetValidation.class,
               FACET_VALUES_VAR,
               facet.name(),
-              facet.vajramInfo().vajramId().id(),
+              facet.vajramId().id(),
               facet.name());
         } else {
           return CodeBlock.of("return this.$L.$L()", FACET_VALUES_VAR, facet.name());

@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.batching.Batched;
@@ -16,7 +17,8 @@ public sealed interface FacetGenModel permits DefaultFacetModel, DependencyModel
 
   String name();
 
-  VajramInfoLite vajramInfo();
+  /** The vajram that this facet belongs to */
+  VajramID vajramId();
 
   Element facetElement();
 

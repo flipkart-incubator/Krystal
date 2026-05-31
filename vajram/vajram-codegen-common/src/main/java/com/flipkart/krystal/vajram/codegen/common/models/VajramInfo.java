@@ -12,18 +12,18 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import java.util.List;
 import java.util.stream.Stream;
-import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public record VajramInfo(
     VajramInfoLite lite,
+    String packageName,
     ImmutableList<DefaultFacetModel> givenFacets,
     ImmutableList<DependencyModel> dependencies,
     TypeElement definitionElement,
     @Nullable VajramInfoLite conformsToTraitInfo,
     @Nullable ComputeDelegationMode vajramDelegationMode,
-    @Nullable Element inputsElement) {
+    @Nullable TypeElement inputsElement) {
 
   public VajramInfo {
     if (lite.isTrait()) {
@@ -93,11 +93,10 @@ public record VajramInfo(
   }
 
   public ClassName facetsInterfaceType() {
-    return ClassName.get(lite.packageName(), vajramName() + Constants.FACETS_CLASS_SUFFIX);
+    return ClassName.get(packageName(), vajramName() + Constants.FACETS_CLASS_SUFFIX);
   }
 
   public ClassName facetsImmutPojoType() {
-    return ClassName.get(
-        lite.packageName(), vajramName() + Constants.FACETS_IMMUT_POJO_CLASS_SUFFIX);
+    return ClassName.get(packageName(), vajramName() + Constants.FACETS_IMMUT_POJO_CLASS_SUFFIX);
   }
 }

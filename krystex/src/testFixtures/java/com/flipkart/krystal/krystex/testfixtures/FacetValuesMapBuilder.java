@@ -21,7 +21,7 @@ public final class FacetValuesMapBuilder implements FacetValuesMap, FacetValuesB
 
   private final SimpleRequestBuilder<Object> _request;
   private final ImmutableSet<? extends Facet> _facets;
-  private final Map<Integer, FacetValue> otherFacetValues;
+  private final Map<String, FacetValue> otherFacetValues;
   private final VajramID _vajramID;
 
   public FacetValuesMapBuilder(
@@ -32,7 +32,7 @@ public final class FacetValuesMapBuilder implements FacetValuesMap, FacetValuesB
   FacetValuesMapBuilder(
       SimpleRequestBuilder<Object> _request,
       Set<? extends Facet> _facets,
-      Map<Integer, ? extends FacetValue> otherFacetValues,
+      Map<String, ? extends FacetValue> otherFacetValues,
       VajramID vajramID) {
     this._request = _request._asBuilder();
     this._facets = ImmutableSet.copyOf(_facets);
@@ -40,20 +40,20 @@ public final class FacetValuesMapBuilder implements FacetValuesMap, FacetValuesB
     this._vajramID = vajramID;
   }
 
-  public FacetValue _get(int facetId) {
+  public FacetValue _get(String facetId) {
     if (_request._hasValue(facetId)) {
       ErrableFacetValue<Object> v = _request._get(facetId);
       if (v != null) {
         return v;
       } else {
-        throw new AssertionError("This should not be possible sinve _hasValue is true");
+        throw new AssertionError("This should not be possible since _hasValue is true");
       }
     }
     return otherFacetValues.getOrDefault(facetId, ErrableFacetValue.nil());
   }
 
   @Override
-  public Errable<?> _getOne2OneResponse(int facetId) {
+  public Errable<?> _getOne2OneResponse(String facetId) {
     if (_request._hasValue(facetId)) {
       return _request._get(facetId).asErrable();
     } else {
@@ -70,7 +70,7 @@ public final class FacetValuesMapBuilder implements FacetValuesMap, FacetValuesB
 
   @Override
   @SuppressWarnings("unchecked")
-  public FanoutDepResponses _getDepResponses(int facetId) {
+  public FanoutDepResponses _getDepResponses(String facetId) {
     FacetValue datum = otherFacetValues.getOrDefault(facetId, ErrableFacetValue.nil());
     if (datum instanceof FanoutDepResponses fanoutDepResponses) {
       return fanoutDepResponses;
@@ -80,14 +80,14 @@ public final class FacetValuesMapBuilder implements FacetValuesMap, FacetValuesB
   }
 
   @Override
-  public ImmutableMap<Integer, FacetValue> _asMap() {
-    return ImmutableMap.<Integer, FacetValue>builder()
+  public ImmutableMap<String, FacetValue> _asMap() {
+    return ImmutableMap.<String, FacetValue>builder()
         .putAll(_request._asMap())
         .putAll(otherFacetValues)
         .build();
   }
 
-  public boolean _hasValue(int facetId) {
+  public boolean _hasValue(String facetId) {
     return _request._hasValue(facetId) || otherFacetValues.containsKey(facetId);
   }
 
@@ -103,7 +103,7 @@ public final class FacetValuesMapBuilder implements FacetValuesMap, FacetValuesB
         _request, _facets, new LinkedHashMap<>(otherFacetValues), _vajramID);
   }
 
-  public FacetValuesMapBuilder _set(int facetId, FacetValue value) {
+  public FacetValuesMapBuilder _set(String facetId, FacetValue value) {
     if (this._hasValue(facetId)) {
       throw new IllegalModificationException();
     }

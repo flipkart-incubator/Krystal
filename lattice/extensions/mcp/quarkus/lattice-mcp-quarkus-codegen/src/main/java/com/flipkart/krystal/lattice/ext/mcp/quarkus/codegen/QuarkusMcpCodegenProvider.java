@@ -117,7 +117,7 @@ public class QuarkusMcpCodegenProvider implements LatticeCodeGeneratorProvider {
               .add(
                   "$T._builder()",
                   ClassName.get(
-                      vajramInfo.lite().packageName(),
+                      vajramInfo.packageName(),
                       vajramInfo.vajramName() + IMMUT_REQUEST_POJO_SUFFIX));
 
       for (FacetGenModel facet : vajramInfo.facetStream().toList()) {
@@ -230,7 +230,7 @@ return $T.createFrom()
 """,
           Uni.class,
           ClassName.get(
-              vajramInfo.lite().packageName(), vajramInfo.vajramName() + IMMUT_REQUEST_POJO_SUFFIX),
+              vajramInfo.packageName(), vajramInfo.vajramName() + IMMUT_REQUEST_POJO_SUFFIX),
           vajramInfo
               .facetStream()
               .filter(fd -> fd.facetType() == FacetType.INPUT)
@@ -288,8 +288,7 @@ return $T.createFrom()
 """,
           Uni.class,
           ClassName.get(
-              vajramInfo.lite().packageName(),
-              vajramInfo.vajramName() + IMMUT_REQUEST_POJO_SUFFIX));
+              vajramInfo.packageName(), vajramInfo.vajramName() + IMMUT_REQUEST_POJO_SUFFIX));
       mcpResourcesClassBuilder.addMethod(methodBuilder.build());
     }
 

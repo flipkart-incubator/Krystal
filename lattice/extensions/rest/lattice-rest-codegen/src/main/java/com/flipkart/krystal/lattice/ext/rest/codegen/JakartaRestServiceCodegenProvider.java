@@ -552,7 +552,6 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
 
   public static ClassName getJaxRsResourceName(VajramInfo vajramInfo, TypeElement vajramElem) {
     return ClassName.get(
-        vajramInfo.lite().packageName(),
-        vajramElem.getSimpleName().toString() + "_JakartaRestResource");
+        vajramInfo.packageName(), vajramElem.getSimpleName().toString() + "_JakartaRestResource");
   }
 }

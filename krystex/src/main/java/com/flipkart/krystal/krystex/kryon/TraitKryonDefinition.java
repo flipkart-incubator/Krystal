@@ -35,11 +35,6 @@ public record TraitKryonDefinition(
   }
 
   @Override
-  public ImmutableMap<Integer, Facet> facetsById() {
-    return view.facetsById();
-  }
-
-  @Override
   public ImmutableSet<Facet> facetsByType(FacetType facetType) {
     return view.facetsByType().getOrDefault(facetType, ImmutableSet.of());
   }

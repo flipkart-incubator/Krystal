@@ -45,7 +45,7 @@ class DefaultKryonExecutionReportTest {
   void reportStartAndEnd_success() {
     VajramID vajramID = new VajramID("kryon_1");
     KryonLogicId kryonLogicId = new KryonLogicId(vajramID, "kryon_1__logic_1");
-    Set<SimpleFacet> allInputs = Set.of(input(1));
+    Set<SimpleFacet> allInputs = Set.of(input());
     ImmutableList<ExecutionItem> facetValuesList =
         ImmutableList.of(
             new ExecutionItem(
@@ -101,16 +101,16 @@ class DefaultKryonExecutionReportTest {
     assertThat(derefedMap)
         .isEqualTo(
             ImmutableMap.of(
-                ImmutableMap.of(input(1), "v1"), "r1", ImmutableMap.of(input(1), "v2"), "r1"));
+                ImmutableMap.of(input(), "v1"), "r1", ImmutableMap.of(input(), "v2"), "r1"));
 
     ImmutableList<ImmutableMap<Facet, String>> inputsList = logicExecInfo.inputsList();
 
-    List<Map<Integer, String>> dereffedInputList = new ArrayList<>();
+    List<Map<String, String>> dereffedInputList = new ArrayList<>();
     for (ImmutableMap<Facet, String> inputs : inputsList) {
-      Map<Integer, String> map = new LinkedHashMap<>();
+      Map<String, String> map = new LinkedHashMap<>();
       inputs.forEach(
           (inputName, valueRef) ->
-              map.put(inputName.id(), (String) kryonExecutionReport.dataMap().get(valueRef)));
+              map.put(inputName.name(), (String) kryonExecutionReport.dataMap().get(valueRef)));
       dereffedInputList.add(map);
     }
     assertThat(dereffedInputList)
@@ -126,15 +126,15 @@ class DefaultKryonExecutionReportTest {
             new ExecutionItem(
                 new FacetValuesMapBuilder(
                     new SimpleRequestBuilder<>(
-                        Set.of(input(1)), ImmutableMap.of(1, withValue("v1")), vajramID),
-                    Set.of(input(1)),
+                        Set.of(input()), ImmutableMap.of(1, withValue("v1")), vajramID),
+                    Set.of(input()),
                     vajramID),
                 new CompletableFuture<>()),
             new ExecutionItem(
                 new FacetValuesMapBuilder(
                     new SimpleRequestBuilder<>(
-                        Set.of(input(2)), ImmutableMap.of(2, withValue("v2")), vajramID),
-                    Set.of(input(2)),
+                        Set.of(input()), ImmutableMap.of(2, withValue("v2")), vajramID),
+                    Set.of(input()),
                     vajramID),
                 new CompletableFuture<>()));
 
@@ -161,15 +161,15 @@ class DefaultKryonExecutionReportTest {
             new ExecutionItem(
                 new FacetValuesMapBuilder(
                     new SimpleRequestBuilder<>(
-                        Set.of(input(1)), ImmutableMap.of(1, withValue("v1")), vajramID),
-                    Set.of(input(1)),
+                        Set.of(input()), ImmutableMap.of(1, withValue("v1")), vajramID),
+                    Set.of(input()),
                     vajramID),
                 new CompletableFuture<>()),
             new ExecutionItem(
                 new FacetValuesMapBuilder(
                     new SimpleRequestBuilder<>(
-                        Set.of(input(2)), ImmutableMap.of(2, withValue("v2")), vajramID),
-                    Set.of(input(2)),
+                        Set.of(input()), ImmutableMap.of(2, withValue("v2")), vajramID),
+                    Set.of(input()),
                     vajramID),
                 new CompletableFuture<>()));
 
@@ -214,13 +214,13 @@ class DefaultKryonExecutionReportTest {
         ImmutableList.of(
             new ImmutableFacetValuesMap(
                 new SimpleRequestBuilder<>(
-                    Set.of(input(1)), ImmutableMap.of(1, withValue("v1")), vajramID),
-                Set.of(input(1)),
+                    Set.of(input()), ImmutableMap.of(1, withValue("v1")), vajramID),
+                Set.of(input()),
                 vajramID),
             new ImmutableFacetValuesMap(
                 new SimpleRequestBuilder<>(
-                    Set.of(input(2)), ImmutableMap.of(2, withValue("v2")), vajramID),
-                Set.of(input(2)),
+                    Set.of(input()), ImmutableMap.of(2, withValue("v2")), vajramID),
+                Set.of(input()),
                 vajramID));
 
     clock.setInstant(END_TIME);

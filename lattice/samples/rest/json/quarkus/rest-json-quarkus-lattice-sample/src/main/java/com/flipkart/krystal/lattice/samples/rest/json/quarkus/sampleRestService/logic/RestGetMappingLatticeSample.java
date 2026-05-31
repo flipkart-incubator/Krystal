@@ -32,17 +32,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @GET
 @Vajram
 public abstract class RestGetMappingLatticeSample extends ComputeVajramDef<JsonResponse> {
-  interface _Inputs {
-    @IfAbsent(FAIL)
-    @PathParam
-    String fullPath();
-
-    @QueryParam
-    String name();
-
-    @QueryParam
-    String age();
-  }
+  interface _Inputs extends RestGetMappingLatticeSample_Inputs {}
 
   interface _InternalFacets {
     @Inject

@@ -21,7 +21,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 
 /**
  * Useful data views over {@link VajramKryonDefinition}'s data
@@ -34,7 +33,6 @@ import java.util.function.Function;
  * @param dependenciesWithNoResolvers Set of dependency names which have no resolvers.
  */
 record KryonDefinitionView(
-    ImmutableMap<Integer, Facet> facetsById,
     ImmutableMap<FacetType, ImmutableSet<Facet>> facetsByType,
     ImmutableSet<Facet> givenFacets,
     ImmutableSet<Dependency> dependencies,
@@ -73,7 +71,6 @@ record KryonDefinitionView(
     ImmutableMap<Optional<Facet>, ImmutableSet<ResolverDefinition>> resolverDefinitionsByFacets =
         createResolverDefinitionsByFacets(resolversByDefinition.keySet());
     return new KryonDefinitionView(
-        allFacets.stream().collect(toImmutableMap(Facet::id, Function.identity())),
         facetsByType.entrySet().stream()
             .collect(toImmutableMap(Entry::getKey, e -> ImmutableSet.copyOf(e.getValue()))),
         allFacets.stream().filter(FacetUtils::isGiven).collect(toImmutableSet()),

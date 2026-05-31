@@ -254,7 +254,7 @@ class ProtoServiceSchemaGen implements CodeGenerator {
                       getSimpleClassName(vajramInfo.responseType().canonicalClassName());
                   // Add imports for the request and response messages
                   imports.add(
-                      vajramInfo.packageName().replace('.', '/')
+                      vajramInfo.inputsInfo().requestPackageName().replace('.', '/')
                           + "/"
                           + vajramInfo.vajramId().id()
                           + reqProtoFileSuffix);

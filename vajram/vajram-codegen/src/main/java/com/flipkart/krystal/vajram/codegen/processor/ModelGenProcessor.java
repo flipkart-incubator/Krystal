@@ -15,12 +15,16 @@ import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocol;
+import com.flipkart.krystal.model.SupportedModelProtocolName;
 import com.google.auto.service.AutoService;
 import com.google.common.base.Throwables;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
@@ -72,7 +76,7 @@ public final class ModelGenProcessor extends AbstractKrystalAnnoProcessor {
                     customCodeGeneratorProvider
                         .getSupportedModelProtocols()
                         .contains(modelProtocol))) {
-          util.error(
+          util.note(
               "No model code generator found supporting model protocol %s for model root %s"
                   .formatted(modelProtocol, modelRoot),
               modelRoot);
@@ -93,24 +97,47 @@ public final class ModelGenProcessor extends AbstractKrystalAnnoProcessor {
       TypeElement modelRootType, CodeGenUtility util) {
     SupportedModelProtocol[] protocols =
         modelRootType.getAnnotationsByType(SupportedModelProtocol.class);
+    SupportedModelProtocolName[] protocolNames =
+        modelRootType.getAnnotationsByType(SupportedModelProtocolName.class);
     if (protocols.length == 0) {
       return Set.of(PlainJavaObject.class);
     }
-    return java.util.Arrays.stream(protocols)
-        .map(p -> util.getTypeElemFromAnnotationMember(p::value))
-        .map(element -> element.getQualifiedName().toString())
-        .map(
-            s -> {
-              try {
-                //noinspection unchecked
-                return (Class<? extends ModelProtocol>)
-                    Class.forName(s, false, this.getClass().getClassLoader());
-              } catch (ClassNotFoundException e) {
-                util.error(Throwables.getStackTraceAsString(e), modelRootType);
-                return null;
-              }
-            })
-        .filter(Objects::nonNull)
-        .collect(toSet());
+    Set<Class<? extends ModelProtocol>> modelProtocolClasses =
+        Arrays.stream(protocols)
+            .map(p -> util.getTypeElemFromAnnotationMember(p::value))
+            .map(element -> element.getQualifiedName().toString())
+            .map(
+                s -> {
+                  try {
+                    //noinspection unchecked
+                    return (Class<? extends ModelProtocol>)
+                        Class.forName(s, false, this.getClass().getClassLoader());
+                  } catch (ClassNotFoundException e) {
+                    util.error(Throwables.getStackTraceAsString(e), modelRootType);
+                    return null;
+                  }
+                })
+            .filter(Objects::nonNull)
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+
+    modelProtocolClasses.addAll(
+        Arrays.stream(protocolNames)
+            .map(SupportedModelProtocolName::value)
+            .map(
+                s -> {
+                  try {
+                    //noinspection unchecked
+                    return (Class<? extends ModelProtocol>)
+                        Class.forName(s, false, this.getClass().getClassLoader());
+                  } catch (ClassNotFoundException e) {
+                    util.note(
+                        "Skipping processing of model protocol %s since it is not part of the class path.");
+                    return null;
+                  }
+                })
+            .filter(Objects::nonNull)
+            .collect(toSet()));
+
+    return modelProtocolClasses;
   }
 }
