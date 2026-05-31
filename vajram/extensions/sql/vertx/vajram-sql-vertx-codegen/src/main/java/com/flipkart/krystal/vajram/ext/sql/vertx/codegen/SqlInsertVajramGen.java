@@ -10,6 +10,7 @@ import static javax.lang.model.element.Modifier.STATIC;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
+import com.flipkart.krystal.except.SkippedExecutionException;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -29,6 +30,7 @@ import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
@@ -41,6 +43,7 @@ import java.util.List;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.ElementFilter;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Generates a {@code @Vajram} ComputeVajram for each {@code @SQL @INSERT @Trait} interface.
@@ -95,7 +98,9 @@ public class SqlInsertVajramGen implements CodeGenerator {
 
     ExecutableElement inputMethod = findInputMethod(sqlTraitElement);
     if (inputMethod == null) {
-      return;
+      throw util.errorAndThrow(
+          "No Inputs found in %s. Insert trait must have one input representing the row to insert",
+          sqlTraitElement);
     }
 
     ClassName traitClass = ClassName.get(pkg, traitName);
@@ -114,7 +119,7 @@ public class SqlInsertVajramGen implements CodeGenerator {
             .addMethod(buildResolveSqlMethod(facClass, insertModel, inputMethod))
             .addMethod(buildResolveParamsMethod(facClass, insertModel, inputMethod))
             .addMethod(buildResolvePoolMethod(facClass))
-            .addMethod(buildMapResultMethod())
+            .addMethod(buildOutputMethod())
             .build();
     ClassName vajramClassName = ClassName.get(pkg, vajramName);
 
@@ -172,7 +177,6 @@ public class SqlInsertVajramGen implements CodeGenerator {
         MethodSpec.methodBuilder(VertxSqlUtil.SQL_RESULT_FACET)
             .returns(VertxSqlUtil.ROW_SET_OF_ROW)
             .addModifiers(PUBLIC, ABSTRACT)
-            .addAnnotation(ifAbsentFail)
             .addAnnotation(
                 AnnotationSpec.builder(Dependency.class)
                     .addMember("onVajram", "$T.class", ExecuteVertxSql.class)
@@ -224,7 +228,16 @@ public class SqlInsertVajramGen implements CodeGenerator {
       prefix.append(columns.get(i).columnName());
     }
     prefix.append(") VALUES ");
-
+    method.addCode(
+"""
+    if($L.isEmpty()){
+      throw new $T($S);
+    }
+""",
+        model.inputParamName(),
+        SkippedExecutionException.class,
+        "%s: skipping dependency ExecuteVertxSql since '%s' input list is empty"
+            .formatted(vajramInfo.definitionElement().getSimpleName(), model.inputParamName()));
     method.addStatement(
         "$T _sb = new $T($S)", StringBuilder.class, StringBuilder.class, prefix.toString());
     method.addStatement("int _paramIdx = 1");
@@ -346,13 +359,24 @@ public class SqlInsertVajramGen implements CodeGenerator {
 
   // ─── @Output mapResult ──────────────────────────────────────────────────────
 
-  private MethodSpec buildMapResultMethod() {
+  private MethodSpec buildOutputMethod() {
     return MethodSpec.methodBuilder("mapResult")
         .addModifiers(STATIC)
         .addAnnotation(Output.class)
-        .returns(TypeName.INT.box())
-        .addParameter(VertxSqlUtil.ROW_SET_OF_ROW, VertxSqlUtil.SQL_RESULT_FACET)
-        .addStatement("return $L.rowCount()", VertxSqlUtil.SQL_RESULT_FACET)
+        .returns(TypeName.INT)
+        .addParameter(
+            ParameterSpec.builder(VertxSqlUtil.ROW_SET_OF_ROW, VertxSqlUtil.SQL_RESULT_FACET)
+                .addAnnotation(Nullable.class)
+                .build())
+        .addCode(
+"""
+    if($L == null){
+      return 0;
+    }
+    return $L.rowCount();
+""",
+            VertxSqlUtil.SQL_RESULT_FACET,
+            VertxSqlUtil.SQL_RESULT_FACET)
         .build();
   }
 

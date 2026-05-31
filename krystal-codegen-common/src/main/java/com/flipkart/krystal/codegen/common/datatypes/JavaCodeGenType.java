@@ -63,6 +63,8 @@ public final class JavaCodeGenType implements CodeGenType {
         // Filter specifically for ENUM_CONSTANT
         if (field.getKind() == ElementKind.ENUM_CONSTANT
             && field.getAnnotation(DefaultValue.class) != null) {
+          // JavaModelsGen#validateEnumModel validates that exactly one enum constant is annotated
+          // with @DefaultValue
           return CodeBlock.of("$T.$L", typeMirror, field.getSimpleName());
         }
       }

@@ -203,7 +203,7 @@ public final class SqlModelParser {
   /**
    * Parses a single {@code @WHERE}-annotated {@code SelectionPredicate} into a {@link WhereLeaf}.
    * Each method in the predicate interface becomes a {@link WhereColumn} with resolved DB column
-   * name (via {@code @Column}) and comparison operator (via {@code @IsEqualTo}, defaulting to
+   * name (via {@code @Column}) and comparison operator (example: {@code @IsEqualTo}, defaulting to
    * {@code "="}).
    */
   private WhereLeaf parseWhereLeaf(
@@ -505,7 +505,7 @@ public final class SqlModelParser {
   public String getTableName(TypeElement tableElement) {
     Table tableAnno = tableElement.getAnnotation(Table.class);
     if (tableAnno == null) {
-      throw new IllegalArgumentException(tableElement + " does not have @Table annotation");
+      throw util.errorAndThrow(tableElement + " does not have @Table annotation");
     }
     String name;
     if (tableAnno.name().isBlank()) {
@@ -555,7 +555,7 @@ public final class SqlModelParser {
   /** Returns the name of the {@code @PrimaryKey}-annotated column in the given table. */
   public String findPkColumn(TypeElement tableElement) {
     ExecutableElement pkMethod = findPkMethod(tableElement);
-    return pkMethod.getSimpleName().toString();
+    return resolveColumnName(pkMethod, true);
   }
 
   /**

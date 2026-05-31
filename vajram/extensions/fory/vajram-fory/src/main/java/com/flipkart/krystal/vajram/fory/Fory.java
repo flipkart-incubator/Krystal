@@ -68,9 +68,11 @@ public final class Fory implements SerdeProtocol<NoAnnotation, SerializableModel
   @SuppressWarnings("unchecked")
   @Override
   public <T> T deserialize(Object payload, Object typeInfo, @Nullable NoAnnotation customConfig) {
-    if (payload instanceof byte[] bytes) {
-      if (typeInfo instanceof Class<?> clazz) {
+    if (typeInfo instanceof Class<?> clazz) {
+      if (payload instanceof byte[] bytes) {
         return (T) FORY_INSTANCE.deserialize(bytes, clazz);
+      } else if (payload instanceof ByteArray byteArray) {
+        return (T) FORY_INSTANCE.deserialize(byteArray.toArray(), clazz);
       }
     }
     throw new UnsupportedOperationException(

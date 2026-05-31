@@ -1069,6 +1069,7 @@ public final class JavaModelsGen implements CodeGenerator {
             constructorBuilder.addStatement("this.$L = $L", fieldName, fieldName);
           }
         }
+        case RANGE -> constructorBuilder.addStatement("this.$L = $L", fieldName, fieldName);
         case LIST -> {
           if (modelRootInfo.isPresent()) {
             constructorBuilder.addStatement(

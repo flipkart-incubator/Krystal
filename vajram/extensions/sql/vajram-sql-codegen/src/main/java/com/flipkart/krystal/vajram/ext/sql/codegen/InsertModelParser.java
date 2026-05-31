@@ -98,6 +98,10 @@ public final class InsertModelParser {
       columns.add(new InsertColumn(dbColumnName, actualType, accessorName, isOptional, serdeInfo));
     }
 
+    if (columns.isEmpty()) {
+      util.error("Table '%s' has no columns. To INSERT in a table, at least one column is needed");
+    }
+
     return new InsertQueryModel(tableElement, tableName, columns, paramName, isList);
   }
 

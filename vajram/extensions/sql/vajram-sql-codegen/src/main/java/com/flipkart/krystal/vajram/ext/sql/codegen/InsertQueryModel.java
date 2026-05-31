@@ -13,7 +13,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @param tableElement the {@code @Table}-annotated type element
  * @param tableName the SQL table name from {@code @Table(name = ...)}
  * @param columns the table's insertable columns (excluding {@code @IncomingForeignKey})
- * @param inputParamName the method name of the single input in {@code _Inputs}
+ * @param inputParamName the name of the single input in {@code _Inputs}
  * @param isList {@code true} if the input type is {@code List<@Table>}, {@code false} for a single
  *     {@code @Table}
  */

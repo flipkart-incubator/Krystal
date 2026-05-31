@@ -1433,52 +1433,43 @@ public class CodeGenUtility {
     return asModelRoot(javaModelType, elements).isPresent();
   }
 
-  public ContainerType getContainerType(TypeMirror javaModelType) {
-    boolean isOptional = isOptional(javaModelType);
-    if (isOptional) {
-      javaModelType = getOptionalInnerType(javaModelType);
-    }
-    boolean isListType = isListType(javaModelType);
-    return isListType
-        ? ContainerType.LIST
-        : isMapType(javaModelType) ? ContainerType.MAP : ContainerType.NO_CONTAINER;
-  }
-
-  public Optional<ModelRootInfo> asModelRoot(TypeMirror javaModelType, Element... elements) {
-    ContainerType containerType = ContainerType.NO_CONTAINER;
+  public ContainerType getContainerType(TypeMirror javaModelType, Element... elements) {
+    javaModelType = getOptionalInnerType(javaModelType);
     if (isOptional(javaModelType)) {
-      javaModelType = getOptionalInnerType(javaModelType);
-      if (isOptional(javaModelType)) {
-        error(
-            "Optional of Optional (Optional<Optional<..>>) is not supported by Krystal Modelling framework",
-            elements);
-      }
+      error(
+          "Optional of Optional (Optional<Optional<..>>) is not supported by Krystal Modelling framework",
+          elements);
     }
     if (isListType(javaModelType)) {
-      javaModelType = getContentType(javaModelType);
-      if (isListType(javaModelType)) {
+      if (isListType(getContentType(javaModelType))) {
         error(
             "List of Lists (List<List<..>>) is not supported by Krystal Modelling protocol",
             elements);
       }
-      containerType = ContainerType.LIST;
+      return ContainerType.LIST;
     } else if (isMapType(javaModelType)) {
-      javaModelType = getMapValueType(javaModelType);
-      if (isMapType(javaModelType)) {
+      if (isMapType(getContentType(javaModelType))) {
         error(
             "Map of Maps (Map<K, Map<..>>) is not supported by Krystal Modelling protocol",
             elements);
       }
-      containerType = ContainerType.MAP;
+      return ContainerType.MAP;
+    } else if (isRangeType(javaModelType)) {
+      return ContainerType.RANGE;
     }
-    if (!isRawAssignable(javaModelType, Model.class)) {
+    return ContainerType.NO_CONTAINER;
+  }
+
+  public Optional<ModelRootInfo> asModelRoot(TypeMirror javaModelType, Element... elements) {
+    TypeMirror contentType = getContentType(getOptionalInnerType(javaModelType));
+    if (!isRawAssignable(contentType, Model.class)) {
       return Optional.empty();
     }
-    if (typeUtils.asElement(javaModelType) instanceof TypeElement typeElement) {
+    ContainerType containerType = getContainerType(javaModelType, elements);
+    if (typeUtils.asElement(contentType) instanceof TypeElement typeElement) {
       ModelRoot annotation = typeElement.getAnnotation(ModelRoot.class);
       if (annotation != null) {
-        return Optional.of(
-            new ModelRootInfo(typeElement, javaModelType, annotation, containerType));
+        return Optional.of(new ModelRootInfo(typeElement, contentType, annotation, containerType));
       }
     }
     return Optional.empty();
