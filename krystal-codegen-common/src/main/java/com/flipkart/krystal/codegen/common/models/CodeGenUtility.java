@@ -21,7 +21,9 @@ import com.flipkart.krystal.codegen.common.datatypes.DataTypeRegistry;
 import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider;
 import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider.ModelProtocolConfig;
 import com.flipkart.krystal.datatypes.JavaType;
+import com.flipkart.krystal.model.EnumModel;
 import com.flipkart.krystal.model.IfAbsent;
+import com.flipkart.krystal.model.IfAbsent.Creator;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
@@ -66,6 +68,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.ServiceLoader;
+import java.util.ServiceLoader.Provider;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
@@ -293,13 +296,13 @@ public class CodeGenUtility {
                 .formatted(modelElement.getSimpleName()),
             modelElement);
         // Fallback to FAIL to continue processing
-        ifAbsent = IfAbsent.Creator.create(FAIL);
+        ifAbsent = Creator.create(FAIL);
       } else if (isRequest) {
-        ifAbsent = IfAbsent.Creator.create(MAY_FAIL_CONDITIONALLY);
+        ifAbsent = Creator.create(MAY_FAIL_CONDITIONALLY);
       } else if (optOrNullable) {
-        ifAbsent = IfAbsent.Creator.create(WILL_NEVER_FAIL);
+        ifAbsent = Creator.create(WILL_NEVER_FAIL);
       } else {
-        ifAbsent = IfAbsent.Creator.create(FAIL);
+        ifAbsent = Creator.create(FAIL);
       }
     }
     return ifAbsent;
@@ -1297,7 +1300,7 @@ public class CodeGenUtility {
     Map<String, ModelProtocol> availableModelProtocols =
         ServiceLoader.load(ModelProtocolConfigProvider.class, this.getClass().getClassLoader())
             .stream()
-            .map(ServiceLoader.Provider::get)
+            .map(Provider::get)
             .map(ModelProtocolConfigProvider::getConfig)
             .map(ModelProtocolConfig::modelProtocol)
             .collect(
@@ -1308,6 +1311,7 @@ public class CodeGenUtility {
         .map(element -> element.getQualifiedName().toString())
         .map(availableModelProtocols::get)
         .filter(Objects::nonNull)
+        .map(Objects::requireNonNull)
         .toList();
   }
 
@@ -1369,13 +1373,14 @@ public class CodeGenUtility {
 
   public @Nullable AnnotationMirror getAnnotationMirror(
       AnnotatedConstruct annotatedElement, String annoClassCanonicalName) {
-    return annotatedElement.getAnnotationMirrors().stream()
-        .filter(
-            annotationMirror ->
-                annotationMirror.getAnnotationType().asElement() instanceof QualifiedNameable q
-                    && q.getQualifiedName().contentEquals(annoClassCanonicalName))
-        .findAny()
-        .orElse(null);
+    Optional<? extends AnnotationMirror> any =
+        annotatedElement.getAnnotationMirrors().stream()
+            .filter(
+                annotationMirror ->
+                    annotationMirror.getAnnotationType().asElement() instanceof QualifiedNameable q
+                        && q.getQualifiedName().contentEquals(annoClassCanonicalName))
+            .findAny();
+    return any.isPresent() ? any.get() : null;
   }
 
   public <T extends Annotation> @Nullable AnnotationInfo<T> getAnnotationInfo(
@@ -1475,10 +1480,7 @@ public class CodeGenUtility {
     return Optional.empty();
   }
 
-  /**
-   * Returns true if the given TypeElement is an enum that implements {@link
-   * com.flipkart.krystal.model.EnumModel}.
-   */
+  /** Returns true if the given TypeElement is an enum that implements {@link EnumModel}. */
   public boolean isEnumModel(@Nullable Element typeElement) {
     if (typeElement == null) {
       return false;
@@ -1488,7 +1490,7 @@ public class CodeGenUtility {
 
   /**
    * Returns true if the given TypeMirror is an enum type annotated with {@link ModelRoot} and
-   * implementing {@link com.flipkart.krystal.model.EnumModel}.
+   * implementing {@link EnumModel}.
    */
   public boolean isEnumModelType(TypeMirror type) {
     Element element = processingEnv().getTypeUtils().asElement(type);

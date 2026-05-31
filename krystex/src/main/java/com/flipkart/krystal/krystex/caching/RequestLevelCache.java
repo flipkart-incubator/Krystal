@@ -255,7 +255,7 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
    * of cache key computation and using the facets object is equivalent to using the inner request
    * object.
    *
-   * @param facetValues
+   * @param facetValues The facet values to be used as a cache key
    */
   private static @Nullable ImmutableFacetValues newCacheKey(FacetValues facetValues) {
     ImmutableFacetValues immut;

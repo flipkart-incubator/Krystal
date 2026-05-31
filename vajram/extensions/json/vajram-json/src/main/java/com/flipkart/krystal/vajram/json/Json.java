@@ -69,24 +69,28 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
       customConfig = JsonConfig.Creator.createDefault();
     }
     try {
-      object = tryAsJsonModel(object, mapper);
+      @Nullable Object transformed = tryAsJsonModel(object, mapper);
       return switch (customConfig.serializeAs()) {
         case BYTE_ARRAY ->
-            object instanceof SerializableJsonModel jsonModel
+            transformed instanceof SerializableJsonModel jsonModel
                 ? jsonModel._serialize()
-                : OBJECT_WRITER.writeValueAsBytes(object);
+                : OBJECT_WRITER.writeValueAsBytes(transformed);
         case STRING ->
-            object instanceof SerializableJsonModel jsonModel
+            transformed instanceof SerializableJsonModel jsonModel
                 ? jsonModel._serializeAsString()
-                : OBJECT_WRITER.writeValueAsString(object);
+                : OBJECT_WRITER.writeValueAsString(transformed);
       };
     } catch (Exception e) {
       throw new IllegalArgumentException(e);
     }
   }
 
-  private static Object tryAsJsonModel(
-      Object object, Function<Model, @Nullable SerializableJsonModel> mapper) {
+  @SuppressWarnings("type.argument")
+  private @Nullable static Object tryAsJsonModel(
+      @Nullable Object object, Function<Model, @Nullable SerializableJsonModel> mapper) {
+    if (object == null) {
+      return null;
+    }
     if (object instanceof Model model) {
       object =
           requireNonNullElse(

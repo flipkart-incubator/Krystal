@@ -49,7 +49,8 @@ public abstract class AbstractKrystalAnnoProcessor extends AbstractProcessor {
   public final boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     validateAndInit();
     if (expectedPhase == null || Objects.equals(expectedPhase, codegenPhase)) {
-      return processImpl(annotations, roundEnv);
+      processImpl(annotations, roundEnv);
+      return false;
     }
     requireNonNull(codeGenUtil)
         .note(
@@ -86,7 +87,5 @@ public abstract class AbstractKrystalAnnoProcessor extends AbstractProcessor {
     this.codeGenUtil = new CodeGenUtility(processingEnv, this.getClass(), codegenPhase);
   }
 
-  protected boolean processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-    return false;
-  }
+  protected void processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {}
 }

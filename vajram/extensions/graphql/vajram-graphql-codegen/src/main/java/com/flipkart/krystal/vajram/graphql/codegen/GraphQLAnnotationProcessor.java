@@ -30,15 +30,15 @@ public class GraphQLAnnotationProcessor extends AbstractKrystalAnnoProcessor {
   boolean generated;
 
   @Override
-  protected boolean processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+  protected void processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     if (this.generated) {
-      return false;
+      return;
     }
     CodeGenUtility util = codeGenUtil();
     File schemaFile = getSchemaFilePath(util).toFile();
     if (!schemaFile.exists()) {
       util.note("Schema.graphqls not found. Skipping GraphQl Code Generation");
-      return false;
+      return;
     }
     util.note("Annotations: " + annotations);
     for (TypeElement annotation : annotations) {
@@ -61,6 +61,6 @@ public class GraphQLAnnotationProcessor extends AbstractKrystalAnnoProcessor {
       util.error("[GraphQL Codegen Exception] " + getStackTraceAsString(e));
     }
     generated = true;
-    return false;
+    return;
   }
 }

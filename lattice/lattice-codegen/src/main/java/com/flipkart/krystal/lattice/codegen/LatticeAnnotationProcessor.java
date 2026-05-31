@@ -30,7 +30,7 @@ import javax.lang.model.element.TypeElement;
 public class LatticeAnnotationProcessor extends AbstractKrystalAnnoProcessor {
 
   @Override
-  protected final boolean processImpl(
+  protected final void processImpl(
       Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     VajramCodeGenUtility util = new VajramCodeGenUtility(codeGenUtil());
     List<TypeElement> latticeApps =
@@ -75,6 +75,6 @@ public class LatticeAnnotationProcessor extends AbstractKrystalAnnoProcessor {
       }
     }
 
-    return false;
+    return;
   }
 }

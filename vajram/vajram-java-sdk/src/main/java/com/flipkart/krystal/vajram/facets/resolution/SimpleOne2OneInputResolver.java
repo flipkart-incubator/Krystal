@@ -6,7 +6,6 @@ import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil._r
 
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.ImmutableRequest;
-import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.resolution.ResolverCommand;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
@@ -25,7 +24,7 @@ public final class SimpleOne2OneInputResolver<S, T, CV extends Request<?>, DV ex
 
   @Override
   public ResolverCommand resolve(
-      List<? extends Builder<?>> _depRequests, FacetValues _rawFacetValues) {
+      List<? extends ImmutableRequest.Builder<?>> _depRequests, FacetValues _rawFacetValues) {
     {
       try {
         //noinspection unchecked,rawtypes

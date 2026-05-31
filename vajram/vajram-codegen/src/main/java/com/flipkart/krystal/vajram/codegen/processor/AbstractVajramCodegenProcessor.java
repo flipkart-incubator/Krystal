@@ -35,8 +35,7 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractKrystalAnno
   public AbstractVajramCodegenProcessor() {}
 
   @Override
-  public final boolean processImpl(
-      Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+  public final void processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     VajramCodeGenUtility util = new VajramCodeGenUtility(codeGenUtil());
     this.vajramDefinitions.addAll(util.getDefinitionClasses(roundEnv));
     CharSequence message =
@@ -104,7 +103,6 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractKrystalAnno
                 failure.element());
       }
     }
-    return false;
   }
 
   private record Failure(@Nullable TypeElement element, Throwable throwable) {}

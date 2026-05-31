@@ -1,6 +1,7 @@
 package com.flipkart.krystal.codegen.common.datatypes;
 
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.standardTypesByCanonicalName;
+import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenerationException;
 import com.flipkart.krystal.model.DefaultValue;
@@ -57,7 +58,7 @@ public final class JavaCodeGenType implements CodeGenType {
   public CodeBlock defaultValueExpr(ProcessingEnvironment processingEnv)
       throws CodeGenerationException {
     if (isEnum(processingEnv)) {
-      Element element = processingEnv.getTypeUtils().asElement(typeMirror);
+      Element element = requireNonNull(processingEnv.getTypeUtils().asElement(typeMirror));
       List<VariableElement> fields = ElementFilter.fieldsIn(element.getEnclosedElements());
       for (VariableElement field : fields) {
         // Filter specifically for ENUM_CONSTANT

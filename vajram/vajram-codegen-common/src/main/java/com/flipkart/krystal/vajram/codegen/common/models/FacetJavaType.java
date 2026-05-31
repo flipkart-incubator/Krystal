@@ -47,7 +47,10 @@ public abstract sealed class FacetJavaType {
   public CodeBlock fieldInitializer(FacetGenModel facet) {
     if (util.usePlatformDefault(facet)) {
       try {
-        return facet.dataType().defaultValueExpr(util.processingEnv());
+        CodeBlock defaultValueExpr = facet.dataType().defaultValueExpr(util.processingEnv());
+        if (defaultValueExpr == null) {}
+
+        return defaultValueExpr;
       } catch (Exception e) {
         throw new VajramDefinitionException(
             "The datatype "

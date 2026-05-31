@@ -102,7 +102,7 @@ public class TypeNameVisitor extends AbstractTypeVisitor14<TypeName, Void> {
 
   @Override
   public TypeName visitError(ErrorType t, Void unused) {
-    return visitDeclared(t, unused);
+    return visitDeclared(t, null);
   }
 
   @Override

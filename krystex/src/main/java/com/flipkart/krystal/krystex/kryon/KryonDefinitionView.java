@@ -13,7 +13,6 @@ import com.flipkart.krystal.krystex.resolution.Resolver;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSet.Builder;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -120,7 +119,7 @@ record KryonDefinitionView(
   private static ImmutableMap<Optional<Facet>, ImmutableSet<ResolverDefinition>>
       createResolverDefinitionsByFacets(
           ImmutableCollection<ResolverDefinition> resolverDefinitions) {
-    Map<Optional<Facet>, Builder<ResolverDefinition>> resolverDefinitionsBySource =
+    Map<Optional<Facet>, ImmutableSet.Builder<ResolverDefinition>> resolverDefinitionsBySource =
         new LinkedHashMap<>();
     resolverDefinitions.forEach(
         resolverDefinition -> {

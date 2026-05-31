@@ -37,7 +37,7 @@ import javax.lang.model.element.TypeElement;
 public class VertxSqlAnnoProcessor extends AbstractKrystalAnnoProcessor {
 
   @Override
-  protected boolean processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+  protected void processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     try {
       VajramCodeGenUtility vajramUtil = new VajramCodeGenUtility(codeGenUtil());
       SqlModelParser parser = new SqlModelParser(vajramUtil, paramIndex -> "$" + paramIndex);
@@ -70,7 +70,6 @@ public class VertxSqlAnnoProcessor extends AbstractKrystalAnnoProcessor {
     } catch (Exception e) {
       codeGenUtil().error("[SQL TraitVajramGen] " + getStackTraceAsString(e));
     }
-    return false;
   }
 
   private List<TypeElement> getSqlTraits(RoundEnvironment roundEnv) {
