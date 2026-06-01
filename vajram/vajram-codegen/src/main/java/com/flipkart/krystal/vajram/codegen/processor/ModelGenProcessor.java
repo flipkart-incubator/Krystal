@@ -99,19 +99,16 @@ public final class ModelGenProcessor extends AbstractKrystalAnnoProcessor {
         modelRootType.getAnnotationsByType(SupportedModelProtocol.class);
     SupportedModelProtocolName[] protocolNames =
         modelRootType.getAnnotationsByType(SupportedModelProtocolName.class);
-    if (protocols.length == 0) {
-      return Set.of(PlainJavaObject.class);
-    }
     Set<Class<? extends ModelProtocol>> modelProtocolClasses =
         Arrays.stream(protocols)
             .map(p -> util.getTypeElemFromAnnotationMember(p::value))
             .map(element -> element.getQualifiedName().toString())
             .map(
-                s -> {
+                protocolName -> {
                   try {
                     //noinspection unchecked
                     return (Class<? extends ModelProtocol>)
-                        Class.forName(s, false, this.getClass().getClassLoader());
+                        Class.forName(protocolName, false, this.getClass().getClassLoader());
                   } catch (ClassNotFoundException e) {
                     util.error(Throwables.getStackTraceAsString(e), modelRootType);
                     return null;
@@ -124,20 +121,24 @@ public final class ModelGenProcessor extends AbstractKrystalAnnoProcessor {
         Arrays.stream(protocolNames)
             .map(SupportedModelProtocolName::value)
             .map(
-                s -> {
+                protocolName -> {
                   try {
                     //noinspection unchecked
                     return (Class<? extends ModelProtocol>)
-                        Class.forName(s, false, this.getClass().getClassLoader());
+                        Class.forName(protocolName, false, this.getClass().getClassLoader());
                   } catch (ClassNotFoundException e) {
                     util.note(
-                        "Skipping processing of model protocol %s since it is not part of the class path.");
+                        "Skipping processing of model protocol %s since it is not part of the classpath."
+                            .formatted(protocolName));
                     return null;
                   }
                 })
             .filter(Objects::nonNull)
             .collect(toSet()));
 
+    if (modelProtocolClasses.isEmpty()) {
+      return Set.of(PlainJavaObject.class);
+    }
     return modelProtocolClasses;
   }
 }

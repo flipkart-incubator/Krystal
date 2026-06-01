@@ -89,7 +89,7 @@ class Resilience4JBulkheadTest {
     OutputLogicDefinition<String> outputLogicDef =
         newIOLogic(
             "bulkhead_restrictsConcurrency",
-            ImmutableSet.of(input()),
+            ImmutableSet.of(input("facet1")),
             executionItem ->
                 runAsync(
                     () -> {
@@ -105,10 +105,10 @@ class Resilience4JBulkheadTest {
     VajramKryonDefinition kryonDefinition =
         kryonDefinitionRegistry.newVajramKryonDefinition(
             vajramID("kryon"),
-            Set.of(input()),
+            Set.of(input("facet1")),
             outputLogicDef.kryonLogicId(),
             ImmutableMap.of(),
-            newCreateNewRequestLogic(Set.of(input())),
+            newCreateNewRequestLogic(Set.of(input("facet1"))),
             newFacetsFromRequestLogic(),
             _graphExecData -> _graphExecData.communicationFacade().executeOutputLogic(),
             ElementTags.of(
@@ -138,7 +138,9 @@ class Resilience4JBulkheadTest {
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
         executor1.executeKryon(
             new SimpleRequestBuilder<>(
-                    Set.of(input()), ImmutableMap.of(1, withValue(1)), kryonDefinition.vajramID())
+                    Set.of(input("facet1")),
+                    ImmutableMap.of("facet1", withValue(1)),
+                    kryonDefinition.vajramID())
                 ._build(),
             KryonExecutionConfig.builder().executionId("req_1").build());
     KryonExecutor executor2 =
@@ -152,7 +154,9 @@ class Resilience4JBulkheadTest {
     CompletableFuture<Object> call2BeforeBulkheadExhaustion =
         executor2.executeKryon(
             new SimpleRequestBuilder<>(
-                    Set.of(input()), ImmutableMap.of(1, withValue(2)), kryonDefinition.vajramID())
+                    Set.of(input("facet1")),
+                    ImmutableMap.of("facet1", withValue(2)),
+                    kryonDefinition.vajramID())
                 ._build(),
             KryonExecutionConfig.builder().executionId("req_2").build());
     KryonExecutor executor3 =
@@ -166,7 +170,9 @@ class Resilience4JBulkheadTest {
     CompletableFuture<Object> callAfterBulkheadExhaustion =
         executor3.executeKryon(
             new SimpleRequestBuilder<>(
-                    Set.of(input()), ImmutableMap.of(1, withValue(3)), kryonDefinition.vajramID())
+                    Set.of(input("facet1")),
+                    ImmutableMap.of("facet1", withValue(3)),
+                    kryonDefinition.vajramID())
                 ._build(),
             KryonExecutionConfig.builder().executionId("req_3").build());
     executor1.close();
@@ -187,7 +193,7 @@ class Resilience4JBulkheadTest {
   @Test
   void threadpoolBulkhead_restrictsConcurrency() {
     CountDownLatch countDownLatch = new CountDownLatch(1);
-    Set<SimpleFacet> inputs = Set.of(input());
+    Set<SimpleFacet> inputs = Set.of(input("facet1"));
     OutputLogicDefinition<String> outputLogic =
         newIOLogic(
             "threadpoolBulkhead_restrictsConcurrency",
@@ -238,7 +244,7 @@ class Resilience4JBulkheadTest {
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
         executor1.executeKryon(
             new SimpleRequestBuilder<>(
-                    inputs, ImmutableMap.of(1, withValue(1)), kryonDefinition.vajramID())
+                    inputs, ImmutableMap.of("facet1", withValue(1)), kryonDefinition.vajramID())
                 ._build(),
             KryonExecutionConfig.builder().executionId("req_1").build());
     KryonExecutor executor2 =
@@ -252,7 +258,7 @@ class Resilience4JBulkheadTest {
     CompletableFuture<Object> call2BeforeBulkheadExhaustion =
         executor2.executeKryon(
             new SimpleRequestBuilder<>(
-                    inputs, ImmutableMap.of(1, withValue(2)), kryonDefinition.vajramID())
+                    inputs, ImmutableMap.of("facet1", withValue(2)), kryonDefinition.vajramID())
                 ._build(),
             KryonExecutionConfig.builder().executionId("req_2").build());
     KryonExecutor executor3 =
@@ -266,7 +272,7 @@ class Resilience4JBulkheadTest {
     CompletableFuture<Object> callAfterBulkheadExhaustion =
         executor3.executeKryon(
             new SimpleRequestBuilder<>(
-                    inputs, ImmutableMap.of(1, withValue(3)), kryonDefinition.vajramID())
+                    inputs, ImmutableMap.of("facet1", withValue(3)), kryonDefinition.vajramID())
                 ._build(),
             KryonExecutionConfig.builder().executionId("req_3").build());
     executor1.close();

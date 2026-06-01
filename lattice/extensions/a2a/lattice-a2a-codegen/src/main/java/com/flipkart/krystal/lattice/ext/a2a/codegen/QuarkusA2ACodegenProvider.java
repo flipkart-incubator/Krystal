@@ -277,9 +277,7 @@ public class QuarkusA2ACodegenProvider implements LatticeCodeGeneratorProvider {
     }
 
     VajramInfo vajramInfo = ctx.codeGenUtility().computeVajramInfo(cancellerVajram);
-    ClassName requestClass =
-        ClassName.get(
-            vajramInfo.packageName(), vajramInfo.vajramName() + IMMUT_REQUEST_POJO_SUFFIX);
+    ClassName requestClass = vajramInfo.lite().reqImmutPojoClassName();
 
     CodeBlock requestBuilder = buildRequestFromContext(vajramInfo, requestClass, true);
 

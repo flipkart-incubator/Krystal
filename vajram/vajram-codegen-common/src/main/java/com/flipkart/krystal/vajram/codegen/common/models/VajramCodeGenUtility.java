@@ -319,7 +319,7 @@ public class VajramCodeGenUtility {
    * fields. For interfaces, returns abstract methods. For classes with abstract methods (abstract
    * classes), returns both fields and abstract methods.
    */
-  private List<Element> extractFacetElements(@Nullable Element container) {
+  public List<Element> extractFacetElements(@Nullable Element container) {
     if (container == null) {
       return List.of();
     }
@@ -559,6 +559,7 @@ public class VajramCodeGenUtility {
       TypeElement inputsElement = getInputsClass(vajramOrReqClass).orElse(null);
       Element externalInputsElement = getExternalInputsElement(inputsElement);
       if (externalInputsElement != null) {
+        validateExternalInputsVajramId(externalInputsElement, vajramId, inputsElement);
         requestPackageName += "." + SHARED_MODELS_SUB_PACKAGE;
       }
 
@@ -787,6 +788,30 @@ public class VajramCodeGenUtility {
             .map(Entry::getValue)
             .orElseThrow(AssertionError::new)
             .getValue());
+  }
+
+  private void validateExternalInputsVajramId(
+      Element externalInputsElement, VajramID vajramId, TypeElement inputsElement) {
+    InputsForVajram[] annotations =
+        externalInputsElement.getAnnotationsByType(InputsForVajram.class);
+    boolean matchFound = false;
+    for (InputsForVajram annotation : annotations) {
+      if (annotation.vajramId().equals(vajramId.id())) {
+        matchFound = true;
+        break;
+      }
+    }
+    if (!matchFound) {
+      codegenUtil()
+          .error(
+              "The @InputsForVajram annotation on '%s' does not declare vajramId '%s'. Please add @InputsForVajram(vajramId = \"%s\", ...) to '%s'"
+                  .formatted(
+                      externalInputsElement.getSimpleName(),
+                      vajramId.id(),
+                      vajramId.id(),
+                      externalInputsElement.getSimpleName()),
+              inputsElement);
+    }
   }
 
   @Nullable

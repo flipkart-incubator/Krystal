@@ -205,7 +205,8 @@ class KryonExecutorTest {
   @Test
   void requestExecution_unboundInputs_success() {
     VajramID kryonName = vajramID("requestExecution_noDependencies_success_nodeName");
-    ImmutableSet<SimpleFacet> inputDefs = ImmutableSet.of(input(), input(), input());
+    ImmutableSet<SimpleFacet> inputDefs =
+        ImmutableSet.of(input("facet1"), input("facet2"), input("facet3"));
     VajramID vajramID =
         kryonDefinitionRegistry
             .newVajramKryonDefinition(
@@ -213,7 +214,7 @@ class KryonExecutorTest {
                 inputDefs,
                 newComputeLogic(
                         kryonName,
-                        Set.of(input(), input(), input()),
+                        Set.of(input("facet1"), input("facet2"), input("facet3")),
                         facets ->
                             "computed_values: a=%s;b=%s;c=%s"
                                 .formatted(

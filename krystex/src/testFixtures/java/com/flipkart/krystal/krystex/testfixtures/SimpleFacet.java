@@ -21,15 +21,13 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 public sealed class SimpleFacet implements Facet, InputMirror permits SimpleDep {
 
-  public static SimpleFacet input() {
-    return new SimpleFacet("input" + count++, INPUT);
+  public static SimpleFacet input(String name) {
+    return new SimpleFacet(name, INPUT);
   }
 
   public static SimpleDep dependency(String name, VajramID ofVajramID, VajramID onVajramID) {
     return new SimpleDep(name, ofVajramID, onVajramID);
   }
-
-  private static int count;
 
   private final String name;
 

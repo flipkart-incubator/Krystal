@@ -42,7 +42,6 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
-import javax.lang.model.util.ElementFilter;
 import org.jetbrains.annotations.UnknownNullability;
 
 /**
@@ -59,8 +58,11 @@ import org.jetbrains.annotations.UnknownNullability;
 @RunOnlyWhenCodegenPhaseIs(MODELS)
 public final class SharedModelsGenProcessor extends AbstractKrystalAnnoProcessor {
 
+  private VajramCodeGenUtility vajramUtil;
+
   @Override
   protected void processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+    this.vajramUtil = new VajramCodeGenUtility(codeGenUtil());
     Set<? extends Element> annotatedElements =
         roundEnv.getElementsAnnotatedWith(InputsForVajram.class);
 
@@ -162,7 +164,10 @@ public final class SharedModelsGenProcessor extends AbstractKrystalAnnoProcessor
     List<DefaultFacetModel> facets = new ArrayList<>();
 
     for (ExecutableElement method :
-        ElementFilter.methodsIn(inputsInterface.getEnclosedElements())) {
+        vajramUtil.extractFacetElements(inputsInterface).stream()
+            .filter(ExecutableElement.class::isInstance)
+            .map(ExecutableElement.class::cast)
+            .toList()) {
       String facetName = method.getSimpleName().toString();
       TypeMirror returnType = method.getReturnType();
       CodeGenType dataType =

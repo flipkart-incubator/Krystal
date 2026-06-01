@@ -12,13 +12,13 @@ import java.lang.annotation.Target;
 public @interface InputsForVajram {
 
   /**
-   * The parent package of the all the auto generated models - the models are generated in
-   * `parentPackage() +".shared_models` or one of its sub-packages. Ideally should be same as the
+   * The parent package of the all the auto generated models - the models are generated in {@code
+   * parentPackage() + ".shared_models"} or one of its sub-packages. Ideally should be same as the
    * package of the vajram class
    */
   String parentPackage();
 
-  /** The id of the vajram which used this interface as inputs definition. */
+  /** The id of the vajram which uses this interface as inputs definition. */
   String vajramId();
 
   @Target(TYPE)
