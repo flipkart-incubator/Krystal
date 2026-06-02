@@ -15,7 +15,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 @SupportedModelProtocol(Fory.class)
 @SupportedModelProtocol(PlainJavaObject.class)
-@ModelRoot(type = {REQUEST})
+@ModelRoot(type = REQUEST)
 public interface ForyRequest extends Model {
 
   @Nullable Integer optionalInput();

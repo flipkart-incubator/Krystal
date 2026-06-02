@@ -23,6 +23,14 @@ public @interface ModelRoot {
    */
   boolean pure() default true;
 
+  /**
+   * true if this model root is intended to be shared across other client modules/projects. Those
+   * modules may choose to generate code bases on this model. The general implication of this for
+   * code generation is that clients will need the ability to generate the code in a subpackage
+   * instead of the same package as the model root to avoid split package issues across modules.
+   */
+  boolean isShared() default false;
+
   enum ModelType {
     /** This model is designed to be used as part of requests */
     REQUEST,

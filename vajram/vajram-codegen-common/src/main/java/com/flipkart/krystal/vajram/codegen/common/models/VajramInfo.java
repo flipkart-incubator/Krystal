@@ -23,7 +23,7 @@ public record VajramInfo(
     TypeElement definitionElement,
     @Nullable VajramInfoLite conformsToTraitInfo,
     @Nullable ComputeDelegationMode vajramDelegationMode,
-    @Nullable TypeElement inputsElement) {
+    @Nullable TypeElement inputsSource) {
 
   public VajramInfo {
     if (lite.isTrait()) {

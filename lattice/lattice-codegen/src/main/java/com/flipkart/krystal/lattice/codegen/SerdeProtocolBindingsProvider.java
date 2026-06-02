@@ -2,7 +2,6 @@ package com.flipkart.krystal.lattice.codegen;
 
 import static java.util.Objects.requireNonNull;
 
-import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider;
 import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider.ModelProtocolConfig;
 import com.flipkart.krystal.lattice.codegen.spi.LatticeAppCodeGenAttrsProvider;
@@ -59,12 +58,11 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
                         requireNonNull(
                             cp.getConfig().modelProtocol().getClass().getCanonicalName()),
                     ModelProtocolConfigProvider::getConfig));
-    Map<String, TypeElement> responseTypeElems = new LinkedHashMap<>();
+    Map<String, TypeMirror> responseTypeElems = new LinkedHashMap<>();
     Map<String, List<String>> responseToVajramsMapping = new LinkedHashMap<>();
     for (TypeElement vajram : remotelyInvocableVajrams) {
       VajramInfoLite vajramInfoLite = util.computeVajramInfoLiteWithUpperBoundTypeArgs(vajram);
-      CodeGenType responseType = vajramInfoLite.responseType();
-      TypeMirror responseMirror = responseType.typeMirror(util.processingEnv());
+      TypeMirror responseMirror = vajramInfoLite.responseType().typeMirror(util.processingEnv());
       if (!util.codegenUtil().isRawAssignable(responseMirror, Model.class)) {
         continue;
       }
@@ -73,15 +71,19 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
               requireNonNull(
                   util.codegenUtil().processingEnv().getTypeUtils().asElement(responseMirror));
       String responseCanonicalName = responseTypeElem.getQualifiedName().toString();
-      responseTypeElems.put(responseCanonicalName, responseTypeElem);
+      responseTypeElems.put(responseCanonicalName, responseMirror);
       responseToVajramsMapping
           .computeIfAbsent(responseCanonicalName, s -> new ArrayList<>())
           .add(vajramInfoLite.vajramId().id());
     }
     List<Binding> bindings = new ArrayList<>();
-    for (Entry<String, TypeElement> entry : responseTypeElems.entrySet()) {
+    for (Entry<String, TypeMirror> entry : responseTypeElems.entrySet()) {
       String responseCanonicalName = entry.getKey();
-      TypeElement responseElement = entry.getValue();
+      TypeMirror responseType = entry.getValue();
+      TypeElement responseElement =
+          (TypeElement)
+              requireNonNull(
+                  util.codegenUtil().processingEnv().getTypeUtils().asElement(responseType));
       List<TypeElement> supportedModelProtocolElems =
           util.codegenUtil().getSupportedProtocolTypeElements(responseElement).stream()
               .filter(te -> util.codegenUtil().isRawAssignable(te.asType(), SerdeProtocol.class))
@@ -93,13 +95,13 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
       ClassName immutBuilderClassName =
           ClassName.get(immutClassName.packageName(), immutClassName.simpleName(), "Builder");
       TypeElement defaultSerializationProtocol =
-          util.codegenUtil().getDefaultProtocolTypeElement(responseElement);
+          util.codegenUtil().getDefaultProtocolTypeElement(responseType);
       List<CodeBlock> providingLogicBlocks = new ArrayList<>();
       if (defaultSerializationProtocol == null) {
         util.codegenUtil()
             .note(
                 "Could not determine default Serialization protocol for response type "
-                    + responseElement
+                    + responseType
                     + ". Add isDefault=true to one of its @SupportedModelProtocol annotations if needed.",
                 responseElement);
         providingLogicBlocks.add(
@@ -114,7 +116,7 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
           throw util.codegenUtil()
               .errorAndThrow(
                   "Response type "
-                      + responseElement
+                      + responseType
                       + " of vajram(s): "
                       + responseToVajramsMapping.get(responseCanonicalName)
                       + " does not support the default serialization protocol "

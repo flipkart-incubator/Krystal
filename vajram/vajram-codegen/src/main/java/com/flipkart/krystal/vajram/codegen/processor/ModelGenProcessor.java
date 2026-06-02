@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajram.codegen.processor;
 import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
 import static com.flipkart.krystal.codegen.common.models.Constants.MODULE_ROOT_PATH_KEY;
 import static java.lang.System.lineSeparator;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toSet;
 import static java.util.stream.StreamSupport.stream;
@@ -11,6 +12,7 @@ import com.flipkart.krystal.codegen.common.models.AbstractKrystalAnnoProcessor;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGeneratorProvider;
+import com.flipkart.krystal.model.ImportSharedModels;
 import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.PlainJavaObject;
@@ -18,6 +20,7 @@ import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.model.SupportedModelProtocolName;
 import com.google.auto.service.AutoService;
 import com.google.common.base.Throwables;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -32,9 +35,14 @@ import javax.annotation.processing.SupportedOptions;
 import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.util.ElementFilter;
 
-@SupportedAnnotationTypes("com.flipkart.krystal.model.ModelRoot")
+@SupportedAnnotationTypes({
+  "com.flipkart.krystal.model.ModelRoot",
+  "com.flipkart.krystal.model.ImportModels"
+})
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 @AutoService(Processor.class)
 @SupportedOptions({CODEGEN_PHASE_KEY, MODULE_ROOT_PATH_KEY})
@@ -42,15 +50,24 @@ public final class ModelGenProcessor extends AbstractKrystalAnnoProcessor {
 
   @Override
   protected void processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+
     CodeGenUtility util = codeGenUtil();
     List<TypeElement> modelRoots =
-        roundEnv.getElementsAnnotatedWith(ModelRoot.class).stream()
-            .filter(
-                element ->
-                    element.getKind() == ElementKind.INTERFACE
-                        || element.getKind() == ElementKind.ENUM)
+        new ArrayList<>(
+            roundEnv.getElementsAnnotatedWith(ModelRoot.class).stream()
+                .filter(
+                    element ->
+                        element.getKind() == ElementKind.INTERFACE
+                            || element.getKind() == ElementKind.ENUM)
+                .map(executableElement -> (TypeElement) executableElement)
+                .toList());
+    modelRoots.addAll(
+        roundEnv.getElementsAnnotatedWith(ImportSharedModels.class).stream()
             .map(executableElement -> (TypeElement) executableElement)
-            .toList();
+            .map(executableElement -> getImportedModelElements(executableElement, util))
+            .flatMap(List::stream)
+            .peek(e -> validateImportedModels(e, util))
+            .toList());
     util.note(
         "Model Roots received by %s: %s"
             .formatted(
@@ -68,7 +85,7 @@ public final class ModelGenProcessor extends AbstractKrystalAnnoProcessor {
       Set<Class<? extends ModelProtocol>> supportedModelProtocols =
           getSupportedModelProtocols(modelRoot, util);
       ModelsCodeGenContext creationContext =
-          new ModelsCodeGenContext(modelRoot, util, codegenPhase());
+          new ModelsCodeGenContext(modelRoot, codegenPhase(), util);
       for (Class<? extends ModelProtocol> modelProtocol : supportedModelProtocols) {
         if (stream(codeGeneratorProviders.spliterator(), false)
             .noneMatch(
@@ -91,6 +108,37 @@ public final class ModelGenProcessor extends AbstractKrystalAnnoProcessor {
       }
     }
     return;
+  }
+
+  private static List<TypeElement> getImportedModelElements(
+      TypeElement executableElement, CodeGenUtility util) {
+    ImportSharedModels importSharedModels =
+        requireNonNull(executableElement.getAnnotation(ImportSharedModels.class));
+    List<TypeElement> allSharedModels =
+        new ArrayList<>(util.getTypeElemsFromAnnotationMember(importSharedModels::value));
+    String[] packageNames = importSharedModels.fromPackages();
+    for (String importedPackage : packageNames) {
+      PackageElement packageElement =
+          util.processingEnv().getElementUtils().getPackageElement(importedPackage);
+      if (packageElement == null) {
+        throw util.errorAndThrow(
+            "Package %s not found".formatted(importedPackage), executableElement);
+      }
+      ElementFilter.typesIn(packageElement.getEnclosedElements()).stream()
+          .filter(e -> e.getAnnotation(ModelRoot.class) != null)
+          .forEach(allSharedModels::add);
+    }
+    return allSharedModels;
+  }
+
+  private void validateImportedModels(TypeElement modelRootElem, CodeGenUtility util) {
+    ModelRoot modelRootAnno = modelRootElem.getAnnotation(ModelRoot.class);
+    if (modelRootAnno == null || !modelRootAnno.isShared()) {
+      throw util.errorAndThrow(
+          "Imported model %s must be annotated with @ModelRoot(isShared=true)"
+              .formatted(modelRootElem),
+          modelRootElem);
+    }
   }
 
   private Set<Class<? extends ModelProtocol>> getSupportedModelProtocols(

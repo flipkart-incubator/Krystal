@@ -2,11 +2,9 @@ package com.flipkart.krystal.serial;
 
 import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.METHOD;
-import static java.lang.annotation.RetentionPolicy.SOURCE;
 
 import com.flipkart.krystal.annos.ApplicableToElements;
 import com.flipkart.krystal.core.KrystalElement.Facet;
-import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
 /**
@@ -15,7 +13,6 @@ import java.lang.annotation.Target;
  */
 @ApplicableToElements(Facet.class)
 @Target({FIELD, METHOD})
-@Retention(SOURCE)
 public @interface SerialId {
   int value();
 }

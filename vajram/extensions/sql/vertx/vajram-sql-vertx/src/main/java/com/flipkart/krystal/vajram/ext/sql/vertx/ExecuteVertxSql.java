@@ -11,6 +11,7 @@ import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowSet;
 import io.vertx.sqlclient.Tuple;
 import java.util.concurrent.CompletableFuture;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * IO Vajram that executes a parameterized SQL query using the Vert.x SQL client.
@@ -21,6 +22,7 @@ import java.util.concurrent.CompletableFuture;
  *
  * <p>The query is executed as a prepared statement to prevent SQL injection.
  */
+@Slf4j
 @Vajram
 public abstract class ExecuteVertxSql extends IOVajramDef<RowSet<Row>> {
 
@@ -40,6 +42,17 @@ public abstract class ExecuteVertxSql extends IOVajramDef<RowSet<Row>> {
 
   @Output
   static CompletableFuture<RowSet<Row>> execute(String sql, Tuple params, Pool pool) {
-    return pool.preparedQuery(sql).execute(params).toCompletionStage().toCompletableFuture();
+    CompletableFuture<RowSet<Row>> resultFuture =
+        pool.preparedQuery(sql)
+            .execute(params)
+            .toCompletionStage()
+            .toCompletableFuture()
+            .whenComplete(
+                (rows, throwable) -> {
+                  if (throwable != null) {
+                    log.error("Failed to execute SQL query", throwable);
+                  }
+                });
+    return resultFuture;
   }
 }

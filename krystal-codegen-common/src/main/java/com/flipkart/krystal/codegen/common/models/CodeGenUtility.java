@@ -29,10 +29,12 @@ import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.ModelRoot.ModelType;
 import com.flipkart.krystal.model.SupportedModelProtocol;
+import com.flipkart.krystal.model.SupportedModelProtocolName;
 import com.flipkart.krystal.model.array.PrimitiveArray;
 import com.flipkart.krystal.model.list.ModelsListBuilder;
 import com.flipkart.krystal.model.map.ModelsMapBuilder;
 import com.flipkart.krystal.serial.DefaultSerdeProtocol;
+import com.flipkart.krystal.serial.DefaultSerdeProtocolName;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Range;
@@ -212,6 +214,27 @@ public class CodeGenUtility {
       return declaredType.getTypeArguments().get(0);
     }
     return objectType;
+  }
+
+  /**
+   * Returns the package in which code should be generated for the given model root element. By
+   * default, codegen happens in the same package as the modelRoot. But if the model root is shared,
+   * i.e: @ModelRoot(isShared = true), then codegen happens in a sub-package
+   */
+  public String getCodegenPackageName(Element element) {
+    ModelRoot modelRoot = element.getAnnotation(ModelRoot.class);
+    if (modelRoot == null) {
+      throw new IllegalArgumentException(
+          "Cannot fetch codegen package name for Type which does not have @ModelRoot annotation");
+    }
+    String modelRootPackageName =
+        requireNonNull(processingEnv().getElementUtils().getPackageOf(element))
+            .getQualifiedName()
+            .toString();
+    if (modelRoot.isShared()) {
+      return modelRootPackageName + "." + Constants.SHARED_MODELS_SUB_PACKAGE;
+    }
+    return modelRootPackageName;
   }
 
   public String getPackageName(Element element) {
@@ -1020,7 +1043,7 @@ public class CodeGenUtility {
     }
 
     String modelRootName = modelRootType.getSimpleName().toString();
-    String packageName = getPackageName(modelRootType);
+    String packageName = getCodegenPackageName(modelRootType);
     return ClassName.get(packageName, modelRootName + modelRoot.suffixSeparator() + IMMUT_SUFFIX);
   }
 
@@ -1254,10 +1277,14 @@ public class CodeGenUtility {
    */
   public List<TypeElement> getSupportedProtocolTypeElements(Element element) {
     SupportedModelProtocol[] protocols = element.getAnnotationsByType(SupportedModelProtocol.class);
-    if (protocols.length == 0) {
-      return List.of();
-    }
-    return stream(protocols).map(p -> getTypeElemFromAnnotationMember(p::value)).toList();
+    SupportedModelProtocolName[] protocolNames =
+        element.getAnnotationsByType(SupportedModelProtocolName.class);
+    return Stream.concat(
+            stream(protocols).map(p -> getTypeElemFromAnnotationMember(p::value)),
+            stream(protocolNames)
+                .map(p -> elementUtils.getTypeElement(p.value()))
+                .filter(Objects::nonNull))
+        .toList();
   }
 
   /**
@@ -1265,24 +1292,50 @@ public class CodeGenUtility {
    * {@code @SupportedModelProtocol} annotations on the given element (the one with {@code isDefault
    * = true}). Returns {@code null} if no default is declared.
    */
-  public @Nullable TypeElement getDefaultProtocolTypeElement(Element element) {
-    DefaultSerdeProtocol defaultSerdeProtocol = element.getAnnotation(DefaultSerdeProtocol.class);
-    if (defaultSerdeProtocol == null) {
+  public @Nullable TypeElement getDefaultProtocolTypeElement(TypeMirror modelType) {
+    AnnotationMirror defaultSerdeProtocolMirror =
+        getAnnotationMirror(modelType, DefaultSerdeProtocol.class);
+    if (defaultSerdeProtocolMirror != null) {
+      return elementUtils.getTypeElement(
+          (CharSequence)
+              defaultSerdeProtocolMirror.getElementValues().entrySet().stream()
+                  .filter(e -> e.getKey().getSimpleName().contentEquals("value"))
+                  .findFirst()
+                  .map(Entry::getValue)
+                  .orElseThrow(AssertionError::new)
+                  .getValue());
+    }
+    Element element = typeUtils.asElement(modelType);
+    if (element == null) {
       return null;
     }
-    return getTypeElemFromAnnotationMember(defaultSerdeProtocol::value);
+    DefaultSerdeProtocol defaultSerdeProtocol = element.getAnnotation(DefaultSerdeProtocol.class);
+    DefaultSerdeProtocolName defaultSerdeProtocolName =
+        element.getAnnotation(DefaultSerdeProtocolName.class);
+    if (defaultSerdeProtocol != null && defaultSerdeProtocolName != null) {
+      error(
+          "Only one of @DefaultSerdeProtocol or @DefaultSerdeProtocolName should be specified - since a type can only have one default",
+          element);
+    }
+    if (defaultSerdeProtocol != null) {
+      return getTypeElemFromAnnotationMember(defaultSerdeProtocol::value);
+    }
+    if (defaultSerdeProtocolName != null) {
+      TypeElement typeElement = elementUtils.getTypeElement(defaultSerdeProtocolName.value());
+      if (typeElement == null) {
+        note(
+            "Ignoring %s as DefaultSerdeProtocol since loading type element for protocol returned null - maybe its not in the classpath");
+      } else {
+        return typeElement;
+      }
+    }
+    return null;
   }
 
   /** Returns true if the model root type supports the given model protocol. */
   public boolean typeExplicitlySupportsProtocol(
       Element modelRootType, Class<? extends ModelProtocol> modelProtocol) {
-    SupportedModelProtocol[] protocols =
-        modelRootType.getAnnotationsByType(SupportedModelProtocol.class);
-    if (protocols.length == 0) {
-      return false;
-    }
-    return stream(protocols)
-        .map(p -> getTypeElemFromAnnotationMember(p::value))
+    return getSupportedProtocolTypeElements(modelRootType).stream()
         .map(element -> element.getQualifiedName().toString())
         .anyMatch(s -> Objects.equals(s, modelProtocol.getCanonicalName()));
   }
@@ -1292,9 +1345,9 @@ public class CodeGenUtility {
    * the given element. Only protocols that extend SerdeProtocol are included.
    */
   public List<ModelProtocol> getModelProtocols(Element modelRootType) {
-    SupportedModelProtocol[] protocols =
-        modelRootType.getAnnotationsByType(SupportedModelProtocol.class);
-    if (protocols.length == 0) {
+    List<TypeElement> supportedProtocolTypeElements =
+        getSupportedProtocolTypeElements(modelRootType);
+    if (supportedProtocolTypeElements.isEmpty()) {
       return List.of();
     }
     Map<String, ModelProtocol> availableModelProtocols =
@@ -1306,8 +1359,7 @@ public class CodeGenUtility {
             .collect(
                 toMap(c -> requireNonNull(c.getClass().getCanonicalName()), Function.identity()));
 
-    return stream(protocols)
-        .map(p -> getTypeElemFromAnnotationMember(p::value))
+    return supportedProtocolTypeElements.stream()
         .map(element -> element.getQualifiedName().toString())
         .map(availableModelProtocols::get)
         .filter(Objects::nonNull)

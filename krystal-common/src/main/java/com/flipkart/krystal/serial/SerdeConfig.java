@@ -1,12 +1,13 @@
 package com.flipkart.krystal.serial;
 
 import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.TYPE;
 
 import com.flipkart.krystal.serial.SerdeConfig.SerdeConfigs;
 import java.lang.annotation.Repeatable;
 import java.lang.annotation.Target;
 
-@Target(METHOD)
+@Target({METHOD, TYPE})
 @Repeatable(SerdeConfigs.class)
 public @interface SerdeConfig {
   Class<? extends SerdeProtocol> protocol();

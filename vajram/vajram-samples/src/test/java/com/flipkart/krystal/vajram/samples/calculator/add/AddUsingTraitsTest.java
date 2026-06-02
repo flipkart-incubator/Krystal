@@ -20,7 +20,7 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.traits.TraitDispatchPolicies;
-import com.flipkart.krystal.vajram.guice.traitbinding.StaticDispatchPolicyImpl;
+import com.flipkart.krystal.vajram.guice.traitbinding.GuiceyStaticDispatchPolicy;
 import com.flipkart.krystal.vajram.guice.traitbinding.TraitBinder;
 import com.flipkart.krystal.vajram.samples.Util;
 import com.flipkart.krystal.vajram.samples.calculator.add.AddUsingTraits.ThreeSums;
@@ -86,7 +86,7 @@ class AddUsingTraitsTest {
     this.kGraph = KrystexGraph.builder().vajramGraph(graph);
     this.kGraph.traitDispatchPolicies(
         new TraitDispatchPolicies(
-            new StaticDispatchPolicyImpl(
+            new GuiceyStaticDispatchPolicy(
                 graph, graph.getVajramIdByVajramDefType(MultiAdd.class), traitBinder)));
   }
 

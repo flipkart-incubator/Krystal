@@ -28,7 +28,6 @@ import static com.flipkart.krystal.vajram.codegen.common.models.Constants._INPUT
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants._INTERNAL_FACETS_CLASS;
 import static com.flipkart.krystal.vajram.codegen.common.models.ParsedVajramData.fromVajramInfo;
 import static com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility.getImmutFacetsClassName;
-import static com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility.getImmutRequestPojoName;
 import static com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility.getRequestInterfaceName;
 import static com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility.getVajramImplClassName;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -78,6 +77,7 @@ import com.flipkart.krystal.except.KrystalCompletionException;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.facets.FacetUtils;
+import com.flipkart.krystal.facets.InputsForVajram;
 import com.flipkart.krystal.facets.resolution.ResolutionTarget;
 import com.flipkart.krystal.facets.resolution.ResolverCommand;
 import com.flipkart.krystal.facets.resolution.ResolverCommand.ExecuteDependency;
@@ -90,6 +90,8 @@ import com.flipkart.krystal.model.ModelRoot.ModelType;
 import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.model.SupportedModelProtocol.SupportedModelProtocols;
+import com.flipkart.krystal.model.SupportedModelProtocolName;
+import com.flipkart.krystal.model.SupportedModelProtocolName.SupportedModelProtocolNames;
 import com.flipkart.krystal.serial.DefaultSerdeProtocol;
 import com.flipkart.krystal.serial.ReservedSerialIds;
 import com.flipkart.krystal.serial.SerialId;
@@ -212,6 +214,8 @@ public class VajramCodeGenerator implements CodeGenerator {
                   ReservedSerialIds.class,
                   SupportedModelProtocol.class,
                   SupportedModelProtocols.class,
+                  SupportedModelProtocolName.class,
+                  SupportedModelProtocolNames.class,
                   DefaultSerdeProtocol.class)
               .<@NonNull String>map(aClass -> requireNonNull(aClass.getCanonicalName()))
               .toList());
@@ -296,7 +300,11 @@ public class VajramCodeGenerator implements CodeGenerator {
   }
 
   private boolean areInputsExternal() {
-    return vajramUtil.getExternalInputsElement(currentVajramInfo().inputsElement()) != null;
+    TypeElement inputsElement = currentVajramInfo().inputsSource();
+    if (inputsElement == null) {
+      return false;
+    }
+    return inputsElement.getAnnotation(InputsForVajram.class) != null;
   }
 
   private void validate() {
@@ -318,7 +326,7 @@ public class VajramCodeGenerator implements CodeGenerator {
         currentVajramInfo().requestInterfaceSuperTypes(),
         currentVajramInfo().vajramClassElem().getQualifiedName().toString(),
         currentVajramInfo().vajramClassElem(),
-        currentVajramInfo().inputsElement(),
+        currentVajramInfo().inputsSource(),
         currentVajramInfo().conformsToTraitOrSelf().inputsInfo());
   }
 
@@ -496,8 +504,7 @@ public class VajramCodeGenerator implements CodeGenerator {
     wrapperConstructor(vajramWrapperClass);
 
     ClassName requestInterfaceType = getRequestInterfaceType();
-    ClassName immutRequestType =
-        ClassName.get(vajramPackageName(), getImmutRequestPojoName(vajramName));
+    ClassName immutRequestType = currentVajramInfo().lite().inputsInfo().reqImmutPojoClassName();
     ClassName immutFacetsType =
         ClassName.get(vajramPackageName(), getImmutFacetsClassName(vajramName));
 
@@ -1003,7 +1010,10 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
     String facetName = parameter.getSimpleName().toString();
     FacetGenModel facetGenModel = facetModelsByName.get(facetName);
     if (facetGenModel == null) {
-      throw util.errorAndThrow("Unknown facet with name %s".formatted(facetName), parameter);
+      throw util.errorAndThrow(
+          "Unknown facet with name '%s'. Known facets: %s"
+              .formatted(facetName, facetModelsByName.keySet()),
+          parameter);
     }
     return facetGenModel;
   }
@@ -2288,7 +2298,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
    * compatibility reasons.
    */
   private void validateSerialIdReservations() {
-    Element inputsElement = currentVajramInfo().inputsElement();
+    Element inputsElement = currentVajramInfo().inputsSource();
     if (inputsElement == null) {
       return;
     }

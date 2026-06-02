@@ -115,7 +115,8 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
 
     private void jakartaResources(TypeElement latticeAppElem) {
       RestService restService = latticeAppElem.getAnnotation(RestService.class);
-      String pathPrefix = restService.pathPrefix().isEmpty() ? "" : "/" + restService.pathPrefix();
+      String pathPrefix = restService.pathPrefix();
+      pathPrefix = (pathPrefix.isEmpty() ? "" : "/") + pathPrefix;
       for (TypeElement vajramElem : getRestResourceVajramElems(latticeAppElem, util)) {
         VajramInfo vajramInfo = context.codeGenUtility().computeVajramInfo(vajramElem);
         var resourceMethods = resourceMethods(vajramElem, vajramInfo);
@@ -129,6 +130,12 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
         } else {
           pathValue = path.value();
         }
+        if (pathValue.startsWith("/")) {
+          pathValue = pathValue.substring(1);
+        }
+        if (pathValue.startsWith("/")) {
+          pathValue = pathValue.substring(0, pathValue.length() - 1);
+        }
         ClassName jaxRsResourceName = getJaxRsResourceName(vajramInfo, vajramElem);
         TypeSpec.Builder resourceClassBuilder =
             util.classBuilder(
@@ -138,7 +145,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
             .addField(RestServiceDopant.class, "_restServiceDopant", PRIVATE, FINAL)
             .addAnnotation(
                 AnnotationSpec.builder(jakarta.ws.rs.Path.class)
-                    .addMember("value", "$S", pathPrefix + pathValue)
+                    .addMember("value", "$S", pathPrefix + "/" + pathValue)
                     .build())
             .addMethod(
                 MethodSpec.constructorBuilder()
@@ -349,31 +356,30 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
           // body into the vajram request object
           !explicitPath) {
 
-        Element protocolSource;
+        TypeElement inputsSource = vajramInfo.inputsSource();
+        Element supportedProtocolSource = inputsSource != null ? inputsSource : vajramElem;
         Map<Element, SerdeConfig> serdeConfigsMap = new HashMap<>();
+        TypeMirror defaultProtocolSource;
         if (bodyFacet != null) {
           Map<@NonNull Element, SerdeConfig> collect =
               Arrays.stream(bodyFacet.facetElement().getAnnotationsByType(SerdeConfig.class))
                   .collect(toMap(s -> util.getTypeElemFromAnnotationMember(s::protocol), s -> s));
           serdeConfigsMap.putAll(collect);
-          protocolSource =
-              requireNonNull(
-                  util.processingEnv()
-                      .getTypeUtils()
-                      .asElement(bodyFacet.dataType().typeMirror(util.processingEnv())));
-          for (SerdeConfig serdeConfig : protocolSource.getAnnotationsByType(SerdeConfig.class)) {
-            serdeConfigsMap.putIfAbsent(
-                util.getTypeElemFromAnnotationMember(serdeConfig::protocol), serdeConfig);
+          TypeMirror bodyFacetType = bodyFacet.dataType().typeMirror(util.processingEnv());
+          defaultProtocolSource = bodyFacetType;
+          supportedProtocolSource = util.processingEnv().getTypeUtils().asElement(bodyFacetType);
+          if (supportedProtocolSource == null) {
+            throw util.errorAndThrow(
+                "Could not retrieve type element for body facet type", bodyFacet.facetElement());
           }
         } else {
-          protocolSource =
-              vajramInfo.inputsElement() != null ? vajramInfo.inputsElement() : vajramElem;
-          Map<@NonNull Element, SerdeConfig> collect =
-              Arrays.stream(protocolSource.getAnnotationsByType(SerdeConfig.class))
-                  .collect(toMap(s -> util.getTypeElemFromAnnotationMember(s::protocol), s -> s));
-          serdeConfigsMap.putAll(collect);
+          serdeConfigsMap.putAll(
+              Arrays.stream(supportedProtocolSource.getAnnotationsByType(SerdeConfig.class))
+                  .collect(toMap(s -> util.getTypeElemFromAnnotationMember(s::protocol), s -> s)));
+          defaultProtocolSource = supportedProtocolSource.asType();
         }
-        List<TypeElement> allProtocolElems = util.getSupportedProtocolTypeElements(protocolSource);
+        List<TypeElement> allProtocolElems =
+            util.getSupportedProtocolTypeElements(supportedProtocolSource);
         ImmutableList<TypeElement> requestSerdeProtocols = ImmutableList.of();
         if (allProtocolElems.isEmpty()) {
           util.error(
@@ -402,7 +408,8 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
                 bodyFacet.facetElement());
           }
         }
-        TypeElement defaultProtocolTypeElement = util.getDefaultProtocolTypeElement(protocolSource);
+        TypeElement defaultProtocolTypeElement =
+            util.getDefaultProtocolTypeElement(defaultProtocolSource);
         for (TypeElement serdeProtocolType : requestSerdeProtocols) {
           boolean isDefaultProtocol =
               defaultProtocolTypeElement != null

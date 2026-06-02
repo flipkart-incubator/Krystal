@@ -45,11 +45,8 @@ import com.flipkart.krystal.vajram.protobuf.util.ProtoByteArray;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Shorts;
 import com.google.protobuf.ByteString;
-import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.TypeName;
 import java.io.IOException;
-import java.net.URL;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -191,7 +188,7 @@ public final class ProtoGenUtility {
     }
 
     Element annotationSource =
-        vajramInfo.inputsElement() != null ? vajramInfo.inputsElement() : vajramClass;
+        vajramInfo.inputsSource() != null ? vajramInfo.inputsSource() : vajramClass;
     List<? extends TypeMirror> serializationProtocols =
         getSerializationProtocols(annotationSource, util);
     if (serializationProtocols.stream()
@@ -304,36 +301,33 @@ public final class ProtoGenUtility {
     } else if (dataType instanceof AnnotatedStandardJavaType annotatedStandardJavaType
         && JAVA_TO_PROTO_SCALAR_TYPES.containsKey(annotatedStandardJavaType.standardJavaType())) {
       return JAVA_TO_PROTO_SCALAR_TYPES.get(annotatedStandardJavaType.standardJavaType());
-    } else if (TypeName.get(dataType.typeMirror(util.processingEnv()))
-            instanceof ClassName modelRootName
+    } else if (util.processingEnv()
+                .getTypeUtils()
+                .asElement(dataType.typeMirror(util.processingEnv()))
+            instanceof TypeElement modelRootName
         && util.isEnumModelType(javaModelType)) {
       return new EnumFieldType(
-          modelRootName.packageName(),
+          util.getCodegenPackageName(modelRootName),
           // Strip underscores from the model name for the protobuf type reference - proto
           // messages and enums must be TitleCase. The file name keeps the original Java simple
           // name since the file path doesn't have to obey TitleCase.
-          toTitleCaseProtoName(modelRootName.simpleName()) + config.messageSuffix(),
-          modelRootName.simpleName(),
+          toTitleCaseProtoName(modelRootName.getSimpleName().toString()) + config.messageSuffix(),
+          modelRootName.getSimpleName().toString(),
           config.fileSuffix());
     } else {
       Element javaElement = util.processingEnv().getTypeUtils().asElement(javaModelType);
       if (javaElement != null
           && util.typeExplicitlySupportsProtocol(javaElement, config.protocolClass())
-          && TypeName.get(dataType.typeMirror(util.processingEnv()))
-              instanceof ClassName modelRootName) {
+          && util.processingEnv()
+                  .getTypeUtils()
+                  .asElement(dataType.typeMirror(util.processingEnv()))
+              instanceof TypeElement modelRootName) {
         String protoTypeName =
-            toTitleCaseProtoName(modelRootName.simpleName()) + config.messageSuffix();
-        if (util.isEnumModelType(javaModelType)) {
-          return new EnumFieldType(
-              modelRootName.packageName(),
-              protoTypeName,
-              modelRootName.simpleName(),
-              config.fileSuffix());
-        }
+            toTitleCaseProtoName(modelRootName.getSimpleName().toString()) + config.messageSuffix();
         return new MessageFieldType(
-            modelRootName.packageName(),
+            util.getCodegenPackageName(modelRootName),
             protoTypeName,
-            modelRootName.simpleName(),
+            modelRootName.getSimpleName().toString(),
             config.fileSuffix());
       }
       throw util.errorAndThrow(

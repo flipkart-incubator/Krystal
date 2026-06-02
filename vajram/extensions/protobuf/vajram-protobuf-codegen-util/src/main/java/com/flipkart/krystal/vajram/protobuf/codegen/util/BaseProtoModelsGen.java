@@ -148,7 +148,7 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
    */
   private void generateEnumProtoUtils() {
     TypeElement enumElement = codeGenContext.modelRootType();
-    String packageName = processingEnv.getElementUtils().getPackageOf(enumElement).toString();
+    String packageName = util.getCodegenPackageName(enumElement);
     String utilsClassName = enumElement.getSimpleName().toString() + config.utilsSuffix();
 
     ClassName javaEnumType = ClassName.get(enumElement);
@@ -189,7 +189,7 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
 
   private ClassName getProtoUtilsClassName(TypeElement enumElement) {
     return ClassName.get(
-        processingEnv.getElementUtils().getPackageOf(enumElement).toString(),
+        util.getCodegenPackageName(enumElement),
         enumElement.getSimpleName().toString() + config.utilsSuffix());
   }
 

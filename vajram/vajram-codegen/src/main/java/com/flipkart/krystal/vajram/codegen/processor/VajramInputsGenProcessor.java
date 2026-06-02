@@ -8,6 +8,7 @@ import static com.flipkart.krystal.core.VajramID.vajramID;
 import static com.flipkart.krystal.facets.FacetType.INPUT;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static java.lang.System.lineSeparator;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
@@ -17,6 +18,7 @@ import com.flipkart.krystal.codegen.common.models.RunOnlyWhenCodegenPhaseIs;
 import com.flipkart.krystal.codegen.common.models.TypeNameVisitor;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.facets.ImportVajramInputs;
 import com.flipkart.krystal.facets.InputsForVajram;
 import com.flipkart.krystal.facets.VajramInputs;
 import com.flipkart.krystal.vajram.codegen.common.models.DefaultFacetModel;
@@ -28,6 +30,7 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -39,9 +42,11 @@ import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.ElementFilter;
 import org.jetbrains.annotations.UnknownNullability;
 
 /**
@@ -51,34 +56,38 @@ import org.jetbrains.annotations.UnknownNullability;
  * <p>This processor runs during the MODELS codegen phase and generates the request interface in the
  * {@code parentPackage.shared_models} package.
  */
-@SupportedAnnotationTypes("com.flipkart.krystal.facets.InputsForVajram")
+@SupportedAnnotationTypes({
+  "com.flipkart.krystal.facets.InputsForVajram",
+  "com.flipkart.krystal.facets.ImportVajramInputs"
+})
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 @AutoService(Processor.class)
 @SupportedOptions({CODEGEN_PHASE_KEY, MODULE_ROOT_PATH_KEY})
 @RunOnlyWhenCodegenPhaseIs(MODELS)
-public final class SharedModelsGenProcessor extends AbstractKrystalAnnoProcessor {
+public final class VajramInputsGenProcessor extends AbstractKrystalAnnoProcessor {
 
   private VajramCodeGenUtility vajramUtil;
 
   @Override
   protected void processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     this.vajramUtil = new VajramCodeGenUtility(codeGenUtil());
-    Set<? extends Element> annotatedElements =
-        roundEnv.getElementsAnnotatedWith(InputsForVajram.class);
+    Set<Element> inputsForVajramElements =
+        new LinkedHashSet<>(roundEnv.getElementsAnnotatedWith(InputsForVajram.class));
+    inputsForVajramElements.addAll(getImportedVajramInputs(roundEnv));
 
     VajramCodeGenUtility vajramUtil = new VajramCodeGenUtility(codeGenUtil());
 
     CharSequence message =
         "SharedModelsGenProcessor found @InputsForVajram elements: %s"
             .formatted(
-                annotatedElements.stream()
+                inputsForVajramElements.stream()
                     .map(Objects::toString)
                     .collect(
                         joining(lineSeparator(), '[' + lineSeparator(), lineSeparator() + ']')));
     codeGenUtil().note(message);
 
     List<Failure> failures = new ArrayList<>();
-    for (Element element : annotatedElements) {
+    for (Element element : inputsForVajramElements) {
       if (!(element instanceof TypeElement inputsInterface)) {
         codeGenUtil().error("@InputsForVajram can only be applied to interfaces", element);
         continue;
@@ -100,6 +109,31 @@ public final class SharedModelsGenProcessor extends AbstractKrystalAnnoProcessor
               "[SharedModels Codegen Exception] " + getStackTraceAsString(failure.throwable()),
               failure.element());
     }
+  }
+
+  private Set<TypeElement> getImportedVajramInputs(RoundEnvironment roundEnv) {
+    Set<? extends Element> elementsAnnotatedWith =
+        roundEnv.getElementsAnnotatedWith(ImportVajramInputs.class);
+    Set<TypeElement> importedVajramInputs = new LinkedHashSet<>();
+
+    for (Element element : elementsAnnotatedWith) {
+      ImportVajramInputs importVajramInputs =
+          requireNonNull(element.getAnnotation(ImportVajramInputs.class));
+      String[] importedPackages = importVajramInputs.fromPackages();
+      for (String importedPackage : importedPackages) {
+        PackageElement packageElement =
+            codeGenUtil().processingEnv().getElementUtils().getPackageElement(importedPackage);
+        if (packageElement == null) {
+          throw codeGenUtil().errorAndThrow("Package " + importedPackage + " not found", element);
+        }
+        ElementFilter.typesIn(packageElement.getEnclosedElements()).stream()
+            .filter(
+                typeElement -> typeElement.getAnnotationsByType(InputsForVajram.class).length != 0)
+            .forEach(importedVajramInputs::add);
+      }
+    }
+
+    return importedVajramInputs;
   }
 
   private void processInputsForVajram(

@@ -117,7 +117,8 @@ class DefaultKryonExecutionReportTest {
       dereffedInputList.add(map);
     }
     assertThat(dereffedInputList)
-        .isEqualTo(ImmutableList.of(ImmutableMap.of(1, "v1"), ImmutableMap.of(1, "v2")));
+        .isEqualTo(
+            ImmutableList.of(ImmutableMap.of("facet1", "v1"), ImmutableMap.of("facet1", "v2")));
   }
 
   @Test
@@ -129,14 +130,18 @@ class DefaultKryonExecutionReportTest {
             new ExecutionItem(
                 new FacetValuesMapBuilder(
                     new SimpleRequestBuilder<>(
-                        Set.of(input("facet1")), ImmutableMap.of("facet1", withValue("v1")), vajramID),
+                        Set.of(input("facet1")),
+                        ImmutableMap.of("facet1", withValue("v1")),
+                        vajramID),
                     Set.of(input("facet1")),
                     vajramID),
                 new CompletableFuture<>()),
             new ExecutionItem(
                 new FacetValuesMapBuilder(
                     new SimpleRequestBuilder<>(
-                        Set.of(input("facet2")), ImmutableMap.of("facet2", withValue("v2")), vajramID),
+                        Set.of(input("facet2")),
+                        ImmutableMap.of("facet2", withValue("v2")),
+                        vajramID),
                     Set.of(input("facet2")),
                     vajramID),
                 new CompletableFuture<>()));
@@ -164,14 +169,18 @@ class DefaultKryonExecutionReportTest {
             new ExecutionItem(
                 new FacetValuesMapBuilder(
                     new SimpleRequestBuilder<>(
-                        Set.of(input("facet1")), ImmutableMap.of("facet1", withValue("v1")), vajramID),
+                        Set.of(input("facet1")),
+                        ImmutableMap.of("facet1", withValue("v1")),
+                        vajramID),
                     Set.of(input("facet1")),
                     vajramID),
                 new CompletableFuture<>()),
             new ExecutionItem(
                 new FacetValuesMapBuilder(
                     new SimpleRequestBuilder<>(
-                        Set.of(input("facet2")), ImmutableMap.of("facet2", withValue("v2")), vajramID),
+                        Set.of(input("facet2")),
+                        ImmutableMap.of("facet2", withValue("v2")),
+                        vajramID),
                     Set.of(input("facet2")),
                     vajramID),
                 new CompletableFuture<>()));

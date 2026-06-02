@@ -220,7 +220,6 @@ public class VajramCodeGenUtility {
               .getQualifiedName()
               .toString();
     }
-    Optional<TypeElement> inputsClass = getInputsClass(vajramClass);
     Optional<Element> internalFacetsClass = getInternalFacetsClass(vajramClass);
     BiMap<String, Integer> givenIdsByName = HashBiMap.create();
     Set<Integer> takenFacetIds = givenIdsByName.values();
@@ -271,7 +270,7 @@ public class VajramCodeGenUtility {
             vajramClass,
             conformsToTraitInfo,
             outputLogicDelegationMode,
-            inputsClass.orElse(null));
+            getInputsSource(vajramClass));
     codegenUtil().note("VajramInfo: %s".formatted(vajramInfo));
     validateVajramInfo(vajramInfo);
     return vajramInfo;
@@ -297,6 +296,18 @@ public class VajramCodeGenUtility {
         .filter(element -> element.getSimpleName().contentEquals(Constants._INPUTS_CLASS))
         .findFirst()
         .map(TypeElement.class::cast);
+  }
+
+  private @Nullable TypeElement getInputsSource(TypeElement vajramClass) {
+    TypeElement inputsClass = getInputsClass(vajramClass).orElse(null);
+    if (inputsClass == null) {
+      return null;
+    }
+    TypeElement externalInputsElement = getExternalInputsElement(inputsClass);
+    if (externalInputsElement == null) {
+      return inputsClass;
+    }
+    return externalInputsElement;
   }
 
   private void validateVajramInfo(VajramInfo vajramInfo) {
@@ -388,7 +399,10 @@ public class VajramCodeGenUtility {
   private @Nullable FacetType getFacetType(Element facetElement) {
     String facetName = facetElement.getSimpleName().toString();
     FacetType facetType = null;
-    boolean isInput = "_Inputs".contentEquals(facetElement.getEnclosingElement().getSimpleName());
+    Element enclosingElement = facetElement.getEnclosingElement();
+    boolean isInput =
+        "_Inputs".contentEquals(enclosingElement.getSimpleName())
+            || enclosingElement.getAnnotation(InputsForVajram.class) != null;
     if (isInput) {
       facetType = INPUT;
     }
@@ -559,12 +573,16 @@ public class VajramCodeGenUtility {
       TypeElement inputsElement = getInputsClass(vajramOrReqClass).orElse(null);
       Element externalInputsElement = getExternalInputsElement(inputsElement);
       if (externalInputsElement != null) {
-        validateExternalInputsVajramId(externalInputsElement, vajramId, inputsElement);
-        requestPackageName += "." + SHARED_MODELS_SUB_PACKAGE;
+        requestPackageName =
+            validateExternalInputsAndGetPackage(externalInputsElement, vajramId, inputsElement)
+                + "."
+                + SHARED_MODELS_SUB_PACKAGE;
       }
 
       inputs =
-          extractFacetElements(inputsElement).stream()
+          extractFacetElements(
+                  externalInputsElement != null ? externalInputsElement : inputsElement)
+              .stream()
               .map(facetElement -> toGivenFacetModel(facetElement, vajramId))
               .filter(Optional::isPresent)
               .map(Optional::get)
@@ -790,20 +808,20 @@ public class VajramCodeGenUtility {
             .getValue());
   }
 
-  private void validateExternalInputsVajramId(
+  private String validateExternalInputsAndGetPackage(
       Element externalInputsElement, VajramID vajramId, TypeElement inputsElement) {
     InputsForVajram[] annotations =
         externalInputsElement.getAnnotationsByType(InputsForVajram.class);
-    boolean matchFound = false;
+    InputsForVajram matchFound = null;
     for (InputsForVajram annotation : annotations) {
       if (annotation.vajramId().equals(vajramId.id())) {
-        matchFound = true;
+        matchFound = annotation;
         break;
       }
     }
-    if (!matchFound) {
-      codegenUtil()
-          .error(
+    if (matchFound == null) {
+      throw codegenUtil()
+          .errorAndThrow(
               "The @InputsForVajram annotation on '%s' does not declare vajramId '%s'. Please add @InputsForVajram(vajramId = \"%s\", ...) to '%s'"
                   .formatted(
                       externalInputsElement.getSimpleName(),
@@ -812,25 +830,30 @@ public class VajramCodeGenUtility {
                       externalInputsElement.getSimpleName()),
               inputsElement);
     }
+    if (!inputsElement.getEnclosedElements().isEmpty()) {
+      throw codegenUtil.errorAndThrow(
+          "_Inputs that extend @InputsForVajram interface should not have any fields",
+          inputsElement);
+    }
+    return matchFound.parentPackage();
   }
 
-  @Nullable
-  public Element getExternalInputsElement(TypeElement inputsElement) {
+  public @Nullable TypeElement getExternalInputsElement(@Nullable TypeElement inputsElement) {
     if (inputsElement == null) {
       return null;
     }
     List<? extends TypeMirror> interfaces = inputsElement.getInterfaces();
-    List<Element> externalInputsElements =
+    List<TypeElement> externalInputsElements =
         interfaces.stream()
             .map(typeUtils::asElement)
+            .filter(TypeElement.class::isInstance)
+            .map(TypeElement.class::cast)
             .filter(element -> element.getAnnotation(InputsForVajram.class) != null)
             .toList();
     if (externalInputsElements.size() > 1) {
       codegenUtil()
           .error("Multiple external inputs found for vajram. Max one allowed.", inputsElement);
     }
-    Element externalInputsElement =
-        externalInputsElements.isEmpty() ? null : externalInputsElements.get(0);
-    return externalInputsElement;
+    return externalInputsElements.isEmpty() ? null : externalInputsElements.get(0);
   }
 }
