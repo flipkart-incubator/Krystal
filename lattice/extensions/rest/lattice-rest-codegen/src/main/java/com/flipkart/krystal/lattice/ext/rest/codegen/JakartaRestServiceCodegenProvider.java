@@ -133,7 +133,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
         if (pathValue.startsWith("/")) {
           pathValue = pathValue.substring(1);
         }
-        if (pathValue.startsWith("/")) {
+        if (pathValue.endsWith("/")) {
           pathValue = pathValue.substring(0, pathValue.length() - 1);
         }
         ClassName jaxRsResourceName = getJaxRsResourceName(vajramInfo, vajramElem);

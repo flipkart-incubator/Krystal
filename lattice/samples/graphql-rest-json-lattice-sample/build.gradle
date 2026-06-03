@@ -100,3 +100,7 @@ configurations {
         }
     }
 }
+
+checkerFramework {
+    excludeTests = true
+}

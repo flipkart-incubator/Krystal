@@ -41,6 +41,7 @@ import java.util.concurrent.Flow.Publisher;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
 @DopantType(RestServiceDopant.REST_SERVICE_DOPANT_TYPE)
@@ -116,8 +117,11 @@ public abstract class RestServiceDopant implements Dopant<RestService, RestServi
 
   @Produces(inScope = RequestScoped.class)
   @Named(StandardHeaderNames.ACCEPT)
-  public Header getAcceptHeader(HttpHeaders httpHeaders) {
+  public @Nullable Header getAcceptHeader(HttpHeaders httpHeaders) {
     List<String> requestHeaderValues = httpHeaders.getRequestHeader(StandardHeaderNames.ACCEPT);
+    if (requestHeaderValues == null) {
+      return null;
+    }
     List<String> splitHeaderValues = new ArrayList<>();
     for (String requestHeaderValue : requestHeaderValues) {
       Splitter.on(',').trimResults().split(requestHeaderValue).forEach(splitHeaderValues::add);

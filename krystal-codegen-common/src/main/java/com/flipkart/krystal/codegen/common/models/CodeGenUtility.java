@@ -1283,7 +1283,8 @@ public class CodeGenUtility {
             stream(protocols).map(p -> getTypeElemFromAnnotationMember(p::value)),
             stream(protocolNames)
                 .map(p -> elementUtils.getTypeElement(p.value()))
-                .filter(Objects::nonNull))
+                .filter(Objects::nonNull)
+                .map(Objects::requireNonNull))
         .toList();
   }
 
@@ -1324,7 +1325,8 @@ public class CodeGenUtility {
       TypeElement typeElement = elementUtils.getTypeElement(defaultSerdeProtocolName.value());
       if (typeElement == null) {
         note(
-            "Ignoring %s as DefaultSerdeProtocol since loading type element for protocol returned null - maybe its not in the classpath");
+            "Ignoring %s as DefaultSerdeProtocol since loading type element for protocol returned null - maybe its not in the classpath"
+                .formatted(defaultSerdeProtocolName.value()));
       } else {
         return typeElement;
       }
