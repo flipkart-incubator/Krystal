@@ -62,6 +62,7 @@ import java.nio.file.Paths;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -604,8 +605,8 @@ public class CodeGenUtility {
 
   public TypeMirror getTypeFromAnnotationMember(Supplier<Class<?>> supplier) {
     try {
-      var ignored = supplier.get();
-      throw new AssertionError("Expected supplier to throw error");
+      var clazz = supplier.get();
+      return elementUtils.getTypeElement(requireNonNull(clazz.getCanonicalName())).asType();
     } catch (MirroredTypeException mte) {
       TypeMirror typeMirror = mte.getTypeMirror();
       if (typeMirror == null) {
@@ -618,8 +619,12 @@ public class CodeGenUtility {
 
   public List<? extends TypeMirror> getTypesFromAnnotationMember(Supplier<Class<?>[]> supplier) {
     try {
-      var ignored = supplier.get();
-      return List.of();
+      return Arrays.stream(supplier.get())
+          .map(Class::getCanonicalName)
+          .map(Objects::requireNonNull)
+          .map(elementUtils::getTypeElement)
+          .map(TypeElement::asType)
+          .toList();
     } catch (MirroredTypesException mte) {
       return mte.getTypeMirrors();
     }
