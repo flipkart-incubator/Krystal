@@ -33,7 +33,7 @@ import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.Order_Immut
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.User;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.User_ImmutPojo;
 import com.flipkart.krystal.vajram.guice.injection.VajramGuiceInputInjector;
-import com.flipkart.krystal.vajram.guice.traitbinding.StaticDispatchPolicyImpl;
+import com.flipkart.krystal.vajram.guice.traitbinding.GuiceyStaticDispatchPolicy;
 import com.flipkart.krystal.vajram.guice.traitbinding.TraitBinder;
 import com.flipkart.krystal.vajram.json.Json;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
@@ -1314,7 +1314,7 @@ class SqlTraitIntegrationTest {
                         GetUserWithAddressById_Req._VAJRAM_ID)
                     .map(
                         vajramID ->
-                            new StaticDispatchPolicyImpl(vajramGraph, vajramID, traitBinder))
+                            new GuiceyStaticDispatchPolicy(vajramGraph, vajramID, traitBinder))
                     .toList())
             .build());
     return kGraph

@@ -47,7 +47,6 @@ public final class VajramDefinition {
   private final ImmutableSet<FacetSpec> facetSpecs;
   private final ImmutableSet<InputMirror> inputMirrors;
   private final ImmutableMap<String, FacetSpec> facetsByName;
-  private final ImmutableMap<Integer, FacetSpec> facetsById;
 
   public VajramDefinition(VajramDefRoot<Object> vajramDefRoot) {
     this.vajramId = parseVajramId(vajramDefRoot);
@@ -65,7 +64,6 @@ public final class VajramDefinition {
     this.inputMirrors = ImmutableSet.copyOf(vajramDefRoot.newRequestBuilder()._facets());
     this.facetsByName =
         facetSpecs.stream().collect(toImmutableMap(Facet::name, Function.identity()));
-    this.facetsById = facetSpecs.stream().collect(toImmutableMap(Facet::id, Function.identity()));
 
     this.outputLogicTags = parseOutputLogicTags(vajramDefRoot);
     this.vajramTags = parseVajramTags(vajramDefRoot);

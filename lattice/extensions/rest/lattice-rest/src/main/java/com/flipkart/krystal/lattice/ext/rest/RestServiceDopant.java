@@ -24,6 +24,7 @@ import com.flipkart.krystal.lattice.vajram.VajramRequestExecutionContext.VajramR
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.tags.Names;
+import com.google.common.base.Splitter;
 import io.smallrye.mutiny.Multi;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
@@ -32,6 +33,7 @@ import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.Response.ResponseBuilder;
 import jakarta.ws.rs.core.UriInfo;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletionStage;
@@ -39,6 +41,7 @@ import java.util.concurrent.Flow.Publisher;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
 @DopantType(RestServiceDopant.REST_SERVICE_DOPANT_TYPE)
@@ -114,9 +117,16 @@ public abstract class RestServiceDopant implements Dopant<RestService, RestServi
 
   @Produces(inScope = RequestScoped.class)
   @Named(StandardHeaderNames.ACCEPT)
-  public Header getAcceptHeader(HttpHeaders httpHeaders) {
-    return Header.of(
-        StandardHeaderNames.ACCEPT, httpHeaders.getRequestHeader(StandardHeaderNames.ACCEPT));
+  public @Nullable Header getAcceptHeader(HttpHeaders httpHeaders) {
+    List<String> requestHeaderValues = httpHeaders.getRequestHeader(StandardHeaderNames.ACCEPT);
+    if (requestHeaderValues == null) {
+      return null;
+    }
+    List<String> splitHeaderValues = new ArrayList<>();
+    for (String requestHeaderValue : requestHeaderValues) {
+      Splitter.on(',').trimResults().split(requestHeaderValue).forEach(splitHeaderValues::add);
+    }
+    return Header.of(StandardHeaderNames.ACCEPT, splitHeaderValues);
   }
 
   private static Bindings getRequestScopeSeeds(HttpHeaders headers, UriInfo uriInfo) {

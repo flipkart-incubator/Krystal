@@ -18,7 +18,7 @@ ext {
     krystal_version = project['com.flipkart.krystal.currentVersion']
     lattice_version = project['com.flipkart.krystal.lattice.currentVersion']
 
-    protobuf_version = '4.34.1'
+    protobuf_version = '4.35.0'
     grpc_version = '1.81.0'
     fory_version = '0.17.0'
     quarkus_version = '3.35.3'
@@ -136,6 +136,7 @@ configure(subprojects.findAll {
         api 'com.google.guava:guava'
         implementation 'org.slf4j:slf4j-api'
         implementation 'jakarta.inject:jakarta.inject-api'
+        compileOnly 'com.google.auto.service:auto-service-annotations'
         implementation 'com.google.auto.service:auto-service-annotations'
         annotationProcessor 'com.google.auto.service:auto-service'
 

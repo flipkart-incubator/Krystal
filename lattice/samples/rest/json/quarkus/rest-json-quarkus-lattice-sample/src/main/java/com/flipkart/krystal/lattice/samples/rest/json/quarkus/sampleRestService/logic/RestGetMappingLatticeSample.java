@@ -7,8 +7,6 @@ import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.annos.InvocableOutsideProcess;
 import com.flipkart.krystal.lattice.core.di.ByContentType;
 import com.flipkart.krystal.lattice.ext.rest.api.Path;
-import com.flipkart.krystal.lattice.ext.rest.api.PathParam;
-import com.flipkart.krystal.lattice.ext.rest.api.QueryParam;
 import com.flipkart.krystal.lattice.ext.rest.api.methods.GET;
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.JsonResponse;
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.JsonResponse_Immut;
@@ -32,17 +30,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @GET
 @Vajram
 public abstract class RestGetMappingLatticeSample extends ComputeVajramDef<JsonResponse> {
-  interface _Inputs {
-    @IfAbsent(FAIL)
-    @PathParam
-    String fullPath();
-
-    @QueryParam
-    String name();
-
-    @QueryParam
-    String age();
-  }
+  interface _Inputs extends RestGetMappingLatticeSample_Inputs {}
 
   interface _InternalFacets {
     @Inject

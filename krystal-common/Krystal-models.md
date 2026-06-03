@@ -404,3 +404,60 @@ public interface Task extends Model {
 When used in protobuf messages, the enum field is generated as the corresponding proto enum type,
 and getter/setter code in the generated `_ImmutProto` wrapper delegates to the shared
 `<EnumName>_ProtoUtils` class for conversion.
+
+## Shared Models (External Inputs)
+
+Normally, a Vajram's inputs are defined inside its class via the `_Inputs` nested interface. Shared
+Models allow inputs to be defined **externally** in a standalone interface annotated with
+`@InputsForVajram`. This is useful when:
+
+- Multiple Vajrams share the same input contract.
+- The inputs interface lives in a different module from the Vajram implementation.
+- You want to generate the request interface (`_Req`) separately from the Vajram codegen.
+
+### Defining External Inputs
+
+Create an interface that extends `VajramInputs<T>` (where `T` is the response type) and annotate it
+with `@InputsForVajram`:
+
+```java
+@InputsForVajram(parentPackage = "com.example.vajrams", vajramId = "GetOrder")
+public interface GetOrderInputs extends VajramInputs<OrderResponse> {
+
+  String orderId();
+
+  @Nullable
+  String customerId();
+}
+```
+
+**Key attributes of `@InputsForVajram`:**
+
+| Attribute       | Description                                                                                                            |
+|-----------------|------------------------------------------------------------------------------------------------------------------------|
+| `parentPackage` | The parent package for the generated request interface. The request is generated in `parentPackage + ".shared_models"`. |
+| `vajramId`      | The ID of the Vajram that uses this interface as its inputs definition.                                                 |
+
+### How It Works
+
+1. The `SharedModelsGenProcessor` (an annotation processor) discovers interfaces annotated with
+   `@InputsForVajram`.
+2. It extracts the response type from the `VajramInputs<T>` type parameter.
+3. It builds `DefaultFacetModel` instances from the interface's methods (each method becomes an
+   input facet).
+4. It delegates to `VajramCodeGenerator.generateVajramRequest()` to generate the request interface
+   (`_Req`) in the `parentPackage.shared_models` package.
+
+### Repeatable Annotation
+
+`@InputsForVajram` is repeatable — a single inputs interface can define inputs for multiple Vajrams:
+
+```java
+@InputsForVajram(parentPackage = "com.example.vajrams.getorder", vajramId = "GetOrder")
+@InputsForVajram(parentPackage = "com.example.vajrams.getorderv2", vajramId = "GetOrderV2")
+public interface GetOrderInputs extends VajramInputs<OrderResponse> {
+  String orderId();
+}
+```
+
+This generates separate `_Req` interfaces for each Vajram in their respective packages.

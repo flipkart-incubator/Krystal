@@ -60,10 +60,10 @@ public abstract class AbstractKrystalAnnoProcessor extends AbstractProcessor {
   }
 
   private void validateAndInit() {
-    validateCodegenPhase();
+    validateAndInitCodegenPhase();
   }
 
-  private void validateCodegenPhase() {
+  private void validateAndInitCodegenPhase() {
     String currentPhaseString = processingEnv.getOptions().get(CODEGEN_PHASE_KEY);
     if (currentPhaseString == null) {
       return;

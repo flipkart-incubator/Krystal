@@ -4,6 +4,7 @@ import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.asClassN
 import static com.flipkart.krystal.facets.FacetType.DEPENDENCY;
 
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.FacetType;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.TypeName;
@@ -16,8 +17,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public record DependencyModel(
     int id,
     @NonNull String name,
-    @NonNull VajramInfoLite vajramInfo,
-    @NonNull VajramInfoLite depVajramInfo,
+    @NonNull VajramID vajramId,
+    @NonNull VajramInputsInfo depVajramInfo,
     @NonNull CodeGenType dataType,
     @NonNull TypeName depReqType,
     boolean canFanout,

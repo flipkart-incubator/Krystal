@@ -117,8 +117,7 @@ public abstract class BaseProtoSchemaGen implements CodeGenerator {
   private void generateProtobufSchema() {
     TypeElement modelRootType = codeGenContext.modelRootType();
     String modelRootName = modelRootType.getSimpleName().toString();
-    String packageName =
-        util.processingEnv().getElementUtils().getPackageOf(modelRootType).toString();
+    String packageName = util.getCodegenPackageName(modelRootType);
     String protoFileName = modelRootName + config.fileSuffix();
 
     try {

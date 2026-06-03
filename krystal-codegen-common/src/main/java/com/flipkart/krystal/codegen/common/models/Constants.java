@@ -13,6 +13,7 @@ public final class Constants {
   public static final String IMMUT_POJO_SUFFIX = "_" + IMMUT_SUFFIX + POJO.modelClassesSuffix();
 
   public static final CodeBlock EMPTY_CODE_BLOCK = CodeBlock.builder().build();
+  public static final String SHARED_MODELS_SUB_PACKAGE = "gen";
 
   private Constants() {}
 }

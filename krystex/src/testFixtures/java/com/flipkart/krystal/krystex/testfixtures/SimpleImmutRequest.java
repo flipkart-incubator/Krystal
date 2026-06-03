@@ -14,19 +14,19 @@ import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class SimpleImmutRequest<T> implements SimpleRequest<T>, ImmutableRequest<T> {
-  private final Map<Integer, ErrableFacetValue<Object>> _data;
+  private final Map<String, ErrableFacetValue<Object>> _data;
   private final VajramID _vajramID;
 
   public static <T> SimpleImmutRequest<T> empty(VajramID vajramID) {
     return new SimpleImmutRequest<>(ImmutableMap.of(), vajramID);
   }
 
-  SimpleImmutRequest(Map<Integer, ErrableFacetValue<Object>> data, VajramID vajramID) {
+  SimpleImmutRequest(Map<String, ErrableFacetValue<Object>> data, VajramID vajramID) {
     this._data = ImmutableMap.copyOf(data);
     this._vajramID = vajramID;
   }
 
-  public ErrableFacetValue<Object> _get(int facetId) {
+  public ErrableFacetValue<Object> _get(String facetId) {
     return _data.getOrDefault(facetId, ErrableFacetValue.nil());
   }
 
@@ -41,7 +41,7 @@ public final class SimpleImmutRequest<T> implements SimpleRequest<T>, ImmutableR
   }
 
   @Override
-  public Map<Integer, ErrableFacetValue<Object>> _asMap() {
+  public Map<String, ErrableFacetValue<Object>> _asMap() {
     return _data;
   }
 
@@ -50,7 +50,7 @@ public final class SimpleImmutRequest<T> implements SimpleRequest<T>, ImmutableR
     return ImmutableSet.of();
   }
 
-  public boolean _hasValue(int facetId) {
+  public boolean _hasValue(String facetId) {
     return _data.containsKey(facetId);
   }
 
@@ -77,7 +77,7 @@ public final class SimpleImmutRequest<T> implements SimpleRequest<T>, ImmutableR
     return Objects.hash(_data, _vajramID);
   }
 
-  public Map<Integer, ErrableFacetValue<Object>> _data() {
+  public Map<String, ErrableFacetValue<Object>> _data() {
     return _data;
   }
 

@@ -19,7 +19,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class SimpleRequestBuilder<T> implements ImmutableRequest.Builder<T> {
 
   private final ImmutableSet<? extends InputMirror> _facets;
-  private final Map<Integer, ErrableFacetValue<Object>> _data;
+  private final Map<String, ErrableFacetValue<Object>> _data;
   private final VajramID _vajramID;
 
   public SimpleRequestBuilder(Set<? extends InputMirror> _facets, VajramID vajramID) {
@@ -27,7 +27,7 @@ public final class SimpleRequestBuilder<T> implements ImmutableRequest.Builder<T
   }
 
   public SimpleRequestBuilder(
-      Set<? extends InputMirror> _facets, Map<Integer, Errable<Object>> data, VajramID vajramID) {
+      Set<? extends InputMirror> _facets, Map<String, Errable<Object>> data, VajramID vajramID) {
     this._facets = ImmutableSet.copyOf(_facets);
     this._data =
         data.entrySet().stream()
@@ -35,11 +35,11 @@ public final class SimpleRequestBuilder<T> implements ImmutableRequest.Builder<T
     this._vajramID = vajramID;
   }
 
-  public ErrableFacetValue<Object> _get(int facetId) {
+  public ErrableFacetValue<Object> _get(String facetId) {
     return _data.getOrDefault(facetId, ErrableFacetValue.nil());
   }
 
-  public Map<Integer, ErrableFacetValue<Object>> _asMap() {
+  public Map<String, ErrableFacetValue<Object>> _asMap() {
     return _data;
   }
 
@@ -48,7 +48,7 @@ public final class SimpleRequestBuilder<T> implements ImmutableRequest.Builder<T
     return _facets;
   }
 
-  public boolean _hasValue(int facetId) {
+  public boolean _hasValue(String facetId) {
     return _data.containsKey(facetId);
   }
 
@@ -58,7 +58,7 @@ public final class SimpleRequestBuilder<T> implements ImmutableRequest.Builder<T
   }
 
   @SuppressWarnings("unchecked")
-  public SimpleRequestBuilder<T> _set(int facetId, FacetValue value) {
+  public SimpleRequestBuilder<T> _set(String facetId, FacetValue value) {
     if (!(value instanceof ErrableFacetValue<?> errableFacetValue)) {
       throw new IllegalArgumentException(
           "Expected Errable but found %s".formatted(value.getClass()));

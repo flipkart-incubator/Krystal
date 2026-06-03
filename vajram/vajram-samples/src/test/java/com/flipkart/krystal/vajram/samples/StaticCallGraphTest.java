@@ -17,7 +17,7 @@ import static com.flipkart.krystal.visualization.StaticCallGraphGenerator.genera
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.traits.TraitDispatchPolicies;
-import com.flipkart.krystal.vajram.guice.traitbinding.StaticDispatchPolicyImpl;
+import com.flipkart.krystal.vajram.guice.traitbinding.GuiceyStaticDispatchPolicy;
 import com.flipkart.krystal.vajram.guice.traitbinding.TraitBinder;
 import com.flipkart.krystal.vajram.samples.calculator.add.Add;
 import com.flipkart.krystal.vajram.samples.calculator.add.AddUsingTraits;
@@ -120,7 +120,7 @@ class StaticCallGraphTest {
           .to(SplitAdd_Req.class);
       kGraph.traitDispatchPolicies(
           new TraitDispatchPolicies(
-              new StaticDispatchPolicyImpl(
+              new GuiceyStaticDispatchPolicy(
                   graph, graph.getVajramIdByVajramDefType(MultiAdd.class), traitBinder),
               dispatchTrait(CustomerServiceAgent_Req.class, graph)
                   .conditionally(
@@ -207,7 +207,7 @@ class StaticCallGraphTest {
         .to(SplitAdd_Req.class);
     kGraph.traitDispatchPolicies(
         new TraitDispatchPolicies(
-            new StaticDispatchPolicyImpl(
+            new GuiceyStaticDispatchPolicy(
                 graph, graph.getVajramIdByVajramDefType(MultiAdd.class), traitBinder)));
     // Generate complete static call graph (no specific Vajram filter)
     GraphGenerationResult result = generateStaticCallGraphContent(kGraph.build(), null);

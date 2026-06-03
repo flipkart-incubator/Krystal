@@ -10,7 +10,5 @@ import java.lang.annotation.Target;
 @Retention(RUNTIME)
 @Target({FIELD, TYPE})
 public @interface FacetIdNameMapping {
-  int id();
-
   String name();
 }

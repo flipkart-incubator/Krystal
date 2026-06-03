@@ -21,23 +21,19 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 public sealed class SimpleFacet implements Facet, InputMirror permits SimpleDep {
 
-  public static SimpleFacet input(int facetId) {
-    return new SimpleFacet(facetId, "input" + count++, INPUT);
+  public static SimpleFacet input(String name) {
+    return new SimpleFacet(name, INPUT);
   }
 
-  public static SimpleDep dependency(int facetId, VajramID ofVajramID, VajramID onVajramID) {
-    return new SimpleDep(facetId, "dep" + count++, ofVajramID, onVajramID);
+  public static SimpleDep dependency(String name, VajramID ofVajramID, VajramID onVajramID) {
+    return new SimpleDep(name, ofVajramID, onVajramID);
   }
 
-  private static int count;
-
-  private final int id;
   private final String name;
 
   private final FacetType facetType;
 
-  public SimpleFacet(int id, String name, FacetType facetType) {
-    this.id = id;
+  public SimpleFacet(String name, FacetType facetType) {
     this.name = name;
     this.facetType = facetType;
   }
@@ -47,23 +43,18 @@ public sealed class SimpleFacet implements Facet, InputMirror permits SimpleDep 
   }
 
   @Override
-  public int id() {
-    return id;
-  }
-
-  @Override
   public String name() {
     return name;
   }
 
   @Override
   public @Nullable FacetValue getFacetValue(FacetValues facetValues) {
-    return ((FacetValuesMap) facetValues)._asMap().get(id());
+    return ((FacetValuesMap) facetValues)._asMap().get(name());
   }
 
   @Override
   public void setFacetValue(FacetValuesBuilder facets, FacetValue value) {
-    ((FacetValuesMapBuilder) facets)._set(id(), value);
+    ((FacetValuesMapBuilder) facets)._set(name(), value);
   }
 
   @Override
@@ -73,7 +64,7 @@ public sealed class SimpleFacet implements Facet, InputMirror permits SimpleDep 
 
   @Override
   public @Nullable Object getFromRequest(Request request) {
-    return ((SimpleRequest) request)._asMap().get(id());
+    return ((SimpleRequest) request)._asMap().get(name());
   }
 
   @SuppressWarnings("unchecked")
@@ -81,7 +72,7 @@ public sealed class SimpleFacet implements Facet, InputMirror permits SimpleDep 
   public void setToRequest(Builder request, @Nullable Object value) {
     ((SimpleRequestBuilder<Object>) request)
         ._asMap()
-        .put(id(), new ErrableFacetValue<>(Errable.withValue(value)));
+        .put(name(), new ErrableFacetValue<>(Errable.withValue(value)));
   }
 
   @Override
@@ -98,11 +89,11 @@ public sealed class SimpleFacet implements Facet, InputMirror permits SimpleDep 
   public boolean equals(Object o) {
     if (o == null || getClass() != o.getClass()) return false;
     SimpleFacet that = (SimpleFacet) o;
-    return id == that.id && facetType == that.facetType;
+    return name().equals(that.name()) && facetType == that.facetType;
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, facetType);
+    return Objects.hash(name, facetType);
   }
 }

@@ -34,7 +34,7 @@ public record ParsedVajramData(
   public static Optional<ParsedVajramData> fromVajramInfo(
       VajramInfo vajramInfo, VajramCodeGenUtility util) {
     validate(vajramInfo, util);
-    String packageName = vajramInfo.lite().packageName();
+    String packageName = vajramInfo.packageName();
     ImmutableList<ExecutableElement> allMethods = getAllMethods(vajramInfo.vajramClassElem());
     if (vajramInfo.lite().isTrait()) {
       if (!allMethods.isEmpty()) {

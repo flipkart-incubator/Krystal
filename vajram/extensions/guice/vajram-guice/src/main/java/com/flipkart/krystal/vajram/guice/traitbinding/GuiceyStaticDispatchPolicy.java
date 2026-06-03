@@ -27,7 +27,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * @see TraitBinder
  */
-public class StaticDispatchPolicyImpl extends StaticDispatchPolicy {
+public class GuiceyStaticDispatchPolicy extends StaticDispatchPolicy {
 
   @Getter private final VajramID traitID;
   @Getter private final ImmutableSet<Class<? extends Request<?>>> dispatchTargetReqs;
@@ -39,7 +39,7 @@ public class StaticDispatchPolicyImpl extends StaticDispatchPolicy {
   private final Map<VajramID, Map<QualWrapper, Class<? extends Request<?>>>> bindingsByQualifier =
       new LinkedHashMap<>();
 
-  public StaticDispatchPolicyImpl(
+  public GuiceyStaticDispatchPolicy(
       VajramGraph vajramGraph, VajramID traitID, TraitBinder traitBinder) {
     this.vajramGraph = vajramGraph;
     this.traitID = traitID;

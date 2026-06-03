@@ -15,7 +15,6 @@ import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.DEFAULT;
-import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
@@ -81,6 +80,7 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
@@ -191,17 +191,19 @@ public final class JavaModelsGen implements CodeGenerator {
     if (!isApplicable()) {
       return;
     }
-
     TypeElement modelRootType = codeGenContext.modelRootType();
-
     // For enum models: validate only, no code generation needed
     if (util.isEnumModel(modelRootType)) {
       validateEnumModel(modelRootType);
       return;
     }
-
     validate();
+    interfaces();
+    impls();
+  }
 
+  private void interfaces() {
+    TypeElement modelRootType = codeGenContext.modelRootType();
     CodeGenUtility util = codeGenContext.util();
 
     // Extract and validate model methods
@@ -230,12 +232,18 @@ public final class JavaModelsGen implements CodeGenerator {
         generateImmutableInterface(modelRootType, modelMethods, immutModelNameRaw);
     // Write the immutable interface to a file
     util.writeJavaFile(packageName, immutableInterface, modelRootType);
+  }
 
+  private void impls() {
+    TypeElement modelRootType = codeGenContext.modelRootType();
+    CodeGenUtility util = codeGenContext.util();
+    String packageName = util.getCodegenPackageName(modelRootType);
     if (util.typeExplicitlySupportsProtocol(modelRootType, PlainJavaObject.class)
+        ||
         // If no SupportedModelProtocol annotation is present, then we assume PlainJavaObject as a
         // sane default
-        || modelRootType.getAnnotationsByType(SupportedModelProtocol.class).length == 0) {
-      // Generate the POJO class only if PlainJavaObject is explicitly supported
+        util.getSupportedProtocolTypeElements(modelRootType).isEmpty()) {
+      List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
       util.writeJavaFile(
           packageName, generateImmutablePojo(modelRootType, modelMethods), modelRootType);
     }
@@ -965,7 +973,7 @@ public final class JavaModelsGen implements CodeGenerator {
                   util.getModelFieldType(method, false, null).fieldType(),
                   method.getSimpleName().toString(),
                   PRIVATE,
-                  FINAL)
+                  Modifier.FINAL)
               .build());
     }
 
@@ -1016,7 +1024,7 @@ public final class JavaModelsGen implements CodeGenerator {
         classBuilder);
     // Create the POJO class
     return classBuilder
-        .addModifiers(PUBLIC, FINAL)
+        .addModifiers(PUBLIC, Modifier.FINAL)
         .addSuperinterface(immutIfaceType)
         .addFields(fields)
         .addMethod(allArgCtor(modelMethods, util).build())
@@ -1374,7 +1382,7 @@ this.$L = $L == null
             "Builder",
             modelRootType.getTypeParameters().stream().map(TypeVariableName::get).toList(),
             modelRootType.getQualifiedName().toString())
-        .addModifiers(PUBLIC, STATIC, FINAL)
+        .addModifiers(PUBLIC, STATIC, Modifier.FINAL)
         .addSuperinterface(withTypeParams(builderClassName, modelRootType.getTypeParameters()))
         .addFields(fields)
         .addMethod(noArgConstructor)

@@ -29,7 +29,7 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.traits.TraitDispatchPolicies;
-import com.flipkart.krystal.vajram.guice.traitbinding.StaticDispatchPolicyImpl;
+import com.flipkart.krystal.vajram.guice.traitbinding.GuiceyStaticDispatchPolicy;
 import com.flipkart.krystal.vajram.guice.traitbinding.TraitBinder;
 import com.flipkart.krystal.vajram.samples.Util;
 import com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.AdditionMethod;
@@ -420,7 +420,7 @@ class MultiAddTest {
         .to(SplitAdd_Req.class);
     this.kGraph.traitDispatchPolicies(
         new TraitDispatchPolicies(
-            new StaticDispatchPolicyImpl(
+            new GuiceyStaticDispatchPolicy(
                 vGraph, vGraph.getVajramIdByVajramDefType(MultiAdd.class), traitBinder)));
   }
 

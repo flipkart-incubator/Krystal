@@ -39,7 +39,7 @@ public abstract sealed class AbstractFacetSpec<T, CV extends Request> extends Ab
       String documentation,
       boolean isBatched,
       Callable<ElementTags> tagsParser) {
-    super(id, name, ofVajramID, facetType, documentation);
+    super(name, ofVajramID, facetType, documentation);
     this.type = type;
     this.ofVajram = ofVajram;
     this.tagsParser = tagsParser;

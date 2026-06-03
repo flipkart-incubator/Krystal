@@ -21,7 +21,6 @@ public final class InputMirrorSpec<T, CV extends Request> implements InputMirror
   @Getter private final VajramID ofVajramID;
   @Getter private final DataType<T> type;
   @Getter private final Class<? extends CV> ofVajram;
-  @Getter private final int id;
   @Getter private final String name;
   @Getter private final String documentation;
   private @MonotonicNonNull ElementTags tags;
@@ -39,7 +38,6 @@ public final class InputMirrorSpec<T, CV extends Request> implements InputMirror
       Callable<ElementTags> tagsParser,
       Function<CV, @Nullable T> getFromRequest,
       BiConsumer<ImmutableRequest.Builder<?>, @Nullable T> setToRequest) {
-    this.id = id;
     this.name = name;
     this.ofVajramID = ofVajramID;
     this.type = type;
@@ -64,7 +62,7 @@ public final class InputMirrorSpec<T, CV extends Request> implements InputMirror
 
   @Override
   public String toString() {
-    return "InputMirror(id=" + id + ", name=" + name + ", doc=" + documentation + ')';
+    return "InputMirror(name=" + name + ", doc=" + documentation + ')';
   }
 
   @SneakyThrows

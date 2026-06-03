@@ -13,8 +13,8 @@ public final class SimpleDep extends SimpleFacet implements Dependency {
   private final VajramID ofVajramID;
   private final VajramID onVajramID;
 
-  SimpleDep(int id, String name, VajramID ofVajramID, VajramID onVajramID) {
-    super(id, name, DEPENDENCY);
+  SimpleDep(String name, VajramID ofVajramID, VajramID onVajramID) {
+    super(name, DEPENDENCY);
     this.ofVajramID = ofVajramID;
     this.onVajramID = onVajramID;
   }
@@ -30,7 +30,7 @@ public final class SimpleDep extends SimpleFacet implements Dependency {
   }
 
   public void setToFacets(FacetValues facetValues, DepResponse value) {
-    ((FacetValuesMapBuilder) facetValues._asBuilder())._set(id(), value);
+    ((FacetValuesMapBuilder) facetValues._asBuilder())._set(name(), value);
   }
 
   @Override
@@ -42,11 +42,11 @@ public final class SimpleDep extends SimpleFacet implements Dependency {
   public boolean equals(Object o) {
     if (o == null || getClass() != o.getClass()) return false;
     SimpleDep that = (SimpleDep) o;
-    return id() == that.id() && facetType() == that.facetType();
+    return name().equals(that.name()) && facetType() == that.facetType();
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(id(), facetType());
+    return Objects.hash(name(), facetType());
   }
 }
