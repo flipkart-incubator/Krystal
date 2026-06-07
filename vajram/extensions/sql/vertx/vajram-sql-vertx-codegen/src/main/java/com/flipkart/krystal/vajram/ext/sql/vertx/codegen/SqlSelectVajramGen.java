@@ -29,9 +29,11 @@ import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.TraitResultType
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereColumn;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereInput;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.WhereLeaf;
+import com.flipkart.krystal.vajram.ext.sql.codegen.syntax.SqlSyntax;
 import com.flipkart.krystal.vajram.ext.sql.lang.LIMIT;
 import com.flipkart.krystal.vajram.ext.sql.lang.LIMIT.Creator;
 import com.flipkart.krystal.vajram.ext.sql.lang.ORDER;
+import com.flipkart.krystal.vajram.ext.sql.lang.SqlDialect;
 import com.flipkart.krystal.vajram.ext.sql.model.Table;
 import com.flipkart.krystal.vajram.ext.sql.vertx.ExecuteVertxSql;
 import com.flipkart.krystal.vajram.facets.Dependency;
@@ -57,7 +59,6 @@ import java.util.Objects;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -76,15 +77,20 @@ public class SqlSelectVajramGen implements CodeGenerator {
   private final VajramInfo vajramInfo;
   private final SqlModelParser parser;
   private final VajramCodeGenUtility vajramUtil;
-  private final VajramInfo executSqlVajram;
+  private final VajramInfo executeSqlVajram;
+  private final SqlSyntax syntax;
 
   public SqlSelectVajramGen(
-      VajramCodeGenUtility vajramUtil, VajramInfo vajramInfo, SqlModelParser parser) {
+      VajramCodeGenUtility vajramUtil,
+      VajramInfo vajramInfo,
+      SqlModelParser parser,
+      SqlDialect sqlDialect) {
     this.util = vajramUtil.codegenUtil();
     this.vajramInfo = vajramInfo;
     this.parser = parser;
     this.vajramUtil = vajramUtil;
-    this.executSqlVajram = vajramUtil.computeVajramInfo(ExecuteVertxSql.class);
+    this.executeSqlVajram = vajramUtil.computeVajramInfo(ExecuteVertxSql.class);
+    this.syntax = SqlSyntax.forDialect(sqlDialect);
   }
 
   // ─── Entry point ─────────────────────────────────────────────────────────────
@@ -345,7 +351,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
   }
 
   private TypeName getExecuteVertxSqlReq() {
-    return executSqlVajram.lite().requestInterfaceTypeName();
+    return executeSqlVajram.lite().requestInterfaceTypeName();
   }
 
   private MethodSpec buildResolveParamsMethod(
@@ -399,11 +405,14 @@ public class SqlSelectVajramGen implements CodeGenerator {
       String vajramName,
       String parentPkAlias) {
 
-    if (!selection.joins().isEmpty() && resultType.isList()) {
-      return buildListJoinMapResultMethod(
-          selection, resultPkg, resultName, outputReturnTypeName, parentPkAlias);
-    } else if (!selection.joins().isEmpty()) {
-      return buildJoinMapResultMethod(selection, resultPkg, resultName, vajramName, parentPkAlias);
+    if (!selection.joins().isEmpty()) {
+      if (resultType.isList()) {
+        return buildListJoinMapResultMethod(
+            selection, resultPkg, resultName, outputReturnTypeName, parentPkAlias);
+      } else {
+        return buildJoinMapResultMethod(
+            selection, resultPkg, resultName, vajramName, parentPkAlias);
+      }
     } else if (resultType.isList()) {
       return buildListMapResultMethod(selection, resultPkg, resultName, outputReturnTypeName);
     } else {
@@ -436,12 +445,23 @@ public class SqlSelectVajramGen implements CodeGenerator {
 
     CodeBlock.Builder chain = CodeBlock.builder().add("return $T._builder()", resultImmutPojo);
     for (ScalarColumn col : proj.scalars()) {
-      chain.add("\n    .$L($L)", col.methodName(), columnExpression("_row", col.methodName(), col));
+      chain.add(readColumnAndSetValue(col, col.methodName()));
     }
     chain.add("\n    ._build()");
     method.addStatement(chain.build());
 
     return method.build();
+  }
+
+  private CodeBlock readColumnAndSetValue(ScalarColumn col, String alias) {
+    CodeBlock columnExpression =
+        rowGetter("_row", syntax.columnNameInResult(alias), col.javaType());
+    if (col.serdeInfo() != null) {
+      columnExpression =
+          loadProtocolConfig(requireNonNull(col.serdeInfo()).protocolTypeElement())
+              .createDeserializationExpression(columnExpression, col.javaType(), util);
+    }
+    return CodeBlock.of("\n    .$L($L)", col.methodName(), columnExpression);
   }
 
   /** Maps all rows to a {@code List<result>}. */
@@ -462,7 +482,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
 
     CodeBlock.Builder chain = CodeBlock.builder().add("_result.add($T._builder()", resultImmutPojo);
     for (ScalarColumn col : proj.scalars()) {
-      chain.add("\n    .$L($L)", col.methodName(), columnExpression("_row", col.methodName(), col));
+      chain.add(readColumnAndSetValue(col, col.methodName()));
     }
     chain.add("\n    ._build())");
     method.addStatement(chain.build());
@@ -561,7 +581,10 @@ public class SqlSelectVajramGen implements CodeGenerator {
     method.beginControlFlow("for ($T _row : $L)", Row.class, VertxSqlUtil.SQL_RESULT_FACET);
 
     // Parent key
-    method.addStatement("$T _parentKey = _row.getValue($S)", Object.class, parentPkAlias);
+    method.addStatement(
+        "$T _parentKey = _row.getValue($S)",
+        Object.class,
+        syntax.columnNameInResult(parentPkAlias));
 
     // Init parent entry on first encounter
     method.beginControlFlow("if (_parentKey != null && !_parentBuilders.containsKey(_parentKey))");
@@ -569,11 +592,11 @@ public class SqlSelectVajramGen implements CodeGenerator {
         CodeBlock.builder().add("_parentBuilders.put(_parentKey, $T._builder()", resultImmutPojo);
     for (ScalarColumn col : selection.scalars()) {
       String alias = selection.tableName() + "_" + col.methodName();
-      parentChain.add("\n    .$L($L)", col.methodName(), columnExpression("_row", alias, col));
+      parentChain.add(readColumnAndSetValue(col, alias));
     }
     parentChain.add(")");
     method.addStatement(parentChain.build());
-    // Initialise child accumulators for this new parent
+    // Initialize child accumulators for this new parent
     for (JoinRelation join : selection.joins()) {
       if (join.nestedJoins().isEmpty()) {
         method.addStatement("_$L.put(_parentKey, new $T<>())", join.methodName(), ArrayList.class);
@@ -605,13 +628,14 @@ public class SqlSelectVajramGen implements CodeGenerator {
         }
         String sentinelAlias = join.methodName() + "_" + sentinelMethodName;
         method.beginControlFlow(
-            "if (_parentKey != null && _row.getValue($S) != null)", sentinelAlias);
+            "if (_parentKey != null && _row.getValue($S) != null)",
+            syntax.columnNameInResult(sentinelAlias));
         CodeBlock.Builder childChain =
             CodeBlock.builder()
                 .add("_$L.get(_parentKey).add($T._builder()", join.methodName(), joinImmutPojo);
         for (ScalarColumn col : join.columns()) {
           String alias = join.methodName() + "_" + col.methodName();
-          childChain.add("\n    .$L($L)", col.methodName(), columnExpression("_row", alias, col));
+          childChain.add(readColumnAndSetValue(col, alias));
         }
         childChain.add("\n    ._build())");
         method.addStatement(childChain.build());
@@ -624,7 +648,10 @@ public class SqlSelectVajramGen implements CodeGenerator {
         }
         String childPkAlias = join.methodName() + "_" + childPkMethodName;
         method.addStatement(
-            "$T _$LKey = _row.getValue($S)", Object.class, join.methodName(), childPkAlias);
+            "$T _$LKey = _row.getValue($S)",
+            Object.class,
+            join.methodName(),
+            syntax.columnNameInResult(childPkAlias));
         method.beginControlFlow(
             "if (_parentKey != null && _$LKey != null"
                 + " && !_$LBuilders.get(_parentKey).containsKey(_$LKey))",
@@ -640,7 +667,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
                     joinImmutPojo);
         for (ScalarColumn col : join.columns()) {
           String alias = join.methodName() + "_" + col.methodName();
-          l1Chain.add("\n    .$L($L)", col.methodName(), columnExpression("_row", alias, col));
+          l1Chain.add(readColumnAndSetValue(col, alias));
         }
         l1Chain.add(")");
         method.addStatement(l1Chain.build());
@@ -667,7 +694,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
           method.beginControlFlow(
               "if (_parentKey != null && _$LKey != null && _row.getValue($S) != null)",
               join.methodName(),
-              nestedSentinelAlias);
+              syntax.columnNameInResult(nestedSentinelAlias));
           CodeBlock.Builder l2Chain =
               CodeBlock.builder()
                   .add(
@@ -678,7 +705,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
                       nestedImmutPojo);
           for (ScalarColumn col : nested.columns()) {
             String alias = nested.methodName() + "_" + col.methodName();
-            l2Chain.add("\n    .$L($L)", col.methodName(), columnExpression("_row", alias, col));
+            l2Chain.add(readColumnAndSetValue(col, alias));
           }
           l2Chain.add("\n    ._build())");
           method.addStatement(l2Chain.build());
@@ -819,7 +846,8 @@ public class SqlSelectVajramGen implements CodeGenerator {
 
     // Parent initialisation / identity validation
     if (hasValidation) {
-      method.addStatement("$T _rowKey = _row.getValue($S)", Object.class, parentPkAlias);
+      method.addStatement(
+          "$T _rowKey = _row.getValue($S)", Object.class, syntax.columnNameInResult(parentPkAlias));
       method.beginControlFlow("if (_parent == null)");
       method.addStatement("_parentKey = _rowKey");
     } else {
@@ -830,7 +858,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
         CodeBlock.builder().add("_parent = $T._builder()", resultImmutPojo);
     for (ScalarColumn col : proj.scalars()) {
       String alias = proj.tableName() + "_" + col.methodName();
-      parentChain.add("\n    .$L($L)", col.methodName(), columnExpression("_row", alias, col));
+      parentChain.add(readColumnAndSetValue(col, alias));
     }
     method.addStatement(parentChain.build());
 
@@ -867,12 +895,13 @@ public class SqlSelectVajramGen implements CodeGenerator {
           return method.build();
         }
         String sentinelAlias = join.methodName() + "_" + sentinelMethodName;
-        method.beginControlFlow("if (_row.getValue($S) != null)", sentinelAlias);
+        method.beginControlFlow(
+            "if (_row.getValue($S) != null)", syntax.columnNameInResult(sentinelAlias));
         CodeBlock.Builder childChain =
             CodeBlock.builder().add("_$L.add($T._builder()", join.methodName(), joinImmutPojo);
         for (ScalarColumn col : join.columns()) {
           String alias = join.methodName() + "_" + col.methodName();
-          childChain.add("\n    .$L($L)", col.methodName(), columnExpression("_row", alias, col));
+          childChain.add(readColumnAndSetValue(col, alias));
         }
         childChain.add("\n    ._build())");
         method.addStatement(childChain.build());
@@ -885,7 +914,10 @@ public class SqlSelectVajramGen implements CodeGenerator {
         }
         String childPkAlias = join.methodName() + "_" + childPkMethodName;
         method.addStatement(
-            "$T _$LKey = _row.getValue($S)", Object.class, join.methodName(), childPkAlias);
+            "$T _$LKey = _row.getValue($S)",
+            Object.class,
+            join.methodName(),
+            syntax.columnNameInResult(childPkAlias));
         method.beginControlFlow(
             "if (_$LKey != null && !_$LBuilders.containsKey(_$LKey))",
             join.methodName(),
@@ -901,7 +933,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
                     joinImmutPojo);
         for (ScalarColumn col : join.columns()) {
           String alias = join.methodName() + "_" + col.methodName();
-          l1Chain.add("\n    .$L($L)", col.methodName(), columnExpression("_row", alias, col));
+          l1Chain.add(readColumnAndSetValue(col, alias));
         }
         l1Chain.add(")");
         method.addStatement(l1Chain.build());
@@ -930,7 +962,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
           method.beginControlFlow(
               "if (_$LKey != null && _row.getValue($S) != null)",
               join.methodName(),
-              nestedSentinelAlias);
+              syntax.columnNameInResult(nestedSentinelAlias));
           CodeBlock.Builder l2Chain =
               CodeBlock.builder()
                   .add(
@@ -941,7 +973,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
                       nestedImmutPojo);
           for (ScalarColumn col : nested.columns()) {
             String alias = nested.methodName() + "_" + col.methodName();
-            l2Chain.add("\n    .$L($L)", col.methodName(), columnExpression("_row", alias, col));
+            l2Chain.add(readColumnAndSetValue(col, alias));
           }
           l2Chain.add("\n    ._build())");
           method.addStatement(l2Chain.build());
@@ -1090,63 +1122,31 @@ public class SqlSelectVajramGen implements CodeGenerator {
   }
 
   // ─── Row getter ──────────────────────────────────────────────────────────────
-
-  private String rowGetter(String rowVar, String alias, TypeMirror type) {
-    String q = "\"" + alias + "\"";
-    if (type.getKind() == TypeKind.LONG) {
-      return rowVar + ".getLong(" + q + ")";
-    }
-    if (type.getKind() == TypeKind.INT) {
-      return rowVar + ".getInteger(" + q + ")";
-    }
-    if (type.getKind() == TypeKind.BOOLEAN) {
-      return rowVar + ".getBoolean(" + q + ")";
-    }
-    if (type.getKind() == TypeKind.DOUBLE) {
-      return rowVar + ".getDouble(" + q + ")";
-    }
-    if (type.getKind() == TypeKind.FLOAT) {
-      return rowVar + ".getFloat(" + q + ")";
-    }
-    if (type.getKind() == TypeKind.SHORT) {
-      return rowVar + ".getShort(" + q + ")";
+  private CodeBlock rowGetter(String rowVar, String alias, TypeMirror type) {
+    switch (type.getKind()) {
+      case BOOLEAN:
+        return CodeBlock.of("$L.getBoolean($S)", rowVar, alias);
+      case SHORT:
+        return CodeBlock.of("$L.getShort($S)", rowVar, alias);
+      case INT:
+        return CodeBlock.of("$L.getInteger($S)", rowVar, alias);
+      case LONG:
+        return CodeBlock.of("$L.getLong($S)", rowVar, alias);
+      case FLOAT:
+        return CodeBlock.of("$L.getFloat($S)", rowVar, alias);
+      case DOUBLE:
+        return CodeBlock.of("$L.getDouble($S)", rowVar, alias);
     }
     return switch (type.toString()) {
-      case "java.lang.String" -> rowVar + ".getString(" + q + ")";
-      case "java.lang.Long" -> rowVar + ".getLong(" + q + ")";
-      case "java.lang.Integer" -> rowVar + ".getInteger(" + q + ")";
-      case "java.lang.Boolean" -> rowVar + ".getBoolean(" + q + ")";
-      case "java.lang.Double" -> rowVar + ".getDouble(" + q + ")";
-      case "java.lang.Float" -> rowVar + ".getFloat(" + q + ")";
-      case "java.lang.Short" -> rowVar + ".getShort(" + q + ")";
-      case "java.time.LocalDate" -> rowVar + ".getLocalDate(" + q + ")";
-      case "java.time.LocalDateTime" -> rowVar + ".getLocalDateTime(" + q + ")";
-      case "java.time.OffsetDateTime" -> rowVar + ".getOffsetDateTime(" + q + ")";
-      case "java.util.UUID" -> rowVar + ".getUUID(" + q + ")";
-      default -> rowVar + ".getValue(" + q + ")";
+      case "java.lang.String" -> CodeBlock.of("$L.getString($S)", rowVar, alias);
+      case "java.time.LocalDate" -> CodeBlock.of("$L.getLocalDate($S)", rowVar, alias);
+      case "java.time.LocalDateTime" -> CodeBlock.of("$L.getLocalDateTime($S)", rowVar, alias);
+      case "java.time.OffsetDateTime" -> CodeBlock.of("$L.getOffsetDateTime($S)", rowVar, alias);
+      case "java.util.UUID" -> CodeBlock.of("$L.getUUID($S)", rowVar, alias);
+      default -> CodeBlock.of("$L.getValue($S)", rowVar, alias);
     };
   }
 
   // ─── Serde deserialization helpers ──────────────────────────────────────────
 
-  /**
-   * Returns a {@link CodeBlock} for extracting a column value from a row. For columns with serde
-   * info, this generates a deserialization call; otherwise it delegates to {@link #rowGetter}.
-   */
-  private CodeBlock columnExpression(String rowVar, String alias, ScalarColumn col) {
-    if (col.serdeInfo() != null) {
-      return deserializeExpression(rowVar, alias, col);
-    }
-    return CodeBlock.of("$L", rowGetter(rowVar, alias, col.javaType()));
-  }
-
-  /**
-   * Generates a deserialization expression: {@code facet.deserialize(row.getValue(alias), typeInfo,
-   * config)} with a null guard so that SQL NULL values are passed through as {@code null}.
-   */
-  private CodeBlock deserializeExpression(String rowVar, String alias, ScalarColumn col) {
-    return loadProtocolConfig(requireNonNull(col.serdeInfo()).protocolTypeElement())
-        .createDeserializationExpression(
-            CodeBlock.of("$L.getValue($S)", rowVar, alias), col.javaType(), util);
-  }
 }

@@ -82,7 +82,7 @@ final class JsonModelsGen implements CodeGenerator {
     String packageName = immutClassName.packageName();
 
     // Extract and validate model methods
-    List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
+    List<ExecutableElement> modelMethods = util.getModelFieldsForCodegen(modelRootType);
 
     // Validate serde compatibility (nested Models must support JSON; purity not required for JSON)
     new SerdeModelValidator(util, modelRootType, Json.JSON).validate(modelMethods);
@@ -439,7 +439,7 @@ this.$L = $L == null
 
     ClassName builderType = immutableJsonName.nestedClass("Builder");
     List<MethodSpec> dataAccessMethods =
-        builderGettersAndSetters(modelMethods, builderType, modelRoot, JSON, util);
+        builderGettersAndSetters(codeGenContext, modelMethods, builderType, modelRoot, JSON, util);
 
     // Create the builder class
     return builderSpec

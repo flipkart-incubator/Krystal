@@ -12,12 +12,13 @@ import com.flipkart.krystal.vajram.ext.sql.lang.LIMIT;
 import com.flipkart.krystal.vajram.ext.sql.lang.ORDER;
 import com.flipkart.krystal.vajram.ext.sql.lang.SELECT;
 import com.flipkart.krystal.vajram.ext.sql.lang.SQL;
+import com.flipkart.krystal.vajram.ext.sql.lang.SqlDialect;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderInfo;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderUserIdEquals;
 import java.util.List;
 
 /** Fetches the 5 most recent orders for a user, sorted by {@code orderTime} descending. */
-@SQL
+@SQL(dialect = SqlDialect.POSTGRESQL_18)
 @SELECT
 @Trait
 @CallGraphDelegationMode(SYNC)

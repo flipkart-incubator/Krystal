@@ -14,7 +14,6 @@ import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
-import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
@@ -49,11 +48,10 @@ class GetPieceTest {
 
     // Create and register dispatch policy
     kGraph.traitDispatchPolicies(
-        new TraitDispatchPolicies(
-            dispatchTrait(GetPiece_Req.class, graph)
-                .conditionally(
-                    when(type_s, equalsEnum(KNIGHT)).to(GetKnight_Req.class),
-                    when(type_s, equalsEnum(ROOK)).to(GetRook_Req.class))));
+        dispatchTrait(GetPiece_Req.class, graph)
+            .conditionally(
+                when(type_s, equalsEnum(KNIGHT)).to(GetKnight_Req.class),
+                when(type_s, equalsEnum(ROOK)).to(GetRook_Req.class)));
   }
 
   @AfterEach

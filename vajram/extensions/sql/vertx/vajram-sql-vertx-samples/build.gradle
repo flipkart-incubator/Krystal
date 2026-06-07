@@ -33,8 +33,21 @@ dependencies {
 
     testImplementation 'com.flipkart.krystal:vajram-krystex'
     testImplementation 'com.flipkart.krystal:vajram-guice'
-    testImplementation 'io.vertx:vertx-jdbc-client'
-    testImplementation 'com.h2database:h2:2.3.232'
+    testImplementation 'io.vertx:vertx-pg-client'
+    testImplementation platform('org.testcontainers:testcontainers-bom:2.0.2')
+    testImplementation 'org.testcontainers:testcontainers'
+    testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
+    testImplementation 'org.testcontainers:testcontainers-postgresql'
+    testRuntimeOnly 'org.slf4j:slf4j-simple:2.0.13'
+}
+
+test {
+    // Testcontainers needs the Docker socket path (Colima uses a non-default location)
+    def dockerSocket = file("${System.getProperty('user.home')}/.colima/default/docker.sock")
+    if (dockerSocket.exists()) {
+        environment 'DOCKER_HOST', "unix://${dockerSocket.absolutePath}"
+        environment 'TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE', '/var/run/docker.sock'
+    }
 }
 
 checkerFramework {

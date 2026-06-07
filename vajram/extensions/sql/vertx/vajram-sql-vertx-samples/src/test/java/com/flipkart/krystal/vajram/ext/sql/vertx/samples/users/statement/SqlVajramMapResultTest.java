@@ -37,8 +37,8 @@ class SqlVajramMapResultTest {
     Row row = mockRow();
     stubLong(row, "id", 1L);
     stubString(row, "name", "Alisha");
-    stubString(row, "contactEmail", "Alisha@example.com");
-    stubString(row, "phoneNumber", "+1-555-0100");
+    stubString(row, "contactemail", "Alisha@example.com");
+    stubString(row, "phonenumber", "+1-555-0100");
 
     UserInfo result = GetUserInfoById_VertxSql.mapResult(rowSetOf(row));
 
@@ -66,14 +66,14 @@ class SqlVajramMapResultTest {
   @Test
   void getOrderInfoByUserId_mapsMultipleRows() {
     Row r1 = mockRow();
-    stubLong(r1, "orderId", 10L);
-    stubLong(r1, "userId", 1L);
-    stubLong(r1, "amountCents", 5000L);
+    stubLong(r1, "orderid", 10L);
+    stubLong(r1, "userid", 1L);
+    stubLong(r1, "amountcents", 5000L);
 
     Row r2 = mockRow();
-    stubLong(r2, "orderId", 11L);
-    stubLong(r2, "userId", 1L);
-    stubLong(r2, "amountCents", 12000L);
+    stubLong(r2, "orderid", 11L);
+    stubLong(r2, "userid", 1L);
+    stubLong(r2, "amountcents", 12000L);
 
     List<OrderInfo> result = GetOrderInfoByUserId_VertxSql.mapResult(rowSetOf(r1, r2));
 
@@ -100,14 +100,14 @@ class SqlVajramMapResultTest {
   @Test
   void getRecentOrdersByUserId_mapsMultipleRows() {
     Row r1 = mockRow();
-    stubLong(r1, "orderId", 11L);
-    stubLong(r1, "userId", 1L);
-    stubLong(r1, "amountCents", 12000L);
+    stubLong(r1, "orderid", 11L);
+    stubLong(r1, "userid", 1L);
+    stubLong(r1, "amountcents", 12000L);
 
     Row r2 = mockRow();
-    stubLong(r2, "orderId", 10L);
-    stubLong(r2, "userId", 1L);
-    stubLong(r2, "amountCents", 5000L);
+    stubLong(r2, "orderid", 10L);
+    stubLong(r2, "userid", 1L);
+    stubLong(r2, "amountcents", 5000L);
 
     List<OrderInfo> result = GetRecentOrdersByUserId_VertxSql.mapResult(rowSetOf(r1, r2));
 
@@ -135,11 +135,11 @@ class SqlVajramMapResultTest {
     Row r3 = orderRow(1L, 11L, 4000L, 1000L, 102L, "Gadget", 4999L);
     // Order 12: no items (LEFT JOIN null)
     Row r4 = mockRow();
-    stubObject(r4, "OrderEntity_orderId", 12L);
-    stubLong(r4, "OrderEntity_orderId", 12L);
-    stubLong(r4, "OrderEntity_amountCents", 500L);
-    stubLong(r4, "OrderEntity_orderTime", 500L);
-    stubObject(r4, "orderItems_orderItemId", null);
+    stubObject(r4, "orderentity_orderid", 12L);
+    stubLong(r4, "orderentity_orderid", 12L);
+    stubLong(r4, "orderentity_amountcents", 500L);
+    stubLong(r4, "orderentity_ordertime", 500L);
+    stubObject(r4, "orderitems_orderitemid", null);
 
     List<OrderWithItems> result =
         GetOrdersWithItemsByUserId_VertxSql.mapResult(rowSetOf(r1, r2, r3, r4));
@@ -193,20 +193,20 @@ class SqlVajramMapResultTest {
   void getUserOrdersByUserName_mapsParentAndChildRows() {
     // Two order rows for the same user
     Row r1 = mockRow();
-    stubObject(r1, "UserEntity_id", 1L);
-    stubString(r1, "UserEntity_name", "Babu");
-    stubObject(r1, "orders_orderId", 20L);
-    stubLong(r1, "orders_orderId", 20L);
-    stubLong(r1, "orders_userId", 1L);
-    stubLong(r1, "orders_amountCents", 8000L);
+    stubObject(r1, "userentity_id", 1L);
+    stubString(r1, "userentity_name", "Babu");
+    stubObject(r1, "orders_orderid", 20L);
+    stubLong(r1, "orders_orderid", 20L);
+    stubLong(r1, "orders_userid", 1L);
+    stubLong(r1, "orders_amountcents", 8000L);
 
     Row r2 = mockRow();
-    stubObject(r2, "UserEntity_id", 1L);
-    stubString(r2, "UserEntity_name", "Babu");
-    stubObject(r2, "orders_orderId", 21L);
-    stubLong(r2, "orders_orderId", 21L);
-    stubLong(r2, "orders_userId", 1L);
-    stubLong(r2, "orders_amountCents", 3500L);
+    stubObject(r2, "userentity_id", 1L);
+    stubString(r2, "userentity_name", "Babu");
+    stubObject(r2, "orders_orderid", 21L);
+    stubLong(r2, "orders_orderid", 21L);
+    stubLong(r2, "orders_userid", 1L);
+    stubLong(r2, "orders_amountcents", 3500L);
 
     UserNameAndOrders result = GetUserOrdersByUserName_VertxSql.mapResult(rowSetOf(r1, r2));
 
@@ -220,9 +220,9 @@ class SqlVajramMapResultTest {
   @Test
   void getUserOrdersByUserName_returnsParentWithEmptyListWhenNoChildRows() {
     Row r1 = mockRow();
-    stubObject(r1, "UserEntity_id", 1L);
-    stubString(r1, "UserEntity_name", "Carol");
-    stubObject(r1, "orders_orderId", null); // LEFT JOIN with no matching orders
+    stubObject(r1, "userentity_id", 1L);
+    stubString(r1, "userentity_name", "Carol");
+    stubObject(r1, "orders_orderid", null); // LEFT JOIN with no matching orders
 
     UserNameAndOrders result = GetUserOrdersByUserName_VertxSql.mapResult(rowSetOf(r1));
 
@@ -234,14 +234,14 @@ class SqlVajramMapResultTest {
   @Test
   void getUserOrdersByUserName_throwsWhenMultipleParentsDetected() {
     Row r1 = mockRow();
-    stubObject(r1, "UserEntity_id", 1L);
-    stubString(r1, "UserEntity_name", "Dan");
-    stubObject(r1, "orders_orderId", null);
+    stubObject(r1, "userentity_id", 1L);
+    stubString(r1, "userentity_name", "Dan");
+    stubObject(r1, "orders_orderid", null);
 
     Row r2 = mockRow();
-    stubObject(r2, "UserEntity_id", 2L); // different parent PK — should trigger the guard
-    stubString(r2, "UserEntity_name", "Eve");
-    stubObject(r2, "orders_orderId", null);
+    stubObject(r2, "userentity_id", 2L); // different parent PK — should trigger the guard
+    stubString(r2, "userentity_name", "Eve");
+    stubObject(r2, "orders_orderid", null);
 
     assertThatThrownBy(() -> GetUserOrdersByUserName_VertxSql.mapResult(rowSetOf(r1, r2)))
         .isInstanceOf(IllegalStateException.class)
@@ -272,13 +272,13 @@ class SqlVajramMapResultTest {
     Row r3 = orderItemRow(1L, "Alisha", 31L, 4000L, 0L, 102L, "Gadget", 4999L);
     // order 32 exists but has no items (LEFT JOIN null)
     Row r4 = mockRow();
-    stubObject(r4, "UserEntity_id", 1L);
-    stubString(r4, "UserEntity_name", "Alisha");
-    stubObject(r4, "orders_orderId", 32L);
-    stubLong(r4, "orders_orderId", 32L);
-    stubLong(r4, "orders_amountCents", 0L);
-    stubLong(r4, "orders_orderTime", 1000L);
-    stubObject(r4, "orderItems_orderItemId", null); // no items for order 32
+    stubObject(r4, "userentity_id", 1L);
+    stubString(r4, "userentity_name", "Alisha");
+    stubObject(r4, "orders_orderid", 32L);
+    stubLong(r4, "orders_orderid", 32L);
+    stubLong(r4, "orders_amountcents", 0L);
+    stubLong(r4, "orders_ordertime", 1000L);
+    stubObject(r4, "orderitems_orderitemid", null); // no items for order 32
 
     UserWithOrdersAndItems result =
         GetUserByIdWithOrdersAndItems_VertxSql.mapResult(rowSetOf(r1, r2, r3, r4));
@@ -413,14 +413,14 @@ class SqlVajramMapResultTest {
       String itemName,
       long itemPriceCents) {
     Row row = mockRow();
-    stubObject(row, "OrderEntity_orderId", orderId);
-    stubLong(row, "OrderEntity_orderId", orderId);
-    stubLong(row, "OrderEntity_amountCents", amountCents);
-    stubLong(row, "OrderEntity_orderTime", orderTime);
-    stubObject(row, "orderItems_orderItemId", itemId);
-    stubLong(row, "orderItems_orderItemId", itemId);
-    stubString(row, "orderItems_itemName", itemName);
-    stubLong(row, "orderItems_itemPriceCents", itemPriceCents);
+    stubObject(row, "orderentity_orderid", orderId);
+    stubLong(row, "orderentity_orderid", orderId);
+    stubLong(row, "orderentity_amountcents", amountCents);
+    stubLong(row, "orderentity_ordertime", orderTime);
+    stubObject(row, "orderitems_orderitemid", itemId);
+    stubLong(row, "orderitems_orderitemid", itemId);
+    stubString(row, "orderitems_itemname", itemName);
+    stubLong(row, "orderitems_itempricecents", itemPriceCents);
     return row;
   }
 
@@ -435,16 +435,16 @@ class SqlVajramMapResultTest {
       String itemName,
       long itemPriceCents) {
     Row row = mockRow();
-    stubObject(row, "UserEntity_id", userId);
-    stubString(row, "UserEntity_name", userName);
-    stubObject(row, "orders_orderId", orderId);
-    stubLong(row, "orders_orderId", orderId);
-    stubLong(row, "orders_amountCents", amountCents);
-    stubLong(row, "orders_orderTime", orderTime);
-    stubObject(row, "orderItems_orderItemId", itemId);
-    stubLong(row, "orderItems_orderItemId", itemId);
-    stubString(row, "orderItems_itemName", itemName);
-    stubLong(row, "orderItems_itemPriceCents", itemPriceCents);
+    stubObject(row, "userentity_id", userId);
+    stubString(row, "userentity_name", userName);
+    stubObject(row, "orders_orderid", orderId);
+    stubLong(row, "orders_orderid", orderId);
+    stubLong(row, "orders_amountcents", amountCents);
+    stubLong(row, "orders_ordertime", orderTime);
+    stubObject(row, "orderitems_orderitemid", itemId);
+    stubLong(row, "orderitems_orderitemid", itemId);
+    stubString(row, "orderitems_itemname", itemName);
+    stubLong(row, "orderitems_itempricecents", itemPriceCents);
     return row;
   }
 }

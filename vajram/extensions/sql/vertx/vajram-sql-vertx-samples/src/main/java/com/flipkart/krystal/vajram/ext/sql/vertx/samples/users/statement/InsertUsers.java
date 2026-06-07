@@ -9,6 +9,7 @@ import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.ext.sql.lang.INSERT;
 import com.flipkart.krystal.vajram.ext.sql.lang.SQL;
+import com.flipkart.krystal.vajram.ext.sql.lang.SqlDialect;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.User;
 import java.util.List;
 
@@ -16,7 +17,7 @@ import java.util.List;
  * Inserts multiple users into the {@code users} table in a single statement. The SQL and parameters
  * are built dynamically based on the list size.
  */
-@SQL
+@SQL(dialect = SqlDialect.POSTGRESQL_18)
 @INSERT
 @Trait
 @CallGraphDelegationMode(SYNC)

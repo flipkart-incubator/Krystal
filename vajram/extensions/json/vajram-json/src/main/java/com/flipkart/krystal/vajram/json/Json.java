@@ -27,8 +27,10 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.checker.nullness.qual.PolyNull;
 
 public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonModel> {
 
@@ -61,10 +63,13 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
   }
 
   @Override
-  public Object serialize(
-      Object object,
+  public @PolyNull Object serialize(
+      @PolyNull Object object,
       Function<Model, @Nullable SerializableJsonModel> mapper,
       @Nullable JsonConfig customConfig) {
+    if (object == null) {
+      return null;
+    }
     if (customConfig == null) {
       customConfig = JsonConfig.Creator.createDefault();
     }
@@ -82,6 +87,53 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
       };
     } catch (Exception e) {
       throw new IllegalArgumentException(e);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public <T> T deserialize(Object payload, Object typeInfo, @Nullable JsonConfig customConfig) {
+    if (typeInfo instanceof Class<?> clazz) {
+      return (T) deserialize(payload, clazz, customConfig);
+    } else if (typeInfo instanceof Type type) {
+      return deserialize(payload, type, customConfig);
+    } else if (typeInfo instanceof TypeReference<?> typeRef) {
+      return (T) deserialize(payload, typeRef, customConfig);
+    } else {
+      throw new IllegalArgumentException("Unsupported typeInfo: " + typeInfo);
+    }
+  }
+
+  public <T> T deserialize(
+      Object payload, Class<? extends T> typeInfo, @Nullable JsonConfig customConfig) {
+    return deserialize(payload, OBJECT_READER.forType(typeInfo));
+  }
+
+  public <T> T deserialize(Object payload, Type typeInfo, @Nullable JsonConfig customConfig) {
+    return deserialize(payload, OBJECT_READER.forType(typeInfo));
+  }
+
+  public <T> T deserialize(
+      Object payload, TypeReference<T> typeInfo, @Nullable JsonConfig customConfig) {
+    return deserialize(payload, OBJECT_READER.forType(typeInfo));
+  }
+
+  private static <T> T deserialize(Object payload, ObjectReader reader) {
+    if (payload == null) {
+      return null;
+    }
+    if (payload instanceof Optional<?> optional) {
+      return deserialize(optional.orElse(null), reader);
+    }
+    try {
+      T deserializedValue = readValue(payload, reader);
+      if (deserializedValue != null) {
+        return deserializedValue;
+      } else {
+        throw new IllegalArgumentException("Unsupported payload type: " + payload.getClass());
+      }
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
   }
 
@@ -113,59 +165,6 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
     } else {
       return mapper.apply(model);
     }
-  }
-
-  @SuppressWarnings("unchecked")
-  @Override
-  public <T> T deserialize(Object payload, Object typeInfo, @Nullable JsonConfig customConfig) {
-    if (typeInfo instanceof Type type) {
-      return deserialize(payload, type, customConfig);
-    } else if (typeInfo instanceof TypeReference<?> typeRef) {
-      return deserialize(payload, (TypeReference<? extends T>) typeRef, customConfig);
-    } else {
-      throw new IllegalArgumentException("Unsupported typeInfo: " + typeInfo);
-    }
-  }
-
-  public <T> T deserialize(
-      Object payload, Class<? extends T> typeInfo, @Nullable JsonConfig customConfig) {
-    try {
-      ObjectReader reader = OBJECT_READER.forType(typeInfo);
-      T deserializedValue = readValue(payload, reader);
-      if (deserializedValue != null) {
-        return deserializedValue;
-      }
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    throw new IllegalArgumentException("Unsupported payload type: " + payload.getClass());
-  }
-
-  public <T> T deserialize(Object payload, Type typeInfo, @Nullable JsonConfig customConfig) {
-    try {
-      ObjectReader reader = OBJECT_READER.forType(typeInfo);
-      T deserializedValue = readValue(payload, reader);
-      if (deserializedValue != null) {
-        return deserializedValue;
-      }
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    throw new IllegalArgumentException("Unsupported payload type: " + payload.getClass());
-  }
-
-  public <T> T deserialize(
-      Object payload, TypeReference<T> typeInfo, @Nullable JsonConfig customConfig) {
-    try {
-      ObjectReader reader = OBJECT_READER.forType(typeInfo);
-      T deserializedValue = readValue(payload, reader);
-      if (deserializedValue != null) {
-        return deserializedValue;
-      }
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    throw new IllegalArgumentException("Unsupported payload type: " + payload.getClass());
   }
 
   private static SimpleModule byteArrayModule() {

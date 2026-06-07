@@ -41,8 +41,7 @@ public class JsonConfigProvider implements ModelProtocolConfigProvider {
     public CodeBlock createDeserializationExpression(
         CodeBlock valueExpression, TypeMirror type, CodeGenUtility util) {
       return CodeBlock.of(
-          "$L != null ? $T.$L.deserialize($L, $L, $L) : null",
-          valueExpression,
+          "$T.$L.deserialize($L, $L, $L)",
           Json.class,
           "JSON",
           valueExpression,

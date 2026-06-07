@@ -12,6 +12,7 @@ import com.flipkart.krystal.vajram.ext.sql.lang.LIMIT;
 import com.flipkart.krystal.vajram.ext.sql.lang.ORDER;
 import com.flipkart.krystal.vajram.ext.sql.lang.SELECT;
 import com.flipkart.krystal.vajram.ext.sql.lang.SQL;
+import com.flipkart.krystal.vajram.ext.sql.lang.SqlDialect;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderInfo;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderTimeIsInRange;
 import java.util.List;
@@ -21,7 +22,7 @@ import java.util.List;
  * ascending. Tests the {@code @IsInRange} operator which dynamically adapts SQL comparison
  * operators based on the range's bound types (open/closed).
  */
-@SQL
+@SQL(dialect = SqlDialect.POSTGRESQL_18)
 @SELECT
 @Trait
 @CallGraphDelegationMode(SYNC)

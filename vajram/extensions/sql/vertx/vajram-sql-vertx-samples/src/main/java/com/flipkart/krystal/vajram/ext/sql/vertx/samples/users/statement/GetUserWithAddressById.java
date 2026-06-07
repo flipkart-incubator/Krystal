@@ -10,6 +10,7 @@ import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.ext.sql.lang.LIMIT;
 import com.flipkart.krystal.vajram.ext.sql.lang.SELECT;
 import com.flipkart.krystal.vajram.ext.sql.lang.SQL;
+import com.flipkart.krystal.vajram.ext.sql.lang.SqlDialect;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserIdPredicate;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserWithAddress;
 
@@ -17,7 +18,7 @@ import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserWithAd
  * SELECT trait that returns a user with their JSON-serialized address columns deserialized via
  * {@code SerdeProtocol.deserialize}.
  */
-@SQL
+@SQL(dialect = SqlDialect.POSTGRESQL_18)
 @SELECT
 @Trait
 @CallGraphDelegationMode(SYNC)

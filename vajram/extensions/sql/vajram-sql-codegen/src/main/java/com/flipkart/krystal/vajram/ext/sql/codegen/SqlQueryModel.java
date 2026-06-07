@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.ext.sql.codegen;
 
+import com.flipkart.krystal.vajram.ext.sql.lang.ColumnPredicate;
 import com.flipkart.krystal.vajram.ext.sql.lang.ORDER;
 import com.squareup.javapoet.CodeBlock;
 import java.util.List;
@@ -103,7 +104,7 @@ public final class SqlQueryModel {
 
   /**
    * A leaf WHERE predicate: an AND group of column comparisons from a single {@link
-   * com.flipkart.krystal.vajram.ext.sql.lang.SelectionPredicate}.
+   * ColumnPredicate}.
    *
    * @param javaAccessorPrefix full Java accessor prefix for parameter binding (e.g., {@code
    *     "where"} or {@code "where.orWithUserId()"})
@@ -116,8 +117,8 @@ public final class SqlQueryModel {
   /**
    * Complete WHERE specification for one {@code _Inputs} method.
    *
-   * <p>For a simple {@link com.flipkart.krystal.vajram.ext.sql.lang.SelectionPredicate} input,
-   * {@code isOr} is {@code false} and {@code leaves} has a single entry. For an {@link
+   * <p>For a simple {@link ColumnPredicate} input, {@code isOr} is {@code false} and {@code leaves}
+   * has a single entry. For an {@link
    * com.flipkart.krystal.vajram.ext.sql.lang.operators.logical.SqlOrPredicate} input, {@code isOr}
    * is {@code true} and {@code leaves} contains one entry per OR branch.
    *

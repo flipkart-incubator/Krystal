@@ -84,7 +84,7 @@ final class GraphQlRespJsonModelGen implements CodeGenerator {
     String packageName = immutClassName.packageName();
 
     // Extract and validate model methods
-    List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
+    List<ExecutableElement> modelMethods = util.getModelFieldsForCodegen(modelRootType);
 
     // Generate the GQlRespJson model class
     TypeSpec gqlRespJsonClass =

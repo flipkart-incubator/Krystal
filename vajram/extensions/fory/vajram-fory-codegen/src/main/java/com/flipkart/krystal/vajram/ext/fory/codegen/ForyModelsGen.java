@@ -87,7 +87,7 @@ final class ForyModelsGen implements CodeGenerator {
     ClassName immutClassName = util.getImmutInterfaceName(modelRootType);
     String packageName = immutClassName.packageName();
 
-    List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
+    List<ExecutableElement> modelMethods = util.getModelFieldsForCodegen(modelRootType);
 
     new SerdeModelValidator(util, modelRootType, Fory.FORY).validate(modelMethods);
 
@@ -419,7 +419,7 @@ final class ForyModelsGen implements CodeGenerator {
 
     ClassName builderType = immutableForyName.nestedClass("Builder");
     List<MethodSpec> dataAccessMethods =
-        builderGettersAndSetters(modelMethods, builderType, modelRoot, FORY, util);
+        builderGettersAndSetters(codeGenContext, modelMethods, builderType, modelRoot, FORY, util);
 
     return builderSpec
         .addModifiers(PUBLIC, STATIC, FINAL)

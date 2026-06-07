@@ -9,6 +9,7 @@ import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.ext.sql.lang.SELECT;
 import com.flipkart.krystal.vajram.ext.sql.lang.SQL;
+import com.flipkart.krystal.vajram.ext.sql.lang.SqlDialect;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserIdPredicate;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserWithOrdersAndItems;
 
@@ -16,7 +17,7 @@ import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserWithOr
  * Fetches a user together with all their orders and each order's line items via a two-level nested
  * LEFT JOIN (users → orders → orderItems).
  */
-@SQL
+@SQL(dialect = SqlDialect.POSTGRESQL_18)
 @SELECT
 @Trait
 @CallGraphDelegationMode(SYNC)

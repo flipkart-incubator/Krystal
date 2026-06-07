@@ -87,9 +87,6 @@ public final class SqlModelParser {
       return null;
     }
     TypeElement tableElement = util.getTypeElemFromAnnotationMember(selectionAnno::from);
-    if (tableElement == null) {
-      return null;
-    }
 
     String tableName = getTableName(tableElement);
     String parentPkColumn = findPkColumn(tableElement);
@@ -97,7 +94,7 @@ public final class SqlModelParser {
     List<ScalarColumn> scalars = new ArrayList<>();
     List<JoinRelation> joins = new ArrayList<>();
 
-    for (ExecutableElement method : util.extractAndValidateModelMethods(selectionElement)) {
+    for (ExecutableElement method : util.getModelFields(selectionElement)) {
       TypeMirror returnType = method.getReturnType();
       TypeElement joinSelectionElem = getListElementSelection(returnType);
       if (joinSelectionElem != null) {
@@ -143,11 +140,6 @@ public final class SqlModelParser {
         vajramInfo.givenFacets().stream().filter(fd -> fd.facetType() == FacetType.INPUT).toList();
     util.note("Input facets on " + vajramInfo.lite().vajramId() + " : " + vajramInfo.givenFacets());
 
-    TypeElement sqlOrPredicateType =
-        util.processingEnv()
-            .getElementUtils()
-            .getTypeElement(SqlOrPredicate.class.getCanonicalName());
-
     List<WhereInput> result = new ArrayList<>();
     for (DefaultFacetModel input : inputs) {
       TypeMirror inputType = input.dataType().typeMirror(util.processingEnv());
@@ -162,12 +154,9 @@ public final class SqlModelParser {
       String paramName = input.name();
 
       // ── SqlOrPredicate path ────────────────────────────────────────────────────
-      if (sqlOrPredicateType != null
-          && util.processingEnv()
-              .getTypeUtils()
-              .isAssignable(typeElem.asType(), sqlOrPredicateType.asType())) {
+      if (util.isRawAssignable(typeElem.asType(), SqlOrPredicate.class)) {
         List<WhereLeaf> leaves = new ArrayList<>();
-        for (ExecutableElement orMethod : util.extractAndValidateModelMethods(typeElem)) {
+        for (ExecutableElement orMethod : util.getModelFields(typeElem)) {
           TypeMirror childType = orMethod.getReturnType();
           if (!(childType instanceof DeclaredType childDt)) {
             continue;
@@ -212,7 +201,7 @@ public final class SqlModelParser {
     String inTableName = inTable != null ? getTableName(inTable) : "";
 
     List<WhereColumn> columns = new ArrayList<>();
-    for (ExecutableElement method : util.extractAndValidateModelMethods(predicateElem)) {
+    for (ExecutableElement method : util.getModelFields(predicateElem)) {
       String fieldName = method.getSimpleName().toString();
       String dbCol = resolveColumnName(method, false);
       WhereOperator operator = resolveComparisonOperator(method);
@@ -427,7 +416,7 @@ public final class SqlModelParser {
 
     // Recursively parse nested joins from the child selection's List<Selection> methods
     List<JoinRelation> nestedJoins = new ArrayList<>();
-    for (ExecutableElement childMethod : util.extractAndValidateModelMethods(childSelectionElem)) {
+    for (ExecutableElement childMethod : util.getModelFields(childSelectionElem)) {
       TypeElement grandChildProjElem = getListElementSelection(childMethod.getReturnType());
       if (grandChildProjElem != null) {
         JoinRelation nested = parseJoinRelation(childMethod, grandChildProjElem, childTableElem);
@@ -455,7 +444,7 @@ public final class SqlModelParser {
   public List<ScalarColumn> parseScalarColumns(
       TypeElement selectionElement, TypeElement tableElement) {
     List<ScalarColumn> result = new ArrayList<>();
-    for (ExecutableElement m : util.extractAndValidateModelMethods(selectionElement)) {
+    for (ExecutableElement m : util.getModelFields(selectionElement)) {
       TypeMirror rt = m.getReturnType();
       if (getListElementSelection(rt) != null) {
         continue; // skip List<@Selection> join methods
@@ -538,7 +527,7 @@ public final class SqlModelParser {
    * to {@code parentTable}.
    */
   public String findFkColumnInChildForParent(TypeElement childTable, TypeElement parentTable) {
-    for (ExecutableElement method : util.extractAndValidateModelMethods(childTable)) {
+    for (ExecutableElement method : util.getModelFields(childTable)) {
       ForeignKey fkAnno = method.getAnnotation(ForeignKey.class);
       if (fkAnno == null) {
         continue;
@@ -563,7 +552,7 @@ public final class SqlModelParser {
    * error if none is found.
    */
   public ExecutableElement findPkMethod(TypeElement tableElement) {
-    for (ExecutableElement method : util.extractAndValidateModelMethods(tableElement)) {
+    for (ExecutableElement method : util.getModelFields(tableElement)) {
       if (method.getAnnotation(PrimaryKey.class) != null) {
         return method;
       }
@@ -580,7 +569,7 @@ public final class SqlModelParser {
    * method whose return type (unwrapped from {@code List<>} if present) is the {@code childTable}.
    */
   public boolean hasIncomingFkForChild(TypeElement parentTable, TypeElement childTable) {
-    for (ExecutableElement method : util.extractAndValidateModelMethods(parentTable)) {
+    for (ExecutableElement method : util.getModelFields(parentTable)) {
       IncomingForeignKey ifkAnno = method.getAnnotation(IncomingForeignKey.class);
       if (ifkAnno == null) {
         continue;
@@ -599,7 +588,7 @@ public final class SqlModelParser {
    * the {@code @PrimaryKey} return type of the referenced table.
    */
   private void validateForeignKeyTypes(TypeElement tableElement) {
-    for (ExecutableElement method : util.extractAndValidateModelMethods(tableElement)) {
+    for (ExecutableElement method : util.getModelFields(tableElement)) {
       ForeignKey fkAnno = method.getAnnotation(ForeignKey.class);
       if (fkAnno == null) {
         continue;
@@ -743,7 +732,7 @@ public final class SqlModelParser {
       return true;
     }
 
-    for (ExecutableElement method : util.extractAndValidateModelMethods(tableElement)) {
+    for (ExecutableElement method : util.getModelFields(tableElement)) {
       if (method.getAnnotation(UniqueKey.class) != null) {
         if (whereFields.contains(method.getSimpleName().toString())) {
           return true;
@@ -770,13 +759,13 @@ public final class SqlModelParser {
   public List<String> findInvalidSelectionColumns(
       TypeElement selectionElement, TypeElement tableElement) {
     Set<String> tableColumns =
-        util.extractAndValidateModelMethods(tableElement).stream()
+        util.getModelFields(tableElement).stream()
             .filter(m -> m.getAnnotation(IncomingForeignKey.class) == null)
             .map(this::resolveColumnName)
             .collect(Collectors.toSet());
 
     List<String> invalid = new ArrayList<>();
-    for (ExecutableElement m : util.extractAndValidateModelMethods(selectionElement)) {
+    for (ExecutableElement m : util.getModelFields(selectionElement)) {
       if (getListElementSelection(m.getReturnType()) != null) {
         continue;
       }
@@ -916,7 +905,7 @@ public final class SqlModelParser {
    */
   public @Nullable SerdeColumnInfo resolveSerdeInfoFromTable(
       String dbColumnName, TypeElement tableElement) {
-    for (ExecutableElement tableMethod : util.extractAndValidateModelMethods(tableElement)) {
+    for (ExecutableElement tableMethod : util.getModelFields(tableElement)) {
       if (tableMethod.getAnnotation(IncomingForeignKey.class) != null) {
         continue;
       }

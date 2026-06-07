@@ -209,7 +209,7 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
     ClassName protoMsgOrBuilderType =
         ClassName.get(protoMsgType.packageName(), protoMsgType.simpleName() + "OrBuilder");
 
-    List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
+    List<ExecutableElement> modelMethods = util.getModelFieldsForCodegen(modelRootType);
 
     TypeName serializableTypeName =
         ParameterizedTypeName.get(

@@ -10,7 +10,8 @@ import java.lang.annotation.Target;
  * _Inputs} should contain one or more inputs whose types are annotated with {@code @Table}. Each
  * input represents a row (or rows, if the type is {@code List<@Table>}) to insert into the table.
  *
- * <p>The trait must return {@code int} — the number of rows inserted.
+ * <p>The trait must return {@code int} (the number of rows inserted) or a {@code @ReturnOnInsert}
+ * interface (to return specific columns from the inserted rows).
  *
  * <p>If there are multiple inputs, they must all reference the <b>same</b> {@code @Table} type.
  */

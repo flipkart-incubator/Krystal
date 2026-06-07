@@ -18,8 +18,6 @@ import com.flipkart.krystal.lattice.vajram.VajramDopant;
 import com.flipkart.krystal.lattice.vajram.VajramRequestExecutionContext;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
-import com.flipkart.krystal.traits.TraitDispatchPolicies;
-import com.flipkart.krystal.traits.TraitDispatchPolicies.TraitDispatchPoliciesBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
@@ -56,16 +54,9 @@ public final class KrystexDopant implements SimpleDopant {
       DependencyInjectionFramework dependencyInjectionFramework,
       VajramDopant vajramDopant,
       ThreadingStrategyDopant threadingStrategyDopant,
-      Provider<KrystexGraphBuilder> krystexGraphBuilderProvider,
-      Provider<KryonExecutorConfigurator> kryonExecutorConfigurator,
-      Provider<TraitDispatchPolicies> traitDispatchPolicies) {
+      Provider<KryonExecutorConfigurator> kryonExecutorConfigurator) {
     this.threadingStrategyDopant = threadingStrategyDopant;
-    KrystexGraphBuilder krystexGraphBuilder =
-        asOptional(krystexGraphBuilderProvider)
-            .orElse(KrystexGraph.builder())
-            .vajramGraph(vajramDopant.vajramGraph())
-            .injectionProvider(dependencyInjectionFramework.toVajramInjectionProvider());
-    asOptional(traitDispatchPolicies).ifPresent(krystexGraphBuilder::traitDispatchPolicies);
+    KrystexGraphBuilder krystexGraphBuilder = KrystexGraph.builder();
     for (Consumer<KrystexGraphBuilder> p : krystexDopantSpec.buildKrystexGraphWith()) {
       p.accept(krystexGraphBuilder);
     }
@@ -75,17 +66,12 @@ public final class KrystexDopant implements SimpleDopant {
               asOptional(kryonExecutorConfigurator).orElse(KryonExecutorConfigurator.NO_OP));
           krystexDopantSpec.configureExecutorWith().forEach(configBuilder::configureWith);
         };
-    this.krystexGraph = krystexGraphBuilder.build();
-  }
 
-  @Produces(inScope = Singleton.class)
-  public static TraitDispatchPolicies traitDispatchPolicies(
-      Provider<TraitDispatchPoliciesBuilder> traitDispatchPoliciesBuilder,
-      KrystexDopantSpec krystexDopantSpec) {
-    return asOptional(traitDispatchPoliciesBuilder)
-        .orElseGet(TraitDispatchPolicies::builder)
-        .addTraitDispatchPolicies(krystexDopantSpec.traitDispatchPolicies())
-        .build();
+    this.krystexGraph =
+        krystexGraphBuilder
+            .vajramGraph(vajramDopant.vajramGraph())
+            .injectionProvider(dependencyInjectionFramework.toVajramInjectionProvider())
+            .build();
   }
 
   public <RespT extends @Nullable Object> CompletionStage<RespT> executeRequest(

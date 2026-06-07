@@ -1,15 +1,17 @@
 package com.flipkart.krystal.vajram.ext.sql.vertx.codegen;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
-import static com.flipkart.krystal.vajram.ext.sql.codegen.InsertQueryBuilder.buildInsertSql;
+import static com.flipkart.krystal.vajram.ext.sql.vertx.codegen.VertxSqlUtil.SQL_RESULT_FACET;
 import static com.flipkart.krystal.vajram.ext.sql.vertx.codegen.VertxSqlUtil.loadProtocolConfig;
 import static com.flipkart.krystal.vajram.ext.sql.vertx.codegen.VertxSqlUtil.varArgsToList;
+import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
+import com.flipkart.krystal.data.Failure;
 import com.flipkart.krystal.except.SkippedExecutionException;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
@@ -17,11 +19,20 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.ext.sql.codegen.InsertModelParser;
+import com.flipkart.krystal.vajram.ext.sql.codegen.InsertQueryBuilder;
 import com.flipkart.krystal.vajram.ext.sql.codegen.InsertQueryModel;
-import com.flipkart.krystal.vajram.ext.sql.codegen.InsertQueryModel.InsertColumn;
+import com.flipkart.krystal.vajram.ext.sql.codegen.InsertQueryModel.TableColumn;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlDriverConfig;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlModelParser;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.SerdeColumnInfo;
+import com.flipkart.krystal.vajram.ext.sql.codegen.syntax.SqlSyntax;
+import com.flipkart.krystal.vajram.ext.sql.lang.ReturnOnInsert;
+import com.flipkart.krystal.vajram.ext.sql.lang.SqlDialect;
+import com.flipkart.krystal.vajram.ext.sql.model.DefaultValue;
+import com.flipkart.krystal.vajram.ext.sql.model.DefaultValueStrategy;
+import com.flipkart.krystal.vajram.ext.sql.model.IncomingForeignKey;
 import com.flipkart.krystal.vajram.ext.sql.vertx.ExecuteVertxSql;
+import com.flipkart.krystal.vajram.ext.sql.vertx.codegen.InsertResultType.ReturningColumn;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
@@ -40,8 +51,12 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeKind;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -65,16 +80,28 @@ public class SqlInsertVajramGen implements CodeGenerator {
   private final CodeGenUtility util;
   private final VajramInfo vajramInfo;
   private final InsertModelParser parser;
+  private final SqlModelParser sqlParser;
   private final VajramCodeGenUtility vajramUtil;
   private final VajramInfo executeSqlVajram;
+  private final SqlSyntax syntax;
+  private final InsertQueryBuilder insertQueryBuilder;
+  private final DialectCodeGenerator dialectGen;
 
   public SqlInsertVajramGen(
-      VajramCodeGenUtility vajramUtil, VajramInfo vajramInfo, InsertModelParser parser) {
+      VajramCodeGenUtility vajramUtil,
+      VajramInfo vajramInfo,
+      InsertModelParser parser,
+      SqlModelParser sqlParser,
+      SqlDialect sqlDialect) {
     this.util = vajramUtil.codegenUtil();
     this.vajramInfo = vajramInfo;
     this.parser = parser;
+    this.sqlParser = sqlParser;
     this.vajramUtil = vajramUtil;
     this.executeSqlVajram = vajramUtil.computeVajramInfo(ExecuteVertxSql.class);
+    this.syntax = SqlSyntax.forDialect(sqlDialect);
+    this.insertQueryBuilder = new InsertQueryBuilder(vajramUtil);
+    this.dialectGen = DialectCodeGenerator.forDialect(sqlDialect, new VertxSqlUtil(util, syntax));
   }
 
   // ─── Entry point ─────────────────────────────────────────────────────────────
@@ -103,8 +130,31 @@ public class SqlInsertVajramGen implements CodeGenerator {
           sqlTraitElement);
     }
 
+    // Parse the trait's response type to determine if RETURNING clause is needed.
+    InsertResultType resultType = parseInsertResultType(vajramInfo, insertModel.tableElement());
+    boolean hasReturning = resultType != null;
+
     ClassName traitClass = ClassName.get(pkg, traitName);
     ClassName facClass = ClassName.get(pkg, vajramName + "_Fac");
+
+    // Determine the vajram's response type.
+    TypeName vajramResponseTypeName;
+    if (hasReturning) {
+      String resultPkg =
+          util.processingEnv()
+              .getElementUtils()
+              .getPackageOf(resultType.selectionElement())
+              .getQualifiedName()
+              .toString();
+      String resultName = resultType.selectionElement().getSimpleName().toString();
+      ClassName selectionClass = ClassName.get(resultPkg, resultName);
+      vajramResponseTypeName =
+          resultType.isListResult()
+              ? ParameterizedTypeName.get(ClassName.get(List.class), selectionClass)
+              : selectionClass;
+    } else {
+      vajramResponseTypeName = TypeName.INT.box();
+    }
 
     TypeSpec vajramSpec =
         util.classBuilder(vajramName, traitClass.canonicalName())
@@ -112,20 +162,138 @@ public class SqlInsertVajramGen implements CodeGenerator {
             .addAnnotation(Vajram.class)
             .superclass(
                 ParameterizedTypeName.get(
-                    ClassName.get(ComputeVajramDef.class), TypeName.INT.box()))
+                    ClassName.get(ComputeVajramDef.class), vajramResponseTypeName))
             .addSuperinterface(traitClass)
             .addType(buildInputsInterface(inputMethod))
-            .addType(buildInternalFacetsInterface(insertModel))
-            .addMethod(buildResolveSqlMethod(facClass, insertModel, inputMethod))
+            .addType(buildInternalFacetsInterface())
+            .addMethod(
+                buildResolveSqlMethod(
+                    facClass,
+                    insertModel,
+                    inputMethod,
+                    hasReturning && syntax.supportsReturning() ? syntax : null,
+                    hasReturning ? resultType.returningColumns() : List.of()))
             .addMethod(buildResolveParamsMethod(facClass, insertModel, inputMethod))
             .addMethod(buildResolvePoolMethod(facClass))
-            .addMethod(buildOutputMethod())
+            .addMethod(
+                hasReturning
+                    ? dialectGen.mapResultsForInsertReturn(resultType)
+                    : buildOutputMethod())
             .build();
     ClassName vajramClassName = ClassName.get(pkg, vajramName);
 
     JavaFile javaFile = JavaFile.builder(pkg, vajramSpec).build();
     util.generateSourceFile(vajramClassName.canonicalName(), javaFile, sqlTraitElement);
     util.note("Generated " + pkg + "." + vajramName);
+  }
+
+  /**
+   * Parses the INSERT trait's response type. Returns {@code null} if the response is {@code
+   * Integer} (row-count mode). Otherwise, validates the response type is annotated with
+   * {@code @ReturnOnInsert} and parses its declared columns.
+   */
+  private @Nullable InsertResultType parseInsertResultType(
+      VajramInfo vajramInfo, TypeElement tableElement) {
+    TypeMirror rawResponseType = vajramInfo.lite().responseType().typeMirror(util.processingEnv());
+
+    // Primitive int → row-count mode, no RETURNING
+    if (rawResponseType.getKind() == TypeKind.INT) {
+      return null;
+    }
+
+    if (!(rawResponseType instanceof DeclaredType responseType)) {
+      return null; // unexpected primitive or error type — treat as row-count
+    }
+
+    TypeElement responseTypeElem =
+        requireNonNull((TypeElement) util.processingEnv().getTypeUtils().asElement(responseType));
+
+    // Boxed Integer → row-count mode, no RETURNING
+    if (responseTypeElem.getQualifiedName().contentEquals(Integer.class.getCanonicalName())) {
+      return null;
+    }
+
+    boolean isListResult = false;
+    if (responseTypeElem.getQualifiedName().contentEquals(List.class.getCanonicalName())) {
+      isListResult = true;
+      responseType = (DeclaredType) responseType.getTypeArguments().get(0);
+      responseTypeElem =
+          requireNonNull((TypeElement) util.processingEnv().getTypeUtils().asElement(responseType));
+    }
+
+    // Validate the response type has @ReturnOnInsert
+    ReturnOnInsert returnOnInsertAnno = responseTypeElem.getAnnotation(ReturnOnInsert.class);
+    if (returnOnInsertAnno == null) {
+      util.error(
+          "[SqlInsertVajramGen] Response type '"
+              + responseTypeElem.getQualifiedName()
+              + "' must be annotated with @ReturnOnInsert",
+          vajramInfo.definitionElement());
+      return null;
+    }
+
+    // Parse returning columns from the @ReturnOnInsert interface
+    List<ReturningColumn> returningColumns = parseReturningColumns(responseTypeElem, tableElement);
+
+    return new InsertResultType(responseTypeElem, isListResult, returningColumns);
+  }
+
+  /**
+   * Parses the methods of a {@code @ReturnOnInsert} interface to build a list of returning columns.
+   * For each method, resolves the DB column name, Java type, serde info, and whether the
+   * corresponding table column has {@code @DefaultValueStrategy(AUTO_ASSIGN_ID)}.
+   */
+  private List<ReturningColumn> parseReturningColumns(
+      TypeElement returnOnInsertElement, TypeElement tableElement) {
+    List<ReturningColumn> returningColumns = new ArrayList<>();
+    List<? extends ExecutableElement> methods = util.getModelFields(returnOnInsertElement);
+
+    for (ExecutableElement method : methods) {
+      String methodName = method.getSimpleName().toString();
+      String dbColumnName = sqlParser.resolveColumnName(method);
+
+      TypeMirror returnType = method.getReturnType();
+      boolean isOptional = vajramUtil.codegenUtil().isOptional(returnType);
+      TypeMirror actualType =
+          isOptional ? vajramUtil.codegenUtil().getOptionalInnerType(returnType) : returnType;
+
+      // Resolve serde info from the corresponding table column
+      @Nullable SerdeColumnInfo serdeInfo =
+          sqlParser.resolveSerdeInfoFromTable(dbColumnName, tableElement);
+
+      // Check if the corresponding table column has @DefaultValueStrategy(AUTO_ASSIGN_ID)
+      boolean isAutoAssignId = isAutoAssignIdInTable(dbColumnName, tableElement);
+
+      returningColumns.add(
+          new ReturningColumn(
+              dbColumnName, methodName, actualType, isOptional, serdeInfo, isAutoAssignId));
+    }
+
+    if (returningColumns.isEmpty()) {
+      util.error(
+          "[SqlInsertVajramGen] @ReturnOnInsert interface '"
+              + returnOnInsertElement.getQualifiedName()
+              + "' has no methods. At least one column must be declared.",
+          returnOnInsertElement);
+    }
+
+    return returningColumns;
+  }
+
+  /** Checks if the given column in the table has {@code @DefaultValueStrategy(AUTO_ASSIGN_ID)}. */
+  private boolean isAutoAssignIdInTable(String dbColumnName, TypeElement tableElement) {
+    for (ExecutableElement tableMethod : util.getModelFields(tableElement)) {
+      if (tableMethod.getAnnotation(IncomingForeignKey.class) != null) {
+        continue;
+      }
+      if (sqlParser.resolveColumnName(tableMethod).equals(dbColumnName)) {
+        DefaultValueStrategy defaultValueStrategy =
+            tableMethod.getAnnotation(DefaultValueStrategy.class);
+        return defaultValueStrategy != null
+            && defaultValueStrategy.value() == DefaultValueStrategy.ValueComputation.AUTO_ASSIGN_ID;
+      }
+    }
+    return false;
   }
 
   private ExecutableElement findInputMethod(TypeElement traitElement) {
@@ -157,7 +325,7 @@ public class SqlInsertVajramGen implements CodeGenerator {
     return inputs.build();
   }
 
-  private TypeSpec buildInternalFacetsInterface(InsertQueryModel insertModel) {
+  private TypeSpec buildInternalFacetsInterface() {
     AnnotationSpec ifAbsentFail =
         AnnotationSpec.builder(IfAbsent.class)
             .addMember("value", "$T.$L", FAIL.getDeclaringClass(), "FAIL")
@@ -174,7 +342,7 @@ public class SqlInsertVajramGen implements CodeGenerator {
                     .build())
             .build();
     MethodSpec sqlResultField =
-        MethodSpec.methodBuilder(VertxSqlUtil.SQL_RESULT_FACET)
+        MethodSpec.methodBuilder(SQL_RESULT_FACET)
             .returns(VertxSqlUtil.ROW_SET_OF_ROW)
             .addModifiers(PUBLIC, ABSTRACT)
             .addAnnotation(
@@ -194,13 +362,19 @@ public class SqlInsertVajramGen implements CodeGenerator {
   // ─── @Resolve resolveSql ────────────────────────────────────────────────────
 
   private MethodSpec buildResolveSqlMethod(
-      ClassName facClass, InsertQueryModel model, ExecutableElement inputMethod) {
+      ClassName facClass,
+      InsertQueryModel model,
+      ExecutableElement inputMethod,
+      @Nullable SqlSyntax syntax,
+      List<ReturningColumn> returningColumns) {
+    List<String> returningColNames =
+        returningColumns.stream().map(ReturningColumn::columnName).toList();
     MethodSpec.Builder method =
         MethodSpec.methodBuilder("resolveSql")
             .addModifiers(STATIC)
             .addAnnotation(
                 AnnotationSpec.builder(Resolve.class)
-                    .addMember("dep", "$T.$L", facClass, VertxSqlUtil.SQL_RESULT_FACET + "_n")
+                    .addMember("dep", "$T.$L", facClass, SQL_RESULT_FACET + "_n")
                     .addMember("depInputs", "$T.$L", getExecuteVertxSqlReq(), "sql_n")
                     .build())
             .returns(String.class)
@@ -208,17 +382,22 @@ public class SqlInsertVajramGen implements CodeGenerator {
                 TypeName.get(inputMethod.getReturnType()), inputMethod.getSimpleName().toString());
 
     if (model.isList()) {
-      buildDynamicInsertSql(method, model);
+      buildDynamicInsertSql(method, model, syntax, returningColNames);
     } else {
-      String sql = buildInsertSql(model, VERTX_SQL_CONFIG);
-      method.addStatement("return $S", sql);
+      method.addStatement(
+          "return $S",
+          insertQueryBuilder.buildInsertSql(model, VERTX_SQL_CONFIG, syntax, returningColNames));
     }
 
     return method.build();
   }
 
-  private void buildDynamicInsertSql(MethodSpec.Builder method, InsertQueryModel model) {
-    List<InsertColumn> columns = model.columns();
+  private void buildDynamicInsertSql(
+      MethodSpec.Builder method,
+      InsertQueryModel model,
+      @Nullable SqlSyntax syntax,
+      List<String> returningColNames) {
+    List<TableColumn> columns = model.columns();
 
     // Build: "INSERT INTO table (col1, col2, ...) VALUES "
     StringBuilder prefix = new StringBuilder("INSERT INTO ");
@@ -255,6 +434,13 @@ public class SqlInsertVajramGen implements CodeGenerator {
     }
     method.addStatement("_sb.append($S)", ")");
     method.endControlFlow();
+    if (syntax != null && !returningColNames.isEmpty() && syntax.supportsReturning()) {
+      try {
+        method.addStatement("_sb.append($S)", syntax.returningClause(returningColNames));
+      } catch (Exception e) {
+        util.error(e, model.tableElement());
+      }
+    }
     method.addStatement("return _sb.toString()");
   }
 
@@ -267,7 +453,7 @@ public class SqlInsertVajramGen implements CodeGenerator {
             .addModifiers(STATIC)
             .addAnnotation(
                 AnnotationSpec.builder(Resolve.class)
-                    .addMember("dep", "$T.$L", facClass, VertxSqlUtil.SQL_RESULT_FACET + "_n")
+                    .addMember("dep", "$T.$L", facClass, SQL_RESULT_FACET + "_n")
                     .addMember("depInputs", "$T.$L", getExecuteVertxSqlReq(), "params_n")
                     .build())
             .returns(ClassName.get(Tuple.class))
@@ -285,7 +471,7 @@ public class SqlInsertVajramGen implements CodeGenerator {
 
   private void buildStaticParams(MethodSpec.Builder method, InsertQueryModel model) {
     List<CodeBlock> args = new ArrayList<>();
-    for (InsertColumn col : model.columns()) {
+    for (TableColumn col : model.columns()) {
       args.add(columnAccessor(model.inputParamName(), col));
     }
     method.addStatement("return $T.from($L)", ClassName.get(Tuple.class), varArgsToList(args));
@@ -296,7 +482,7 @@ public class SqlInsertVajramGen implements CodeGenerator {
     method.beginControlFlow(
         "for ($T _item : $L)", TypeName.get(model.tableElement().asType()), model.inputParamName());
 
-    for (InsertColumn col : model.columns()) {
+    for (TableColumn col : model.columns()) {
       method.addStatement("_params.add($L)", columnAccessor("_item", col));
     }
 
@@ -305,27 +491,25 @@ public class SqlInsertVajramGen implements CodeGenerator {
   }
 
   /** Generates the code to access a column value from a table model variable. */
-  private CodeBlock columnAccessor(String varName, InsertColumn col) {
+  private CodeBlock columnAccessor(String varName, TableColumn col) {
+    CodeBlock codeBlock =
+        CodeBlock.of(
+            "$L.$L()$L", varName, col.methodName(), col.isOptional() ? ".orElse(null)" : "");
     SerdeColumnInfo serde = col.serdeInfo();
-    if (col.isOptional()) {
-      if (serde != null) {
-        // Optional serde — e.g. user.address().map(a -> Json.JSON.serialize(a,
-        // config)).orElse(null)
-        return CodeBlock.of(
-            "$L.$L().map(_v -> $L).orElse(null)",
-            varName,
-            col.accessorMethodName(),
-            serializeExpression("_v", serde));
-      }
-      // Optional scalar — e.g. user.phoneNumber().orElse(null)
-      return CodeBlock.of("$L.$L().orElse(null)", varName, col.accessorMethodName());
-    }
     if (serde != null) {
-      // Mandatory serde — e.g. Json.JSON.serialize(user.address(), config)
-      return serializeExpression(
-          CodeBlock.of("$L.$L()", varName, col.accessorMethodName()).toString(), serde);
+      // Serde — e.g. Json.JSON.serialize(user.address(), config)
+      // Serde is supposed to handle null values
+      codeBlock = serializeExpression(codeBlock, serde);
     }
-    return CodeBlock.of("$L.$L()", varName, col.accessorMethodName());
+
+    DefaultValue defaultValue = col.declaringMethod().getAnnotation(DefaultValue.class);
+    if (defaultValue != null) {
+      codeBlock =
+          CodeBlock.of(
+              "$T.requireNonNullElse($L, $S)", Objects.class, codeBlock, defaultValue.value());
+    }
+
+    return codeBlock;
   }
 
   /**
@@ -336,7 +520,7 @@ public class SqlInsertVajramGen implements CodeGenerator {
    * from the column's type via {@code Type.class.getAnnotation(ConfigAnno.class)}. Otherwise,
    * {@code null} is passed.
    */
-  private CodeBlock serializeExpression(String valueExpr, SerdeColumnInfo serde) {
+  private CodeBlock serializeExpression(CodeBlock valueExpr, SerdeColumnInfo serde) {
     return loadProtocolConfig(serde.protocolTypeElement())
         .createSerializationExpression(CodeBlock.of("$L", valueExpr), serde.columnType(), util);
   }
@@ -348,7 +532,7 @@ public class SqlInsertVajramGen implements CodeGenerator {
         .addModifiers(STATIC)
         .addAnnotation(
             AnnotationSpec.builder(Resolve.class)
-                .addMember("dep", "$T.$L", facClass, VertxSqlUtil.SQL_RESULT_FACET + "_n")
+                .addMember("dep", "$T.$L", facClass, SQL_RESULT_FACET + "_n")
                 .addMember("depInputs", "$T.$L", getExecuteVertxSqlReq(), "pool_n")
                 .build())
         .addParameter(ClassName.get(Pool.class), VertxSqlUtil.VERTX_SQL_POOL_FACET)
@@ -364,19 +548,23 @@ public class SqlInsertVajramGen implements CodeGenerator {
         .addModifiers(STATIC)
         .addAnnotation(Output.class)
         .returns(TypeName.INT)
+        .addException(Throwable.class)
         .addParameter(
-            ParameterSpec.builder(VertxSqlUtil.ROW_SET_OF_ROW, VertxSqlUtil.SQL_RESULT_FACET)
-                .addAnnotation(Nullable.class)
-                .build())
+            ParameterSpec.builder(VertxSqlUtil.ERRABLE_OF_ROW_SET_OF_ROW, SQL_RESULT_FACET).build())
         .addCode(
 """
-    if($L == null){
+    if($L instanceof $T<?> failure){
+      throw failure.error();
+    }
+    if($L.value() == null){
       return 0;
     }
-    return $L.rowCount();
+    return $L.value().rowCount();
 """,
-            VertxSqlUtil.SQL_RESULT_FACET,
-            VertxSqlUtil.SQL_RESULT_FACET)
+            SQL_RESULT_FACET,
+            Failure.class,
+            SQL_RESULT_FACET,
+            SQL_RESULT_FACET)
         .build();
   }
 

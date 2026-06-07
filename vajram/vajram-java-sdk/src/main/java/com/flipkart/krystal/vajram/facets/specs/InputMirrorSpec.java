@@ -13,9 +13,11 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import lombok.Getter;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+@Slf4j
 public final class InputMirrorSpec<T, CV extends Request> implements InputMirror {
 
   @Getter private final VajramID ofVajramID;
@@ -72,6 +74,7 @@ public final class InputMirrorSpec<T, CV extends Request> implements InputMirror
       try {
         tags = tagsParser.call();
       } catch (Exception e) {
+        log.error("Failed to parse tags for input mirror {}", name, e);
         tags = emptyTags();
       }
     }

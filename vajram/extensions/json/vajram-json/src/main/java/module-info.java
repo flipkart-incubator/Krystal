@@ -13,4 +13,5 @@ module flipkart.krystal.vajram.ext.json {
   requires static lombok;
   requires com.google.auto.value.annotations;
   requires java.compiler;
+  requires org.jspecify;
 }
