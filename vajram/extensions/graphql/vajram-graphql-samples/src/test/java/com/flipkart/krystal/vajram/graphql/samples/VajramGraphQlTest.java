@@ -2,7 +2,6 @@ package com.flipkart.krystal.vajram.graphql.samples;
 
 import static com.flipkart.krystal.vajram.graphql.samples.order.GetOrderSummary.UNIX_EPOCH_DATE;
 import static com.flipkart.krystal.vajram.graphql.samples.order.GetOrderSummary.UNIX_EPOCH_DATE_TIME;
-import static com.flipkart.krystal.vajramexecutor.krystex.traits.PredicateDispatchUtil.dispatchTrait;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
@@ -13,7 +12,6 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
-import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.vajram.graphql.api.execution.GraphQLQuery;
 import com.flipkart.krystal.vajram.graphql.api.execution.GraphQlExecutionFacade;
 import com.flipkart.krystal.vajram.graphql.api.schema.GraphQlInitializer;
@@ -29,6 +27,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuil
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.traits.PredicateDispatchUtil;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
 import java.time.Duration;
@@ -75,9 +74,8 @@ public class VajramGraphQlTest {
             .build();
     this.kGraph = KrystexGraph.builder().vajramGraph(vGraph);
     kGraph.traitDispatchPolicies(
-        new TraitDispatchPolicies(
-            dispatchTrait(GraphQlOperationAggregate_Req.class, vGraph)
-                .alwaysTo(Query_GQlAggr_Req.class)));
+        PredicateDispatchUtil.dispatchTrait(GraphQlOperationAggregate_Req.class, vGraph)
+            .alwaysTo(Query_GQlAggr_Req.class));
   }
 
   @AfterEach

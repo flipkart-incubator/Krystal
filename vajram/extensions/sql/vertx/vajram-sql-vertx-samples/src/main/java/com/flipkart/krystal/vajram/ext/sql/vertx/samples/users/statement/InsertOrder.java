@@ -9,13 +9,14 @@ import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.ext.sql.lang.INSERT;
 import com.flipkart.krystal.vajram.ext.sql.lang.SQL;
+import com.flipkart.krystal.vajram.ext.sql.lang.SqlDialect;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.Order;
 
 /**
  * Inserts a single order into the {@code orders} table. Demonstrates INSERT with a
  * {@code @ForeignKey} column ({@code userId}).
  */
-@SQL
+@SQL(dialect = SqlDialect.POSTGRESQL_18)
 @INSERT
 @Trait
 @CallGraphDelegationMode(SYNC)

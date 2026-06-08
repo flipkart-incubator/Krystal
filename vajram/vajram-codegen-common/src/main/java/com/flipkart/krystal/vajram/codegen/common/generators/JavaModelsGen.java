@@ -207,7 +207,7 @@ public final class JavaModelsGen implements CodeGenerator {
     CodeGenUtility util = codeGenContext.util();
 
     // Extract and validate model methods
-    List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
+    List<ExecutableElement> modelMethods = util.getModelFieldsForCodegen(modelRootType);
 
     // Validate @SerialId all-or-none consistency
     validateSerialIdConsistency(modelMethods);
@@ -243,7 +243,7 @@ public final class JavaModelsGen implements CodeGenerator {
         // If no SupportedModelProtocol annotation is present, then we assume PlainJavaObject as a
         // sane default
         util.getSupportedProtocolTypeElements(modelRootType).isEmpty()) {
-      List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
+      List<ExecutableElement> modelMethods = util.getModelFieldsForCodegen(modelRootType);
       util.writeJavaFile(
           packageName, generateImmutablePojo(modelRootType, modelMethods), modelRootType);
     }
@@ -759,8 +759,10 @@ public final class JavaModelsGen implements CodeGenerator {
                         .map(AnnotationSpec::get)
                         .filter(a -> !isNullableAnnotation(a))
                         .toList());
+        String methodName = method.getSimpleName().toString();
         immutGetterOverrides.add(
-            MethodSpec.methodBuilder(method.getSimpleName().toString())
+            MethodSpec.methodBuilder(methodName)
+                .addJavadoc("@see $T#$L", codeGenContext.modelRootType(), methodName)
                 .addModifiers(PUBLIC, ABSTRACT)
                 .addAnnotation(Override.class)
                 .returns(returnType)
@@ -887,6 +889,7 @@ public final class JavaModelsGen implements CodeGenerator {
       TypeName variableType = util.getVariableType(method, true);
       MethodSpec.Builder setter =
           MethodSpec.methodBuilder(methodName)
+              .addJavadoc("@see $T#$L", codeGenContext.modelRootType(), methodName)
               .addModifiers(PUBLIC, ABSTRACT)
               .addParameter(variableType, methodName)
               .returns(builderType);
@@ -902,6 +905,7 @@ public final class JavaModelsGen implements CodeGenerator {
           && NO_CONTAINER.equals(fieldModelRootInfo.get().containerType())) {
         MethodSpec.Builder methodBuilder =
             MethodSpec.methodBuilder(methodName)
+                .addJavadoc("@see $T#$L", codeGenContext.modelRootType(), methodName)
                 .addModifiers(PUBLIC, ABSTRACT)
                 .addParameter(
                     util.getImmutInterfaceName(fieldModelRootInfo.get().element())
@@ -982,6 +986,8 @@ public final class JavaModelsGen implements CodeGenerator {
     for (ExecutableElement method : modelMethods) {
       methods.add(
           getterMethod(method, false, null, util, immutPojoType, modelRoot)
+              .addJavadoc(
+                  "@see $T#$L", codeGenContext.modelRootType(), method.getSimpleName().toString())
               .addAnnotation(Override.class)
               .build());
     }
@@ -1132,7 +1138,7 @@ this.$L = $L == null
   }
 
   public static MethodSpec copyCtor(TypeElement modelRootType, CodeGenUtility util) {
-    List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
+    List<ExecutableElement> modelMethods = util.getModelFieldsForCodegen(modelRootType);
     MethodSpec.Builder ctorBuilder = MethodSpec.constructorBuilder().addModifiers(PUBLIC);
 
     ctorBuilder.addParameter(
@@ -1368,7 +1374,7 @@ this.$L = $L == null
     MethodSpec noArgConstructor = MethodSpec.constructorBuilder().addModifiers(PRIVATE).build();
 
     List<MethodSpec> dataAccessMethods =
-        builderGettersAndSetters(modelMethods, builderType, modelRoot, null, util);
+        builderGettersAndSetters(codeGenContext, modelMethods, builderType, modelRoot, null, util);
 
     MethodSpec.Builder buildMethodBuilder =
         buildForBuilder(modelMethods, immutablePojoName, util, modelRoot);
@@ -1505,6 +1511,7 @@ this.$L = $L == null
   }
 
   public static List<MethodSpec> builderGettersAndSetters(
+      ModelsCodeGenContext codeGenContext,
       List<ExecutableElement> modelMethods,
       TypeName builderType,
       ModelRoot modelRoot,
@@ -1517,6 +1524,7 @@ this.$L = $L == null
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType(), method);
       dataAccessMethods.add(
           MethodSpec.methodBuilder(methodName)
+              .addJavadoc("@see $T#$L", codeGenContext.modelRootType(), methodName)
               .addModifiers(PUBLIC)
               .addParameter(util.getVariableType(method, true), methodName)
               .addAnnotation(Override.class)

@@ -9,4 +9,5 @@ module krystal.vajram.ext.sql.codegen {
   requires com.squareup.javapoet;
 
   exports com.flipkart.krystal.vajram.ext.sql.codegen;
+  exports com.flipkart.krystal.vajram.ext.sql.codegen.syntax;
 }

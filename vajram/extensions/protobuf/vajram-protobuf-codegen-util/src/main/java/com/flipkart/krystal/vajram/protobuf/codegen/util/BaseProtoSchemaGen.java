@@ -87,7 +87,7 @@ public abstract class BaseProtoSchemaGen implements CodeGenerator {
     TypeElement modelRootType = codeGenContext.modelRootType();
     validateModelType(modelRootType, util);
     if (!util.isEnumModel(modelRootType)) {
-      List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
+      List<ExecutableElement> modelMethods = util.getModelFieldsForCodegen(modelRootType);
       new SerdeModelValidator(util, modelRootType, config.protocolInstance())
           .validate(modelMethods);
     }
@@ -306,7 +306,7 @@ public abstract class BaseProtoSchemaGen implements CodeGenerator {
   private StringBuilder generateMessageBodyAndCollectImports(
       TypeElement modelRootType, String packageName, Set<String> imports) {
     String modelRootName = modelRootType.getSimpleName().toString();
-    List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
+    List<ExecutableElement> modelMethods = util.getModelFieldsForCodegen(modelRootType);
 
     Set<Integer> usedFieldNumbers = new HashSet<>();
     StringBuilder protoMessageBody = new StringBuilder();

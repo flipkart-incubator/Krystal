@@ -16,7 +16,6 @@ import static com.flipkart.krystal.vajramexecutor.krystex.traits.PredicateDispat
 import static com.flipkart.krystal.visualization.StaticCallGraphGenerator.generateStaticCallGraphContent;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.vajram.guice.traitbinding.GuiceyStaticDispatchPolicy;
 import com.flipkart.krystal.vajram.guice.traitbinding.TraitBinder;
 import com.flipkart.krystal.vajram.samples.calculator.add.Add;
@@ -119,31 +118,30 @@ class StaticCallGraphTest {
           .annotatedWith(AdditionMethod.Creator.create(SPLIT))
           .to(SplitAdd_Req.class);
       kGraph.traitDispatchPolicies(
-          new TraitDispatchPolicies(
-              new GuiceyStaticDispatchPolicy(
-                  graph, graph.getVajramIdByVajramDefType(MultiAdd.class), traitBinder),
-              dispatchTrait(CustomerServiceAgent_Req.class, graph)
-                  .conditionally(
-                      when(agentType_s, equalsEnum(L1))
-                          .and(initialCommunication_s, isInstanceOf(Call.class))
-                          .to(L1CallAgent_Req.class),
-                      when(agentType_s, equalsEnum(L1))
-                          .and(initialCommunication_s, isInstanceOf(Email.class))
-                          .to(L1EmailAgent_Req.class),
-                      when(agentType_s, equalsEnum(L2))
-                          .and(initialCommunication_s, isInstanceOf(Call.class))
-                          .to(L2CallAgent_Req.class),
-                      when(agentType_s, equalsEnum(L3))
-                          .and(initialCommunication_s, isInstanceOf(Email.class))
-                          .to(L3EmailAgent_Req.class),
-                      when(initialCommunication_s, isInstanceOf(Call.class))
-                          .to(DefaultCallAgent_Req.class),
-                      when(initialCommunication_s, isInstanceOf(Email.class))
-                          .to(DefaultEmailAgent_Req.class),
-                      // Default fallback
-                      when(agentType_s, isAnyValue())
-                          .and(initialCommunication_s, isAnyValue())
-                          .to(DefaultCustomerServiceAgent_Req.class))));
+          new GuiceyStaticDispatchPolicy(
+              graph, graph.getVajramIdByVajramDefType(MultiAdd.class), traitBinder),
+          dispatchTrait(CustomerServiceAgent_Req.class, graph)
+              .conditionally(
+                  when(agentType_s, equalsEnum(L1))
+                      .and(initialCommunication_s, isInstanceOf(Call.class))
+                      .to(L1CallAgent_Req.class),
+                  when(agentType_s, equalsEnum(L1))
+                      .and(initialCommunication_s, isInstanceOf(Email.class))
+                      .to(L1EmailAgent_Req.class),
+                  when(agentType_s, equalsEnum(L2))
+                      .and(initialCommunication_s, isInstanceOf(Call.class))
+                      .to(L2CallAgent_Req.class),
+                  when(agentType_s, equalsEnum(L3))
+                      .and(initialCommunication_s, isInstanceOf(Email.class))
+                      .to(L3EmailAgent_Req.class),
+                  when(initialCommunication_s, isInstanceOf(Call.class))
+                      .to(DefaultCallAgent_Req.class),
+                  when(initialCommunication_s, isInstanceOf(Email.class))
+                      .to(DefaultEmailAgent_Req.class),
+                  // Default fallback
+                  when(agentType_s, isAnyValue())
+                      .and(initialCommunication_s, isAnyValue())
+                      .to(DefaultCustomerServiceAgent_Req.class)));
       // Generate complete static call graph (no specific Vajram filter)
       GraphGenerationResult result = generateStaticCallGraphContent(kGraph.build(), null);
 
@@ -206,9 +204,8 @@ class StaticCallGraphTest {
         .annotatedWith(AdditionMethod.Creator.create(SPLIT))
         .to(SplitAdd_Req.class);
     kGraph.traitDispatchPolicies(
-        new TraitDispatchPolicies(
-            new GuiceyStaticDispatchPolicy(
-                graph, graph.getVajramIdByVajramDefType(MultiAdd.class), traitBinder)));
+        new GuiceyStaticDispatchPolicy(
+            graph, graph.getVajramIdByVajramDefType(MultiAdd.class), traitBinder));
     // Generate complete static call graph (no specific Vajram filter)
     GraphGenerationResult result = generateStaticCallGraphContent(kGraph.build(), null);
 

@@ -33,6 +33,7 @@ import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.facets.InputsForVajram;
+import com.flipkart.krystal.facets.VajramInputs;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.IOVajramDef;
@@ -574,7 +575,8 @@ public class VajramCodeGenUtility {
       Element externalInputsElement = getExternalInputsElement(inputsElement);
       if (externalInputsElement != null) {
         requestPackageName =
-            validateExternalInputsAndGetPackage(externalInputsElement, vajramId, inputsElement)
+            validateExternalInputsAndGetPackage(
+                    externalInputsElement, vajramId, inputsElement, responseTypeMirror)
                 + "."
                 + SHARED_MODELS_SUB_PACKAGE;
       }
@@ -809,7 +811,10 @@ public class VajramCodeGenUtility {
   }
 
   private String validateExternalInputsAndGetPackage(
-      Element externalInputsElement, VajramID vajramId, TypeElement inputsElement) {
+      Element externalInputsElement,
+      VajramID vajramId,
+      TypeElement inputsElement,
+      TypeMirror vajramResponseType) {
     InputsForVajram[] annotations =
         externalInputsElement.getAnnotationsByType(InputsForVajram.class);
     InputsForVajram matchFound = null;
@@ -835,7 +840,32 @@ public class VajramCodeGenUtility {
           "_Inputs that extend @InputsForVajram interface should not have any fields",
           inputsElement);
     }
+    if (externalInputsElement instanceof TypeElement externalTypeElement) {
+      validateVajramInputsResponseType(externalTypeElement, vajramResponseType, inputsElement);
+    }
     return matchFound.parentPackage();
+  }
+
+  private void validateVajramInputsResponseType(
+      TypeElement externalInputsElement, TypeMirror vajramResponseType, Element errorElement) {
+    ImmutableList<TypeMirror> typeParameters =
+        codegenUtil.getTypeParamTypes(
+            externalInputsElement,
+            requireNonNull(
+                elementUtils.getTypeElement(
+                    requireNonNull(VajramInputs.class.getCanonicalName()))));
+    TypeMirror inputsResponseType = null;
+    if (typeParameters.size() == 1
+        && typeUtils.isSameType(inputsResponseType = typeParameters.get(0), vajramResponseType)) {
+      return;
+    }
+    codegenUtil()
+        .error(
+            """
+                VajramInputs response type '%s' does not match vajram's response type '%s'.  \
+                The type parameter of VajramInputs<T> must be the same as the vajram's response type."""
+                .formatted(inputsResponseType, vajramResponseType),
+            errorElement);
   }
 
   public @Nullable TypeElement getExternalInputsElement(@Nullable TypeElement inputsElement) {

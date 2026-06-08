@@ -5,7 +5,7 @@ import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.vajram.codegen.common.models.DefaultFacetModel;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
-import com.flipkart.krystal.vajram.ext.sql.codegen.InsertQueryModel.InsertColumn;
+import com.flipkart.krystal.vajram.ext.sql.codegen.InsertQueryModel.TableColumn;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.SerdeColumnInfo;
 import com.flipkart.krystal.vajram.ext.sql.model.IncomingForeignKey;
 import com.flipkart.krystal.vajram.ext.sql.model.Table;
@@ -81,13 +81,12 @@ public final class InsertModelParser {
     String tableName = sqlParser.getTableName(tableElement);
 
     // Collect column names from the table (excluding @IncomingForeignKey)
-    List<InsertColumn> columns = new ArrayList<>();
-    for (ExecutableElement method : util.extractAndValidateModelMethods(tableElement)) {
+    List<TableColumn> columns = new ArrayList<>();
+    for (ExecutableElement method : util.getModelFields(tableElement)) {
       if (method.getAnnotation(IncomingForeignKey.class) != null) {
         continue; // not a real column
       }
       String dbColumnName = sqlParser.resolveColumnName(method);
-      String accessorName = method.getSimpleName().toString();
 
       TypeMirror returnType = method.getReturnType();
       boolean isOptional = util.isOptional(returnType);
@@ -95,7 +94,14 @@ public final class InsertModelParser {
 
       SerdeColumnInfo serdeInfo = sqlParser.resolveSerdeInfo(method, actualType);
 
-      columns.add(new InsertColumn(dbColumnName, actualType, accessorName, isOptional, serdeInfo));
+      columns.add(
+          new TableColumn(
+              method,
+              dbColumnName,
+              actualType,
+              isOptional,
+              serdeInfo,
+              util.isMethodEligibleForModelCodeGen(method, tableElement)));
     }
 
     if (columns.isEmpty()) {

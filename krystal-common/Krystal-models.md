@@ -3,7 +3,7 @@
 ## Interface ModelRoots
 
 An interface model root is a Java `interface` annotated with `@ModelRoot` that extends `Model`. It
-defines a structured data model whose fields are declared as zero-argument accessor methods. The
+defines a structured data model whose `field`s are declared as zero-argument accessor methods. The
 Krystal code generation framework processes these interfaces at compile time and generates immutable
 implementations, builders, and serde wrappers.
 
@@ -37,19 +37,28 @@ public interface OrderResponse extends Model {
 **Rules for model root interfaces:**
 
 - Must extend `Model`.
-- All accessor methods must have zero parameters and a non-void return type.
-- Array return types are not allowed — use `List<T>` instead (byte arrays use `PrimitiveArray`
-  subtypes like `ByteArray`).
+- All non-static methods of the interface (including inherited methods) which do not start with
+  an `_` (underscore) are interpreted as declarations of `fields` of the model. (Names starting with
+  an `_` are considered reserved for
+  platform use; e.g. code generators generate methods like `_build`, `_builder`, `_serialize`
+  etc.)
+- Model Fields can be declared by abstract methods or default methods.
+- Abstract methods declaring model fields must follow these rules:
+    - must have zero parameters
+    - must have a non-void return type.
+- Fields declared using default methods maybe ignored by code-generators and `SerdeProtocol`s
+- Array return types are not allowed — use `List<T>` instead (for primitive arrays use
+  `PrimitiveArray` subtypes like `ByteArray`).
 - Method names should _not_ use the `get` prefix (recommended convention, not enforced).
 
 ### `@ModelRoot` Annotation
 
-| Attribute                 | Default      | Description                                                                                                                                                                                                                                                                                                                                          |
-|---------------------------|--------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Attribute                 | Default      | Description                                                                                                                                                                                                                                                                                                                                                                                    |
+|---------------------------|--------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `type`                    | `{}` (empty) | An array of `ModelType` values: `REQUEST`, `RESPONSE`, or both `{REQUEST, RESPONSE}`. An empty array (the default) means the model is a general-purpose model with no request/response-specific semantics. `REQUEST` models are used to accept data from a client. `RESPONSE` models are used to provide data to a client. Models with both types must adhere to **both** sets of constraints. |
-| `pure`                    | `true`       | If true, all field types are restricted to primitives, boxed primitives, `String`, `PrimitiveArray` subtypes, `@ModelRoot` enums, pure `Model`s, and `List`/`Map` of these types. See [Model Purity](#model-purity).                                                                                                                                 |
-| `builderExtendsModelRoot` | `false`      | If true, the generated `Builder` interface also extends the model root interface, so builder instances can be used wherever the model root type is expected. See [Builder Extends ModelRoot](#builderExtendsModelRoot).                                                                                                                               |
-| `suffixSeparator`         | `"_"`        | The separator between the model root name and the generated class suffix (e.g. `_Immut`, `_ImmutPojo`).                                                                                                                                                                                                                                              |
+| `pure`                    | `true`       | If true, all field types are restricted to primitives, boxed primitives, `String`, `PrimitiveArray` subtypes, `@ModelRoot` enums, pure `Model`s, and `List`/`Map` of these types. See [Model Purity](#model-purity).                                                                                                                                                                           |
+| `builderExtendsModelRoot` | `false`      | If true, the generated `Builder` interface also extends the model root interface, so builder instances can be used wherever the model root type is expected. See [Builder Extends ModelRoot](#builderExtendsModelRoot).                                                                                                                                                                        |
+| `suffixSeparator`         | `"_"`        | The separator between the model root name and the generated class suffix (e.g. `_Immut`, `_ImmutPojo`).                                                                                                                                                                                                                                                                                        |
 
 ### Field Annotations
 
@@ -250,24 +259,28 @@ For example, a `RESPONSE` model cannot have a field whose type is a `REQUEST`-on
 // ✗ Compile error: RESPONSE model references REQUEST-only model
 @ModelRoot(type = {RESPONSE})
 public interface MyResponse extends Model {
+
   MyRequest nested(); // ERROR — MyRequest is type = {REQUEST}
 }
 
 // ✓ Correct: nested model includes RESPONSE
 @ModelRoot(type = {RESPONSE})
 public interface MyResponse extends Model {
+
   InnerResponse nested(); // OK — InnerResponse type includes RESPONSE
 }
 
 // ✓ Correct: nested model has both types
 @ModelRoot(type = {RESPONSE})
 public interface MyResponse extends Model {
+
   SharedData nested(); // OK — SharedData type = {REQUEST, RESPONSE}
 }
 
 // ✓ Correct: general-purpose models can be nested anywhere
 @ModelRoot(type = {REQUEST})
 public interface MyRequest extends Model {
+
   CommonData nested(); // OK — CommonData type = {} (general-purpose)
 }
 ```
@@ -301,19 +314,24 @@ wrap the inner collection in a `@ModelRoot` model:
 // ✗ Compile error: nested collection
 @ModelRoot
 public interface MyModel extends Model {
+
   List<List<String>> nestedList();       // ERROR
+
   Map<String, Map<String, Integer>> nestedMap(); // ERROR
 }
 
 // ✓ Correct: wrap inner collection in a model
 @ModelRoot
 public interface StringList extends Model {
+
   List<String> values();
 }
 
 @ModelRoot
 public interface MyModel extends Model {
+
   List<StringList> nestedList();          // OK
+
   Map<String, StringList> nestedMap();    // OK
 }
 ```
@@ -322,14 +340,14 @@ public interface MyModel extends Model {
 
 For a model root `MyModel`:
 
-| Artifact                                     | Phase  | Condition                                                      |
-|----------------------------------------------|--------|----------------------------------------------------------------|
-| `MyModel_Immut` (interface)                  | MODELS | Always                                                         |
-| `MyModel_Immut.Builder` (interface)          | MODELS | Always                                                         |
-| `MyModel_ImmutPojo` (class + inner Builder)  | MODELS | `PlainJavaObject` explicitly in `@SupportedModelProtocol`     |
-| `MyModel_ImmutJson` (class + inner Builder)  | FINAL  | `Json` in `@SupportedModelProtocol`                           |
-| `MyModel_ImmutProto` (class + inner Builder) | FINAL  | `Protobuf3` in `@SupportedModelProtocol`                      |
-| `MyModel_Proto.proto` (schema)               | FINAL  | `Protobuf3` in `@SupportedModelProtocol`                      |
+| Artifact                                     | Phase  | Condition                                                 |
+|----------------------------------------------|--------|-----------------------------------------------------------|
+| `MyModel_Immut` (interface)                  | MODELS | Always                                                    |
+| `MyModel_Immut.Builder` (interface)          | MODELS | Always                                                    |
+| `MyModel_ImmutPojo` (class + inner Builder)  | MODELS | `PlainJavaObject` explicitly in `@SupportedModelProtocol` |
+| `MyModel_ImmutJson` (class + inner Builder)  | FINAL  | `Json` in `@SupportedModelProtocol`                       |
+| `MyModel_ImmutProto` (class + inner Builder) | FINAL  | `Protobuf3` in `@SupportedModelProtocol`                  |
+| `MyModel_Proto.proto` (schema)               | FINAL  | `Protobuf3` in `@SupportedModelProtocol`                  |
 
 ## Enum ModelRoots
 
@@ -421,6 +439,7 @@ Create an interface that extends `VajramInputs<T>` (where `T` is the response ty
 with `@InputsForVajram`:
 
 ```java
+
 @InputsForVajram(parentPackage = "com.example.vajrams", vajramId = "GetOrder")
 public interface GetOrderInputs extends VajramInputs<OrderResponse> {
 
@@ -433,8 +452,8 @@ public interface GetOrderInputs extends VajramInputs<OrderResponse> {
 
 **Key attributes of `@InputsForVajram`:**
 
-| Attribute       | Description                                                                                                            |
-|-----------------|------------------------------------------------------------------------------------------------------------------------|
+| Attribute       | Description                                                                                                             |
+|-----------------|-------------------------------------------------------------------------------------------------------------------------|
 | `parentPackage` | The parent package for the generated request interface. The request is generated in `parentPackage + ".shared_models"`. |
 | `vajramId`      | The ID of the Vajram that uses this interface as its inputs definition.                                                 |
 
@@ -453,9 +472,11 @@ public interface GetOrderInputs extends VajramInputs<OrderResponse> {
 `@InputsForVajram` is repeatable — a single inputs interface can define inputs for multiple Vajrams:
 
 ```java
+
 @InputsForVajram(parentPackage = "com.example.vajrams.getorder", vajramId = "GetOrder")
 @InputsForVajram(parentPackage = "com.example.vajrams.getorderv2", vajramId = "GetOrderV2")
 public interface GetOrderInputs extends VajramInputs<OrderResponse> {
+
   String orderId();
 }
 ```

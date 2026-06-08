@@ -18,8 +18,11 @@ import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FacetValue.SingleFacetValue;
 import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.data.Failure;
 import com.flipkart.krystal.data.FanoutDepResponses;
+import com.flipkart.krystal.data.NonNil;
 import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.facets.BasicFacetInfo;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.facets.Facet;
@@ -344,7 +347,7 @@ public final class VajramGraph {
 
   private void validateMandatory(
       VajramID vajramID, FacetValues facetValues, ImmutableCollection<FacetSpec> sourceFacets) {
-    Map<String, Throwable> missingMandatoryValues = new HashMap<>();
+    Map<Facet, Throwable> missingMandatoryValues = new HashMap<>();
     for (Facet facet : sourceFacets) {
       if (!facet
           .tags()
@@ -360,11 +363,24 @@ public final class VajramGraph {
         value = errableFacetValue.asErrable();
       } else if (facetValue instanceof FanoutDepResponses<?, ?> fanoutDepResponses) {
         var requestResponsePairs = fanoutDepResponses.requestResponsePairs();
-        if (requestResponsePairs.stream()
-            .allMatch(reqResp -> reqResp.response().valueOpt().isEmpty())) {
+        boolean allAreEmpty = true;
+        Failure<?> firstFailure = null;
+        for (RequestResponse<?, ?> reqResp : requestResponsePairs) {
+          Errable<?> response = reqResp.response();
+          if (response instanceof Failure<?> f) {
+            firstFailure = f;
+          } else if (response instanceof NonNil<?>) {
+            allAreEmpty = false;
+            break;
+          }
+        }
+        if (allAreEmpty) {
           missingMandatoryValues.put(
-              mandatoryFacet.name(),
-              new MandatoryFacetMissingException(vajramID.id(), mandatoryFacet.name()));
+              mandatoryFacet,
+              new MandatoryFacetMissingException(
+                  vajramID.id(),
+                  mandatoryFacet.name(),
+                  firstFailure == null ? null : firstFailure.error()));
         }
         continue;
       } else {
@@ -372,13 +388,13 @@ public final class VajramGraph {
       }
       Optional<Throwable> error = value.errorOpt();
       if (error.isPresent()) {
-        missingMandatoryValues.put(mandatoryFacet.name(), error.get());
+        missingMandatoryValues.put(mandatoryFacet, error.get());
       } else {
         try {
           validateMandatoryFacet(
               value.valueOpt().orElse(null), vajramID.id(), mandatoryFacet.name());
         } catch (Throwable e) {
-          missingMandatoryValues.put(mandatoryFacet.name(), e);
+          missingMandatoryValues.put(mandatoryFacet, e);
         }
       }
     }

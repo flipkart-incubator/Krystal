@@ -9,7 +9,6 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
-import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.vajram.ext.sql.vertx.ExecuteVertxSql;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderAmountGtPredicate;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderAmountLtePredicate;
@@ -31,6 +30,7 @@ import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.Address_Imm
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.Order;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.Order_ImmutPojo;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.User;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.UserInsertResult;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.User_ImmutPojo;
 import com.flipkart.krystal.vajram.guice.injection.VajramGuiceInputInjector;
 import com.flipkart.krystal.vajram.guice.traitbinding.GuiceyStaticDispatchPolicy;
@@ -46,8 +46,8 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
 import io.vertx.core.Vertx;
-import io.vertx.jdbcclient.JDBCConnectOptions;
-import io.vertx.jdbcclient.JDBCPool;
+import io.vertx.pgclient.PgBuilder;
+import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.sqlclient.Pool;
 import io.vertx.sqlclient.PoolOptions;
 import java.time.Duration;
@@ -59,16 +59,23 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- * Integration tests that start an H2 in-memory database, seed it with data, then execute each SQL
+ * Integration tests that start a PostgreSQL Testcontainer, seed it with data, then execute each SQL
  * trait through a full Krystal {@link KrystexVajramExecutor} and assert the results.
  */
+@Testcontainers
 class SqlTraitIntegrationTest {
 
   private static final Duration TIMEOUT = Duration.ofSeconds(5);
   private static final String PACKAGE_PATH =
       "com.flipkart.krystal.vajram.ext.sql.vertx.samples.users";
+
+  @Container
+  private static final PostgreSQLContainer<?> PG = new PostgreSQLContainer<>("postgres:17-alpine");
 
   private static SingleThreadExecutorsPool EXEC_POOL;
   private static Vertx vertx;
@@ -81,25 +88,27 @@ class SqlTraitIntegrationTest {
     EXEC_POOL = new SingleThreadExecutorsPool("SqlTest", 4);
     vertx = Vertx.vertx();
     pool =
-        JDBCPool.pool(
-            vertx,
-            new JDBCConnectOptions()
-                .setJdbcUrl(
-                    "jdbc:h2:mem:testdb"
-                        + ";DB_CLOSE_DELAY=-1"
-                        + ";MODE=PostgreSQL"
-                        + ";DATABASE_TO_UPPER=FALSE"
-                        + ";CASE_INSENSITIVE_IDENTIFIERS=FALSE"),
-            new PoolOptions().setMaxSize(4));
+        PgBuilder.pool()
+            .with(new PoolOptions().setMaxSize(4))
+            .connectingTo(
+                new PgConnectOptions()
+                    .setHost(PG.getHost())
+                    .setPort(PG.getMappedPort(5432))
+                    .setDatabase(PG.getDatabaseName())
+                    .setUser(PG.getUsername())
+                    .setPassword(PG.getPassword()))
+            .using(vertx)
+            .build();
 
     runSql(
         "CREATE TABLE UserEntity ("
+            + "internalId SERIAL UNIQUE, "
             + "id BIGINT PRIMARY KEY, "
             + "name VARCHAR(255) NOT NULL, "
             + "email VARCHAR(255), "
             + "phoneNumber VARCHAR(255), "
-            + "address CLOB, "
-            + "secondaryAddresses CLOB)");
+            + "address TEXT, "
+            + "secondaryAddresses TEXT)");
     runSql(
         "CREATE TABLE OrderEntity ("
             + "orderId BIGINT PRIMARY KEY, "
@@ -1237,6 +1246,118 @@ class SqlTraitIntegrationTest {
     runSql("DELETE FROM UserEntity WHERE id IN (200, 201)");
   }
 
+  // ─── InsertUserReturning (single INSERT … RETURNING) ───────────────────────
+
+  @Test
+  void insertUserReturning_insertsOneRowAndReturnsInsertResult() throws Exception {
+    CompletableFuture<UserInsertResult> future;
+    User newUser =
+        User_ImmutPojo._builder()
+            .id(300L)
+            .name("Grace")
+            .email("grace@example.com")
+            .phoneNumber("+1-555-0600")
+            .address(Address_ImmutJson._builder().city("TKY").zip("100-0001")._build())
+            .secondaryAddresses(List.of())
+            .orders(List.of())
+            ._build();
+    try (KrystexVajramExecutor executor = createExecutor("insertUserReturning")) {
+      future =
+          executor.execute(
+              InsertUserReturning_Req._builder().user(newUser)._build(),
+              KryonExecutionConfig.builder().executionId("insertUserReturning_exec").build());
+    }
+    assertThat(future)
+        .succeedsWithin(TIMEOUT)
+        .satisfies(
+            result -> {
+              assertThat(result).isNotNull();
+              assertThat(result.id()).isEqualTo(300L);
+            });
+
+    // Verify the row was actually inserted by reading it back
+    CompletableFuture<UserInfo> verifyFuture;
+    try (KrystexVajramExecutor executor = createExecutor("insertUserReturning_verify")) {
+      verifyFuture =
+          executor.execute(
+              GetUserInfoById_Req._builder().where(UserIdPredicate._builder().idIs(300L))._build(),
+              KryonExecutionConfig.builder()
+                  .executionId("insertUserReturning_verify_exec")
+                  .build());
+    }
+    assertThat(verifyFuture)
+        .succeedsWithin(TIMEOUT)
+        .satisfies(
+            user -> {
+              assertThat(user).isNotNull();
+              assertThat(user.name()).isEqualTo("Grace");
+            });
+
+    // Cleanup
+    runSql("DELETE FROM UserEntity WHERE id = 300");
+  }
+
+  // ─── InsertUsersReturning (batch INSERT … RETURNING) ──────────────────────
+
+  @Test
+  void insertUsersReturning_insertsMultipleUsersAndReturnsInsertResults() throws Exception {
+    CompletableFuture<List<UserInsertResult>> future;
+    List<User> newUsers =
+        List.of(
+            User_ImmutPojo._builder()
+                .id(400L)
+                .name("Henry")
+                .email("henry@example.com")
+                .phoneNumber("+1-555-0700")
+                .address(Address_ImmutJson._builder().city("BER").zip("10115")._build())
+                .secondaryAddresses(List.of())
+                .orders(List.of())
+                ._build(),
+            User_ImmutPojo._builder()
+                .id(401L)
+                .name("Ivy")
+                .email("ivy@example.com")
+                .address(Address_ImmutJson._builder().city("SYD").zip("2000")._build())
+                .secondaryAddresses(List.of())
+                .orders(List.of())
+                ._build());
+    try (KrystexVajramExecutor executor = createExecutor("insertUsersReturning")) {
+      future =
+          executor.execute(
+              InsertUsersReturning_Req._builder().users(newUsers)._build(),
+              KryonExecutionConfig.builder().executionId("insertUsersReturning_exec").build());
+    }
+    assertThat(future)
+        .succeedsWithin(TIMEOUT)
+        .satisfies(
+            results -> {
+              assertThat(results).hasSize(2);
+              assertThat(results.get(0).id()).isEqualTo(400L);
+              assertThat(results.get(1).id()).isEqualTo(401L);
+            });
+
+    // Verify both users were inserted
+    CompletableFuture<UserInfo> verifyHenry;
+    try (KrystexVajramExecutor executor = createExecutor("insertUsersReturning_verify_henry")) {
+      verifyHenry =
+          executor.execute(
+              GetUserInfoById_Req._builder().where(UserIdPredicate._builder().idIs(400L))._build(),
+              KryonExecutionConfig.builder()
+                  .executionId("insertUsersReturning_verify_henry_exec")
+                  .build());
+    }
+    assertThat(verifyHenry)
+        .succeedsWithin(TIMEOUT)
+        .satisfies(
+            user -> {
+              assertThat(user).isNotNull();
+              assertThat(user.name()).isEqualTo("Henry");
+            });
+
+    // Cleanup
+    runSql("DELETE FROM UserEntity WHERE id IN (400, 401)");
+  }
+
   // ─── Helpers ─────────────────────────────────────────────────────────────────
 
   private KrystexVajramExecutor createExecutor(String executorId) {
@@ -1288,35 +1409,38 @@ class SqlTraitIntegrationTest {
     traitBinder.bindTrait(InsertUser_Req.class).to(InsertUser_VertxSql_Req.class);
     traitBinder.bindTrait(InsertOrder_Req.class).to(InsertOrder_VertxSql_Req.class);
     traitBinder.bindTrait(InsertUsers_Req.class).to(InsertUsers_VertxSql_Req.class);
+    traitBinder.bindTrait(InsertUserReturning_Req.class).to(InsertUserReturning_VertxSql_Req.class);
+    traitBinder
+        .bindTrait(InsertUsersReturning_Req.class)
+        .to(InsertUsersReturning_VertxSql_Req.class);
     traitBinder
         .bindTrait(GetUserWithAddressById_Req.class)
         .to(GetUserWithAddressById_VertxSql_Req.class);
 
-    kGraph.traitDispatchPolicies(
-        TraitDispatchPolicies.builder()
-            .addTraitDispatchPolicies(
-                Stream.of(
-                        GetUserInfoById_Req._VAJRAM_ID,
-                        GetOrderInfoByUserId_Req._VAJRAM_ID,
-                        GetUserOrdersByUserName_Req._VAJRAM_ID,
-                        GetUserByIdWithOrdersAndItems_Req._VAJRAM_ID,
-                        GetUserByNameWithOrdersAndItems_Req._VAJRAM_ID,
-                        GetRecentOrdersByUserId_Req._VAJRAM_ID,
-                        GetOrdersWithItemsByUserId_Req._VAJRAM_ID,
-                        GetUserByIdOrName_Req._VAJRAM_ID,
-                        GetOrdersByTimeRange_Req._VAJRAM_ID,
-                        GetOrdersByMinAmount_Req._VAJRAM_ID,
-                        GetOrdersByMaxAmount_Req._VAJRAM_ID,
-                        GetOrdersByTimeInRange_Req._VAJRAM_ID,
-                        InsertUser_Req._VAJRAM_ID,
-                        InsertOrder_Req._VAJRAM_ID,
-                        InsertUsers_Req._VAJRAM_ID,
-                        GetUserWithAddressById_Req._VAJRAM_ID)
-                    .map(
-                        vajramID ->
-                            new GuiceyStaticDispatchPolicy(vajramGraph, vajramID, traitBinder))
-                    .toList())
-            .build());
+    kGraph
+        .traitDispatchPolicies(
+            Stream.of(
+                    GetUserInfoById_Req._VAJRAM_ID,
+                    GetOrderInfoByUserId_Req._VAJRAM_ID,
+                    GetUserOrdersByUserName_Req._VAJRAM_ID,
+                    GetUserByIdWithOrdersAndItems_Req._VAJRAM_ID,
+                    GetUserByNameWithOrdersAndItems_Req._VAJRAM_ID,
+                    GetRecentOrdersByUserId_Req._VAJRAM_ID,
+                    GetOrdersWithItemsByUserId_Req._VAJRAM_ID,
+                    GetUserByIdOrName_Req._VAJRAM_ID,
+                    GetOrdersByTimeRange_Req._VAJRAM_ID,
+                    GetOrdersByMinAmount_Req._VAJRAM_ID,
+                    GetOrdersByMaxAmount_Req._VAJRAM_ID,
+                    GetOrdersByTimeInRange_Req._VAJRAM_ID,
+                    InsertUser_Req._VAJRAM_ID,
+                    InsertOrder_Req._VAJRAM_ID,
+                    InsertUsers_Req._VAJRAM_ID,
+                    InsertUserReturning_Req._VAJRAM_ID,
+                    InsertUsersReturning_Req._VAJRAM_ID,
+                    GetUserWithAddressById_Req._VAJRAM_ID)
+                .map(vajramID -> new GuiceyStaticDispatchPolicy(vajramGraph, vajramID, traitBinder))
+                .toList())
+        .build();
     return kGraph
         .build()
         .createExecutor(
@@ -1357,6 +1481,53 @@ class SqlTraitIntegrationTest {
 
   private static void runSql(String sql) throws Exception {
     pool.preparedQuery(sql).execute().toCompletionStage().toCompletableFuture().get();
+  }
+
+  @Test
+  void diagnostic_pgInsertAndReturning() throws Exception {
+    try {
+      // 1) Basic INSERT without RETURNING — check rowCount
+      var rs1 =
+          pool.preparedQuery(
+                  "INSERT INTO UserEntity (id, name, email, phoneNumber, address, secondaryAddresses) "
+                      + "VALUES ($1, $2, $3, $4, $5, $6)")
+              .execute(
+                  io.vertx.sqlclient.Tuple.of(9999L, "Diag", "diag@test.com", null, "{}", "[]"))
+              .toCompletionStage()
+              .toCompletableFuture()
+              .get();
+      System.out.println("[DIAG] INSERT rowCount=" + rs1.rowCount() + " size=" + rs1.size());
+
+      // 2) INSERT with RETURNING — check rows
+      var rs2 =
+          pool.preparedQuery(
+                  "INSERT INTO UserEntity (id, name, email, phoneNumber, address, secondaryAddresses) "
+                      + "VALUES ($1, $2, $3, $4, $5, $6) RETURNING id")
+              .execute(
+                  io.vertx.sqlclient.Tuple.of(
+                      9998L, "DiagReturn", "diag2@test.com", null, "{}", "[]"))
+              .toCompletionStage()
+              .toCompletableFuture()
+              .get();
+      System.out.println(
+          "[DIAG] INSERT RETURNING rowCount=" + rs2.rowCount() + " size=" + rs2.size());
+      for (var row : rs2) {
+        System.out.println("[DIAG] row: id=" + row.getValue("id") + " columns=" + row.size());
+      }
+
+      // 3) Simple SELECT — verify data was inserted
+      var rs3 =
+          pool.preparedQuery("SELECT count(*) AS cnt FROM UserEntity WHERE id IN ($1, $2)")
+              .execute(io.vertx.sqlclient.Tuple.of(9998L, 9999L))
+              .toCompletionStage()
+              .toCompletableFuture()
+              .get();
+      for (var row : rs3) {
+        System.out.println("[DIAG] SELECT count=" + row.getValue("cnt"));
+      }
+    } finally {
+      runSql("DELETE FROM UserEntity WHERE id IN (9998, 9999)");
+    }
   }
 
   private static class GuiceModule extends AbstractModule {

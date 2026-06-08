@@ -1,19 +1,22 @@
 package com.flipkart.krystal.codegen.common.models;
 
 import static com.flipkart.krystal.codegen.common.models.Constants.IMMUT_SUFFIX;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.WILL_NEVER_FAIL;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.squareup.javapoet.CodeBlock.joining;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toMap;
-import static javax.lang.model.element.Modifier.ABSTRACT;
+import static javax.lang.model.element.Modifier.DEFAULT;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
+import static javax.lang.model.element.Modifier.STATIC;
 
 import com.flipkart.krystal.annos.Generated;
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
@@ -24,6 +27,7 @@ import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.model.EnumModel;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.IfAbsent.Creator;
+import com.flipkart.krystal.model.ImmutableModel;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelProtocol;
 import com.flipkart.krystal.model.ModelRoot;
@@ -62,6 +66,7 @@ import java.nio.file.Paths;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -332,54 +337,100 @@ public class CodeGenUtility {
   }
 
   /**
-   * Extracts and validates model methods from the model root interface.
-   *
-   * @param modelRootType The type element representing the model root
-   * @return List of validated executable elements representing model methods
+   * Returns all model fields of the given ModelRoot element including the ones which have default
+   * implementations and are not used for generating implementations
    */
-  public List<ExecutableElement> extractAndValidateModelMethods(TypeElement modelRootType) {
+  public ImmutableList<ExecutableElement> getModelFields(TypeElement modelRootElem) {
+    if (modelRootElem.getAnnotation(ModelRoot.class) == null) {
+      error("Model root type %s does not have @ModelRoot annotation", modelRootElem);
+    }
     List<ExecutableElement> modelMethods = new ArrayList<>();
 
-    for (ExecutableElement executableElem :
-        ElementFilter.methodsIn(processingEnv.getElementUtils().getAllMembers(modelRootType))) {
-      if (ElementKind.METHOD.equals(executableElem.getKind())
-          && executableElem.getModifiers().contains(ABSTRACT)) {
-        if (executableElem.getSimpleName().toString().startsWith("_")) {
-          // Methods whose names start with an '_' are considered "meta" methods which are not
-          // used to access actual model data. So they are ignored.
-          continue;
-        }
-        validateGetterMethod(executableElem);
-
-        modelMethods.add(executableElem);
+    for (ExecutableElement executableElement :
+        ElementFilter.methodsIn(modelRootElem.getEnclosedElements())) {
+      if (executableElement.getModifiers().contains(STATIC)) {
+        // Static methods are considered application code which is ignored by Krystal
+        continue;
       }
     }
 
-    return modelMethods;
+    for (ExecutableElement method :
+        ElementFilter.methodsIn(processingEnv.getElementUtils().getAllMembers(modelRootElem))) {
+      if (isSameRawType(method.getEnclosingElement().asType(), Object.class)
+          || isSameRawType(method.getEnclosingElement().asType(), Model.class)
+          || isSameRawType(method.getEnclosingElement().asType(), ImmutableModel.class)
+          || isSameRawType(method.getEnclosingElement().asType(), ImmutableModel.Builder.class)) {
+        // Since these methods are defined in platform classes, ignore them.
+        continue;
+      }
+
+      if (!method.getModifiers().contains(STATIC)) {
+        if (method.getSimpleName().toString().startsWith("_")) {
+          // Ignore methods starting with '_' as they are not model fields and are reserved for
+          // platform use.
+          continue;
+        }
+        validateModelRootMethod(method);
+        modelMethods.add(method);
+      }
+    }
+    return ImmutableList.copyOf(modelMethods);
   }
 
-  private void validateGetterMethod(ExecutableElement method) {
-    // Validate method has zero parameters
-    if (!method.getParameters().isEmpty()) {
-      error("Model root methods must have zero parameters: " + method.getSimpleName(), method);
-    }
+  /**
+   * Extracts model methods from the model root interface which are eligible for code-generation
+   * (i.e. these methods do not have a default implementation)
+   *
+   * @param modelRootElem The type element representing the model root
+   * @return List of validated executable elements representing model methods
+   */
+  public ImmutableList<ExecutableElement> getModelFieldsForCodegen(TypeElement modelRootElem) {
+    return getModelFields(modelRootElem).stream()
+        .filter(method -> isMethodEligibleForModelCodeGen(method, modelRootElem))
+        .collect(toImmutableList());
+  }
 
+  private void validateModelRootMethod(ExecutableElement method) {
     TypeMirror returnType = method.getReturnType();
-
-    // Validate method has a return type (not void)
-    if (returnType.getKind() == TypeKind.VOID) {
+    // Validate method return type is not an array
+    if (returnType.getKind() == TypeKind.ARRAY) {
       error(
-          "Model root methods must have a return type (not void): " + method.getSimpleName(),
+          "Model root methods must not return arrays. Use List or PrimitiveArray instead."
+              + method.getSimpleName(),
           method);
     }
 
-    // Validate method return type is not an array
-    if (returnType.getKind() == TypeKind.ARRAY) {
-      error("Model root methods must not return arrays. Use List instead.", method);
+    if (method.getSimpleName().toString().startsWith("_")) {
+      // Application code cannot define methods starting with '_'
+      error(
+          "Model field method names cannot start with an '_' as such names are considered reserved for platform use."
+              + method.getSimpleName());
+    }
+
+    if (!method.getParameters().isEmpty()) {
+      error("Model root methods must have zero parameters" + method.getSimpleName(), method);
+    }
+
+    if (returnType.getKind() == TypeKind.VOID) {
+      error(
+          "Model root methods must have a return type (not void)" + method.getSimpleName(), method);
     }
 
     // Validate no nested collections (List<List>, List<Map>, Map<K, List>, Map<K, Map>)
     validateNoNestedCollections(method, returnType);
+  }
+
+  public boolean isMethodEligibleForModelCodeGen(
+      ExecutableElement method, TypeElement modelRootElem) {
+    return
+    // If the method is not a default method - then it is eligible for code generation
+    !method.getModifiers().contains(DEFAULT)
+        ||
+        // If the method is a default method, but has @IfAbsent(ASSUME_DEFAULT_VALUE) -
+        // then it is eligible for code generation
+        ASSUME_DEFAULT_VALUE.equals(
+            getIfAbsent(method, requireNonNull(modelRootElem.getAnnotation(ModelRoot.class)))
+                .value());
   }
 
   private void validateNoNestedCollections(ExecutableElement method, TypeMirror type) {
@@ -604,8 +655,8 @@ public class CodeGenUtility {
 
   public TypeMirror getTypeFromAnnotationMember(Supplier<Class<?>> supplier) {
     try {
-      var ignored = supplier.get();
-      throw new AssertionError("Expected supplier to throw error");
+      var clazz = supplier.get();
+      return elementUtils.getTypeElement(requireNonNull(clazz.getCanonicalName())).asType();
     } catch (MirroredTypeException mte) {
       TypeMirror typeMirror = mte.getTypeMirror();
       if (typeMirror == null) {
@@ -618,8 +669,12 @@ public class CodeGenUtility {
 
   public List<? extends TypeMirror> getTypesFromAnnotationMember(Supplier<Class<?>[]> supplier) {
     try {
-      var ignored = supplier.get();
-      return List.of();
+      return Arrays.stream(supplier.get())
+          .map(Class::getCanonicalName)
+          .map(Objects::requireNonNull)
+          .map(elementUtils::getTypeElement)
+          .map(TypeElement::asType)
+          .toList();
     } catch (MirroredTypesException mte) {
       return mte.getTypeMirrors();
     }
@@ -702,6 +757,10 @@ public class CodeGenUtility {
 
   public void error(String message, @Nullable Element... elements) {
     _error(message, elements);
+  }
+
+  public void error(Exception e, @Nullable Element... elements) {
+    _error(e.getMessage(), elements);
   }
 
   private void _error(String message, @Nullable Element... elements) {

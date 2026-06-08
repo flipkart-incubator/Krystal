@@ -1,8 +1,10 @@
 package com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model;
 
+import static com.flipkart.krystal.vajram.ext.sql.model.DefaultValueStrategy.ValueComputation.AUTO_ASSIGN_ID;
 import static com.flipkart.krystal.vajram.json.JsonConfig.SerdeOutputType.STRING;
 
 import com.flipkart.krystal.model.ModelRoot;
+import com.flipkart.krystal.vajram.ext.sql.model.DefaultValueStrategy;
 import com.flipkart.krystal.vajram.ext.sql.model.IncomingForeignKey;
 import com.flipkart.krystal.vajram.ext.sql.model.PrimaryKey;
 import com.flipkart.krystal.vajram.ext.sql.model.SerdeWith;
@@ -30,12 +32,19 @@ import java.util.Optional;
 @Table(name = "UserEntity")
 public interface User extends TableModel {
 
+  @DefaultValueStrategy(AUTO_ASSIGN_ID)
+  @UniqueKey
+  default long internalId() {
+    throw new UnsupportedOperationException(
+        "'internalId' value is auto-assigned and cannot be inserted via this model.");
+  }
+
   @PrimaryKey
   long id();
 
   String name();
 
-  @UniqueKey(name = "uk_users_email")
+  @UniqueKey
   String email();
 
   Optional<String> phoneNumber();

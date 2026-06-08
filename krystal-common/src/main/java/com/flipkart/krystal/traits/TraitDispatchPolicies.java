@@ -6,6 +6,7 @@ import static java.util.function.Function.identity;
 import com.flipkart.krystal.core.VajramID;
 import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import lombok.Builder;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -22,7 +23,7 @@ public class TraitDispatchPolicies {
   }
 
   @Builder
-  public TraitDispatchPolicies(List<TraitDispatchPolicy> traitDispatchPolicies) {
+  public TraitDispatchPolicies(Collection<? extends TraitDispatchPolicy> traitDispatchPolicies) {
     this.traitDispatchPolicies =
         traitDispatchPolicies.stream()
             .collect(toImmutableMap(TraitDispatchPolicy::traitID, identity()));
@@ -38,11 +39,11 @@ public class TraitDispatchPolicies {
 
   public static class TraitDispatchPoliciesBuilder {
 
-    public TraitDispatchPolicies.TraitDispatchPoliciesBuilder addTraitDispatchPolicies(
+    @SuppressWarnings("MismatchedQueryAndUpdateOfCollection") // Used by lombok
+    private final List<TraitDispatchPolicy> traitDispatchPolicies = new ArrayList<>();
+
+    public TraitDispatchPolicies.TraitDispatchPoliciesBuilder traitDispatchPolicies(
         List<? extends TraitDispatchPolicy> traitDispatchPolicies) {
-      if (this.traitDispatchPolicies == null) {
-        this.traitDispatchPolicies = new ArrayList<>();
-      }
       this.traitDispatchPolicies.addAll(traitDispatchPolicies);
       return this;
     }

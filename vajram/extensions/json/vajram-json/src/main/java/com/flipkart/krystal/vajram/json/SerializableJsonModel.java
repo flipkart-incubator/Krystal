@@ -17,7 +17,7 @@ public interface SerializableJsonModel extends SerializableModel {
 
   @Override
   default byte[] _serialize() throws JsonProcessingException {
-    return new byte[0];
+    return OBJECT_WRITER.writeValueAsBytes(this);
   }
 
   default String _serializeAsString() throws JsonProcessingException {

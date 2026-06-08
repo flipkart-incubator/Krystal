@@ -3,10 +3,10 @@ plugins {
 }
 
 dependencies {
-    implementation platform('io.vertx:vertx-stack-depchain:5.0.11')
     api project(':vajram:vajram-java-sdk')
     api project(':vajram:extensions:sql:vajram-sql')
     api 'io.vertx:vertx-sql-client'
+    api 'io.vertx:vertx-mysql-client'
     krystalModelsGenProcessor "com.flipkart.krystal:vajram-codegen:${krystal_version}"
 }
 

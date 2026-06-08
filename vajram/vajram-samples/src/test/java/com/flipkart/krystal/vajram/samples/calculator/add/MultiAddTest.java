@@ -28,7 +28,6 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
-import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.vajram.guice.traitbinding.GuiceyStaticDispatchPolicy;
 import com.flipkart.krystal.vajram.guice.traitbinding.TraitBinder;
 import com.flipkart.krystal.vajram.samples.Util;
@@ -184,9 +183,8 @@ class MultiAddTest {
   @Test
   void chainAdd_predicateDispatch_success() {
     this.kGraph.traitDispatchPolicies(
-        new TraitDispatchPolicies(
-            dispatchTrait(MultiAdd_Req.class, vGraph)
-                .conditionally(when(numbers_s, isAnyValue()).to(ChainAdd_Req.class))));
+        dispatchTrait(MultiAdd_Req.class, vGraph)
+            .conditionally(when(numbers_s, isAnyValue()).to(ChainAdd_Req.class)));
 
     // Setup test data
     List<Integer> numbers1 = asList(1, 2, 3);
@@ -215,9 +213,8 @@ class MultiAddTest {
   @Test
   void splitAdd_predicateDispatch_success() {
     this.kGraph.traitDispatchPolicies(
-        new TraitDispatchPolicies(
-            dispatchTrait(MultiAdd_Req.class, vGraph)
-                .conditionally(when(numbers_s, isAnyValue()).to(SplitAdd_Req.class))));
+        dispatchTrait(MultiAdd_Req.class, vGraph)
+            .conditionally(when(numbers_s, isAnyValue()).to(SplitAdd_Req.class)));
 
     // Setup test data
     List<Integer> numbers1 = asList(1, 2, 3);
@@ -246,9 +243,8 @@ class MultiAddTest {
   @Test
   void simpleAdd_predicateDispatch_success() {
     this.kGraph.traitDispatchPolicies(
-        new TraitDispatchPolicies(
-            dispatchTrait(MultiAdd_Req.class, vGraph)
-                .conditionally(when(numbers_s, isAnyValue()).to(SimpleAdd_Req.class))));
+        dispatchTrait(MultiAdd_Req.class, vGraph)
+            .conditionally(when(numbers_s, isAnyValue()).to(SimpleAdd_Req.class)));
 
     // Setup test data
     List<Integer> numbers1 = asList(1, 2, 3);
@@ -277,11 +273,10 @@ class MultiAddTest {
   @Test
   void chainAdd_computeDispatch_success() {
     this.kGraph.traitDispatchPolicies(
-        new TraitDispatchPolicies(
-            dispatchTrait(MultiAdd_Req.class, vGraph)
-                .computingTargetWith(
-                    multiAddReq -> Optional.of(ChainAdd_Req.class),
-                    ImmutableSet.of(ChainAdd_Req.class))));
+        dispatchTrait(MultiAdd_Req.class, vGraph)
+            .computingTargetWith(
+                multiAddReq -> Optional.of(ChainAdd_Req.class),
+                ImmutableSet.of(ChainAdd_Req.class)));
 
     // Setup test data
     List<Integer> numbers1 = asList(1, 2, 3);
@@ -310,11 +305,10 @@ class MultiAddTest {
   @Test
   void splitAdd_computeDispatch_success() {
     this.kGraph.traitDispatchPolicies(
-        new TraitDispatchPolicies(
-            dispatchTrait(MultiAdd_Req.class, vGraph)
-                .computingTargetWith(
-                    multiAddReq -> Optional.of(SplitAdd_Req.class),
-                    ImmutableSet.of(SplitAdd_Req.class))));
+        dispatchTrait(MultiAdd_Req.class, vGraph)
+            .computingTargetWith(
+                multiAddReq -> Optional.of(SplitAdd_Req.class),
+                ImmutableSet.of(SplitAdd_Req.class)));
 
     // Setup test data
     List<Integer> numbers1 = asList(1, 2, 3);
@@ -343,11 +337,10 @@ class MultiAddTest {
   @Test
   void simpleAdd_computeDispatch_success() {
     this.kGraph.traitDispatchPolicies(
-        new TraitDispatchPolicies(
-            dispatchTrait(MultiAdd_Req.class, vGraph)
-                .computingTargetWith(
-                    multiAddReq -> Optional.of(SimpleAdd_Req.class),
-                    ImmutableSet.of(SimpleAdd_Req.class))));
+        dispatchTrait(MultiAdd_Req.class, vGraph)
+            .computingTargetWith(
+                multiAddReq -> Optional.of(SimpleAdd_Req.class),
+                ImmutableSet.of(SimpleAdd_Req.class)));
 
     // Setup test data
     List<Integer> numbers1 = asList(1, 2, 3);
@@ -376,9 +369,8 @@ class MultiAddTest {
   @Test
   void nullResolution_computeDispatch_throws() {
     this.kGraph.traitDispatchPolicies(
-        new TraitDispatchPolicies(
-            dispatchTrait(MultiAdd_Req.class, vGraph)
-                .computingTargetWith(multiAddReq -> Optional.empty(), ImmutableSet.of())));
+        dispatchTrait(MultiAdd_Req.class, vGraph)
+            .computingTargetWith(multiAddReq -> Optional.empty(), ImmutableSet.of()));
 
     // Setup test data
     List<Integer> numbers1 = asList(1, 2, 3);
@@ -419,9 +411,8 @@ class MultiAddTest {
         .annotatedWith(AdditionMethod.Creator.create(SPLIT))
         .to(SplitAdd_Req.class);
     this.kGraph.traitDispatchPolicies(
-        new TraitDispatchPolicies(
-            new GuiceyStaticDispatchPolicy(
-                vGraph, vGraph.getVajramIdByVajramDefType(MultiAdd.class), traitBinder)));
+        new GuiceyStaticDispatchPolicy(
+            vGraph, vGraph.getVajramIdByVajramDefType(MultiAdd.class), traitBinder));
   }
 
   private KrystexVajramExecutorConfigBuilder executorConfig() {

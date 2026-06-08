@@ -42,17 +42,16 @@ public abstract class ExecuteVertxSql extends IOVajramDef<RowSet<Row>> {
 
   @Output
   static CompletableFuture<RowSet<Row>> execute(String sql, Tuple params, Pool pool) {
-    CompletableFuture<RowSet<Row>> resultFuture =
-        pool.preparedQuery(sql)
-            .execute(params)
-            .toCompletionStage()
-            .toCompletableFuture()
-            .whenComplete(
-                (rows, throwable) -> {
-                  if (throwable != null) {
-                    log.error("Failed to execute SQL query", throwable);
-                  }
-                });
-    return resultFuture;
+    return pool.preparedQuery(sql)
+        .execute(params)
+        .toCompletionStage()
+        .toCompletableFuture()
+        .whenComplete(
+            (rows, throwable) -> {
+              log.info("ExecuteVertxSql execute completed");
+              if (throwable != null) {
+                log.error("ExecuteVertxSql execute failed", throwable);
+              }
+            });
   }
 }

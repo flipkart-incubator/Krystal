@@ -24,7 +24,6 @@ import static com.flipkart.krystal.vajram.codegen.common.models.Constants.RESOLV
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.RESOLVER_RESULT;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.RESOLVER_RESULTS;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.VAJRAM_ID_CONSTANT_NAME;
-import static com.flipkart.krystal.vajram.codegen.common.models.Constants._INPUTS_CLASS;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants._INTERNAL_FACETS_CLASS;
 import static com.flipkart.krystal.vajram.codegen.common.models.ParsedVajramData.fromVajramInfo;
 import static com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility.getImmutFacetsClassName;
@@ -2921,7 +2920,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
             """
                     $L,
                     $T.fieldTagsParser(
-                      () -> $T.$L.class.$L($S),
+                      () -> $T.class.$L($S),
                       () -> $T.class.getDeclaredField($S)),
                     _facetValues -> (($T)_facetValues).$L(),
                     (_facetValues, _value) -> {
@@ -2933,8 +2932,10 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                 """,
             facet.isBatched(),
             FacetUtils.class,
-            currentVajramInfo().vajramClassElem(),
-            facet.facetType().equals(INPUT) ? _INPUTS_CLASS : _INTERNAL_FACETS_CLASS,
+            facet.facetType().equals(INPUT)
+                ? currentVajramInfo().inputsSource()
+                : ClassName.get(currentVajramInfo().vajramClassElem())
+                    .nestedClass(_INTERNAL_FACETS_CLASS),
             facetReflectionAccessor,
             facet.name(),
             currentVajramInfo().facetsInterfaceType(),

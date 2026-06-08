@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.facets.specs;
 
 import static com.flipkart.krystal.tags.ElementTags.emptyTags;
+import static org.reflections.Reflections.log;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Request;
@@ -10,6 +11,7 @@ import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.tags.ElementTags;
 import java.util.concurrent.Callable;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 /**
@@ -19,6 +21,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  * @param <T> The data type of the facet.
  * @param <CV> The current vajram which has the facet
  */
+@Slf4j
 @Getter
 public abstract sealed class AbstractFacetSpec<T, CV extends Request> extends AbstractFacet
     implements FacetSpec<T, CV> permits DefaultFacetSpec, DependencySpec {
@@ -52,6 +55,7 @@ public abstract sealed class AbstractFacetSpec<T, CV extends Request> extends Ab
       try {
         tags = tagsParser.call();
       } catch (Exception e) {
+        log.error("Failed to parse tags for facet {}", name(), e);
         tags = emptyTags();
       }
     }

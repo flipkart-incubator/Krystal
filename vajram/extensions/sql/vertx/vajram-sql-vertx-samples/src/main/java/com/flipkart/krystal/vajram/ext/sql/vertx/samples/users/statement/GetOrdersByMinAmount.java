@@ -10,12 +10,13 @@ import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.ext.sql.lang.LIMIT;
 import com.flipkart.krystal.vajram.ext.sql.lang.SELECT;
 import com.flipkart.krystal.vajram.ext.sql.lang.SQL;
+import com.flipkart.krystal.vajram.ext.sql.lang.SqlDialect;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderAmountGtPredicate;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderInfo;
 import java.util.List;
 
 /** Fetches orders with {@code amountCents > threshold}. Demonstrates {@code @IsGreaterThan}. */
-@SQL
+@SQL(dialect = SqlDialect.POSTGRESQL_18)
 @SELECT
 @Trait
 @CallGraphDelegationMode(SYNC)

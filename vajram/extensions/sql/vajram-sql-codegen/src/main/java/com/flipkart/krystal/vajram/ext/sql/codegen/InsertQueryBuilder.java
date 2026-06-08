@@ -1,6 +1,11 @@
 package com.flipkart.krystal.vajram.ext.sql.codegen;
 
+import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
+import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
+import com.flipkart.krystal.vajram.ext.sql.codegen.InsertQueryModel.TableColumn;
+import com.flipkart.krystal.vajram.ext.sql.codegen.syntax.SqlSyntax;
 import java.util.List;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Builds SQL INSERT statements from parsed {@link InsertQueryModel} records.
@@ -10,7 +15,11 @@ import java.util.List;
  */
 public final class InsertQueryBuilder {
 
-  private InsertQueryBuilder() {}
+  private final CodeGenUtility util;
+
+  public InsertQueryBuilder(VajramCodeGenUtility vajramUtil) {
+    this.util = vajramUtil.codegenUtil();
+  }
 
   /**
    * Builds a parameterized {@code INSERT INTO table (col1, col2, …) VALUES ($1, $2, …)} statement.
@@ -19,8 +28,26 @@ public final class InsertQueryBuilder {
    * @param config driver-specific config for placeholder format
    * @return the SQL INSERT string with positional placeholders
    */
-  public static String buildInsertSql(InsertQueryModel model, SqlDriverConfig config) {
-    List<InsertQueryModel.InsertColumn> columns = model.columns();
+  public String buildInsertSql(InsertQueryModel model, SqlDriverConfig config) {
+    return buildInsertSql(model, config, null, List.of());
+  }
+
+  /**
+   * Builds a parameterized INSERT statement, optionally appending a {@code RETURNING} clause.
+   *
+   * @param model the parsed INSERT model containing table name and column definitions
+   * @param config driver-specific config for placeholder format
+   * @param syntax the SQL syntax provider for the target database dialect; if non-null and {@code
+   *     returningColumnNames} is non-empty, a RETURNING clause is appended
+   * @param returningColumnNames the column names to include in the RETURNING clause; may be empty
+   * @return the SQL INSERT string with positional placeholders and optional RETURNING clause
+   */
+  public String buildInsertSql(
+      InsertQueryModel model,
+      SqlDriverConfig config,
+      @Nullable SqlSyntax syntax,
+      List<String> returningColumnNames) {
+    List<TableColumn> columns = model.columns();
 
     StringBuilder sb = new StringBuilder();
     sb.append("INSERT INTO ").append(model.tableName()).append(" (");
@@ -42,6 +69,14 @@ public final class InsertQueryBuilder {
     }
 
     sb.append(")");
+
+    if (syntax != null && !returningColumnNames.isEmpty()) {
+      try {
+        sb.append(syntax.returningClause(returningColumnNames));
+      } catch (Exception e) {
+        util.error(e, model.tableElement());
+      }
+    }
 
     return sb.toString();
   }

@@ -32,7 +32,7 @@ as traits allows developers dealing with SQL databases to remain in a purely dec
 mindset without worrying about imperative details of SQL. This also allows the codegeneration logic
 to generate the most optimal query possible for the give inputs and output shapes.
 This "code generation of vajrams" approach also allows
-us the flexibility of generating different flavours of
+us the flexibility of generating different dialects of
 the Vajram which conforms to the declared Trait which are based on different tech stacks based on
 requirements - without changing anything about the declared models and traits. Keeping true to
 the Krystalline paradigm of reactive
@@ -682,7 +682,58 @@ public interface InsertUsers extends TraitDef<Integer> {
 - `@IncomingForeignKey` methods are excluded (not real DB columns)
 - `@ForeignKey` columns are treated as plain scalars
 - DB column names are resolved via `@Column` (falling back to method name)
-- The trait return type must be `Integer` (the number of rows inserted)
+- The trait return type must be `Integer` (the number of rows inserted), **or** a
+  `@ReturnOnInsert`-annotated interface (see below)
+
+#### Returning columns from INSERT with `@ReturnOnInsert`
+
+To return specific columns from an INSERT operation (e.g. auto-assigned IDs), define a
+`@ReturnOnInsert` interface that declares which columns should be returned. This gives you explicit
+control over what is returned, accommodating different SQL dialect rules:
+
+```java
+@ModelRoot(type = ModelRoot.ModelType.RESPONSE)
+@SupportedModelProtocol(PlainJavaObject.class)
+@ReturnOnInsert(value = true, inTable = User.class)
+public interface UserInsertResult extends Model {
+  long id(); // column to return after INSERT
+}
+```
+
+Then declare the INSERT trait's return type as your `@ReturnOnInsert` interface:
+
+```java
+// Single-row insert returning the declared columns
+@SQL @INSERT @Trait @CallGraphDelegationMode(SYNC)
+public interface InsertUserReturning extends TraitDef<UserInsertResult> {
+  interface _Inputs {
+    @IfAbsent(FAIL) User user();
+  }
+}
+
+// Multi-row batch insert returning the declared columns
+@SQL @INSERT @Trait @CallGraphDelegationMode(SYNC)
+public interface InsertUsersReturning extends TraitDef<List<UserInsertResult>> {
+  interface _Inputs {
+    @IfAbsent(FAIL) List<User> users();
+  }
+}
+```
+
+**How it works per SQL dialect:**
+
+- **`SQL_2023` / `POSTGRESQL_18`** — The generated SQL includes a `RETURNING <column>` clause. The
+  `mapResult` method iterates over the returned rows to build the result.
+- **`MYSQL_8`** — MySQL does not support the `RETURNING` clause. Instead, the generated `mapResult`
+  uses
+  [`VertxSqlInsertResultUtil`](../vertx/vajram-sql-vertx/src/main/java/com/flipkart/krystal/vajram/ext/sql/vertx/VertxSqlInsertResultUtil.java)
+  to extract the `LAST_INSERT_ID` property from the Vert.x MySQL client's `RowSet`. For batch
+  inserts, MySQL assigns sequential IDs starting from the first auto-increment value.
+
+**Compile-time constraints for `MYSQL_8`:**
+
+- Only **one** `@AutoAssignId` column is allowed per table (MySQL limitation)
+- The `@AutoAssignId` column must be of type `long`
 
 ### UPDATE / DELETE (planned)
 

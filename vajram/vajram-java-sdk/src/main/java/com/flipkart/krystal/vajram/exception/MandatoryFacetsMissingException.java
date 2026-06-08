@@ -4,27 +4,28 @@ import static java.util.Collections.unmodifiableMap;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.except.KrystalCompletionException;
+import com.flipkart.krystal.facets.Facet;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 public class MandatoryFacetsMissingException extends KrystalCompletionException {
 
   private final VajramID vajramID;
-  private final Map<String, Throwable> failedMandatoryInputs;
-  private @MonotonicNonNull String detailedMessage;
+  private final Map<Facet, Throwable> failedMandatoryFacets;
+  private @MonotonicNonNull String message;
 
   public MandatoryFacetsMissingException(
-      VajramID vajramID, Map<String, Throwable> failedMandatoryInputs) {
+      VajramID vajramID, Map<Facet, Throwable> failedMandatoryFacets) {
     this.vajramID = vajramID;
-    this.failedMandatoryInputs = unmodifiableMap(failedMandatoryInputs);
+    this.failedMandatoryFacets = unmodifiableMap(failedMandatoryFacets);
   }
 
   @Override
   public String getMessage() {
-    if (detailedMessage == null) {
-      detailedMessage = createMessage();
+    if (message == null) {
+      message = createMessage();
     }
-    return detailedMessage;
+    return message;
   }
 
   private String createMessage() {
@@ -33,15 +34,15 @@ public class MandatoryFacetsMissingException extends KrystalCompletionException 
             vajramID,
             String.join(
                 ", ",
-                failedMandatoryInputs.keySet().stream()
+                failedMandatoryFacets.keySet().stream()
                     .map(
-                        s ->
-                            "'%s' (Cause: %s)"
+                        facet ->
+                            "%s (Cause: %s)"
                                 .formatted(
-                                    s,
+                                    facet,
                                     String.valueOf(
-                                        failedMandatoryInputs
-                                            .getOrDefault(s, new RuntimeException())
+                                        failedMandatoryFacets
+                                            .getOrDefault(facet, new RuntimeException())
                                             .getMessage())))
                     .toList()));
   }

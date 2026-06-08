@@ -16,4 +16,6 @@ public @interface Table {
    * means the class name is same as the table name
    */
   String name() default "";
+
+  UniqueKey[] uniqueKeys() default {};
 }

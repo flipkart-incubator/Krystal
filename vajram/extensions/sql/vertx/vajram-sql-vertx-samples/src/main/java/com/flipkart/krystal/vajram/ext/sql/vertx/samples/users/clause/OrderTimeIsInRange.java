@@ -3,7 +3,7 @@ package com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocol;
-import com.flipkart.krystal.vajram.ext.sql.lang.SelectionPredicate;
+import com.flipkart.krystal.vajram.ext.sql.lang.ColumnPredicate;
 import com.flipkart.krystal.vajram.ext.sql.lang.WHERE;
 import com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison.IsInRange;
 import com.flipkart.krystal.vajram.ext.sql.model.Column;
@@ -18,7 +18,7 @@ import com.google.common.collect.Range;
 @ModelRoot
 @SupportedModelProtocol(PlainJavaObject.class)
 @WHERE(inTable = Order.class)
-public interface OrderTimeIsInRange extends SelectionPredicate {
+public interface OrderTimeIsInRange extends ColumnPredicate {
 
   @Column("orderTime")
   @IsInRange

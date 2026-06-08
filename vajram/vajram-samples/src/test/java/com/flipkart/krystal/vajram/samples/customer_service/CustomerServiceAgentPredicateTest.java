@@ -18,7 +18,6 @@ import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
-import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent.*;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
@@ -55,29 +54,28 @@ class CustomerServiceAgentPredicateTest {
 
     // Create and register dispatch policy
     kGraph.traitDispatchPolicies(
-        new TraitDispatchPolicies(
-            dispatchTrait(CustomerServiceAgent_Req.class, graph)
-                .conditionally(
-                    when(agentType_s, equalsEnum(L1))
-                        .and(initialCommunication_s, isInstanceOf(Call.class))
-                        .to(L1CallAgent_Req.class),
-                    when(agentType_s, equalsEnum(L1))
-                        .and(initialCommunication_s, isInstanceOf(Email.class))
-                        .to(L1EmailAgent_Req.class),
-                    when(agentType_s, equalsEnum(L2))
-                        .and(initialCommunication_s, isInstanceOf(Call.class))
-                        .to(L2CallAgent_Req.class),
-                    when(agentType_s, equalsEnum(L3))
-                        .and(initialCommunication_s, isInstanceOf(Email.class))
-                        .to(L3EmailAgent_Req.class),
-                    when(initialCommunication_s, isInstanceOf(Call.class))
-                        .to(DefaultCallAgent_Req.class),
-                    when(initialCommunication_s, isInstanceOf(Email.class))
-                        .to(DefaultEmailAgent_Req.class),
-                    // Default fallback
-                    when(agentType_s, isAnyValue())
-                        .and(initialCommunication_s, isAnyValue())
-                        .to(DefaultCustomerServiceAgent_Req.class))));
+        dispatchTrait(CustomerServiceAgent_Req.class, graph)
+            .conditionally(
+                when(agentType_s, equalsEnum(L1))
+                    .and(initialCommunication_s, isInstanceOf(Call.class))
+                    .to(L1CallAgent_Req.class),
+                when(agentType_s, equalsEnum(L1))
+                    .and(initialCommunication_s, isInstanceOf(Email.class))
+                    .to(L1EmailAgent_Req.class),
+                when(agentType_s, equalsEnum(L2))
+                    .and(initialCommunication_s, isInstanceOf(Call.class))
+                    .to(L2CallAgent_Req.class),
+                when(agentType_s, equalsEnum(L3))
+                    .and(initialCommunication_s, isInstanceOf(Email.class))
+                    .to(L3EmailAgent_Req.class),
+                when(initialCommunication_s, isInstanceOf(Call.class))
+                    .to(DefaultCallAgent_Req.class),
+                when(initialCommunication_s, isInstanceOf(Email.class))
+                    .to(DefaultEmailAgent_Req.class),
+                // Default fallback
+                when(agentType_s, isAnyValue())
+                    .and(initialCommunication_s, isAnyValue())
+                    .to(DefaultCustomerServiceAgent_Req.class)));
   }
 
   @AfterEach

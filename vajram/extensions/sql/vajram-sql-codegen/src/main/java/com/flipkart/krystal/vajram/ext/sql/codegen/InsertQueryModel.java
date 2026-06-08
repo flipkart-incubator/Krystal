@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.ext.sql.codegen;
 
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.SerdeColumnInfo;
 import java.util.List;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -20,25 +21,38 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public record InsertQueryModel(
     TypeElement tableElement,
     String tableName,
-    List<InsertColumn> columns,
+    List<TableColumn> columns,
     String inputParamName,
     boolean isList) {
+
+  @Override
+  public List<TableColumn> columns() {
+    return columns.stream().filter(TableColumn::isEligibleForInsertion).toList();
+  }
 
   /**
    * A column in the target table.
    *
    * @param columnName the DB column name (from {@code @Column} or the method name)
    * @param javaType the Java type of the column (unwrapped if Optional)
-   * @param accessorMethodName the method name on the Table model to call
    * @param isOptional {@code true} if the column's return type on the Table model is {@code
    *     Optional<T>}
    * @param serdeInfo if the column's type has {@code @SupportedModelProtocol}, the serialization
    *     info; otherwise {@code null}
+   * @param isEligibleForInsertion {@code true} if the column is eligible for insertion from
+   *     application (Ex: columns whose values are auto-assigned, like auto-incremented IDs and
+   *     current timestamp, are not)
    */
-  public record InsertColumn(
+  public record TableColumn(
+      ExecutableElement declaringMethod,
       String columnName,
       TypeMirror javaType,
-      String accessorMethodName,
       boolean isOptional,
-      @Nullable SerdeColumnInfo serdeInfo) {}
+      @Nullable SerdeColumnInfo serdeInfo,
+      boolean isEligibleForInsertion) {
+
+    public String methodName() {
+      return declaringMethod.getSimpleName().toString();
+    }
+  }
 }
