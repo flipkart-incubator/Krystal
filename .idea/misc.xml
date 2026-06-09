@@ -8,6 +8,9 @@
       <item index="3" class="java.lang.String" itemvalue="com.google.inject.Provides" />
       <item index="4" class="java.lang.String" itemvalue="jakarta.enterprise.inject.Produces" />
     </list>
+    <writeAnnotations>
+      <writeAnnotation name="io.quarkus.test.common.http.TestHTTPResource" />
+    </writeAnnotations>
   </component>
   <component name="ExternalStorageConfigurationManager" enabled="true" />
   <component name="ProjectRootManager" version="2" languageLevel="JDK_17" default="true" project-jdk-name="17" project-jdk-type="JavaSDK">

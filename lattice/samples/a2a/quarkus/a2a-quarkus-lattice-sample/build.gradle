@@ -12,7 +12,7 @@ application {
 
 dependencies {
     implementation platform("com.flipkart.krystal:lattice-bom:${lattice_version}")
-    implementation platform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
+    implementation enforcedPlatform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
     krystalModelsGenProcessor platform("com.flipkart.krystal:lattice-bom:${lattice_version}")
 
     implementation 'com.flipkart.krystal:lattice-core'
@@ -39,6 +39,7 @@ dependencies {
     compileOnly "org.projectlombok:lombok:$lombok_version"
     implementation 'org.slf4j:slf4j-api'
 
+    testImplementation 'io.quarkus:quarkus-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
     testImplementation platform('org.assertj:assertj-bom:3.27.7')

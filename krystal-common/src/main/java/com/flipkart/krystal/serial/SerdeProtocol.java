@@ -32,7 +32,8 @@ public interface SerdeProtocol<A extends Annotation, T extends SerializableModel
    * @return the serialized value. The type of the return value depends on the serde protocol and
    *     the custom config. Examples: {@link ByteArray}, {@link String}
    */
-  Object serialize(Object object, Function<Model, T> modelMapper, @Nullable A customConfig);
+  @Nullable Object serialize(
+      Object object, Function<Model, T> modelMapper, @Nullable A customConfig);
 
   /**
    * Deserializes the given payload using the given type info and custom config if possible. Else
@@ -43,5 +44,5 @@ public interface SerdeProtocol<A extends Annotation, T extends SerializableModel
    * @param customConfig custom configuration on how to deserialize
    * @return the deserialized object
    */
-  <T> T deserialize(Object payload, Object typeInfo, @Nullable A customConfig);
+  <T> @Nullable T deserialize(@Nullable Object payload, Object typeInfo, @Nullable A customConfig);
 }
