@@ -506,7 +506,7 @@ public class SqlInsertVajramGen implements CodeGenerator {
     if (defaultValue != null) {
       codeBlock =
           CodeBlock.of(
-              "$T.requireNonNullElse($L, $S)",
+              "$T.requireNonNullElse($L, $L)",
               Objects.class,
               codeBlock,
               convertDefaultValue(defaultValue, col));
@@ -537,9 +537,7 @@ public class SqlInsertVajramGen implements CodeGenerator {
             }
             case FLOAT -> Float.valueOf(defaultValueString);
             case DOUBLE -> Double.valueOf(defaultValueString);
-            default ->
-                throw new UnsupportedOperationException(
-                    "@DefaultValue is not supported for type " + typeMirror);
+            default -> CodeBlock.of("$S", defaultValueString);
           });
     } catch (Exception e) {
       util.error(e, column.declaringMethod());

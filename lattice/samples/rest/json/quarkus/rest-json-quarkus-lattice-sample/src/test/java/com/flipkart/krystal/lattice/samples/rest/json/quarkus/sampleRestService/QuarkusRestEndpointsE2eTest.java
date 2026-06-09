@@ -4,15 +4,12 @@ import static java.net.http.HttpResponse.BodyHandlers.ofString;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 
-import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.app.RestfulQuarkusApp_Impl;
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.JsonRequest_ImmutJson;
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.JsonResponse;
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.JsonResponse_ImmutJson;
 import com.flipkart.krystal.model.array.SimpleByteArray;
-import io.quarkus.runtime.Quarkus;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.Socket;
+import io.quarkus.test.common.http.TestHTTPResource;
+import io.quarkus.test.junit.QuarkusTest;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -24,9 +21,6 @@ import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.CompletionStage;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -38,54 +32,21 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
  * JVM. Run with {@code ./gradlew
  * :lattice:samples:rest:json:quarkus:rest-json-quarkus-lattice-sample:test -PunsafeCompile=true}.
  */
+@QuarkusTest
 @TestInstance(Lifecycle.PER_CLASS)
 class QuarkusRestEndpointsE2eTest {
-
-  private static final int APP_PORT = 18082;
-  private static final String BASE_URL = "http://localhost:" + APP_PORT;
   private static final Duration TIMEOUT = Duration.ofSeconds(1);
 
-  private @MonotonicNonNull HttpClient httpClient;
+  @TestHTTPResource private URI baseUri;
 
-  @BeforeAll
-  void startServer() throws Exception {
-    System.setProperty("quarkus.http.port", String.valueOf(APP_PORT));
-
-    Thread serverThread =
-        new Thread(
-            () -> {
-              try {
-                RestfulQuarkusApp_Impl.main(new String[] {});
-              } catch (Throwable t) {
-                t.printStackTrace();
-              }
-            },
-            "lattice-quarkus-test-app");
-    serverThread.setDaemon(true);
-    serverThread.start();
-
-    long deadline = System.currentTimeMillis() + 120_000L;
-    while (System.currentTimeMillis() < deadline) {
-      if (isPortOpen()) {
-        httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
-        return;
-      }
-      Thread.sleep(200);
-    }
-    throw new IllegalStateException(
-        "Embedded Quarkus server did not start on port " + APP_PORT + " within 120s");
-  }
-
-  @AfterAll
-  void stopServer() {
-    Quarkus.asyncExit();
-  }
+  private final HttpClient httpClient =
+      HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
 
   @Test
   void getMapping_returnsResponseWithQueryParams() throws Exception {
     HttpResponse<CompletionStage<JsonResponse_ImmutJson>> resp =
         httpClient.send(
-            HttpRequest.newBuilder(URI.create(BASE_URL + "/foo/bar?name=Alisha&age=42"))
+            HttpRequest.newBuilder(baseUri.resolve("foo/bar?name=Alisha&age=42"))
                 .GET()
                 .header("Accept", "application/json")
                 .build(),
@@ -110,7 +71,7 @@ class QuarkusRestEndpointsE2eTest {
 
     HttpResponse<CompletionStage<JsonResponse_ImmutJson>> resp =
         httpClient.send(
-            HttpRequest.newBuilder(URI.create(BASE_URL + "/foo/bar"))
+            HttpRequest.newBuilder(baseUri.resolve("foo/bar"))
                 .POST(BodyPublishers.ofByteArray(body._serialize()))
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")
@@ -133,21 +94,12 @@ class QuarkusRestEndpointsE2eTest {
   void headMapping_returns200WithoutBody() throws Exception {
     HttpResponse<String> resp =
         httpClient.send(
-            HttpRequest.newBuilder(URI.create(BASE_URL + "/foo/bar?name=Alisha&age=42"))
+            HttpRequest.newBuilder(baseUri.resolve("foo/bar?name=Alisha&age=42"))
                 .method("HEAD", BodyPublishers.noBody())
                 .build(),
             ofString());
     assertThat(resp.statusCode()).isEqualTo(200);
     assertThat(resp.body()).isEmpty();
-  }
-
-  private static boolean isPortOpen() {
-    try (Socket s = new Socket()) {
-      s.connect(new InetSocketAddress("localhost", APP_PORT), 250);
-      return true;
-    } catch (IOException e) {
-      return false;
-    }
   }
 
   @Test
@@ -163,7 +115,7 @@ class QuarkusRestEndpointsE2eTest {
             """;
     HttpResponse<String> resp =
         httpClient.send(
-            HttpRequest.newBuilder(URI.create(BASE_URL + "/complex/ctxA/path/nameA/p1/p2/p3/123"))
+            HttpRequest.newBuilder(baseUri.resolve("complex/ctxA/path/nameA/p1/p2/p3/123"))
                 .POST(BodyPublishers.ofString(body))
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")

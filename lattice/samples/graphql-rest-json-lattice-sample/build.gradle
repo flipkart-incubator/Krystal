@@ -8,7 +8,7 @@ plugins {
 
 dependencies {
     implementation platform("com.flipkart.krystal:lattice-bom:${lattice_version}")
-    implementation platform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
+    implementation enforcedPlatform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
     krystalModelsGenProcessor platform("com.flipkart.krystal:lattice-bom:${lattice_version}")
 
     implementation 'com.flipkart.krystal:lattice-core'
@@ -41,6 +41,8 @@ dependencies {
 
     testImplementation platform('org.assertj:assertj-bom:3.27.7')
     testImplementation 'org.assertj:assertj-core'
+
+    testImplementation 'io.quarkus:quarkus-junit5'
 
 }
 
