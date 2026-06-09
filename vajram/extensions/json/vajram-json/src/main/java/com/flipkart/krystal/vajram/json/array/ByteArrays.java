@@ -32,8 +32,8 @@ public class ByteArrays {
     @Override
     public JsonByteArray deserialize(JsonParser p, DeserializationContext context)
         throws IOException {
-      // Avoid copying of bytes by using of() instead of copyOf() - the binary value byte array
-      // should not be modified after this
+      // Avoid copying of bytes by using of() instead of copyOf() since the binary value byte array
+      // would not be modified after this
       return JsonByteArray.of(p.getBinaryValue());
     }
   }

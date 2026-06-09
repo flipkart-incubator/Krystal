@@ -10,6 +10,7 @@ import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
+import com.flipkart.krystal.codegen.common.models.CodeGenUtility.ContainerType;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.data.Failure;
 import com.flipkart.krystal.except.SkippedExecutionException;
@@ -30,6 +31,7 @@ import com.flipkart.krystal.vajram.ext.sql.lang.ReturnOnInsert;
 import com.flipkart.krystal.vajram.ext.sql.lang.SqlDialect;
 import com.flipkart.krystal.vajram.ext.sql.model.DefaultValue;
 import com.flipkart.krystal.vajram.ext.sql.model.DefaultValueStrategy;
+import com.flipkart.krystal.vajram.ext.sql.model.DefaultValueStrategy.ValueComputation;
 import com.flipkart.krystal.vajram.ext.sql.model.IncomingForeignKey;
 import com.flipkart.krystal.vajram.ext.sql.vertx.ExecuteVertxSql;
 import com.flipkart.krystal.vajram.ext.sql.vertx.codegen.InsertResultType.ReturningColumn;
@@ -45,6 +47,7 @@ import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
+import com.squareup.javapoet.TypeSpec.Builder;
 import io.vertx.sqlclient.Pool;
 import io.vertx.sqlclient.Tuple;
 import jakarta.inject.Inject;
@@ -54,7 +57,6 @@ import java.util.List;
 import java.util.Objects;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
@@ -201,9 +203,7 @@ public class SqlInsertVajramGen implements CodeGenerator {
       return null;
     }
 
-    if (!(rawResponseType instanceof DeclaredType responseType)) {
-      return null; // unexpected primitive or error type — treat as row-count
-    }
+    TypeMirror responseType = rawResponseType;
 
     TypeElement responseTypeElem =
         requireNonNull((TypeElement) util.processingEnv().getTypeUtils().asElement(responseType));
@@ -214,9 +214,9 @@ public class SqlInsertVajramGen implements CodeGenerator {
     }
 
     boolean isListResult = false;
-    if (responseTypeElem.getQualifiedName().contentEquals(List.class.getCanonicalName())) {
+    if (ContainerType.LIST.equals(util.getContainerType(responseType))) {
       isListResult = true;
-      responseType = (DeclaredType) responseType.getTypeArguments().get(0);
+      responseType = util.getContentType(responseType);
       responseTypeElem =
           requireNonNull((TypeElement) util.processingEnv().getTypeUtils().asElement(responseType));
     }
@@ -290,7 +290,7 @@ public class SqlInsertVajramGen implements CodeGenerator {
         DefaultValueStrategy defaultValueStrategy =
             tableMethod.getAnnotation(DefaultValueStrategy.class);
         return defaultValueStrategy != null
-            && defaultValueStrategy.value() == DefaultValueStrategy.ValueComputation.AUTO_ASSIGN_ID;
+            && defaultValueStrategy.value() == ValueComputation.AUTO_ASSIGN_ID;
       }
     }
     return false;
@@ -311,7 +311,7 @@ public class SqlInsertVajramGen implements CodeGenerator {
   // ─── _Inputs / _InternalFacets ────────────────────────────────────────────────
 
   private TypeSpec buildInputsInterface(ExecutableElement inputMethod) {
-    TypeSpec.Builder inputs = TypeSpec.interfaceBuilder("_Inputs").addModifiers(STATIC);
+    Builder inputs = TypeSpec.interfaceBuilder("_Inputs").addModifiers(STATIC);
     AnnotationSpec ifAbsentFail =
         AnnotationSpec.builder(IfAbsent.class)
             .addMember("value", "$T.$L", FAIL.getDeclaringClass(), "FAIL")
@@ -350,7 +350,7 @@ public class SqlInsertVajramGen implements CodeGenerator {
                     .addMember("onVajram", "$T.class", ExecuteVertxSql.class)
                     .build())
             .build();
-    TypeSpec.Builder builder =
+    Builder builder =
         TypeSpec.interfaceBuilder("_InternalFacets")
             .addModifiers(STATIC)
             .addMethod(poolField)
@@ -506,10 +506,45 @@ public class SqlInsertVajramGen implements CodeGenerator {
     if (defaultValue != null) {
       codeBlock =
           CodeBlock.of(
-              "$T.requireNonNullElse($L, $S)", Objects.class, codeBlock, defaultValue.value());
+              "$T.requireNonNullElse($L, $S)",
+              Objects.class,
+              codeBlock,
+              convertDefaultValue(defaultValue, col));
     }
 
     return codeBlock;
+  }
+
+  private CodeBlock convertDefaultValue(DefaultValue defaultValue, TableColumn column) {
+    TypeMirror typeMirror = column.javaType();
+    final String defaultValueString = defaultValue.value();
+    try {
+      return CodeBlock.of(
+          "$L",
+          switch (typeMirror.getKind()) {
+            case BOOLEAN -> Boolean.valueOf(defaultValueString);
+            case BYTE -> Byte.valueOf(defaultValueString);
+            case SHORT -> Short.valueOf(defaultValueString);
+            case INT -> Integer.valueOf(defaultValueString);
+            case LONG -> Long.valueOf(defaultValueString);
+            case CHAR -> {
+              if (defaultValueString.length() != 1) {
+                throw new IllegalArgumentException(
+                    "@DefaultValue(value) must be exactly one character long for type "
+                        + typeMirror);
+              }
+              yield defaultValueString.charAt(0);
+            }
+            case FLOAT -> Float.valueOf(defaultValueString);
+            case DOUBLE -> Double.valueOf(defaultValueString);
+            default ->
+                throw new UnsupportedOperationException(
+                    "@DefaultValue is not supported for type " + typeMirror);
+          });
+    } catch (Exception e) {
+      util.error(e, column.declaringMethod());
+      throw e;
+    }
   }
 
   /**

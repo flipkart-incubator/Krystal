@@ -10,15 +10,18 @@ import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.ParameterizedTypeName;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowSet;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.ServiceLoader.Provider;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -73,37 +76,35 @@ final class VertxSqlUtil {
 
   public String vertxColumnGetter(String rowVar, String columnName, TypeMirror type) {
     String q = "\"" + syntax.columnNameInResult(columnName) + "\"";
-    if (type.getKind() == TypeKind.LONG) {
-      return rowVar + ".getLong(" + q + ")";
+    switch (type.getKind()) {
+      case LONG:
+        return rowVar + ".getLong(" + q + ")";
+      case INT:
+        return rowVar + ".getInteger(" + q + ")";
+      case BOOLEAN:
+        return rowVar + ".getBoolean(" + q + ")";
+      case DOUBLE:
+        return rowVar + ".getDouble(" + q + ")";
+      case FLOAT:
+        return rowVar + ".getFloat(" + q + ")";
+      case SHORT:
+        return rowVar + ".getShort(" + q + ")";
     }
-    if (type.getKind() == TypeKind.INT) {
-      return rowVar + ".getInteger(" + q + ")";
+    if (util.isRawAssignable(type, String.class)) {
+      return rowVar + ".getString(" + q + ")";
     }
-    if (type.getKind() == TypeKind.BOOLEAN) {
-      return rowVar + ".getBoolean(" + q + ")";
+    if (util.isRawAssignable(type, LocalDate.class)) {
+      return rowVar + ".getLocalDate(" + q + ")";
     }
-    if (type.getKind() == TypeKind.DOUBLE) {
-      return rowVar + ".getDouble(" + q + ")";
+    if (util.isRawAssignable(type, LocalDateTime.class)) {
+      return rowVar + ".getLocalDateTime(" + q + ")";
     }
-    if (type.getKind() == TypeKind.FLOAT) {
-      return rowVar + ".getFloat(" + q + ")";
+    if (util.isRawAssignable(type, OffsetDateTime.class)) {
+      return rowVar + ".getOffsetDateTime(" + q + ")";
     }
-    if (type.getKind() == TypeKind.SHORT) {
-      return rowVar + ".getShort(" + q + ")";
+    if (util.isRawAssignable(type, UUID.class)) {
+      return rowVar + ".getUUID(" + q + ")";
     }
-    return switch (type.toString()) {
-      case "java.lang.String" -> rowVar + ".getString(" + q + ")";
-      case "java.lang.Long" -> rowVar + ".getLong(" + q + ")";
-      case "java.lang.Integer" -> rowVar + ".getInteger(" + q + ")";
-      case "java.lang.Boolean" -> rowVar + ".getBoolean(" + q + ")";
-      case "java.lang.Double" -> rowVar + ".getDouble(" + q + ")";
-      case "java.lang.Float" -> rowVar + ".getFloat(" + q + ")";
-      case "java.lang.Short" -> rowVar + ".getShort(" + q + ")";
-      case "java.time.LocalDate" -> rowVar + ".getLocalDate(" + q + ")";
-      case "java.time.LocalDateTime" -> rowVar + ".getLocalDateTime(" + q + ")";
-      case "java.time.OffsetDateTime" -> rowVar + ".getOffsetDateTime(" + q + ")";
-      case "java.util.UUID" -> rowVar + ".getUUID(" + q + ")";
-      default -> rowVar + ".getValue(" + q + ")";
-    };
+    return rowVar + ".getValue(" + q + ")";
   }
 }
