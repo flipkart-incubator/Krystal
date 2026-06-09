@@ -88,7 +88,7 @@ public final class MySqlCodeGenerator implements DialectCodeGenerator {
         SQL_RESULT_FACET,
         List.class);
     method.addStatement(
-        "$T<$T> _autoIds = $T.extractMySqlAutoIds($L, $L.rowCount())",
+        "$T<$T> _autoIds = $T.extractMySqlAutoIds($L, $L.rowCount(), 1)",
         List.class,
         Long.class,
         VertxSqlInsertResultUtil.class,

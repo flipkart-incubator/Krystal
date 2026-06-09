@@ -126,12 +126,7 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
       return deserialize(optional.orElse(null), reader);
     }
     try {
-      T deserializedValue = readValue(payload, reader);
-      if (deserializedValue != null) {
-        return deserializedValue;
-      } else {
-        throw new IllegalArgumentException("Unsupported payload type: " + payload.getClass());
-      }
+      return readValue(payload, reader);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -177,12 +172,14 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
   private static <T> @Nullable T readValue(Object payload, ObjectReader reader) throws IOException {
     if (payload instanceof JsonByteArray jsonByteArray) {
       return jsonByteArray.readFromJson(reader);
+    } else if (payload instanceof ByteArray byteArray) {
+      return reader.readValue(byteArray.newInputStream());
     } else if (payload instanceof byte[] bytes) {
       return reader.readValue(bytes);
     } else if (payload instanceof String string) {
       return reader.readValue(string);
     }
-    return null;
+    throw new IllegalArgumentException("Unsupported payload type: " + payload.getClass());
   }
 
   private Json() {}

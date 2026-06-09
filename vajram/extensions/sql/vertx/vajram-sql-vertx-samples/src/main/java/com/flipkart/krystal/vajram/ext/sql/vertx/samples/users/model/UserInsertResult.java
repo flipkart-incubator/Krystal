@@ -12,7 +12,7 @@ import com.flipkart.krystal.vajram.ext.sql.lang.ReturnOnInsert;
  */
 @ModelRoot(type = ModelRoot.ModelType.RESPONSE)
 @SupportedModelProtocol(PlainJavaObject.class)
-@ReturnOnInsert(value = true, inTable = User.class)
+@ReturnOnInsert(inTable = User.class)
 public interface UserInsertResult extends Model {
   long id();
 }

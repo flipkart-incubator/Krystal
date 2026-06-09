@@ -6,7 +6,7 @@ import static java.lang.annotation.ElementType.METHOD;
 import java.lang.annotation.Target;
 import java.time.Instant;
 
-/** Specifies the default value to be stored in a column */
+/** Specifies the strategy with which the default value to be stored in a column is computed */
 @Target(METHOD)
 public @interface DefaultValueStrategy {
   ValueComputation value();

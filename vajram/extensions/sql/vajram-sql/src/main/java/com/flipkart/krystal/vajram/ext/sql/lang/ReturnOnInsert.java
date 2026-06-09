@@ -22,7 +22,5 @@ import java.lang.annotation.Target;
  */
 @Target(TYPE)
 public @interface ReturnOnInsert {
-  boolean value();
-
   Class<? extends TableModel> inTable();
 }
