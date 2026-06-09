@@ -656,7 +656,8 @@ public class CodeGenUtility {
   public TypeMirror getTypeFromAnnotationMember(Supplier<Class<?>> supplier) {
     try {
       var clazz = supplier.get();
-      return elementUtils.getTypeElement(requireNonNull(clazz.getCanonicalName())).asType();
+      return requireNonNull(elementUtils.getTypeElement(requireNonNull(clazz.getCanonicalName())))
+          .asType();
     } catch (MirroredTypeException mte) {
       TypeMirror typeMirror = mte.getTypeMirror();
       if (typeMirror == null) {
@@ -673,6 +674,7 @@ public class CodeGenUtility {
           .map(Class::getCanonicalName)
           .map(Objects::requireNonNull)
           .map(elementUtils::getTypeElement)
+          .map(Objects::requireNonNull)
           .map(TypeElement::asType)
           .toList();
     } catch (MirroredTypesException mte) {
@@ -760,7 +762,7 @@ public class CodeGenUtility {
   }
 
   public void error(Exception e, @Nullable Element... elements) {
-    _error(e.getMessage(), elements);
+    _error(String.valueOf(e), elements);
   }
 
   private void _error(String message, @Nullable Element... elements) {

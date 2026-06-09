@@ -92,7 +92,8 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
 
   @SuppressWarnings("unchecked")
   @Override
-  public <T> T deserialize(Object payload, Object typeInfo, @Nullable JsonConfig customConfig) {
+  public <T> @Nullable T deserialize(
+      @Nullable Object payload, Object typeInfo, @Nullable JsonConfig customConfig) {
     if (typeInfo instanceof Class<?> clazz) {
       return (T) deserialize(payload, clazz, customConfig);
     } else if (typeInfo instanceof Type type) {
@@ -104,26 +105,29 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
     }
   }
 
-  public <T> T deserialize(
-      Object payload, Class<? extends T> typeInfo, @Nullable JsonConfig customConfig) {
+  public <T> @Nullable T deserialize(
+      @Nullable Object payload, Class<? extends T> typeInfo, @Nullable JsonConfig customConfig) {
     return deserialize(payload, OBJECT_READER.forType(typeInfo));
   }
 
-  public <T> T deserialize(Object payload, Type typeInfo, @Nullable JsonConfig customConfig) {
+  public <T> @Nullable T deserialize(
+      @Nullable Object payload, Type typeInfo, @Nullable JsonConfig customConfig) {
     return deserialize(payload, OBJECT_READER.forType(typeInfo));
   }
 
-  public <T> T deserialize(
-      Object payload, TypeReference<T> typeInfo, @Nullable JsonConfig customConfig) {
+  public <T> @Nullable T deserialize(
+      @Nullable Object payload, TypeReference<T> typeInfo, @Nullable JsonConfig customConfig) {
     return deserialize(payload, OBJECT_READER.forType(typeInfo));
   }
 
-  private static <T> T deserialize(Object payload, ObjectReader reader) {
+  private static <T> @Nullable T deserialize(@Nullable Object payload, ObjectReader reader) {
     if (payload == null) {
       return null;
     }
-    if (payload instanceof Optional<?> optional) {
-      return deserialize(optional.orElse(null), reader);
+    if (payload instanceof Optional<? extends @Nullable Object> optional) {
+      @SuppressWarnings("argument")
+      Object innerPayload = optional.orElse(null);
+      return deserialize(innerPayload, reader);
     }
     try {
       return readValue(payload, reader);
