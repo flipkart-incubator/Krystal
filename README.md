@@ -2,10 +2,22 @@
 
 ## Latest Releases
 
-Single Bill-Of-Materials artefact with all krystal artefacts versions defined.  
-[![Clojars Project](https://img.shields.io/clojars/v/com.flipkart.krystal/krystal-bom.svg)](https://clojars.org/com.flipkart.krystal/krystal-bom)
+### Krystal BOM
 
-#### Included artefacts:
+[![Maven Central](https://img.shields.io/maven-central/v/com.flipkart.krystal/krystal-bom.svg)](https://central.sonatype.com/artifact/com.flipkart.krystal/krystal-bom)
+
+* Software Bill-Of-Materials artefact with all krystal artefacts inclusing extensions
+* Excludes lattice related artefacts
+* Use if you want Vajram, krystex and/or krystal models:  
+
+### Lattice BOM
+
+[![Maven Central](https://img.shields.io/maven-central/v/com.flipkart.krystal/lattice-bom.svg)](https://central.sonatype.com/artifact/com.flipkart.krystal/lattice-bom)
+
+* Software Bill-Of-Materials artefact with all krystal & Lattice artefacts, including extensions
+* Use if you want lattice application framework along with vajram, krystex and krystal models: 
+
+### Included artefacts:
 
 1. `com.flipkart.krystal:krystal-common`: Contains all common data models and classes used across
    krystal project
