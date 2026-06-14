@@ -302,10 +302,5 @@ configure(subprojects.findAll {
         knownModule('com.google.googlejavaformat:google-java-format', 'com.google.googlejavaformat')
 
         module('org.apache.fory:fory-core', 'org.apache.fory.core')
-
-//        knownModule('com.flipkart.krystal:vajram-java-sdk', 'flipkart.krystal.vajram')
-//        knownModule('com.flipkart.krystal:krystal-codegen-common', 'flipkart.krystal.codegen.common')
-//        knownModule('com.flipkart.krystal:vajram-codegen-common', 'flipkart.krystal.vajram.codegen.common')
-//        module('com.flipkart.krystal:vajram-codegen', 'flipkart.krystal.vajram.codegen')
     }
 }

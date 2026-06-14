@@ -59,7 +59,6 @@ configurations.configureEach {
 }
 extraJavaModuleInfo {
     module('com.google.auto.value:auto-value-annotations', 'com.google.auto.value.annotations')
-//    module('com.flipkart.krystal:vajram-codegen', 'com.flipkart.krystal.vajram.codegen')
     module('com.google.code.findbugs:jsr305', 'com.google.code.findbugs.jsr305')
     module('com.github.kevinstern:software-and-algorithms', 'com.github.kevinstern.software.and.algorithms')
     module('javax.inject:javax.inject', 'javax.inject')
@@ -74,9 +73,6 @@ extraJavaModuleInfo {
     knownModule('jakarta.inject:jakarta.inject-api', 'jakarta.inject')
     knownModule('com.google.auto.service:auto-service-annotations', 'com.google.auto.service')
     knownModule('org.checkerframework:checker-qual', 'org.checkerframework.checker.qual')
-//    knownModule('com.flipkart.krystal:krystal-codegen-common', 'flipkart.krystal.codegen.common')
-//    knownModule('com.flipkart.krystal:vajram-codegen-common', 'flipkart.krystal.vajram.codegen.common')
-//    knownModule('com.flipkart.krystal:vajram-java-sdk', 'flipkart.krystal.vajram')
     knownModule('com.google.guava:guava', 'com.google.common')
     knownModule('com.squareup:javapoet', 'com.squareup.javapoet')
     knownModule('org.projectlombok:lombok', 'lombok')
