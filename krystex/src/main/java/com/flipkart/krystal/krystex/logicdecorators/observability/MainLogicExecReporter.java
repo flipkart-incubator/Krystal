@@ -1,6 +1,6 @@
 package com.flipkart.krystal.krystex.logicdecorators.observability;
 
-import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
+import static com.fasterxml.jackson.annotation.JsonInclude.Value.ALL_NON_NULL;
 import static com.flipkart.krystal.data.Errable.nil;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -11,6 +11,7 @@ import static java.util.concurrent.CompletableFuture.allOf;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.core.VajramID;
@@ -48,13 +49,13 @@ public final class MainLogicExecReporter
   public MainLogicExecReporter(KryonExecutionReport kryonExecutionReport) {
     this.kryonExecutionReport = kryonExecutionReport;
     objectMapper =
-        new ObjectMapper()
-            .registerModule(new JavaTimeModule())
-            .registerModule(new Jdk8Module())
-            .setSerializationInclusion(NON_NULL)
+        JsonMapper.builder()
+            .addModules(new JavaTimeModule(), new Jdk8Module())
+            .defaultPropertyInclusion(ALL_NON_NULL)
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
             .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
-            .disable(SerializationFeature.FAIL_ON_SELF_REFERENCES);
+            .disable(SerializationFeature.FAIL_ON_SELF_REFERENCES)
+            .build();
   }
 
   @Override

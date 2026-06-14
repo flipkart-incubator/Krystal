@@ -3,6 +3,7 @@ package com.flipkart.krystal.visualization;
 import static com.flipkart.krystal.visualization.StaticCallGraphHtml.generateStaticCallGraphHtml;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.InputMirror;
 import com.flipkart.krystal.model.IfAbsent;
@@ -44,7 +45,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @Slf4j
 public class StaticCallGraphGenerator {
 
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private static final ObjectMapper OBJECT_MAPPER = JsonMapper.builder().build();
 
   /**
    * Generates a static call graph from a VajramKryonGraph and returns the HTML content and
