@@ -225,9 +225,9 @@ configure(subprojects.findAll {
     }
 
     // Exclude modules which should not be published or have custom publishing config
-    // vajram-codegen has the 'java-gradle-plugin'  applied - which itself publishes to maven.
+    // krystal-gradle-plugin has the 'java-gradle-plugin'  applied - which itself publishes to maven.
     // So we need to disable it here - else it will lead to duplicate publishing
-    if (project.name !in ['vajram-lang', 'vajram-codegen'] && project.subprojects.isEmpty()) {
+    if (project.name !in ['vajram-lang', 'krystal-gradle-plugin'] && project.subprojects.isEmpty()) {
         mavenPublishing {
             configure(new JavaLibrary(new JavadocJar.Empty(),//Javadoc is not being generated on delombok-ed code - need to fix
                     true))

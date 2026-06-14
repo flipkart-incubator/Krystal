@@ -1,0 +1,28 @@
+import com.vanniktech.maven.publish.GradlePlugin
+import com.vanniktech.maven.publish.JavadocJar
+
+plugins {
+    id 'java-gradle-plugin'
+}
+
+version = project['com.flipkart.krystal.currentVersion']
+
+
+description = '''Gradle plugin for projects using the Krystal framework. 
+Tasks from this plugin are added under the group "Krystal"'''
+
+gradlePlugin {
+    plugins {
+        simplePlugin {
+            id = 'com.flipkart.krystal'
+            implementationClass = 'com.flipkart.krystal.gradle.plugin.VajramPlugin'
+        }
+    }
+}
+
+mavenPublishing {
+    configure(
+            new GradlePlugin(
+                    new JavadocJar.Empty(),//Javadoc is not being generated on delombok-ed code - need to fix
+                    true))
+}

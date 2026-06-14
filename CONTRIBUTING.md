@@ -21,7 +21,7 @@
 # Testing on Local
 
 1. After making changes to the framework,
-   run [`/usr/bin/env bash upgradeVersionAndPublishToLocal.macOS.sh`](upgradeVersionAndPublishToLocal.macOS.sh) to
+   run [`/usr/bin/env bash upgradeVersionLocal.macOS.sh`](upgradeVersionLocal.macOS.sh) to
    publish the framework changes locally such that the new changes are available to the sample
    projects
 2. Run `./gradlew test --rerun-tasks -PunsafeCompile=true` to run all tests. (`-PunsafeCompile=true` is needed temporarily to deal with a checkerframework missing class exception)

@@ -28,7 +28,7 @@ and response serialization.
 
 ```bash
 # Publish Krystal to local Maven repo first (from project root)
-./upgradeVersionAndPublishToLocal.macOS.sh
+./upgradeVersionLocal.macOS.sh
 
 # Run the sample tests
 ./gradlew :lattice:samples:rest:fory:quarkus:rest-fory-quarkus-lattice-sample:test -PunsafeCompile=true

@@ -36,7 +36,6 @@ public final class Constants {
   public static final String WRPR_SUFFIX = "_Wrpr";
 
   public static final String QUALIFIED_FACET_SEPARATOR = ":";
-  public static final String VAJRAM_MODELS_GEN_DIR_NAME = "vajramModels";
   public static final String VAJRAM_ID_CONSTANT_NAME = "_VAJRAM_ID";
 
   private Constants() {}
