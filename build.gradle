@@ -275,7 +275,6 @@ configure(subprojects.findAll {
         module('gradle-test-kit-8.14.5.jar', 'gradle.test.kit')
 
         module('ch.qos.reload4j:reload4j', 'ch.qos.reload4j')
-        module('com.flipkart.krystal:vajram-codegen', 'com.flipkart.krystal.vajram.codegen')
         module('org.abego.treelayout:org.abego.treelayout.core', 'org.abego.treelayout.core')
         module('org.antlr:ST4', 'org.antlr.antlr.ST4')
         module('org.antlr:antlr-runtime', 'org.antlr.antlr.runtime')
@@ -303,10 +302,5 @@ configure(subprojects.findAll {
         knownModule('com.google.googlejavaformat:google-java-format', 'com.google.googlejavaformat')
 
         module('org.apache.fory:fory-core', 'org.apache.fory.core')
-
-        knownModule('com.flipkart.krystal:vajram-java-sdk', 'flipkart.krystal.vajram')
-        knownModule('com.flipkart.krystal:krystal-codegen-common', 'flipkart.krystal.codegen.common')
-        knownModule('com.flipkart.krystal:vajram-codegen-common', 'flipkart.krystal.vajram.codegen.common')
-        module('com.flipkart.krystal:vajram-codegen', 'flipkart.krystal.vajram.codegen')
     }
 }

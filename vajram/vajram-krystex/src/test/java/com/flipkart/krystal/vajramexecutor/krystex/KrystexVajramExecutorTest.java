@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
-import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
+import static com.fasterxml.jackson.annotation.JsonInclude.Value.ALL_NON_NULL;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
@@ -127,13 +128,13 @@ class KrystexVajramExecutorTest {
                 InputBatchingDecorator.DECORATOR_TYPE));
     requestContext = new TestRequestContext(Optional.of("user_id_1"), 2);
     objectMapper =
-        new ObjectMapper()
-            .registerModule(new JavaTimeModule())
-            .registerModule(new Jdk8Module())
-            .setSerializationInclusion(NON_NULL)
+        JsonMapper.builder()
+            .addModules(new JavaTimeModule(), new Jdk8Module())
+            .defaultPropertyInclusion(ALL_NON_NULL)
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
             .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
-            .disable(SerializationFeature.FAIL_ON_SELF_REFERENCES);
+            .disable(SerializationFeature.FAIL_ON_SELF_REFERENCES)
+            .build();
   }
 
   @AfterEach

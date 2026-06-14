@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.samples.greet;
 
-import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
+import static com.fasterxml.jackson.annotation.JsonInclude.Value.ALL_NON_NULL;
 import static com.flipkart.krystal.data.Errable.withValue;
 import static com.google.inject.Guice.createInjector;
 import static java.lang.System.*;
@@ -11,6 +11,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
@@ -101,13 +102,12 @@ class GreetTest {
     this.requestLevelCache = new TestRequestLevelCache(graph.kryonDefinitionRegistry());
 
     this.objectMapper =
-        new ObjectMapper()
-            .registerModule(new JavaTimeModule())
-            .registerModule(new Jdk8Module())
-            .setSerializationInclusion(NON_NULL)
+        JsonMapper.builder()
+            .addModules(new JavaTimeModule(), new Jdk8Module())
+            .defaultPropertyInclusion(ALL_NON_NULL)
             .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-            .registerModule(
+            .addModule(
                 new SimpleModule()
                     .addSerializer(
                         new StdSerializer<>(Logger.class) {
@@ -117,7 +117,8 @@ class GreetTest {
                               throws IOException {
                             gen.writeString(value.toString());
                           }
-                        }));
+                        }))
+            .build();
   }
 
   @AfterEach

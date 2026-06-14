@@ -10,8 +10,7 @@ dependencies {
 
     testAnnotationProcessor project(':krystal-common')
     testAnnotationProcessor project(':krystal-codegen-common')
-    testAnnotationProcessor project(':krystal-codegen-common')
-    testKrystalModelsGenProcessor "com.flipkart.krystal:vajram-codegen:${krystal_version}"
+    testKrystalModelsGenProcessor project(':vajram:vajram-codegen')
     testAnnotationProcessor 'org.checkerframework:checker-qual'
 
     testImplementation project(':vajram:extensions:resilience4j:vajram-resilience4j')

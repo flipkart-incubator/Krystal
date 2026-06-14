@@ -58,7 +58,7 @@ dependencies {
 sourceSets {
     main {
         proto {
-            srcDir 'build/generated/sources/vajramModels/protobuf/main'
+            srcDir 'build/generated/sources/krystalModels/protobuf/main'
         }
         java {
             'build/generated/source/proto/main/java'

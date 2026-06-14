@@ -1,15 +1,15 @@
 package com.flipkart.krystal.vajram.json;
 
-import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_ABSENT;
 import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
 import static com.fasterxml.jackson.databind.SerializationFeature.FAIL_ON_EMPTY_BEANS;
 import static com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS;
 import static java.util.Objects.requireNonNullElse;
 
+import com.fasterxml.jackson.annotation.JsonInclude.Value;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
@@ -36,18 +36,20 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
 
   public static final Json JSON = new Json();
 
-  private static final ObjectMapper OBJECT_MAPPER =
-      new ObjectMapper()
-          .setSerializationInclusion(NON_ABSENT)
+  private static final JsonMapper OBJECT_MAPPER =
+      JsonMapper.builder()
+          .defaultPropertyInclusion(Value.ALL_NON_ABSENT)
           .disable(FAIL_ON_UNKNOWN_PROPERTIES)
           .disable(FAIL_ON_EMPTY_BEANS)
           .disable(WRITE_DATES_AS_TIMESTAMPS)
-          .registerModule(new GuavaModule())
-          .registerModule(new JavaTimeModule())
-          .registerModule(new Jdk8Module())
-          .registerModule(new ParameterNamesModule())
-          .registerModule(byteArrayModule())
-          .registerModule(new EnumModelModule());
+          .addModules(
+              new GuavaModule(),
+              new JavaTimeModule(),
+              new Jdk8Module(),
+              new ParameterNamesModule(),
+              byteArrayModule(),
+              new EnumModelModule())
+          .build();
 
   public static final ObjectReader OBJECT_READER = OBJECT_MAPPER.reader();
   public static final ObjectWriter OBJECT_WRITER = OBJECT_MAPPER.writer();
