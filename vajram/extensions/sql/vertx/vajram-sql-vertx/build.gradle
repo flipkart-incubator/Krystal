@@ -2,6 +2,8 @@ plugins {
     id 'com.flipkart.krystal' version "${krystal_version}"
 }
 
+description = "Vajram-SQL implementation where SQL is executed via the vertx-sql library "
+
 dependencies {
     api project(':vajram:vajram-java-sdk')
     api project(':vajram:extensions:sql:vajram-sql')

@@ -1,3 +1,6 @@
+description = "Enhances Vajram Java SDK to be able to execute sql statements in a krystal graph in a way that is compatible" +
+        " with the krystalline programming paradigm."
+
 dependencies {
     api project(':krystal-common')
 }
