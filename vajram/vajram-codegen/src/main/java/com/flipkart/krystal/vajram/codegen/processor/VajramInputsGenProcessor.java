@@ -47,7 +47,6 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
-import org.jetbrains.annotations.UnknownNullability;
 
 /**
  * Annotation processor that generates request interfaces for Vajrams whose inputs are defined
@@ -137,7 +136,7 @@ public final class VajramInputsGenProcessor extends AbstractKrystalAnnoProcessor
   }
 
   private void processInputsForVajram(
-      @UnknownNullability VajramCodeGenUtility vajramUtil,
+      VajramCodeGenUtility vajramUtil,
       TypeElement inputsInterface,
       InputsForVajram inputsForVajram) {
     String parentPackage = inputsForVajram.parentPackage();

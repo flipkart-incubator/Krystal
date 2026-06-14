@@ -24,6 +24,7 @@ include 'krystal-codegen-common'
 include 'krystal-common'
 include 'krystal-visualization'
 include 'krystex'
+include 'krystal-gradle-plugin'
 
 include 'vajram:vajram-codegen'
 include 'vajram:vajram-codegen-common'

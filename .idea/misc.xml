@@ -8,6 +8,7 @@
       <item index="3" class="java.lang.String" itemvalue="com.google.inject.Provides" />
       <item index="4" class="java.lang.String" itemvalue="jakarta.enterprise.inject.Produces" />
     </list>
+    <pattern value="org.gradle.api.Plugin" hierarchically="true" />
     <writeAnnotations>
       <writeAnnotation name="io.quarkus.test.common.http.TestHTTPResource" />
     </writeAnnotations>

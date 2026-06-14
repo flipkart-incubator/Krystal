@@ -1,11 +1,4 @@
-package com.flipkart.krystal.vajram.codegen.plugin;
-
-import static com.flipkart.krystal.codegen.common.models.CodegenPhase.FINAL;
-import static com.flipkart.krystal.codegen.common.models.CodegenPhase.MODELS;
-import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
-import static com.flipkart.krystal.codegen.common.models.Constants.MODULE_ROOT_PATH_KEY;
-import static com.flipkart.krystal.config.PropertyNames.RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME;
-import static com.flipkart.krystal.vajram.codegen.common.models.Constants.VAJRAM_MODELS_GEN_DIR_NAME;
+package com.flipkart.krystal.gradle.plugin;
 
 import java.io.File;
 import java.util.List;
@@ -21,9 +14,15 @@ import org.gradle.api.tasks.testing.Test;
 
 public class VajramPlugin implements Plugin<Project> {
 
-  static final String EMPTY_DIR = "tmp/empty";
+  // Copied from com.flipkart.krystal.codegen.common.models.Constants to avoid compile-time
+  // dependency
+  static final String CODEGEN_PHASE_KEY = "krystal.codegen.phase";
+  static final String MODULE_ROOT_PATH_KEY = "krystal.codegen.moduleRootPath";
 
+  static final String EMPTY_DIR = "tmp/empty";
+  static final String VAJRAM_MODELS_GEN_DIR_NAME = "krystalModels";
   static final String SRC_GEN_DIR = "/generated/sources/annotationProcessor/java";
+
   // Vajram models are generated in a different directory to keep the build phase inputs and
   // outputs separate -
   // This enables better caching and to deterministically reuse previous build's outputs
@@ -60,7 +59,8 @@ public class VajramPlugin implements Plugin<Project> {
         .named("test")
         .configure(
             task ->
-                task.systemProperty(RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME, true));
+                task.systemProperty(
+                    "krystal.krystex.risky.openAllVajramsToExternalInvocation", true));
   }
 
   private static void addSourceSets(
@@ -111,8 +111,8 @@ public class VajramPlugin implements Plugin<Project> {
               // is not used by this step.
               // We reassign the `destinationDirectory` to a dummy empty directory so that the
               // destination directory does not clash
-              // with the full compile step. This is so that gradle caching works optimally -
-              // gradle doesn't cache outputs of tasks which share output directories with other
+              // with the full compile step. This is so that Gradle caching works optimally -
+              // Gradle doesn't cache outputs of tasks which share output directories with other
               // tasks -
               // See:
               // https://docs.gradle.org/current/userguide/build_cache_concepts.html#concepts_overlapping_outputs
@@ -130,7 +130,7 @@ public class VajramPlugin implements Plugin<Project> {
                   .addAll(
                       List.of(
                           "-proc:only",
-                          "-A" + CODEGEN_PHASE_KEY + '=' + MODELS,
+                          "-A" + CODEGEN_PHASE_KEY + "=MODELS", // CodegenPhase.MODELS
                           "-A"
                               + MODULE_ROOT_PATH_KEY
                               + "="
@@ -163,7 +163,7 @@ public class VajramPlugin implements Plugin<Project> {
                       List.of(
 
                           // So that vajram wrappers are generated during compilation
-                          "-A" + CODEGEN_PHASE_KEY + '=' + FINAL,
+                          "-A" + CODEGEN_PHASE_KEY + "=FINAL", // CodegenPhase.FINAL
                           "-A"
                               + MODULE_ROOT_PATH_KEY
                               + "="
@@ -219,7 +219,7 @@ public class VajramPlugin implements Plugin<Project> {
               // is not essential used by this step.
               // We reassign the `destinationDirectory` to a dummy empty directory so that the
               // destination directory does not clash
-              // with the full compile step. This is so that gradle caching works optimally - gradle
+              // with the full compile step. This is so that Gradle caching works optimally - Gradle
               // doesn't cache outputs of tasks
               // which share output directories with other tasks -
               // See:
@@ -235,7 +235,10 @@ public class VajramPlugin implements Plugin<Project> {
                   .fileValue(project.file(testModelsGenDir));
               task.getOptions()
                   .getCompilerArgs()
-                  .addAll(List.of("-proc:only", "-A" + CODEGEN_PHASE_KEY + '=' + MODELS));
+                  .addAll(
+                      List.of(
+                          "-proc:only",
+                          "-A" + CODEGEN_PHASE_KEY + "=MODELS")); // CodegenPhase.MODELS
             })
         .configure(
             testKrystalModelsGen ->
