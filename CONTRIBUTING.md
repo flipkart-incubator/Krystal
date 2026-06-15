@@ -26,3 +26,13 @@
    projects
 2. Run `./gradlew test --rerun-tasks -PunsafeCompile=true` to run all tests. (`-PunsafeCompile=true` is needed temporarily to deal with a checkerframework missing class exception)
 3. Run `./gradlew build -PunsafeCompile=true` to run all tests and all code analysis checks. (`-PunsafeCompile=true` is needed temporarily to deal with a checkerframework missing class exception)
+
+# IntelliJ Plugin (Krystal Vajrams)
+
+The `krystal-intellij-plugin` module provides IDE actions and facet-aware autocomplete for authoring Vajrams.
+
+```bash
+./gradlew :krystal-intellij-plugin:runIde
+```
+
+See [`krystal-intellij-plugin/README.md`](krystal-intellij-plugin/README.md) for setup details (local IntelliJ path, Java 21 toolchain).

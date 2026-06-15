@@ -9,6 +9,7 @@ pluginManagement {
 }
 
 dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
     repositories {
         mavenLocal()
         mavenCentral()
@@ -25,6 +26,7 @@ include 'krystal-common'
 include 'krystal-visualization'
 include 'krystex'
 include 'krystal-gradle-plugin'
+include 'krystal-intellij-plugin'
 
 include 'vajram:vajram-codegen'
 include 'vajram:vajram-codegen-common'

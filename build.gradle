@@ -26,6 +26,19 @@ ext {
     kordamp_jandex_version = '2.3.0'
 }
 
+// Load the gradle.private.properties file for dev-local settings
+def privateProperties = new Properties()
+def privatePropertiesFile = rootProject.file('gradle.private.properties')
+
+if (privatePropertiesFile.exists()) {
+    privateProperties.load(new FileInputStream(privatePropertiesFile))
+
+    // 2. Inject them into Gradle's extra properties
+    privateProperties.each { key, value ->
+        extensions.extraProperties.set(key, value)
+    }
+}
+
 group = 'com.flipkart.krystal'
 configure(subprojects.findAll {
     //Only leaf projects are of interest to us
@@ -42,6 +55,7 @@ configure(subprojects.findAll {
     it.subprojects.isEmpty()
             //Exclude non java projects
             && it.name != 'code-coverage-report'
+            && it.name != 'krystal-intellij-plugin'
             // Exclude sample projects so that they are configured independently making
             // them a better representation of how clients should use krystal
             && !it.name.contains('sample')
@@ -234,7 +248,6 @@ configure(subprojects.findAll {
         }
     }
 
-
     checkerFramework {
         excludeTests = true
     }
@@ -254,53 +267,49 @@ configure(subprojects.findAll {
         }
     }
 
-
     //We need to dynamically add module info to old jars which have not yet modularized and do not have "Automatic-Module-Name" in their MANIFEST.MF
     extraJavaModuleInfo {
-        module('com.google.auto.value:auto-value', 'com.google.auto.value')
-        module('com.google.auto.service:auto-service', 'com.google.auto.auto.service')
-        module('com.google.auto.value:auto-value-annotations', 'com.google.auto.value.annotations')
-        module('com.google.auto:auto-common', 'com.google.auto.common')
-        module('com.google.code.findbugs:jsr305', 'com.google.code.findbugs.jsr305')
-        knownModule('com.google.errorprone:error_prone_annotations', 'com.google.errorprone.annotations')
-        knownModule('org.jspecify:jspecify', 'org.jspecify')
-
-        module('aopalliance:aopalliance', 'aopalliance')
-        module('com.github.kevinstern:software-and-algorithms', 'com.github.kevinstern.software.and.algorithms')
-        module('javax.cache:cache-api', 'javax.cache.api')
-        module('javax.inject:javax.inject', 'javax.inject')
-
         module('gradle-api-8.14.5.jar', 'gradle.api')
         module('gradle-installation-beacon-8.14.5.jar', 'gradle.installation.beacon')
         module('gradle-test-kit-8.14.5.jar', 'gradle.test.kit')
 
+        module('aopalliance:aopalliance', 'aopalliance')
         module('ch.qos.reload4j:reload4j', 'ch.qos.reload4j')
+        module('com.github.kevinstern:software-and-algorithms', 'com.github.kevinstern.software.and.algorithms')
+        module('com.google.auto.service:auto-service', 'com.google.auto.auto.service')
+        module('com.google.auto.value:auto-value', 'com.google.auto.value')
+        module('com.google.auto.value:auto-value-annotations', 'com.google.auto.value.annotations')
+        module('com.google.auto:auto-common', 'com.google.auto.common')
+        module('com.google.code.findbugs:jsr305', 'com.google.code.findbugs.jsr305')
+        module('javax.cache:cache-api', 'javax.cache.api')
+        module('javax.inject:javax.inject', 'javax.inject')
         module('org.abego.treelayout:org.abego.treelayout.core', 'org.abego.treelayout.core')
         module('org.antlr:ST4', 'org.antlr.antlr.ST4')
         module('org.antlr:antlr-runtime', 'org.antlr.antlr.runtime')
         module('org.antlr:antlr4', 'org.antlr.antlr4')
+        module('org.apache.fory:fory-core', 'org.apache.fory.core')
         module('org.hdrhistogram:HdrHistogram', 'org.hdrhistogram')
         module('org.latencyutils:LatencyUtils', 'org.latencyutils')
         module('org.slf4j:slf4j-reload4j', 'org.slf4j.reload4j')
 
         //These already have a module name
-        knownModule('org.checkerframework:checker-qual', 'org.checkerframework.checker.qual')
-        knownModule('org.slf4j:slf4j-api', 'org.slf4j')
-        knownModule('jakarta.inject:jakarta.inject-api', 'jakarta.inject')
-        knownModule('com.google.guava:guava', 'com.google.common')
         knownModule('com.google.auto.service:auto-service-annotations', 'com.google.auto.service')
-        knownModule('org.antlr:antlr4-runtime', 'org.antlr.antlr4.runtime')
-        knownModule('com.ibm.icu:icu4j', 'com.ibm.icu.icu4j')
-        knownModule('com.squareup:javapoet', 'com.squareup.javapoet')
-        knownModule('org.projectlombok:lombok', 'lombok')
+        knownModule('com.google.errorprone:error_prone_annotations', 'com.google.errorprone.annotations')
+        knownModule('com.google.googlejavaformat:google-java-format', 'com.google.googlejavaformat')
+        knownModule('com.google.guava:guava', 'com.google.common')
         knownModule('com.google.j2objc:j2objc-annotations', 'com.google.j2objc.annotations')
-        knownModule('org.reflections:reflections', 'org.reflections')
-        knownModule('org.javassist:javassist', 'org.javassist')
         knownModule('com.graphql-java:graphql-java', 'com.graphqljava')
         knownModule('com.graphql-java:graphql-java-extended-scalars', 'com.graphqljava.extendedscalars')
+        knownModule('com.ibm.icu:icu4j', 'com.ibm.icu.icu4j')
+        knownModule('com.squareup:javapoet', 'com.squareup.javapoet')
+        knownModule('jakarta.inject:jakarta.inject-api', 'jakarta.inject')
+        knownModule('org.antlr:antlr4-runtime', 'org.antlr.antlr4.runtime')
+        knownModule('org.checkerframework:checker-qual', 'org.checkerframework.checker.qual')
+        knownModule('org.javassist:javassist', 'org.javassist')
+        knownModule('org.jspecify:jspecify', 'org.jspecify')
+        knownModule('org.projectlombok:lombok', 'lombok')
+        knownModule('org.reflections:reflections', 'org.reflections')
+        knownModule('org.slf4j:slf4j-api', 'org.slf4j')
         knownModule('org.yaml:snakeyaml', 'org.yaml.snakeyaml')
-        knownModule('com.google.googlejavaformat:google-java-format', 'com.google.googlejavaformat')
-
-        module('org.apache.fory:fory-core', 'org.apache.fory.core')
     }
 }
