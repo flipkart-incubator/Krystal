@@ -1,7 +1,6 @@
 plugins {
     id("org.jetbrains.intellij.platform") version "2.5.0"
     id("java")
-
 }
 
 description = "IntelliJ IDEA plugin for authoring Krystal Vajrams."
@@ -55,7 +54,6 @@ tasks {
     named("prepareTestSandbox") { enabled = false }
 
     test {
-        useJUnit()
         jvmArgumentProviders.clear()
         jvmArgs = emptyList()
         systemProperties.clear()
