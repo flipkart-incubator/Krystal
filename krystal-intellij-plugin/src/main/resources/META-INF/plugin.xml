@@ -1,0 +1,51 @@
+<idea-plugin>
+  <id>com.flipkart.krystal.intellij</id>
+  <name>Krystal</name>
+  <vendor>Flipkart</vendor>
+  <description><![CDATA[
+    IntelliJ support for authoring Krystal Vajrams: code generation actions and facet-aware autocomplete.
+  ]]></description>
+
+  <depends>com.intellij.modules.platform</depends>
+  <depends>com.intellij.modules.java</depends>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <projectService serviceImplementation="com.flipkart.krystal.intellij.index.VajramFacetIndex"/>
+    <completion.contributor language="JAVA"
+                            implementationClass="com.flipkart.krystal.intellij.completion.VajramCompletionContributor"/>
+    <postStartupActivity implementation="com.flipkart.krystal.intellij.gradle.KrystalGradleSourceRootListener"/>
+  </extensions>
+
+  <actions>
+    <group id="Krystal.ActionGroup" text="Krystal" popup="true">
+      <add-to-group group-id="NewGroup" anchor="last"/>
+      <add-to-group group-id="GenerateGroup" anchor="last"/>
+      <action id="Krystal.NewVajram"
+              class="com.flipkart.krystal.intellij.actions.NewVajramAction"
+              text="Vajram"
+              description="Create a new Krystal Vajram class"/>
+      <separator/>
+      <action id="Krystal.AddInput"
+              class="com.flipkart.krystal.intellij.actions.AddInputAction"
+              text="Add Vajram Input"
+              description="Add an input facet to the current Vajram"/>
+      <action id="Krystal.AddDependency"
+              class="com.flipkart.krystal.intellij.actions.AddDependencyAction"
+              text="Add Dependency"
+              description="Add a dependency facet to the current Vajram"/>
+      <action id="Krystal.AddInjection"
+              class="com.flipkart.krystal.intellij.actions.AddInjectionAction"
+              text="Add Injection"
+              description="Add an injection facet to the current Vajram"/>
+      <separator/>
+      <action id="Krystal.GenerateOutput"
+              class="com.flipkart.krystal.intellij.actions.GenerateOutputMethodAction"
+              text="Generate Output Method"
+              description="Generate an @Output method from available facets"/>
+      <action id="Krystal.GenerateResolver"
+              class="com.flipkart.krystal.intellij.actions.GenerateResolverAction"
+              text="Generate Resolver Method"
+              description="Generate a @Resolve method for a dependency facet"/>
+    </group>
+  </actions>
+</idea-plugin>

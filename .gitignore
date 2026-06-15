@@ -2,6 +2,8 @@
 **/.gradle/
 **/build/
 **/bin/
+**/gradle.private.properties
+.intellijPlatform/
 
 ## From https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
 
@@ -45,7 +47,6 @@
 .idea/modules
 *.iml
 *.ipr
-.idea/inspectionProfiles/Project_Default.xml
 
 # File-based project format
 *.iws
