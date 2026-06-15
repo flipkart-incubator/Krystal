@@ -3,7 +3,6 @@ package com.flipkart.krystal.intellij.actions;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants._INTERNAL_FACETS_CLASS;
 
 import com.flipkart.krystal.intellij.psi.VajramPsiUtil;
-import jakarta.inject.Inject;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.project.Project;
@@ -13,20 +12,20 @@ import com.intellij.psi.PsiElementFactory;
 import com.intellij.psi.PsiField;
 import com.intellij.psi.PsiJavaFile;
 import com.intellij.psi.codeStyle.CodeStyleManager;
-import org.jetbrains.annotations.NotNull;
+import jakarta.inject.Inject;
 
 public final class AddInjectionAction extends VajramActionBase {
 
   @Override
-  protected boolean isApplicable(@NotNull PsiClass vajramClass) {
+  protected boolean isApplicable(PsiClass vajramClass) {
     return VajramPsiUtil.isVajram(vajramClass);
   }
 
   @Override
-  protected void perform(
-      @NotNull Project project, @NotNull PsiClass vajramClass, @NotNull AnActionEvent e) {
+  protected void perform(Project project, PsiClass vajramClass, AnActionEvent e) {
     String fieldName =
-        Messages.showInputDialog(project, "Injection facet name:", "Add Injection", null, "log", null);
+        Messages.showInputDialog(
+            project, "Injection facet name:", "Add Injection", null, "log", null);
     if (fieldName == null || fieldName.isBlank()) {
       return;
     }
@@ -36,8 +35,7 @@ public final class AddInjectionAction extends VajramActionBase {
     if (type == null || type.isBlank()) {
       return;
     }
-    PsiClass internalFacets =
-        VajramPsiUtil.findNestedClass(vajramClass, _INTERNAL_FACETS_CLASS);
+    PsiClass internalFacets = VajramPsiUtil.findNestedClass(vajramClass, _INTERNAL_FACETS_CLASS);
     if (internalFacets == null) {
       Messages.showErrorDialog(project, "No _InternalFacets nested type found.", "Add Injection");
       return;
@@ -53,7 +51,8 @@ public final class AddInjectionAction extends VajramActionBase {
         () -> {
           PsiElementFactory factory = PsiElementFactory.getInstance(project);
           PsiField field =
-              factory.createFieldFromText(snippet, (PsiJavaFile) internalFacets.getContainingFile());
+              factory.createFieldFromText(
+                  snippet, (PsiJavaFile) internalFacets.getContainingFile());
           internalFacets.add(field);
           CodeStyleManager.getInstance(project).reformat(internalFacets);
         });

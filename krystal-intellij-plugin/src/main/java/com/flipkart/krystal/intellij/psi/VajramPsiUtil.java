@@ -14,7 +14,6 @@ import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.JavaPsiFacade;
 import com.intellij.psi.PsiAnnotation;
@@ -37,7 +36,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import org.jetbrains.annotations.NotNull;
 
 public final class VajramPsiUtil {
 
@@ -55,8 +53,7 @@ public final class VajramPsiUtil {
     return hasAnnotation(psiClass, Trait.class);
   }
 
-  public static @org.jetbrains.annotations.Nullable PsiClass findEnclosingVajram(
-      PsiElement element) {
+  public static @Nullable PsiClass findEnclosingVajram(PsiElement element) {
     PsiClass enclosing = PsiTreeUtil.getParentOfType(element, PsiClass.class);
     while (enclosing != null) {
       if (isVajramOrTrait(enclosing)) {
@@ -67,8 +64,7 @@ public final class VajramPsiUtil {
     return null;
   }
 
-  public static @org.jetbrains.annotations.Nullable PsiClass findNestedClass(
-      PsiClass vajramClass, String nestedName) {
+  public static @Nullable PsiClass findNestedClass(PsiClass vajramClass, String nestedName) {
     for (PsiClass inner : vajramClass.getInnerClasses()) {
       if (nestedName.equals(inner.getName())) {
         return inner;
@@ -128,9 +124,7 @@ public final class VajramPsiUtil {
       FacetKind kind =
           hasAnnotation(field, Dependency.class)
               ? FacetKind.DEPENDENCY
-              : hasAnnotation(field, Inject.class)
-                  ? FacetKind.INJECTION
-                  : null;
+              : hasAnnotation(field, Inject.class) ? FacetKind.INJECTION : null;
       if (kind == null) {
         continue;
       }
@@ -157,15 +151,18 @@ public final class VajramPsiUtil {
       FacetKind kind =
           hasAnnotation(method, Dependency.class)
               ? FacetKind.DEPENDENCY
-              : hasAnnotation(method, Inject.class)
-                  ? FacetKind.INJECTION
-                  : null;
+              : hasAnnotation(method, Inject.class) ? FacetKind.INJECTION : null;
       if (kind == null) {
         continue;
       }
       facets.add(
           toFacetInfo(
-              name, kind, method.getReturnType(), method, vajramId, resolveDependencyVajramName(method)));
+              name,
+              kind,
+              method.getReturnType(),
+              method,
+              vajramId,
+              resolveDependencyVajramName(method)));
     }
     return facets;
   }
@@ -176,7 +173,7 @@ public final class VajramPsiUtil {
       PsiType type,
       PsiElement element,
       String vajramId,
-      @org.jetbrains.annotations.Nullable String dependencyVajramName) {
+      @Nullable String dependencyVajramName) {
     boolean mandatory = isMandatoryOnServer(element);
     boolean optionalForClient = isOptionalForClient(element);
     String qualifiedName = vajramId + QUALIFIED_FACET_SEPARATOR + name;
@@ -203,8 +200,7 @@ public final class VajramPsiUtil {
     return owner.getAnnotation(IfAbsent.class.getName()) == null;
   }
 
-  private static @org.jetbrains.annotations.Nullable String resolveDependencyVajramName(
-      PsiElement element) {
+  private static @Nullable String resolveDependencyVajramName(PsiElement element) {
     if (!(element instanceof PsiModifierListOwner owner)) {
       return null;
     }
@@ -278,7 +274,7 @@ public final class VajramPsiUtil {
     return constants;
   }
 
-  public static @org.jetbrains.annotations.Nullable PsiMethod findOutputMethod(PsiClass vajramClass) {
+  public static @Nullable PsiMethod findOutputMethod(PsiClass vajramClass) {
     for (PsiMethod method : vajramClass.getMethods()) {
       if (hasAnnotation(method, Output.class)) {
         return method;
@@ -287,8 +283,7 @@ public final class VajramPsiUtil {
     return null;
   }
 
-  public static boolean hasAnnotation(
-      PsiElement element, @NotNull Class<? extends Annotation> annotation) {
+  public static boolean hasAnnotation(PsiElement element, Class<? extends Annotation> annotation) {
     return element instanceof PsiModifierListOwner owner
         && owner.getAnnotation(annotation.getName()) != null;
   }
@@ -308,7 +303,7 @@ public final class VajramPsiUtil {
     return idx >= 0 ? fqn.substring(idx + 1) : fqn;
   }
 
-  public static @org.jetbrains.annotations.Nullable PsiClassType resolveDependencyVajramClass(
+  public static @Nullable PsiClassType resolveDependencyVajramClass(
       Project project, GlobalSearchScope scope, FacetInfo dependencyFacet) {
     if (dependencyFacet.dependencyVajramName() == null) {
       return null;

@@ -7,12 +7,9 @@ import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.openapi.vfs.newvfs.BulkFileListener;
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent;
 import com.intellij.psi.PsiManager;
-import java.nio.file.Path;
 import java.util.List;
 import kotlin.Unit;
 import kotlin.coroutines.Continuation;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /** Marks Krystal Gradle generated source directories when they appear on disk. */
 public final class KrystalGradleSourceRootListener implements ProjectActivity {
@@ -23,14 +20,15 @@ public final class KrystalGradleSourceRootListener implements ProjectActivity {
       "build/generated/sources/annotationProcessor/java/main";
 
   @Override
-  public @Nullable Object execute(@NotNull Project project, @NotNull Continuation<? super Unit> $completion) {
-    project.getMessageBus()
+  public Object execute(Project project, Continuation<? super Unit> continuation) {
+    project
+        .getMessageBus()
         .connect()
         .subscribe(
             VirtualFileManager.VFS_CHANGES,
             new BulkFileListener() {
               @Override
-              public void after(@NotNull List<? extends VFileEvent> events) {
+              public void after(List<? extends VFileEvent> events) {
                 for (VFileEvent event : events) {
                   VirtualFile file = event.getFile();
                   if (file != null) {

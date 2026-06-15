@@ -17,7 +17,7 @@ import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.util.ProcessingContext;
-import org.jetbrains.annotations.NotNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class VajramCompletionContributor extends CompletionContributor {
 
@@ -28,9 +28,9 @@ public final class VajramCompletionContributor extends CompletionContributor {
         new CompletionProvider<>() {
           @Override
           protected void addCompletions(
-              @NotNull CompletionParameters parameters,
-              @NotNull ProcessingContext context,
-              @NotNull CompletionResultSet result) {
+              CompletionParameters parameters,
+              ProcessingContext context,
+              CompletionResultSet result) {
             PsiElement position = parameters.getPosition();
             VajramContextDetector.ContextKind kind = VajramContextDetector.detect(position);
             if (kind == VajramContextDetector.ContextKind.NONE) {
@@ -68,11 +68,13 @@ public final class VajramCompletionContributor extends CompletionContributor {
   }
 
   private static void suggestDependencyFacetConstants(
-      VajramFacetIndex index, VajramInfo vajramInfo, GlobalSearchScope scope, CompletionResultSet result) {
+      VajramFacetIndex index,
+      VajramInfo vajramInfo,
+      GlobalSearchScope scope,
+      CompletionResultSet result) {
     for (String constant : index.getGeneratedFacetNameConstants(vajramInfo, scope)) {
       result.addElement(
-          LookupElementBuilder.create(constant)
-              .withTypeText(vajramInfo.facetsClassName(), true));
+          LookupElementBuilder.create(constant).withTypeText(vajramInfo.facetsClassName(), true));
     }
     for (FacetInfo facet : index.getDependencyFacets(vajramInfo.vajramClass())) {
       result.addElement(
@@ -106,8 +108,7 @@ public final class VajramCompletionContributor extends CompletionContributor {
                     LookupElementBuilder.create(constant)
                         .withTypeText(depFacet.dependencyVajramName() + "_Req", true));
               }
-              for (FacetInfo input :
-                  index.getDependencyInputFacets(depFacet, scope)) {
+              for (FacetInfo input : index.getDependencyInputFacets(depFacet, scope)) {
                 result.addElement(
                     LookupElementBuilder.create(input.facetNameConstant())
                         .withTypeText("predicted", true)
@@ -116,8 +117,7 @@ public final class VajramCompletionContributor extends CompletionContributor {
             });
   }
 
-  private static @org.jetbrains.annotations.Nullable String findSelectedDependencyFacetName(
-      PsiElement position) {
+  private static @Nullable String findSelectedDependencyFacetName(PsiElement position) {
     PsiClass vajramClass = VajramPsiUtil.findEnclosingVajram(position);
     if (vajramClass == null) {
       return null;

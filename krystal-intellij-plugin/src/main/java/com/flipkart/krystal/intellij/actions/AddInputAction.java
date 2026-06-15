@@ -1,6 +1,5 @@
 package com.flipkart.krystal.intellij.actions;
 
-import static com.flipkart.krystal.vajram.codegen.common.models.Constants.REQUEST_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants._INPUTS_CLASS;
 
 import com.flipkart.krystal.intellij.psi.VajramPsiUtil;
@@ -14,21 +13,24 @@ import com.intellij.psi.PsiElementFactory;
 import com.intellij.psi.PsiJavaFile;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.codeStyle.CodeStyleManager;
-import org.jetbrains.annotations.NotNull;
 
 public final class AddInputAction extends VajramActionBase {
 
   @Override
-  protected boolean isApplicable(@NotNull PsiClass vajramClass) {
+  protected boolean isApplicable(PsiClass vajramClass) {
     return VajramPsiUtil.isVajramOrTrait(vajramClass);
   }
 
   @Override
-  protected void perform(
-      @NotNull Project project, @NotNull PsiClass vajramClass, @NotNull AnActionEvent e) {
+  protected void perform(Project project, PsiClass vajramClass, AnActionEvent e) {
     String name =
         Messages.showInputDialog(
-            project, "Input facet name (lowerCamelCase):", "Add Vajram Input", null, "exampleInput", null);
+            project,
+            "Input facet name (lowerCamelCase):",
+            "Add Vajram Input",
+            null,
+            "exampleInput",
+            null);
     if (name == null || name.isBlank()) {
       return;
     }
@@ -47,11 +49,7 @@ public final class AddInputAction extends VajramActionBase {
         @%s(%s.FAIL)
         %s %s();
         """
-            .formatted(
-                IfAbsent.class.getName(),
-                IfAbsent.IfAbsentThen.class.getName(),
-                type,
-                name);
+            .formatted(IfAbsent.class.getName(), IfAbsent.IfAbsentThen.class.getName(), type, name);
     WriteCommandAction.runWriteCommandAction(
         project,
         () -> {

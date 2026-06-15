@@ -31,6 +31,11 @@ Build plugin distribution:
 ./gradlew :krystal-intellij-plugin:buildPlugin
 ```
 
+Note: `instrumentCode` is disabled in this module's Gradle config so that `compileTestJava` and unit
+tests work without downloading `java-compiler-ant-tasks` from JetBrains Maven. Re-enable
+`instrumentCode` before publishing a production plugin zip if your environment can reach JetBrains
+repositories (or has the dependency cached).
+
 ## Requirements
 
 - Java 21 toolchain (matches IntelliJ Platform 2025.3+)

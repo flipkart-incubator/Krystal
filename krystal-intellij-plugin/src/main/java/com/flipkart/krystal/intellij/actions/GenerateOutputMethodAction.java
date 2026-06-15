@@ -13,18 +13,17 @@ import com.intellij.psi.PsiElementFactory;
 import com.intellij.psi.PsiJavaFile;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.codeStyle.CodeStyleManager;
-import org.jetbrains.annotations.NotNull;
 
 public final class GenerateOutputMethodAction extends VajramActionBase {
 
   @Override
-  protected boolean isApplicable(@NotNull PsiClass vajramClass) {
-    return VajramPsiUtil.isVajram(vajramClass) && VajramPsiUtil.findOutputMethod(vajramClass) == null;
+  protected boolean isApplicable(PsiClass vajramClass) {
+    return VajramPsiUtil.isVajram(vajramClass)
+        && VajramPsiUtil.findOutputMethod(vajramClass) == null;
   }
 
   @Override
-  protected void perform(
-      @NotNull Project project, @NotNull PsiClass vajramClass, @NotNull AnActionEvent e) {
+  protected void perform(Project project, PsiClass vajramClass, AnActionEvent e) {
     String returnType =
         Messages.showInputDialog(
             project, "Output return type:", "Generate Output Method", null, "String", null);

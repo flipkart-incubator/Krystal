@@ -5,16 +5,15 @@ import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.actionSystem.LangDataKeys;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiDirectory;
 import com.intellij.psi.PsiFileFactory;
 import com.intellij.psi.PsiManager;
-import com.intellij.openapi.vfs.VirtualFile;
-import org.jetbrains.annotations.NotNull;
 
 public final class NewVajramAction extends com.intellij.openapi.actionSystem.AnAction {
 
   @Override
-  public void actionPerformed(@NotNull AnActionEvent e) {
+  public void actionPerformed(AnActionEvent e) {
     Project project = e.getProject();
     PsiDirectory directory = getTargetDirectory(e);
     if (project == null || directory == null) {
@@ -27,7 +26,9 @@ public final class NewVajramAction extends com.intellij.openapi.actionSystem.AnA
       return;
     }
     String packageName =
-        com.intellij.psi.JavaDirectoryService.getInstance().getPackage(directory).getQualifiedName();
+        com.intellij.psi.JavaDirectoryService.getInstance()
+            .getPackage(directory)
+            .getQualifiedName();
     String template =
         """
         package %s;
@@ -67,9 +68,10 @@ public final class NewVajramAction extends com.intellij.openapi.actionSystem.AnA
   }
 
   private static PsiDirectory getTargetDirectory(AnActionEvent e) {
-    PsiDirectory directory = e.getData(LangDataKeys.IDE_VIEW) != null
-        ? e.getData(LangDataKeys.IDE_VIEW).getOrChooseDirectory()
-        : null;
+    PsiDirectory directory =
+        e.getData(LangDataKeys.IDE_VIEW) != null
+            ? e.getData(LangDataKeys.IDE_VIEW).getOrChooseDirectory()
+            : null;
     if (directory != null) {
       return directory;
     }

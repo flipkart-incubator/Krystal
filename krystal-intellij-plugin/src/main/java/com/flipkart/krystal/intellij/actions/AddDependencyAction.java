@@ -14,36 +14,40 @@ import com.intellij.psi.PsiElementFactory;
 import com.intellij.psi.PsiJavaFile;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.codeStyle.CodeStyleManager;
-import org.jetbrains.annotations.NotNull;
 
 public final class AddDependencyAction extends VajramActionBase {
 
   @Override
-  protected boolean isApplicable(@NotNull PsiClass vajramClass) {
+  protected boolean isApplicable(PsiClass vajramClass) {
     return VajramPsiUtil.isVajram(vajramClass);
   }
 
   @Override
-  protected void perform(
-      @NotNull Project project, @NotNull PsiClass vajramClass, @NotNull AnActionEvent e) {
+  protected void perform(Project project, PsiClass vajramClass, AnActionEvent e) {
     String facetName =
-        Messages.showInputDialog(project, "Dependency facet name:", "Add Dependency", null, "dep", null);
+        Messages.showInputDialog(
+            project, "Dependency facet name:", "Add Dependency", null, "dep", null);
     if (facetName == null || facetName.isBlank()) {
       return;
     }
     String depVajram =
         Messages.showInputDialog(
-            project, "Dependency vajram class (simple name):", "Add Dependency", null, "OtherVajram", null);
+            project,
+            "Dependency vajram class (simple name):",
+            "Add Dependency",
+            null,
+            "OtherVajram",
+            null);
     if (depVajram == null || depVajram.isBlank()) {
       return;
     }
     String returnType =
-        Messages.showInputDialog(project, "Dependency return type:", "Add Dependency", null, "Object", null);
+        Messages.showInputDialog(
+            project, "Dependency return type:", "Add Dependency", null, "Object", null);
     if (returnType == null || returnType.isBlank()) {
       return;
     }
-    PsiClass internalFacets =
-        VajramPsiUtil.findNestedClass(vajramClass, _INTERNAL_FACETS_CLASS);
+    PsiClass internalFacets = VajramPsiUtil.findNestedClass(vajramClass, _INTERNAL_FACETS_CLASS);
     if (internalFacets == null) {
       Messages.showErrorDialog(project, "No _InternalFacets nested type found.", "Add Dependency");
       return;
@@ -66,7 +70,8 @@ public final class AddDependencyAction extends VajramActionBase {
         () -> {
           PsiElementFactory factory = PsiElementFactory.getInstance(project);
           PsiMethod method =
-              factory.createMethodFromText(snippet, (PsiJavaFile) internalFacets.getContainingFile());
+              factory.createMethodFromText(
+                  snippet, (PsiJavaFile) internalFacets.getContainingFile());
           internalFacets.add(method);
           CodeStyleManager.getInstance(project).reformat(internalFacets);
         });

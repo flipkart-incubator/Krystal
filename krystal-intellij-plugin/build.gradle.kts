@@ -1,10 +1,8 @@
 plugins {
     id("org.jetbrains.intellij.platform") version "2.5.0"
     id("java")
-}
 
-group = "com.flipkart.krystal"
-version = project.findProperty("com.flipkart.krystal.currentVersion") ?: "0.0.0-SNAPSHOT"
+}
 
 description = "IntelliJ IDEA plugin for authoring Krystal Vajrams."
 
@@ -25,9 +23,9 @@ dependencies {
         bundledPlugins("com.intellij.java")
     }
     compileOnly(project(":vajram:vajram-codegen-common"))
-    compileOnly("jakarta.inject:jakarta.inject-api:2.0.1")
-    compileOnly("org.checkerframework:checker-qual:3.48.4")
-    testImplementation("junit:junit:4.13.2")
+    compileOnly("jakarta.inject:jakarta.inject-api")
+    compileOnly("org.checkerframework:checker-qual")
+    testCompileOnly(project(":vajram:vajram-codegen-common"))
 }
 
 java {
@@ -46,7 +44,24 @@ intellijPlatform {
 }
 
 tasks {
+    // compileTestJava depends on instrumentCode, which downloads java-compiler-ant-tasks
+    // from JetBrains Maven. Disable for unit-test compilation; re-enable for buildPlugin if needed.
+    named("instrumentCode") { enabled = false }
+    named("instrumentTestCode") { enabled = false }
+
+    // IntelliJ Platform plugin configures the default `test` task with IDE sandbox JVM args.
+    // Use plain JUnit for lightweight unit tests in this module.
+    named("prepareTest") { enabled = false }
+    named("prepareTestSandbox") { enabled = false }
+
     test {
         useJUnit()
+        jvmArgumentProviders.clear()
+        jvmArgs = emptyList()
+        systemProperties.clear()
     }
+}
+
+extraJavaModuleInfo {
+    failOnMissingModuleInfo = false
 }

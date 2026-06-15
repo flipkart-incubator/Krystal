@@ -18,20 +18,19 @@ import com.intellij.psi.PsiJavaFile;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.codeStyle.CodeStyleManager;
 import java.util.List;
-import org.jetbrains.annotations.NotNull;
 
 public final class GenerateResolverAction extends VajramActionBase {
 
   @Override
-  protected boolean isApplicable(@NotNull PsiClass vajramClass) {
+  protected boolean isApplicable(PsiClass vajramClass) {
     return VajramPsiUtil.isVajram(vajramClass)
-        && !VajramFacetIndex.getInstance(vajramClass.getProject()).getDependencyFacets(vajramClass)
+        && !VajramFacetIndex.getInstance(vajramClass.getProject())
+            .getDependencyFacets(vajramClass)
             .isEmpty();
   }
 
   @Override
-  protected void perform(
-      @NotNull Project project, @NotNull PsiClass vajramClass, @NotNull AnActionEvent e) {
+  protected void perform(Project project, PsiClass vajramClass, AnActionEvent e) {
     VajramFacetIndex index = VajramFacetIndex.getInstance(project);
     List<FacetInfo> dependencies = index.getDependencyFacets(vajramClass);
     String[] names = dependencies.stream().map(FacetInfo::name).toArray(String[]::new);
@@ -52,8 +51,7 @@ public final class GenerateResolverAction extends VajramActionBase {
     String depInputsConstant = "input_n";
     if (dependency.dependencyVajramName() != null) {
       List<FacetInfo> depInputs =
-          index.getDependencyInputFacets(
-              dependency, vajramClass.getResolveScope());
+          index.getDependencyInputFacets(dependency, vajramClass.getResolveScope());
       if (!depInputs.isEmpty()) {
         depInputsConstant =
             dependency.dependencyVajramName()
@@ -85,7 +83,9 @@ public final class GenerateResolverAction extends VajramActionBase {
                 depInputsConstant,
                 dependency.type().getPresentableText(),
                 capitalize(dependency.name()),
-                dependency.dependencyVajramName() != null ? dependency.dependencyVajramName() : "Dep",
+                dependency.dependencyVajramName() != null
+                    ? dependency.dependencyVajramName()
+                    : "Dep",
                 VajramPsiUtil.collectFacets(vajramClass).stream()
                     .filter(f -> f.name().equals(sourceFacet))
                     .findFirst()

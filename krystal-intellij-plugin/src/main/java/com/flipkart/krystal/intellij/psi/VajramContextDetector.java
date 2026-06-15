@@ -13,7 +13,7 @@ import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiNameValuePair;
 import com.intellij.psi.PsiParameter;
 import com.intellij.psi.util.PsiTreeUtil;
-import org.jetbrains.annotations.Nullable;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class VajramContextDetector {
 
@@ -35,7 +35,8 @@ public final class VajramContextDetector {
       return ContextKind.NONE;
     }
     PsiMethod outputMethod = VajramPsiUtil.findOutputMethod(vajramClass);
-    if (outputMethod != null && PsiTreeUtil.isAncestor(outputMethod.getParameterList(), element, false)) {
+    if (outputMethod != null
+        && PsiTreeUtil.isAncestor(outputMethod.getParameterList(), element, false)) {
       return ContextKind.OUTPUT_METHOD_PARAMETERS;
     }
     PsiMethod resolveMethod = PsiTreeUtil.getParentOfType(element, PsiMethod.class);
@@ -53,8 +54,7 @@ public final class VajramContextDetector {
         && ref.getParent() instanceof PsiNameValuePair pair
         && "onVajram".equals(pair.getName())) {
       PsiAnnotation dependency = PsiTreeUtil.getParentOfType(pair, PsiAnnotation.class);
-      if (dependency != null
-          && Dependency.class.getName().equals(dependency.getQualifiedName())) {
+      if (dependency != null && Dependency.class.getName().equals(dependency.getQualifiedName())) {
         return ContextKind.DEPENDENCY_ON_VAJRAM;
       }
     }

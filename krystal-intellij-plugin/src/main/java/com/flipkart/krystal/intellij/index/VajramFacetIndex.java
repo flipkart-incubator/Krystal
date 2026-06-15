@@ -9,44 +9,40 @@ import com.intellij.psi.PsiClass;
 import com.intellij.psi.search.GlobalSearchScope;
 import java.util.List;
 import java.util.Optional;
-import org.jetbrains.annotations.NotNull;
 
 @Service(Service.Level.PROJECT)
 public final class VajramFacetIndex {
 
   private final Project project;
 
-  public VajramFacetIndex(@NotNull Project project) {
+  public VajramFacetIndex(Project project) {
     this.project = project;
   }
 
-  public static VajramFacetIndex getInstance(@NotNull Project project) {
+  public static VajramFacetIndex getInstance(Project project) {
     return project.getService(VajramFacetIndex.class);
   }
 
-  public List<FacetInfo> getFacets(@NotNull PsiClass vajramClass) {
+  public List<FacetInfo> getFacets(PsiClass vajramClass) {
     return VajramPsiUtil.collectFacets(vajramClass);
   }
 
-  public List<FacetInfo> getOutputAvailableFacets(@NotNull PsiClass vajramClass) {
+  public List<FacetInfo> getOutputAvailableFacets(PsiClass vajramClass) {
     return getFacets(vajramClass);
   }
 
-  public List<FacetInfo> getDependencyFacets(@NotNull PsiClass vajramClass) {
-    return getFacets(vajramClass).stream()
-        .filter(f -> f.kind() == FacetKind.DEPENDENCY)
-        .toList();
+  public List<FacetInfo> getDependencyFacets(PsiClass vajramClass) {
+    return getFacets(vajramClass).stream().filter(f -> f.kind() == FacetKind.DEPENDENCY).toList();
   }
 
-  public Optional<FacetInfo> findDependencyFacet(
-      @NotNull PsiClass vajramClass, @NotNull String facetName) {
+  public Optional<FacetInfo> findDependencyFacet(PsiClass vajramClass, String facetName) {
     return getDependencyFacets(vajramClass).stream()
         .filter(f -> f.name().equals(facetName))
         .findFirst();
   }
 
   public List<FacetInfo> getDependencyInputFacets(
-      @NotNull FacetInfo dependencyFacet, @NotNull GlobalSearchScope scope) {
+      FacetInfo dependencyFacet, GlobalSearchScope scope) {
     if (dependencyFacet.dependencyVajramName() == null) {
       return List.of();
     }
@@ -62,7 +58,7 @@ public final class VajramFacetIndex {
   }
 
   public List<String> getGeneratedFacetNameConstants(
-      @NotNull VajramInfo vajramInfo, @NotNull GlobalSearchScope scope) {
+      VajramInfo vajramInfo, GlobalSearchScope scope) {
     String qualifiedName = vajramInfo.vajramClass().getQualifiedName();
     if (qualifiedName == null) {
       return List.of();
@@ -73,9 +69,7 @@ public final class VajramFacetIndex {
   }
 
   public List<String> getGeneratedRequestInputConstants(
-      @NotNull String dependencyVajramName,
-      @NotNull PsiClass currentVajram,
-      @NotNull GlobalSearchScope scope) {
+      String dependencyVajramName, PsiClass currentVajram, GlobalSearchScope scope) {
     PsiClass depVajram =
         com.intellij.psi.JavaPsiFacade.getInstance(project).findClass(dependencyVajramName, scope);
     if (depVajram == null) {
@@ -90,7 +84,7 @@ public final class VajramFacetIndex {
     return VajramPsiUtil.collectGeneratedStringConstants(project, scope, requestFqn);
   }
 
-  public List<PsiClass> getAllVajrams(@NotNull GlobalSearchScope scope) {
+  public List<PsiClass> getAllVajrams(GlobalSearchScope scope) {
     return VajramPsiUtil.findAllVajrams(project, scope);
   }
 }
