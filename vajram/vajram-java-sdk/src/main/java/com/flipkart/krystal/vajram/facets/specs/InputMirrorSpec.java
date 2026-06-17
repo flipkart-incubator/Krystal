@@ -31,7 +31,6 @@ public final class InputMirrorSpec<T, CV extends Request> implements InputMirror
   private final Callable<ElementTags> tagsParser;
 
   public InputMirrorSpec(
-      int id,
       String name,
       VajramID ofVajramID,
       DataType<T> type,

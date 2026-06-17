@@ -10,11 +10,10 @@ import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-public non-sealed class OptionalOne2OneDepSpec<T, CV extends Request, DV extends Request<T>>
+public final class OptionalOne2OneDepSpec<T, CV extends Request, DV extends Request<T>>
     extends One2OneDepSpec<T, CV, DV> implements OptionalSingleValueFacetSpec<T, CV> {
 
   public OptionalOne2OneDepSpec(
-      int id,
       String name,
       VajramID vajramID,
       DataType<T> type,
@@ -27,7 +26,6 @@ public non-sealed class OptionalOne2OneDepSpec<T, CV extends Request, DV extends
       Function<FacetValues, One2OneDepResponse<DV, T>> getFromFacets,
       BiConsumer<FacetValues, One2OneDepResponse<DV, T>> setToFacets) {
     super(
-        id,
         name,
         vajramID,
         type,

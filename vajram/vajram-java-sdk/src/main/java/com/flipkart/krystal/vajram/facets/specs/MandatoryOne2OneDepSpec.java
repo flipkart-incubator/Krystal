@@ -14,7 +14,6 @@ public final class MandatoryOne2OneDepSpec<T, CV extends Request, DV extends Req
     extends One2OneDepSpec<T, CV, DV> implements MandatorySingleValueFacetSpec<T, CV> {
 
   public MandatoryOne2OneDepSpec(
-      int id,
       String name,
       VajramID vajramID,
       DataType<T> type,
@@ -27,7 +26,6 @@ public final class MandatoryOne2OneDepSpec<T, CV extends Request, DV extends Req
       Function<FacetValues, One2OneDepResponse<DV, T>> getFromFacets,
       BiConsumer<FacetValues, One2OneDepResponse<DV, T>> setToFacets) {
     super(
-        id,
         name,
         vajramID,
         type,

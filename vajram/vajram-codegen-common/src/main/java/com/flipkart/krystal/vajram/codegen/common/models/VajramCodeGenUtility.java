@@ -15,7 +15,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
-import static java.util.Objects.requireNonNullElseGet;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 
 import com.flipkart.krystal.annos.ComputeDelegationMode;
@@ -55,8 +54,6 @@ import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FacetIdNameMapping;
 import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
 import com.google.common.base.Splitter;
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.squareup.javapoet.ClassName;
@@ -71,8 +68,6 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Random;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -222,14 +217,11 @@ public class VajramCodeGenUtility {
               .toString();
     }
     Optional<Element> internalFacetsClass = getInternalFacetsClass(vajramClass);
-    BiMap<String, Integer> givenIdsByName = HashBiMap.create();
-    Set<Integer> takenFacetIds = givenIdsByName.values();
     List<Element> internalFacetElements = extractFacetElements(internalFacetsClass.orElse(null));
     List<Element> dependencyElements =
         internalFacetElements.stream()
             .filter(element -> element.getAnnotation(Dependency.class) != null)
             .toList();
-    AtomicInteger nextFacetId = new AtomicInteger(1);
     ComputeDelegationMode outputLogicDelegationMode;
     if (vajramInfoLite.isTrait()) {
       // Traits don't have output logic, so there is not outputLogicDelegationMode
@@ -258,13 +250,7 @@ public class VajramCodeGenUtility {
             dependencyElements.stream()
                 .map(
                     depElement ->
-                        Optional.ofNullable(
-                            toDependencyModel(
-                                vajramInfoLite,
-                                depElement,
-                                givenIdsByName,
-                                takenFacetIds,
-                                nextFacetId)))
+                        Optional.ofNullable(toDependencyModel(vajramInfoLite, depElement)))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .collect(toImmutableList()),
@@ -417,28 +403,11 @@ public class VajramCodeGenUtility {
     return facetType;
   }
 
-  private static int getNextAvailableFacetId(
-      Set<Integer> takenFacetIds, AtomicInteger nextFacetId) {
-    while (takenFacetIds.contains(nextFacetId.get())) {
-      nextFacetId.getAndIncrement();
-    }
-    return nextFacetId.getAndIncrement();
-  }
-
-  private @Nullable DependencyModel toDependencyModel(
-      VajramInfoLite vajramInfo,
-      Element depField,
-      BiMap<String, Integer> givenIdsByName,
-      Set<Integer> takenFacetIds,
-      AtomicInteger nextFacetId) {
+  private @Nullable DependencyModel toDependencyModel(VajramInfoLite vajramInfo, Element depField) {
     VajramID vajramId = vajramInfo.vajramId();
     String facetName = depField.getSimpleName().toString();
-    Dependency dependency = depField.getAnnotation(Dependency.class);
+    Dependency dependency = requireNonNull(depField.getAnnotation(Dependency.class));
     DependencyModelBuilder depBuilder = DependencyModel.builder().facetElement(depField);
-    depBuilder.id(
-        requireNonNullElseGet(
-            givenIdsByName.get(facetName),
-            () -> getNextAvailableFacetId(takenFacetIds, nextFacetId)));
     depBuilder.name(facetName);
     Optional<TypeElement> vajramReqType =
         Optional.of(codegenUtil.getTypeElemFromAnnotationMember(dependency::withVajramReq))
@@ -503,7 +472,6 @@ public class VajramCodeGenUtility {
               .dataType(declaredFieldDataType)
               .vajramId(vajramInfo.inputsInfo().vajramId())
               .build();
-      givenIdsByName.putIfAbsent(facetName, depModel.id());
       return depModel;
     }
     String message =
@@ -621,7 +589,7 @@ public class VajramCodeGenUtility {
         .map(
             facetSpecField -> {
               FacetIdNameMapping facetIdNameMapping =
-                  facetSpecField.getAnnotation(FacetIdNameMapping.class);
+                  requireNonNull(facetSpecField.getAnnotation(FacetIdNameMapping.class));
               return new FacetDetail(
                   facetIdNameMapping.name(),
                   facetSpecField

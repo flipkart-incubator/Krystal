@@ -23,7 +23,6 @@ public abstract sealed class DefaultFacetSpec<T, CV extends Request>
   private final BiConsumer<FacetValues, @Nullable T> setToFacets;
 
   public DefaultFacetSpec(
-      int id,
       String name,
       VajramID ofVajramID,
       DataType<T> type,
@@ -34,7 +33,7 @@ public abstract sealed class DefaultFacetSpec<T, CV extends Request>
       Callable<ElementTags> tagsParser,
       Function<FacetValues, @Nullable T> getFromFacets,
       BiConsumer<FacetValues, @Nullable T> setToFacets) {
-    super(id, name, ofVajramID, type, facetType, ofVajram, documentation, isBatched, tagsParser);
+    super(name, ofVajramID, type, facetType, ofVajram, documentation, isBatched, tagsParser);
     this.getFromFacets = getFromFacets;
     this.setToFacets = setToFacets;
   }

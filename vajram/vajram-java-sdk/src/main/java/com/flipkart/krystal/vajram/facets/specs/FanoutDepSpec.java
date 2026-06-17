@@ -29,7 +29,6 @@ public abstract sealed class FanoutDepSpec<T, CV extends Request<?>, DV extends 
   private final BiConsumer<FacetValues, FanoutDepResponses<DV, T>> setToFacets;
 
   public FanoutDepSpec(
-      int id,
       String name,
       VajramID ofVajramID,
       DataType<T> type,
@@ -42,7 +41,6 @@ public abstract sealed class FanoutDepSpec<T, CV extends Request<?>, DV extends 
       Function<FacetValues, FanoutDepResponses<DV, T>> getFromFacets,
       BiConsumer<FacetValues, FanoutDepResponses<DV, T>> setToFacets) {
     super(
-        id,
         name,
         ofVajramID,
         type,
