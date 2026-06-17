@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.facets.specs;
 
 import static com.flipkart.krystal.tags.ElementTags.emptyTags;
-import static org.reflections.Reflections.log;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Request;
@@ -33,7 +32,6 @@ public abstract sealed class AbstractFacetSpec<T, CV extends Request> extends Ab
   private final Callable<ElementTags> tagsParser;
 
   public AbstractFacetSpec(
-      int id,
       String name,
       VajramID ofVajramID,
       DataType<T> type,

@@ -15,7 +15,6 @@ public final class OptionalFacetDefaultSpec<T, CV extends Request> extends Defau
     implements OptionalSingleValueFacetSpec<T, CV> {
 
   public OptionalFacetDefaultSpec(
-      int id,
       String name,
       VajramID ofVajramID,
       DataType<T> type,
@@ -27,7 +26,6 @@ public final class OptionalFacetDefaultSpec<T, CV extends Request> extends Defau
       Function<FacetValues, @Nullable T> getFromFacets,
       BiConsumer<FacetValues, @Nullable T> setToFacets) {
     super(
-        id,
         name,
         ofVajramID,
         type,

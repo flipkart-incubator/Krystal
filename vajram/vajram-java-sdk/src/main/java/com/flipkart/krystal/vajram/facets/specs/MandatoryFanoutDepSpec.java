@@ -24,7 +24,6 @@ public final class MandatoryFanoutDepSpec<T, CV extends Request<?>, DV extends R
     extends FanoutDepSpec<T, CV, DV> implements MandatoryFacetSpec<T, CV> {
 
   public MandatoryFanoutDepSpec(
-      int id,
       String name,
       VajramID vajramID,
       DataType<T> type,
@@ -37,7 +36,6 @@ public final class MandatoryFanoutDepSpec<T, CV extends Request<?>, DV extends R
       Function<FacetValues, FanoutDepResponses<DV, T>> getFromFacets,
       BiConsumer<FacetValues, FanoutDepResponses<DV, T>> setToFacets) {
     super(
-        id,
         name,
         vajramID,
         type,

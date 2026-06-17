@@ -1271,7 +1271,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
     if (facetGenModel.isBatched()) {
       util.error(
           "Cannot use batch facet '%s' as direct input param for output logic"
-              .formatted(facetGenModel.id()),
+              .formatted(facetGenModel.name()),
           param);
     }
     return CodeBlock.of("$L", facetGenModel.name());
@@ -2840,12 +2840,10 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
           .add(
               """
                   new $T<>(
-                    $L,
                     $S,
                     $T.$L,
                   """,
               specType,
-              facet.id(),
               facet.name(),
               inputsInfo.requestInterfaceClassName(),
               VAJRAM_ID_CONSTANT_NAME)

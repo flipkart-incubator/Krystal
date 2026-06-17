@@ -43,16 +43,6 @@ intellijPlatform {
 }
 
 tasks {
-    // compileTestJava depends on instrumentCode, which downloads java-compiler-ant-tasks
-    // from JetBrains Maven. Disable for unit-test compilation; re-enable for buildPlugin if needed.
-    named("instrumentCode") { enabled = false }
-    named("instrumentTestCode") { enabled = false }
-
-    // IntelliJ Platform plugin configures the default `test` task with IDE sandbox JVM args.
-    // Use plain JUnit for lightweight unit tests in this module.
-    named("prepareTest") { enabled = false }
-    named("prepareTestSandbox") { enabled = false }
-
     test {
         jvmArgumentProviders.clear()
         jvmArgs = emptyList()

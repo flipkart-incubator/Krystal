@@ -30,7 +30,6 @@ public abstract sealed class DependencySpec<T, CV extends Request, DV extends Re
   private final VajramID onVajramID;
 
   public DependencySpec(
-      int id,
       String name,
       VajramID ofVajramID,
       DataType<T> dataType,
@@ -40,8 +39,7 @@ public abstract sealed class DependencySpec<T, CV extends Request, DV extends Re
       String documentation,
       boolean isBatched,
       Callable<ElementTags> tagsParser) {
-    super(
-        id, name, ofVajramID, dataType, DEPENDENCY, ofVajram, documentation, isBatched, tagsParser);
+    super(name, ofVajramID, dataType, DEPENDENCY, ofVajram, documentation, isBatched, tagsParser);
     this.onVajram = onVajram;
     this.onVajramID = onVajramID;
   }

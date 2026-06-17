@@ -29,7 +29,6 @@ public abstract sealed class One2OneDepSpec<T, CV extends Request, DV extends Re
   private final BiConsumer<FacetValues, One2OneDepResponse<DV, T>> setToFacets;
 
   public One2OneDepSpec(
-      int id,
       String name,
       VajramID ofVajramID,
       DataType<T> type,
@@ -42,7 +41,6 @@ public abstract sealed class One2OneDepSpec<T, CV extends Request, DV extends Re
       Function<FacetValues, One2OneDepResponse<DV, T>> getFromFacets,
       BiConsumer<FacetValues, One2OneDepResponse<DV, T>> setToFacets) {
     super(
-        id,
         name,
         ofVajramID,
         type,

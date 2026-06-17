@@ -24,7 +24,6 @@ public final class OptionalFanoutDepSpec<T, CV extends Request<?>, DV extends Re
     extends FanoutDepSpec<T, CV, DV> implements OptionalFacetSpec<T, CV> {
 
   public OptionalFanoutDepSpec(
-      int id,
       String name,
       VajramID vajramID,
       DataType<T> type,
@@ -37,7 +36,6 @@ public final class OptionalFanoutDepSpec<T, CV extends Request<?>, DV extends Re
       Function<FacetValues, FanoutDepResponses<DV, T>> getFromFacets,
       BiConsumer<FacetValues, FanoutDepResponses<DV, T>> setToFacets) {
     super(
-        id,
         name,
         vajramID,
         type,

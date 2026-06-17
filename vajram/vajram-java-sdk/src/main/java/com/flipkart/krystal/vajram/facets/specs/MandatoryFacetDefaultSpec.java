@@ -15,7 +15,6 @@ public final class MandatoryFacetDefaultSpec<T, CV extends Request> extends Defa
     implements MandatorySingleValueFacetSpec<T, CV> {
 
   public MandatoryFacetDefaultSpec(
-      int id,
       String name,
       VajramID ofVajramID,
       DataType<T> type,
@@ -27,7 +26,6 @@ public final class MandatoryFacetDefaultSpec<T, CV extends Request> extends Defa
       Function<FacetValues, @Nullable T> getFromFacets,
       BiConsumer<FacetValues, @Nullable T> setToFacets) {
     super(
-        id,
         name,
         ofVajramID,
         type,
