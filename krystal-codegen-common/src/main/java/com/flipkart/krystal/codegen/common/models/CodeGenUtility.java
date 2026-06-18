@@ -1482,14 +1482,14 @@ public class CodeGenUtility {
   }
 
   public <T extends Annotation> @Nullable AnnotationMirror getAnnotationMirror(
-      AnnotatedConstruct annotatedElement, Class<T> annoClass) {
-    return getAnnotationMirror(annotatedElement, requireNonNull(annoClass.getCanonicalName()));
+      AnnotatedConstruct annotatedConstruct, Class<T> annoClass) {
+    return getAnnotationMirror(annotatedConstruct, requireNonNull(annoClass.getCanonicalName()));
   }
 
   public @Nullable AnnotationMirror getAnnotationMirror(
-      AnnotatedConstruct annotatedElement, String annoClassCanonicalName) {
+      AnnotatedConstruct annotatedConstruct, String annoClassCanonicalName) {
     Optional<? extends AnnotationMirror> any =
-        annotatedElement.getAnnotationMirrors().stream()
+        annotatedConstruct.getAnnotationMirrors().stream()
             .filter(
                 annotationMirror ->
                     annotationMirror.getAnnotationType().asElement() instanceof QualifiedNameable q
@@ -1499,7 +1499,7 @@ public class CodeGenUtility {
   }
 
   public <T extends Annotation> @Nullable AnnotationInfo<T> getAnnotationInfo(
-      AnnotatedConstruct annotatedElement, Class<T> annoClass) {
+      Element annotatedElement, Class<T> annoClass) {
     T annotation = annotatedElement.getAnnotation(annoClass);
     Optional<? extends AnnotationMirror> mirror =
         annotatedElement.getAnnotationMirrors().stream()

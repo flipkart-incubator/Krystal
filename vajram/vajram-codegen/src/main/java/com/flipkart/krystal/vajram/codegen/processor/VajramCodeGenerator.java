@@ -2134,7 +2134,9 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
           ParameterSpec.builder(
                   facetFieldType
                       .javaTypeName(facet)
-                      .annotated(annotations(facetFieldType.typeAnnotations(facet, codeGenParams))),
+                      .annotated(
+                          annotations(
+                              facetFieldType.additionalTypeAnnotations(facet, codeGenParams))),
                   facet.name())
               .build();
       boolean isInput = facet.facetType().equals(INPUT);
@@ -2144,7 +2146,9 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
               FieldSpec.builder(
                   facetFieldType
                       .javaTypeName(facet)
-                      .annotated(annotations(facetFieldType.typeAnnotations(facet, codeGenParams))),
+                      .annotated(
+                          annotations(
+                              facetFieldType.additionalTypeAnnotations(facet, codeGenParams))),
                   facet.name(),
                   PRIVATE);
           if (codeGenParams.isBuilder()) {
@@ -2262,7 +2266,8 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
             .returns(
                 returnType
                     .javaTypeName(facet)
-                    .annotated(annotations(returnType.typeAnnotations(facet, codeGenParams))));
+                    .annotated(
+                        annotations(returnType.additionalTypeAnnotations(facet, codeGenParams))));
 
     if (codeGenParams.isModelRoot()) {
       String documentation = facet.documentation();
@@ -2633,7 +2638,8 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
               .returns(
                   returnType
                       .javaTypeName(facet)
-                      .annotated(annotations(returnType.typeAnnotations(facet, codeGenParams))))
+                      .annotated(
+                          annotations(returnType.additionalTypeAnnotations(facet, codeGenParams))))
               .build());
     }
     batchItemsIface
@@ -2724,7 +2730,8 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
               .returns(
                   returnType
                       .javaTypeName(facet)
-                      .annotated(annotations(returnType.typeAnnotations(facet, codeGenParams))))
+                      .annotated(
+                          annotations(returnType.additionalTypeAnnotations(facet, codeGenParams))))
               .addStatement(returnType.fieldGetterCode(facet, codeGenParams));
       if (facet.isGiven()) {
         getter.addAnnotation(Include.class);

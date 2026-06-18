@@ -9,6 +9,7 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
+import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.vajram.ext.sql.vertx.ExecuteVertxSql;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderAmountGtPredicate;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderAmountLtePredicate;
@@ -1163,15 +1164,14 @@ class SqlTraitIntegrationTest {
     assertThat(verifyFuture)
         .succeedsWithin(TIMEOUT)
         .satisfies(
-            orders -> {
-              assertThat(orders.stream().filter(o -> o.orderId() == 999L).findFirst())
-                  .isPresent()
-                  .hasValueSatisfying(
-                      o -> {
-                        assertThat(o.userId()).isEqualTo(1L);
-                        assertThat(o.amountCents()).isEqualTo(7500L);
-                      });
-            });
+            orders ->
+                assertThat(orders.stream().filter(o -> o.orderId() == 999L).findFirst())
+                    .isPresent()
+                    .hasValueSatisfying(
+                        o -> {
+                          assertThat(o.userId()).isEqualTo(1L);
+                          assertThat(o.amountCents()).isEqualTo(7500L);
+                        }));
 
     // Cleanup
     runSql("DELETE FROM OrderEntity WHERE orderId = 999");
@@ -1417,8 +1417,8 @@ class SqlTraitIntegrationTest {
         .bindTrait(GetUserWithAddressById_Req.class)
         .to(GetUserWithAddressById_VertxSql_Req.class);
 
-    kGraph
-        .traitDispatchPolicies(
+    kGraph.traitDispatchPolicies(
+        new TraitDispatchPolicies(
             Stream.of(
                     GetUserInfoById_Req._VAJRAM_ID,
                     GetOrderInfoByUserId_Req._VAJRAM_ID,
@@ -1439,8 +1439,7 @@ class SqlTraitIntegrationTest {
                     InsertUsersReturning_Req._VAJRAM_ID,
                     GetUserWithAddressById_Req._VAJRAM_ID)
                 .map(vajramID -> new GuiceyStaticDispatchPolicy(vajramGraph, vajramID, traitBinder))
-                .toList())
-        .build();
+                .toList()));
     return kGraph
         .build()
         .createExecutor(

@@ -12,6 +12,7 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
+import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.vajram.graphql.api.execution.GraphQLQuery;
 import com.flipkart.krystal.vajram.graphql.api.execution.GraphQlExecutionFacade;
 import com.flipkart.krystal.vajram.graphql.api.schema.GraphQlInitializer;
@@ -74,8 +75,9 @@ public class VajramGraphQlTest {
             .build();
     this.kGraph = KrystexGraph.builder().vajramGraph(vGraph);
     kGraph.traitDispatchPolicies(
-        PredicateDispatchUtil.dispatchTrait(GraphQlOperationAggregate_Req.class, vGraph)
-            .alwaysTo(Query_GQlAggr_Req.class));
+        new TraitDispatchPolicies(
+            PredicateDispatchUtil.dispatchTrait(GraphQlOperationAggregate_Req.class, vGraph)
+                .alwaysTo(Query_GQlAggr_Req.class)));
   }
 
   @AfterEach
