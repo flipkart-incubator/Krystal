@@ -6,6 +6,7 @@ import com.flipkart.krystal.lattice.core.doping.SimpleDopantSpec;
 import com.flipkart.krystal.lattice.core.doping.SimpleDopantSpecBuilder;
 import com.flipkart.krystal.lattice.ext.rest.RestServiceDopantSpec;
 import com.flipkart.krystal.lattice.graphql.rest.dispatch.GraphQlOperationExecutor;
+import com.flipkart.krystal.lattice.krystex.KrystexDopantSpec;
 import com.flipkart.krystal.lattice.krystex.KrystexDopantSpec.KrystexDopantSpecBuilder;
 import com.flipkart.krystal.lattice.vajram.VajramDopantSpec;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationDispatch;
@@ -29,8 +30,7 @@ public record GraphQlOverRestSpec(
       GraphQlOperationDispatch graphQlOperationDispatch) {
     krystexDopantSpecBuilder.configureExecutorWith(
         graphQlOperationExecutor.asKryonExecutorConfigurator());
-    krystexDopantSpecBuilder.buildKrystexGraphWith(
-        kg -> kg.traitDispatchPolicies(graphQlOperationDispatch));
+    krystexDopantSpecBuilder.traitDispatchPolicies(graphQlOperationDispatch);
   }
 
   @Override
@@ -43,7 +43,8 @@ public record GraphQlOverRestSpec(
 
     @Override
     public List<DopantSpecBuilder<?, ?, ?>> getAdditionalDopants() {
-      return List.of(VajramDopantSpec.builder(), RestServiceDopantSpec.builder());
+      return List.of(
+          VajramDopantSpec.builder(), KrystexDopantSpec.builder(), RestServiceDopantSpec.builder());
     }
   }
 }

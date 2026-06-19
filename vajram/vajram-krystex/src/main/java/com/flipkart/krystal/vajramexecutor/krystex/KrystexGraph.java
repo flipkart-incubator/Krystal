@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
 import static java.util.Objects.requireNonNull;
+import static java.util.Objects.requireNonNullElseGet;
 import static lombok.AccessLevel.PACKAGE;
 
 import com.flipkart.krystal.core.VajramID;
@@ -22,10 +23,6 @@ import com.flipkart.krystal.vajramexecutor.krystex.batching.InputBatchingDecorat
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.KryonInputInjector;
 import com.flipkart.krystal.vajramexecutor.krystex.traits.DefaultTraitDispatcher;
 import com.google.common.collect.ImmutableList;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import lombok.Builder;
@@ -55,11 +52,12 @@ public final class KrystexGraph {
   @Builder
   private KrystexGraph(
       @NonNull VajramGraph vajramGraph,
-      Collection<? extends TraitDispatchPolicy> traitDispatchPolicies,
+      @Nullable TraitDispatchPolicies traitDispatchPolicies,
       @Nullable InputBatcherConfig inputBatcherConfig,
       @Nullable VajramInjectionProvider injectionProvider) {
     this.vajramGraph = vajramGraph;
-    this.traitDispatchPolicies = new TraitDispatchPolicies(traitDispatchPolicies);
+    this.traitDispatchPolicies =
+        requireNonNullElseGet(traitDispatchPolicies, TraitDispatchPolicies::new);
     this.traitDispatchDecorator =
         new DefaultTraitDispatcher(vajramGraph, this.traitDispatchPolicies);
     this.inputInjectionConfig = create(injectionProvider, vajramGraph);
@@ -166,21 +164,5 @@ public final class KrystexGraph {
     return configBuilder ->
         configBuilder.outputLogicDecoratorConfig(
             InputBatchingDecorator.DECORATOR_TYPE, batchingDecoratorConfig);
-  }
-
-  public static class KrystexGraphBuilder {
-    @SuppressWarnings("MismatchedQueryAndUpdateOfCollection") // Used by lombok
-    private final List<TraitDispatchPolicy> traitDispatchPolicies = new ArrayList<>();
-
-    public KrystexGraphBuilder traitDispatchPolicies(
-        Collection<? extends TraitDispatchPolicy> traitDispatchPolicies) {
-      this.traitDispatchPolicies.addAll(traitDispatchPolicies);
-      return this;
-    }
-
-    public KrystexGraphBuilder traitDispatchPolicies(TraitDispatchPolicy... traitDispatchPolicies) {
-      this.traitDispatchPolicies.addAll(Arrays.asList(traitDispatchPolicies));
-      return this;
-    }
   }
 }

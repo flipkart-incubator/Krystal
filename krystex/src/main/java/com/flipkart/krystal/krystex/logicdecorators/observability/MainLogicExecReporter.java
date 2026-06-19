@@ -33,7 +33,6 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -91,10 +90,7 @@ public final class MainLogicExecReporter
       /*
        Report logic end
       */
-      allOf(
-              input.facetValueResponses().stream()
-                  .map(ExecutionItem::response)
-                  .toArray(CompletableFuture[]::new))
+      allOf(input.responseFutures())
           .whenComplete(
               (unused, throwable) ->
                   kryonExecutionReport.reportMainLogicEnd(

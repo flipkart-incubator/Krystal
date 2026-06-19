@@ -14,6 +14,7 @@ import com.flipkart.krystal.vajram.facets.FacetValidation;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.TypeName;
 import java.util.Optional;
+import javax.lang.model.type.TypeMirror;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public abstract sealed class FacetJavaType {
@@ -64,7 +65,7 @@ public abstract sealed class FacetJavaType {
     }
   }
 
-  public Class<?>[] typeAnnotations(FacetGenModel facet, CodeGenParams codeGenParams) {
+  public Class<?>[] additionalTypeAnnotations(FacetGenModel facet, CodeGenParams codeGenParams) {
     return new Class[] {};
   }
 
@@ -76,18 +77,21 @@ public abstract sealed class FacetJavaType {
 
     @Override
     public TypeName javaTypeName(FacetGenModel facet) {
-      CodeGenType dataType = facet.dataType();
-      return util.codegenUtil().getTypeName(dataType).typeName();
+      return util.codegenUtil().getTypeName(facet.dataType()).typeName();
     }
 
     @Override
-    public Class<?>[] typeAnnotations(FacetGenModel facet, CodeGenParams codeGenParams) {
+    public Class<?>[] additionalTypeAnnotations(FacetGenModel facet, CodeGenParams codeGenParams) {
       if (!(facet instanceof DependencyModel)
           && !javaTypeName(facet).isPrimitive()
           && !codeGenParams.isSubsetBatch()) {
-        return new Class[] {Nullable.class};
+        TypeMirror typeMirror = facet.dataType().typeMirror(util.processingEnv());
+        if (util.codegenUtil().getAnnotationMirror(typeMirror, Nullable.class) == null) {
+          // Since declared type doesn't have @Nullable, we add it
+          return new Class[] {Nullable.class};
+        }
       }
-      return super.typeAnnotations(facet, codeGenParams);
+      return super.additionalTypeAnnotations(facet, codeGenParams);
     }
 
     @Override
@@ -126,8 +130,15 @@ public abstract sealed class FacetJavaType {
     }
 
     @Override
-    public Class<?>[] typeAnnotations(FacetGenModel facet, CodeGenParams codeGenParams) {
-      return new Class<?>[] {Nullable.class};
+    public Class<?>[] additionalTypeAnnotations(FacetGenModel facet, CodeGenParams codeGenParams) {
+      if (util.codegenUtil()
+              .getAnnotationMirror(
+                  facet.dataType().typeMirror(util.processingEnv()), Nullable.class)
+          == null) {
+        // Since declared type doesn't have @Nullable, we add it
+        return new Class<?>[] {Nullable.class};
+      }
+      return super.additionalTypeAnnotations(facet, codeGenParams);
     }
   }
 

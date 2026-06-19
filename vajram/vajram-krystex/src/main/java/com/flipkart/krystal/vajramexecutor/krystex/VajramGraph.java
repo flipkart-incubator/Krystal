@@ -91,8 +91,21 @@ public final class VajramGraph {
   private final Set<VajramID> vajramExecutables =
       Collections.synchronizedSet(new LinkedHashSet<>());
 
+  private final boolean ignoreMissingDependencies;
+
+  /**
+   * @param packagePrefixes Load all vajrams within these packages and their sub-packages
+   * @param classes Load all this classes
+   * @param ignoreMissingDependencies if a vajram's dependency is missing, don't throw an error
+   *     while loading the graph. Throw an error during vajram execution instead (if the dependency
+   *     is invoked).
+   */
   @lombok.Builder
-  private VajramGraph(Set<String> packagePrefixes, Set<Class<? extends VajramDefRoot>> classes) {
+  private VajramGraph(
+      Set<String> packagePrefixes,
+      Set<Class<? extends VajramDefRoot>> classes,
+      boolean ignoreMissingDependencies) {
+    this.ignoreMissingDependencies = ignoreMissingDependencies;
     LogicDefinitionRegistry logicDefinitionRegistry = new LogicDefinitionRegistry();
     this.kryonDefinitionRegistry = new KryonDefinitionRegistry(logicDefinitionRegistry);
     this.logicRegistryDecorator = new LogicDefRegistryDecorator(logicDefinitionRegistry);
@@ -238,7 +251,14 @@ public final class VajramGraph {
     }
     tagParsingInProgress.put(vajramID, true);
     try {
-      VajramDefinition vajramDefinition = getVajramDefinition(vajramID);
+      VajramDefinition vajramDefinition = vajramDefinitions.get(vajramID);
+      if (vajramDefinition == null) {
+        if (ignoreMissingDependencies) {
+          return emptyTags();
+        } else {
+          throw new IllegalStateException("Vajram definition not found for vajramID: " + vajramID);
+        }
+      }
       List<ElementTags> depVajramTags =
           vajramDefinition.facetSpecs().stream()
               .filter(DependencySpec.class::isInstance)
@@ -456,8 +476,13 @@ public final class VajramGraph {
       var vajramID = dependency.onVajramID();
       VajramDefinition dependencyVajram = vajramDefinitions.get(vajramID);
       if (dependencyVajram == null) {
-        throw new VajramDefinitionException(
-            "Unable to find vajram for vajramId %s".formatted(vajramID));
+        String message = "Unable to find vajram for vajramId " + vajramID;
+        if (ignoreMissingDependencies) {
+          log.warn(message);
+          continue;
+        } else {
+          throw new VajramDefinitionException(message);
+        }
       }
       loadKryonSubgraph(dependencyVajram.vajramId(), loadingInProgress);
     }
