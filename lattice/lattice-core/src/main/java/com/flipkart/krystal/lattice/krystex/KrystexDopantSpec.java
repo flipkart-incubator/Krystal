@@ -36,6 +36,7 @@ public record KrystexDopantSpec(
   public KrystexDopantSpec {
     buildKrystexGraphWith = requireNonNullElse(buildKrystexGraphWith, List.of());
     configureExecutorWith = requireNonNullElse(configureExecutorWith, ImmutableList.of());
+    traitDispatchPolicies = requireNonNullElse(traitDispatchPolicies, ImmutableList.of());
   }
 
   @Override
