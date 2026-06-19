@@ -59,7 +59,6 @@ import javax.lang.model.util.ElementFilter;
   "com.flipkart.krystal.facets.InputsForVajram",
   "com.flipkart.krystal.facets.ImportVajramInputs"
 })
-@SupportedSourceVersion(SourceVersion.RELEASE_17)
 @AutoService(Processor.class)
 @SupportedOptions({CODEGEN_PHASE_KEY, MODULE_ROOT_PATH_KEY})
 @RunOnlyWhenCodegenPhaseIs(MODELS)

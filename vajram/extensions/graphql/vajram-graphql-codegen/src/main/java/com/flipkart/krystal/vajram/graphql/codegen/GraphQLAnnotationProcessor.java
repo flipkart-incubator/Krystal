@@ -21,7 +21,6 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
 
 @SupportedAnnotationTypes("*")
-@SupportedSourceVersion(SourceVersion.RELEASE_17)
 @AutoService(Processor.class)
 @SupportedOptions({CODEGEN_PHASE_KEY, MODULE_ROOT_PATH_KEY})
 @RunOnlyWhenCodegenPhaseIs(MODELS)

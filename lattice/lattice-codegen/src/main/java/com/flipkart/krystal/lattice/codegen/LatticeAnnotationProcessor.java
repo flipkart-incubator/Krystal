@@ -24,7 +24,6 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
 
 @SupportedAnnotationTypes("com.flipkart.krystal.lattice.core.LatticeApp")
-@SupportedSourceVersion(SourceVersion.RELEASE_17)
 @AutoService(Processor.class)
 @SupportedOptions({CODEGEN_PHASE_KEY, MODULE_ROOT_PATH_KEY})
 public class LatticeAnnotationProcessor extends AbstractKrystalAnnoProcessor {

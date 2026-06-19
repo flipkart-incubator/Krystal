@@ -22,6 +22,7 @@ import java.util.Objects;
 import java.util.ServiceLoader;
 import java.util.Set;
 import javax.annotation.processing.RoundEnvironment;
+import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;

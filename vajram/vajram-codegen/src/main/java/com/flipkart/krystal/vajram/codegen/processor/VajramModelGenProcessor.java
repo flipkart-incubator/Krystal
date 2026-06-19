@@ -17,7 +17,6 @@ import javax.lang.model.SourceVersion;
   "com.flipkart.krystal.vajram.Trait",
   "com.flipkart.krystal.annos.Generated"
 })
-@SupportedSourceVersion(SourceVersion.RELEASE_17)
 @AutoService(Processor.class)
 @SupportedOptions({CODEGEN_PHASE_KEY, MODULE_ROOT_PATH_KEY})
 @RunOnlyWhenCodegenPhaseIs(MODELS)

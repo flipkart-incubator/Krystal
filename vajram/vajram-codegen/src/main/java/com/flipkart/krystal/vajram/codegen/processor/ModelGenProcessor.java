@@ -43,7 +43,6 @@ import javax.lang.model.util.ElementFilter;
   "com.flipkart.krystal.model.ModelRoot",
   "com.flipkart.krystal.model.ImportModels"
 })
-@SupportedSourceVersion(SourceVersion.RELEASE_17)
 @AutoService(Processor.class)
 @SupportedOptions({CODEGEN_PHASE_KEY, MODULE_ROOT_PATH_KEY})
 public final class ModelGenProcessor extends AbstractKrystalAnnoProcessor {
