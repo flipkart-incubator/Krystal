@@ -63,7 +63,6 @@ import com.flipkart.krystal.traits.StaticDispatchPolicy;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -432,29 +431,28 @@ public final class KryonExecutor implements KrystalExecutor {
     }
   }
 
-  @CanIgnoreReturnValue
-  private Kryon<? extends KryonCommand<?>, ? extends KryonCommandResponse> createKryonIfAbsent(
-      VajramID vajramID, VajramKryonDefinition kryonDefinition) {
-    return kryonRegistry.createIfAbsent(
-        vajramID,
-        _n ->
-            switch (executorConfig.kryonExecStrategy()) {
-              case BATCH ->
-                  new BatchKryon(
-                      kryonDefinition,
-                      this,
-                      this::getOutputLogicDecorators,
-                      this::getDependencyDecorators,
-                      executorConfig.decorationOrdering(),
-                      preferredReqGenerator);
-              case DIRECT ->
-                  new DirectKryon(
-                      kryonDefinition,
-                      this,
-                      this::getOutputLogicDecorators,
-                      this::getDependencyDecorators,
-                      executorConfig.decorationOrdering());
-            });
+  private void createKryonIfAbsent(VajramID vajramID, VajramKryonDefinition kryonDefinition) {
+    Kryon<?, ?> ignored =
+        kryonRegistry.createIfAbsent(
+            vajramID,
+            _n ->
+                switch (executorConfig.kryonExecStrategy()) {
+                  case BATCH ->
+                      new BatchKryon(
+                          kryonDefinition,
+                          this,
+                          this::getOutputLogicDecorators,
+                          this::getDependencyDecorators,
+                          executorConfig.decorationOrdering(),
+                          preferredReqGenerator);
+                  case DIRECT ->
+                      new DirectKryon(
+                          kryonDefinition,
+                          this,
+                          this::getOutputLogicDecorators,
+                          this::getDependencyDecorators,
+                          executorConfig.decorationOrdering());
+                });
   }
 
   /**

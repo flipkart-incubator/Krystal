@@ -2,13 +2,13 @@ package com.flipkart.krystal.vajram.samples.calculator;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.krystex.KrystexGraph;
+import com.flipkart.krystal.krystex.KrystexVajramExecutor;
+import com.flipkart.krystal.krystex.KrystexVajramExecutorConfig;
+import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;

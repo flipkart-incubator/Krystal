@@ -1,11 +1,13 @@
 package com.flipkart.krystal.krystex.caching;
 
 import com.flipkart.krystal.core.VajramID;
-import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValues;
+import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorExecutionInfo;
 import com.flipkart.krystal.tags.ElementTags;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Optional;
 import java.util.function.Function;
@@ -20,17 +22,16 @@ import lombok.extern.slf4j.Slf4j;
 public class RequestLevelCacheInvalidator {
 
   private final CacheContainer cacheContainer;
-  private final Function<Class<? extends Request<?>>, VajramID> vajramIdMapper;
   private final Function<VajramID, ElementTags> vajramTagsProvider;
   private final KryonExecutorExecutionInfo executionInfo;
+  private final VajramGraph vajramGraph;
 
   public RequestLevelCacheInvalidator(
       RequestLevelCache requestLevelCache,
-      Function<Class<? extends Request<?>>, VajramID> vajramIdMapper,
       Function<VajramID, ElementTags> vajramTagsProvider,
       KryonExecutorExecutionInfo executionInfo) {
     this.cacheContainer = requestLevelCache.cacheContainer();
-    this.vajramIdMapper = vajramIdMapper;
+    this.vajramGraph = requestLevelCache.vajramGraph();
     this.vajramTagsProvider = vajramTagsProvider;
     this.executionInfo = executionInfo;
   }
@@ -45,7 +46,7 @@ public class RequestLevelCacheInvalidator {
    * @param <R> the type of the request
    */
   public <R extends Request<?>> void invalidateCacheKeys(
-      Class<R> reqClass, Predicate<FacetValues> invalidateIfTrue) {
+      Class<R> reqClass, Predicate<R> invalidateIfTrue) {
     VajramID activeVajram = executionInfo.activeKryon();
     if (activeVajram == null) {
       IllegalStateException e =
@@ -68,17 +69,9 @@ public class RequestLevelCacheInvalidator {
       log.error("", e);
       throw e;
     }
-    Class<? extends Request<?>>[] permittedTargetVajrams =
-        requestLevelCacheConfig.get().canInvalidateCacheOf();
 
-    boolean isPermitted = false;
-
-    for (Class<? extends Request<?>> permittedTargetVajram : permittedTargetVajrams) {
-      if (permittedTargetVajram.equals(reqClass)) {
-        isPermitted = true;
-        break;
-      }
-    }
+    boolean isPermitted =
+        Arrays.asList(requestLevelCacheConfig.get().canInvalidateCacheOf()).contains(reqClass);
 
     if (!isPermitted) {
       log.error(
@@ -91,7 +84,7 @@ public class RequestLevelCacheInvalidator {
     VajramID targetVajram;
 
     try {
-      targetVajram = vajramIdMapper.apply(reqClass);
+      targetVajram = vajramGraph.getVajramIdByVajramReqType(reqClass);
     } catch (Exception e) {
       log.warn(
           "Skipping cache invalidation as we could not retrieve vajramID for reqClass: {}",
@@ -101,11 +94,15 @@ public class RequestLevelCacheInvalidator {
 
     Iterator<ImmutableFacetValues> iterator = cacheContainer.getKeys(targetVajram).iterator();
     iterator.forEachRemaining(
-        key -> {
+        facetValues -> {
           boolean shouldInvalidate;
           try {
-            //noinspection unchecked
-            shouldInvalidate = invalidateIfTrue.test(key);
+            ImmutableRequest<?> immutableRequest = facetValues._request();
+            if (reqClass.isInstance(immutableRequest)) {
+              shouldInvalidate = invalidateIfTrue.test(reqClass.cast(immutableRequest));
+            } else {
+              shouldInvalidate = false;
+            }
           } catch (Exception e) {
             shouldInvalidate = false;
           }

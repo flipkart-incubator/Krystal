@@ -1,0 +1,121 @@
+package com.flipkart.krystal.krystex.test_vajrams.multihello;
+
+import static com.flipkart.krystal.krystex.test_vajrams.multihello.MultiHelloFriends_Fac.audited_s;
+import static com.flipkart.krystal.krystex.test_vajrams.multihello.MultiHelloFriends_Fac.hellos_n;
+import static com.flipkart.krystal.krystex.test_vajrams.multihello.MultiHelloFriends_Fac.hellos_s;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
+import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
+import static com.flipkart.krystal.vajram.facets.FanoutCommand.skipFanout;
+import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
+import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInputFanout;
+import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.resolve;
+import static java.lang.System.lineSeparator;
+
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
+import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.FanoutDepResponses;
+import com.flipkart.krystal.data.RequestResponse;
+import com.flipkart.krystal.krystex.test_vajrams.audit.AuditData;
+import com.flipkart.krystal.krystex.test_vajrams.audit.AuditData_Req;
+import com.flipkart.krystal.krystex.test_vajrams.hellofriends.HelloFriends;
+import com.flipkart.krystal.krystex.test_vajrams.hellofriends.HelloFriends_Req;
+import com.flipkart.krystal.krystex.test_vajrams.hellofriends.HelloFriends_ReqImmut;
+import com.flipkart.krystal.krystex.test_vajrams.hellofriends.HelloFriends_ReqImmutPojo;
+import com.flipkart.krystal.model.IfAbsent;
+import com.flipkart.krystal.vajram.ComputeVajramDef;
+import com.flipkart.krystal.vajram.Vajram;
+import com.flipkart.krystal.vajram.facets.Dependency;
+import com.flipkart.krystal.vajram.facets.FanoutCommand;
+import com.flipkart.krystal.vajram.facets.Output;
+import com.flipkart.krystal.vajram.facets.resolution.Resolve;
+import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
+import com.google.common.collect.ImmutableCollection;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+@InvocableOutsideGraph
+@Vajram
+public abstract class MultiHelloFriends extends ComputeVajramDef<String> {
+  interface _Inputs {
+    @IfAbsent(FAIL)
+    List<String> userIds();
+
+    boolean skip();
+  }
+
+  interface _InternalFacets {
+    @Dependency(onVajram = HelloFriends.class, canFanout = true)
+    String hellos();
+
+    @Dependency(onVajram = AuditData.class, canFanout = true)
+    Void audited();
+  }
+
+  private static final List<Integer> NUMBER_OF_FRIENDS = List.of(1, 2);
+
+  @Override
+  public ImmutableCollection<? extends SimpleInputResolver> getSimpleInputResolvers() {
+    return resolve(
+        dep(
+            audited_s,
+            depInputFanout(AuditData_Req.data_s)
+                .using(hellos_s)
+                .skipIf(hellos -> hellos.requestResponsePairs().isEmpty(), "Nothing to audit")
+                .asResolver(
+                    hellos ->
+                        hellos.requestResponsePairs().stream()
+                            .map(RequestResponse::response)
+                            .map(Errable::valueOpt)
+                            .filter(Optional::isPresent)
+                            .map(Optional::get)
+                            .toList())));
+  }
+
+  @Resolve(
+      dep = hellos_n,
+      depInputs = {HelloFriends_Req.userId_n, HelloFriends_Req.numberOfFriends_n})
+  static FanoutCommand<HelloFriends_ReqImmut.Builder> sayHello(
+      List<String> userIds, Optional<Boolean> skip) {
+    if (skip.orElse(false)) {
+      return skipFanout("skip requested");
+    }
+    List<HelloFriends_ReqImmutPojo.Builder> requests = new ArrayList<>();
+    for (String userId : userIds) {
+      for (int numberOfFriend : NUMBER_OF_FRIENDS) {
+        requests.add(
+            HelloFriends_ReqImmutPojo._builder().userId(userId).numberOfFriends(numberOfFriend));
+      }
+    }
+    return executeFanoutWith(requests);
+  }
+
+  @Output
+  static String sayHellos(
+      List<String> userIds,
+      FanoutDepResponses<HelloFriends_Req, String> hellos,
+      FanoutDepResponses<AuditData_Req, Void> audited) {
+    List<String> result = new ArrayList<>();
+    for (String userId : userIds) {
+      for (Integer numberOfFriend : NUMBER_OF_FRIENDS) {
+        hellos
+            .getForRequest(
+                HelloFriends_ReqImmutPojo._builder()
+                    .userId(userId)
+                    .numberOfFriends(numberOfFriend)
+                    ._build())
+            .valueOpt()
+            .ifPresent(result::add);
+      }
+    }
+    log.debug(
+        audited.requestResponsePairs().stream()
+            .map(RequestResponse::request)
+            .map(Object::toString)
+            .collect(Collectors.joining(lineSeparator())));
+    return String.join("\n", result);
+  }
+}

@@ -17,9 +17,7 @@ sourceSets {
 }
 
 dependencies {
-    api project(':krystal-common')
-    api project(':vajram:vajram-java-sdk')
-    implementation project(':vajram:vajram-krystex')
+    api project(':krystex')
     implementation project(':vajram:extensions:json:vajram-json')
     krystalModelsGenProcessor project(':vajram:vajram-codegen')
 

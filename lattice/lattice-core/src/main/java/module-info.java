@@ -18,7 +18,6 @@ module flipkart.krystal.lattice.core {
   requires flipkart.krystal.common;
   requires flipkart.krystal.krystex;
   requires flipkart.krystal.vajram;
-  requires flipkart.krystal.vajramexecutor.krystex;
   requires jakarta.inject;
   requires java.compiler;
   requires org.apache.commons.cli;

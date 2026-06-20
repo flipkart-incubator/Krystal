@@ -29,7 +29,7 @@ dependencies {
 
     implementation 'com.google.inject.extensions:guice-servlet'
     implementation 'ru.vyarus:dropwizard-guicey'
-    testImplementation 'com.flipkart.krystal:vajram-krystex'
+    testImplementation 'com.flipkart.krystal:krystex'
 
     /** END: Lattice dependencies **/
 

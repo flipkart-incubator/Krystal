@@ -1,6 +1,8 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
+import static com.flipkart.krystal.krystex.batching.DepChainBatcherConfig.simple;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.DIRECT;
+import static com.flipkart.krystal.krystex.testharness.VajramTestHarness.prepareForTest;
 import static com.flipkart.krystal.vajram.samples.Util.TEST_TIMEOUT;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.loadFromClasspath;
@@ -8,8 +10,6 @@ import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.calculator.add.Add.FAIL_ADDER_FLAG;
 import static com.flipkart.krystal.vajram.samples.calculator.add.Add.add;
 import static com.flipkart.krystal.vajram.samples.calculator.divide.Divide.divide;
-import static com.flipkart.krystal.vajramexecutor.krystex.batching.DepChainBatcherConfig.simple;
-import static com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness.prepareForTest;
 import static com.google.inject.Guice.createInjector;
 import static com.google.inject.name.Names.named;
 import static java.time.Duration.ofSeconds;
@@ -27,6 +27,13 @@ import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.krystex.KrystexGraph;
+import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
+import com.flipkart.krystal.krystex.KrystexVajramExecutor;
+import com.flipkart.krystal.krystex.KrystexVajramExecutorConfig;
+import com.flipkart.krystal.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
+import com.flipkart.krystal.krystex.VajramGraph;
+import com.flipkart.krystal.krystex.batching.InputBatcherConfig;
 import com.flipkart.krystal.krystex.caching.TestRequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
@@ -44,13 +51,6 @@ import com.flipkart.krystal.vajram.samples.Util;
 import com.flipkart.krystal.vajram.samples.calculator.add.Add;
 import com.flipkart.krystal.vajram.samples.calculator.add.Add_FacImmutPojo;
 import com.flipkart.krystal.vajram.samples.calculator.divide.Divide_FacImmutPojo;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.batching.InputBatcherConfig;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.AbstractModule;
@@ -100,7 +100,7 @@ class FormulaTest {
   void setUp() {
     this.executorLease = EXECUTOR_LEASES[0];
     this.graph = loadFromClasspath(Formula.class.getPackageName()).build();
-    this.requestLevelCache = spy(new TestRequestLevelCache(graph.kryonDefinitionRegistry()));
+    this.requestLevelCache = spy(new TestRequestLevelCache(graph));
     Add.CALL_COUNTER.reset();
   }
 

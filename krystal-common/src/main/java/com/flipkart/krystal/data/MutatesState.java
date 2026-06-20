@@ -35,14 +35,26 @@ public @interface MutatesState {
    *   <li>TRUE - This vajram has logic which can mutate the state of the system.
    *   <li>FALSE - This vajram can never mutate state of the system.
    *   <li>UNKNOWN - It is unknown whether this vajram mutates state of the system or not. This is
-   *       the value assumed if this annotation is not present or induced onto a vajram. The
-   *       interpretation of this depends on the application. Depending on the application's use
-   *       case, it might choose to interpret this as TRUE or FALSE. In general, it considered safer
-   *       to interpret this as TRUE since vajrams which mutate state can have side effects which
-   *       can impact the correctness of the overall computation (for example race conditions, etc).
+   *       the value assumed if this annotation is not present or induced onto a vajram. This is
+   *       also used when a vajram can dynamically decide whether to mutate the state or not (For
+   *       example, the decision depends on the value of an input or some injected value)
    * </ul>
    */
   Trilean value();
+
+  /**
+   * The entity's/entities' namespaced names whose data that this vajram handles.
+   *
+   * <ul>
+   *   <li>If {@link #value()} is TRUE, this denotes the entity/entities whose state this vajram
+   *       mutates.
+   *   <li>If {@link #value()} is FALSE, this denotes the entity/entities whose state this vajram
+   *       reads.
+   *   <li>If {@link #value()} is UNKNOWN, this denotes the entity/entities whose state this vajram
+   *       could read or mutate.
+   * </ul>
+   */
+  String[] entities() default {};
 
   @UtilityClass
   final class Creator {

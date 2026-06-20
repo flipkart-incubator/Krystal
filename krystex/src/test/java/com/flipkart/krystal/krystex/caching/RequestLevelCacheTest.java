@@ -21,6 +21,7 @@ import com.flipkart.krystal.krystex.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
+import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
@@ -88,9 +89,10 @@ class RequestLevelCacheTest {
 
   @BeforeEach
   void setUp() throws LeaseUnavailableException {
-    this.logicDefinitionRegistry = new LogicDefinitionRegistry();
-    this.kryonDefinitionRegistry = new KryonDefinitionRegistry(logicDefinitionRegistry);
-    this.requestLevelCache = new RequestLevelCache(kryonDefinitionRegistry, false);
+    VajramGraph vajramGraph = VajramGraph.builder().build();
+    this.kryonDefinitionRegistry = vajramGraph.kryonDefinitionRegistry();
+    this.logicDefinitionRegistry = kryonDefinitionRegistry.logicDefinitionRegistry();
+    this.requestLevelCache = new RequestLevelCache(vajramGraph, false);
     this.executorLease = EXEC_POOL.lease();
   }
 

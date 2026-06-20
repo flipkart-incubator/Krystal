@@ -73,8 +73,8 @@ separately and not yet managed by a BOM.
 * **What it has**
   * The generic runtime execution engine for synchronous workflow DAGs (kryons, executors, decorators)
 * **When to use**
+  * To execute vajram-based business logic at runtime; keeps `vajram-java-sdk` and `krystex` independent of each other
   * When building a custom executor integration on top of Krystex primitives
-  * Not intended for direct use by application developers — prefer the Vajram programming model and `vajram-krystex`
 * **Coordinates:** [![Maven Central](https://img.shields.io/maven-central/v/com.flipkart.krystal/krystex.svg?label=krystex&color=green)](https://central.sonatype.com/artifact/com.flipkart.krystal/krystex)
 * **Location:** [./krystex](krystex)
 * **README:** [krystex/README.md](krystex/README.md)
@@ -98,15 +98,6 @@ separately and not yet managed by a BOM.
   * For experimentation with the vajram-lang programming model; production workflows should use `vajram-java-sdk`
 * **Coordinates:** [![Maven Central](https://img.shields.io/maven-central/v/com.flipkart.krystal/vajram-lang.svg?label=vajram-lang&color=green)](https://central.sonatype.com/artifact/com.flipkart.krystal/vajram-lang)
 * **Location:** [./vajram/vajram-lang](vajram/vajram-lang)
-
-#### **vajram-krystex**
-* **What it has**
-  * The bridge that transpiles developer-written vajrams into kryon models understood by Krystex (`VajramGraph`, `KrystexGraph`)
-* **When to use**
-  * To execute vajram-based business logic at runtime; keeps `vajram-java-sdk` and `krystex` independent of each other
-* **Coordinates:** [![Maven Central](https://img.shields.io/maven-central/v/com.flipkart.krystal/vajram-krystex.svg?label=vajram-krystex&color=green)](https://central.sonatype.com/artifact/com.flipkart.krystal/vajram-krystex)
-* **Location:** [./vajram/vajram-krystex](vajram/vajram-krystex)
-* **BOM:** [Krystal BOM](#krystal-bom)
 
 #### **vajram-codegen-common**
 * **What it has**

@@ -35,7 +35,7 @@ dependencies {
 
     testImplementation platform('org.assertj:assertj-bom:3.27.7')
     testImplementation 'org.assertj:assertj-core'
-    testImplementation 'com.flipkart.krystal:vajram-krystex'
+    testImplementation 'com.flipkart.krystal:krystex'
     testImplementation 'com.flipkart.krystal:vajram-guice'
 
     testImplementation platform('org.mockito:mockito-bom:5.17.0')

@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="EntryPointsManager">
-    <list size="5">
+    <list size="6">
       <item index="0" class="java.lang.String" itemvalue="com.flipkart.krystal.lattice.core.doping.AutoConfigure" />
       <item index="1" class="java.lang.String" itemvalue="com.flipkart.krystal.model.IfAbsent" />
       <item index="2" class="java.lang.String" itemvalue="com.google.auto.service.AutoService" />
       <item index="3" class="java.lang.String" itemvalue="com.google.inject.Provides" />
       <item index="4" class="java.lang.String" itemvalue="jakarta.enterprise.inject.Produces" />
+      <item index="5" class="java.lang.String" itemvalue="jakarta.inject.Inject" />
     </list>
     <pattern value="org.gradle.api.Plugin" hierarchically="true" />
     <writeAnnotations>

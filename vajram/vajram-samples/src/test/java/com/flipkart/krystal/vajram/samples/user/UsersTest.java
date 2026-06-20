@@ -8,6 +8,11 @@ import static org.assertj.core.api.InstanceOfAssertFactories.list;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.krystex.KrystexGraph;
+import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
+import com.flipkart.krystal.krystex.KrystexVajramExecutor;
+import com.flipkart.krystal.krystex.KrystexVajramExecutorConfig;
+import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.caching.RequestLevelCacheInvalidator;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
@@ -17,11 +22,6 @@ import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.guice.injection.VajramGuiceInputInjector;
 import com.flipkart.krystal.vajram.samples.user.response_pojos.UserWithProfile;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.google.inject.AbstractModule;
 import java.util.Arrays;
 import java.util.List;
@@ -161,12 +161,11 @@ class UsersTest {
 
   @Test
   void mutatingVajram_invalidatesCacheOfReadVajram() {
-    RequestLevelCache requestLevelCache = new RequestLevelCache(graph.kryonDefinitionRegistry());
+    RequestLevelCache requestLevelCache = new RequestLevelCache(graph);
     KryonExecutorExecutionInfo executionInfo = new KryonExecutorExecutionInfo();
     RequestLevelCacheInvalidator cacheInvalidator =
         new RequestLevelCacheInvalidator(
             requestLevelCache,
-            graph::getVajramIdByVajramReqType,
             vajramID -> graph.getVajramDefinition(vajramID).vajramTags(),
             executionInfo);
     VajramGuiceInputInjector guiceInputInjector =
@@ -211,12 +210,11 @@ class UsersTest {
 
   @Test
   void mutatingVajram_invalidationDisabling_leadsToCacheHit() {
-    RequestLevelCache requestLevelCache = new RequestLevelCache(graph.kryonDefinitionRegistry());
+    RequestLevelCache requestLevelCache = new RequestLevelCache(graph);
     KryonExecutorExecutionInfo executionInfo = new KryonExecutorExecutionInfo();
     RequestLevelCacheInvalidator cacheInvalidator =
         new RequestLevelCacheInvalidator(
             requestLevelCache,
-            graph::getVajramIdByVajramReqType,
             vajramID -> graph.getVajramDefinition(vajramID).vajramTags(),
             executionInfo);
     VajramGuiceInputInjector guiceInputInjector =
@@ -264,12 +262,11 @@ class UsersTest {
 
   @Test
   void mutatingVajrams_areNotCached() {
-    RequestLevelCache requestLevelCache = new RequestLevelCache(graph.kryonDefinitionRegistry());
+    RequestLevelCache requestLevelCache = new RequestLevelCache(graph);
     KryonExecutorExecutionInfo executionInfo = new KryonExecutorExecutionInfo();
     RequestLevelCacheInvalidator cacheInvalidator =
         new RequestLevelCacheInvalidator(
             requestLevelCache,
-            graph::getVajramIdByVajramReqType,
             vajramID -> graph.getVajramDefinition(vajramID).vajramTags(),
             executionInfo);
     VajramGuiceInputInjector guiceInputInjector =
@@ -321,12 +318,11 @@ class UsersTest {
 
   @Test
   void invalidatingCacheKeys_fromNonPermittedVajrams_fails() {
-    RequestLevelCache requestLevelCache = new RequestLevelCache(graph.kryonDefinitionRegistry());
+    RequestLevelCache requestLevelCache = new RequestLevelCache(graph);
     KryonExecutorExecutionInfo executionInfo = new KryonExecutorExecutionInfo();
     RequestLevelCacheInvalidator cacheInvalidator =
         new RequestLevelCacheInvalidator(
             requestLevelCache,
-            graph::getVajramIdByVajramReqType,
             vajramID -> graph.getVajramDefinition(vajramID).vajramTags(),
             executionInfo);
     VajramGuiceInputInjector guiceInputInjector =

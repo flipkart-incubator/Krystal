@@ -1,9 +1,9 @@
 package com.flipkart.krystal.lattice.vajram;
 
+import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.lattice.core.di.Produces;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
 import com.flipkart.krystal.lattice.core.doping.SimpleDopant;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.Getter;

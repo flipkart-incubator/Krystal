@@ -19,9 +19,8 @@ public class VajramPlugin implements Plugin<Project> {
   static final String CODEGEN_PHASE_KEY = "krystal.codegen.phase";
   static final String MODULE_ROOT_PATH_KEY = "krystal.codegen.moduleRootPath";
 
-  static final String EMPTY_DIR = "tmp/empty";
+  static final String EMPTY_DIR = "tmp/krystalModels/empty";
   static final String VAJRAM_MODELS_GEN_DIR_NAME = "krystalModels";
-  static final String SRC_GEN_DIR = "/generated/sources/annotationProcessor/java";
 
   // Vajram models are generated in a different directory to keep the build phase inputs and
   // outputs separate -
@@ -39,13 +38,11 @@ public class VajramPlugin implements Plugin<Project> {
   public void apply(Project project) {
     var mainModelsGenDir =
         new File(getBuildDir(project).getPath() + VAJRAM_MODELS_GEN_DIR + "/main");
-    var mainImplsGenDir = new File(getBuildDir(project).getPath() + SRC_GEN_DIR + "/main");
 
     var testModelsGenDir =
         new File(getBuildDir(project).getPath() + VAJRAM_MODELS_GEN_DIR + "/test");
-    var testImplsGenDir = new File(getBuildDir(project).getPath() + SRC_GEN_DIR + "/test");
 
-    addSourceSets(project, mainModelsGenDir, mainImplsGenDir, testModelsGenDir, testImplsGenDir);
+    addSourceSets(project, mainModelsGenDir, testModelsGenDir);
     registerKrystalModelsGen(project, mainModelsGenDir);
     configureCompileJava(project);
     registerTestKrystalModelsGen(project, testModelsGenDir);
@@ -63,20 +60,15 @@ public class VajramPlugin implements Plugin<Project> {
                     "krystal.krystex.risky.openAllVajramsToExternalInvocation", true));
   }
 
-  private static void addSourceSets(
-      Project project,
-      File mainModelsGenDir,
-      File mainImplsGenDir,
-      File testModelsGenDir,
-      File testImplsGenDir) {
+  private static void addSourceSets(Project project, File mainModelsGenDir, File testModelsGenDir) {
     JavaPluginExtension javaPluginExtension =
         project.getExtensions().findByType(JavaPluginExtension.class);
     if (javaPluginExtension == null) {
       return;
     }
     SourceSetContainer sourceSets = javaPluginExtension.getSourceSets();
-    sourceSets.getByName("main").getJava().srcDir(mainModelsGenDir).srcDir(mainImplsGenDir);
-    sourceSets.getByName("test").getJava().srcDir(testModelsGenDir).srcDir(testImplsGenDir);
+    sourceSets.getByName("main").getJava().srcDir(mainModelsGenDir);
+    sourceSets.getByName("test").getJava().srcDir(testModelsGenDir);
   }
 
   private static void registerKrystalModelsGen(Project project, File mainModelsGenDir) {
@@ -96,6 +88,7 @@ public class VajramPlugin implements Plugin<Project> {
         .getByName(
             "annotationProcessor",
             annotationProcessor -> annotationProcessor.extendsFrom(krystalModelsGenProcessorPath));
+
     project
         .getTasks()
         .register(
@@ -138,15 +131,14 @@ public class VajramPlugin implements Plugin<Project> {
             })
         .configure(
             krystalModelsGen ->
-                krystalModelsGen.doFirst(
-                    _t ->
-                        krystalModelsGen
-                            .getOptions()
-                            .setAnnotationProcessorPath(
-                                project
-                                    .getConfigurations()
-                                    .named(KRYSTAL_MODELS_GEN_PROC_PATH)
-                                    .get())));
+                krystalModelsGen
+                    .getOptions()
+                    .setAnnotationProcessorPath(
+                        project
+                            .getConfigurations()
+                            .named(KRYSTAL_MODELS_GEN_PROC_PATH)
+                            .get()
+                            .getAsFileTree()));
   }
 
   private static void configureCompileJava(Project project) {
@@ -242,15 +234,10 @@ public class VajramPlugin implements Plugin<Project> {
             })
         .configure(
             testKrystalModelsGen ->
-                testKrystalModelsGen.doFirst(
-                    _t ->
-                        testKrystalModelsGen
-                            .getOptions()
-                            .setAnnotationProcessorPath(
-                                project
-                                    .getConfigurations()
-                                    .named(testModelGenProcessorPath)
-                                    .get())));
+                testKrystalModelsGen
+                    .getOptions()
+                    .setAnnotationProcessorPath(
+                        project.getConfigurations().named(testModelGenProcessorPath).get()));
   }
 
   private static @NonNull String capitalizeFirstChar(String krystalModelsGen) {

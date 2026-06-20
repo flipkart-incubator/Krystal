@@ -5,9 +5,9 @@ import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.Dependency;
+import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.google.common.collect.ImmutableSet;
 import graphql.com.google.common.collect.ImmutableMap;
 import graphql.execution.ExecutionContext;

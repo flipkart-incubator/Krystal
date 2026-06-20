@@ -4,13 +4,13 @@ import static com.flipkart.krystal.vajram.samples.Util.TEST_TIMEOUT;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.krystex.KrystexGraph;
+import com.flipkart.krystal.krystex.KrystexVajramExecutor;
+import com.flipkart.krystal.krystex.KrystexVajramExecutorConfig;
+import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import java.util.concurrent.CompletableFuture;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;

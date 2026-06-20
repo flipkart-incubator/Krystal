@@ -3,13 +3,13 @@ package com.flipkart.krystal.lattice.krystex;
 import static com.flipkart.krystal.lattice.krystex.KrystexDopant.DOPANT_TYPE;
 import static java.util.Objects.requireNonNullElse;
 
+import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
+import com.flipkart.krystal.krystex.batching.DepChainBatcherConfig.BatchSizeSupplier;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
 import com.flipkart.krystal.lattice.core.doping.SimpleDopantSpec;
 import com.flipkart.krystal.lattice.core.doping.SimpleDopantSpecBuilder;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.batching.DepChainBatcherConfig.BatchSizeSupplier;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.Arrays;

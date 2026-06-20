@@ -2,6 +2,7 @@ package com.flipkart.krystal.lattice.graphql.codegen;
 
 import static com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility.getRequestInterfaceName;
 
+import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.codegen.spi.di.BindingsContainer;
 import com.flipkart.krystal.lattice.codegen.spi.di.BindingsProvider;
@@ -10,7 +11,6 @@ import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationDispatch;
 import com.flipkart.krystal.vajram.graphql.codegen.GraphQLTypeName;
 import com.flipkart.krystal.vajram.graphql.codegen.GraphQlCodeGenUtil;
 import com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.google.auto.service.AutoService;
 import com.google.common.collect.ImmutableList;
 import com.squareup.javapoet.AnnotationSpec;

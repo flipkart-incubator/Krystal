@@ -9,8 +9,6 @@ import com.google.auto.service.AutoService;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedOptions;
-import javax.annotation.processing.SupportedSourceVersion;
-import javax.lang.model.SourceVersion;
 
 @SupportedAnnotationTypes({
   "com.flipkart.krystal.vajram.Vajram",

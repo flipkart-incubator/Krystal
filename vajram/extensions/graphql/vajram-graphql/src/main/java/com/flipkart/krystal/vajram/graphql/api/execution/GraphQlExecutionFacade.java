@@ -4,10 +4,10 @@ import static com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionS
 import static com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject._asExecutionResult;
 
 import com.flipkart.krystal.core.VajramInvocation;
+import com.flipkart.krystal.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig.KryonExecutionConfigBuilder;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;

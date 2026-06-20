@@ -167,7 +167,6 @@ configure(subprojects.findAll {
         testImplementation 'org.checkerframework:checker-qual'
 
         compileOnly 'com.google.auto.value:auto-value-annotations'
-        compileOnly 'com.google.errorprone:error_prone_annotations'
         compileOnly 'org.jspecify:jspecify'
         annotationProcessor 'com.google.auto.value:auto-value'
 
@@ -212,7 +211,6 @@ configure(subprojects.findAll {
 
             c.compileOnly "org.projectlombok:lombok:$lombok_version"
             c.compileOnly 'com.google.auto.value:auto-value-annotations:1.11.0'
-            c.compileOnly 'com.google.errorprone:error_prone_annotations:2.36.0'
             c.compileOnly 'org.jspecify:jspecify:1.0.0'
             c.compileOnly 'org.jetbrains:annotations:26.0.2'
 
@@ -294,7 +292,6 @@ configure(subprojects.findAll {
 
         //These already have a module name
         knownModule('com.google.auto.service:auto-service-annotations', 'com.google.auto.service')
-        knownModule('com.google.errorprone:error_prone_annotations', 'com.google.errorprone.annotations')
         knownModule('com.google.googlejavaformat:google-java-format', 'com.google.googlejavaformat')
         knownModule('com.google.guava:guava', 'com.google.common')
         knownModule('com.google.j2objc:j2objc-annotations', 'com.google.j2objc.annotations')

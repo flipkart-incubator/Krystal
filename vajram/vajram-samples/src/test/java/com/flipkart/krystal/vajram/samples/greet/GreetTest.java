@@ -19,26 +19,26 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.krystex.KrystexGraph;
+import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
+import com.flipkart.krystal.krystex.KrystexVajramExecutor;
+import com.flipkart.krystal.krystex.KrystexVajramExecutorConfig;
+import com.flipkart.krystal.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
+import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.caching.TestRequestLevelCache;
 import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
+import com.flipkart.krystal.krystex.inputinjection.KryonInputInjector;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.KryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecReporter;
+import com.flipkart.krystal.krystex.testharness.VajramTestHarness;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.guice.injection.VajramGuiceInputInjector;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.KryonInputInjector;
-import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
@@ -99,7 +99,7 @@ class GreetTest {
                 .add(KryonInputInjector.DECORATOR_TYPE)
                 .build());
     this.graph = VajramGraph.builder().loadFromPackage(PACKAGE_PATH).build();
-    this.requestLevelCache = new TestRequestLevelCache(graph.kryonDefinitionRegistry());
+    this.requestLevelCache = new TestRequestLevelCache(graph);
 
     this.objectMapper =
         JsonMapper.builder()

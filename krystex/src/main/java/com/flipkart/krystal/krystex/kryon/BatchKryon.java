@@ -74,10 +74,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * Kryon is able to keep track of incoming requests per dependent chain and thus is able to send a
  * Flush command to its dependencies per dependent chain. This capability is crucial for achieving
  * capabilities like optimal batching (For example:
- * com.flipkart.krystal.vajramexecutor.krystex.InputBatchingDecorator) etc which rely on the fact
- * that they are able to track the complete super set of active dependent chains and able to
- * determine accurately when the call graph execution has reached a point where not further requests
- * can be received.
+ * com.flipkart.krystal.krystex.InputBatchingDecorator) etc which rely on the fact that they are
+ * able to track the complete super set of active dependent chains and able to determine accurately
+ * when the call graph execution has reached a point where not further requests can be received.
  *
  * <p>This design choice of singleRequest-SingleResponse, as well as flushing means has the
  * following implication on this class' design:

@@ -24,26 +24,24 @@ import lombok.extern.slf4j.Slf4j;
 @RequestLevelCacheConfig(canInvalidateCacheOf = GetUserProfile_Req.class)
 public abstract class UpdateUserProfile extends IOVajramDef<Boolean> {
 
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _Inputs {
+  interface _Inputs {
     @IfAbsent(FAIL)
-    String userProfileId;
+    String userProfileId();
 
     @IfAbsent(FAIL)
-    UserProfile userProfile;
+    UserProfile userProfile();
   }
 
   public static LongAdder CALL_COUNTER = new LongAdder();
 
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _InternalFacets {
+  interface _InternalFacets {
     @Inject
     @IfAbsent(FAIL)
-    RequestLevelCacheInvalidator reqCacheInvalidator;
+    RequestLevelCacheInvalidator reqCacheInvalidator();
 
     @Inject
     @Named("UpdateUserProfile.shouldUpdate")
-    boolean shouldUpdate;
+    boolean shouldUpdate();
   }
 
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
@@ -68,7 +66,6 @@ public abstract class UpdateUserProfile extends IOVajramDef<Boolean> {
       String userProfileId, RequestLevelCacheInvalidator reqCacheInvalidator) {
     reqCacheInvalidator.invalidateCacheKeys(
         GetUserProfile_Req.class,
-        getUserProfileReq ->
-            userProfileId.equals(((GetUserProfile_Fac) getUserProfileReq).userProfileId()));
+        getUserProfileReq -> userProfileId.equals(getUserProfileReq.userProfileId()));
   }
 }

@@ -48,9 +48,9 @@ introduces the following new concepts:
   examples of
   dopants:
     * VajramDopant: Allows a lattice application to interact with a [
-      `VajramGraph`](../vajram/vajram-krystex/src/main/java/com/flipkart/krystal/vajramexecutor/krystex/VajramGraph.java)
+      `VajramGraph`](../krystex/src/main/java/com/flipkart/krystal/krystex/VajramGraph.java)
     * KrystexDopant: Allows a lattice application to execute business logic using a [
-      `KrystexGraph`](../vajram/vajram-krystex/src/main/java/com/flipkart/krystal/vajramexecutor/krystex/KrystexGraph.java)
+      `KrystexGraph`](../krystex/src/main/java/com/flipkart/krystal/krystex/KrystexGraph.java)
     * ThreadingStrategyDopant: Allows application owner to control how threads are created and
       managed inside the application
     * RestServiceDopant: Adds capability to the lattice application such that it can behave as a

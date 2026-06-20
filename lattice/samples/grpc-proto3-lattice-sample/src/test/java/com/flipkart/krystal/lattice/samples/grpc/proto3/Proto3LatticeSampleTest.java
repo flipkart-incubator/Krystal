@@ -8,9 +8,15 @@ import static org.assertj.core.api.InstanceOfAssertFactories.type;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.krystex.KrystexGraph;
+import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
+import com.flipkart.krystal.krystex.KrystexVajramExecutor;
+import com.flipkart.krystal.krystex.KrystexVajramExecutorConfig;
+import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.caching.TestRequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
+import com.flipkart.krystal.krystex.testharness.VajramTestHarness;
 import com.flipkart.krystal.lattice.samples.grpc.proto3.sampleProtoService.Proto3LatticeSample;
 import com.flipkart.krystal.lattice.samples.grpc.proto3.sampleProtoService.Proto3LatticeSampleResponse;
 import com.flipkart.krystal.lattice.samples.grpc.proto3.sampleProtoService.Proto3LatticeSampleResponse_Immut;
@@ -29,12 +35,6 @@ import com.flipkart.krystal.vajram.exception.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajram.guice.injection.VajramGuiceInputInjector;
 import com.flipkart.krystal.vajram.protobuf.util.ProtoByteArray;
 import com.flipkart.krystal.vajram.protobuf.util.SerializableProtoModel;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.protobuf.ByteString;
@@ -72,7 +72,7 @@ class Proto3LatticeSampleTest {
     this.executorLease = EXEC_POOL.lease();
     this.graph = VajramGraph.builder().loadClasses(Proto3LatticeSample.class).build();
     this.kGraph = KrystexGraph.builder().vajramGraph(graph);
-    this.requestLevelCache = new TestRequestLevelCache(this.graph.kryonDefinitionRegistry());
+    this.requestLevelCache = new TestRequestLevelCache(graph);
     this.kGraph.injectionProvider(
         new VajramGuiceInputInjector(
             Guice.createInjector(

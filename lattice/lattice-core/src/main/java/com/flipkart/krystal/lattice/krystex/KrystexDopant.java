@@ -1,11 +1,17 @@
 package com.flipkart.krystal.lattice.krystex;
 
+import static com.flipkart.krystal.krystex.batching.DepChainBatcherConfig.computeSharedBatcherConfig;
 import static com.flipkart.krystal.lattice.core.di.Util.asOptional;
 import static com.flipkart.krystal.lattice.krystex.KrystexDopant.DOPANT_TYPE;
-import static com.flipkart.krystal.vajramexecutor.krystex.batching.DepChainBatcherConfig.computeSharedBatcherConfig;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.data.ImmutableRequest;
+import com.flipkart.krystal.krystex.KrystexGraph;
+import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
+import com.flipkart.krystal.krystex.KrystexVajramExecutor;
+import com.flipkart.krystal.krystex.KrystexVajramExecutorConfig;
+import com.flipkart.krystal.krystex.VajramGraph;
+import com.flipkart.krystal.krystex.batching.DepChainBatcherConfig.BatchSizeSupplier;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
 import com.flipkart.krystal.lattice.core.di.Bindings;
@@ -19,12 +25,6 @@ import com.flipkart.krystal.lattice.vajram.VajramRequestExecutionContext;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.traits.TraitDispatchPolicies;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.batching.DepChainBatcherConfig.BatchSizeSupplier;
 import jakarta.inject.Inject;
 import jakarta.inject.Provider;
 import jakarta.inject.Singleton;

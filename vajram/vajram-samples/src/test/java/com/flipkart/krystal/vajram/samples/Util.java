@@ -5,11 +5,11 @@ import static java.time.Duration.ofSeconds;
 import static java.util.Arrays.stream;
 import static java.util.concurrent.CompletableFuture.allOf;
 
+import com.flipkart.krystal.krystex.VajramGraph;
+import com.flipkart.krystal.krystex.VajramGraph.VajramGraphBuilder;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
 import com.flipkart.krystal.pooling.MultiLeasePool;
 import com.flipkart.krystal.pooling.MultiLeasePoolStats;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph.VajramGraphBuilder;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;

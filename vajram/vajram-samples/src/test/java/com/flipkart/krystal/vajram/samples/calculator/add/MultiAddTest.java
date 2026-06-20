@@ -4,6 +4,8 @@ import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStr
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.DIRECT;
+import static com.flipkart.krystal.krystex.traits.PredicateDispatchUtil.dispatchTrait;
+import static com.flipkart.krystal.krystex.traits.PredicateDispatchUtil.when;
 import static com.flipkart.krystal.traits.matchers.InputValueMatcher.isAnyValue;
 import static com.flipkart.krystal.vajram.samples.Util.TEST_TIMEOUT;
 import static com.flipkart.krystal.vajram.samples.calculator.add.ChainAdd_Fac.chainSum_s;
@@ -13,14 +15,18 @@ import static com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiA
 import static com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd_Req.numbers_s;
 import static com.flipkart.krystal.vajram.samples.calculator.add.SplitAdd_Fac.splitSum1_s;
 import static com.flipkart.krystal.vajram.samples.calculator.add.SplitAdd_Fac.splitSum2_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.traits.PredicateDispatchUtil.dispatchTrait;
-import static com.flipkart.krystal.vajramexecutor.krystex.traits.PredicateDispatchUtil.when;
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.except.KrystalCompletionException;
+import com.flipkart.krystal.krystex.KrystexGraph;
+import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
+import com.flipkart.krystal.krystex.KrystexVajramExecutor;
+import com.flipkart.krystal.krystex.KrystexVajramExecutorConfig;
+import com.flipkart.krystal.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
+import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
@@ -33,12 +39,6 @@ import com.flipkart.krystal.vajram.guice.traitbinding.GuiceyStaticDispatchPolicy
 import com.flipkart.krystal.vajram.guice.traitbinding.TraitBinder;
 import com.flipkart.krystal.vajram.samples.Util;
 import com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.AdditionMethod;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.google.common.collect.ImmutableSet;
 import java.util.List;
 import java.util.Optional;

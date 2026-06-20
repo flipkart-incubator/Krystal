@@ -88,7 +88,6 @@ public abstract class AbstractKrystalAnnoProcessor extends AbstractProcessor {
     this.codeGenUtil = new CodeGenUtility(processingEnv, this.getClass(), codegenPhase);
   }
 
-
   @Override
   public SourceVersion getSupportedSourceVersion() {
     return SourceVersion.latestSupported();

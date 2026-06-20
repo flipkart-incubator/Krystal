@@ -2,7 +2,6 @@
 description = "Guice extension for Krystal - Facilitates using Guice to @Inject inputs into vajrams"
 
 dependencies {
-    api project(':vajram:vajram-java-sdk')
-    api project(':vajram:vajram-krystex')
+    api project(':krystex')
     api 'com.google.inject:guice'
 }
