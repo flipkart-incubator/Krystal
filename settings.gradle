@@ -31,7 +31,6 @@ include 'krystal-intellij-plugin'
 include 'vajram:vajram-codegen'
 include 'vajram:vajram-codegen-common'
 include 'vajram:vajram-java-sdk'
-include 'vajram:vajram-krystex'
 include 'vajram:vajram-lang'
 
 /* ******** VAJRAM EXTENSIONS : START *********** */

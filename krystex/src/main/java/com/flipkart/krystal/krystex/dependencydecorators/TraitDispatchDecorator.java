@@ -5,6 +5,8 @@ import com.flipkart.krystal.traits.TraitDispatchPolicies;
 
 public interface TraitDispatchDecorator extends DependencyDecorator {
 
+  TraitDispatchDecorator NO_OP = DependencyDecorator.NO_OP::decorateDependency;
+
   default TraitDispatchPolicies traitDispatchPolicies() {
     return new TraitDispatchPolicies();
   }

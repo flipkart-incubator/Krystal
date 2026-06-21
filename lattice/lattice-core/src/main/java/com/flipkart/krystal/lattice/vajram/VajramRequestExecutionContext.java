@@ -1,8 +1,8 @@
 package com.flipkart.krystal.lattice.vajram;
 
 import com.flipkart.krystal.data.ImmutableRequest;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
 import com.flipkart.krystal.lattice.core.di.Bindings;
 import java.util.List;
 import lombok.Builder;
@@ -14,13 +14,13 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public record VajramRequestExecutionContext<RespT extends @Nullable Object>(
     @NonNull ImmutableRequest<RespT> vajramRequest,
     @Nullable Bindings requestScopeSeeds,
-    @Nullable KryonExecutorConfigBuilder executorConfigBuilder,
+    @Nullable KrystalExecutorConfigBuilder executorConfigBuilder,
     @Nullable @Singular List<RequestInitializer> requestScopeInitializers) {
 
   @Override
-  public KryonExecutorConfigBuilder executorConfigBuilder() {
+  public KrystalExecutorConfigBuilder executorConfigBuilder() {
     if (executorConfigBuilder == null) {
-      return KryonExecutorConfig.builder();
+      return KrystalExecutorConfig.builder();
     }
     return executorConfigBuilder;
   }

@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.Set;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
+import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
 import javax.tools.Diagnostic.Kind;
 import lombok.extern.slf4j.Slf4j;
@@ -85,6 +86,11 @@ public abstract class AbstractKrystalAnnoProcessor extends AbstractProcessor {
                       CODEGEN_PHASE_KEY));
     }
     this.codeGenUtil = new CodeGenUtility(processingEnv, this.getClass(), codegenPhase);
+  }
+
+  @Override
+  public SourceVersion getSupportedSourceVersion() {
+    return SourceVersion.latestSupported();
   }
 
   protected void processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {}

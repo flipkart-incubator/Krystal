@@ -31,7 +31,7 @@ dependencies {
     krystalModelsGenProcessor 'com.flipkart.krystal:vajram-protobuf2024e-codegen'
 
     testImplementation project(':vajram:extensions:guice:vajram-guice')
-    testImplementation project(':vajram:vajram-krystex')
+    testImplementation project(':krystex')
 
     /** END: Lattice dependencies **/
 

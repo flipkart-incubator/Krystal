@@ -14,7 +14,6 @@ module flipkart.krystal.vajram {
   requires com.google.common;
   requires org.reflections;
   requires org.checkerframework.checker.qual;
-  requires com.google.errorprone.annotations;
   requires java.compiler;
   requires com.google.auto.value.annotations;
   requires static lombok;

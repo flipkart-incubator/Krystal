@@ -8,20 +8,19 @@ import static org.assertj.core.api.InstanceOfAssertFactories.list;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig;
+import com.flipkart.krystal.krystex.KrystexGraph;
+import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
+import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.caching.RequestLevelCacheInvalidator;
-import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorExecutionInfo;
+import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
+import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.guice.injection.VajramGuiceInputInjector;
 import com.flipkart.krystal.vajram.samples.user.response_pojos.UserWithProfile;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.google.inject.AbstractModule;
 import java.util.Arrays;
 import java.util.List;
@@ -77,23 +76,20 @@ class UsersTest {
   @Test
   void testErrorContamination_CorrectAndIncorrectInputs() throws Exception {
     CompletableFuture<List<UserWithProfile>> future;
-    try (KrystexVajramExecutor executor =
+    try (VajramKryonExecutor executor =
         kGraph
             .build()
             .createExecutor(
-                KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfig(
-                        KryonExecutorConfig.builder()
-                            .executorId("error-contaminated-test")
-                            .executorService(executorLease.get())
-                            .build()))) {
+                KrystalExecutorConfig.builder()
+                    .executorId("error-contaminated-test")
+                    .executorService(executorLease.get()))) {
 
       List<String> userIds = Arrays.asList("Incorrect_User_Id", "Correct_User_Id");
 
       future =
           executor.execute(
               GetUserProfilesFromUserIds_ReqImmutPojo._builder().userIds(userIds)._build(),
-              KryonExecutionConfig.builder().build());
+              VajramExecutionConfig.builder().build());
     }
 
     assertThat(future).succeedsWithin(TEST_TIMEOUT);
@@ -104,16 +100,13 @@ class UsersTest {
   @Test
   void testAllCorrectInputs_success() {
     CompletableFuture<List<UserWithProfile>> future;
-    try (KrystexVajramExecutor executor =
+    try (VajramKryonExecutor executor =
         kGraph
             .build()
             .createExecutor(
-                KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfig(
-                        KryonExecutorConfig.builder()
-                            .executorId("all-correct-inputs-test")
-                            .executorService(executorLease.get())
-                            .build()))) {
+                KrystalExecutorConfig.builder()
+                    .executorId("all-correct-inputs-test")
+                    .executorService(executorLease.get()))) {
 
       List<String> userIds =
           Arrays.asList("Correct_User_Id_1", "Correct_User_Id_2", "Correct_User_Id_3");
@@ -121,7 +114,7 @@ class UsersTest {
       future =
           executor.execute(
               GetUserProfilesFromUserIds_ReqImmutPojo._builder().userIds(userIds)._build(),
-              KryonExecutionConfig.builder().build());
+              VajramExecutionConfig.builder().build());
     }
 
     assertThat(future)
@@ -134,23 +127,20 @@ class UsersTest {
   @Test
   void testAllIncorrectInputs_success() {
     CompletableFuture<List<UserWithProfile>> future;
-    try (KrystexVajramExecutor executor =
+    try (VajramKryonExecutor executor =
         kGraph
             .build()
             .createExecutor(
-                KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfig(
-                        KryonExecutorConfig.builder()
-                            .executorId("all-fail-test")
-                            .executorService(executorLease.get())
-                            .build()))) {
+                KrystalExecutorConfig.builder()
+                    .executorId("all-fail-test")
+                    .executorService(executorLease.get()))) {
 
       List<String> userIds = Arrays.asList("Incorrect_User_Id", "Incorrect_User_Id");
 
       future =
           executor.execute(
               GetUserProfilesFromUserIds_ReqImmutPojo._builder().userIds(userIds)._build(),
-              KryonExecutionConfig.builder().build());
+              VajramExecutionConfig.builder().build());
     }
 
     assertThat(future)
@@ -161,12 +151,11 @@ class UsersTest {
 
   @Test
   void mutatingVajram_invalidatesCacheOfReadVajram() {
-    RequestLevelCache requestLevelCache = new RequestLevelCache(graph.kryonDefinitionRegistry());
+    RequestLevelCache requestLevelCache = new RequestLevelCache(graph);
     KryonExecutorExecutionInfo executionInfo = new KryonExecutorExecutionInfo();
     RequestLevelCacheInvalidator cacheInvalidator =
         new RequestLevelCacheInvalidator(
             requestLevelCache,
-            graph::getVajramIdByVajramReqType,
             vajramID -> graph.getVajramDefinition(vajramID).vajramTags(),
             executionInfo);
     VajramGuiceInputInjector guiceInputInjector =
@@ -181,18 +170,15 @@ class UsersTest {
     CompletableFuture<Boolean> future1;
     CompletableFuture<Boolean> future2;
     kGraph.injectionProvider(guiceInputInjector);
-    try (KrystexVajramExecutor executor =
+    try (VajramKryonExecutor executor =
         kGraph
             .build()
             .createExecutor(
-                KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfig(
-                        KryonExecutorConfig.builder()
-                            .executorId("all-correct-inputs-test")
-                            .executorService(executorLease.get())
-                            .configureWith(requestLevelCache.asKryonExecutorConfigurator())
-                            .executorInfo(executionInfo)
-                            .build()))) {
+                KrystalExecutorConfig.builder()
+                    .executorId("all-correct-inputs-test")
+                    .executorService(executorLease.get())
+                    .configureWith(requestLevelCache.asKryonExecutorConfigurator())
+                    .executorInfo(executionInfo))) {
 
       future1 =
           executor.execute(RunUserWorkflow_ReqImmutPojo._builder().userId("UserId_1")._build());
@@ -211,12 +197,11 @@ class UsersTest {
 
   @Test
   void mutatingVajram_invalidationDisabling_leadsToCacheHit() {
-    RequestLevelCache requestLevelCache = new RequestLevelCache(graph.kryonDefinitionRegistry());
+    RequestLevelCache requestLevelCache = new RequestLevelCache(graph);
     KryonExecutorExecutionInfo executionInfo = new KryonExecutorExecutionInfo();
     RequestLevelCacheInvalidator cacheInvalidator =
         new RequestLevelCacheInvalidator(
             requestLevelCache,
-            graph::getVajramIdByVajramReqType,
             vajramID -> graph.getVajramDefinition(vajramID).vajramTags(),
             executionInfo);
     VajramGuiceInputInjector guiceInputInjector =
@@ -234,18 +219,15 @@ class UsersTest {
     CompletableFuture<Boolean> future1;
     CompletableFuture<Boolean> future2;
     kGraph.injectionProvider(guiceInputInjector);
-    try (KrystexVajramExecutor executor =
+    try (VajramKryonExecutor executor =
         kGraph
             .build()
             .createExecutor(
-                KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfig(
-                        KryonExecutorConfig.builder()
-                            .executorId("all-correct-inputs-test")
-                            .executorService(executorLease.get())
-                            .configureWith(requestLevelCache.asKryonExecutorConfigurator())
-                            .executorInfo(executionInfo)
-                            .build()))) {
+                KrystalExecutorConfig.builder()
+                    .executorId("all-correct-inputs-test")
+                    .executorService(executorLease.get())
+                    .configureWith(requestLevelCache.asKryonExecutorConfigurator())
+                    .executorInfo(executionInfo))) {
 
       future1 =
           executor.execute(RunUserWorkflow_ReqImmutPojo._builder().userId("UserId_1")._build());
@@ -264,12 +246,11 @@ class UsersTest {
 
   @Test
   void mutatingVajrams_areNotCached() {
-    RequestLevelCache requestLevelCache = new RequestLevelCache(graph.kryonDefinitionRegistry());
+    RequestLevelCache requestLevelCache = new RequestLevelCache(graph);
     KryonExecutorExecutionInfo executionInfo = new KryonExecutorExecutionInfo();
     RequestLevelCacheInvalidator cacheInvalidator =
         new RequestLevelCacheInvalidator(
             requestLevelCache,
-            graph::getVajramIdByVajramReqType,
             vajramID -> graph.getVajramDefinition(vajramID).vajramTags(),
             executionInfo);
     VajramGuiceInputInjector guiceInputInjector =
@@ -287,18 +268,15 @@ class UsersTest {
     CompletableFuture<Boolean> future1;
     CompletableFuture<Boolean> future2;
     kGraph.injectionProvider(guiceInputInjector);
-    try (KrystexVajramExecutor executor =
+    try (VajramKryonExecutor executor =
         kGraph
             .build()
             .createExecutor(
-                KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfig(
-                        KryonExecutorConfig.builder()
-                            .executorId("all-correct-inputs-test")
-                            .executorService(executorLease.get())
-                            .configureWith(requestLevelCache.asKryonExecutorConfigurator())
-                            .executorInfo(executionInfo)
-                            .build()))) {
+                KrystalExecutorConfig.builder()
+                    .executorId("all-correct-inputs-test")
+                    .executorService(executorLease.get())
+                    .configureWith(requestLevelCache.asKryonExecutorConfigurator())
+                    .executorInfo(executionInfo))) {
 
       future1 =
           executor.execute(RunUserWorkflow_ReqImmutPojo._builder().userId("UserId_1")._build());
@@ -321,12 +299,11 @@ class UsersTest {
 
   @Test
   void invalidatingCacheKeys_fromNonPermittedVajrams_fails() {
-    RequestLevelCache requestLevelCache = new RequestLevelCache(graph.kryonDefinitionRegistry());
+    RequestLevelCache requestLevelCache = new RequestLevelCache(graph);
     KryonExecutorExecutionInfo executionInfo = new KryonExecutorExecutionInfo();
     RequestLevelCacheInvalidator cacheInvalidator =
         new RequestLevelCacheInvalidator(
             requestLevelCache,
-            graph::getVajramIdByVajramReqType,
             vajramID -> graph.getVajramDefinition(vajramID).vajramTags(),
             executionInfo);
     VajramGuiceInputInjector guiceInputInjector =
@@ -343,18 +320,15 @@ class UsersTest {
                 }));
     kGraph.injectionProvider(guiceInputInjector);
     CompletableFuture<List<UserWithProfile>> future1;
-    try (KrystexVajramExecutor executor =
+    try (VajramKryonExecutor executor =
         kGraph
             .build()
             .createExecutor(
-                KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfig(
-                        KryonExecutorConfig.builder()
-                            .executorId("all-correct-inputs-test")
-                            .executorService(executorLease.get())
-                            .configureWith(requestLevelCache.asKryonExecutorConfigurator())
-                            .executorInfo(executionInfo)
-                            .build()))) {
+                KrystalExecutorConfig.builder()
+                    .executorId("all-correct-inputs-test")
+                    .executorService(executorLease.get())
+                    .configureWith(requestLevelCache.asKryonExecutorConfigurator())
+                    .executorInfo(executionInfo))) {
 
       future1 =
           executor.execute(

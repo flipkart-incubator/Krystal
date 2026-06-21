@@ -39,7 +39,7 @@ abstract sealed class AbstractKryon<
 
   protected final VajramKryonDefinition kryonDefinition;
   protected final VajramID vajramID;
-  protected final KryonExecutor kryonExecutor;
+  protected final VajramKryonExecutor kryonExecutor;
 
   /** decoratorType -> Decorator */
   protected final Function<LogicExecutionContext, NavigableSet<OutputLogicDecorator>>
@@ -58,7 +58,7 @@ abstract sealed class AbstractKryon<
 
   AbstractKryon(
       VajramKryonDefinition definition,
-      KryonExecutor kryonExecutor,
+      VajramKryonExecutor kryonExecutor,
       Function<LogicExecutionContext, NavigableSet<OutputLogicDecorator>>
           sortedOutputLogicDecoratorsSupplier,
       Function<DependencyExecutionContext, ImmutableMap<String, DependencyDecorator>>

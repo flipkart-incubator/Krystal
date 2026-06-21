@@ -6,16 +6,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
-import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
+import com.flipkart.krystal.krystex.KrystexGraph;
+import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
+import com.flipkart.krystal.krystex.VajramGraph;
+import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
+import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import java.util.concurrent.CompletableFuture;
 import org.assertj.core.util.Throwables;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -50,21 +49,17 @@ class AddTest {
   @Test
   void withOutNumberTwo_usesPlatformDefaultValue_success() {
     // Create a VajramKryonGraph and KrystexVajramExecutor
-    KrystexVajramExecutorConfigBuilder config =
-        KrystexVajramExecutorConfig.builder()
-            .requestId("adderTest")
-            .kryonExecutorConfig(
-                KryonExecutorConfig.builder()
-                    .executorId("adderTest")
-                    .executorService(new SingleThreadExecutor("adderTest"))
-                    .build());
+    KrystalExecutorConfigBuilder config =
+        KrystalExecutorConfig.builder()
+            .executorId("adderTest")
+            .executorService(new SingleThreadExecutor("adderTest"));
     CompletableFuture<Integer> future;
-    try (KrystexVajramExecutor executor = kGraph.build().createExecutor(config)) {
+    try (VajramKryonExecutor executor = kGraph.build().createExecutor(config)) {
       // Execute the Adder Vajram without passing numberTwo
       future =
           executor.execute(
               Add_ReqImmutPojo._builder().numberOne(5)._build(),
-              KryonExecutionConfig.builder().build());
+              VajramExecutionConfig.builder().build());
     }
     // Assert that the result is equal to numberOne (5) + default numberTwo (0)
     assertThat(future).succeedsWithin(TEST_TIMEOUT).isEqualTo(5);
@@ -77,19 +72,14 @@ class AddTest {
     executorService.execute(() -> eventLoopThreadFuture.complete(currentThread()));
     Thread eventLoopThread = eventLoopThreadFuture.join();
     CompletableFuture<@Nullable Integer> result;
-    KrystexVajramExecutorConfigBuilder config =
-        KrystexVajramExecutorConfig.builder()
-            .kryonExecutorConfig(
-                KryonExecutorConfig.builder()
-                    .executorId("subtract")
-                    .executorService(executorService)
-                    .build());
+    KrystalExecutorConfigBuilder config =
+        KrystalExecutorConfig.builder().executorId("subtract").executorService(executorService);
     CompletableFuture<Thread> resultThreadFuture = new CompletableFuture<>();
-    try (KrystexVajramExecutor krystexVajramExecutor = kGraph.build().createExecutor(config)) {
+    try (VajramKryonExecutor krystexVajramExecutor = kGraph.build().createExecutor(config)) {
       result =
           krystexVajramExecutor.execute(
               Add_ReqImmutPojo._builder().numberOne(5)._build(),
-              KryonExecutionConfig.builder().build());
+              VajramExecutionConfig.builder().build());
       result.thenRun(
           () -> {
             System.out.println(Throwables.getStackTrace(new RuntimeException()));

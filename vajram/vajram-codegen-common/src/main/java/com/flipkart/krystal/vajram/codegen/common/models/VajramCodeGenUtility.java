@@ -661,7 +661,7 @@ public class VajramCodeGenUtility {
     } else {
       throw codegenUtil.errorAndThrow(
           "Incorrect number of parameter types on Vajram interface %s. Expected 1, Found %s. Unable to infer response type for Vajram %s"
-              .formatted(targetClass, typeParameters, vajramOrReqType),
+              .formatted(targetParentClass, typeParameters, vajramOrReqType),
           vajramOrReqType);
     }
   }

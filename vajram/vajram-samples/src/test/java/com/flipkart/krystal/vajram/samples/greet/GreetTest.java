@@ -19,26 +19,25 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
+import com.flipkart.krystal.krystex.KrystexGraph;
+import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
+import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.caching.TestRequestLevelCache;
 import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
-import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
-import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
-import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonExecutionReport;
-import com.flipkart.krystal.krystex.logicdecorators.observability.KryonExecutionReport;
-import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecReporter;
+import com.flipkart.krystal.krystex.inputinjection.KryonInputInjector;
+import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
+import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
+import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy;
+import com.flipkart.krystal.krystex.testharness.VajramTestHarness;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.guice.injection.VajramGuiceInputInjector;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.KryonInputInjector;
-import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness;
+import com.flipkart.krystal.visualization.executiongraph.DefaultKryonExecutionReport;
+import com.flipkart.krystal.visualization.executiongraph.KryonExecutionReport;
+import com.flipkart.krystal.visualization.executiongraph.MainLogicExecReporter;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
@@ -99,7 +98,7 @@ class GreetTest {
                 .add(KryonInputInjector.DECORATOR_TYPE)
                 .build());
     this.graph = VajramGraph.builder().loadFromPackage(PACKAGE_PATH).build();
-    this.requestLevelCache = new TestRequestLevelCache(graph.kryonDefinitionRegistry());
+    this.requestLevelCache = new TestRequestLevelCache(graph);
 
     this.objectMapper =
         JsonMapper.builder()
@@ -134,20 +133,17 @@ class GreetTest {
     assertThat(analyticsEventSink.events).isEmpty();
     KrystexGraphBuilder kGraph = KrystexGraph.builder().vajramGraph(graph);
     kGraph.injectionProvider(new VajramGuiceInputInjector(injector));
-    try (KrystexVajramExecutor krystexVajramExecutor =
+    try (VajramKryonExecutor krystexVajramExecutor =
         kGraph
             .build()
             .createExecutor(
-                KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfig(
-                        KryonExecutorConfig.builder()
-                            .executorId(REQUEST_ID)
-                            .executorService(executorLease.get())
-                            .decorationOrdering(decorationOrdering)
-                            .configureWith(
-                                new MainLogicExecReporter(kryonExecutionReport)
-                                    .asKryonExecutorConfigurator())
-                            .build()))) {
+                KrystalExecutorConfig.builder()
+                    .executorId(REQUEST_ID)
+                    .executorService(executorLease.get())
+                    .decorationOrdering(decorationOrdering)
+                    .configureWith(
+                        new MainLogicExecReporter(kryonExecutionReport)
+                            .asKryonExecutorConfigurator()))) {
       future = executeVajram(krystexVajramExecutor, requestContext);
     }
     assertThat(future)
@@ -177,28 +173,25 @@ class GreetTest {
   public record RequestContext(String requestId, String userId) {}
 
   private static CompletableFuture<String> executeVajram(
-      KrystexVajramExecutor krystexVajramExecutor, RequestContext rc) {
+      VajramKryonExecutor krystexVajramExecutor, RequestContext rc) {
     return krystexVajramExecutor.execute(
         Greet_ReqImmutPojo._builder().userId(rc.userId)._build(),
-        KryonExecutionConfig.builder().executionId("req_1").build());
+        VajramExecutionConfig.builder().executionId("req_1").build());
   }
 
   @Test
   void greeting_success_when_user_service_call_is_success() {
     CompletableFuture<String> future;
-    KrystexVajramExecutorConfigBuilder executorConfig =
-        KrystexVajramExecutorConfig.builder()
-            .kryonExecutorConfig(
-                KryonExecutorConfig.builder()
-                    .executorId(REQUEST_ID)
-                    .executorService(executorLease.get())
-                    .graphTraversalStrategy(GraphTraversalStrategy.DEPTH)
-                    .build());
+    KrystalExecutorConfigBuilder executorConfig =
+        KrystalExecutorConfig.builder()
+            .executorId(REQUEST_ID)
+            .executorService(executorLease.get())
+            .graphTraversalStrategy(GraphTraversalStrategy.DEPTH);
     RequestContext requestContext = new RequestContext(REQUEST_ID, USER_ID);
     VajramGraph vajramGraph = graph;
     KrystexGraphBuilder kGraph = KrystexGraph.builder().vajramGraph(vajramGraph);
     kGraph.injectionProvider(new VajramGuiceInputInjector(injector));
-    try (KrystexVajramExecutor krystexVajramExecutor =
+    try (VajramKryonExecutor krystexVajramExecutor =
         kGraph
             .build()
             .createExecutor(
@@ -215,19 +208,16 @@ class GreetTest {
   @Test
   void greeting_success_when_user_service_fails_with_request_timeout() {
     CompletableFuture<String> future;
-    KrystexVajramExecutorConfigBuilder executorConfig =
-        KrystexVajramExecutorConfig.builder()
-            .kryonExecutorConfig(
-                KryonExecutorConfig.builder()
-                    .executorId(REQUEST_ID)
-                    .executorService(executorLease.get())
-                    .graphTraversalStrategy(GraphTraversalStrategy.DEPTH)
-                    .build());
+    KrystalExecutorConfigBuilder executorConfig =
+        KrystalExecutorConfig.builder()
+            .executorId(REQUEST_ID)
+            .executorService(executorLease.get())
+            .graphTraversalStrategy(GraphTraversalStrategy.DEPTH);
     RequestContext requestContext = new RequestContext(REQUEST_ID, USER_ID);
     VajramGraph vajramGraph = graph;
     KrystexGraphBuilder krystexGraph = KrystexGraph.builder().vajramGraph(vajramGraph);
     krystexGraph.injectionProvider(new VajramGuiceInputInjector(injector));
-    try (KrystexVajramExecutor krystexVajramExecutor =
+    try (VajramKryonExecutor krystexVajramExecutor =
         krystexGraph
             .build()
             .createExecutor(

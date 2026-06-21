@@ -1,25 +1,24 @@
 package com.flipkart.krystal.vajram.samples.chess;
 
+import static com.flipkart.krystal.krystex.traits.PredicateDispatchUtil.dispatchTrait;
+import static com.flipkart.krystal.krystex.traits.PredicateDispatchUtil.when;
 import static com.flipkart.krystal.traits.matchers.InputValueMatcher.equalsEnum;
 import static com.flipkart.krystal.vajram.samples.Util.TEST_TIMEOUT;
 import static com.flipkart.krystal.vajram.samples.chess.GetPiece_Req.type_s;
 import static com.flipkart.krystal.vajram.samples.chess.PieceType.KNIGHT;
 import static com.flipkart.krystal.vajram.samples.chess.PieceType.ROOK;
-import static com.flipkart.krystal.vajramexecutor.krystex.traits.PredicateDispatchUtil.dispatchTrait;
-import static com.flipkart.krystal.vajramexecutor.krystex.traits.PredicateDispatchUtil.when;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
+import com.flipkart.krystal.krystex.KrystexGraph;
+import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
+import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.traits.TraitDispatchPolicies;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -79,9 +78,7 @@ class GetPieceTest {
     assertThat(result).succeedsWithin(TEST_TIMEOUT).isEqualTo(new Rook());
   }
 
-  private KrystexVajramExecutorConfigBuilder getExecutorConfig() {
-    return KrystexVajramExecutorConfig.builder()
-        .kryonExecutorConfig(
-            KryonExecutorConfig.builder().executorService(executorLease.get()).build());
+  private KrystalExecutorConfigBuilder getExecutorConfig() {
+    return KrystalExecutorConfig.builder().executorService(executorLease.get());
   }
 }

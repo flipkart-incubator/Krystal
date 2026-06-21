@@ -35,7 +35,7 @@ dependencies {
     krystalModelsGenProcessor 'com.flipkart.krystal:lattice-rest-quarkus-codegen'
     krystalModelsGenProcessor 'com.flipkart.krystal:lattice-quarkus-codegen'
 
-    testImplementation 'com.flipkart.krystal:vajram-krystex'
+    testImplementation 'com.flipkart.krystal:krystex'
 
     /** END: Lattice dependencies **/
 

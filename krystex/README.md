@@ -1,11 +1,16 @@
 # Krystex
 
-Krystex (**Kryst**al **Ex**ecutor) is a generic execution engine for synchronous workflows.
+Krystex (**Kryst**al **Ex**ecutor) is the runtime execution engine for synchronous workflows,
+including vajram-based business logic written with
+[`vajram-java-sdk`](../vajram/vajram-java-sdk/README.md).
 
 ## Introduction
 
-Krystex is designed to execute arbitrary synchronous business workflows which can involve making API
-network calls to other microservices.
+Krystex is designed to execute synchronous business workflows which can involve making API network
+calls to other microservices. For the common case of vajram-based applications, Krystex compiles
+vajram definitions into kryons via [`VajramGraph`](src/main/java/com/flipkart/krystal/krystex/VajramGraph.java)
+and executes them through
+[`KrystexVajramExecutor`](src/main/java/com/flipkart/krystal/krystex/KrystexVajramExecutor.java).
 
 These synchronous workflows could be the business logic inside services which perform
 high-throughput, low-latency "scatter-gather" operations from across multiple
@@ -30,26 +35,39 @@ application. Its concerns include:
 * Dynamic configurability
 * Optimal resource reclamation and garbage collection
 
-### What krystex is NOT
+### Vajram integration
 
-Krystex is not designed to solve for functional and development-time use cases. For example, krystex
-**DOES NOT** understand or have support for the following:
+Krystex includes the vajram execution layer that was previously a separate module. The main entry
+points are:
 
-* **Mandatory vs. optionality** - For krystex, everything is optional
-* **Type-safety** - For krystex, everything is either a plain old java `Object`, a `Throwable` or
-  a `HashMap<>` (more on this later)
-* **Batching** - For krystex, every unit of computation takes `1` set of inputs and returns
-  exactly `1` outputs.
+* [`VajramGraph`](src/main/java/com/flipkart/krystal/krystex/VajramGraph.java) — loads vajram
+  definitions and builds the corresponding kryon definitions
+* [`KrystexGraph`](src/main/java/com/flipkart/krystal/krystex/KrystexGraph.java) — wraps a
+  `VajramGraph` and wires decorators for batching, injection, caching, and trait dispatch
+* [`KrystexVajramExecutor`](src/main/java/com/flipkart/krystal/krystex/KrystexVajramExecutor.java) —
+  implements the `VajramExecutor` interface and delegates to `KryonExecutor`
+
+Application developers write business logic with `vajram-java-sdk`; Krystex handles compilation into
+kryons and runtime execution. No separate bridge or transpiler module is required.
+
+### What the kryon-level APIs are NOT
+
+At the kryon primitive level, Krystex is intentionally type-agnostic and does not solve for
+functional and development-time use cases directly. For example, raw kryons **DO NOT** understand or
+have support for the following:
+
+* **Mandatory vs. optionality** — for a raw kryon, everything is optional
+* **Type-safety** — for a raw kryon, everything is either a plain old java `Object`, a `Throwable`
+  or a `HashMap<>` (more on this later)
+* **Batching** — for a raw kryon, every unit of computation takes `1` set of inputs and returns
+  exactly `1` output.
   (This is a bit debatable. One could argue that batching is a non-functional
   aspect of a workflow. In the future, krystex might provide first-class support for batching. But
-  for now, batching is expected to be solved by clients of Krystex
-  via [LogicDecorators](#logic-decorator).)
+  for now, batching is expected to be solved via [LogicDecorators](#logic-decorator).)
 
-Because of this design choice, Krystex is not very developer-friendly, and is not supposed to be
-used by application developers directly. It is expected that other
-frameworks (like [vajramDef](../vajramDef/README.md)) will create
-abstractions over krystex which provide a developer-friendly environment to write application logic,
-and then translate/compile these abstractions into Krystal native entities for runtime execution.
+These limitations apply to the low-level kryon APIs used for custom integrations. The vajram
+execution path (`VajramGraph` → `KrystexGraph` → `KrystexVajramExecutor`) provides the
+developer-friendly programming model on top of these primitives.
 
 ## Concepts
 

@@ -32,6 +32,7 @@ import com.flipkart.krystal.facets.resolution.ResolverCommand.ExecuteDependency;
 import com.flipkart.krystal.facets.resolution.ResolverCommand.SkipDependency;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
+import com.flipkart.krystal.krystex.batching.InputBatchingDecorator;
 import com.flipkart.krystal.krystex.commands.CallbackBatch;
 import com.flipkart.krystal.krystex.commands.ForwardReceiveBatch;
 import com.flipkart.krystal.krystex.commands.ForwardSendBatch;
@@ -73,11 +74,10 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * ForwardSendBatch} commands to another kryon in the same dependent chain. This way a Flushable
  * Kryon is able to keep track of incoming requests per dependent chain and thus is able to send a
  * Flush command to its dependencies per dependent chain. This capability is crucial for achieving
- * capabilities like optimal batching (For example:
- * com.flipkart.krystal.vajramexecutor.krystex.InputBatchingDecorator) etc which rely on the fact
- * that they are able to track the complete super set of active dependent chains and able to
- * determine accurately when the call graph execution has reached a point where not further requests
- * can be received.
+ * capabilities like optimal batching (For example: {@link InputBatchingDecorator}) etc which rely
+ * on the fact that they are able to track the complete super set of active dependent chains and
+ * able to determine accurately when the call graph execution has reached a point where not further
+ * requests can be received.
  *
  * <p>This design choice of singleRequest-SingleResponse, as well as flushing means has the
  * following implication on this class' design:
@@ -86,9 +86,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *   <li>The class using {@link CompletableFuture}s for tracking responses
  *   <li>This class performs bookkeeping of what commands were received and what commands were sent
  *       in in-memory data structures which are not cleared up because the complete executor and all
- *       kryons will anyway be garbage collected once the {@link KryonExecutor} is closed. This is
- *       acceptable since each executor is expected to last for a few seconds, not more (this is the
- *       nature of the request-response paradigm)
+ *       kryons will anyway be garbage collected once the {@link VajramKryonExecutor} is closed.
+ *       This is acceptable since each executor is expected to last for a few seconds, not more
+ *       (this is the nature of the request-response paradigm)
  * </ul>
  */
 @Slf4j
@@ -120,7 +120,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
 
   BatchKryon(
       VajramKryonDefinition kryonDefinition,
-      KryonExecutor kryonExecutor,
+      VajramKryonExecutor kryonExecutor,
       Function<LogicExecutionContext, NavigableSet<OutputLogicDecorator>>
           sortedOutputLogicDecoratorSupplier,
       Function<DependencyExecutionContext, ImmutableMap<String, DependencyDecorator>>

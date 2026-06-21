@@ -17,7 +17,7 @@ import java.util.Map;
  * the scopeInstance when All futures are done:
  *
  * <pre><code>
- *   try(KrystexVajramExecutor vajramExecutor = krystexGraph.createExecutor(vajramExecConfig)) {
+ *   try(VajramKryonExecutor vajramExecutor = krystexGraph.createExecutor(vajramExecConfig)) {
  *     var scopeInstance = scope.enter(vajramExecutor.getKrystalExecutor());
  *     // explicitly seed some seed objects...
  *     scopeInstance.seed(SomeObject.class, someObject);

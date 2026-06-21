@@ -10,8 +10,8 @@ import lombok.experimental.UtilityClass;
 /**
  * Alows vajram developers to indicate whether the vajram has been designed for direct invocation
  * from outside the krystal graph. Invocation from outside the krystal graph means the
- * KrystexVajramExecutor or the KrystalExecutor is used to invoke the vajram directly (without
- * writing a vajram depending on it).
+ * VajramKryonExecutor or the KrystalExecutor is used to invoke the vajram directly (without writing
+ * a vajram depending on it).
  *
  * <p>This information is useful to auto infer graph metadata like shared batcher batching policy
  * (the shared dependency chains) etc. in which we need to know the set of vajram which are

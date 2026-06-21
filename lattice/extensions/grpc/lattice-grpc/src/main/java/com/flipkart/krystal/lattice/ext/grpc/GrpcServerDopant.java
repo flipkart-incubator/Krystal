@@ -4,8 +4,8 @@ import static com.flipkart.krystal.lattice.ext.grpc.GrpcServerDopant.DOPANT_TYPE
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.flipkart.krystal.data.ImmutableRequest;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
 import com.flipkart.krystal.lattice.core.di.Bindings;
 import com.flipkart.krystal.lattice.core.di.Bindings.BindingsBuilder;
 import com.flipkart.krystal.lattice.core.doping.Dopant;
@@ -111,7 +111,7 @@ public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerC
       StreamObserver<@Nullable RespProtoT> responseObserver,
       Function<@Nullable RespT, RespProtoT> protoConverter) {
     Bindings seedMap = getRequestSeeds();
-    KryonExecutorConfigBuilder configBuilder = KryonExecutorConfig.builder();
+    KrystalExecutorConfigBuilder configBuilder = KrystalExecutorConfig.builder();
     String requestId = grpcServerSpec.requestIdContextKey().get();
     if (requestId != null) {
       configBuilder.executorId(requestId);

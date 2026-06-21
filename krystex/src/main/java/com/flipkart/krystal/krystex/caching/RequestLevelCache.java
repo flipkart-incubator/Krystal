@@ -13,6 +13,7 @@ import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.data.MutatesState;
 import com.flipkart.krystal.except.KrystalCompletionException;
+import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.commands.DirectForwardReceive;
 import com.flipkart.krystal.krystex.commands.ForwardReceiveBatch;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
@@ -20,7 +21,6 @@ import com.flipkart.krystal.krystex.kryon.BatchResponse;
 import com.flipkart.krystal.krystex.kryon.Kryon;
 import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
-import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator.KryonExecutorConfiguratorProvider;
 import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -48,31 +49,32 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
       Errable.withError(new KrystalCompletionException("Unknown error in request cache"));
 
   private final CacheContainer cache = new CacheContainer();
-  private final KryonDefinitionRegistry kryonDefinitionRegistry;
+
+  @Getter private final VajramGraph vajramGraph;
+
   private final boolean defaultMutatesStateVal;
 
   /**
    * If a vajram doesn't have a @MutatesState annotation, then it is assumed to mutate state, and
    * caching is skipped.
    *
-   * @param kryonDefinitionRegistry the Kryon Definition registry corresponding to the Krystal
-   *     executor for which this is a request level cache
+   * @param vajramGraph the VajramGraph corresponding to the Krystal executor for which this is a
+   *     request level cache
    */
-  public RequestLevelCache(KryonDefinitionRegistry kryonDefinitionRegistry) {
-    this(kryonDefinitionRegistry, true);
+  public RequestLevelCache(VajramGraph vajramGraph) {
+    this(vajramGraph, true);
   }
 
   /**
-   * @param kryonDefinitionRegistry the Kryon Definition registry corresponding to the Krystal
-   *     executor for which this is a request level cache
+   * @param vajramGraph the VajramGraph corresponding to the Krystal executor for which this is a
+   *     request level cache
    * @param defaultMutatesStateVal If a vajram doesn't have a @MutatesState annotation, then this
    *     value is used as the default. NOTE: Passing "false" here is not recommended as it can lead
    *     to unexpected behavior. This has been provided to support legacy code, and would be removed
    *     in a future release. Prefer using the other constructor which defaults to true.
    */
-  public RequestLevelCache(
-      KryonDefinitionRegistry kryonDefinitionRegistry, boolean defaultMutatesStateVal) {
-    this.kryonDefinitionRegistry = kryonDefinitionRegistry;
+  public RequestLevelCache(VajramGraph vajramGraph, boolean defaultMutatesStateVal) {
+    this.vajramGraph = vajramGraph;
     this.defaultMutatesStateVal = defaultMutatesStateVal;
   }
 
@@ -80,7 +82,6 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
   public KryonExecutorConfigurator asKryonExecutorConfigurator() {
     return configBuilder ->
         configBuilder.kryonDecoratorConfig(
-            DECORATOR_TYPE,
             new KryonDecoratorConfig(
                 DECORATOR_TYPE,
                 _c -> true, // Apply cache to all vajrams
@@ -130,7 +131,7 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
 
     private boolean isEligibleForCaching(KryonCommand<?> kryonCommand) {
       VajramID vajramID = kryonCommand.vajramID();
-      KryonDefinition kryonDefinition = kryonDefinitionRegistry.getOrThrow(vajramID);
+      KryonDefinition kryonDefinition = vajramGraph.kryonDefinitionRegistry().getOrThrow(vajramID);
       boolean mutatesStateTransitive =
           kryonDefinition
               .tags()

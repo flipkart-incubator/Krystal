@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajram.samples;
 
+import static com.flipkart.krystal.krystex.traits.PredicateDispatchUtil.dispatchTrait;
+import static com.flipkart.krystal.krystex.traits.PredicateDispatchUtil.when;
 import static com.flipkart.krystal.traits.matchers.InputValueMatcher.equalsEnum;
 import static com.flipkart.krystal.traits.matchers.InputValueMatcher.isAnyValue;
 import static com.flipkart.krystal.traits.matchers.InputValueMatcher.isInstanceOf;
@@ -11,11 +13,12 @@ import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServi
 import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent.AgentType.L3;
 import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent_Req.agentType_s;
 import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent_Req.initialCommunication_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.traits.PredicateDispatchUtil.dispatchTrait;
-import static com.flipkart.krystal.vajramexecutor.krystex.traits.PredicateDispatchUtil.when;
-import static com.flipkart.krystal.visualization.StaticCallGraphGenerator.generateStaticCallGraphContent;
+import static com.flipkart.krystal.visualization.staticgraph.StaticCallGraphGenerator.generateStaticCallGraphContent;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.flipkart.krystal.krystex.KrystexGraph;
+import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
+import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.vajram.guice.traitbinding.GuiceyStaticDispatchPolicy;
 import com.flipkart.krystal.vajram.guice.traitbinding.TraitBinder;
@@ -40,10 +43,7 @@ import com.flipkart.krystal.vajram.samples.customer_service.L1CallAgent_Req;
 import com.flipkart.krystal.vajram.samples.customer_service.L1EmailAgent_Req;
 import com.flipkart.krystal.vajram.samples.customer_service.L2CallAgent_Req;
 import com.flipkart.krystal.vajram.samples.customer_service.L3EmailAgent_Req;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
-import com.flipkart.krystal.visualization.models.GraphGenerationResult;
+import com.flipkart.krystal.visualization.staticgraph.models.GraphGenerationResult;
 import org.junit.jupiter.api.Test;
 
 class StaticCallGraphTest {

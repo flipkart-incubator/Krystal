@@ -3,6 +3,7 @@ package com.flipkart.krystal.lattice.samples.grpc.proto2024e.sampleProtoService.
 import static com.flipkart.krystal.lattice.core.execution.ThreadingStrategy.POOLED_NATIVE_THREAD_PER_REQUEST;
 import static com.flipkart.krystal.lattice.ext.grpc.GrpcServerDopant.grpcServer;
 
+import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.lattice.core.LatticeApp;
 import com.flipkart.krystal.lattice.core.LatticeApplication;
 import com.flipkart.krystal.lattice.core.doping.DopeWith;
@@ -18,7 +19,6 @@ import com.flipkart.krystal.lattice.krystex.KrystexDopantSpec.KrystexDopantSpecB
 import com.flipkart.krystal.lattice.samples.grpc.proto2024e.sampleProtoService.Proto2024eLatticeSample;
 import com.flipkart.krystal.lattice.vajram.VajramDopantSpec;
 import com.flipkart.krystal.lattice.vajram.VajramDopantSpec.VajramDopantSpecBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 
 @GrpcServer(
     serverName = "LatticeSampleAppGrpc",

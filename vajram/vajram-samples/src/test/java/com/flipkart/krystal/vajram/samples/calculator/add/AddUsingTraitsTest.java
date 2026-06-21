@@ -14,9 +14,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
+import com.flipkart.krystal.krystex.KrystexGraph;
+import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
+import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
-import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
+import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
+import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.traits.TraitDispatchPolicies;
@@ -25,12 +30,6 @@ import com.flipkart.krystal.vajram.guice.traitbinding.TraitBinder;
 import com.flipkart.krystal.vajram.samples.Util;
 import com.flipkart.krystal.vajram.samples.calculator.add.AddUsingTraits.ThreeSums;
 import com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.AdditionMethod;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.google.common.collect.ImmutableSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -104,7 +103,7 @@ class AddUsingTraitsTest {
 
     CompletableFuture<ThreeSums> future;
 
-    try (KrystexVajramExecutor krystexVajramExecutor =
+    try (VajramKryonExecutor krystexVajramExecutor =
         kGraph.build().createExecutor(executorConfig())) {
       // Execute the vajram
       future = executeVajram(graph, krystexVajramExecutor, numbers1, numbers2, numbers3);
@@ -128,7 +127,7 @@ class AddUsingTraitsTest {
 
     CompletableFuture<ThreeSums> future;
 
-    try (KrystexVajramExecutor krystexVajramExecutor =
+    try (VajramKryonExecutor krystexVajramExecutor =
         kGraph.build().createExecutor(executorConfig())) {
 
       // Execute the vajram with empty lists
@@ -146,13 +145,10 @@ class AddUsingTraitsTest {
             });
   }
 
-  private KrystexVajramExecutorConfigBuilder executorConfig() {
-    return KrystexVajramExecutorConfig.builder()
-        .kryonExecutorConfig(
-            KryonExecutorConfig.builder()
-                .executorId(REQUEST_ID)
-                .executorService(executorLease.get())
-                .build());
+  private KrystalExecutorConfigBuilder executorConfig() {
+    return KrystalExecutorConfig.builder()
+        .executorId(REQUEST_ID)
+        .executorService(executorLease.get());
   }
 
   @Test
@@ -169,7 +165,7 @@ class AddUsingTraitsTest {
 
     CompletableFuture<ThreeSums> future;
 
-    try (KrystexVajramExecutor krystexVajramExecutor =
+    try (VajramKryonExecutor krystexVajramExecutor =
         kGraph.build().createExecutor(executorConfig())) {
 
       // Execute the vajram with different sized lists
@@ -189,7 +185,7 @@ class AddUsingTraitsTest {
 
   private static CompletableFuture<ThreeSums> executeVajram(
       VajramGraph graph,
-      KrystexVajramExecutor krystexVajramExecutor,
+      VajramKryonExecutor krystexVajramExecutor,
       List<Integer> numbers1,
       List<Integer> numbers2,
       List<Integer> numbers3) {
@@ -200,7 +196,7 @@ class AddUsingTraitsTest {
             .numbers2(numbers2)
             .numbers3(numbers3)
             ._build(),
-        KryonExecutionConfig.builder()
+        VajramExecutionConfig.builder()
             .disabledDependentChains(getDisabledDependentChains(graph))
             .executionId(REQUEST_ID)
             .build());

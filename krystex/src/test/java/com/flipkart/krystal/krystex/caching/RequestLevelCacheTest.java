@@ -3,10 +3,10 @@ package com.flipkart.krystal.krystex.caching;
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.core.VajramID.vajramID;
 import static com.flipkart.krystal.data.Errable.computeErrableFrom;
-import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
-import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
-import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
-import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.DIRECT;
+import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.BREADTH;
+import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.DEPTH;
+import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy.BATCH;
+import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy.DIRECT;
 import static com.flipkart.krystal.tags.ElementTags.emptyTags;
 import static java.util.Collections.emptySet;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -18,18 +18,20 @@ import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
+import com.flipkart.krystal.krystex.KrystexGraph;
 import com.flipkart.krystal.krystex.LogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
+import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
-import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
-import com.flipkart.krystal.krystex.kryon.KryonExecutor;
-import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
-import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
+import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
+import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
+import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy;
+import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
 import com.flipkart.krystal.krystex.resolution.FacetsFromRequest;
 import com.flipkart.krystal.krystex.testfixtures.FacetValuesMapBuilder;
@@ -76,7 +78,8 @@ class RequestLevelCacheTest {
   private KryonDefinitionRegistry kryonDefinitionRegistry;
   private LogicDefinitionRegistry logicDefinitionRegistry;
   private RequestLevelCache requestLevelCache;
-  private KryonExecutor kryonExecutor;
+  private VajramKryonExecutor kryonExecutor;
+  private KrystexGraph krystexGraph;
 
   private Lease<SingleThreadExecutor> executorLease;
 
@@ -88,15 +91,17 @@ class RequestLevelCacheTest {
 
   @BeforeEach
   void setUp() throws LeaseUnavailableException {
-    this.logicDefinitionRegistry = new LogicDefinitionRegistry();
-    this.kryonDefinitionRegistry = new KryonDefinitionRegistry(logicDefinitionRegistry);
-    this.requestLevelCache = new RequestLevelCache(kryonDefinitionRegistry, false);
+    VajramGraph vajramGraph = VajramGraph.builder().build();
+    this.kryonDefinitionRegistry = vajramGraph.kryonDefinitionRegistry();
+    this.logicDefinitionRegistry = kryonDefinitionRegistry.logicDefinitionRegistry();
+    this.requestLevelCache = new RequestLevelCache(vajramGraph, false);
+    this.krystexGraph = KrystexGraph.builder().vajramGraph(vajramGraph).build();
     this.executorLease = EXEC_POOL.lease();
   }
 
   @AfterEach
   void tearDown() {
-    Optional.ofNullable(kryonExecutor).ifPresent(KryonExecutor::close);
+    Optional.ofNullable(kryonExecutor).ifPresent(VajramKryonExecutor::close);
     executorLease.close();
   }
 
@@ -122,13 +127,13 @@ class RequestLevelCacheTest {
             _graphExecData -> _graphExecData.communicationFacade().executeOutputLogic(),
             ElementTags.of(List.of(InvocableOutsideGraph.Creator.create())));
     CompletableFuture<Object> future1 =
-        kryonExecutor.executeKryon(
+        kryonExecutor.execute(
             SimpleImmutRequest.empty(kryonDefinition.vajramID()),
-            KryonExecutionConfig.builder().executionId("req_1").build());
+            VajramExecutionConfig.builder().executionId("req_1").build());
     CompletableFuture<Object> future2 =
-        kryonExecutor.executeKryon(
+        kryonExecutor.execute(
             SimpleImmutRequest.empty(kryonDefinition.vajramID()),
-            KryonExecutionConfig.builder().executionId("req_2").build());
+            VajramExecutionConfig.builder().executionId("req_2").build());
 
     kryonExecutor.close();
     assertThat(future1).succeedsWithin(TIMEOUT).isEqualTo("computed_value");
@@ -159,13 +164,13 @@ class RequestLevelCacheTest {
             ElementTags.of(List.of(InvocableOutsideGraph.Creator.create())));
 
     CompletableFuture<Object> future1 =
-        kryonExecutor.executeKryon(
+        kryonExecutor.execute(
             SimpleImmutRequest.empty(kryonDefinition.vajramID()),
-            KryonExecutionConfig.builder().executionId("req_1").build());
+            VajramExecutionConfig.builder().executionId("req_1").build());
     CompletableFuture<Object> future2 =
-        kryonExecutor.executeKryon(
+        kryonExecutor.execute(
             SimpleImmutRequest.empty(kryonDefinition.vajramID()),
-            KryonExecutionConfig.builder().executionId("req_2").build());
+            VajramExecutionConfig.builder().executionId("req_2").build());
 
     kryonExecutor.close();
     assertThat(future1).succeedsWithin(TIMEOUT).isEqualTo("computed_value");
@@ -173,19 +178,19 @@ class RequestLevelCacheTest {
     assertThat(outputLogicInvocationCount.sum()).isEqualTo(2);
   }
 
-  private KryonExecutor getKryonExecutor(
+  private VajramKryonExecutor getKryonExecutor(
       KryonExecStrategy kryonExecStrategy,
       GraphTraversalStrategy graphTraversalStrategy,
       boolean withCache) {
-    KryonExecutorConfigBuilder configBuilder =
-        KryonExecutorConfig.builder()
+    KrystalExecutorConfigBuilder configBuilder =
+        KrystalExecutorConfig.builder()
             .executorService(executorLease.get())
             .kryonExecStrategy(kryonExecStrategy)
             .graphTraversalStrategy(graphTraversalStrategy);
     if (withCache) {
-      configBuilder.configureWith(requestLevelCache.asKryonExecutorConfigurator()).build();
+      configBuilder.configureWith(requestLevelCache.asKryonExecutorConfigurator());
     }
-    return new KryonExecutor(kryonDefinitionRegistry, configBuilder.executorId("test").build());
+    return new VajramKryonExecutor(krystexGraph, configBuilder.executorId("test"));
   }
 
   private <T> OutputLogicDefinition<T> newComputeLogic(

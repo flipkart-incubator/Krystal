@@ -561,7 +561,7 @@ public class CodeGenUtility {
     return disallowedTypes.entrySet().stream()
         .<@Nullable String>map(
             e -> {
-              if (isRawAssignable(type, e.getKey(), processingEnv())) {
+              if (isRawAssignable(type, e.getKey())) {
                 return e.getValue();
               } else {
                 return null;
@@ -570,19 +570,6 @@ public class CodeGenUtility {
         .filter(Objects::nonNull)
         .findFirst()
         .orElse(null);
-  }
-
-  /**
-   * Returns true if the raw type (without generics) of {@code from} can be assigned to the raw type
-   * of {@code to}
-   */
-  public static boolean isRawAssignable(
-      TypeMirror from, Class<?> to, ProcessingEnvironment processingEnv) {
-    Types typeUtils = processingEnv.getTypeUtils();
-    return typeUtils.isAssignable(
-        typeUtils.erasure(from),
-        typeUtils.erasure(
-            getTypeElement(checkNotNull(to.getCanonicalName()), processingEnv).asType()));
   }
 
   public static TypeElement getTypeElement(String name, ProcessingEnvironment processingEnv) {
@@ -845,7 +832,11 @@ public class CodeGenUtility {
    * of {@code to}
    */
   public boolean isRawAssignable(TypeMirror from, Class<?> to) {
-    return isRawAssignable(from, to, processingEnv());
+    Types typeUtils = processingEnv().getTypeUtils();
+    return typeUtils.isAssignable(
+        typeUtils.erasure(from),
+        typeUtils.erasure(
+            getTypeElement(checkNotNull(to.getCanonicalName()), processingEnv()).asType()));
   }
 
   public TypeMirror box(TypeMirror type) {

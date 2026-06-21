@@ -27,7 +27,7 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-databind'
 
 
-    testImplementation 'com.flipkart.krystal:vajram-krystex'
+    testImplementation 'com.flipkart.krystal:krystex'
     testImplementation platform('org.assertj:assertj-bom:3.27.7')
     testImplementation 'org.assertj:assertj-core'
 }

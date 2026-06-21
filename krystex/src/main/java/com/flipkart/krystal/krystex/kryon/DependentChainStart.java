@@ -12,8 +12,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * <p>All {@link DependentChain}s are guaranteed to begin with a {@link DependentChainStart}
  *
- * <p>{@link Kryon}s which are executed explicitly, externally using {@link
- * KrystalExecutor#executeKryon} have this as their dependantChain.
+ * <p>{@link Kryon}s which are executed explicitly, externally using {@link KrystalExecutor#execute}
+ * have this as their dependantChain.
  */
 @EqualsAndHashCode(callSuper = false, cacheStrategy = CacheStrategy.LAZY)
 public final class DependentChainStart extends AbstractDependentChain {

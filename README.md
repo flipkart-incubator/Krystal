@@ -71,10 +71,11 @@ separately and not yet managed by a BOM.
 
 #### **krystex** (**Kryst**al **Ex**ecutor)
 * **What it has**
-  * The generic runtime execution engine for synchronous workflow DAGs (kryons, executors, decorators)
+  * The runtime execution engine for synchronous workflow DAGs (kryons, executors, decorators)
+  * Built-in vajram integration — `VajramGraph`, `KrystexGraph`, and `KrystexVajramExecutor` compile vajram definitions into kryons and execute them
 * **When to use**
-  * When building a custom executor integration on top of Krystex primitives
-  * Not intended for direct use by application developers — prefer the Vajram programming model and `vajram-krystex`
+  * To execute vajram-based business logic at runtime (the standard path for Krystal applications)
+  * When building a custom executor integration on top of Krystex kryon primitives
 * **Coordinates:** [![Maven Central](https://img.shields.io/maven-central/v/com.flipkart.krystal/krystex.svg?label=krystex&color=green)](https://central.sonatype.com/artifact/com.flipkart.krystal/krystex)
 * **Location:** [./krystex](krystex)
 * **README:** [krystex/README.md](krystex/README.md)
@@ -98,15 +99,6 @@ separately and not yet managed by a BOM.
   * For experimentation with the vajram-lang programming model; production workflows should use `vajram-java-sdk`
 * **Coordinates:** [![Maven Central](https://img.shields.io/maven-central/v/com.flipkart.krystal/vajram-lang.svg?label=vajram-lang&color=green)](https://central.sonatype.com/artifact/com.flipkart.krystal/vajram-lang)
 * **Location:** [./vajram/vajram-lang](vajram/vajram-lang)
-
-#### **vajram-krystex**
-* **What it has**
-  * The bridge that transpiles developer-written vajrams into kryon models understood by Krystex (`VajramGraph`, `KrystexGraph`)
-* **When to use**
-  * To execute vajram-based business logic at runtime; keeps `vajram-java-sdk` and `krystex` independent of each other
-* **Coordinates:** [![Maven Central](https://img.shields.io/maven-central/v/com.flipkart.krystal/vajram-krystex.svg?label=vajram-krystex&color=green)](https://central.sonatype.com/artifact/com.flipkart.krystal/vajram-krystex)
-* **Location:** [./vajram/vajram-krystex](vajram/vajram-krystex)
-* **BOM:** [Krystal BOM](#krystal-bom)
 
 #### **vajram-codegen-common**
 * **What it has**
@@ -385,9 +377,9 @@ components.
 
 * Vajram: A programming model which allows developers to design and write code for synchronous
   scatter gather business logic in a 'bottom-up' (choreographed) manner.
-* Krystex: A runtime environment which executes synchronous parts of the code written in vajram
-  programming model in an optimal way by understanding static dependencies between pieces of code,
-  creating a logical Directed-Acyclic-Graph, and executing the DAG with maximal concurrency.
+* Krystex: The runtime environment that executes vajram-based business logic. It understands static
+  dependencies between vajrams, compiles them into a logical Directed-Acyclic-Graph of kryons, and
+  executes the DAG with maximal concurrency.
 * Honeycomb: An asynchronous workflow orchestrator which orchestrates the asynchronous parts of
   worflows written in the vajram programming model.
 

@@ -5,7 +5,7 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
-import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
+import com.flipkart.krystal.krystex.VajramGraph;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -34,7 +34,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *   when(cache.getCachedErrable(any(Vajram1_Fac.class))).thenReturn(mockErrableResult);
  *   when(cache.getCachedValue(any(Vajram2_Fac.class))).thenReturn(mockResult);
  *   when(cache.getCachedErrable(any(Vajram3_Fac.class))).thenReturn(Errable.withError(mockException));
- *   try (KrystexVajramExecutor krystexVajramExecutor =
+ *   try (VajramKryonExecutor krystexVajramExecutor =
  *         graph.createExecutor(
  *             VajramTestHarness.prepareForTest(vajramExecutorConfig, cache)
  *                 .buildConfig())) {
@@ -45,13 +45,12 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class TestRequestLevelCache extends RequestLevelCache {
   private static final Object NO_VALUE = new Object();
 
-  public TestRequestLevelCache(KryonDefinitionRegistry kryonDefinitionRegistry) {
-    super(kryonDefinitionRegistry);
+  public TestRequestLevelCache(VajramGraph vajramGraph) {
+    super(vajramGraph);
   }
 
-  public TestRequestLevelCache(
-      KryonDefinitionRegistry kryonDefinitionRegistry, boolean defaultMutatesStateVal) {
-    super(kryonDefinitionRegistry, defaultMutatesStateVal);
+  public TestRequestLevelCache(VajramGraph vajramGraph, boolean defaultMutatesStateVal) {
+    super(vajramGraph, defaultMutatesStateVal);
   }
 
   @Override

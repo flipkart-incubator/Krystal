@@ -7,20 +7,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.core.VajramID;
-import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig;
+import com.flipkart.krystal.krystex.KrystexGraph;
+import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
+import com.flipkart.krystal.krystex.VajramGraph;
+import com.flipkart.krystal.krystex.VajramGraph.VajramGraphBuilder;
+import com.flipkart.krystal.krystex.batching.DepChainBatcherConfig;
+import com.flipkart.krystal.krystex.batching.InputBatcherConfig;
+import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
+import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.samples.calculator.add.Add;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph.VajramGraphBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.batching.DepChainBatcherConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.batching.InputBatcherConfig;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.concurrent.CompletableFuture;
@@ -64,20 +63,17 @@ class AddZeroTest {
             ImmutableMap.of(
                 vajramID,
                 ImmutableList.of(DepChainBatcherConfig.simple(() -> new InputBatcherImpl(100))))));
-    try (KrystexVajramExecutor krystexVajramExecutor =
+    try (VajramKryonExecutor krystexVajramExecutor =
         kGraph
             .build()
             .createExecutor(
-                KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfig(
-                        KryonExecutorConfig.builder()
-                            .executorId(REQUEST_ID)
-                            .executorService(executorLease.get())
-                            .build()))) {
+                KrystalExecutorConfig.builder()
+                    .executorId(REQUEST_ID)
+                    .executorService(executorLease.get()))) {
       future =
           krystexVajramExecutor.execute(
               AddZero_ReqImmutPojo._builder().number(5)._build(),
-              KryonExecutionConfig.builder().executionId("addZeroTest").build());
+              VajramExecutionConfig.builder().executionId("addZeroTest").build());
     }
     assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(5);
   }

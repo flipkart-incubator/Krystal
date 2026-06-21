@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajram.samples.customer_service;
 
+import static com.flipkart.krystal.krystex.traits.PredicateDispatchUtil.dispatchTrait;
+import static com.flipkart.krystal.krystex.traits.PredicateDispatchUtil.when;
 import static com.flipkart.krystal.traits.matchers.InputValueMatcher.equalsEnum;
 import static com.flipkart.krystal.traits.matchers.InputValueMatcher.isAnyValue;
 import static com.flipkart.krystal.traits.matchers.InputValueMatcher.isInstanceOf;
@@ -9,15 +11,17 @@ import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServi
 import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent.AgentType.L3;
 import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent_Req.agentType_s;
 import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent_Req.initialCommunication_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.traits.PredicateDispatchUtil.dispatchTrait;
-import static com.flipkart.krystal.vajramexecutor.krystex.traits.PredicateDispatchUtil.when;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.InstanceOfAssertFactories.LIST;
 import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
+import com.flipkart.krystal.krystex.KrystexGraph;
+import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
+import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.traits.TraitDispatchPolicies;
@@ -25,11 +29,6 @@ import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent
 import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent.Call;
 import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent.Email;
 import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent.InitialCommunication;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexGraph.KrystexGraphBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramGraph;
 import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -216,9 +215,7 @@ class MultiAgentContactTest {
         .hasSize(3);
   }
 
-  private KrystexVajramExecutorConfigBuilder getExecutorConfig() {
-    return KrystexVajramExecutorConfig.builder()
-        .kryonExecutorConfig(
-            KryonExecutorConfig.builder().executorService(executorLease.get()).build());
+  private KrystalExecutorConfigBuilder getExecutorConfig() {
+    return KrystalExecutorConfig.builder().executorService(executorLease.get());
   }
 }

@@ -5,6 +5,8 @@
       <name>com.google.common.collect.ImmutableList.toImmutableList</name>
       <name>com.google.common.collect.ImmutableMap.toImmutableMap</name>
       <name>com.flipkart.krystal.core.VajramID.vajramID</name>
+      <name>java.util.Objects.requireNonNullElseGet</name>
+      <name>java.util.Objects.requireNonNullElse</name>
     </included-static-names>
   </component>
 </project>
