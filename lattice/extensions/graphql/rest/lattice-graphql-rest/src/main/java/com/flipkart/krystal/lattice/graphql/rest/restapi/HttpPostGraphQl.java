@@ -3,9 +3,12 @@ package com.flipkart.krystal.lattice.graphql.rest.restapi;
 import static com.flipkart.krystal.lattice.graphql.rest.restapi.HttpPostGraphQl_Fac.queryResponse_n;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject._asExecutionResult;
+import static com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponse.GRAPHQL_RESPONSE_JSON_CONTENT_TYPE;
 import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static java.util.Objects.requireNonNullElse;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.annos.InvocableOutsideProcess;
 import com.flipkart.krystal.data.Errable;
@@ -19,7 +22,6 @@ import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponseJson;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate_Req;
 import com.flipkart.krystal.vajram.json.Json;
@@ -33,6 +35,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @POST
 @Vajram
 public abstract class HttpPostGraphQl extends ComputeVajramDef<Response> {
+
+  public static final ObjectWriter OBJECT_WRITER =
+      Json.OBJECT_WRITER.forType(new TypeReference<Map<String, Object>>() {});
 
   @SupportedModelProtocol(Json.class)
   @SupportedModelProtocol(PlainJavaObject.class)
@@ -70,9 +75,8 @@ public abstract class HttpPostGraphQl extends ComputeVajramDef<Response> {
   static Response output(Errable<GraphQlOperationObject> queryResponse) {
     try {
       return Response.ok(
-              Json.OBJECT_WRITER.writeValueAsBytes(
-                  _asExecutionResult(queryResponse).toSpecification()))
-          .header(CONTENT_TYPE, GraphQlResponseJson.INSTANCE.defaultContentType())
+              OBJECT_WRITER.writeValueAsBytes(_asExecutionResult(queryResponse).toSpecification()))
+          .header(CONTENT_TYPE, GRAPHQL_RESPONSE_JSON_CONTENT_TYPE)
           .build();
     } catch (Exception e) {
       throw new RuntimeException(e);

@@ -4,7 +4,7 @@ import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.graphql.samples.name.Name;
-import com.flipkart.krystal.vajram.graphql.samples.name.Name_ImmutGQlRespJson;
+import com.flipkart.krystal.vajram.graphql.samples.name.Name_ImmutGQlResp;
 
 @Vajram
 public abstract class GetName extends ComputeVajramDef<Name> {
@@ -14,6 +14,6 @@ public abstract class GetName extends ComputeVajramDef<Name> {
 
   @Output
   static Name getName() {
-    return Name_ImmutGQlRespJson._builder().value("Veerendra Vikramadeva");
+    return Name_ImmutGQlResp._builder().value("Veerendra Vikramadeva");
   }
 }

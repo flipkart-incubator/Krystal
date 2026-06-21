@@ -3,7 +3,7 @@ package com.flipkart.krystal.lattice.samples.graphql.rest.json.logic;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.logic.name.Name;
-import com.flipkart.krystal.lattice.samples.graphql.rest.json.logic.name.Name_ImmutGQlRespJson;
+import com.flipkart.krystal.lattice.samples.graphql.rest.json.logic.name.Name_ImmutGQlResp;
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.logic.person.PersonId;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
@@ -19,7 +19,7 @@ public abstract class GetPersonName extends ComputeVajramDef<Name> {
 
   @Output
   static Name outputLogic(PersonId id) {
-    return Name_ImmutGQlRespJson._builder()
+    return Name_ImmutGQlResp._builder()
         .firstName(id.value() + "-FirstName")
         .lastName(id.value() + "-LastName");
   }
