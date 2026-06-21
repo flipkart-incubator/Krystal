@@ -160,9 +160,9 @@ public final class VajramKryonExecutor implements KrystalExecutor {
 
   public VajramKryonExecutor(
       KrystexGraph krystexGraph, KrystalExecutorConfigBuilder executorConfigBuilder) {
+    this.executorConfig = executorConfigBuilder.build();
     this.kryonDefinitionRegistry = krystexGraph.vajramGraph().kryonDefinitionRegistry();
     this.krystexGraph = krystexGraph;
-    this.executorConfig = primeConfig(executorConfigBuilder, krystexGraph);
     this.singleThreadExecutor = executorConfig.executorService();
     this.executorId =
         requireNonNullElseGet(
@@ -187,13 +187,6 @@ public final class VajramKryonExecutor implements KrystalExecutor {
             this,
             executorConfig.executorServiceTransformer().apply(executorConfig.executorService()));
     this.commandQueue = decoratedExecService;
-  }
-
-  private static KrystalExecutorConfig primeConfig(
-      KrystalExecutorConfigBuilder executorConfigBuilder, KrystexGraph krystexGraph) {
-    executorConfigBuilder.configureWith(krystexGraph.inputBatchingConfig());
-    executorConfigBuilder.configureWith(krystexGraph.injectionConfig());
-    return executorConfigBuilder.build();
   }
 
   private NavigableSet<OutputLogicDecorator> getOutputLogicDecorators(

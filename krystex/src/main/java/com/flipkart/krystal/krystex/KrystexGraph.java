@@ -63,8 +63,12 @@ public final class KrystexGraph {
   }
 
   public VajramKryonExecutor createExecutor(KrystalExecutorConfigBuilder vajramExecConfig) {
-    return new VajramKryonExecutor(
-        this, vajramExecConfig.traitDispatchDecorator(traitDispatchDecorator));
+    KrystalExecutorConfigBuilder executorConfigBuilder =
+        vajramExecConfig.configureWith(inputBatchingConfig).configureWith(injectionConfig);
+    if (traitDispatchDecorator != null) {
+      vajramExecConfig.traitDispatchDecorator(traitDispatchDecorator);
+    }
+    return new VajramKryonExecutor(this, executorConfigBuilder);
   }
 
   public @Nullable TraitDispatchPolicy getTraitDispatchPolicy(VajramID traitID) {

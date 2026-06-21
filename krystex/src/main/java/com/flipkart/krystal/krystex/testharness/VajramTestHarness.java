@@ -47,19 +47,25 @@ public class VajramTestHarness {
   }
 
   public KrystalExecutorConfigBuilder buildConfig() {
+    String decoratorType = RequestLevelCache.DECORATOR_TYPE;
+    if (krystalExecutorConfigBuilder.hasKryonDecorator(decoratorType)) {
+      throw new IllegalStateException(
+          "ConfigBuilder already has a decorator of type "
+              + decoratorType
+              + ". Harness cannot prime mock data");
+    }
+
     vajramIdMockData.forEach(
         (vajramID, vajramRequestErrableMap) ->
             vajramRequestErrableMap.forEach(
                 (objectVajramRequest, objectErrable) ->
                     requestLevelCache.primeCache(objectVajramRequest, objectErrable.toFuture())));
-    if (!krystalExecutorConfigBuilder.hasKryonDecorator(RequestLevelCache.DECORATOR_TYPE)) {
-      krystalExecutorConfigBuilder.kryonDecoratorConfig(
-          new KryonDecoratorConfig(
-              RequestLevelCache.DECORATOR_TYPE,
-              executionContext -> vajramIdMockData.containsKey(executionContext.vajramID()),
-              executionContext -> RequestLevelCache.DECORATOR_TYPE,
-              kryonExecutionContext -> requestLevelCache));
-    }
+    krystalExecutorConfigBuilder.kryonDecoratorConfig(
+        new KryonDecoratorConfig(
+            decoratorType,
+            executionContext -> vajramIdMockData.containsKey(executionContext.vajramID()),
+            executionContext -> decoratorType,
+            kryonExecutionContext -> requestLevelCache));
     return krystalExecutorConfigBuilder;
   }
 }
