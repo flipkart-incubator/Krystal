@@ -37,7 +37,7 @@ public interface GraphQlOperationObject extends GraphQlObject {
 
   static ExecutionResult _asExecutionResult(Errable<GraphQlOperationObject> errable) {
     return errable.mapToValue(
-        failure -> {
+        /* ifFailure= */ failure -> {
           Throwable error = failure.error();
           if (error instanceof GraphQLError graphQLError) {
             return ExecutionResult.newExecutionResult().addError(graphQLError).build();
@@ -50,8 +50,8 @@ public interface GraphQlOperationObject extends GraphQlObject {
                       .build())
               .build();
         },
-        () -> ExecutionResult.newExecutionResult().build(),
-        GraphQlOperationObject::_asExecutionResult);
+        /* ifNil= */ () -> ExecutionResult.newExecutionResult().build(),
+        /* ifNonNil= */ GraphQlOperationObject::_asExecutionResult);
   }
 
   default ExecutionResult _asExecutionResult() {

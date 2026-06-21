@@ -36,7 +36,7 @@ import com.flipkart.krystal.vajram.graphql.api.Constants.Directives;
 import com.flipkart.krystal.vajram.graphql.api.Constants.Facets;
 import com.flipkart.krystal.vajram.graphql.api.execution.GraphQLUtils;
 import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponseJson;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponse;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
 import com.google.common.collect.ImmutableMap;
 import com.squareup.javapoet.AnnotationSpec;
@@ -490,7 +490,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
         objectTypeName.value()
             + "_"
             + IMMUT_SUFFIX
-            + GraphQlResponseJson.INSTANCE.modelClassesSuffix());
+            + GraphQlResponse.INSTANCE.modelClassesSuffix());
   }
 
   private List<MethodSpec> getInputResolvers(

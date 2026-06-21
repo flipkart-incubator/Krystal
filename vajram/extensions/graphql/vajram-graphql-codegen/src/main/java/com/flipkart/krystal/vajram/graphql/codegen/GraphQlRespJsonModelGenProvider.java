@@ -4,7 +4,7 @@ import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGeneratorProvider;
 import com.flipkart.krystal.model.ModelProtocol;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponseJson;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponse;
 import com.google.auto.service.AutoService;
 import java.util.Set;
 
@@ -17,6 +17,6 @@ public class GraphQlRespJsonModelGenProvider implements ModelsCodeGeneratorProvi
 
   @Override
   public Set<Class<? extends ModelProtocol>> getSupportedModelProtocols() {
-    return Set.of(GraphQlResponseJson.class);
+    return Set.of(GraphQlResponse.class);
   }
 }
