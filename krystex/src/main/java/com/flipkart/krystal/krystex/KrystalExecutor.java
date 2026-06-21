@@ -5,18 +5,22 @@ import static com.flipkart.krystal.krystex.internal.KrystalExecutorExecService.T
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponseFuture;
-import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
+import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public interface KrystalExecutor extends AutoCloseable {
 
-  <T> CompletableFuture<@Nullable T> executeKryon(
-      ImmutableRequest<T> request, KryonExecutionConfig executionConfig);
+  default <T> CompletableFuture<@Nullable T> execute(ImmutableRequest<T> request) {
+    return execute(request, VajramExecutionConfig.builder().build());
+  }
 
-  <T> void executeKryon(
+  <T> CompletableFuture<@Nullable T> execute(
+      ImmutableRequest<T> request, VajramExecutionConfig executionConfig);
+
+  <T> void execute(
       RequestResponseFuture<? extends Request<T>, T> requestResponseFuture,
-      KryonExecutionConfig executionConfig);
+      VajramExecutionConfig executionConfig);
 
   /** Returns the identifier of this executor. */
   String executorId();

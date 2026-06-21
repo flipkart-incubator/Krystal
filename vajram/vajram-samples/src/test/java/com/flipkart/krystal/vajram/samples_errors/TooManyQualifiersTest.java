@@ -7,13 +7,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig;
 import com.flipkart.krystal.krystex.KrystexGraph;
 import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
-import com.flipkart.krystal.krystex.KrystexVajramExecutor;
-import com.flipkart.krystal.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.VajramGraph.VajramGraphBuilder;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
+import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.exception.MandatoryFacetsMissingException;
@@ -52,7 +51,7 @@ class TooManyQualifiersTest {
   void tooManyQualifiersInjectionFacet_throws() {
     CompletableFuture<@Nullable String> result;
     VajramGraph vajramGraph = graph.build();
-    try (KrystexVajramExecutor executor = createExecutor(vajramGraph)) {
+    try (VajramKryonExecutor executor = createExecutor(vajramGraph)) {
       result = executor.execute(TooManyQualifiers_ReqImmutPojo._builder().input("i1")._build());
     }
     assertThat(result)
@@ -65,7 +64,7 @@ class TooManyQualifiersTest {
                 + " does not have a value) ]");
   }
 
-  private KrystexVajramExecutor createExecutor(VajramGraph vajramGraph) {
+  private VajramKryonExecutor createExecutor(VajramGraph vajramGraph) {
     KrystexGraphBuilder kGraph = KrystexGraph.builder().vajramGraph(vajramGraph);
     kGraph.injectionProvider(
         new VajramGuiceInputInjector(
@@ -79,9 +78,6 @@ class TooManyQualifiersTest {
                 })));
     return kGraph
         .build()
-        .createExecutor(
-            KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfig(
-                    KryonExecutorConfig.builder().executorService(executorLease.get()).build()));
+        .createExecutor(KrystalExecutorConfig.builder().executorService(executorLease.get()));
   }
 }

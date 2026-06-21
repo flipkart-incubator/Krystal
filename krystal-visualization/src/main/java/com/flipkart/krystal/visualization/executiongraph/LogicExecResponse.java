@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex.logicdecorators.observability;
+package com.flipkart.krystal.visualization.executiongraph;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValues;

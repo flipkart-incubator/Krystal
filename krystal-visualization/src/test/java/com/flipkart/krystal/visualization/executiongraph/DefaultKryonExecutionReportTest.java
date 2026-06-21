@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex.logicdecorators.observability;
+package com.flipkart.krystal.visualization.executiongraph;
 
 import static com.flipkart.krystal.data.Errable.withValue;
 import static com.flipkart.krystal.krystex.testfixtures.SimpleFacet.input;
@@ -11,11 +11,11 @@ import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
-import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonExecutionReport.LogicExecInfo;
 import com.flipkart.krystal.krystex.testfixtures.FacetValuesMapBuilder;
 import com.flipkart.krystal.krystex.testfixtures.ImmutableFacetValuesMap;
 import com.flipkart.krystal.krystex.testfixtures.SimpleFacet;
 import com.flipkart.krystal.krystex.testfixtures.SimpleRequestBuilder;
+import com.flipkart.krystal.visualization.executiongraph.DefaultKryonExecutionReport.LogicExecInfo;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.time.Instant;

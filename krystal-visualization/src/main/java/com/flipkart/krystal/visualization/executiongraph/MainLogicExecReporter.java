@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex.logicdecorators.observability;
+package com.flipkart.krystal.visualization.executiongraph;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Value.ALL_NON_NULL;
 import static com.flipkart.krystal.data.Errable.nil;
@@ -61,7 +61,6 @@ public final class MainLogicExecReporter
   public KryonExecutorConfigurator asKryonExecutorConfigurator() {
     return configBuilder ->
         configBuilder.outputLogicDecoratorConfig(
-            decoratorType(),
             new OutputLogicDecoratorConfig(
                 decoratorType(),
                 logicExecutionContext -> true, // apply to all vajrams

@@ -1,9 +1,9 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
-import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
-import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
-import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
-import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.DIRECT;
+import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.BREADTH;
+import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.DEPTH;
+import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy.BATCH;
+import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy.DIRECT;
 import static com.flipkart.krystal.krystex.traits.PredicateDispatchUtil.dispatchTrait;
 import static com.flipkart.krystal.krystex.traits.PredicateDispatchUtil.when;
 import static com.flipkart.krystal.traits.matchers.InputValueMatcher.isAnyValue;
@@ -21,17 +21,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.except.KrystalCompletionException;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.KrystexGraph;
 import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
-import com.flipkart.krystal.krystex.KrystexVajramExecutor;
-import com.flipkart.krystal.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
-import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
-import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
-import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
+import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
+import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
+import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy;
+import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.traits.TraitDispatchPolicies;
@@ -108,12 +107,12 @@ class MultiAddTest {
     int expectedSum1 = 6; // 1+2+3 using CHAIN
 
     CompletableFuture<Integer> future;
-    try (KrystexVajramExecutor krystexVajramExecutor =
+    try (VajramKryonExecutor krystexVajramExecutor =
         kGraph.build().createExecutor(executorConfig())) {
       future =
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .disabledDependentChains(getDisabledDependentChains(vGraph))
                   .executionId(REQUEST_ID)
                   .staticDispatchQualifier(AdditionMethod.Creator.create(CHAIN))
@@ -136,12 +135,12 @@ class MultiAddTest {
     int expectedSum1 = 6; // 1+2+3 using CHAIN
 
     CompletableFuture<Integer> future;
-    try (KrystexVajramExecutor krystexVajramExecutor =
+    try (VajramKryonExecutor krystexVajramExecutor =
         kGraph.build().createExecutor(executorConfig())) {
       future =
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .disabledDependentChains(getDisabledDependentChains(vGraph))
                   .executionId(REQUEST_ID)
                   .staticDispatchQualifier(AdditionMethod.Creator.create(SPLIT))
@@ -164,12 +163,12 @@ class MultiAddTest {
     int expectedSum1 = 6; // 1+2+3 using CHAIN
 
     CompletableFuture<Integer> future;
-    try (KrystexVajramExecutor krystexVajramExecutor =
+    try (VajramKryonExecutor krystexVajramExecutor =
         kGraph.build().createExecutor(executorConfig())) {
       future =
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .executionId(REQUEST_ID)
                   .staticDispatchQualifier(AdditionMethod.Creator.create(SIMPLE))
                   .build());
@@ -195,12 +194,12 @@ class MultiAddTest {
     int expectedSum1 = 6; // 1+2+3 using CHAIN
 
     CompletableFuture<Integer> future;
-    try (KrystexVajramExecutor krystexVajramExecutor =
+    try (VajramKryonExecutor krystexVajramExecutor =
         kGraph.build().createExecutor(executorConfig())) {
       future =
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .disabledDependentChains(getDisabledDependentChains(vGraph))
                   .executionId(REQUEST_ID)
                   .build());
@@ -226,12 +225,12 @@ class MultiAddTest {
     int expectedSum1 = 6; // 1+2+3 using CHAIN
 
     CompletableFuture<Integer> future;
-    try (KrystexVajramExecutor krystexVajramExecutor =
+    try (VajramKryonExecutor krystexVajramExecutor =
         kGraph.build().createExecutor(executorConfig())) {
       future =
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .disabledDependentChains(getDisabledDependentChains(vGraph))
                   .executionId(REQUEST_ID)
                   .build());
@@ -257,12 +256,12 @@ class MultiAddTest {
     int expectedSum1 = 6; // 1+2+3 using CHAIN
 
     CompletableFuture<Integer> future;
-    try (KrystexVajramExecutor krystexVajramExecutor =
+    try (VajramKryonExecutor krystexVajramExecutor =
         kGraph.build().createExecutor(executorConfig())) {
       future =
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .disabledDependentChains(getDisabledDependentChains(vGraph))
                   .executionId(REQUEST_ID)
                   .build());
@@ -290,12 +289,12 @@ class MultiAddTest {
     int expectedSum1 = 6; // 1+2+3 using CHAIN
 
     CompletableFuture<Integer> future;
-    try (KrystexVajramExecutor krystexVajramExecutor =
+    try (VajramKryonExecutor krystexVajramExecutor =
         kGraph.build().createExecutor(executorConfig())) {
       future =
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .disabledDependentChains(getDisabledDependentChains(vGraph))
                   .executionId(REQUEST_ID)
                   .build());
@@ -323,12 +322,12 @@ class MultiAddTest {
     int expectedSum1 = 6; // 1+2+3 using CHAIN
 
     CompletableFuture<Integer> future;
-    try (KrystexVajramExecutor krystexVajramExecutor =
+    try (VajramKryonExecutor krystexVajramExecutor =
         kGraph.build().createExecutor(executorConfig())) {
       future =
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .disabledDependentChains(getDisabledDependentChains(vGraph))
                   .executionId(REQUEST_ID)
                   .build());
@@ -356,12 +355,12 @@ class MultiAddTest {
     int expectedSum1 = 6; // 1+2+3 using CHAIN
 
     CompletableFuture<Integer> future;
-    try (KrystexVajramExecutor krystexVajramExecutor =
+    try (VajramKryonExecutor krystexVajramExecutor =
         kGraph.build().createExecutor(executorConfig())) {
       future =
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .disabledDependentChains(getDisabledDependentChains(vGraph))
                   .executionId(REQUEST_ID)
                   .build());
@@ -384,12 +383,12 @@ class MultiAddTest {
     List<Integer> numbers1 = asList(1, 2, 3);
 
     CompletableFuture<Integer> future;
-    try (KrystexVajramExecutor krystexVajramExecutor =
+    try (VajramKryonExecutor krystexVajramExecutor =
         kGraph.build().createExecutor(executorConfig())) {
       future =
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .disabledDependentChains(getDisabledDependentChains(vGraph))
                   .executionId(REQUEST_ID)
                   .build());
@@ -424,16 +423,12 @@ class MultiAddTest {
                 vGraph, vGraph.getVajramIdByVajramDefType(MultiAdd.class), traitBinder)));
   }
 
-  private KrystexVajramExecutorConfigBuilder executorConfig() {
-    return KrystexVajramExecutorConfig.builder()
-        .graph(kGraph.build())
-        .requestId(REQUEST_ID)
-        .kryonExecutorConfig(
-            KryonExecutorConfig.builder()
-                .executorService(executorLease.get())
-                .kryonExecStrategy(kryonExecStrategy)
-                .graphTraversalStrategy(graphTraversalStrategy)
-                .build());
+  private KrystalExecutorConfigBuilder executorConfig() {
+    return KrystalExecutorConfig.builder()
+        .executorId(REQUEST_ID)
+        .executorService(executorLease.get())
+        .kryonExecStrategy(kryonExecStrategy)
+        .graphTraversalStrategy(graphTraversalStrategy);
   }
 
   private static ImmutableSet<DependentChain> getDisabledDependentChains(VajramGraph graph) {

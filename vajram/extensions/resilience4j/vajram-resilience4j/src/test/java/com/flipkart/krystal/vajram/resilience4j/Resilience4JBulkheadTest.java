@@ -20,15 +20,17 @@ import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.InputMirror;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig;
+import com.flipkart.krystal.krystex.KrystexGraph;
 import com.flipkart.krystal.krystex.LogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
+import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
-import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
-import com.flipkart.krystal.krystex.kryon.KryonExecutor;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
+import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
+import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
 import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
 import com.flipkart.krystal.krystex.resolution.FacetsFromRequest;
 import com.flipkart.krystal.krystex.testfixtures.FacetValuesMapBuilder;
@@ -69,12 +71,15 @@ class Resilience4JBulkheadTest {
   private Lease<SingleThreadExecutor> executorLease;
   private KryonDefinitionRegistry kryonDefinitionRegistry;
   private LogicDefinitionRegistry logicDefinitionRegistry;
+  private KrystexGraph krystexGraph;
 
   @BeforeEach
   void setUp() throws LeaseUnavailableException {
     this.executorLease = EXEC_POOL.lease();
-    this.logicDefinitionRegistry = new LogicDefinitionRegistry();
-    this.kryonDefinitionRegistry = new KryonDefinitionRegistry(logicDefinitionRegistry);
+    VajramGraph vajramGraph = VajramGraph.builder().build();
+    this.kryonDefinitionRegistry = vajramGraph.kryonDefinitionRegistry();
+    this.logicDefinitionRegistry = kryonDefinitionRegistry.logicDefinitionRegistry();
+    this.krystexGraph = KrystexGraph.builder().vajramGraph(vajramGraph).build();
   }
 
   @AfterEach
@@ -127,54 +132,51 @@ class Resilience4JBulkheadTest {
                         "bulkhead_restrictsConcurrency.bulkhead.enabled",
                         true))));
 
-    KryonExecutor executor1 =
-        new KryonExecutor(
-            kryonDefinitionRegistry,
-            KryonExecutorConfig.builder()
+    VajramKryonExecutor executor1 =
+        new VajramKryonExecutor(
+            krystexGraph,
+            KrystalExecutorConfig.builder()
                 .executorId("executor1")
                 .executorService(executorLease.get())
-                .configureWith(singleBulkhead)
-                .build());
+                .configureWith(singleBulkhead));
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
-        executor1.executeKryon(
+        executor1.execute(
             new SimpleRequestBuilder<>(
                     Set.of(input("facet1")),
                     ImmutableMap.of("facet1", withValue(1)),
                     kryonDefinition.vajramID())
                 ._build(),
-            KryonExecutionConfig.builder().executionId("req_1").build());
-    KryonExecutor executor2 =
-        new KryonExecutor(
-            kryonDefinitionRegistry,
-            KryonExecutorConfig.builder()
+            VajramExecutionConfig.builder().executionId("req_1").build());
+    VajramKryonExecutor executor2 =
+        new VajramKryonExecutor(
+            krystexGraph,
+            KrystalExecutorConfig.builder()
                 .executorService(executorLease.get())
                 .configureWith(singleBulkhead)
-                .executorId("executor2")
-                .build());
+                .executorId("executor2"));
     CompletableFuture<Object> call2BeforeBulkheadExhaustion =
-        executor2.executeKryon(
+        executor2.execute(
             new SimpleRequestBuilder<>(
                     Set.of(input("facet1")),
                     ImmutableMap.of("facet1", withValue(2)),
                     kryonDefinition.vajramID())
                 ._build(),
-            KryonExecutionConfig.builder().executionId("req_2").build());
-    KryonExecutor executor3 =
-        new KryonExecutor(
-            kryonDefinitionRegistry,
-            KryonExecutorConfig.builder()
+            VajramExecutionConfig.builder().executionId("req_2").build());
+    VajramKryonExecutor executor3 =
+        new VajramKryonExecutor(
+            krystexGraph,
+            KrystalExecutorConfig.builder()
                 .executorService(executorLease.get())
                 .configureWith(singleBulkhead)
-                .executorId("executor3")
-                .build());
+                .executorId("executor3"));
     CompletableFuture<Object> callAfterBulkheadExhaustion =
-        executor3.executeKryon(
+        executor3.execute(
             new SimpleRequestBuilder<>(
                     Set.of(input("facet1")),
                     ImmutableMap.of("facet1", withValue(3)),
                     kryonDefinition.vajramID())
                 ._build(),
-            KryonExecutionConfig.builder().executionId("req_3").build());
+            VajramExecutionConfig.builder().executionId("req_3").build());
     executor1.close();
     executor2.close();
     executor3.close();
@@ -233,48 +235,45 @@ class Resilience4JBulkheadTest {
                 InvocableOutsideGraph.Creator.create(),
                 OutputLogicDelegationMode.Creator.create(SYNC)));
 
-    KryonExecutor executor1 =
-        new KryonExecutor(
-            kryonDefinitionRegistry,
-            KryonExecutorConfig.builder()
+    VajramKryonExecutor executor1 =
+        new VajramKryonExecutor(
+            krystexGraph,
+            KrystalExecutorConfig.builder()
                 .executorService(executorLease.get())
                 .configureWith(resilience4JBulkhead)
-                .executorId("executor1")
-                .build());
+                .executorId("executor1"));
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
-        executor1.executeKryon(
+        executor1.execute(
             new SimpleRequestBuilder<>(
                     inputs, ImmutableMap.of("facet1", withValue(1)), kryonDefinition.vajramID())
                 ._build(),
-            KryonExecutionConfig.builder().executionId("req_1").build());
-    KryonExecutor executor2 =
-        new KryonExecutor(
-            kryonDefinitionRegistry,
-            KryonExecutorConfig.builder()
+            VajramExecutionConfig.builder().executionId("req_1").build());
+    VajramKryonExecutor executor2 =
+        new VajramKryonExecutor(
+            krystexGraph,
+            KrystalExecutorConfig.builder()
                 .executorService(executorLease.get())
                 .configureWith(resilience4JBulkhead)
-                .executorId("executor2")
-                .build());
+                .executorId("executor2"));
     CompletableFuture<Object> call2BeforeBulkheadExhaustion =
-        executor2.executeKryon(
+        executor2.execute(
             new SimpleRequestBuilder<>(
                     inputs, ImmutableMap.of("facet1", withValue(2)), kryonDefinition.vajramID())
                 ._build(),
-            KryonExecutionConfig.builder().executionId("req_2").build());
-    KryonExecutor executor3 =
-        new KryonExecutor(
-            kryonDefinitionRegistry,
-            KryonExecutorConfig.builder()
+            VajramExecutionConfig.builder().executionId("req_2").build());
+    VajramKryonExecutor executor3 =
+        new VajramKryonExecutor(
+            krystexGraph,
+            KrystalExecutorConfig.builder()
                 .executorService(executorLease.get())
                 .configureWith(resilience4JBulkhead)
-                .executorId("executor3")
-                .build());
+                .executorId("executor3"));
     CompletableFuture<Object> callAfterBulkheadExhaustion =
-        executor3.executeKryon(
+        executor3.execute(
             new SimpleRequestBuilder<>(
                     inputs, ImmutableMap.of("facet1", withValue(3)), kryonDefinition.vajramID())
                 ._build(),
-            KryonExecutionConfig.builder().executionId("req_3").build());
+            VajramExecutionConfig.builder().executionId("req_3").build());
     executor1.close();
     executor2.close();
     executor3.close();

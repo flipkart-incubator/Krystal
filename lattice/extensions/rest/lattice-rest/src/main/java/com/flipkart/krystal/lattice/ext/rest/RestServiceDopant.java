@@ -6,8 +6,8 @@ import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Unit;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
 import com.flipkart.krystal.lattice.core.di.Bindings;
 import com.flipkart.krystal.lattice.core.di.Bindings.BindingsBuilder;
 import com.flipkart.krystal.lattice.core.di.Produces;
@@ -60,7 +60,7 @@ public abstract class RestServiceDopant implements Dopant<RestService, RestServi
       ImmutableRequest<RespT> vajramRequest, HttpHeaders headers, UriInfo uriInfo)
       throws HttpResponseStatusException {
     List<String> requestIds = headers.getRequestHeader(REQUEST_ID);
-    KryonExecutorConfigBuilder executorConfigBuilder = KryonExecutorConfig.builder();
+    KrystalExecutorConfigBuilder executorConfigBuilder = KrystalExecutorConfig.builder();
     if (requestIds != null && !requestIds.isEmpty()) {
       executorConfigBuilder.executorId(requestIds.get(0));
     }

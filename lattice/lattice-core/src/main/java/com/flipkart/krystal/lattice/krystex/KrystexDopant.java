@@ -1,19 +1,17 @@
 package com.flipkart.krystal.lattice.krystex;
 
 import static com.flipkart.krystal.krystex.batching.DepChainBatcherConfig.computeSharedBatcherConfig;
-import static com.flipkart.krystal.lattice.core.di.Util.asOptional;
 import static com.flipkart.krystal.lattice.krystex.KrystexDopant.DOPANT_TYPE;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.data.ImmutableRequest;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.KrystexGraph;
 import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
-import com.flipkart.krystal.krystex.KrystexVajramExecutor;
-import com.flipkart.krystal.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.batching.DepChainBatcherConfig.BatchSizeSupplier;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
+import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
 import com.flipkart.krystal.lattice.core.di.Bindings;
 import com.flipkart.krystal.lattice.core.di.DependencyInjectionFramework;
 import com.flipkart.krystal.lattice.core.di.Produces;
@@ -26,7 +24,6 @@ import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import jakarta.inject.Inject;
-import jakarta.inject.Provider;
 import jakarta.inject.Singleton;
 import java.util.ArrayList;
 import java.util.List;
@@ -56,19 +53,15 @@ public final class KrystexDopant implements SimpleDopant {
       KrystexDopantSpec krystexDopantSpec,
       DependencyInjectionFramework dependencyInjectionFramework,
       VajramGraph vajramGraph,
-      ThreadingStrategyDopant threadingStrategyDopant,
-      Provider<KryonExecutorConfigurator> kryonExecutorConfigurator) {
+      ThreadingStrategyDopant threadingStrategyDopant) {
     this.threadingStrategyDopant = threadingStrategyDopant;
     KrystexGraphBuilder krystexGraphBuilder = KrystexGraph.builder();
     for (Consumer<KrystexGraphBuilder> p : krystexDopantSpec.buildKrystexGraphWith()) {
       p.accept(krystexGraphBuilder);
     }
     this.kryonExecutorConfigurator =
-        configBuilder -> {
-          configBuilder.configureWith(
-              asOptional(kryonExecutorConfigurator).orElse(KryonExecutorConfigurator.NO_OP));
-          krystexDopantSpec.configureExecutorWith().forEach(configBuilder::configureWith);
-        };
+        configBuilder ->
+            krystexDopantSpec.configureExecutorWith().forEach(configBuilder::configureWith);
 
     TraitDispatchPolicies traitDispatchPolicies =
         new TraitDispatchPolicies(krystexDopantSpec.traitDispatchPolicies());
@@ -91,7 +84,7 @@ public final class KrystexDopant implements SimpleDopant {
       VajramRequestExecutionContext<RespT> executionContext) throws LeaseUnavailableException {
     ImmutableRequest<RespT> vajramRequest = executionContext.vajramRequest();
     Bindings requestScopeSeeds = executionContext.requestScopeSeeds();
-    KryonExecutorConfigBuilder executorConfigBuilder = executionContext.executorConfigBuilder();
+    KrystalExecutorConfigBuilder executorConfigBuilder = executionContext.executorConfigBuilder();
     Lease<? extends ExecutorService> lease = threadingStrategyDopant.getExecutorService();
     ExecutorService executorService = lease.get();
     if (!(executorService instanceof SingleThreadExecutor singleThreadExecutor)) {
@@ -113,7 +106,7 @@ public final class KrystexDopant implements SimpleDopant {
                       executionContext.requestScopeInitializers()) {
                     requestScopedCloseables.add(requestInitializer.init());
                   }
-                  try (KrystexVajramExecutor executor =
+                  try (VajramKryonExecutor executor =
                       createExecutor(
                           executorConfigBuilder
                               .executorService(singleThreadExecutor)
@@ -128,13 +121,13 @@ public final class KrystexDopant implements SimpleDopant {
                                 if (log.isInfoEnabled()) {
                                   log.info(
                                       "Request sent to executor id '{}' completed successfully",
-                                      executor.getKrystalExecutor().executorId());
+                                      executor.executorId());
                                 }
                               } else {
                                 if (log.isErrorEnabled()) {
                                   log.error(
                                       "Request sent to executor id '{}' completed with error",
-                                      executor.getKrystalExecutor().executorId(),
+                                      executor.executorId(),
                                       throwable);
                                 }
                               }
@@ -149,12 +142,10 @@ public final class KrystexDopant implements SimpleDopant {
     return future;
   }
 
-  private KrystexVajramExecutor createExecutor(
-      @CalledMethods("executorService") KryonExecutorConfigBuilder kryonConfigBuilder) {
+  private VajramKryonExecutor createExecutor(
+      @CalledMethods("executorService") KrystalExecutorConfigBuilder kryonConfigBuilder) {
     kryonConfigBuilder.configureWith(kryonExecutorConfigurator);
-
-    return krystexGraph.createExecutor(
-        KrystexVajramExecutorConfig.builder().kryonExecutorConfig(kryonConfigBuilder.build()));
+    return krystexGraph.createExecutor(kryonConfigBuilder);
   }
 
   private static void closeAll(List<AutoCloseable> closeables) {

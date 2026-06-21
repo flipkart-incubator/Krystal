@@ -11,12 +11,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.KrystexGraph;
 import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
-import com.flipkart.krystal.krystex.KrystexVajramExecutorConfig;
-import com.flipkart.krystal.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.VajramGraph;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.traits.ComputeDispatchPolicyImpl;
 import com.flipkart.krystal.krystex.traits.DispatchTargetComputing.DispatchTargetReqTypeComputer;
 import com.flipkart.krystal.pooling.Lease;
@@ -248,9 +247,7 @@ class CustomerServiceAgentComputeTest {
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("received your Ticket");
   }
 
-  private KrystexVajramExecutorConfigBuilder getExecutorConfig() {
-    return KrystexVajramExecutorConfig.builder()
-        .kryonExecutorConfig(
-            KryonExecutorConfig.builder().executorService(executorLease.get()).build());
+  private KrystalExecutorConfigBuilder getExecutorConfig() {
+    return KrystalExecutorConfig.builder().executorService(executorLease.get());
   }
 }

@@ -34,7 +34,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *   when(cache.getCachedErrable(any(Vajram1_Fac.class))).thenReturn(mockErrableResult);
  *   when(cache.getCachedValue(any(Vajram2_Fac.class))).thenReturn(mockResult);
  *   when(cache.getCachedErrable(any(Vajram3_Fac.class))).thenReturn(Errable.withError(mockException));
- *   try (KrystexVajramExecutor krystexVajramExecutor =
+ *   try (VajramKryonExecutor krystexVajramExecutor =
  *         graph.createExecutor(
  *             VajramTestHarness.prepareForTest(vajramExecutorConfig, cache)
  *                 .buildConfig())) {

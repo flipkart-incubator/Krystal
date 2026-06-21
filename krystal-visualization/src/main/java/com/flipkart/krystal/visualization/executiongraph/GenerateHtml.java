@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex.logicdecorators.observability;
+package com.flipkart.krystal.visualization.executiongraph;
 
 /**
  * @author ajit.dwivedi on 20/02/24

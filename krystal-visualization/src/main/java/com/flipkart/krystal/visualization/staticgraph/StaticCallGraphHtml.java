@@ -1,4 +1,4 @@
-package com.flipkart.krystal.visualization;
+package com.flipkart.krystal.visualization.staticgraph;
 
 import java.io.BufferedReader;
 import java.io.IOException;

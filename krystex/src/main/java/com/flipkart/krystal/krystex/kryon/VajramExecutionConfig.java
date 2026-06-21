@@ -18,7 +18,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @param staticDispatchQualifier if the vajram being executed is a trait and static dispatch is
  *     configured for that vajram, this qualifier is used to determine the bound vajram Id
  */
-public record KryonExecutionConfig(
+public record VajramExecutionConfig(
     String executionId,
     ImmutableSet<DependentChain> disabledDependentChains,
     @Nullable Annotation staticDispatchQualifier) {
@@ -26,7 +26,7 @@ public record KryonExecutionConfig(
   private static final AtomicLong EXEC_COUNT = new AtomicLong();
 
   @Builder(toBuilder = true)
-  public KryonExecutionConfig {
+  public VajramExecutionConfig {
     if (executionId == null) {
       executionId = "KryonExecution-" + EXEC_COUNT.getAndIncrement();
     }

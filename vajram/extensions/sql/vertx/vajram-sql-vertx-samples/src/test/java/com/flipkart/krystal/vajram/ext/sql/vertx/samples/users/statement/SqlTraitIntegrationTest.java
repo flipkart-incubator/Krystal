@@ -5,12 +5,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig;
 import com.flipkart.krystal.krystex.KrystexGraph;
-import com.flipkart.krystal.krystex.KrystexVajramExecutor;
-import com.flipkart.krystal.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.krystex.VajramGraph;
-import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
+import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
+import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.traits.TraitDispatchPolicies;
@@ -66,7 +65,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * Integration tests that start a PostgreSQL Testcontainer, seed it with data, then execute each SQL
- * trait through a full Krystal {@link KrystexVajramExecutor} and assert the results.
+ * trait through a Krystal {@link VajramKryonExecutor} and assert the results.
  */
 @Testcontainers
 class SqlTraitIntegrationTest {
@@ -234,13 +233,13 @@ class SqlTraitIntegrationTest {
   @Test
   void getUserWithAddressById_returnsDeserializedAddress() {
     CompletableFuture<UserWithAddress> future;
-    try (KrystexVajramExecutor executor = createExecutor("getUserWithAddressById")) {
+    try (VajramKryonExecutor executor = createExecutor("getUserWithAddressById")) {
       future =
           executor.execute(
               GetUserWithAddressById_Req._builder()
                   .where(UserIdPredicate._builder().idIs(1L))
                   ._build(),
-              KryonExecutionConfig.builder().executionId("getUserWithAddressById_exec").build());
+              VajramExecutionConfig.builder().executionId("getUserWithAddressById_exec").build());
     }
     assertThat(future)
         .succeedsWithin(TIMEOUT)
@@ -261,7 +260,7 @@ class SqlTraitIntegrationTest {
   void getUserWithAddressById_returnsDeserializedSecondaryAddresses() throws Exception {
     // Insert a user with non-null secondaryAddresses via InsertUser vajram
     CompletableFuture<Integer> insertFuture;
-    try (KrystexVajramExecutor insertExec = createExecutor("insertTestSerdeUser")) {
+    try (VajramKryonExecutor insertExec = createExecutor("insertTestSerdeUser")) {
       insertFuture =
           insertExec.execute(
               InsertUser_Req._builder()
@@ -284,18 +283,18 @@ class SqlTraitIntegrationTest {
                           .orders(List.of())
                           ._build())
                   ._build(),
-              KryonExecutionConfig.builder().executionId("insertTestSerdeUser_exec").build());
+              VajramExecutionConfig.builder().executionId("insertTestSerdeUser_exec").build());
     }
     assertThat(insertFuture).succeedsWithin(TIMEOUT).isEqualTo(1);
     try {
       CompletableFuture<UserWithAddress> future;
-      try (KrystexVajramExecutor executor = createExecutor("getUserWithAddressByIdSecondary")) {
+      try (VajramKryonExecutor executor = createExecutor("getUserWithAddressByIdSecondary")) {
         future =
             executor.execute(
                 GetUserWithAddressById_Req._builder()
                     .where(UserIdPredicate._builder().idIs(100L))
                     ._build(),
-                KryonExecutionConfig.builder()
+                VajramExecutionConfig.builder()
                     .executionId("getUserWithAddressByIdSecondary_exec")
                     .build());
       }
@@ -326,11 +325,11 @@ class SqlTraitIntegrationTest {
   @Test
   void getUserInfoById_returnsUserFromDatabase() {
     CompletableFuture<UserInfo> future;
-    try (KrystexVajramExecutor executor = createExecutor("getUserInfoById")) {
+    try (VajramKryonExecutor executor = createExecutor("getUserInfoById")) {
       future =
           executor.execute(
               GetUserInfoById_Req._builder().where(UserIdPredicate._builder().idIs(1L))._build(),
-              KryonExecutionConfig.builder().executionId("getUserInfoById_exec").build());
+              VajramExecutionConfig.builder().executionId("getUserInfoById_exec").build());
     }
     assertThat(future)
         .succeedsWithin(TIMEOUT)
@@ -347,11 +346,11 @@ class SqlTraitIntegrationTest {
   @Test
   void getUserInfoById_returnsNullForMissingUser() {
     CompletableFuture<UserInfo> future;
-    try (KrystexVajramExecutor executor = createExecutor("getUserInfoById_missing")) {
+    try (VajramKryonExecutor executor = createExecutor("getUserInfoById_missing")) {
       future =
           executor.execute(
               GetUserInfoById_Req._builder().where(UserIdPredicate._builder().idIs(999L))._build(),
-              KryonExecutionConfig.builder().executionId("getUserInfoById_missing_exec").build());
+              VajramExecutionConfig.builder().executionId("getUserInfoById_missing_exec").build());
     }
     assertThat(future).succeedsWithin(TIMEOUT).isNull();
   }
@@ -361,13 +360,13 @@ class SqlTraitIntegrationTest {
   @Test
   void getOrderInfoByUserId_returnsAllOrdersFromDatabase() {
     CompletableFuture<List<OrderInfo>> future;
-    try (KrystexVajramExecutor executor = createExecutor("getOrderInfoByUserId")) {
+    try (VajramKryonExecutor executor = createExecutor("getOrderInfoByUserId")) {
       future =
           executor.execute(
               GetOrderInfoByUserId_Req._builder()
                   .where(OrderUserIdEquals._builder().userIdIs(1L)._build())
                   ._build(),
-              KryonExecutionConfig.builder().executionId("getOrderInfoByUserId_exec").build());
+              VajramExecutionConfig.builder().executionId("getOrderInfoByUserId_exec").build());
     }
     assertThat(future)
         .succeedsWithin(TIMEOUT)
@@ -384,13 +383,13 @@ class SqlTraitIntegrationTest {
   @Test
   void getOrderInfoByUserId_returnsEmptyListForUserWithNoOrders() {
     CompletableFuture<List<OrderInfo>> future;
-    try (KrystexVajramExecutor executor = createExecutor("getOrderInfoByUserId_empty")) {
+    try (VajramKryonExecutor executor = createExecutor("getOrderInfoByUserId_empty")) {
       future =
           executor.execute(
               GetOrderInfoByUserId_Req._builder()
                   .where(OrderUserIdEquals._builder().userIdIs(999L)._build())
                   ._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .executionId("getOrderInfoByUserId_empty_exec")
                   .build());
     }
@@ -402,13 +401,13 @@ class SqlTraitIntegrationTest {
   @Test
   void getUserOrdersByUserName_returnsUserWithOrdersFromDatabase() {
     CompletableFuture<UserNameAndOrders> future;
-    try (KrystexVajramExecutor executor = createExecutor("getUserOrdersByUserName")) {
+    try (VajramKryonExecutor executor = createExecutor("getUserOrdersByUserName")) {
       future =
           executor.execute(
               GetUserOrdersByUserName_Req._builder()
                   .where(UserNamePredicate._builder().nameIs("Alisha")._build())
                   ._build(),
-              KryonExecutionConfig.builder().executionId("getUserOrdersByUserName_exec").build());
+              VajramExecutionConfig.builder().executionId("getUserOrdersByUserName_exec").build());
     }
     assertThat(future)
         .succeedsWithin(TIMEOUT)
@@ -426,13 +425,13 @@ class SqlTraitIntegrationTest {
   @Test
   void getUserOrdersByUserName_returnsNullForMissingUser() {
     CompletableFuture<UserNameAndOrders> future;
-    try (KrystexVajramExecutor executor = createExecutor("getUserOrdersByUserName_missing")) {
+    try (VajramKryonExecutor executor = createExecutor("getUserOrdersByUserName_missing")) {
       future =
           executor.execute(
               GetUserOrdersByUserName_Req._builder()
                   .where(UserNamePredicate._builder().nameIs("NoSuchUser")._build())
                   ._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .executionId("getUserOrdersByUserName_missing_exec")
                   .build());
     }
@@ -444,13 +443,13 @@ class SqlTraitIntegrationTest {
   @Test
   void getUserByIdWithOrdersAndItems_returnsTwoLevelNestedDataFromDatabase() {
     CompletableFuture<UserWithOrdersAndItems> future;
-    try (KrystexVajramExecutor executor = createExecutor("getUserByIdWithOrdersAndItems")) {
+    try (VajramKryonExecutor executor = createExecutor("getUserByIdWithOrdersAndItems")) {
       future =
           executor.execute(
               GetUserByIdWithOrdersAndItems_Req._builder()
                   .where(UserIdPredicate._builder().idIs(1L)._build())
                   ._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .executionId("getUserByIdWithOrdersAndItems_exec")
                   .build());
     }
@@ -483,13 +482,13 @@ class SqlTraitIntegrationTest {
   @Test
   void getUserByNameWithOrdersAndItems_returnsTwoLevelNestedDataFromDatabase() {
     CompletableFuture<UserWithOrdersAndItems> future;
-    try (KrystexVajramExecutor executor = createExecutor("getUserByNameWithOrdersAndItems")) {
+    try (VajramKryonExecutor executor = createExecutor("getUserByNameWithOrdersAndItems")) {
       future =
           executor.execute(
               GetUserByNameWithOrdersAndItems_Req._builder()
                   .where(UserNamePredicate._builder().nameIs("Alisha")._build())
                   ._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .executionId("getUserByNameWithOrdersAndItems_exec")
                   .build());
     }
@@ -522,14 +521,13 @@ class SqlTraitIntegrationTest {
     // @LIMIT(3) on orders caps at 3 (not 11); @LIMIT(5) on items caps at 5 per order (not 6).
     // Both limits are verified to be independent of each other.
     CompletableFuture<UserWithOrdersAndItems> future;
-    try (KrystexVajramExecutor executor =
-        createExecutor("getUserByNameWithOrdersAndItems_limits")) {
+    try (VajramKryonExecutor executor = createExecutor("getUserByNameWithOrdersAndItems_limits")) {
       future =
           executor.execute(
               GetUserByNameWithOrdersAndItems_Req._builder()
                   .where(UserNamePredicate._builder().nameIs("Babu")._build())
                   ._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .executionId("getUserByNameWithOrdersAndItems_limits_exec")
                   .build());
     }
@@ -560,14 +558,13 @@ class SqlTraitIntegrationTest {
   @Test
   void getUserByNameWithOrdersAndItems_returnsNullForMissingUser() {
     CompletableFuture<UserWithOrdersAndItems> future;
-    try (KrystexVajramExecutor executor =
-        createExecutor("getUserByNameWithOrdersAndItems_missing")) {
+    try (VajramKryonExecutor executor = createExecutor("getUserByNameWithOrdersAndItems_missing")) {
       future =
           executor.execute(
               GetUserByNameWithOrdersAndItems_Req._builder()
                   .where(UserNamePredicate._builder().nameIs("NoSuchUser")._build())
                   ._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .executionId("getUserByNameWithOrdersAndItems_missing_exec")
                   .build());
     }
@@ -579,13 +576,13 @@ class SqlTraitIntegrationTest {
   @Test
   void getOrdersWithItemsByUserId_returnsOrdersWithItemsOrderedByTimeDesc() {
     CompletableFuture<List<OrderWithItems>> future;
-    try (KrystexVajramExecutor executor = createExecutor("getOrdersWithItemsByUserId")) {
+    try (VajramKryonExecutor executor = createExecutor("getOrdersWithItemsByUserId")) {
       future =
           executor.execute(
               GetOrdersWithItemsByUserId_Req._builder()
                   .where(OrderUserIdEquals._builder().userIdIs(1L)._build())
                   ._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .executionId("getOrdersWithItemsByUserId_exec")
                   .build());
     }
@@ -615,13 +612,13 @@ class SqlTraitIntegrationTest {
     // @LIMIT(10) on the list trait caps orders at 10 (not 11); @LIMIT(5) on orderItems caps items
     // at 5 per order (not 6). Both limits are verified independently.
     CompletableFuture<List<OrderWithItems>> future;
-    try (KrystexVajramExecutor executor = createExecutor("getOrdersWithItemsByUserId_joinLimit")) {
+    try (VajramKryonExecutor executor = createExecutor("getOrdersWithItemsByUserId_joinLimit")) {
       future =
           executor.execute(
               GetOrdersWithItemsByUserId_Req._builder()
                   .where(OrderUserIdEquals._builder().userIdIs(2L)._build())
                   ._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .executionId("getOrdersWithItemsByUserId_joinLimit_exec")
                   .build());
     }
@@ -649,13 +646,13 @@ class SqlTraitIntegrationTest {
   @Test
   void getOrdersWithItemsByUserId_returnsEmptyListForUserWithNoOrders() {
     CompletableFuture<List<OrderWithItems>> future;
-    try (KrystexVajramExecutor executor = createExecutor("getOrdersWithItemsByUserId_empty")) {
+    try (VajramKryonExecutor executor = createExecutor("getOrdersWithItemsByUserId_empty")) {
       future =
           executor.execute(
               GetOrdersWithItemsByUserId_Req._builder()
                   .where(OrderUserIdEquals._builder().userIdIs(999L)._build())
                   ._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .executionId("getOrdersWithItemsByUserId_empty_exec")
                   .build());
     }
@@ -667,7 +664,7 @@ class SqlTraitIntegrationTest {
   @Test
   void getUserByIdOrName_matchesById() {
     CompletableFuture<UserInfo> future;
-    try (KrystexVajramExecutor executor = createExecutor("getUserByIdOrName_byId")) {
+    try (VajramKryonExecutor executor = createExecutor("getUserByIdOrName_byId")) {
       future =
           executor.execute(
               GetUserByIdOrName_Req._builder()
@@ -678,7 +675,7 @@ class SqlTraitIntegrationTest {
                               UserNamePredicate._builder().nameIs("NoSuchUser")._build())
                           ._build())
                   ._build(),
-              KryonExecutionConfig.builder().executionId("getUserByIdOrName_byId_exec").build());
+              VajramExecutionConfig.builder().executionId("getUserByIdOrName_byId_exec").build());
     }
     assertThat(future)
         .succeedsWithin(TIMEOUT)
@@ -693,7 +690,7 @@ class SqlTraitIntegrationTest {
   @Test
   void getUserByIdOrName_matchesByName() {
     CompletableFuture<UserInfo> future;
-    try (KrystexVajramExecutor executor = createExecutor("getUserByIdOrName_byName")) {
+    try (VajramKryonExecutor executor = createExecutor("getUserByIdOrName_byName")) {
       future =
           executor.execute(
               GetUserByIdOrName_Req._builder()
@@ -703,7 +700,7 @@ class SqlTraitIntegrationTest {
                           .orWithUserName(UserNamePredicate._builder().nameIs("Babu"))
                           ._build())
                   ._build(),
-              KryonExecutionConfig.builder().executionId("getUserByIdOrName_byName_exec").build());
+              VajramExecutionConfig.builder().executionId("getUserByIdOrName_byName_exec").build());
     }
     assertThat(future)
         .succeedsWithin(TIMEOUT)
@@ -718,7 +715,7 @@ class SqlTraitIntegrationTest {
   @Test
   void getUserByIdOrName_returnsNullWhenNeitherMatches() {
     CompletableFuture<UserInfo> future;
-    try (KrystexVajramExecutor executor = createExecutor("getUserByIdOrName_noMatch")) {
+    try (VajramKryonExecutor executor = createExecutor("getUserByIdOrName_noMatch")) {
       future =
           executor.execute(
               GetUserByIdOrName_Req._builder()
@@ -729,7 +726,9 @@ class SqlTraitIntegrationTest {
                               UserNamePredicate._builder().nameIs("NoSuchUser")._build())
                           ._build())
                   ._build(),
-              KryonExecutionConfig.builder().executionId("getUserByIdOrName_noMatch_exec").build());
+              VajramExecutionConfig.builder()
+                  .executionId("getUserByIdOrName_noMatch_exec")
+                  .build());
     }
     assertThat(future).succeedsWithin(TIMEOUT).isNull();
   }
@@ -742,7 +741,7 @@ class SqlTraitIntegrationTest {
     // Babu's orders:   orderTime 1000,2000,...,11000
     // Range [3000, 6000) should match orderTime 3000,4000,5000 for both users
     CompletableFuture<List<OrderInfo>> future;
-    try (KrystexVajramExecutor executor = createExecutor("getOrdersByTimeRange")) {
+    try (VajramKryonExecutor executor = createExecutor("getOrdersByTimeRange")) {
       future =
           executor.execute(
               GetOrdersByTimeRange_Req._builder()
@@ -752,7 +751,7 @@ class SqlTraitIntegrationTest {
                           .orderTimeTo(6000L)
                           ._build())
                   ._build(),
-              KryonExecutionConfig.builder().executionId("getOrdersByTimeRange_exec").build());
+              VajramExecutionConfig.builder().executionId("getOrdersByTimeRange_exec").build());
     }
     assertThat(future)
         .succeedsWithin(TIMEOUT)
@@ -770,7 +769,7 @@ class SqlTraitIntegrationTest {
   @Test
   void getOrdersByTimeRange_returnsEmptyWhenNoOrdersInRange() {
     CompletableFuture<List<OrderInfo>> future;
-    try (KrystexVajramExecutor executor = createExecutor("getOrdersByTimeRange_empty")) {
+    try (VajramKryonExecutor executor = createExecutor("getOrdersByTimeRange_empty")) {
       future =
           executor.execute(
               GetOrdersByTimeRange_Req._builder()
@@ -780,7 +779,7 @@ class SqlTraitIntegrationTest {
                           .orderTimeTo(100000L)
                           ._build())
                   ._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .executionId("getOrdersByTimeRange_empty_exec")
                   .build());
     }
@@ -794,13 +793,13 @@ class SqlTraitIntegrationTest {
     // Alisha's orders: amountCents=5000, Babu's orders: amountCents=10000
     // amountCents > 5000 should return only Babu's 11 orders
     CompletableFuture<List<OrderInfo>> future;
-    try (KrystexVajramExecutor executor = createExecutor("getOrdersByMinAmount")) {
+    try (VajramKryonExecutor executor = createExecutor("getOrdersByMinAmount")) {
       future =
           executor.execute(
               GetOrdersByMinAmount_Req._builder()
                   .where(OrderAmountGtPredicate._builder().amountGreaterThan(5000L)._build())
                   ._build(),
-              KryonExecutionConfig.builder().executionId("getOrdersByMinAmount_exec").build());
+              VajramExecutionConfig.builder().executionId("getOrdersByMinAmount_exec").build());
     }
     assertThat(future)
         .succeedsWithin(TIMEOUT)
@@ -815,13 +814,13 @@ class SqlTraitIntegrationTest {
   @Test
   void getOrdersByMinAmount_returnsEmptyWhenNoneAboveThreshold() {
     CompletableFuture<List<OrderInfo>> future;
-    try (KrystexVajramExecutor executor = createExecutor("getOrdersByMinAmount_empty")) {
+    try (VajramKryonExecutor executor = createExecutor("getOrdersByMinAmount_empty")) {
       future =
           executor.execute(
               GetOrdersByMinAmount_Req._builder()
                   .where(OrderAmountGtPredicate._builder().amountGreaterThan(99999L)._build())
                   ._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .executionId("getOrdersByMinAmount_empty_exec")
                   .build());
     }
@@ -835,13 +834,13 @@ class SqlTraitIntegrationTest {
     // Alisha's orders: amountCents=5000, Babu's orders: amountCents=10000
     // amountCents <= 5000 should return only Alisha's 6 orders
     CompletableFuture<List<OrderInfo>> future;
-    try (KrystexVajramExecutor executor = createExecutor("getOrdersByMaxAmount")) {
+    try (VajramKryonExecutor executor = createExecutor("getOrdersByMaxAmount")) {
       future =
           executor.execute(
               GetOrdersByMaxAmount_Req._builder()
                   .where(OrderAmountLtePredicate._builder().amountAtMost(5000L)._build())
                   ._build(),
-              KryonExecutionConfig.builder().executionId("getOrdersByMaxAmount_exec").build());
+              VajramExecutionConfig.builder().executionId("getOrdersByMaxAmount_exec").build());
     }
     assertThat(future)
         .succeedsWithin(TIMEOUT)
@@ -857,13 +856,13 @@ class SqlTraitIntegrationTest {
   void getOrdersByMaxAmount_returnsAllWhenThresholdIsHigh() {
     // amountCents <= 99999 should return all 17 orders (6 Alisha + 11 Babu)
     CompletableFuture<List<OrderInfo>> future;
-    try (KrystexVajramExecutor executor = createExecutor("getOrdersByMaxAmount_all")) {
+    try (VajramKryonExecutor executor = createExecutor("getOrdersByMaxAmount_all")) {
       future =
           executor.execute(
               GetOrdersByMaxAmount_Req._builder()
                   .where(OrderAmountLtePredicate._builder().amountAtMost(99999L)._build())
                   ._build(),
-              KryonExecutionConfig.builder().executionId("getOrdersByMaxAmount_all_exec").build());
+              VajramExecutionConfig.builder().executionId("getOrdersByMaxAmount_all_exec").build());
     }
     assertThat(future).succeedsWithin(TIMEOUT).satisfies(orders -> assertThat(orders).hasSize(17));
   }
@@ -876,7 +875,7 @@ class SqlTraitIntegrationTest {
     // Babu's orders:   orderTime 1000,2000,...,11000
     // Range.closed(3000, 5000) should match orderTime 3000, 4000, 5000 for both users
     CompletableFuture<List<OrderInfo>> future;
-    try (KrystexVajramExecutor executor = createExecutor("getOrdersByTimeInRange_closed")) {
+    try (VajramKryonExecutor executor = createExecutor("getOrdersByTimeInRange_closed")) {
       future =
           executor.execute(
               GetOrdersByTimeInRange_Req._builder()
@@ -885,7 +884,7 @@ class SqlTraitIntegrationTest {
                           .orderTimeRange(Range.closed(3000L, 5000L))
                           ._build())
                   ._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .executionId("getOrdersByTimeInRange_closed_exec")
                   .build());
     }
@@ -908,7 +907,7 @@ class SqlTraitIntegrationTest {
   void getOrdersByTimeInRange_openRange_excludesBothEndpoints() {
     // Range.open(3000, 6000) should match orderTime 4000, 5000 (excludes 3000 and 6000)
     CompletableFuture<List<OrderInfo>> future;
-    try (KrystexVajramExecutor executor = createExecutor("getOrdersByTimeInRange_open")) {
+    try (VajramKryonExecutor executor = createExecutor("getOrdersByTimeInRange_open")) {
       future =
           executor.execute(
               GetOrdersByTimeInRange_Req._builder()
@@ -917,7 +916,7 @@ class SqlTraitIntegrationTest {
                           .orderTimeRange(Range.open(3000L, 6000L))
                           ._build())
                   ._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .executionId("getOrdersByTimeInRange_open_exec")
                   .build());
     }
@@ -939,7 +938,7 @@ class SqlTraitIntegrationTest {
   void getOrdersByTimeInRange_closedOpenRange_includesLowerExcludesUpper() {
     // Range.closedOpen(3000, 6000) should match orderTime 3000, 4000, 5000 (excludes 6000)
     CompletableFuture<List<OrderInfo>> future;
-    try (KrystexVajramExecutor executor = createExecutor("getOrdersByTimeInRange_closedOpen")) {
+    try (VajramKryonExecutor executor = createExecutor("getOrdersByTimeInRange_closedOpen")) {
       future =
           executor.execute(
               GetOrdersByTimeInRange_Req._builder()
@@ -948,7 +947,7 @@ class SqlTraitIntegrationTest {
                           .orderTimeRange(Range.closedOpen(3000L, 6000L))
                           ._build())
                   ._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .executionId("getOrdersByTimeInRange_closedOpen_exec")
                   .build());
     }
@@ -969,7 +968,7 @@ class SqlTraitIntegrationTest {
   void getOrdersByTimeInRange_openClosedRange_excludesLowerIncludesUpper() {
     // Range.openClosed(3000, 6000) should match orderTime 4000, 5000, 6000 (excludes 3000)
     CompletableFuture<List<OrderInfo>> future;
-    try (KrystexVajramExecutor executor = createExecutor("getOrdersByTimeInRange_openClosed")) {
+    try (VajramKryonExecutor executor = createExecutor("getOrdersByTimeInRange_openClosed")) {
       future =
           executor.execute(
               GetOrdersByTimeInRange_Req._builder()
@@ -978,7 +977,7 @@ class SqlTraitIntegrationTest {
                           .orderTimeRange(Range.openClosed(3000L, 6000L))
                           ._build())
                   ._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .executionId("getOrdersByTimeInRange_openClosed_exec")
                   .build());
     }
@@ -999,7 +998,7 @@ class SqlTraitIntegrationTest {
   @Test
   void getOrdersByTimeInRange_returnsEmptyWhenNoOrdersInRange() {
     CompletableFuture<List<OrderInfo>> future;
-    try (KrystexVajramExecutor executor = createExecutor("getOrdersByTimeInRange_empty")) {
+    try (VajramKryonExecutor executor = createExecutor("getOrdersByTimeInRange_empty")) {
       future =
           executor.execute(
               GetOrdersByTimeInRange_Req._builder()
@@ -1008,7 +1007,7 @@ class SqlTraitIntegrationTest {
                           .orderTimeRange(Range.closed(99000L, 100000L))
                           ._build())
                   ._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .executionId("getOrdersByTimeInRange_empty_exec")
                   .build());
     }
@@ -1020,13 +1019,13 @@ class SqlTraitIntegrationTest {
   @Test
   void getRecentOrdersByUserId_returnsOrdersOrderedByTimeDescAndRespectLimit() {
     CompletableFuture<List<OrderInfo>> future;
-    try (KrystexVajramExecutor executor = createExecutor("getRecentOrdersByUserId")) {
+    try (VajramKryonExecutor executor = createExecutor("getRecentOrdersByUserId")) {
       future =
           executor.execute(
               GetRecentOrdersByUserId_Req._builder()
                   .where(OrderUserIdEquals._builder().userIdIs(1L)._build())
                   ._build(),
-              KryonExecutionConfig.builder().executionId("getRecentOrdersByUserId_exec").build());
+              VajramExecutionConfig.builder().executionId("getRecentOrdersByUserId_exec").build());
     }
     assertThat(future)
         .succeedsWithin(TIMEOUT)
@@ -1055,21 +1054,21 @@ class SqlTraitIntegrationTest {
             .secondaryAddresses(List.of())
             .orders(List.of())
             ._build();
-    try (KrystexVajramExecutor executor = createExecutor("insertUser")) {
+    try (VajramKryonExecutor executor = createExecutor("insertUser")) {
       future =
           executor.execute(
               InsertUser_Req._builder().user(newUser)._build(),
-              KryonExecutionConfig.builder().executionId("insertUser_exec").build());
+              VajramExecutionConfig.builder().executionId("insertUser_exec").build());
     }
     assertThat(future).succeedsWithin(TIMEOUT).isEqualTo(1);
 
     // Verify the row was actually inserted by reading it back
     CompletableFuture<UserInfo> verifyFuture;
-    try (KrystexVajramExecutor executor = createExecutor("insertUser_verify")) {
+    try (VajramKryonExecutor executor = createExecutor("insertUser_verify")) {
       verifyFuture =
           executor.execute(
               GetUserInfoById_Req._builder().where(UserIdPredicate._builder().idIs(100L))._build(),
-              KryonExecutionConfig.builder().executionId("insertUser_verify_exec").build());
+              VajramExecutionConfig.builder().executionId("insertUser_verify_exec").build());
     }
     assertThat(verifyFuture)
         .succeedsWithin(TIMEOUT)
@@ -1098,21 +1097,21 @@ class SqlTraitIntegrationTest {
             .secondaryAddresses(List.of())
             .orders(List.of())
             ._build();
-    try (KrystexVajramExecutor executor = createExecutor("insertUser_nullable")) {
+    try (VajramKryonExecutor executor = createExecutor("insertUser_nullable")) {
       future =
           executor.execute(
               InsertUser_Req._builder().user(newUser)._build(),
-              KryonExecutionConfig.builder().executionId("insertUser_nullable_exec").build());
+              VajramExecutionConfig.builder().executionId("insertUser_nullable_exec").build());
     }
     assertThat(future).succeedsWithin(TIMEOUT).isEqualTo(1);
 
     // Verify null phoneNumber
     CompletableFuture<UserInfo> verifyFuture;
-    try (KrystexVajramExecutor executor = createExecutor("insertUser_nullable_verify")) {
+    try (VajramKryonExecutor executor = createExecutor("insertUser_nullable_verify")) {
       verifyFuture =
           executor.execute(
               GetUserInfoById_Req._builder().where(UserIdPredicate._builder().idIs(101L))._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .executionId("insertUser_nullable_verify_exec")
                   .build());
     }
@@ -1143,23 +1142,23 @@ class SqlTraitIntegrationTest {
             .orderTime(99000L)
             .orderItems(List.of())
             ._build();
-    try (KrystexVajramExecutor executor = createExecutor("insertOrder")) {
+    try (VajramKryonExecutor executor = createExecutor("insertOrder")) {
       future =
           executor.execute(
               InsertOrder_Req._builder().order(newOrder)._build(),
-              KryonExecutionConfig.builder().executionId("insertOrder_exec").build());
+              VajramExecutionConfig.builder().executionId("insertOrder_exec").build());
     }
     assertThat(future).succeedsWithin(TIMEOUT).isEqualTo(1);
 
     // Verify the order was inserted with the correct FK value
     CompletableFuture<List<OrderInfo>> verifyFuture;
-    try (KrystexVajramExecutor executor = createExecutor("insertOrder_verify")) {
+    try (VajramKryonExecutor executor = createExecutor("insertOrder_verify")) {
       verifyFuture =
           executor.execute(
               GetOrderInfoByUserId_Req._builder()
                   .where(OrderUserIdEquals._builder().userIdIs(1L)._build())
                   ._build(),
-              KryonExecutionConfig.builder().executionId("insertOrder_verify_exec").build());
+              VajramExecutionConfig.builder().executionId("insertOrder_verify_exec").build());
     }
     assertThat(verifyFuture)
         .succeedsWithin(TIMEOUT)
@@ -1201,21 +1200,21 @@ class SqlTraitIntegrationTest {
                 .secondaryAddresses(List.of())
                 .orders(List.of())
                 ._build());
-    try (KrystexVajramExecutor executor = createExecutor("insertUsers")) {
+    try (VajramKryonExecutor executor = createExecutor("insertUsers")) {
       future =
           executor.execute(
               InsertUsers_Req._builder().users(newUsers)._build(),
-              KryonExecutionConfig.builder().executionId("insertUsers_exec").build());
+              VajramExecutionConfig.builder().executionId("insertUsers_exec").build());
     }
     assertThat(future).succeedsWithin(TIMEOUT).isEqualTo(2);
 
     // Verify both users were inserted
     CompletableFuture<UserInfo> verifyEve;
-    try (KrystexVajramExecutor executor = createExecutor("insertUsers_verify_eve")) {
+    try (VajramKryonExecutor executor = createExecutor("insertUsers_verify_eve")) {
       verifyEve =
           executor.execute(
               GetUserInfoById_Req._builder().where(UserIdPredicate._builder().idIs(200L))._build(),
-              KryonExecutionConfig.builder().executionId("insertUsers_verify_eve_exec").build());
+              VajramExecutionConfig.builder().executionId("insertUsers_verify_eve_exec").build());
     }
     assertThat(verifyEve)
         .succeedsWithin(TIMEOUT)
@@ -1227,11 +1226,11 @@ class SqlTraitIntegrationTest {
             });
 
     CompletableFuture<UserInfo> verifyFrank;
-    try (KrystexVajramExecutor executor = createExecutor("insertUsers_verify_frank")) {
+    try (VajramKryonExecutor executor = createExecutor("insertUsers_verify_frank")) {
       verifyFrank =
           executor.execute(
               GetUserInfoById_Req._builder().where(UserIdPredicate._builder().idIs(201L))._build(),
-              KryonExecutionConfig.builder().executionId("insertUsers_verify_frank_exec").build());
+              VajramExecutionConfig.builder().executionId("insertUsers_verify_frank_exec").build());
     }
     assertThat(verifyFrank)
         .succeedsWithin(TIMEOUT)
@@ -1261,11 +1260,11 @@ class SqlTraitIntegrationTest {
             .secondaryAddresses(List.of())
             .orders(List.of())
             ._build();
-    try (KrystexVajramExecutor executor = createExecutor("insertUserReturning")) {
+    try (VajramKryonExecutor executor = createExecutor("insertUserReturning")) {
       future =
           executor.execute(
               InsertUserReturning_Req._builder().user(newUser)._build(),
-              KryonExecutionConfig.builder().executionId("insertUserReturning_exec").build());
+              VajramExecutionConfig.builder().executionId("insertUserReturning_exec").build());
     }
     assertThat(future)
         .succeedsWithin(TIMEOUT)
@@ -1277,11 +1276,11 @@ class SqlTraitIntegrationTest {
 
     // Verify the row was actually inserted by reading it back
     CompletableFuture<UserInfo> verifyFuture;
-    try (KrystexVajramExecutor executor = createExecutor("insertUserReturning_verify")) {
+    try (VajramKryonExecutor executor = createExecutor("insertUserReturning_verify")) {
       verifyFuture =
           executor.execute(
               GetUserInfoById_Req._builder().where(UserIdPredicate._builder().idIs(300L))._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .executionId("insertUserReturning_verify_exec")
                   .build());
     }
@@ -1321,11 +1320,11 @@ class SqlTraitIntegrationTest {
                 .secondaryAddresses(List.of())
                 .orders(List.of())
                 ._build());
-    try (KrystexVajramExecutor executor = createExecutor("insertUsersReturning")) {
+    try (VajramKryonExecutor executor = createExecutor("insertUsersReturning")) {
       future =
           executor.execute(
               InsertUsersReturning_Req._builder().users(newUsers)._build(),
-              KryonExecutionConfig.builder().executionId("insertUsersReturning_exec").build());
+              VajramExecutionConfig.builder().executionId("insertUsersReturning_exec").build());
     }
     assertThat(future)
         .succeedsWithin(TIMEOUT)
@@ -1338,11 +1337,11 @@ class SqlTraitIntegrationTest {
 
     // Verify both users were inserted
     CompletableFuture<UserInfo> verifyHenry;
-    try (KrystexVajramExecutor executor = createExecutor("insertUsersReturning_verify_henry")) {
+    try (VajramKryonExecutor executor = createExecutor("insertUsersReturning_verify_henry")) {
       verifyHenry =
           executor.execute(
               GetUserInfoById_Req._builder().where(UserIdPredicate._builder().idIs(400L))._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .executionId("insertUsersReturning_verify_henry_exec")
                   .build());
     }
@@ -1360,11 +1359,11 @@ class SqlTraitIntegrationTest {
 
   // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-  private KrystexVajramExecutor createExecutor(String executorId) {
+  private VajramKryonExecutor createExecutor(String executorId) {
     return createExecutor(executorId, executorLease.get());
   }
 
-  private static KrystexVajramExecutor createExecutor(
+  private static VajramKryonExecutor createExecutor(
       String executorId, SingleThreadExecutor executor) {
     VajramGraph vajramGraph =
         VajramGraph.builder()
@@ -1443,21 +1442,16 @@ class SqlTraitIntegrationTest {
     return kGraph
         .build()
         .createExecutor(
-            KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfig(
-                    KryonExecutorConfig.builder()
-                        .executorId(executorId)
-                        .executorService(executor)
-                        .build()));
+            KrystalExecutorConfig.builder().executorId(executorId).executorService(executor));
   }
 
   private static void runInsertUser(User user, SingleThreadExecutor executor) throws Exception {
     CompletableFuture<Integer> future;
-    try (KrystexVajramExecutor exec = createExecutor("seed_insertUser_" + user.id(), executor)) {
+    try (VajramKryonExecutor exec = createExecutor("seed_insertUser_" + user.id(), executor)) {
       future =
           exec.execute(
               InsertUser_Req._builder().user(user)._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .executionId("seed_insertUser_" + user.id() + "_exec")
                   .build());
     }
@@ -1466,12 +1460,12 @@ class SqlTraitIntegrationTest {
 
   private static void runInsertOrder(Order order, SingleThreadExecutor executor) throws Exception {
     CompletableFuture<Integer> future;
-    try (KrystexVajramExecutor exec =
+    try (VajramKryonExecutor exec =
         createExecutor("seed_insertOrder_" + order.orderId(), executor)) {
       future =
           exec.execute(
               InsertOrder_Req._builder().order(order)._build(),
-              KryonExecutionConfig.builder()
+              VajramExecutionConfig.builder()
                   .executionId("seed_insertOrder_" + order.orderId() + "_exec")
                   .build());
     }

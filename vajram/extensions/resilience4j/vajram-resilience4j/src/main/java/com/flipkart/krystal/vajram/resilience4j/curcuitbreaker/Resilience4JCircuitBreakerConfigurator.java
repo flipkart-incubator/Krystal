@@ -5,7 +5,7 @@ import static java.util.Collections.synchronizedList;
 
 import com.flipkart.krystal.annos.ComputeDelegationMode;
 import com.flipkart.krystal.annos.OutputLogicDelegationMode;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
@@ -31,9 +31,8 @@ public class Resilience4JCircuitBreakerConfigurator implements KryonExecutorConf
   }
 
   @Override
-  public void addToConfig(KryonExecutorConfigBuilder configBuilder) {
+  public void addToConfig(KrystalExecutorConfigBuilder configBuilder) {
     configBuilder.outputLogicDecoratorConfig(
-        DECORATOR_TYPE,
         new OutputLogicDecoratorConfig(
             DECORATOR_TYPE,
             logicExecutionContext ->

@@ -1,6 +1,6 @@
 package com.flipkart.krystal.lattice.ext.rest.visualization;
 
-import static com.flipkart.krystal.visualization.StaticCallGraphGenerator.generateStaticCallGraphContent;
+import static com.flipkart.krystal.visualization.staticgraph.StaticCallGraphGenerator.generateStaticCallGraphContent;
 
 import com.flipkart.krystal.lattice.krystex.KrystexDopant;
 import jakarta.inject.Inject;

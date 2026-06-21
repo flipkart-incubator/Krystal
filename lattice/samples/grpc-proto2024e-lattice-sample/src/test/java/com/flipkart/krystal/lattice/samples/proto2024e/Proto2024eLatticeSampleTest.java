@@ -8,14 +8,13 @@ import static org.assertj.core.api.InstanceOfAssertFactories.type;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig;
 import com.flipkart.krystal.krystex.KrystexGraph;
 import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
-import com.flipkart.krystal.krystex.KrystexVajramExecutor;
-import com.flipkart.krystal.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.caching.TestRequestLevelCache;
-import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
+import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
+import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
 import com.flipkart.krystal.krystex.testharness.VajramTestHarness;
 import com.flipkart.krystal.lattice.samples.grpc.proto2024e.sampleProtoService.Proto2024eLatticeSample;
 import com.flipkart.krystal.lattice.samples.grpc.proto2024e.sampleProtoService.Proto2024eLatticeSampleResponse;
@@ -104,19 +103,16 @@ class Proto2024eLatticeSampleTest {
             ._build();
 
     CompletableFuture<Proto2024eLatticeSampleResponse> result;
-    try (KrystexVajramExecutor executor =
+    try (VajramKryonExecutor executor =
         kGraph
             .build()
             .createExecutor(
-                KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfig(
-                        KryonExecutorConfig.builder()
-                            .executorId(REQUEST_ID)
-                            .executorService(executorLease.get())
-                            .build()))) {
+                KrystalExecutorConfig.builder()
+                    .executorId(REQUEST_ID)
+                    .executorService(executorLease.get()))) {
       result =
           executor.execute(
-              request, KryonExecutionConfig.builder().executionId("test_all_inputs").build());
+              request, VajramExecutionConfig.builder().executionId("test_all_inputs").build());
     }
 
     assertThat(result)
@@ -150,19 +146,17 @@ class Proto2024eLatticeSampleTest {
             ._build();
 
     CompletableFuture<Proto2024eLatticeSampleResponse> result;
-    try (KrystexVajramExecutor executor =
+    try (VajramKryonExecutor executor =
         kGraph
             .build()
             .createExecutor(
-                KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfig(
-                        KryonExecutorConfig.builder()
-                            .executorId(REQUEST_ID)
-                            .executorService(executorLease.get())
-                            .build()))) {
+                KrystalExecutorConfig.builder()
+                    .executorId(REQUEST_ID)
+                    .executorService(executorLease.get()))) {
       result =
           executor.execute(
-              request, KryonExecutionConfig.builder().executionId("test_optional_omitted").build());
+              request,
+              VajramExecutionConfig.builder().executionId("test_optional_omitted").build());
     }
 
     assertThat(result)
@@ -188,19 +182,16 @@ class Proto2024eLatticeSampleTest {
             ._build();
 
     CompletableFuture<Proto2024eLatticeSampleResponse> result;
-    try (KrystexVajramExecutor executor =
+    try (VajramKryonExecutor executor =
         kGraph
             .build()
             .createExecutor(
-                KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfig(
-                        KryonExecutorConfig.builder()
-                            .executorId(REQUEST_ID)
-                            .executorService(executorLease.get())
-                            .build()))) {
+                KrystalExecutorConfig.builder()
+                    .executorId(REQUEST_ID)
+                    .executorService(executorLease.get()))) {
       result =
           executor.execute(
-              request, KryonExecutionConfig.builder().executionId("test_default_value").build());
+              request, VajramExecutionConfig.builder().executionId("test_default_value").build());
     }
 
     assertThat(result)
@@ -220,20 +211,17 @@ class Proto2024eLatticeSampleTest {
             ._build();
 
     CompletableFuture<Proto2024eLatticeSampleResponse> result;
-    try (KrystexVajramExecutor executor =
+    try (VajramKryonExecutor executor =
         kGraph
             .build()
             .createExecutor(
-                KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfig(
-                        KryonExecutorConfig.builder()
-                            .executorId(REQUEST_ID)
-                            .executorService(executorLease.get())
-                            .build()))) {
+                KrystalExecutorConfig.builder()
+                    .executorId(REQUEST_ID)
+                    .executorService(executorLease.get()))) {
       result =
           executor.execute(
               request,
-              KryonExecutionConfig.builder().executionId("test_missing_mandatory").build());
+              VajramExecutionConfig.builder().executionId("test_missing_mandatory").build());
     }
     assertThat(result)
         .failsWithin(1, SECONDS)
@@ -253,20 +241,17 @@ class Proto2024eLatticeSampleTest {
             ._build();
 
     CompletableFuture<Proto2024eLatticeSampleResponse> result;
-    try (KrystexVajramExecutor executor =
+    try (VajramKryonExecutor executor =
         kGraph
             .build()
             .createExecutor(
-                KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfig(
-                        KryonExecutorConfig.builder()
-                            .executorId(REQUEST_ID)
-                            .executorService(executorLease.get())
-                            .build()))) {
+                KrystalExecutorConfig.builder()
+                    .executorId(REQUEST_ID)
+                    .executorService(executorLease.get()))) {
       result =
           executor.execute(
               request,
-              KryonExecutionConfig.builder().executionId("test_missing_mandatory_long").build());
+              VajramExecutionConfig.builder().executionId("test_missing_mandatory_long").build());
     }
     assertThat(result)
         .failsWithin(1, SECONDS)
@@ -292,17 +277,14 @@ class Proto2024eLatticeSampleTest {
             .status(Status.PENDING)
             ._build();
     CompletableFuture<Proto2024eLatticeSampleResponse> result;
-    try (KrystexVajramExecutor executor =
+    try (VajramKryonExecutor executor =
         kGraph
             .build()
             .createExecutor(
                 VajramTestHarness.prepareForTest(
-                        KrystexVajramExecutorConfig.builder()
-                            .kryonExecutorConfig(
-                                KryonExecutorConfig.builder()
-                                    .executorId(REQUEST_ID)
-                                    .executorService(executorLease.get())
-                                    .build()),
+                        KrystalExecutorConfig.builder()
+                            .executorId(REQUEST_ID)
+                            .executorService(executorLease.get()),
                         requestLevelCache)
                     .withMock(
                         ((VajramDef<?>)
@@ -315,7 +297,7 @@ class Proto2024eLatticeSampleTest {
                     .buildConfig())) {
       result =
           executor.execute(
-              request, KryonExecutionConfig.builder().executionId("test_mocked_response").build());
+              request, VajramExecutionConfig.builder().executionId("test_mocked_response").build());
     }
 
     assertThat(result).succeedsWithin(1, SECONDS).isEqualTo(mockedOutput);
@@ -334,19 +316,16 @@ class Proto2024eLatticeSampleTest {
             ._build();
 
     CompletableFuture<Proto2024eLatticeSampleResponse> result;
-    try (KrystexVajramExecutor executor =
+    try (VajramKryonExecutor executor =
         kGraph
             .build()
             .createExecutor(
-                KrystexVajramExecutorConfig.builder()
-                    .kryonExecutorConfig(
-                        KryonExecutorConfig.builder()
-                            .executorId(REQUEST_ID)
-                            .executorService(executorLease.get())
-                            .build()))) {
+                KrystalExecutorConfig.builder()
+                    .executorId(REQUEST_ID)
+                    .executorService(executorLease.get()))) {
       result =
           executor.execute(
-              request, KryonExecutionConfig.builder().executionId("test_byte_string").build());
+              request, VajramExecutionConfig.builder().executionId("test_byte_string").build());
     }
 
     assertThat(result)

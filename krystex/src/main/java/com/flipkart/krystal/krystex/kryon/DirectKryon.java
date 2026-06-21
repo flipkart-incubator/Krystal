@@ -32,7 +32,7 @@ public final class DirectKryon extends AbstractKryon<MultiRequestDirectCommand, 
 
   DirectKryon(
       VajramKryonDefinition definition,
-      KryonExecutor kryonExecutor,
+      VajramKryonExecutor kryonExecutor,
       Function<LogicExecutionContext, NavigableSet<OutputLogicDecorator>>
           sortedOutputLogicDecoratorsSupplier,
       Function<DependencyExecutionContext, ImmutableMap<String, DependencyDecorator>>

@@ -134,11 +134,7 @@ public class VajramPlugin implements Plugin<Project> {
                 krystalModelsGen
                     .getOptions()
                     .setAnnotationProcessorPath(
-                        project
-                            .getConfigurations()
-                            .named(KRYSTAL_MODELS_GEN_PROC_PATH)
-                            .get()
-                            .getAsFileTree()));
+                        project.getConfigurations().named(KRYSTAL_MODELS_GEN_PROC_PATH).get()));
   }
 
   private static void configureCompileJava(Project project) {

@@ -4,9 +4,8 @@ import static com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionS
 import static com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject._asExecutionResult;
 
 import com.flipkart.krystal.core.VajramInvocation;
-import com.flipkart.krystal.krystex.KrystexVajramExecutor;
-import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
-import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig.KryonExecutionConfigBuilder;
+import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
+import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
@@ -28,12 +27,11 @@ public class GraphQlExecutionFacade {
   }
 
   public CompletableFuture<ExecutionResult> executeGraphQl(
-      KrystexVajramExecutor krystexVajramExecutor,
-      KryonExecutionConfigBuilder kryonExecutionConfigBuilder,
+      VajramKryonExecutor vajramKryonExecutor,
+      VajramExecutionConfig vajramExecutionConfig,
       GraphQLQuery query) {
 
-    // TODO: kryonExecutionConfig.disabledDependentChains();
-    KryonExecutionConfig kryonExecutionConfig = kryonExecutionConfigBuilder.build();
+    // TODO: vajramExecutionConfig.disabledDependentChains();
 
     ExecutionInput executionInput =
         ExecutionInput.newExecutionInput()
@@ -42,11 +40,11 @@ public class GraphQlExecutionFacade {
                     VAJRAM_INVOCATION_CTX_KEY,
                     (VajramInvocation<GraphQlOperationObject>)
                         requestResponseFuture ->
-                            krystexVajramExecutor.execute(
-                                requestResponseFuture, kryonExecutionConfig)))
+                            vajramKryonExecutor.execute(
+                                requestResponseFuture, vajramExecutionConfig)))
             .query(query.query())
             .variables(query.variables())
-            .executionId(ExecutionId.from(kryonExecutionConfig.executionId()))
+            .executionId(ExecutionId.from(vajramExecutionConfig.executionId()))
             .build();
 
     return graphQL

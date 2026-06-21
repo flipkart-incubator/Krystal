@@ -1,6 +1,6 @@
-package com.flipkart.krystal.visualization;
+package com.flipkart.krystal.visualization.staticgraph;
 
-import static com.flipkart.krystal.visualization.StaticCallGraphHtml.generateStaticCallGraphHtml;
+import static com.flipkart.krystal.visualization.staticgraph.StaticCallGraphHtml.generateStaticCallGraphHtml;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
@@ -16,12 +16,12 @@ import com.flipkart.krystal.vajram.VajramDefRoot;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
-import com.flipkart.krystal.visualization.models.Graph;
-import com.flipkart.krystal.visualization.models.GraphGenerationResult;
-import com.flipkart.krystal.visualization.models.Input;
-import com.flipkart.krystal.visualization.models.Link;
-import com.flipkart.krystal.visualization.models.Node;
-import com.flipkart.krystal.visualization.models.VajramType;
+import com.flipkart.krystal.visualization.staticgraph.models.Graph;
+import com.flipkart.krystal.visualization.staticgraph.models.GraphGenerationResult;
+import com.flipkart.krystal.visualization.staticgraph.models.Input;
+import com.flipkart.krystal.visualization.staticgraph.models.Link;
+import com.flipkart.krystal.visualization.staticgraph.models.Node;
+import com.flipkart.krystal.visualization.staticgraph.models.VajramType;
 import com.google.common.collect.ImmutableCollection;
 import java.lang.annotation.Annotation;
 import java.util.ArrayDeque;

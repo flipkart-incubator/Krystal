@@ -151,7 +151,6 @@ public final class GraphQlOperationExecutor
   public KryonExecutorConfigurator asKryonExecutorConfigurator() {
     return configBuilder ->
         configBuilder.dependencyDecoratorConfig(
-            DECORATOR_TYPE,
             new DependencyDecoratorConfig(
                 DECORATOR_TYPE,
                 dependencyExecutionContext -> {

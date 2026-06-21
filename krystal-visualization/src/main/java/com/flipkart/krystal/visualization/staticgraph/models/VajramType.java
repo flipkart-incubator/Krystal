@@ -1,4 +1,4 @@
-package com.flipkart.krystal.visualization.models;
+package com.flipkart.krystal.visualization.staticgraph.models;
 
 public enum VajramType {
   UNKNOWN,

@@ -82,7 +82,6 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
   public KryonExecutorConfigurator asKryonExecutorConfigurator() {
     return configBuilder ->
         configBuilder.kryonDecoratorConfig(
-            DECORATOR_TYPE,
             new KryonDecoratorConfig(
                 DECORATOR_TYPE,
                 _c -> true, // Apply cache to all vajrams

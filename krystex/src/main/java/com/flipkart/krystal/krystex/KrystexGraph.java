@@ -2,10 +2,9 @@ package com.flipkart.krystal.krystex;
 
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElseGet;
-import static lombok.AccessLevel.PACKAGE;
 
 import com.flipkart.krystal.core.VajramID;
-import com.flipkart.krystal.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
+import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.batching.DepChainBatcherConfig;
 import com.flipkart.krystal.krystex.batching.InputBatcherConfig;
 import com.flipkart.krystal.krystex.batching.InputBatchingDecorator;
@@ -13,6 +12,7 @@ import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
 import com.flipkart.krystal.krystex.inputinjection.KryonInputInjector;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
+import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.kryondecoration.KryonExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
@@ -43,11 +43,9 @@ public final class KrystexGraph {
 
   @Getter private final @Nullable TraitDispatchDecorator traitDispatchDecorator;
 
-  @Getter(PACKAGE)
-  private final KryonExecutorConfigurator inputBatchingConfig;
+  @Getter private final KryonExecutorConfigurator inputBatchingConfig;
 
-  @Getter(PACKAGE)
-  private final KryonExecutorConfigurator inputInjectionConfig;
+  @Getter private final KryonExecutorConfigurator injectionConfig;
 
   @Builder
   private KrystexGraph(
@@ -60,15 +58,13 @@ public final class KrystexGraph {
         requireNonNullElseGet(traitDispatchPolicies, TraitDispatchPolicies::new);
     this.traitDispatchDecorator =
         new DefaultTraitDispatcher(vajramGraph, this.traitDispatchPolicies);
-    this.inputInjectionConfig = create(injectionProvider, vajramGraph);
+    this.injectionConfig = create(injectionProvider, vajramGraph);
     this.inputBatchingConfig = create(inputBatcherConfig, vajramGraph);
   }
 
-  public KrystexVajramExecutor createExecutor(KrystexVajramExecutorConfigBuilder vajramExecConfig) {
-    return KrystexVajramExecutor.builder()
-        .executableGraph(this)
-        .executorConfig(vajramExecConfig.graph(this).build())
-        .build();
+  public VajramKryonExecutor createExecutor(KrystalExecutorConfigBuilder vajramExecConfig) {
+    return new VajramKryonExecutor(
+        this, vajramExecConfig.traitDispatchDecorator(traitDispatchDecorator));
   }
 
   public @Nullable TraitDispatchPolicy getTraitDispatchPolicy(VajramID traitID) {
@@ -84,16 +80,22 @@ public final class KrystexGraph {
     if (injectionProvider == null) {
       return KryonExecutorConfigurator.NO_OP;
     }
-    return configBuilder ->
-        configBuilder.kryonDecoratorConfig(
-            KryonInputInjector.DECORATOR_TYPE,
-            new KryonDecoratorConfig(
-                KryonInputInjector.DECORATOR_TYPE,
-                /* shouldDecorate= */ executionContext ->
-                    isInjectionNeeded(executionContext, vajramGraph),
-                /* instanceIdGenerator= */ executionContext -> KryonInputInjector.DECORATOR_TYPE,
-                /* factory= */ decoratorContext ->
-                    new KryonInputInjector(vajramGraph, injectionProvider)));
+    return configBuilder -> {
+      String decoratorType = KryonInputInjector.DECORATOR_TYPE;
+      if (configBuilder.hasKryonDecorator(decoratorType)) {
+        // The decorator set in the executor config has higher precedence
+        // than the one set in the Graph
+        return;
+      }
+      configBuilder.kryonDecoratorConfig(
+          new KryonDecoratorConfig(
+              decoratorType,
+              /* shouldDecorate= */ executionContext ->
+                  isInjectionNeeded(executionContext, vajramGraph),
+              /* instanceIdGenerator= */ executionContext -> decoratorType,
+              /* factory= */ decoratorContext ->
+                  new KryonInputInjector(vajramGraph, injectionProvider)));
+    };
   }
 
   private static boolean isInjectionNeeded(
@@ -145,9 +147,10 @@ public final class KrystexGraph {
                   return DepChainBatcherConfig.NO_BATCHING;
                 });
 
+    String decoratorType = InputBatchingDecorator.DECORATOR_TYPE;
     OutputLogicDecoratorConfig batchingDecoratorConfig =
         new OutputLogicDecoratorConfig(
-            InputBatchingDecorator.DECORATOR_TYPE,
+            decoratorType,
             logicExecutionContext ->
                 !DepChainBatcherConfig.NO_BATCHING.equals(
                     inputBatcherForLogicExecContext.apply(logicExecutionContext)),
@@ -161,8 +164,13 @@ public final class KrystexGraph {
                             decoratorContext.logicExecutionContext()))
                     .decoratorFactory()
                     .apply(decoratorContext));
-    return configBuilder ->
-        configBuilder.outputLogicDecoratorConfig(
-            InputBatchingDecorator.DECORATOR_TYPE, batchingDecoratorConfig);
+    return configBuilder -> {
+      if (configBuilder.hasOutputLogicDecorator(decoratorType)) {
+        // The decorator set in the executor config has higher precedence
+        // than the one set in the Graph
+        return;
+      }
+      configBuilder.outputLogicDecoratorConfig(batchingDecoratorConfig);
+    };
   }
 }
