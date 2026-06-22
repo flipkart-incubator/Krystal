@@ -27,7 +27,7 @@ import java.lang.annotation.Target;
 @Target({TYPE, METHOD})
 @Retention(RUNTIME)
 @Repeatable(DataAccesses.class)
-@ApplicableToElements({Vajram.class, OutputLogic.class})
+@ApplicableToElements(Vajram.class)
 @ElementTagUtility(DataAccessUtil.class)
 @Transitive
 public @interface DataAccess {
