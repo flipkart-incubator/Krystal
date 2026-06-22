@@ -17,6 +17,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
 
 /** A stateless, reusable definition of a Kryon */
 public record VajramKryonDefinition(
@@ -29,7 +32,8 @@ public record VajramKryonDefinition(
     KryonDefinitionRegistry kryonDefinitionRegistry,
     GraphExecutionLogic graphExecutionLogic,
     KryonDefinitionView view,
-    ElementTags tags)
+    ElementTags allTags,
+    ConcurrentMap<Class<?>, Object> customMetadata)
     implements KryonDefinition {
 
   public VajramKryonDefinition(
@@ -52,11 +56,8 @@ public record VajramKryonDefinition(
         kryonDefinitionRegistry,
         graphExecutionLogic,
         KryonDefinitionView.createView(facets, resolversByDefinition),
-        tags);
-  }
-
-  public ImmutableSet<Dependency> dependencies() {
-    return view.dependencies();
+        tags,
+        new ConcurrentHashMap<>());
   }
 
   public VajramKryonDefinition {
@@ -69,6 +70,10 @@ public record VajramKryonDefinition(
                         .formatted(dep, vajramID.id()));
               }
             });
+  }
+
+  public ImmutableSet<Dependency> dependencies() {
+    return view.dependencies();
   }
 
   public <T> OutputLogicDefinition<T> getOutputLogicDefinition() {
@@ -110,5 +115,10 @@ public record VajramKryonDefinition(
 
   public ImmutableMap<Dependency, ImmutableSet<Facet>> dependencyToBoundFacetsMapping() {
     return view.dependencyToBoundFacetsMapping();
+  }
+
+  @SuppressWarnings("unchecked")
+  public <T> T getCustomMetadata(Class<T> clazz, Function<KryonDefinition, T> computer) {
+    return (T) customMetadata.computeIfAbsent(clazz, _c -> computer.apply(this));
   }
 }

@@ -7,5 +7,5 @@ import java.lang.annotation.Target;
 
 @Target(ANNOTATION_TYPE)
 public @interface ApplicableToElements {
-  Class<? extends KrystalElement> value();
+  Class<? extends KrystalElement>[] value();
 }

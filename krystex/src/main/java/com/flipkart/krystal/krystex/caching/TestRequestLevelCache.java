@@ -49,10 +49,6 @@ public final class TestRequestLevelCache extends RequestLevelCache {
     super(vajramGraph);
   }
 
-  public TestRequestLevelCache(VajramGraph vajramGraph, boolean defaultMutatesStateVal) {
-    super(vajramGraph, defaultMutatesStateVal);
-  }
-
   @Override
   public void primeCache(FacetValues facetValues, CompletableFuture<@Nullable Object> data) {
     super.primeCache(facetValues, data);

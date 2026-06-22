@@ -1,12 +1,15 @@
 package com.flipkart.krystal.krystex.testharness;
 
+import static com.flipkart.krystal.krystex.caching.RequestLevelCache.KRYON_DECORATOR_TYPE;
+import static com.flipkart.krystal.krystex.caching.RequestLevelCache.OUTPUT_LOGIC_DECORATOR_TYPE;
+
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
-import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.caching.TestRequestLevelCache;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import jakarta.inject.Inject;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -47,11 +50,10 @@ public class VajramTestHarness {
   }
 
   public KrystalExecutorConfigBuilder buildConfig() {
-    String decoratorType = RequestLevelCache.DECORATOR_TYPE;
-    if (krystalExecutorConfigBuilder.hasKryonDecorator(decoratorType)) {
+    if (krystalExecutorConfigBuilder.hasKryonDecorator(KRYON_DECORATOR_TYPE)) {
       throw new IllegalStateException(
           "ConfigBuilder already has a decorator of type "
-              + decoratorType
+              + KRYON_DECORATOR_TYPE
               + ". Harness cannot prime mock data");
     }
 
@@ -62,10 +64,16 @@ public class VajramTestHarness {
                     requestLevelCache.primeCache(objectVajramRequest, objectErrable.toFuture())));
     krystalExecutorConfigBuilder.kryonDecoratorConfig(
         new KryonDecoratorConfig(
-            decoratorType,
+            KRYON_DECORATOR_TYPE,
             executionContext -> vajramIdMockData.containsKey(executionContext.vajramID()),
-            executionContext -> decoratorType,
-            kryonExecutionContext -> requestLevelCache));
+            executionContext -> KRYON_DECORATOR_TYPE,
+            kryonExecutionContext -> requestLevelCache.kryonDecorator()));
+    krystalExecutorConfigBuilder.outputLogicDecoratorConfig(
+        new OutputLogicDecoratorConfig(
+            OUTPUT_LOGIC_DECORATOR_TYPE,
+            executionContext -> vajramIdMockData.containsKey(executionContext.vajramID()),
+            executionContext -> OUTPUT_LOGIC_DECORATOR_TYPE,
+            kryonExecutionContext -> requestLevelCache.outputLogicDecorator()));
     return krystalExecutorConfigBuilder;
   }
 }

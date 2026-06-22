@@ -94,7 +94,7 @@ class GreetTest {
                 // Output logic decorators
                 .add(MainLogicExecReporter.DECORATOR_TYPE)
                 // KryonDecorators
-                .add(RequestLevelCache.DECORATOR_TYPE)
+                .add(RequestLevelCache.KRYON_DECORATOR_TYPE)
                 .add(KryonInputInjector.DECORATOR_TYPE)
                 .build());
     this.graph = VajramGraph.builder().loadFromPackage(PACKAGE_PATH).build();
@@ -143,7 +143,7 @@ class GreetTest {
                     .decorationOrdering(decorationOrdering)
                     .configureWith(
                         new MainLogicExecReporter(kryonExecutionReport)
-                            .asKryonExecutorConfigurator()))) {
+                            .defaultKryonExecutorConfigurator()))) {
       future = executeVajram(krystexVajramExecutor, requestContext);
     }
     assertThat(future)

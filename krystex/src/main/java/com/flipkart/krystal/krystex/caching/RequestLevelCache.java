@@ -2,17 +2,24 @@ package com.flipkart.krystal.krystex.caching;
 
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.concurrent.Futures.propagateCompletion;
-import static com.flipkart.krystal.datatypes.Trilean.UNKNOWN;
+import static com.flipkart.krystal.data.DataAccess.AccessPattern.MUTATION;
+import static com.flipkart.krystal.data.DataAccess.AccessPattern.QUERY;
 import static com.flipkart.krystal.except.KrystalCompletionException.wrapAsCompletionException;
 import static java.util.concurrent.CompletableFuture.allOf;
+import static java.util.stream.Collectors.toUnmodifiableSet;
 
+import com.flipkart.krystal.annos.ComputeDelegationMode;
+import com.flipkart.krystal.annos.OutputLogicDelegationMode;
+import com.flipkart.krystal.core.OutputLogicExecutionInput;
 import com.flipkart.krystal.core.VajramID;
+import com.flipkart.krystal.data.DataAccess;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValues;
-import com.flipkart.krystal.data.MutatesState;
 import com.flipkart.krystal.except.KrystalCompletionException;
+import com.flipkart.krystal.krystex.OutputLogic;
+import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.commands.DirectForwardReceive;
 import com.flipkart.krystal.krystex.commands.ForwardReceiveBatch;
@@ -22,11 +29,12 @@ import com.flipkart.krystal.krystex.kryon.Kryon;
 import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator.KryonExecutorConfiguratorProvider;
 import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorationInput;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorator;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.request.InvocationId;
 import com.google.common.collect.Iterables;
 import java.util.ArrayList;
@@ -34,16 +42,20 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
-public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorConfiguratorProvider
-    permits TestRequestLevelCache {
+public sealed class RequestLevelCache permits TestRequestLevelCache {
 
-  public static final String DECORATOR_TYPE = RequestLevelCache.class.getName();
+  public static final String KRYON_DECORATOR_TYPE =
+      RequestLevelCache.class.getName() + "_KryonDecorator";
+  public static final String OUTPUT_LOGIC_DECORATOR_TYPE =
+      RequestLevelCache.class.getName() + "_OutputLogicDecorator";
 
   private static final Errable<Object> UNKNOWN_ERROR =
       Errable.withError(new KrystalCompletionException("Unknown error in request cache"));
@@ -51,8 +63,8 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
   private final CacheContainer cache = new CacheContainer();
 
   @Getter private final VajramGraph vajramGraph;
-
-  private final boolean defaultMutatesStateVal;
+  @Getter private final KryonDecorator kryonDecorator;
+  @Getter private final OutputLogicDecorator outputLogicDecorator;
 
   /**
    * If a vajram doesn't have a @MutatesState annotation, then it is assumed to mutate state, and
@@ -62,38 +74,88 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
    *     request level cache
    */
   public RequestLevelCache(VajramGraph vajramGraph) {
-    this(vajramGraph, true);
+    this.vajramGraph = vajramGraph;
+    this.kryonDecorator = CachingDecoratedKryon::new;
+    this.outputLogicDecorator = CachingDecoratedLogic::new;
   }
 
   /**
-   * @param vajramGraph the VajramGraph corresponding to the Krystal executor for which this is a
-   *     request level cache
-   * @param defaultMutatesStateVal If a vajram doesn't have a @MutatesState annotation, then this
-   *     value is used as the default. NOTE: Passing "false" here is not recommended as it can lead
-   *     to unexpected behavior. This has been provided to support legacy code, and would be removed
-   *     in a future release. Prefer using the other constructor which defaults to true.
+   * Returns a configurator which configures the provided configBuilder such that all eligible
+   * computeVajrams are cached using a KryonDecorator, and all eligible IOVajrams are cached using
+   * an OutputLogicDecorator,
+   *
+   * <p>The caching KryonDecorator helps avoid executing the complete call graph of a compute vajram
+   * if it already has been computed.
+   *
+   * <p>For IO vajrams we don't use the KryonDecorator because it might choose to skip caching if
+   * the kryon directly or indirectly reads queries an entity which is mutated by another vajram. In
+   * such cases, the output logic decorator is more robust.
    */
-  public RequestLevelCache(VajramGraph vajramGraph, boolean defaultMutatesStateVal) {
-    this.vajramGraph = vajramGraph;
-    this.defaultMutatesStateVal = defaultMutatesStateVal;
+  public KryonExecutorConfigurator defaultKryonExecutorConfigurator() {
+    return configBuilder -> {
+      configBuilder.kryonDecoratorConfig(
+          new KryonDecoratorConfig(
+              KRYON_DECORATOR_TYPE,
+              executionContext -> {
+                KryonCachingMetadata kryonCachingMetadata =
+                    getKryonCachingMetadata(executionContext.vajramID());
+                return kryonCachingMetadata.isComputeVajram()
+                    && kryonCachingMetadata.isEligibleForCaching();
+              }, // Apply kryon level cache to only compute vajrams
+              _c -> KRYON_DECORATOR_TYPE, // Only one RequestLevelCache across the vajram graph
+              _c -> kryonDecorator // Reuse this instance across the graph
+              ));
+      configBuilder.outputLogicDecoratorConfig(
+          new OutputLogicDecoratorConfig(
+              OUTPUT_LOGIC_DECORATOR_TYPE,
+              executionContext -> {
+                KryonCachingMetadata kryonCachingMetadata =
+                    getKryonCachingMetadata(executionContext.vajramID());
+                return !kryonCachingMetadata.isComputeVajram()
+                    && kryonCachingMetadata.isEligibleForCaching();
+              }, // Apply output logic level cache only for IO vajrams
+              _c ->
+                  OUTPUT_LOGIC_DECORATOR_TYPE, // Only one RequestLevelCache across the vajram graph
+              _c -> outputLogicDecorator // Reuse this instance across the graph
+              ));
+    };
   }
 
-  @Override
-  public KryonExecutorConfigurator asKryonExecutorConfigurator() {
-    return configBuilder ->
-        configBuilder.kryonDecoratorConfig(
-            new KryonDecoratorConfig(
-                DECORATOR_TYPE,
-                _c -> true, // Apply cache to all vajrams
-                _c -> DECORATOR_TYPE, // Only one RequestLevelCache across the vajram graph
-                _c -> this // Reuse this instance across the graph
-                ));
+  private KryonCachingMetadata getKryonCachingMetadata(VajramID vajramID) {
+    return vajramGraph
+        .kryonDefinitionRegistry()
+        .getOrThrow(vajramID)
+        .getCustomMetadata(
+            KryonCachingMetadata.class,
+            kryonDefinition -> computeCachingMetadata(kryonDefinition, vajramGraph));
   }
 
-  @Override
-  public Kryon<KryonCommand<?>, KryonCommandResponse> decorateKryon(
-      KryonDecorationInput decorationInput) {
-    return new CachingDecoratedKryon(decorationInput.kryon());
+  static KryonCachingMetadata computeCachingMetadata(
+      KryonDefinition kryonDefinition, VajramGraph vajramGraph) {
+    return new KryonCachingMetadata(
+        ComputeDelegationMode.NONE
+            == kryonDefinition
+                .allTags()
+                .getAnnotationByType(OutputLogicDelegationMode.class)
+                .map(OutputLogicDelegationMode::value)
+                .orElse(ComputeDelegationMode.NONE),
+        isEligibleForCaching(kryonDefinition, vajramGraph),
+        getEntitiesRead(kryonDefinition),
+        getEntitiesMutated(kryonDefinition));
+  }
+
+  private static Set<String> getEntitiesRead(KryonDefinition kryonDefinition) {
+    return kryonDefinition.allTags().getAnnotationsByType(DataAccess.class).stream()
+        .filter(h -> QUERY.equals(h.accessPattern()))
+        .map(h -> h.datasetName().strip())
+        .collect(toUnmodifiableSet());
+  }
+
+  private static Set<String> getEntitiesMutated(KryonDefinition kryonDefinition) {
+    return kryonDefinition.allTags().getAnnotationsByType(DataAccess.class).stream()
+        .filter(h -> MUTATION.equals(h.accessPattern()))
+        .map(h -> h.datasetName().strip())
+        .collect(toUnmodifiableSet());
   }
 
   CacheContainer cacheContainer() {
@@ -104,8 +166,8 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
 
     private final Kryon<KryonCommand<?>, KryonCommandResponse> kryon;
 
-    private CachingDecoratedKryon(Kryon<KryonCommand<?>, KryonCommandResponse> kryon) {
-      this.kryon = kryon;
+    private CachingDecoratedKryon(KryonDecorationInput input) {
+      this.kryon = input.kryon();
     }
 
     @Override
@@ -115,31 +177,16 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
 
     @Override
     public CompletableFuture<KryonCommandResponse> executeCommand(KryonCommand<?> kryonCommand) {
-      if (kryonCommand instanceof ForwardReceiveBatch forwardBatch
-          && isEligibleForCaching(forwardBatch)) {
-        return readFromCache(kryon, forwardBatch);
-      } else if (kryonCommand instanceof DirectForwardReceive directForwardReceive
-          && isEligibleForCaching(directForwardReceive)) {
-        return readFromCache(kryon, directForwardReceive);
-      } else {
-        // Let all other commands just pass through. Request level cache is supposed to intercept
-        // only
-        // Forward Commands, and only for eligible vajrams.
-        return kryon.executeCommand(kryonCommand);
+      if (getKryonCachingMetadata(kryonCommand.vajramID()).isEligibleForCaching()) {
+        if (kryonCommand instanceof ForwardReceiveBatch forwardBatch) {
+          return readFromCache(kryon, forwardBatch);
+        } else if (kryonCommand instanceof DirectForwardReceive directForwardReceive) {
+          return readFromCache(kryon, directForwardReceive);
+        }
       }
-    }
-
-    private boolean isEligibleForCaching(KryonCommand<?> kryonCommand) {
-      VajramID vajramID = kryonCommand.vajramID();
-      KryonDefinition kryonDefinition = vajramGraph.kryonDefinitionRegistry().getOrThrow(vajramID);
-      boolean mutatesStateTransitive =
-          kryonDefinition
-              .tags()
-              .getAnnotationByType(MutatesState.class)
-              .map(MutatesState::value)
-              .orElse(UNKNOWN)
-              .asBoolean(defaultMutatesStateVal);
-      return !mutatesStateTransitive;
+      // Let all other commands just pass through. Request level cache is supposed to intercept
+      // only Forward Commands, and only for eligible vajrams.
+      return kryon.executeCommand(kryonCommand);
     }
 
     private CompletableFuture<KryonCommandResponse> readFromCache(
@@ -249,6 +296,89 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
     }
   }
 
+  private static boolean isEligibleForCaching(
+      KryonDefinition kryonDefinition, VajramGraph vajramGraph) {
+    List<DataAccess> handlesEntities =
+        kryonDefinition.allTags().getAnnotationsByType(DataAccess.class);
+    if (doesMutateData(handlesEntities)) {
+      // If a Vajram mutates data, then never cache it
+      return false;
+    }
+    if (isIOVajram(kryonDefinition)) {
+      // If an IO Vajram doesn't mutate any data, always cache it
+      return true;
+    }
+
+    // For compute vajrams only cache if they don't read data from an entity which is mutated by
+    // some other vajram in the graph.
+    // This simplifies the business logic of the vajram which is mutating the entity - as that
+    // vajram only needs to invalidate the cache of the IOVajram which is querying the entity and
+    // not all the dependent compute vajrams
+    return !doesReadMutatedEntity(handlesEntities, vajramGraph);
+  }
+
+  private static boolean doesMutateData(List<DataAccess> dataAccesses) {
+    return dataAccesses.stream().map(DataAccess::accessPattern).anyMatch(MUTATION::equals);
+  }
+
+  private static boolean doesReadMutatedEntity(
+      List<DataAccess> dataAccesses, VajramGraph vajramGraph) {
+    if (dataAccesses.isEmpty()) {
+      return false;
+    }
+    EntityWriters entityWriters = getEntityWriters(vajramGraph);
+    for (DataAccess dataAccess : dataAccesses) {
+      if (!QUERY.equals(dataAccess.accessPattern())) {
+        continue;
+      }
+      String entityName = dataAccess.datasetName().strip();
+      if (entityName.isBlank()) {
+        continue;
+      }
+      if (!entityWriters.writersByEntity().getOrDefault(entityName, List.of()).isEmpty()) {
+        // This means there are vajrams which mutate the entity being read by the current vajram
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static boolean isIOVajram(KryonDefinition kryonDefinition) {
+    boolean isIOVajram = false;
+    Optional<OutputLogicDelegationMode> outputLogicDelegationMode =
+        kryonDefinition.allTags().getAnnotationByType(OutputLogicDelegationMode.class);
+    if (outputLogicDelegationMode.isPresent()
+        && !ComputeDelegationMode.NONE.equals(outputLogicDelegationMode.get().value())) {
+      isIOVajram = true;
+    }
+    return isIOVajram;
+  }
+
+  private static EntityWriters getEntityWriters(VajramGraph vajramGraph) {
+    return vajramGraph.getCustomMetadata(
+        EntityWriters.class,
+        () -> {
+          Map<String, List<VajramID>> writers = new LinkedHashMap<>();
+          vajramGraph
+              .kryonDefinitionRegistry()
+              .getDefinitions()
+              .forEach(
+                  (kryonDefinition) -> {
+                    List<DataAccess> dataAccesses =
+                        kryonDefinition.allTags().getAnnotationsByType(DataAccess.class);
+                    for (DataAccess dataAccess : dataAccesses) {
+                      if (MUTATION.equals(dataAccess.accessPattern())) {
+                        String datasetName = dataAccess.datasetName().strip();
+                        writers
+                            .computeIfAbsent(datasetName, _k -> new ArrayList<>())
+                            .add(kryonDefinition.vajramID());
+                      }
+                    }
+                  });
+          return new EntityWriters(writers);
+        });
+  }
+
   /**
    * We use facets instead of request as a cache key so that some non-input facets which have been
    * specifically added (for example, injections) to act as cache keys are also taken into account.
@@ -277,5 +407,46 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
 
   void primeCache(FacetValues facetValues, CompletableFuture<@Nullable Object> data) {
     cache.put(facetValues._build(), data);
+  }
+
+  private class CachingDecoratedLogic implements OutputLogic<Object> {
+
+    private final OutputLogic<Object> logicToDecorate;
+    private final OutputLogicDefinition<Object> outputLogicDefinition;
+
+    public CachingDecoratedLogic(
+        OutputLogic<Object> logicToDecorate, OutputLogicDefinition<Object> outputLogicDefinition) {
+      this.logicToDecorate = logicToDecorate;
+      this.outputLogicDefinition = outputLogicDefinition;
+    }
+
+    @Override
+    public void execute(OutputLogicExecutionInput input) {
+      if (!getKryonCachingMetadata(outputLogicDefinition.kryonLogicId().vajramID())
+          .isEligibleForCaching()) {
+        logicToDecorate.execute(input);
+        return;
+      }
+      List<ExecutionItem> cacheMisses = new ArrayList<>();
+      for (ExecutionItem executionItem : input.executionItems()) {
+        FacetValues facetValues = executionItem.facetValues();
+        var cacheKey = newCacheKey(facetValues);
+        if (cacheKey == null) {
+          // Since the cache key could not be generated, we skip caching for this request
+          log.error(
+              "Skipping Output Logic caching for request {} since cache key is null", facetValues);
+          cacheMisses.add(executionItem);
+          continue;
+        }
+        var cachedFuture = getCachedValue(cacheKey);
+        if (cachedFuture == null) {
+          cache.put(cacheKey, executionItem.response());
+          cacheMisses.add(executionItem);
+          continue;
+        }
+        propagateCompletion(cachedFuture, executionItem.response());
+      }
+      logicToDecorate.execute(input.withExecutionItems(cacheMisses));
+    }
   }
 }

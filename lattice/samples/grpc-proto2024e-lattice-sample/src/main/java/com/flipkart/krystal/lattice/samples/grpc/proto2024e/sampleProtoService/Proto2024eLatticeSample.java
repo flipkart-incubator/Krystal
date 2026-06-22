@@ -1,6 +1,5 @@
 package com.flipkart.krystal.lattice.samples.grpc.proto2024e.sampleProtoService;
 
-import static com.flipkart.krystal.datatypes.Trilean.FALSE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
@@ -8,7 +7,7 @@ import static java.util.Objects.requireNonNullElseGet;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.annos.InvocableOutsideProcess;
-import com.flipkart.krystal.data.MutatesState;
+import com.flipkart.krystal.data.DataAccess;
 import com.flipkart.krystal.lattice.core.di.ByContentType;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.PlainJavaObject;
@@ -32,7 +31,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @InvocableOutsideGraph
 @InvocableOutsideProcess
 @Vajram
-@MutatesState(FALSE)
+@DataAccess(datasetName = "Entity")
 public abstract class Proto2024eLatticeSample
     extends ComputeVajramDef<Proto2024eLatticeSampleResponse> {
 

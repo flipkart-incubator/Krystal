@@ -9,14 +9,18 @@ import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
 
 public record TraitKryonDefinition(
     VajramID vajramID,
     ImmutableSet<Facet> facets,
     LogicDefinition<CreateNewRequest> createNewRequest,
     KryonDefinitionRegistry kryonDefinitionRegistry,
-    ElementTags tags,
-    KryonDefinitionView view)
+    ElementTags allTags,
+    KryonDefinitionView view,
+    ConcurrentMap<Class<?>, Object> customMetadata)
     implements KryonDefinition {
 
   public TraitKryonDefinition(
@@ -31,11 +35,17 @@ public record TraitKryonDefinition(
         createNewRequest,
         kryonDefinitionRegistry,
         tags,
-        KryonDefinitionView.createView(facets, ImmutableMap.of()));
+        KryonDefinitionView.createView(facets, ImmutableMap.of()),
+        new ConcurrentHashMap<>());
   }
 
   @Override
   public ImmutableSet<Facet> facetsByType(FacetType facetType) {
     return view.facetsByType().getOrDefault(facetType, ImmutableSet.of());
+  }
+
+  @SuppressWarnings("unchecked")
+  public <T> T getCustomMetadata(Class<T> clazz, Function<KryonDefinition, T> computer) {
+    return (T) customMetadata.computeIfAbsent(clazz, _c -> computer.apply(this));
   }
 }

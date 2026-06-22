@@ -405,7 +405,7 @@ class VajramKryonExecutorTest {
                     .graphTraversalStrategy(graphTraversalStrategy)
                     .configureWith(
                         new MainLogicExecReporter(kryonExecutionReport)
-                            .asKryonExecutorConfigurator()))) {
+                            .defaultKryonExecutorConfigurator()))) {
       multiHellos =
           krystexVajramExecutor.execute(
               MultiHelloFriends_ReqImmutPojo._builder()
@@ -517,7 +517,7 @@ class VajramKryonExecutorTest {
             .decorationOrdering(decorationOrdering);
 
     krystalExecutorConfigBuilder
-        .configureWith(new RequestLevelCache(vGraph).asKryonExecutorConfigurator())
+        .configureWith(new RequestLevelCache(vGraph).defaultKryonExecutorConfigurator())
         .configureWith(Resilience4JBulkhead.onePerIOVajram())
         .configureWith(Resilience4JCircuitBreaker.onePerIOVajram());
 

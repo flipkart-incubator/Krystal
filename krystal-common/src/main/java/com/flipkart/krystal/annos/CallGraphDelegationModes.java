@@ -8,13 +8,14 @@ import com.flipkart.krystal.core.ElementTagUtils;
 import com.google.common.collect.Comparators;
 import java.lang.annotation.Annotation;
 import java.util.Collection;
+import java.util.List;
 
 /** Element Tag Utility to handle @CallGraphDelegationMode annotations */
 @ElementTagUtilityOf(CallGraphDelegationMode.class)
 public class CallGraphDelegationModes implements ElementTagUtils<CallGraphDelegationMode> {
 
   @Override
-  public CallGraphDelegationMode resolve(Collection<Annotation> annotations) {
+  public List<CallGraphDelegationMode> resolve(Collection<Annotation> annotations) {
     CallGraphDelegationMode max = null;
     for (Annotation annotation : annotations) {
       CallGraphDelegationMode current = asCallGraphDelegationMode(annotation);
@@ -24,7 +25,7 @@ public class CallGraphDelegationModes implements ElementTagUtils<CallGraphDelega
       }
       max = Comparators.max(max, current, this::compare);
     }
-    return requireNonNullElse(max, create(SYNC));
+    return List.of(requireNonNullElse(max, create(SYNC)));
   }
 
   @Override

@@ -1,11 +1,11 @@
 package com.flipkart.krystal.krystex.test_vajrams.friendsservice;
 
-import static com.flipkart.krystal.datatypes.Trilean.FALSE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
+import com.flipkart.krystal.data.DataAccess;
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.MutatesState;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -21,7 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.LongAdder;
 
 @Vajram
-@MutatesState(FALSE)
+@DataAccess(datasetName = "User")
 public abstract class FriendsService extends IOVajramDef<Set<String>> {
   interface _Inputs {
     @IfAbsent(FAIL)
@@ -47,9 +47,7 @@ public abstract class FriendsService extends IOVajramDef<Set<String>> {
   static ImmutableMap<FriendsService_BatchItem, Errable<Set<String>>> unbatch(
       Map<FriendsService_BatchItem, Set<String>> _batchedOutput) {
     return _batchedOutput.entrySet().stream()
-        .collect(
-            ImmutableMap.toImmutableMap(
-                Map.Entry::getKey, entry -> Errable.withValue(entry.getValue())));
+        .collect(toImmutableMap(Map.Entry::getKey, entry -> Errable.withValue(entry.getValue())));
   }
 
   private static Set<String> getFriends(String userId) {

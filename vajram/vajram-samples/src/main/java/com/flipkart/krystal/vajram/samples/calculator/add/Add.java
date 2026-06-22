@@ -1,14 +1,13 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
-import static com.flipkart.krystal.datatypes.Trilean.FALSE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.lang.Boolean.TRUE;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 
+import com.flipkart.krystal.data.DataAccess;
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.MutatesState;
 import com.flipkart.krystal.data.NonNil;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.IOVajramDef;
@@ -34,7 +33,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @SuppressWarnings("initialization.field.uninitialized")
 @Slf4j
 @Vajram
-@MutatesState(FALSE)
+@DataAccess(datasetName = "Global")
 public abstract class Add extends IOVajramDef<Integer> {
 
   interface _Inputs {

@@ -116,7 +116,7 @@ class KryonExecutionTest {
     VajramGraph vajramGraph = VajramGraph.builder().build();
     this.kryonDefinitionRegistry = vajramGraph.kryonDefinitionRegistry();
     this.logicDefinitionRegistry = kryonDefinitionRegistry.logicDefinitionRegistry();
-    this.requestLevelCache = new RequestLevelCache(vajramGraph, false);
+    this.requestLevelCache = new RequestLevelCache(vajramGraph);
     this.krystexGraph = KrystexGraph.builder().vajramGraph(vajramGraph).build();
     this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
   }
@@ -719,7 +719,7 @@ class KryonExecutionTest {
             usedFacets,
             input ->
                 input
-                    .facetValueResponses()
+                    .executionItems()
                     .forEach(
                         executionItem ->
                             linkFutures(
@@ -743,7 +743,7 @@ class KryonExecutionTest {
             inputs,
             input ->
                 input
-                    .facetValueResponses()
+                    .executionItems()
                     .forEach(
                         executionItem ->
                             linkFutures(
@@ -762,7 +762,7 @@ class KryonExecutionTest {
             .executorService(executorLease.get())
             .kryonExecStrategy(kryonExecStrategy)
             .graphTraversalStrategy(graphTraversalStrategy)
-            .configureWith(requestLevelCache.asKryonExecutorConfigurator())
+            .configureWith(requestLevelCache.defaultKryonExecutorConfigurator())
             .executorId("test");
     return new VajramKryonExecutor(krystexGraph, configBuilder);
   }

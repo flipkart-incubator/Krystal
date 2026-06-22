@@ -12,7 +12,7 @@ import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecoratorConf
 import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorExecutionInfo;
+import com.flipkart.krystal.krystex.kryon.KrystalExecutorExecutionInfo;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
@@ -59,7 +59,7 @@ public record KrystalExecutorConfig(
     Map<String, OutputLogicDecoratorConfig> outputLogicDecoratorConfigs,
     Map<String, KryonDecoratorConfig> kryonDecoratorConfigs,
     Map<String, DependencyDecoratorConfig> dependencyDecoratorConfigs,
-    KryonExecutorExecutionInfo executorInfo,
+    KrystalExecutorExecutionInfo executorInfo,
     @NonNull SingleThreadExecutor executorService,
     Function<ExecutorService, ExecutorService> executorServiceTransformer,
     @Nullable TraitDispatchDecorator traitDispatchDecorator,
@@ -99,7 +99,7 @@ public record KrystalExecutorConfig(
       decorationOrdering = DecorationOrdering.none();
     }
     if (executorInfo == null) {
-      executorInfo = new KryonExecutorExecutionInfo();
+      executorInfo = new KrystalExecutorExecutionInfo();
     }
     if (executorServiceTransformer == null) {
       executorServiceTransformer = Function.identity();

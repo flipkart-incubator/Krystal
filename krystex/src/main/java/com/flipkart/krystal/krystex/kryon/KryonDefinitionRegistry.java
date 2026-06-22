@@ -1,5 +1,7 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import static java.util.Collections.unmodifiableCollection;
+
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.resolution.ResolverDefinition;
@@ -11,6 +13,7 @@ import com.flipkart.krystal.krystex.resolution.FacetsFromRequest;
 import com.flipkart.krystal.krystex.resolution.Resolver;
 import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableMap;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -32,6 +35,10 @@ public final class KryonDefinitionRegistry {
 
   public @Nullable KryonDefinition get(VajramID vajramID) {
     return kryonDefinitions.get(vajramID.id());
+  }
+
+  public Collection<KryonDefinition> getDefinitions() {
+    return unmodifiableCollection(kryonDefinitions.values());
   }
 
   public KryonDefinition getOrThrow(VajramID vajramID) {

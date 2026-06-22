@@ -103,7 +103,10 @@ public final class DirectKryon extends AbstractKryon<MultiRequestDirectCommand, 
         }
         kryonDefinition.executeGraph(
             new GraphExecutionData(
-                executionItems, communicationFacade, kryonExecutor.commandQueue()));
+                executionItems,
+                communicationFacade,
+                getContextEnricher(),
+                kryonExecutor.commandQueue()));
       } catch (Throwable e) {
         for (ExecutionItem executionItem : executionItems) {
           if (!executionItem.response().isDone()) {
@@ -130,7 +133,7 @@ public final class DirectKryon extends AbstractKryon<MultiRequestDirectCommand, 
     try {
       finalLogic.execute(
           new OutputLogicExecutionInput(
-              ImmutableList.of(executionItem), kryonExecutor.commandQueue()));
+              ImmutableList.of(executionItem), kryonExecutor.commandQueue(), getContextEnricher()));
     } catch (Throwable e) {
       executionItem.response().completeExceptionally(wrapAsCompletionException(e));
     }

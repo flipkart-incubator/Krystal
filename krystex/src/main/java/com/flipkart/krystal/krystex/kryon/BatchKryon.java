@@ -553,7 +553,9 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
           try {
             finalLogic.execute(
                 new OutputLogicExecutionInput(
-                    ImmutableList.of(outputLogicFacets), kryonExecutor.commandQueue()));
+                    ImmutableList.of(outputLogicFacets),
+                    kryonExecutor.commandQueue(),
+                    getContextEnricher()));
           } catch (Throwable e) {
             outputLogicFacets.response().completeExceptionally(wrapAsCompletionException(e));
           }

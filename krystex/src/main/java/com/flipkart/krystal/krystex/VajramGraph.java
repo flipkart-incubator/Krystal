@@ -63,6 +63,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -71,13 +75,19 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @Slf4j
 public final class VajramGraph {
 
+  private static final AtomicInteger NEXT_VERSION = new AtomicInteger(0);
+
   @Getter private final KryonDefinitionRegistry kryonDefinitionRegistry;
+
+  @Getter private final int version;
 
   private final LogicDefRegistryDecorator logicRegistryDecorator;
 
   private final ImmutableMap<VajramID, VajramDefinition> vajramDefinitions;
   private final ImmutableMap<Class<? extends VajramDefRoot>, VajramDefinition> definitionByDefType;
   private final ImmutableMap<Class<? extends Request<?>>, VajramDefinition> definitionByReqType;
+
+  private final ConcurrentMap<Class<?>, Object> customMetadata = new ConcurrentHashMap<>();
 
   /**
    * Maps every vajramId to its corresponding kryonId all of whose dependencies have also been
@@ -101,6 +111,7 @@ public final class VajramGraph {
       Set<String> packagePrefixes,
       Set<Class<? extends VajramDefRoot>> classes,
       boolean ignoreMissingDependencies) {
+    this.version = NEXT_VERSION.getAndIncrement();
     this.ignoreMissingDependencies = ignoreMissingDependencies;
     LogicDefinitionRegistry logicDefinitionRegistry = new LogicDefinitionRegistry();
     this.kryonDefinitionRegistry = new KryonDefinitionRegistry(logicDefinitionRegistry);
@@ -142,6 +153,22 @@ public final class VajramGraph {
       currentDepChain = currentDepChain.extend(dependency.ofVajramID(), dependency);
     }
     return currentDepChain;
+  }
+
+  /**
+   * A convenience method for clients to compute a cached metadata object which derives data from
+   * this vajram Graph.
+   *
+   * @param clazz The class representing the type of the metadata object
+   * @param computer A function which computes the metadata from this vajram graph. This function is
+   *     only called once for the lifecycle of this vajram graph and is then cached. This means that
+   *     this function should compute values which are valid throughout the lifecycle of this vajram
+   *     graph.
+   * @param <T> The type of the metadata object
+   */
+  @SuppressWarnings("unchecked")
+  public <T> T getCustomMetadata(Class<T> clazz, Supplier<T> computer) {
+    return (T) customMetadata.computeIfAbsent(clazz, _c -> computer.get());
   }
 
   /**
@@ -433,7 +460,7 @@ public final class VajramGraph {
     // Step 4: Create and register Kryon for the output logic
     OutputLogic<@Nullable Object> outputLogicCode =
         input -> {
-          List<ExecutionItem> inputsList = input.facetValueResponses();
+          List<ExecutionItem> inputsList = input.executionItems();
           List<ExecutionItem> validInputs = new ArrayList<>(inputsList.size());
           inputsList.forEach(
               inputs -> {
@@ -445,7 +472,7 @@ public final class VajramGraph {
                 }
               });
           try {
-            vajramDef.execute(input.withFacetValueResponses(validInputs));
+            vajramDef.execute(input.withExecutionItems(validInputs));
           } catch (Throwable e) {
             validInputs.forEach(
                 i -> i.response().completeExceptionally(wrapAsCompletionException(e)));
@@ -512,6 +539,11 @@ public final class VajramGraph {
           "Could not find vajram definition for request type %s".formatted(vajramReqClass));
     }
     return vajramDefinition.vajramId();
+  }
+
+  public Optional<VajramDefinition> tryGetVajramDefinitionByReqType(
+      Class<? extends Request> vajramReqClass) {
+    return Optional.ofNullable(definitionByReqType.get(vajramReqClass));
   }
 
   public Optional<Class<? extends Request<?>>> getVajramReqByVajramId(VajramID vajramID) {

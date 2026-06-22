@@ -25,37 +25,36 @@ public final class SimpleOne2OneInputResolver<S, T, CV extends Request<?>, DV ex
   @Override
   public ResolverCommand resolve(
       List<? extends ImmutableRequest.Builder<?>> _depRequests, FacetValues _rawFacetValues) {
-    {
-      try {
-        //noinspection unchecked,rawtypes
-        DependencyCommand<T> depCommand =
-            _resolutionHelper(
-                getResolverSpec().source(),
-                getResolverSpec().transformer(),
-                getResolverSpec().skipConditions(),
-                _rawFacetValues);
-        if (depCommand instanceof One2OneCommand<T> one2OneCommand) {
-          ResolverCommand command;
-          if (depCommand.shouldSkip()) {
-            command = skip(one2OneCommand.doc(), one2OneCommand.skipCause());
-          } else {
-            for (ImmutableRequest.Builder depRequest : _depRequests) {
-              getResolverSpec().targetInput().setToRequest(depRequest, one2OneCommand.input());
-            }
-            command = executeWithRequests(_depRequests);
-          }
-          return command;
+    try {
+      //noinspection unchecked,rawtypes
+      DependencyCommand<T> depCommand =
+          _resolutionHelper(
+              getResolverSpec().source(),
+              getResolverSpec().transformer(),
+              getResolverSpec().skipConditions(),
+              _rawFacetValues);
+      if (depCommand instanceof One2OneCommand<T> one2OneCommand) {
+        ResolverCommand command;
+        if (depCommand.shouldSkip()) {
+          command = skip(one2OneCommand.doc(), one2OneCommand.skipCause());
         } else {
-          throw new IllegalStateException(
-              "single input resolver must return One2OneCommand command only");
+          for (ImmutableRequest.Builder depRequest : _depRequests) {
+            getResolverSpec().targetInput().setToRequest(depRequest, one2OneCommand.input());
+          }
+          command = executeWithRequests(_depRequests);
         }
-      } catch (Exception e) {
-        return skip(
-            String.format(
-                "Got exception %s while executing the resolver of the dependency %s",
-                e, getDependency().name()),
-            e);
+        return command;
+      } else {
+        throw new IllegalStateException(
+            "single input resolver must return One2OneCommand command only");
       }
+    } catch (Exception e) {
+      return skip(
+          "Got exception "
+              + e
+              + " while executing the resolver of the dependency "
+              + getDependency().name(),
+          e);
     }
   }
 }
