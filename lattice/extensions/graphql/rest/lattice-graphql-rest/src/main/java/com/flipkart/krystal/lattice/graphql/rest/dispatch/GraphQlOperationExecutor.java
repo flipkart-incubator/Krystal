@@ -15,7 +15,6 @@ import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
 import com.flipkart.krystal.krystex.kryon.DirectResponse;
 import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator.KryonExecutorConfiguratorProvider;
 import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationError;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject;
@@ -44,8 +43,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Singleton
-public final class GraphQlOperationExecutor
-    implements DependencyDecorator, KryonExecutorConfiguratorProvider {
+public final class GraphQlOperationExecutor implements DependencyDecorator {
 
   public static final String DECORATOR_TYPE = GraphQlOperationExecutor.class.getName();
 
@@ -147,8 +145,7 @@ public final class GraphQlOperationExecutor
     };
   }
 
-  @Override
-  public KryonExecutorConfigurator asKryonExecutorConfigurator() {
+  public KryonExecutorConfigurator defaultKryonExecutorConfigurator() {
     return configBuilder ->
         configBuilder.dependencyDecoratorConfig(
             new DependencyDecoratorConfig(

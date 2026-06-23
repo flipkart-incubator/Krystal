@@ -55,7 +55,7 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
         outputLogicExecutionInput = input;
       }
       input
-          .facetValueResponses()
+          .executionItems()
           .forEach(
               f -> {
                 if (!(f.facetValues() instanceof BatchEnabledFacetValues)) {
@@ -65,7 +65,7 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
                 }
               });
       List<BatchedFacets> batchedFacetsList = new ArrayList<>();
-      for (ExecutionItem executionItem : input.facetValueResponses()) {
+      for (ExecutionItem executionItem : input.executionItems()) {
         batchedFacetsList.addAll(inputBatcher.add(executionItem));
       }
       for (BatchedFacets batchedFacets : batchedFacetsList) {
@@ -115,7 +115,7 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
       }
     } else {
       try {
-        logicToDecorate.execute(outputLogicExecutionInput.withFacetValueResponses(facetsList));
+        logicToDecorate.execute(outputLogicExecutionInput.withExecutionItems(facetsList));
       } catch (Throwable e) {
         for (ExecutionItem f : facetsList) {
           f.response().completeExceptionally(wrapAsCompletionException(e));

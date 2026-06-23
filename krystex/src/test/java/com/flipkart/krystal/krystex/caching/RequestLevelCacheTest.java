@@ -94,7 +94,7 @@ class RequestLevelCacheTest {
     VajramGraph vajramGraph = VajramGraph.builder().build();
     this.kryonDefinitionRegistry = vajramGraph.kryonDefinitionRegistry();
     this.logicDefinitionRegistry = kryonDefinitionRegistry.logicDefinitionRegistry();
-    this.requestLevelCache = new RequestLevelCache(vajramGraph, false);
+    this.requestLevelCache = new RequestLevelCache(vajramGraph);
     this.krystexGraph = KrystexGraph.builder().vajramGraph(vajramGraph).build();
     this.executorLease = EXEC_POOL.lease();
   }
@@ -188,7 +188,7 @@ class RequestLevelCacheTest {
             .kryonExecStrategy(kryonExecStrategy)
             .graphTraversalStrategy(graphTraversalStrategy);
     if (withCache) {
-      configBuilder.configureWith(requestLevelCache.asKryonExecutorConfigurator());
+      configBuilder.configureWith(requestLevelCache.defaultKryonExecutorConfigurator());
     }
     return new VajramKryonExecutor(krystexGraph, configBuilder.executorId("test"));
   }
@@ -201,7 +201,7 @@ class RequestLevelCacheTest {
             inputs,
             input ->
                 input
-                    .facetValueResponses()
+                    .executionItems()
                     .forEach(
                         executionItem ->
                             linkFutures(

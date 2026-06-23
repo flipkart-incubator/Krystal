@@ -297,7 +297,7 @@ class Resilience4JBulkheadTest {
         new IOLogicDefinition<>(
             new KryonLogicId(new VajramID(kryonId), kryonId + ":asyncLogic"),
             usedFacets,
-            input -> input.facetValueResponses().forEach(logic::accept),
+            input -> input.executionItems().forEach(logic::accept),
             emptyTags());
     logicDefinitionRegistry.addOutputLogic(def);
     return def;

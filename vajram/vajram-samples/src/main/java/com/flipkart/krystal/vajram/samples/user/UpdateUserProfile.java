@@ -1,10 +1,9 @@
 package com.flipkart.krystal.vajram.samples.user;
 
-import static com.flipkart.krystal.datatypes.Trilean.TRUE;
+import static com.flipkart.krystal.data.DataAccess.AccessPattern.MUTATION;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 
-import com.flipkart.krystal.data.MutatesState;
-import com.flipkart.krystal.krystex.caching.RequestLevelCacheConfig;
+import com.flipkart.krystal.data.DataAccess;
 import com.flipkart.krystal.krystex.caching.RequestLevelCacheInvalidator;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.IOVajramDef;
@@ -20,8 +19,8 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Vajram
-@MutatesState(TRUE)
-@RequestLevelCacheConfig(canInvalidateCacheOf = GetUserProfile_Req.class)
+@DataAccess(datasetName = "UserProfile", accessPattern = MUTATION)
+@DataAccess(datasetName = "User")
 public abstract class UpdateUserProfile extends IOVajramDef<Boolean> {
 
   interface _Inputs {

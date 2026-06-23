@@ -17,5 +17,7 @@ public sealed interface KrystalElement {
 
   // **************************************************//
 
-  record Logic() implements KrystalElement {}
+  sealed interface Logic extends KrystalElement {}
+
+  record OutputLogic() implements Logic {}
 }

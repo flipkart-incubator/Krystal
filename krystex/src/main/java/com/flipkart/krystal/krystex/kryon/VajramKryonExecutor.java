@@ -153,7 +153,7 @@ public final class VajramKryonExecutor implements KrystalExecutor {
   private final Map<String, Set<DependentChain>> dependentChainsPerKryon = new LinkedHashMap<>();
   private final RequestIdGenerator preferredReqGenerator;
   private final Set<DependentChain> depChainsDisabledInAllExecutions = new LinkedHashSet<>();
-  @Getter private final KryonExecutorExecutionInfo executionInfo;
+  @Getter private final KrystalExecutorExecutionInfo executionInfo;
 
   private volatile boolean closed;
   private boolean shutdownRequested;
@@ -271,7 +271,7 @@ public final class VajramKryonExecutor implements KrystalExecutor {
     if (!openAllKryonsForExternalInvocation) {
       if (kryonDefinitionRegistry
           .getOrThrow(vajramID)
-          .tags()
+          .allTags()
           .getAnnotationByType(InvocableOutsideGraph.class)
           .isEmpty()) {
         throw new RejectedExecutionException(
@@ -485,6 +485,7 @@ public final class VajramKryonExecutor implements KrystalExecutor {
 
   private <R extends KryonCommandResponse> CompletableFuture<R> _executeCommand(
       KryonCommand<? extends R> kryonCommand) {
+    VajramID previousActiveVajram = executionInfo.activeVajram();
     try {
       VajramKryonDefinition vajramKryonDefinition =
           KryonUtils.validateAsVajram(kryonDefinitionRegistry.getOrThrow(kryonCommand.vajramID()));
@@ -534,11 +535,13 @@ public final class VajramKryonExecutor implements KrystalExecutor {
       }
       VajramID vajramID = kryonCommand.vajramID();
       Kryon<KryonCommand<? extends R>, R> kryon = getDecoratedKryon(kryonCommand, vajramID);
-      executionInfo.activeKryon(kryon.getKryonDefinition().vajramID());
+      executionInfo.activeVajram(kryon.getKryonDefinition().vajramID());
       return kryon.executeCommand(kryonCommand);
     } catch (Throwable e) {
       kryonCommand.error(e);
       return failedFuture(e);
+    } finally {
+      executionInfo.activeVajram(previousActiveVajram);
     }
   }
 

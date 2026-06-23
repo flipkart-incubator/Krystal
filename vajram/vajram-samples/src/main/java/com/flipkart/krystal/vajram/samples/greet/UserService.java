@@ -1,13 +1,12 @@
 package com.flipkart.krystal.vajram.samples.greet;
 
-import static com.flipkart.krystal.datatypes.Trilean.FALSE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.function.Function.identity;
 
+import com.flipkart.krystal.data.DataAccess;
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.MutatesState;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -19,7 +18,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Vajram
-@MutatesState(FALSE)
+@DataAccess(datasetName = "User")
 public abstract class UserService extends IOVajramDef<UserInfo> {
 
   interface _Inputs {

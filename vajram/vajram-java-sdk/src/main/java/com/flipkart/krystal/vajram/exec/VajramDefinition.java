@@ -22,6 +22,8 @@ import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +50,8 @@ public final class VajramDefinition {
   private final ImmutableSet<InputMirror> inputMirrors;
   private final ImmutableMap<String, FacetSpec> facetsByName;
 
+  private final ConcurrentMap<Class<?>, Object> customMetadata = new ConcurrentHashMap<>();
+
   public VajramDefinition(VajramDefRoot<Object> vajramDefRoot) {
     this.vajramId = parseVajramId(vajramDefRoot);
 
@@ -70,10 +74,26 @@ public final class VajramDefinition {
     this.outputLogicSources = parseOutputLogicSources(vajramDefRoot, facetSpecs, facetsByName);
     this.inputResolvers = parseInputResolvers(vajramDefRoot);
 
-    this.metadata = new VajramMetadata(facetSpecs);
+    this.metadata = new VajramMetadata(facetSpecs, vajramTags);
   }
 
   public boolean isTrait() {
     return vajramTags().getAnnotationByType(Trait.class).isPresent();
+  }
+
+  /**
+   * A convenience method for clients to compute a cached metadata object which derives data from
+   * this vajram definition.
+   *
+   * @param clazz The class representing the type of the metadata object
+   * @param computer A function which computes the metadata from this vajram definition. This
+   *     function is only called once for the lifecycle of this vajram definition and is then
+   *     cached. This means that this function should compute values which are valid throughout the
+   *     lifecycle of this vajram definition.
+   * @param <T> The type of the metadata object
+   */
+  @SuppressWarnings("unchecked")
+  public <T> T getCustomMetadata(Class<T> clazz, Function<VajramDefinition, T> computer) {
+    return (T) customMetadata.computeIfAbsent(clazz, _c -> computer.apply(this));
   }
 }

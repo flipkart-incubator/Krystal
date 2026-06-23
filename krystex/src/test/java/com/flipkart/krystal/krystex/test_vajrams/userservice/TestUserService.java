@@ -1,14 +1,13 @@
 package com.flipkart.krystal.krystex.test_vajrams.userservice;
 
-import static com.flipkart.krystal.datatypes.Trilean.FALSE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
+import com.flipkart.krystal.data.DataAccess;
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.MutatesState;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -26,7 +25,7 @@ import java.util.concurrent.atomic.LongAdder;
 
 @InvocableOutsideGraph
 @Vajram
-@MutatesState(FALSE)
+@DataAccess(datasetName = "User")
 public abstract class TestUserService extends IOVajramDef<TestUserInfo> {
   interface _Inputs {
     @IfAbsent(FAIL)

@@ -17,4 +17,5 @@ import java.util.concurrent.ExecutorService;
 public record GraphExecutionData(
     List<ExecutionItem> executionItems,
     CommunicationFacade communicationFacade,
+    ContextEnricher contextEnricher,
     ExecutorService graphExecutor) {}

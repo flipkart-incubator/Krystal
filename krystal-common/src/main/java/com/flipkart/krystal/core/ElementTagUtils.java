@@ -19,9 +19,9 @@ import java.util.Collection;
 public interface ElementTagUtils<T extends Annotation> {
 
   /**
-   * If an element (for example a vajram) infers multiple non-repeatable {@link Transitive}
-   * annotations from different sources (dependencies, for example), this method is used to resolve
-   * the conflict to infer a final, effective annotation.
+   * If an element (for example a vajram) infers multiple {@link Transitive} annotations from
+   * different sources (dependencies, for example), this method is used to resolve the conflicts to
+   * infer a final, effective set of annotations which do not conflict with each other.
    *
    * <p>This means that a transitive annotation must adhere to a <a
    * href="https://en.wikipedia.org/wiki/Total_order">total order</a> so that conflicts between any
@@ -36,7 +36,7 @@ public interface ElementTagUtils<T extends Annotation> {
    *     for convenience of classes which create an instance of this type using reflection.
    */
   @SuppressWarnings("unchecked")
-  T resolve(Collection<Annotation> annotations) throws IllegalArgumentException;
+  Collection<T> resolve(Collection<Annotation> annotations) throws IllegalArgumentException;
 
   /**
    * Returns 1 if a1 has precedence over a2, -1 if a2 has precedence over a1, and 0 if they have

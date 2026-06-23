@@ -92,7 +92,7 @@ class SplitAddTest {
                     .executorService(executorLease.get())
                     .configureWith(
                         new MainLogicExecReporter(kryonExecutionReport)
-                            .asKryonExecutorConfigurator())
+                            .defaultKryonExecutorConfigurator())
                     // Tests whether executor level disabled dependant chains is working
                     .disabledDependentChains(disabledDepChains(graph)))) {
       future = executeVajram(krystexVajramExecutor, 0);

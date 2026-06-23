@@ -56,6 +56,7 @@ import com.flipkart.krystal.codegen.common.models.TypeAndName;
 import com.flipkart.krystal.codegen.common.models.TypeNameVisitor;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.concurrent.Futures;
+import com.flipkart.krystal.core.ContextEnricher;
 import com.flipkart.krystal.core.GraphExecutionData;
 import com.flipkart.krystal.core.OutputLogicExecutionInput;
 import com.flipkart.krystal.core.VajramID;
@@ -710,8 +711,10 @@ $L
   private MethodSpec executeGraph() {
     MethodSpec.Builder executeGraph =
         overriding(
-            util.getMethod(
-                () -> VajramDef.class.getMethod("executeGraph", GraphExecutionData.class)));
+                util.getMethod(
+                    () -> VajramDef.class.getMethod("executeGraph", GraphExecutionData.class)))
+            .addCode(
+                "$T _contextEnricher = _graphExecData.contextEnricher();", ContextEnricher.class);
     boolean simpleInputResolversMethodPresent =
         currentVajramInfo().vajramClassElem().getEnclosedElements().stream()
             .filter(e -> e instanceof ExecutableElement)
@@ -772,34 +775,35 @@ $L
             $completableFuture:T.allOf(
                     $allUsedFutures:L)
                 .whenComplete(
-                  (_unused, _throwable) -> {
-                    $list:T<$reqRespFuture:T<$reqBuilder:T, $depType:T>> _$facetName:L_reqs = new $arrayList:T<>();
-                    $list:T<$executionItem:T> _executionItems = _graphExecData.executionItems();
-                    var _$facetName:L_futures = new $completableFuture:T[_executionItems.size()];
-                    for (int i = 0; i < _executionItems.size(); i++) {
-                      var _executionItem = _executionItems.get(i);
-                      $facImmutPojo:T.Builder _facetValues =
-                          ($facImmutPojo:T.Builder) _executionItem.facetValues()._asBuilder();
-                      var _$facetName:L_requestBuilder = _$facetName:L_reqBuilderSupplier.get();
-                      $list:T<$reqBuilder:T> _$facetName:L_reqBuilders = $list:T.of(_$facetName:L_requestBuilder);
+                  _contextEnricher.enrichContext(
+                      (_unused, _throwable) -> {
+                        $list:T<$reqRespFuture:T<$reqBuilder:T, $depType:T>> _$facetName:L_reqs = new $arrayList:T<>();
+                        $list:T<$executionItem:T> _executionItems = _graphExecData.executionItems();
+                        var _$facetName:L_futures = new $completableFuture:T[_executionItems.size()];
+                        for (int i = 0; i < _executionItems.size(); i++) {
+                          var _executionItem = _executionItems.get(i);
+                          $facImmutPojo:T.Builder _facetValues =
+                              ($facImmutPojo:T.Builder) _executionItem.facetValues()._asBuilder();
+                          var _$facetName:L_requestBuilder = _$facetName:L_reqBuilderSupplier.get();
+                          $list:T<$reqBuilder:T> _$facetName:L_reqBuilders = $list:T.of(_$facetName:L_requestBuilder);
   $executeFanoutResolver:L
-                      for ($one2OneInputResolver:T _$facetName:L_inputResolver :
-                          _$facetName:L_one2oneInputResolvers) {
-                        _$facetName:L_reqBuilders =
-                            ($list:T<$reqBuilder:T>)
-                                _$facetName:L_inputResolver
-                                    .resolve(_$facetName:L_reqBuilders, _facetValues)
-                                    .getRequests();
-                      }
-                      $reassignReqBuilder:L
-                      $setupFutures:L
-                    }
-                    $completableFuture:T.allOf(_$facetName:L_futures)
-                        .whenComplete((_unused2, _throwable2) -> _$facetName:L_ready.complete(null));
-                    _graphExecData
-                        .communicationFacade()
-                        .triggerDependency($fac:T.$facetSpec:L, _$facetName:L_reqs);
-                  });
+                          for ($one2OneInputResolver:T _$facetName:L_inputResolver :
+                              _$facetName:L_one2oneInputResolvers) {
+                            _$facetName:L_reqBuilders =
+                                ($list:T<$reqBuilder:T>)
+                                    _$facetName:L_inputResolver
+                                        .resolve(_$facetName:L_reqBuilders, _facetValues)
+                                        .getRequests();
+                          }
+                          $reassignReqBuilder:L
+                          $setupFutures:L
+                        }
+                        $completableFuture:T.allOf(_$facetName:L_futures)
+                            .whenComplete(_contextEnricher.enrichContext((_unused2, _throwable2) -> _$facetName:L_ready.complete(null)));
+                        _graphExecData
+                            .communicationFacade()
+                            .triggerDependency($fac:T.$facetSpec:L, _$facetName:L_reqs);
+                      }));
           }
   """,
           merge(
@@ -887,24 +891,25 @@ $list:T<$reqRespFuture:T<$reqBuilder:T, $respType:T>> _$facetName:L_reqRespFutur
 _$facetName:L_reqs.addAll(_$facetName:L_reqRespFutures);
 _$facetName:L_futures[i] = $completableFuture:T.allOf($reqRespFuture:T.getFutures(_$facetName:L_reqRespFutures))
     .whenComplete(
-        (_unused2, _throwable2) -> {
-          $fanoutDepResponses:T<$depReq:T, $respType:T> _fanoutResponses;
-          if (_throwable != null) {
-            $list:T<$requestResponse:T<$depReqIface:T, $depType:T>> _erroredRequests = new $arrayList:T<>();
-            for ($depReqIface:T _$facetName:L_request : _$facetName:L_requestBuilders) {
-              _erroredRequests.add(
-                  new $requestResponse:T<>(_$facetName:L_request, $errable:T.withError(_throwable)));
-            }
-            _fanoutResponses = new $fanoutDepResponses:T<>(_erroredRequests);
-          } else {
-            _fanoutResponses = new $fanoutDepResponses:T<>(
-                                          $requestResponse:T
-                                              .<$depReq:T, $depType:T>
-                                                  fromCompletedReqRespFutures(
-                                                      _$facetName:L_reqRespFutures));
-          }
-          _facetValues.$facetName:L(_fanoutResponses);
-        });
+        _contextEnricher.enrichContext(
+            (_unused2, _throwable2) -> {
+              $fanoutDepResponses:T<$depReq:T, $respType:T> _fanoutResponses;
+              if (_throwable != null) {
+                $list:T<$requestResponse:T<$depReqIface:T, $depType:T>> _erroredRequests = new $arrayList:T<>();
+                for ($depReqIface:T _$facetName:L_request : _$facetName:L_requestBuilders) {
+                  _erroredRequests.add(
+                      new $requestResponse:T<>(_$facetName:L_request, $errable:T.withError(_throwable)));
+                }
+                _fanoutResponses = new $fanoutDepResponses:T<>(_erroredRequests);
+              } else {
+                _fanoutResponses = new $fanoutDepResponses:T<>(
+                                              $requestResponse:T
+                                                  .<$depReq:T, $depType:T>
+                                                      fromCompletedReqRespFutures(
+                                                          _$facetName:L_reqRespFutures));
+              }
+              _facetValues.$facetName:L(_fanoutResponses);
+            }));
 """,
                                   commonNamesMap)
                               .build()
@@ -920,10 +925,11 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
     var _$facetName:L_future = _rrf.response();
     _$facetName:L_futures[i] =
         _$facetName:L_future.whenComplete(
-            (_unused2, _throwable2) -> {
-              var _errable = $errable:T.errableFrom(_unused2, _throwable2);
-              _facetValues.$facetName:L(new $requestResponse:T<>(_$facetName:L_requestBuilder, _errable));
-            });
+            _contextEnricher.enrichContext(
+                (_unused2, _throwable2) -> {
+                  var _errable = $errable:T.errableFrom(_unused2, _throwable2);
+                  _facetValues.$facetName:L(new $requestResponse:T<>(_$facetName:L_requestBuilder, _errable));
+                }));
     _$facetName:L_reqs.add(_rrf);
   } else {
     _$facetName:L_futures[i] = $completableFuture:T.completedFuture(null);
@@ -960,9 +966,10 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
 """
     $L
         .whenComplete(
-            (_unused, _throwable) -> {
-              $L
-            });
+            _contextEnricher.enrichContext(
+                (_unused, _throwable) -> {
+                  $L
+                }));
 """,
           switch (computedOutputLogicSources.size()) {
             case 1 ->
@@ -1252,7 +1259,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
             .collect(CodeBlock.joining("\n"));
     executeBuilder.addCode(
         """
-        for ($T _executionItem : _logicInput.facetValueResponses()) {
+        for ($T _executionItem : _logicInput.executionItems()) {
           $T $L = ($T)_executionItem.facetValues();
           $L
           $L
@@ -1307,7 +1314,9 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
           getParsedVajramData().vajramInfo().vajramClassElem());
       return;
     }
-    CodeBlock.Builder codeBuilder = CodeBlock.builder();
+    CodeBlock.Builder codeBuilder =
+        CodeBlock.builder()
+            .add("$T _contextEnricher = _logicInput.contextEnricher();", ContextEnricher.class);
 
     ImmutableMap<String, FacetGenModel> facets =
         currentVajramInfo()
@@ -1388,7 +1397,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
 
     codeBuilder.addNamed(
         """
-            var _executionItems = $logicInput:L.facetValueResponses();
+            var _executionItems = $logicInput:L.executionItems();
             if(_executionItems.isEmpty()) {
               return;
             }
@@ -1481,29 +1490,30 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                 var _batchedOutputFuture = $batchedOutputLogic:L($batchedOutputParams:L);
 
                 _batchedOutputFuture.whenCompleteAsync(
-                    (_batchedOutput, _throwable) -> {
-                      $unbatchOutputExpectedType:T _unbatchedOutput = $imMap:T.of();
-                      $nullCheckCode:L{
-                        try {
-                          _unbatchedOutput = $unbatchOutputLogic:L($unbatchOutputParams:L);
-                        } catch (Throwable _e) {
-                          _throwable = _e;
-                        }
-                      }
-                      for(var _entry : _batchItemExecItems) {
-                        var _batchItem = _entry.batchItem();
-                        var _result = _unbatchedOutput.get(_batchItem);
+                    _contextEnricher.enrichContext(
+                        (_batchedOutput, _throwable) -> {
+                          $unbatchOutputExpectedType:T _unbatchedOutput = $imMap:T.of();
+                          $nullCheckCode:L{
+                            try {
+                              _unbatchedOutput = $unbatchOutputLogic:L($unbatchOutputParams:L);
+                            } catch (Throwable _e) {
+                              _throwable = _e;
+                            }
+                          }
+                          for(var _entry : _batchItemExecItems) {
+                            var _batchItem = _entry.batchItem();
+                            var _result = _unbatchedOutput.get(_batchItem);
 
-                        if (_result != null) {
-                          $futuresUtil:T.linkFutures(_result.toFuture(), _entry.executionItem().response());
-                        } else if (_throwable == null) {
-                            _entry.executionItem().response().complete(null);
-                        } else {
-                          _entry.executionItem().response().completeExceptionally(
-                            $stackTracelessException:T.$stackTracelessWrap:L(_throwable));
-                        }
-                      }
-                    }, $logicInput:L.graphExecutor());
+                            if (_result != null) {
+                              $futuresUtil:T.linkFutures(_result.toFuture(), _entry.executionItem().response());
+                            } else if (_throwable == null) {
+                                _entry.executionItem().response().complete(null);
+                            } else {
+                              _entry.executionItem().response().completeExceptionally(
+                                $stackTracelessException:T.$stackTracelessWrap:L(_throwable));
+                            }
+                          }
+                        }), $logicInput:L.graphExecutor());
             """,
         valueMap);
     executeMethodBuilder.addCode(codeBuilder.build());

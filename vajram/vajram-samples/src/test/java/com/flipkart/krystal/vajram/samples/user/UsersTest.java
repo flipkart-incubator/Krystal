@@ -14,7 +14,7 @@ import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.caching.RequestLevelCacheInvalidator;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorExecutionInfo;
+import com.flipkart.krystal.krystex.kryon.KrystalExecutorExecutionInfo;
 import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
 import com.flipkart.krystal.pooling.Lease;
@@ -152,12 +152,9 @@ class UsersTest {
   @Test
   void mutatingVajram_invalidatesCacheOfReadVajram() {
     RequestLevelCache requestLevelCache = new RequestLevelCache(graph);
-    KryonExecutorExecutionInfo executionInfo = new KryonExecutorExecutionInfo();
+    KrystalExecutorExecutionInfo executionInfo = new KrystalExecutorExecutionInfo();
     RequestLevelCacheInvalidator cacheInvalidator =
-        new RequestLevelCacheInvalidator(
-            requestLevelCache,
-            vajramID -> graph.getVajramDefinition(vajramID).vajramTags(),
-            executionInfo);
+        new RequestLevelCacheInvalidator(requestLevelCache, executionInfo);
     VajramGuiceInputInjector guiceInputInjector =
         new VajramGuiceInputInjector(
             createInjector(
@@ -177,7 +174,7 @@ class UsersTest {
                 KrystalExecutorConfig.builder()
                     .executorId("all-correct-inputs-test")
                     .executorService(executorLease.get())
-                    .configureWith(requestLevelCache.asKryonExecutorConfigurator())
+                    .configureWith(requestLevelCache.defaultKryonExecutorConfigurator())
                     .executorInfo(executionInfo))) {
 
       future1 =
@@ -198,12 +195,9 @@ class UsersTest {
   @Test
   void mutatingVajram_invalidationDisabling_leadsToCacheHit() {
     RequestLevelCache requestLevelCache = new RequestLevelCache(graph);
-    KryonExecutorExecutionInfo executionInfo = new KryonExecutorExecutionInfo();
+    KrystalExecutorExecutionInfo executionInfo = new KrystalExecutorExecutionInfo();
     RequestLevelCacheInvalidator cacheInvalidator =
-        new RequestLevelCacheInvalidator(
-            requestLevelCache,
-            vajramID -> graph.getVajramDefinition(vajramID).vajramTags(),
-            executionInfo);
+        new RequestLevelCacheInvalidator(requestLevelCache, executionInfo);
     VajramGuiceInputInjector guiceInputInjector =
         new VajramGuiceInputInjector(
             createInjector(
@@ -226,7 +220,7 @@ class UsersTest {
                 KrystalExecutorConfig.builder()
                     .executorId("all-correct-inputs-test")
                     .executorService(executorLease.get())
-                    .configureWith(requestLevelCache.asKryonExecutorConfigurator())
+                    .configureWith(requestLevelCache.defaultKryonExecutorConfigurator())
                     .executorInfo(executionInfo))) {
 
       future1 =
@@ -247,12 +241,9 @@ class UsersTest {
   @Test
   void mutatingVajrams_areNotCached() {
     RequestLevelCache requestLevelCache = new RequestLevelCache(graph);
-    KryonExecutorExecutionInfo executionInfo = new KryonExecutorExecutionInfo();
+    KrystalExecutorExecutionInfo executionInfo = new KrystalExecutorExecutionInfo();
     RequestLevelCacheInvalidator cacheInvalidator =
-        new RequestLevelCacheInvalidator(
-            requestLevelCache,
-            vajramID -> graph.getVajramDefinition(vajramID).vajramTags(),
-            executionInfo);
+        new RequestLevelCacheInvalidator(requestLevelCache, executionInfo);
     VajramGuiceInputInjector guiceInputInjector =
         new VajramGuiceInputInjector(
             createInjector(
@@ -275,13 +266,11 @@ class UsersTest {
                 KrystalExecutorConfig.builder()
                     .executorId("all-correct-inputs-test")
                     .executorService(executorLease.get())
-                    .configureWith(requestLevelCache.asKryonExecutorConfigurator())
+                    .configureWith(requestLevelCache.defaultKryonExecutorConfigurator())
                     .executorInfo(executionInfo))) {
 
-      future1 =
-          executor.execute(RunUserWorkflow_ReqImmutPojo._builder().userId("UserId_1")._build());
-      future2 =
-          executor.execute(RunUserWorkflow_ReqImmutPojo._builder().userId("UserId_1")._build());
+      future1 = executor.execute(RunUserWorkflow_Req._builder().userId("UserId_1")._build());
+      future2 = executor.execute(RunUserWorkflow_Req._builder().userId("UserId_1")._build());
     }
 
     assertThat(future1).succeedsWithin(TEST_TIMEOUT).isEqualTo(false);
@@ -300,12 +289,9 @@ class UsersTest {
   @Test
   void invalidatingCacheKeys_fromNonPermittedVajrams_fails() {
     RequestLevelCache requestLevelCache = new RequestLevelCache(graph);
-    KryonExecutorExecutionInfo executionInfo = new KryonExecutorExecutionInfo();
+    KrystalExecutorExecutionInfo executionInfo = new KrystalExecutorExecutionInfo();
     RequestLevelCacheInvalidator cacheInvalidator =
-        new RequestLevelCacheInvalidator(
-            requestLevelCache,
-            vajramID -> graph.getVajramDefinition(vajramID).vajramTags(),
-            executionInfo);
+        new RequestLevelCacheInvalidator(requestLevelCache, executionInfo);
     VajramGuiceInputInjector guiceInputInjector =
         new VajramGuiceInputInjector(
             createInjector(
@@ -327,7 +313,7 @@ class UsersTest {
                 KrystalExecutorConfig.builder()
                     .executorId("all-correct-inputs-test")
                     .executorService(executorLease.get())
-                    .configureWith(requestLevelCache.asKryonExecutorConfigurator())
+                    .configureWith(requestLevelCache.defaultKryonExecutorConfigurator())
                     .executorInfo(executionInfo))) {
 
       future1 =
@@ -342,6 +328,9 @@ class UsersTest {
         .withThrowableOfType(ExecutionException.class)
         .withCauseInstanceOf(IllegalStateException.class)
         .withMessageContaining(
-            "@RequestLevelCacheConfig missing on Vajram v<GetUserProfilesFromUserIds> - this is mandatory for cache invalidation");
+            """
+            Invalidation source vajram v<GetUserProfilesFromUserIds> does not MUTATE a dataset which is being \
+            queried by the invalidation target vajram v<GetUserProfile>. Please declare appropriate @DataAccess \
+            annotations on both invalidating and invalidated vajrams to allow this.""");
   }
 }

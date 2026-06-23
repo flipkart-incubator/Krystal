@@ -1,5 +1,6 @@
 package com.flipkart.krystal.tags;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Collections.synchronizedMap;
 import static java.util.stream.Collectors.groupingBy;
 
@@ -9,18 +10,23 @@ import com.flipkart.krystal.annos.Transitive;
 import com.flipkart.krystal.core.ElementTagUtils;
 import com.google.auto.value.AutoAnnotation;
 import com.google.common.collect.ImmutableCollection;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.Repeatable;
 import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -34,9 +40,10 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * annotations and annotation instances respectively. Each krystal element can have exactly one
  * annotation of a given annotation type. When an element has multiple annotations in the source
  * code which are themselves annotated with {@link Repeatable}, the element is tagged with the
- * container annotation rather than the individual repeatable annotations (as returned by {@link
- * AnnotatedElement#getAnnotations()}). The only exception to this rule is{@link NamedValueTag} (see
- * its documentation for more details)
+ * individual unpacked annotations (as returned by {@link
+ * AnnotatedElement#getAnnotationsByType(Class)}).
+ *
+ * <p>{@link NamedValueTag} is treated slightly differently (see its documentation for more details)
  */
 @Slf4j
 @EqualsAndHashCode
@@ -47,33 +54,49 @@ public final class ElementTags {
   private static final Map<Class<? extends Annotation>, ElementTagUtils<Annotation>>
       ELEMENT_TAG_UTILS_CACHE = synchronizedMap(new HashMap<>());
 
-  private final ImmutableMap<Class<? extends Annotation>, Annotation> annotationTags;
+  private final ImmutableMap<Class<? extends Annotation>, List<Annotation>> annotationTags;
   private final ImmutableMap<String, NamedValueTag> namedValueTags;
+  private final ImmutableList<Annotation> allAnnotations;
 
   private ElementTags(Iterable<Annotation> tags) {
-    Map<Class<? extends Annotation>, Annotation> annos = new HashMap<>();
+    Map<Class<? extends Annotation>, List<Annotation>> annos = new HashMap<>();
+    List<Annotation> allAnnos = new ArrayList<>();
     Map<String, NamedValueTag> namedValueTags = new HashMap<>();
     for (Annotation annotation : tags) {
+      allAnnos.add(annotation);
       if (annotation instanceof NamedValueTag namedValueTag) {
         if (namedValueTags.put(namedValueTag.name(), namedValueTag) != null) {
           throw new IllegalArgumentException("Found duplicate named value tag: " + namedValueTag);
         }
       } else {
-        if (annos.put(annotation.annotationType(), annotation) != null) {
-          throw new IllegalArgumentException(
-              "Found duplicate annotation of this type: " + annotation);
+        List<Annotation> annotations =
+            annos.computeIfAbsent(annotation.annotationType(), _k -> new ArrayList<>());
+        if (!annotation.annotationType().isAnnotationPresent(Repeatable.class)) {
+          if (!annotations.isEmpty()) {
+            throw new IllegalArgumentException(
+                "Annotation "
+                    + annotation
+                    + " is not repeatable, but found more than one. This is not allowed.");
+          }
         }
+        annotations.add(annotation);
       }
     }
     this.annotationTags = ImmutableMap.copyOf(annos);
     this.namedValueTags = ImmutableMap.copyOf(namedValueTags);
+    this.allAnnotations = ImmutableList.copyOf(allAnnos);
   }
 
   private ElementTags(
-      Map<Class<? extends Annotation>, Annotation> annotationTags,
+      Map<Class<? extends Annotation>, List<Annotation>> annotationTags,
       Map<String, NamedValueTag> namedValueTags) {
     this.annotationTags = ImmutableMap.copyOf(annotationTags);
     this.namedValueTags = ImmutableMap.copyOf(namedValueTags);
+    this.allAnnotations =
+        Stream.concat(
+                namedValueTags.values().stream(),
+                annotationTags.values().stream().flatMap(Collection::stream))
+            .collect(toImmutableList());
   }
 
   private static void validate(Annotation annotation) {
@@ -99,24 +122,43 @@ public final class ElementTags {
   }
 
   public static ElementTags of(Annotation... tags) {
-    return new ElementTags(Arrays.asList(tags));
+    return of(Arrays.asList(tags));
   }
 
   public static ElementTags of(Collection<Annotation> tags) {
     if (tags.isEmpty()) {
       return emptyTags();
     }
-    tags.forEach(ElementTags::validate);
-    return new ElementTags(tags);
+    return new ElementTags(
+        tags.stream()
+            .map(ElementTags::unpackContainer)
+            .flatMap(Collection::stream)
+            .peek(ElementTags::validate)
+            .toList());
   }
 
   public static ElementTags emptyTags() {
     return EMPTY_TAGS;
   }
 
-  @SuppressWarnings("unchecked")
   public <A extends Annotation> Optional<A> getAnnotationByType(Class<? extends A> annotationType) {
-    return Optional.ofNullable((@Nullable A) annotationTags.get(annotationType));
+    List<A> annotationsByType = getAnnotationsByType(annotationType);
+    if (annotationType.isAnnotationPresent(Repeatable.class)) {
+      throw new IllegalArgumentException(
+          "Annotation type "
+              + annotationType
+              + " is repeatable. Call getAnnotationsByType instead.");
+    }
+    if (annotationsByType.isEmpty()) {
+      return Optional.empty();
+    } else {
+      return Optional.of(annotationsByType.get(0));
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  public <A extends Annotation> List<A> getAnnotationsByType(Class<? extends A> annotationType) {
+    return (List<A>) annotationTags.getOrDefault(annotationType, List.of());
   }
 
   public Optional<NamedValueTag> getNamedValueTag(String name) {
@@ -124,19 +166,11 @@ public final class ElementTags {
   }
 
   public ImmutableCollection<Annotation> annotations() {
-    return annotationTags.values();
-  }
-
-  public ElementTags mergeAnnotations(Annotation... annotations) {
-    if (annotations.length == 0) {
-      return this;
-    }
-    return mergeTagsWithOverwrite(
-        new ElementTags(Arrays.stream(annotations).peek(ElementTags::validate).toList()));
+    return allAnnotations;
   }
 
   public ElementTags mergeTagsWithOverwrite(ElementTags otherTags) {
-    LinkedHashMap<Class<? extends Annotation>, Annotation> merged =
+    LinkedHashMap<Class<? extends Annotation>, List<Annotation>> merged =
         new LinkedHashMap<>(annotationTags);
     merged.putAll(otherTags.annotationTags);
     LinkedHashMap<String, NamedValueTag> merged2 = new LinkedHashMap<>(namedValueTags);
@@ -161,11 +195,12 @@ public final class ElementTags {
     ElementTags resolvedTags =
         ElementTags.of(
             annotationsByType.entrySet().stream()
-                .map(
+                .flatMap(
                     listEntry -> {
                       List<Annotation> annotationConflicts = listEntry.getValue();
                       return getElementTagUtilsOrThrow(listEntry.getKey())
-                          .resolve(annotationConflicts);
+                          .resolve(annotationConflicts)
+                          .stream();
                     })
                 .toList());
     return resolvedTags;
@@ -174,16 +209,18 @@ public final class ElementTags {
   public static @Nullable ConflictResponse detectConflictingAnnotation(
       ElementTags currentTransitiveTags, ElementTags resolvedDepTags) {
     for (Annotation annotation : currentTransitiveTags.annotations()) {
-      Optional<? extends Annotation> depAnnotationOfSameType =
-          resolvedDepTags.getAnnotationByType(annotation.annotationType());
+      List<? extends Annotation> depAnnotationOfSameType =
+          resolvedDepTags.getAnnotationsByType(annotation.annotationType());
       ElementTagUtils<Annotation> elementTagUtils =
           getElementTagUtilsOrThrow(annotation.annotationType());
       if (depAnnotationOfSameType.isEmpty()) {
         continue;
       }
-      int comparison = elementTagUtils.compare(annotation, depAnnotationOfSameType.get());
-      if (comparison < 0) {
-        return new ConflictResponse(annotation, depAnnotationOfSameType.get());
+      for (Annotation depAnno : depAnnotationOfSameType) {
+        int comparison = elementTagUtils.compare(annotation, depAnno);
+        if (comparison < 0) {
+          return new ConflictResponse(annotation, depAnno);
+        }
       }
     }
     return null;
@@ -219,4 +256,50 @@ public final class ElementTags {
 
   public record ConflictResponse(
       Annotation conflictingAnnotation, Annotation transitiveDepAnnotation) {}
+
+  private static List<Annotation> unpackContainer(Annotation annotation) {
+    Method containedAnnotationsMethod = getContainedAnnotationsMethod(annotation);
+    if (containedAnnotationsMethod == null) {
+      return List.of(annotation);
+    }
+    List<Annotation> unpacked = new ArrayList<>();
+    try {
+      Annotation[] nestedAnnos = (Annotation[]) containedAnnotationsMethod.invoke(annotation);
+      unpacked.addAll(Arrays.asList(nestedAnnos));
+    } catch (Exception e) {
+      // Fallback in case of reflection exceptions
+      unpacked.add(annotation);
+    }
+    return unpacked;
+  }
+
+  /**
+   * If {@code annotation} is a container annotation of a @Repeatable annotation, this method
+   * returns the "value" method which can be invoked to get the contained annotations. Else returns
+   * null
+   */
+  private static @Nullable Method getContainedAnnotationsMethod(Annotation annotation) {
+    try {
+      Class<? extends Annotation> containerType = annotation.annotationType();
+      Method valueMethod = containerType.getMethod("value");
+      Class<?> returnType = valueMethod.getReturnType();
+
+      // 1. Check if the value() method returns an array of Annotations
+      Class<?> componentType = returnType.getComponentType();
+      if (componentType != null && Annotation.class.isAssignableFrom(componentType)) {
+
+        // 2. Fetch the @Repeatable meta-annotation from the component annotation type
+        Repeatable repeatableMeta = componentType.getAnnotation(Repeatable.class);
+
+        // 3. CRITICAL CHECK: Verify that the component's @Repeatable points back to this container
+        // type
+        if (repeatableMeta != null && Objects.equals(repeatableMeta.value(), containerType)) {
+          return valueMethod;
+        }
+      }
+    } catch (NoSuchMethodException e) {
+      // No value() method exists; it cannot be a repeatable container
+    }
+    return null;
+  }
 }

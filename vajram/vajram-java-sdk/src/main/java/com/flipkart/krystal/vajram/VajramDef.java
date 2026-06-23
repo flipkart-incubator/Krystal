@@ -41,8 +41,8 @@ import com.google.common.collect.ImmutableList;
  *   <li>Soon: ({@link IOVajramDef}s) These are vajrams whose output logics delegate the output
  *       computation outside the current thread, and expect the final result to be available soon
  *       (within a few minutes)
- *   <li>Later:(DelayableVajrams) (To be introduced in the future) These are vajrams whose output
- *       logics delegate computation to a longrunning process which is not expected to finish
+ *   <li>Later: (DelayableVajrams) (To be introduced in the future) These are vajrams whose output
+ *       logics delegate computation to a long-running process which is not expected to finish
  *       anytime soon - i.e. it might take hours, days or maybe even years for that long-running
  *       process to complete.
  * </ul>

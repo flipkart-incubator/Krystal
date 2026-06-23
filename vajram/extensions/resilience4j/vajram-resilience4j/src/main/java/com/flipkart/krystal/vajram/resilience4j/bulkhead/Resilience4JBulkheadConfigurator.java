@@ -44,7 +44,7 @@ public class Resilience4JBulkheadConfigurator implements KryonExecutorConfigurat
                 return false;
               }
               return kryonDefinition
-                      .tags()
+                      .allTags()
                       .getAnnotationByType(OutputLogicDelegationMode.class)
                       .map(OutputLogicDelegationMode::value)
                       .orElse(ComputeDelegationMode.NONE)

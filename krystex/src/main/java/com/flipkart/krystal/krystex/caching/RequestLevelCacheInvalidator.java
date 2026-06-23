@@ -5,12 +5,12 @@ import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.krystex.VajramGraph;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorExecutionInfo;
-import com.flipkart.krystal.tags.ElementTags;
-import java.util.Arrays;
+import com.flipkart.krystal.krystex.kryon.KryonDefinition;
+import com.flipkart.krystal.krystex.kryon.KrystalExecutorExecutionInfo;
+import com.flipkart.krystal.vajram.exec.VajramDefinition;
+import com.google.common.collect.Sets;
 import java.util.Iterator;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
 
@@ -22,17 +22,13 @@ import lombok.extern.slf4j.Slf4j;
 public class RequestLevelCacheInvalidator {
 
   private final CacheContainer cacheContainer;
-  private final Function<VajramID, ElementTags> vajramTagsProvider;
-  private final KryonExecutorExecutionInfo executionInfo;
+  private final KrystalExecutorExecutionInfo executionInfo;
   private final VajramGraph vajramGraph;
 
   public RequestLevelCacheInvalidator(
-      RequestLevelCache requestLevelCache,
-      Function<VajramID, ElementTags> vajramTagsProvider,
-      KryonExecutorExecutionInfo executionInfo) {
+      RequestLevelCache requestLevelCache, KrystalExecutorExecutionInfo executionInfo) {
     this.cacheContainer = requestLevelCache.cacheContainer();
     this.vajramGraph = requestLevelCache.vajramGraph();
-    this.vajramTagsProvider = vajramTagsProvider;
     this.executionInfo = executionInfo;
   }
 
@@ -40,75 +36,104 @@ public class RequestLevelCacheInvalidator {
    * Invalidates cache keys for the vajram corresponding to the request class if the predicate
    * returns true
    *
-   * @param reqClass the class representing the request of the vajram whose cache keys need to be
-   *     invalidated
+   * @param targetReqType the class representing the request of the vajram whose cache keys need to
+   *     be invalidated
    * @param invalidateIfTrue a predicate that returns true if the cache key should be invalidated
    * @param <R> the type of the request
    */
   public <R extends Request<?>> void invalidateCacheKeys(
-      Class<R> reqClass, Predicate<R> invalidateIfTrue) {
-    VajramID activeVajram = executionInfo.activeKryon();
-    if (activeVajram == null) {
+      Class<R> targetReqType, Predicate<R> invalidateIfTrue) {
+    VajramID sourceVajramId = executionInfo.activeVajram();
+    if (sourceVajramId == null) {
       IllegalStateException e =
           new IllegalStateException(
               "InvalidateCacheKeys can only be called from an active vajram. Found no active vajram - possibly a framework bug?");
       log.error("", e);
       throw e;
     }
-    ElementTags vajramTags = vajramTagsProvider.apply(activeVajram);
-    Optional<RequestLevelCacheConfig> requestLevelCacheConfig = Optional.empty();
-    if (vajramTags != null) {
-      requestLevelCacheConfig = vajramTags.getAnnotationByType(RequestLevelCacheConfig.class);
+    VajramDefinition target;
+    {
+      Optional<VajramDefinition> vajramDefinitionOpt =
+          vajramGraph.tryGetVajramDefinitionByReqType(targetReqType);
+      if (vajramDefinitionOpt.isEmpty()) {
+        log.warn(
+            """
+              Skipping cache invalidation as we could not retrieve vajramID for targetReqType: {}. \
+              Maybe the vajram was not loaded into the graph?""",
+            targetReqType);
+        return;
+      } else {
+        target = vajramDefinitionOpt.get();
+      }
     }
-    if (vajramTags == null || requestLevelCacheConfig.isEmpty()) {
+    boolean isPermitted = activeVajramMutatesTargetQueriedEntity(sourceVajramId, target);
+
+    if (!isPermitted) {
       IllegalStateException e =
           new IllegalStateException(
-              "@RequestLevelCacheConfig missing on Vajram "
-                  + activeVajram
-                  + " - this is mandatory for cache invalidation");
+              """
+              Invalidation source vajram %s does not MUTATE a dataset which is \
+              being queried by the invalidation target vajram %s. \
+              Please declare appropriate @DataAccess annotations on both invalidating \
+              and invalidated vajrams to allow this."""
+                  .formatted(sourceVajramId, target.vajramId()));
       log.error("", e);
       throw e;
     }
-
-    boolean isPermitted =
-        Arrays.asList(requestLevelCacheConfig.get().canInvalidateCacheOf()).contains(reqClass);
-
-    if (!isPermitted) {
-      log.error(
-          "Vajram {} has not declared intent to invalidate cache of vajram req {}. Please add it to @RequestLevelCacheConfig to allow this.",
-          activeVajram,
-          reqClass);
-      return;
-    }
-
-    VajramID targetVajram;
-
-    try {
-      targetVajram = vajramGraph.getVajramIdByVajramReqType(reqClass);
-    } catch (Exception e) {
-      log.warn(
-          "Skipping cache invalidation as we could not retrieve vajramID for reqClass: {}",
-          reqClass);
-      return;
-    }
-
-    Iterator<ImmutableFacetValues> iterator = cacheContainer.getKeys(targetVajram).iterator();
+    Iterator<ImmutableFacetValues> iterator = cacheContainer.getKeys(target.vajramId()).iterator();
     iterator.forEachRemaining(
         facetValues -> {
           boolean shouldInvalidate;
           try {
             ImmutableRequest<?> immutableRequest = facetValues._request();
-            if (reqClass.isInstance(immutableRequest)) {
-              shouldInvalidate = invalidateIfTrue.test(reqClass.cast(immutableRequest));
+            if (targetReqType.isInstance(immutableRequest)) {
+              shouldInvalidate = invalidateIfTrue.test(targetReqType.cast(immutableRequest));
             } else {
               shouldInvalidate = false;
             }
           } catch (Exception e) {
-            shouldInvalidate = false;
+            log.error(
+                "{} could not invalidate cache keys of {} due to an exception.",
+                sourceVajramId,
+                target.vajramId(),
+                e);
+            throw e;
           }
           if (shouldInvalidate) {
             iterator.remove();
           }
         });
+  }
+
+  /** Returns true if the active vajram mutates an entity which is read by the target vajram. */
+  private boolean activeVajramMutatesTargetQueriedEntity(
+      VajramID activeVajramId, VajramDefinition target) {
+
+    KryonDefinition targetKryonDef = vajramGraph.kryonDefinitionRegistry().get(target.vajramId());
+
+    if (targetKryonDef == null) {
+      // This can happen if the kryon definition was not loaded into the graph
+      // In this case we assume that an entity is shared as it's anyway a no-op
+      return true;
+    }
+
+    KryonDefinition currentKryonDef =
+        vajramGraph.kryonDefinitionRegistry().getOrThrow(activeVajramId);
+
+    KryonCachingMetadata currentKryonMetadata =
+        currentKryonDef.getCustomMetadata(
+            KryonCachingMetadata.class,
+            kryonDefinition ->
+                RequestLevelCache.computeCachingMetadata(kryonDefinition, vajramGraph));
+
+    KryonCachingMetadata targetKryonMetadata =
+        targetKryonDef.getCustomMetadata(
+            KryonCachingMetadata.class,
+            kryonDefinition ->
+                RequestLevelCache.computeCachingMetadata(kryonDefinition, vajramGraph));
+
+    return !Sets.intersection(
+            currentKryonMetadata.entitiesMutated(), targetKryonMetadata.entitiesQueried())
+        .isEmpty();
   }
 }

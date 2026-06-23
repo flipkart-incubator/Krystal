@@ -20,7 +20,6 @@ import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator.KryonExecutorConfiguratorProvider;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
@@ -36,8 +35,7 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public final class MainLogicExecReporter
-    implements OutputLogicDecorator, KryonExecutorConfiguratorProvider {
+public final class MainLogicExecReporter implements OutputLogicDecorator {
 
   public static final String DECORATOR_TYPE = MainLogicExecReporter.class.getName();
 
@@ -57,8 +55,7 @@ public final class MainLogicExecReporter
             .build();
   }
 
-  @Override
-  public KryonExecutorConfigurator asKryonExecutorConfigurator() {
+  public KryonExecutorConfigurator defaultKryonExecutorConfigurator() {
     return configBuilder ->
         configBuilder.outputLogicDecoratorConfig(
             new OutputLogicDecoratorConfig(
@@ -79,7 +76,7 @@ public final class MainLogicExecReporter
       /*
        Report logic start
       */
-      List<? extends ExecutionItem> facets = input.facetValueResponses();
+      List<? extends ExecutionItem> facets = input.executionItems();
       kryonExecutionReport.reportMainLogicStart(vajramID, kryonLogicId, facets);
 
       /*
@@ -96,7 +93,7 @@ public final class MainLogicExecReporter
                       vajramID,
                       kryonLogicId,
                       new LogicExecResults(
-                          input.facetValueResponses().stream()
+                          input.executionItems().stream()
                               .map(
                                   e ->
                                       new LogicExecResponse(

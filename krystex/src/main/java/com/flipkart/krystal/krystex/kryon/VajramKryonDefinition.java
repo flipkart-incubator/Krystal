@@ -17,20 +17,20 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
 import java.util.Set;
+import lombok.Getter;
 
 /** A stateless, reusable definition of a Kryon */
-public record VajramKryonDefinition(
-    VajramID vajramID,
-    ImmutableSet<Facet> facets,
-    KryonLogicId outputLogicId,
-    ImmutableMap<ResolverDefinition, Resolver> resolversByDefinition,
-    LogicDefinition<CreateNewRequest> createNewRequest,
-    LogicDefinition<FacetsFromRequest> facetsFromRequest,
-    KryonDefinitionRegistry kryonDefinitionRegistry,
-    GraphExecutionLogic graphExecutionLogic,
-    KryonDefinitionView view,
-    ElementTags tags)
-    implements KryonDefinition {
+public final class VajramKryonDefinition extends AbstractKryonDefinition {
+  @Getter private final VajramID vajramID;
+  @Getter private final ImmutableSet<Facet> facets;
+  @Getter private final KryonLogicId outputLogicId;
+  @Getter private final ImmutableMap<ResolverDefinition, Resolver> resolversByDefinition;
+  @Getter private final LogicDefinition<CreateNewRequest> createNewRequest;
+  @Getter private final LogicDefinition<FacetsFromRequest> facetsFromRequest;
+  @Getter private final KryonDefinitionRegistry kryonDefinitionRegistry;
+  @Getter private final GraphExecutionLogic graphExecutionLogic;
+  @Getter private final KryonDefinitionView view;
+  @Getter private final ElementTags allTags;
 
   public VajramKryonDefinition(
       VajramID vajramID,
@@ -55,11 +55,17 @@ public record VajramKryonDefinition(
         tags);
   }
 
-  public ImmutableSet<Dependency> dependencies() {
-    return view.dependencies();
-  }
-
-  public VajramKryonDefinition {
+  private VajramKryonDefinition(
+      VajramID vajramID,
+      ImmutableSet<Facet> facets,
+      KryonLogicId outputLogicId,
+      ImmutableMap<ResolverDefinition, Resolver> resolversByDefinition,
+      LogicDefinition<CreateNewRequest> createNewRequest,
+      LogicDefinition<FacetsFromRequest> facetsFromRequest,
+      KryonDefinitionRegistry kryonDefinitionRegistry,
+      GraphExecutionLogic graphExecutionLogic,
+      KryonDefinitionView view,
+      ElementTags allTags) {
     view.resolverDefinitionsByDependencies()
         .forEach(
             (dep, resolvers) -> {
@@ -69,6 +75,20 @@ public record VajramKryonDefinition(
                         .formatted(dep, vajramID.id()));
               }
             });
+    this.vajramID = vajramID;
+    this.facets = facets;
+    this.outputLogicId = outputLogicId;
+    this.resolversByDefinition = resolversByDefinition;
+    this.createNewRequest = createNewRequest;
+    this.facetsFromRequest = facetsFromRequest;
+    this.kryonDefinitionRegistry = kryonDefinitionRegistry;
+    this.graphExecutionLogic = graphExecutionLogic;
+    this.view = view;
+    this.allTags = allTags;
+  }
+
+  public ImmutableSet<Dependency> dependencies() {
+    return view.dependencies();
   }
 
   public <T> OutputLogicDefinition<T> getOutputLogicDefinition() {

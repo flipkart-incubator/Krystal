@@ -9,15 +9,15 @@ import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Set;
+import lombok.Getter;
 
-public record TraitKryonDefinition(
-    VajramID vajramID,
-    ImmutableSet<Facet> facets,
-    LogicDefinition<CreateNewRequest> createNewRequest,
-    KryonDefinitionRegistry kryonDefinitionRegistry,
-    ElementTags tags,
-    KryonDefinitionView view)
-    implements KryonDefinition {
+public final class TraitKryonDefinition extends AbstractKryonDefinition {
+  @Getter private final VajramID vajramID;
+  @Getter private final ImmutableSet<Facet> facets;
+  @Getter private final LogicDefinition<CreateNewRequest> createNewRequest;
+  @Getter private final KryonDefinitionRegistry kryonDefinitionRegistry;
+  @Getter private final ElementTags allTags;
+  @Getter private final KryonDefinitionView view;
 
   public TraitKryonDefinition(
       VajramID vajramID,
@@ -32,6 +32,21 @@ public record TraitKryonDefinition(
         kryonDefinitionRegistry,
         tags,
         KryonDefinitionView.createView(facets, ImmutableMap.of()));
+  }
+
+  private TraitKryonDefinition(
+      VajramID vajramID,
+      ImmutableSet<Facet> facets,
+      LogicDefinition<CreateNewRequest> createNewRequest,
+      KryonDefinitionRegistry kryonDefinitionRegistry,
+      ElementTags allTags,
+      KryonDefinitionView view) {
+    this.vajramID = vajramID;
+    this.facets = facets;
+    this.createNewRequest = createNewRequest;
+    this.kryonDefinitionRegistry = kryonDefinitionRegistry;
+    this.allTags = allTags;
+    this.view = view;
   }
 
   @Override

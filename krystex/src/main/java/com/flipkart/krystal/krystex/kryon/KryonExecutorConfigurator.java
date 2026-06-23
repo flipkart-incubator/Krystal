@@ -13,8 +13,4 @@ public interface KryonExecutorConfigurator {
   KryonExecutorConfigurator NO_OP = configBuilder -> {};
 
   void addToConfig(KrystalExecutorConfigBuilder configBuilder);
-
-  interface KryonExecutorConfiguratorProvider {
-    KryonExecutorConfigurator asKryonExecutorConfigurator();
-  }
 }

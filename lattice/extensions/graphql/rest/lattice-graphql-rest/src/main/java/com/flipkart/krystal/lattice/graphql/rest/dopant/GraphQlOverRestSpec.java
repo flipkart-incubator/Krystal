@@ -29,7 +29,7 @@ public record GraphQlOverRestSpec(
       GraphQlOperationExecutor graphQlOperationExecutor,
       GraphQlOperationDispatch graphQlOperationDispatch) {
     krystexDopantSpecBuilder.configureExecutorWith(
-        graphQlOperationExecutor.asKryonExecutorConfigurator());
+        graphQlOperationExecutor.defaultKryonExecutorConfigurator());
     krystexDopantSpecBuilder.traitDispatchPolicies(graphQlOperationDispatch);
   }
 
