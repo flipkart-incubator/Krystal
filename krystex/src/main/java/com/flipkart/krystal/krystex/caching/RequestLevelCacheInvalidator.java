@@ -74,7 +74,7 @@ public class RequestLevelCacheInvalidator {
               """
               Invalidation source vajram %s does not MUTATE a dataset which is \
               being queried by the invalidation target vajram %s. \
-              Please declare appropriate @EntityAccess annotations on both invalidating \
+              Please declare appropriate @DataAccess annotations on both invalidating \
               and invalidated vajrams to allow this."""
                   .formatted(sourceVajramId, target.vajramId()));
       log.error("", e);
@@ -97,7 +97,7 @@ public class RequestLevelCacheInvalidator {
                 sourceVajramId,
                 target.vajramId(),
                 e);
-            shouldInvalidate = false;
+            throw e;
           }
           if (shouldInvalidate) {
             iterator.remove();

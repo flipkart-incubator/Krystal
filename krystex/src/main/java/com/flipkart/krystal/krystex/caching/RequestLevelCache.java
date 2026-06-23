@@ -331,11 +331,16 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
       if (!QUERY.equals(dataAccess.accessPattern())) {
         continue;
       }
-      String entityName = dataAccess.datasetName().strip();
-      if (entityName.isBlank()) {
+      String datasetName = dataAccess.datasetName().strip();
+      if (datasetName.isBlank()) {
+        // If a blank dataset is being read, it means the vajram might be reading any dataset and in
+        // such cases, we always cache the vajram - because there is no safe way to know if any
+        // other vajram is modifying the exact data which is being read. IO Vajrams are expected to
+        // explicitly declare a dataset name for request level cache to know whether to cache the
+        // vajram or not.
         continue;
       }
-      if (!entityWriters.writersByEntity().getOrDefault(entityName, List.of()).isEmpty()) {
+      if (!entityWriters.writersByEntity().getOrDefault(datasetName, List.of()).isEmpty()) {
         // This means there are vajrams which mutate the entity being read by the current vajram
         return true;
       }

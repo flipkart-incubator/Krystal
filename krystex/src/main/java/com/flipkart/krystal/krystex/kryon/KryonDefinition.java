@@ -9,7 +9,7 @@ import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableSet;
 import java.util.function.Function;
 
-public sealed interface KryonDefinition permits VajramKryonDefinition, TraitKryonDefinition {
+public sealed interface KryonDefinition permits AbstractKryonDefinition {
 
   ImmutableSet<Facet> facetsByType(FacetType facetType);
 

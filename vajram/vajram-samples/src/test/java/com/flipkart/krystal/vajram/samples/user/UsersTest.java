@@ -330,7 +330,7 @@ class UsersTest {
         .withMessageContaining(
             """
             Invalidation source vajram v<GetUserProfilesFromUserIds> does not MUTATE a dataset which is being \
-            queried by the invalidation target vajram v<GetUserProfile>. Please declare appropriate @EntityAccess \
+            queried by the invalidation target vajram v<GetUserProfile>. Please declare appropriate @DataAccess \
             annotations on both invalidating and invalidated vajrams to allow this.""");
   }
 }

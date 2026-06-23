@@ -6,7 +6,7 @@ import java.lang.annotation.Annotation;
 import java.util.Collection;
 import java.util.stream.Collectors;
 
-/** Element Tag Utility to handle @EntityAccess annotations */
+/** Element Tag Utility to handle @DataAccess annotations */
 @ElementTagUtilityOf(DataAccess.class)
 public class DataAccessUtil implements ElementTagUtils<DataAccess> {
   @Override
@@ -34,7 +34,7 @@ public class DataAccessUtil implements ElementTagUtils<DataAccess> {
   private static DataAccess asDataAccess(Annotation annotation) {
     if (!(annotation instanceof DataAccess dataAccess)) {
       throw new IllegalArgumentException(
-          "MutatesStates only supports handling @MutatesState. Found: " + annotation);
+          "DataAccessUtil only supports handling @DataAccess. Found: " + annotation);
     }
     return dataAccess;
   }
