@@ -329,8 +329,8 @@ class UsersTest {
         .withCauseInstanceOf(IllegalStateException.class)
         .withMessageContaining(
             """
-            Vajram has not declared intent to invalidate cache of the provided vajram req. \
-            Either declare @EntityAccess on invalidator and invalidated vajrams or declare the \
-            request type in @RequestLevelCacheConfig to allow this.""");
+            Invalidation source vajram v<GetUserProfilesFromUserIds> does not MUTATE a dataset which is being \
+            queried by the invalidation target vajram v<GetUserProfile>. Please declare appropriate @EntityAccess \
+            annotations on both invalidating and invalidated vajrams to allow this.""");
   }
 }

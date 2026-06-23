@@ -8,7 +8,6 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import com.flipkart.krystal.annos.ApplicableToElements;
 import com.flipkart.krystal.annos.ElementTagUtility;
 import com.flipkart.krystal.annos.Transitive;
-import com.flipkart.krystal.core.KrystalElement.OutputLogic;
 import com.flipkart.krystal.core.KrystalElement.Vajram;
 import com.flipkart.krystal.data.DataAccess.DataAccesses;
 import java.lang.annotation.Repeatable;
@@ -34,7 +33,9 @@ public @interface DataAccess {
 
   /**
    * The dataset's fully qualified names whose data this vajram access. The name must be a qualified
-   * Java name (javax.lang.model.SourceVersion#isName(CharSequence) must return true)
+   * Java name (javax.lang.model.SourceVersion#isName(CharSequence) must return true). A dataset is
+   * a collection of entities or data that is being accessed. Exampled include entity names, data
+   * collection names, etc.
    *
    * <ul>
    *   <li>If {@link #accessPattern()} is MUTATION, this denotes the dataset whose state this vajram
