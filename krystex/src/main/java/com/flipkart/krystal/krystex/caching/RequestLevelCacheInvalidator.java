@@ -105,7 +105,7 @@ public class RequestLevelCacheInvalidator {
         });
   }
 
-  /** Returns true of the active vajram mutates an entity which is read by the target vajram. */
+  /** Returns true if the active vajram mutates an entity which is read by the target vajram. */
   private boolean activeVajramMutatesTargetQueriedEntity(
       VajramID activeVajramId, VajramDefinition target) {
 
