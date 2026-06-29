@@ -24,8 +24,10 @@ import com.flipkart.krystal.lattice.krystex.KrystexDopantSpec;
 import com.flipkart.krystal.lattice.krystex.KrystexDopantSpec.KrystexDopantSpecBuilder;
 import com.flipkart.krystal.lattice.vajram.VajramDopantSpec;
 import com.flipkart.krystal.lattice.vajram.VajramDopantSpec.VajramDopantSpecBuilder;
+import com.flipkart.krystal.vajram.graphql.api.GraphQlModule;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
 
+@GraphQlModule
 @LatticeApp(
     description = "A sample graphql server on rest+json",
     dependencyInjectionFramework = CdiFramework.class)

@@ -18,7 +18,7 @@ import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedOptions;
 import javax.lang.model.element.TypeElement;
 
-@SupportedAnnotationTypes("*")
+@SupportedAnnotationTypes("com.flipkart.krystal.vajram.graphql.api.GraphQlModule")
 @AutoService(Processor.class)
 @SupportedOptions({CODEGEN_PHASE_KEY, MODULE_ROOT_PATH_KEY})
 @RunOnlyWhenCodegenPhaseIs(MODELS)

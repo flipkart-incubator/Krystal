@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.codegen.processor;
+package com.flipkart.krystal.codegen.common.processors;
 
 import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
 import static com.flipkart.krystal.codegen.common.models.Constants.MODULE_ROOT_PATH_KEY;

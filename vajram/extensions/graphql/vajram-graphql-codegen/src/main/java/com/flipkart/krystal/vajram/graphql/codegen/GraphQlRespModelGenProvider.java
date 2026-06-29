@@ -9,10 +9,10 @@ import com.google.auto.service.AutoService;
 import java.util.Set;
 
 @AutoService(ModelsCodeGeneratorProvider.class)
-public class GraphQlRespJsonModelGenProvider implements ModelsCodeGeneratorProvider {
+public class GraphQlRespModelGenProvider implements ModelsCodeGeneratorProvider {
   @Override
   public CodeGenerator create(ModelsCodeGenContext codeGenContext) {
-    return new GraphQlRespJsonModelGen(codeGenContext);
+    return new GraphQlRespModelGen(codeGenContext);
   }
 
   @Override
