@@ -1,3 +1,6 @@
+import com.flipkart.krystal.vajram.graphql.api.GraphQlModule;
+
+@GraphQlModule
 module krystal.vajram.ext.graphql.samples {
   requires com.fasterxml.jackson.databind;
   requires com.google.common;

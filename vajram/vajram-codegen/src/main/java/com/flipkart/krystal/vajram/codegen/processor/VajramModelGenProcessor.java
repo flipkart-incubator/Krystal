@@ -13,7 +13,6 @@ import javax.annotation.processing.SupportedOptions;
 @SupportedAnnotationTypes({
   "com.flipkart.krystal.vajram.Vajram",
   "com.flipkart.krystal.vajram.Trait",
-  "com.flipkart.krystal.annos.Generated"
 })
 @AutoService(Processor.class)
 @SupportedOptions({CODEGEN_PHASE_KEY, MODULE_ROOT_PATH_KEY})

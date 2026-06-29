@@ -57,12 +57,12 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * <p>These models wrap field values in {@code Errable<T>} to support partial failures in GraphQL
  * responses, and include GraphQL execution context for proper query resolution.
  */
-final class GraphQlRespJsonModelGen implements CodeGenerator {
+final class GraphQlRespModelGen implements CodeGenerator {
 
   private final ModelsCodeGenContext codeGenContext;
   private final CodeGenUtility util;
 
-  GraphQlRespJsonModelGen(ModelsCodeGenContext codeGenContext) {
+  GraphQlRespModelGen(ModelsCodeGenContext codeGenContext) {
     this.codeGenContext = codeGenContext;
     this.util = codeGenContext.util();
   }

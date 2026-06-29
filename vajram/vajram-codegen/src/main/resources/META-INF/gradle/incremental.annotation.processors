@@ -1,0 +1,3 @@
+com.flipkart.krystal.vajram.codegen.processor.VajramModelGenProcessor,isolating
+com.flipkart.krystal.vajram.codegen.processor.VajramWrapperGenProcessor,isolating
+com.flipkart.krystal.vajram.codegen.processor.VajramInputsGenProcessor,isolating

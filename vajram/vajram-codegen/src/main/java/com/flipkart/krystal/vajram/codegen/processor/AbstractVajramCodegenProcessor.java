@@ -9,8 +9,6 @@ import com.flipkart.krystal.codegen.common.models.AbstractKrystalAnnoProcessor;
 import com.flipkart.krystal.codegen.common.models.CodeGenShortCircuitException;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
-import com.flipkart.krystal.vajram.codegen.common.spi.AllVajramCodeGenContext;
-import com.flipkart.krystal.vajram.codegen.common.spi.AllVajramsCodeGeneratorProvider;
 import com.flipkart.krystal.vajram.codegen.common.spi.VajramCodeGenContext;
 import com.flipkart.krystal.vajram.codegen.common.spi.VajramCodeGeneratorProvider;
 import com.google.common.collect.Iterables;
@@ -80,17 +78,6 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractKrystalAnno
       }
     }
 
-    Iterable<AllVajramsCodeGeneratorProvider> allVajramCodeGeneratorProviders =
-        ServiceLoader.load(AllVajramsCodeGeneratorProvider.class, this.getClass().getClassLoader());
-    for (AllVajramsCodeGeneratorProvider allVajramCodeGen : allVajramCodeGeneratorProviders) {
-      try {
-        allVajramCodeGen
-            .create(new AllVajramCodeGenContext(vajramInfos, util, codegenPhase()))
-            .generate();
-      } catch (Exception e) {
-        failures.add(new Failure(null, e));
-      }
-    }
     for (Failure failure : failures) {
       Throwable throwable = failure.throwable();
       if (throwable instanceof CodeGenShortCircuitException) {

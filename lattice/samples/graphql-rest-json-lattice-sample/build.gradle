@@ -46,8 +46,10 @@ dependencies {
 
 }
 
-tasks.withType(JavaCompile).configureEach {
-    source(files('src/main/graphqls'))
+//Configure compilation tasks to read graphQl schemas
+tasks.named(name -> name == 'krystalModelsGen' || name == 'compileJava').configureEach {
+    //Needed so that annotation processors can read the graphqls files
+    inputs.dir('src/main/graphqls').withPropertyName('graphQlSchemas')
 }
 
 sourceSets {

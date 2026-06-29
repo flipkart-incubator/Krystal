@@ -36,9 +36,10 @@ checkerFramework {
     excludeTests = true
 }
 
-tasks.withType(JavaCompile).configureEach {
+//Configure compilation tasks to read graphQl schemas
+tasks.named(name -> name == 'krystalModelsGen' || name == 'compileJava').configureEach {
     //Needed so that annotation processors can read the graphqls files
-    it.source(files('src/main/graphqls'))
+    inputs.dir('src/main/graphqls').withPropertyName('graphQlSchemas')
 }
 sourceSets {
     //Needed so that graphqls files are available on the classpath and application can load the file

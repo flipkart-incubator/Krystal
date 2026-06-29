@@ -19,4 +19,5 @@ module flipkart.krystal.codegen.common {
   requires com.google.googlejavaformat;
   requires jdk.compiler;
   requires org.jspecify;
+  requires com.google.auto.service;
 }
