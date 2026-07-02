@@ -16,7 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * A facade for invalidating cache keys of a vajram. This is useful when a mutating vajram mutates
- * some state which is read by another vajram. The mutating vajram can invalidate
+ * some state which is read by another vajram. The mutating vajram can invalidate specific cache
+ * keys of vajrams which query the mutated entity.
  */
 @Slf4j
 public class RequestLevelCacheInvalidator {
