@@ -67,8 +67,8 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
   @Getter private final OutputLogicDecorator outputLogicDecorator;
 
   /**
-   * If a vajram doesn't have a @MutatesState annotation, then it is assumed to mutate state, and
-   * caching is skipped.
+   * If a vajram doesn't have a @DataAccess annotation, then it is assumed that the vajram does not
+   * mutate any state.
    *
    * @param vajramGraph the VajramGraph corresponding to the Krystal executor for which this is a
    *     request level cache
