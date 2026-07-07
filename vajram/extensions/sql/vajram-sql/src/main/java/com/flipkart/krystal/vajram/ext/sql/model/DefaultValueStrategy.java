@@ -5,6 +5,7 @@ import static java.lang.annotation.ElementType.METHOD;
 
 import java.lang.annotation.Target;
 import java.time.Instant;
+import java.time.LocalDateTime;
 
 /** Specifies the strategy with which the default value to be stored in a column is computed */
 @Target(METHOD)
@@ -26,8 +27,8 @@ public @interface DefaultValueStrategy {
      */
     AUTO_ASSIGN_ID,
     /**
-     * Applicable to columns of type {@link Instant}. This will cause the column to be set to the
-     * current timestamp when the row is inserted.
+     * Applicable to columns of type {@link Instant}, and {@link LocalDateTime}. This will cause the
+     * column to be set to the current timestamp when the row is inserted.
      */
     CURRENT_TIMESTAMP,
   }

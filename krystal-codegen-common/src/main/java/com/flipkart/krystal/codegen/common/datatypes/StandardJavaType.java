@@ -10,7 +10,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Range;
 import com.squareup.javapoet.CodeBlock;
 import java.net.URL;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -85,10 +87,22 @@ public enum StandardJavaType implements CodeGenType {
   // ...
   // Other Primitive Arrays to be added here
   // ...
+
+  /* *** java time types ***/
   LOCAL_DATE_TIME(
       TypeKind.DECLARED,
       CodeBlock.of("$T.parse(\"1970-01-01T00:00:00\")", LocalDateTime.class),
       LocalDateTime.class.getCanonicalName()),
+  OFFSET_DATE_TIME(
+      TypeKind.DECLARED,
+      CodeBlock.of("$T.parse(\"1970-01-01T00:00:00+00:00\")", OffsetDateTime.class),
+      LocalDateTime.class.getCanonicalName()),
+  INSTANT(
+      TypeKind.DECLARED,
+      CodeBlock.of("$T.parse(\"1970-01-01T00:00:00Z\")", Instant.class),
+      LocalDateTime.class.getCanonicalName()),
+
+  /* ** networking types ***/
   URL(TypeKind.DECLARED, null, URL.class.getCanonicalName());
 
   static final ImmutableMap<String, StandardJavaType> standardTypesByCanonicalName;

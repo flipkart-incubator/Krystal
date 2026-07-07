@@ -5,7 +5,6 @@ import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.ext.sql.codegen.InsertQueryModel.TableColumn;
 import com.flipkart.krystal.vajram.ext.sql.codegen.syntax.SqlSyntax;
 import java.util.List;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Builds SQL INSERT statements from parsed {@link InsertQueryModel} records.
@@ -22,17 +21,6 @@ public final class InsertQueryBuilder {
   }
 
   /**
-   * Builds a parameterized {@code INSERT INTO table (col1, col2, …) VALUES ($1, $2, …)} statement.
-   *
-   * @param model the parsed INSERT model containing table name and column definitions
-   * @param config driver-specific config for placeholder format
-   * @return the SQL INSERT string with positional placeholders
-   */
-  public String buildInsertSql(InsertQueryModel model, SqlDriverConfig config) {
-    return buildInsertSql(model, config, null, List.of());
-  }
-
-  /**
    * Builds a parameterized INSERT statement, optionally appending a {@code RETURNING} clause.
    *
    * @param model the parsed INSERT model containing table name and column definitions
@@ -45,7 +33,7 @@ public final class InsertQueryBuilder {
   public String buildInsertSql(
       InsertQueryModel model,
       SqlDriverConfig config,
-      @Nullable SqlSyntax syntax,
+      SqlSyntax syntax,
       List<String> returningColumnNames) {
     List<TableColumn> columns = model.columns();
 
