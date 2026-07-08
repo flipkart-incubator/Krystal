@@ -132,10 +132,74 @@ facets.
 
 ## Trait dispatch wiring
 
-- Static dispatch: a `TraitBinder` bound on `kGraph` maps a `@Qualifier` annotation to a concrete request
-  class.
-- Predicate dispatch: `kGraph.traitDispatchPolicies(new TraitDispatchPolicies(...))` with
-  `PredicateDispatchUtil.dispatchTrait(TraitReq.class, graph).conditionally(when(inputSlot, matcher).to(ConcreteReq.class), ...)`.
+A graph containing a Trait dependency doesn't know which implementation to run until you register a
+dispatch policy on the `KrystexGraph` — without one, executing a request against the Trait fails to resolve.
+Which policy type you register must match the dispatch mechanism the Trait's authors chose (see
+`references/vajram-anatomy.md`).
+
+**Static/qualifier dispatch** — bind each qualifier value to a concrete implementation's request class via a
+`TraitBinder`, then wrap it in a `GuiceyStaticDispatchPolicy`:
+
+```java
+TraitBinder traitBinder = new TraitBinder();
+traitBinder.bindTrait(MultiAdd_Req.class)
+    .annotatedWith(AdditionMethod.Creator.create(SIMPLE))
+    .to(SimpleAdd_Req.class);
+traitBinder.bindTrait(MultiAdd_Req.class)
+    .annotatedWith(AdditionMethod.Creator.create(CHAIN))
+    .to(ChainAdd_Req.class);
+
+kGraph.traitDispatchPolicies(
+    new TraitDispatchPolicies(
+        new GuiceyStaticDispatchPolicy(
+            graph, graph.getVajramIdByVajramDefType(MultiAdd.class), traitBinder)));
+```
+
+`AdditionMethod.Creator.create(...)` builds an instance of the custom `@Qualifier` annotation (the
+`@AutoAnnotation`-generated factory that ships alongside a hand-written `@Qualifier` interface) — don't
+hand-instantiate the annotation.
+
+**Predicate dispatch** — build a `PredicateDispatchPolicy` via `PredicateDispatchUtil`, matching each case on
+one or more `@UseForPredicateDispatch` inputs (referenced by their `_s` facet-spec constant, same as the
+`getSimpleInputResolvers()` DSL):
+
+```java
+import static com.flipkart.krystal.krystex.traits.PredicateDispatchUtil.dispatchTrait;
+import static com.flipkart.krystal.krystex.traits.PredicateDispatchUtil.when;
+import static com.flipkart.krystal.traits.matchers.InputValueMatcher.equalsEnum;
+
+kGraph.traitDispatchPolicies(
+    new TraitDispatchPolicies(
+        dispatchTrait(GetPiece_Req.class, graph)
+            .conditionally(
+                when(GetPiece_Req.type_s, equalsEnum(KNIGHT)).to(GetKnight_Req.class),
+                when(GetPiece_Req.type_s, equalsEnum(ROOK)).to(GetRook_Req.class))));
+```
+
+- `InputValueMatcher` (`com.flipkart.krystal.traits.matchers`) factories: `equalsEnum(enumValue)`,
+  `isInstanceOf(type)` (for dispatching on which subtype was supplied), `isAnyValue()`/`isAnyNonNullValue()`
+  (wildcard/fallback case). Chain `.and(otherInputSlot, otherMatcher)` on a `when(...)` case to match on more
+  than one input at once.
+- `InputDispatcherBuilder` also offers `.alwaysTo(ConcreteReq.class)` (single implementation, no real
+  dispatch — mostly useful in tests) and `.computingTargetWith(selectorFn, targets)` for dispatch logic that
+  doesn't reduce to per-input value matching.
+- **Cases are evaluated in the order passed to `.conditionally(...)`, and the first matching case wins** —
+  order specific combinations before broader fallbacks, not the other way around. The real
+  `CustomerServiceAgent` sample dispatches on `(agentType, initialCommunication)` this way: exact
+  `(L1, Call)`/`(L1, Email)`/`(L2, Call)`/`(L3, Email)` cases first, then comm-type-only fallbacks
+  (`when(initialCommunication_s, isInstanceOf(Call.class)).to(DefaultCallAgent_Req.class)`), then a true
+  catch-all (`when(agentType_s, isAnyValue()).and(initialCommunication_s, isAnyValue()).to(...)`) last.
+  Putting the catch-all first would shadow every other case.
+- **A Trait with no registered dispatch policy at all throws `IllegalStateException` the moment it's
+  invoked** (`"Unknown dispatch policy: null"`), and a predicate-dispatch case set that leaves some possible
+  input combination unmatched routes that request into the Trait's own definition — which has no output
+  logic (Traits can't have one), so it fails there instead of surfacing a targeted error. If a Trait's
+  legitimate inputs don't cleanly map into your `.conditionally(...)` cases, add an explicit catch-all case
+  (`isAnyValue()`) rather than relying on every real input matching one of the specific cases.
+- A request built against the Trait type (e.g. `GetPiece_ReqImmutPojo.<Knight>_builder().type(KNIGHT).
+  _build()`) can be `execute()`d directly if the resolved concrete implementation (or the Trait itself) is
+  reachable per the `@InvocableOutsideGraph` rule above — match `MultiAdd`'s pattern (annotate the Trait
+  interface itself) if the top-level caller invokes the Trait's request type directly.
 
 ## Mocking a dependency in isolation — `VajramTestHarness`
 

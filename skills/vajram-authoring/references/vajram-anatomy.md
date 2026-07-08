@@ -196,42 +196,107 @@ reachable as another Vajram's dependency inside the graph.
 
 ## Traits — polymorphism across implementations
 
-A `Trait` defines a behavioral contract (inputs + output shape) with no implementation:
+A `Trait` defines a behavioral contract (inputs + output shape) with **no implementation** — like a Java
+`interface`/`FunctionalInterface`, Scala trait, or Rust trait. Write one whenever a dependency slot should be
+fulfillable by more than one concrete Vajram (a strategy choice, an A/B'd implementation, a
+type-per-subclass dispatch), so callers depend on the behavioral contract rather than one hard-coded
+implementation.
+
+### Declaring a Trait
 
 ```java
+package com.flipkart.krystal.vajram.samples.chess;
+
 @Trait
 @CallGraphDelegationMode(SYNC)
-@InvocableOutsideGraph
-public interface MultiAdd extends TraitDef<Integer> {
+public interface GetPiece<T extends Piece> extends TraitDef<T> {
   interface _Inputs {
     @UseForPredicateDispatch
     @IfAbsent(FAIL)
-    List<Integer> numbers();
+    PieceType type();
   }
-
-  @Qualifier
-  @Retention(RUNTIME)
-  @Target({FIELD, METHOD})
-  @interface AdditionMethod {
-    MultiAddType value();
-  }
-
-  enum MultiAddType { SIMPLE, CHAIN, SPLIT }
 }
 ```
 
-Concrete Vajrams `implements` the Trait interface. A dependency slot typed to the Trait can be fulfilled by
-different implementations, selected by:
+- `@Trait` (`com.flipkart.krystal.vajram.Trait`, `@Target(TYPE)`) marks the interface.
+- It must `extends TraitDef<T>` (`com.flipkart.krystal.vajram.TraitDef`, a `non-sealed interface extends
+  VajramDefRoot<T>` — the same root `ComputeVajramDef`/`IOVajramDef` extend, so a Trait's generated request
+  class slots into a `@Dependency` exactly like a regular Vajram's does).
+- `T` is generic-friendly (`GetPiece<T extends Piece>` above) when different implementations return
+  different subtypes of a common output type — each implementation binds `T` to its own concrete type
+  (`GetKnight` binds it to `Knight`, `GetRook` to `Rook`).
+- A Trait's `_Inputs` is optional — declare it only for inputs every implementation shares, most commonly
+  the one field predicate dispatch will read (see below). A Trait has no `_InternalFacets`, `@Resolve`
+  methods, or `@Output` method of its own — those all belong to the implementing Vajrams, since the Trait
+  declares no logic. This isn't just a style convention: the annotation processor raises a build error
+  ("Traits cannot have dependencies") if a `@Trait` interface's facets include anything but plain inputs.
+- `@CallGraphDelegationMode(SYNC)` caps how much the runtime is allowed to internally reorder/delegate calls
+  to conforming Vajrams; app code never has to reason about the enum values (`ComputeDelegationMode`) beyond
+  copying `SYNC` here — omitting it defaults to the same value. It exists so a runtime that upgrades a Trait
+  to allow more delegation can't silently break a Vajram that was written assuming less.
 
-- **Static/qualifier dispatch** — define a custom `@Qualifier` annotation (like `@AdditionMethod` above)
-  and annotate each `@Dependency` declaration with a specific value; resolved at graph-build time /
-  per-call-site.
-- **Predicate dispatch** — mark a Trait input `@UseForPredicateDispatch`; the runtime picks the
-  implementation based on that input's actual value at request time (e.g. dispatching on an enum or an
-  `instanceof` check).
+### Implementing a Trait
 
-See `references/examples.md` for both patterns fully worked out (`AddUsingTraits`/`MultiAdd` for static
-dispatch, `GetPiece`/chess samples for predicate dispatch).
+Any `@Vajram` (compute or IO) `implements` the Trait interface, generic parameter bound to its own concrete
+output type, alongside its normal `ComputeVajramDef<T>`/`IOVajramDef<T>` supertype:
+
+```java
+@Vajram
+abstract class GetKnight extends ComputeVajramDef<Knight> implements GetPiece<Knight> {
+  interface _Inputs {
+    @IfAbsent(FAIL)
+    PieceType type();
+  }
+
+  @Output
+  static Knight get() {
+    return new Knight();
+  }
+}
+```
+
+The implementation restates any `_Inputs` it inherits from the Trait's contract (`type()` above) — the
+Trait interface doesn't hand down field implementations, only the contract shape.
+
+**A Vajram conforms to at most one Trait.** Many Vajrams can implement the same Trait (`GetKnight` and
+`GetRook` both implement `GetPiece`), but the reverse isn't supported: the codegen picks up only the first
+`@Trait`-annotated interface it finds in a Vajram's `implements` list to build that Vajram's generated
+request hierarchy — a second one compiles without error but is silently ignored for that purpose. If a
+Vajram genuinely needs to conform to two independent behavioral contracts, that's a sign the two contracts
+should be modeled as one Trait, or that the Vajram should be split.
+
+### Choosing a dispatch mechanism
+
+A `@Dependency` slot typed to the Trait (or a client's top-level request typed to the Trait, if
+`@InvocableOutsideGraph`) needs to resolve to exactly one concrete implementation. Two mechanisms, and the
+choice is about *when the choice is known*:
+
+- **Static/qualifier dispatch** — the implementation is fixed per call site, known at graph-build time (e.g.
+  "this particular dependency slot always means the CHAIN algorithm"). Define a custom annotation
+  meta-annotated `@jakarta.inject.Qualifier` (Krystal has no Trait-specific qualifier annotation of its own —
+  it reuses the standard JSR-330 one), annotate each `@Dependency` declaration with a specific value, and
+  bind qualifier → implementation once via a `TraitBinder` when building the graph (see
+  `references/testing.md`). At most one such qualifier annotation may be present per `@Dependency` facet —
+  more than one throws at graph-build time. Static dispatch only works for a Trait reached through a
+  `@Dependency` facet — it can't route a Trait's request when it's executed directly from outside the graph
+  (there's no dependency site for the qualifier to live on), so a Trait meant to be called directly needs
+  predicate dispatch instead.
+- **Predicate dispatch** — the implementation is a genuine runtime decision based on a value in the request
+  (e.g. dispatching on an enum, or on which subtype of an input was supplied). Mark exactly the input(s) the
+  decision depends on `@UseForPredicateDispatch` on the Trait's `_Inputs`, then register a
+  `PredicateDispatchPolicy` mapping input values to implementations when building the graph (see
+  `references/testing.md`). Only `@UseForPredicateDispatch`-annotated inputs are legal to key a dispatch
+  case on — the framework enforces this at graph-build time, not just by convention.
+
+A Trait isn't restricted to exactly one mechanism — `MultiAdd` in `references/examples.md` declares both a
+`@UseForPredicateDispatch` input and a custom `@Qualifier`, and different call sites use whichever fits. In
+practice, pick predicate dispatch when the deciding value only exists inside the request (a client picks it
+at request time); pick static/qualifier dispatch when the deciding value is a wiring decision the graph
+author makes once, independent of any particular request.
+
+See `references/examples.md` for both patterns fully worked out, verbatim (`AddUsingTraits`/`MultiAdd` for
+static dispatch, `GetPiece`/chess samples for predicate dispatch), and `references/testing.md` for exactly
+how to wire the dispatch policy into a `KrystexGraph` for tests.
 
 ## What's hand-written vs. codegen'd
 

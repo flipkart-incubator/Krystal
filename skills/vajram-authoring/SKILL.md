@@ -1,6 +1,6 @@
 ---
 name: vajram-authoring
-description: Writes business logic as Krystal Vajrams — the composable, concurrently-executed unit of logic in flipkart-incubator/Krystal (vajram-java-sdk + krystex runtime). Covers ComputeVajramDef vs IOVajramDef, _Inputs/_InternalFacets, @IfAbsent optionality, @Dependency wiring, @Resolve resolvers (fan-out via FanoutCommand, skips via One2OneCommand), @Output/@Output.Batched+@Output.Unbatch, Trait dispatch (@Qualifier/@UseForPredicateDispatch), and tests via VajramGraph/KrystexGraph/VajramKryonExecutor (incl. VajramTestHarness mocking). Use whenever adding/changing a Vajram, modeling logic as a DAG node, wiring a dependency, adding fan-out/batching, or writing/debugging a vajram-graph test — even if the user just says "add a vajram for X" or "call service Y as a step in Z" without naming Krystal, as long as the repo uses Krystal/Vajram. Not for SQL table modeling or SELECT/INSERT traits — use vajram-sql-data-modelling for that.
+description: Writes business logic as Krystal Vajrams — the composable, concurrently-executed unit of logic in flipkart-incubator/Krystal (vajram-java-sdk + krystex runtime). Covers ComputeVajramDef vs IOVajramDef, _Inputs/_InternalFacets, @IfAbsent optionality, @Dependency wiring, @Resolve resolvers (fan-out via FanoutCommand, skips via One2OneCommand), @Output/@Output.Batched+@Output.Unbatch, writing Vajram Traits (@Trait/TraitDef interfaces with no implementation) and dispatching among their conforming Vajrams via static/qualifier dispatch (@Qualifier + TraitBinder) or predicate dispatch (@UseForPredicateDispatch + PredicateDispatchPolicy), and tests via VajramGraph/KrystexGraph/VajramKryonExecutor (incl. VajramTestHarness mocking and wiring trait dispatch policies). Use whenever adding/changing a Vajram, defining or implementing a Trait, modeling logic as a DAG node, wiring a dependency, adding fan-out/batching, or writing/debugging a vajram-graph test — even if the user just says "add a vajram for X", "make this pluggable/strategy-based", or "call service Y as a step in Z" without naming Krystal, as long as the repo uses Krystal/Vajram. Not for SQL table modeling or SELECT/INSERT traits — use vajram-sql-data-modelling for that.
 ---
 
 # Writing business logic as Krystal Vajrams
@@ -107,15 +107,24 @@ also be resolved via the `getSimpleInputResolvers()` DSL).
 ## Step 6 — Use a Trait when a dependency slot needs multiple implementations
 
 If several concrete Vajrams should be interchangeable behind one dependency (e.g. picking a strategy, or
-letting the runtime choose an implementation based on an input's value), define an
-`interface extends TraitDef<T>` annotated `@Trait`, have each concrete Vajram `implements` it, and pick a
-dispatch mechanism:
-- **Static dispatch** — a custom `@Qualifier` annotation on the dependency declaration selects the
-  implementation at the call site (compile-time fixed per call site).
-- **Predicate dispatch** — mark an input on the Trait's `_Inputs` with `@UseForPredicateDispatch`, and the
-  runtime picks the implementation based on that input's actual value at request time.
+letting the runtime choose an implementation based on an input's value), define a Trait: an
+`interface extends TraitDef<T>` annotated `@Trait` (with no `_InternalFacets`, `@Resolve`, or `@Output` of
+its own — it's a contract, not an implementation), have each concrete `@Vajram` `implements` it (restating
+any inherited `_Inputs`), and pick a dispatch mechanism based on *when* the choice is known:
+- **Static/qualifier dispatch** — the implementation is a fixed, per-call-site wiring decision (independent
+  of any particular request). Define a custom `@jakarta.inject.Qualifier` annotation, put it on each
+  `@Dependency` declaration, and bind qualifier values to implementations once via a `TraitBinder` when
+  building the graph.
+- **Predicate dispatch** — the implementation is a genuine runtime decision based on a value inside the
+  request. Mark exactly the deciding input(s) `@UseForPredicateDispatch` on the Trait's `_Inputs`, and
+  register a `PredicateDispatchPolicy` (built via `PredicateDispatchUtil`) mapping input values to
+  implementations when building the graph.
 
-Full worked examples of both are in `references/examples.md`.
+A single Trait can support both mechanisms at once for different call sites — see `MultiAdd` in
+`references/examples.md`. Read `references/vajram-anatomy.md`'s Traits section for the full annotation
+reference and `references/testing.md`'s Trait dispatch wiring section for exactly how to register either
+policy on a `KrystexGraph`; full worked examples of both dispatch mechanisms (verbatim, from real compiling
+samples) are in `references/examples.md`.
 
 ## Step 7 — Sanity-check before calling it done
 

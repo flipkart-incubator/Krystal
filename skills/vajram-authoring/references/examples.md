@@ -387,8 +387,140 @@ writing three near-identical `@Resolve` methods.
 
 ## 8. Trait — predicate dispatch based on a runtime value
 
-`chess/GetPiece.java` (conceptual shape — a generic Trait dispatched by an enum-typed
-`@UseForPredicateDispatch` input) with `GetKnight`/`GetRook` as concrete implementations selected purely by
-the runtime value of that input, no explicit qualifier annotation needed at the call site. Use this pattern
-instead of static/qualifier dispatch when the choice of implementation is a genuine runtime decision (e.g.
-based on user input) rather than a fixed choice per call site.
+`chess/GetPiece.java` — a generic Trait (`T extends Piece`) dispatched purely by the runtime value of an
+enum-typed `@UseForPredicateDispatch` input, no qualifier annotation needed at any call site. Use this
+pattern instead of static/qualifier dispatch when the choice of implementation is a genuine runtime decision
+(e.g. based on user input) rather than a fixed choice per call site.
+
+```java
+public interface Piece {}
+
+public enum PieceType { KNIGHT, ROOK }
+
+public record Knight() implements Piece {}
+public record Rook() implements Piece {}
+
+@Trait
+@CallGraphDelegationMode(SYNC)
+public interface GetPiece<T extends Piece> extends TraitDef<T> {
+  interface _Inputs {
+    @UseForPredicateDispatch
+    @IfAbsent(FAIL)
+    PieceType type();
+  }
+}
+```
+
+`GetKnight.java` / `GetRook.java` — each restates the Trait's `_Inputs` shape and binds `T` to its own
+output type; the `type` input isn't otherwise used inside the implementation, since dispatch already
+consumed it before the implementation was ever selected:
+
+```java
+@Vajram
+abstract class GetKnight extends ComputeVajramDef<Knight> implements GetPiece<Knight> {
+  interface _Inputs {
+    @IfAbsent(FAIL)
+    PieceType type();
+  }
+
+  @Output
+  static Knight get() {
+    return new Knight();
+  }
+}
+```
+
+`GetPieceTest.java` — registering the predicate dispatch policy and executing directly against the Trait's
+generated request type, parameterized by the concrete output type:
+
+```java
+kGraph.traitDispatchPolicies(
+    new TraitDispatchPolicies(
+        dispatchTrait(GetPiece_Req.class, graph)
+            .conditionally(
+                when(type_s, equalsEnum(KNIGHT)).to(GetKnight_Req.class),
+                when(type_s, equalsEnum(ROOK)).to(GetRook_Req.class))));
+
+CompletableFuture<Knight> result;
+try (var executor = kGraph.build().createExecutor(getExecutorConfig())) {
+  result = executor.execute(GetPiece_ReqImmutPojo.<Knight>_builder().type(KNIGHT)._build());
+}
+assertThat(result).succeedsWithin(TEST_TIMEOUT).isEqualTo(new Knight());
+```
+
+Note `GetPiece` has no `@InvocableOutsideGraph` yet its request is still executed directly in this sample —
+unlike a plain Vajram, a Trait's own `@InvocableOutsideGraph` status isn't the only thing that matters here;
+don't assume you need to add it purely to make a Trait request executable in a test. If you hit
+`RejectedExecutionException` in your own case, add `@InvocableOutsideGraph` to the Trait interface (as
+`MultiAdd` in example 7 does) rather than guessing further.
+
+## 9. Trait — predicate dispatch with multiple inputs and a cascading fallback
+
+`customer_service/CustomerServiceAgent.java` — a Trait dispatched on *two* `@UseForPredicateDispatch`
+inputs at once (an enum and a sealed-interface subtype), with seven conforming Vajrams
+(`L1CallAgent`/`L1EmailAgent`/`L2CallAgent`/`L3EmailAgent`/`DefaultCallAgent`/`DefaultEmailAgent`/
+`DefaultCustomerServiceAgent`) — a realistic shape for "handle this the specific way if we can, otherwise
+fall back":
+
+```java
+@Trait
+@CallGraphDelegationMode(NONE)
+@InvocableOutsideGraph
+public interface CustomerServiceAgent extends TraitDef<String> {
+  interface _Inputs {
+    @IfAbsent(FAIL)
+    @UseForPredicateDispatch
+    AgentType agentType();
+
+    @IfAbsent(FAIL)
+    @UseForPredicateDispatch
+    InitialCommunication initialCommunication();
+
+    @IfAbsent(FAIL)
+    @UseForPredicateDispatch
+    String customerName();
+  }
+
+  enum AgentType { L1, L2, L3 }
+
+  sealed interface InitialCommunication {}
+  record Email(String emailContent) implements InitialCommunication {}
+  record Call(String callRecording) implements InitialCommunication {}
+  record Ticket(String ticketSummary) implements InitialCommunication {}
+}
+```
+
+The dispatch policy (`CustomerServiceAgentPredicateTest.java`) combines two matcher kinds — `equalsEnum` for
+`AgentType`, `isInstanceOf` for which `InitialCommunication` subtype was supplied — and chains them with
+`.and(...)` so a case only matches when *both* conditions hold. Specific cases are listed before broader
+ones, since **the first matching case wins**:
+
+```java
+kGraph.traitDispatchPolicies(
+    new TraitDispatchPolicies(
+        dispatchTrait(CustomerServiceAgent_Req.class, graph)
+            .conditionally(
+                when(agentType_s, equalsEnum(L1))
+                    .and(initialCommunication_s, isInstanceOf(Call.class))
+                    .to(L1CallAgent_Req.class),
+                when(agentType_s, equalsEnum(L1))
+                    .and(initialCommunication_s, isInstanceOf(Email.class))
+                    .to(L1EmailAgent_Req.class),
+                when(agentType_s, equalsEnum(L2))
+                    .and(initialCommunication_s, isInstanceOf(Call.class))
+                    .to(L2CallAgent_Req.class),
+                when(agentType_s, equalsEnum(L3))
+                    .and(initialCommunication_s, isInstanceOf(Email.class))
+                    .to(L3EmailAgent_Req.class),
+                // Falls back to comm-type-only agents when no (agentType, commType) case matches
+                when(initialCommunication_s, isInstanceOf(Call.class)).to(DefaultCallAgent_Req.class),
+                when(initialCommunication_s, isInstanceOf(Email.class)).to(DefaultEmailAgent_Req.class),
+                // True catch-all — must be last
+                when(agentType_s, isAnyValue())
+                    .and(initialCommunication_s, isAnyValue())
+                    .to(DefaultCustomerServiceAgent_Req.class))));
+```
+
+Reordering these cases (e.g. putting the catch-all first) would silently swallow every other case, since
+evaluation stops at the first match — this is why the skill's testing guidance calls out case order as
+load-bearing, not cosmetic.
