@@ -10,7 +10,8 @@ import java.util.List;
  *
  * <p>Obtain an instance via {@link #forDialect(SqlDialect)}.
  */
-public sealed interface SqlSyntax permits MySql8Syntax, PostgreSqlSyntax, Sql2023Syntax {
+public sealed interface SqlSyntax
+    permits MySql8Syntax, PostgreSqlSyntax, Sql2023Syntax, SqlLite3_35Syntax {
 
   /**
    * Returns the appropriate {@link SqlSyntax} implementation for the given SQL dialect.
@@ -23,15 +24,9 @@ public sealed interface SqlSyntax permits MySql8Syntax, PostgreSqlSyntax, Sql202
       case POSTGRESQL_18 -> PostgreSqlSyntax.INSTANCE;
       case MYSQL_8 -> MySql8Syntax.INSTANCE;
       case SQL_2023 -> Sql2023Syntax.INSTANCE;
+      case SQL_LITE_3_35 -> SqlLite3_35Syntax.INSTANCE;
     };
   }
-
-  /**
-   * Returns whether this dialect supports a {@code RETURNING} clause on INSERT statements.
-   *
-   * @return {@code true} if RETURNING is supported
-   */
-  boolean supportsReturning();
 
   /**
    * Builds the {@code RETURNING col1, col2, ...} clause to append after an INSERT statement.
@@ -39,7 +34,8 @@ public sealed interface SqlSyntax permits MySql8Syntax, PostgreSqlSyntax, Sql202
    * @param columnNames the column names to include in the RETURNING clause
    * @return the SQL RETURNING clause string (including the leading space), or empty string if not
    *     supported
-   * @throws UnsupportedOperationException if this dialect does not support RETURNING
+   * @throws UnsupportedOperationException if this dialect does not support RETURNING clause and the
+   *     columnNames list is not empty
    */
   String returningClause(List<String> columnNames) throws Exception;
 

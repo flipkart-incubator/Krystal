@@ -9,11 +9,6 @@ public record PostgreSqlSyntax() implements SqlSyntax {
       new com.flipkart.krystal.vajram.ext.sql.codegen.syntax.PostgreSqlSyntax();
 
   @Override
-  public boolean supportsReturning() {
-    return true;
-  }
-
-  @Override
   public String returningClause(List<String> columnNames) {
     return " RETURNING " + String.join(", ", columnNames);
   }

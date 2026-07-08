@@ -7,5 +7,9 @@ import java.lang.annotation.Target;
 /** Specifies the default value to be stored in a column */
 @Target(METHOD)
 public @interface DefaultValue {
+
+  /**
+   * The string representation of the value from which the actual default value is calculated.
+   */
   String value();
 }

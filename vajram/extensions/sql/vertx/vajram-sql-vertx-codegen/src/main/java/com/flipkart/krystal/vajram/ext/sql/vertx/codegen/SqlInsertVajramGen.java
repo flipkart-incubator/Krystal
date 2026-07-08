@@ -133,25 +133,25 @@ public class SqlInsertVajramGen implements CodeGenerator {
     }
 
     // Parse the trait's response type to determine if RETURNING clause is needed.
-    InsertResultType resultType = parseInsertResultType(vajramInfo, insertModel.tableElement());
-    boolean hasReturning = resultType != null;
+    InsertResultType returningResultType =
+        parseInsertResultType(vajramInfo, insertModel.tableElement());
 
     ClassName traitClass = ClassName.get(pkg, traitName);
     ClassName facClass = ClassName.get(pkg, vajramName + "_Fac");
 
     // Determine the vajram's response type.
     TypeName vajramResponseTypeName;
-    if (hasReturning) {
+    if (returningResultType != null) {
       String resultPkg =
           util.processingEnv()
               .getElementUtils()
-              .getPackageOf(resultType.selectionElement())
+              .getPackageOf(returningResultType.selectionElement())
               .getQualifiedName()
               .toString();
-      String resultName = resultType.selectionElement().getSimpleName().toString();
+      String resultName = returningResultType.selectionElement().getSimpleName().toString();
       ClassName selectionClass = ClassName.get(resultPkg, resultName);
       vajramResponseTypeName =
-          resultType.isListResult()
+          returningResultType.isListResult()
               ? ParameterizedTypeName.get(ClassName.get(List.class), selectionClass)
               : selectionClass;
     } else {
@@ -173,13 +173,15 @@ public class SqlInsertVajramGen implements CodeGenerator {
                     facClass,
                     insertModel,
                     inputMethod,
-                    hasReturning && syntax.supportsReturning() ? syntax : null,
-                    hasReturning ? resultType.returningColumns() : List.of()))
+                    syntax,
+                    returningResultType != null
+                        ? returningResultType.returningColumns()
+                        : List.of()))
             .addMethod(buildResolveParamsMethod(facClass, insertModel, inputMethod))
             .addMethod(buildResolvePoolMethod(facClass))
             .addMethod(
-                hasReturning
-                    ? dialectGen.mapResultsForInsertReturn(resultType)
+                returningResultType != null
+                    ? dialectGen.mapResultsForInsertReturn(returningResultType)
                     : buildOutputMethod())
             .build();
     ClassName vajramClassName = ClassName.get(pkg, vajramName);
@@ -365,7 +367,7 @@ public class SqlInsertVajramGen implements CodeGenerator {
       ClassName facClass,
       InsertQueryModel model,
       ExecutableElement inputMethod,
-      @Nullable SqlSyntax syntax,
+      SqlSyntax syntax,
       List<ReturningColumn> returningColumns) {
     List<String> returningColNames =
         returningColumns.stream().map(ReturningColumn::columnName).toList();
@@ -395,7 +397,7 @@ public class SqlInsertVajramGen implements CodeGenerator {
   private void buildDynamicInsertSql(
       MethodSpec.Builder method,
       InsertQueryModel model,
-      @Nullable SqlSyntax syntax,
+      SqlSyntax syntax,
       List<String> returningColNames) {
     List<TableColumn> columns = model.columns();
 
@@ -434,7 +436,7 @@ public class SqlInsertVajramGen implements CodeGenerator {
     }
     method.addStatement("_sb.append($S)", ")");
     method.endControlFlow();
-    if (syntax != null && !returningColNames.isEmpty() && syntax.supportsReturning()) {
+    if (syntax != null && !returningColNames.isEmpty()) {
       try {
         method.addStatement("_sb.append($S)", syntax.returningClause(returningColNames));
       } catch (Exception e) {

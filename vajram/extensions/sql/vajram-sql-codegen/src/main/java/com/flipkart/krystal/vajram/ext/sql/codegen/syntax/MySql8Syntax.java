@@ -11,16 +11,10 @@ public record MySql8Syntax() implements SqlSyntax {
       new com.flipkart.krystal.vajram.ext.sql.codegen.syntax.MySql8Syntax();
 
   @Override
-  public boolean supportsReturning() {
-    return false;
-  }
-
-  @Override
   public String returningClause(List<String> columnNames) {
     if (columnNames.size() > 1) {
       throw new UnsupportedOperationException(
-          "MySQL 8 does not support RETURNING on INSERT statements. "
-              + "Use SqlDialect.POSTGRESQL_18 or SqlDialect.SQL_2023 instead.");
+          "MySQL 8 does not support RETURNING on INSERT statements. ");
     }
     // WE can add `SELECT LAST_INSERT_ID()` but, drivers like vertx mysql client make this value
     // available by default. so just return empty
