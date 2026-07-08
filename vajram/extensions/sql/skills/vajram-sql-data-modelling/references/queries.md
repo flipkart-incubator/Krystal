@@ -215,11 +215,14 @@ stack multiple `@ORDER` annotations for a multi-column sort; they apply in the o
 ## Dialect — always set it explicitly, don't rely on the default
 
 `@SQL(dialect = ...)` defaults to `SqlDialect.SQL_2023` if omitted. Every real sample explicitly sets
-`POSTGRESQL_18` (or `MYSQL_8`) instead of relying on that default, and there's a known rough edge here: omitting an
-explicit dialect on an `INSERT` trait has been observed to NPE in the current INSERT codegen rather than falling
-back cleanly. Always set `dialect` to match whichever Vert.x SQL client the module actually depends on (see
-`references/build-setup.md` — `vajram-sql-vertx` pulling in `vertx-mysql-client` vs. a Postgres client determines
-which dialect is actually correct, not just which one compiles).
+`POSTGRESQL_18` (or `MYSQL_8`) instead of relying on that default. `SQL_2023` INSERT codegen works for the plain
+`TraitDef<Integer>` (row-count) case, but `SqlSyntax`/`DialectCodeGenerator` for `SQL_2023` cannot produce a
+`RETURNING` clause — pairing an `SQL_2023` `@INSERT` trait with `@ReturnOnInsert` throws
+`UnsupportedOperationException` at codegen time (a real, if late, error — not silent data loss). Always set
+`dialect` to match whichever Vert.x SQL client the module actually depends on (see `references/build-setup.md` —
+`vajram-sql-vertx` pulling in `vertx-mysql-client` vs. a Postgres client determines which dialect is actually
+correct, not just which one compiles). Supported dialects as of current source: `SQL_2023`, `POSTGRESQL_18`,
+`MYSQL_8`, `SQL_LITE_3_35`.
 
 ## Where things live (package convention from the samples)
 

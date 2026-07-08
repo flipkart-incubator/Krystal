@@ -3,10 +3,11 @@
 Source of truth: `com.flipkart.krystal.vajram.ext.sql.model` and `com.flipkart.krystal.vajram.ext.sql.lang` packages in
 [flipkart-incubator/Krystal](https://github.com/flipkart-incubator/Krystal), under `vajram/extensions/sql/vajram-sql`.
 
-**Read this before trusting the plugin's own READMEs.** The `vajram-sql/README.md` and
-`vajram-sql-vertx-codegen/README.md` disagree with each other and with current source in several places (see
-"Doc/source drift" at the bottom). Every annotation below was checked against the actual `.java` source, not the
-prose docs. If something looks off, `grep`/fetch the real annotation source rather than trusting a README example.
+**Read this before trusting the plugin's own READMEs.** `vajram-sql-vertx-codegen/README.md` in particular still
+disagrees with current source in places (see "Doc/source drift" at the bottom); `vajram-sql/README.md` and
+`vajram-sql-codegen/README.md` have been reconciled with source as of this writing, but re-verify before trusting an
+example blindly. Every annotation below was checked against the actual `.java` source, not the prose docs. If
+something looks off, `grep`/fetch the real annotation source rather than trusting a README example.
 
 ## The shape of a table model
 
@@ -133,10 +134,10 @@ public @interface DefaultValueStrategy {
 ```
 
 `ValueComputation` has three values:
-- `AUTO_ASSIGN_ID` — DB-assigned (e.g. auto-increment/serial).
-- `CURRENT_TIMESTAMP` — for timestamp columns like `createdAt`/`updatedAt`. Either `java.time.Instant` or
-  `java.time.LocalDateTime` is a valid column type here; combine with `trigger = Trigger.ON_UPDATE` for an "updated
-  at" column that refreshes on every update.
+- `AUTO_ASSIGN_ID` — DB-assigned (e.g. auto-increment/serial). Applicable to `int`-typed columns.
+- `CURRENT_TIMESTAMP` — for timestamp columns like `createdAt`/`updatedAt`. Applicable to `java.time.Instant`
+  columns only (sets the value to the current UTC timestamp); combine with `trigger = Trigger.ON_UPDATE` for an
+  "updated at" column that refreshes on every update.
 - `CUSTOM_STATIC_VALUE` — pair with `@DefaultValue("literal")` for a fixed default (e.g. `@DefaultValue("false")` on
   a boolean flag column).
 
@@ -144,7 +145,7 @@ public @interface DefaultValueStrategy {
 easy to get wrong.** Verified directly against `InsertModelParser`/`InsertQueryModel` in `vajram-sql-codegen`: a
 column is only left out of the generated `INSERT INTO ... (...)` column list if its accessor is declared as a Java
 `default` method (with no `@IfAbsent(ASSUME_DEFAULT_VALUE)` override) — the codegen doesn't actually branch on
-`AUTO_ASSIGN_ID` vs. `CURRENT_TIMESTAMP` vs. anything else. The samples' `default long internalId() { throw ... }`
+`AUTO_ASSIGN_ID` vs. `CURRENT_TIMESTAMP` vs. anything else. The samples' `default int internalId() { throw ... }`
 idiom happens to work for `AUTO_ASSIGN_ID` for exactly this reason. **If you declare a `CURRENT_TIMESTAMP` column as
 a plain abstract method** (as it's easy to assume, since "defaults to now" sounds DB-managed), **it will NOT be
 excluded from the generated INSERT** — the caller still has to supply a real value, and only `Objects.requireNonNullElse`-style substitution via `@DefaultValue` (for `CUSTOM_STATIC_VALUE`) gets any help at insert time. To
@@ -154,12 +155,12 @@ the same `default`-method-with-throwing-body treatment as an `AUTO_ASSIGN_ID` co
 ```java
 @DefaultValueStrategy(AUTO_ASSIGN_ID)
 @UniqueKey
-default long internalId() {
+default int internalId() {
   throw new UnsupportedOperationException("'internalId' is auto-assigned and cannot be inserted via this model.");
 }
 
 @DefaultValueStrategy(CURRENT_TIMESTAMP)
-default LocalDateTime publishedAt() {
+default Instant publishedAt() {
   throw new UnsupportedOperationException("'publishedAt' is DB-assigned and cannot be set when inserting.");
 }
 ```
@@ -169,16 +170,11 @@ If a `CURRENT_TIMESTAMP`/`AUTO_ASSIGN_ID` column is declared as a plain abstract
 the INSERT trait is where this actually bites) — but flag it, since whoever writes the INSERT trait against this
 table will otherwise be surprised that the "auto" column isn't actually optional at insert time.
 
-**MySQL-specific gotcha:** only one `AUTO_ASSIGN_ID` column is allowed per table under the MySQL dialect, and it must
-be typed `long`. This isn't enforced uniformly across dialects — it'll surface as a MySQL-specific failure, not a
-generic compile error.
-
-**Temporal type gotcha (version-dependent):** Krystal's codegen resolves standard Java types through a fixed
-`StandardJavaType` enum (`krystal-codegen-common`), and older Krystal releases only include `LocalDateTime` there —
-not `Instant`. Using `Instant` on such a version fails at compile time, not with a helpful error pointing at the
-type. This is a known framework gap, not an intentional restriction, and is expected to be fixed upstream so both
-types work. If you hit a compile failure on an `Instant`-typed column, that's the symptom — swap to `LocalDateTime`
-and it should resolve immediately.
+**MySQL-specific gotcha:** an `AUTO_ASSIGN_ID` column must be typed `int` — the MySQL codegen path
+(`MySqlCodeGenerator`/`SqlInsertVajramGen`) specifically checks for `TypeKind.INT`. Using `long` (or any other type)
+on an `AUTO_ASSIGN_ID` column will silently fail to wire up correctly rather than producing a clear compile error.
+The "only one `AUTO_ASSIGN_ID` column per table" constraint some older docs mention isn't actually enforced anywhere
+in the codegen — it's just a MySQL/`LAST_INSERT_ID` practical limitation, not a checked invariant.
 
 ## Nested/JSON columns: `@SerdeWith(Json.class)` + `@JsonConfig`
 
@@ -238,13 +234,10 @@ plugin. Don't reach for them when the task is "model/update a table" — only wh
 ## Doc/source drift — known discrepancies
 
 If you consult the plugin's own READMEs directly, watch for these (verified against source, not prose):
-- The vertx-codegen README uses `@Projection`/`@ORDER_BY`; the real, current annotations are `@Selection` and
-  `@ORDER`.
-- The vajram-sql README's own code *examples* sometimes write `@Selection(over = User.class)` — `over` isn't a real
-  attribute; the real one is `from` (`@Selection(from = User.class)`).
-- The README implies WHERE-predicate interfaces extend `SelectionPredicate`/`WhereClause`; the real marker interface
-  is `ColumnPredicate`.
-- `ReturnOnInsert` lives in package `lang`, not `model`, despite what a README snippet might imply.
+- The vertx-codegen README (`vajram-sql-vertx-codegen/README.md`) still uses stale `@Projection`/`@ORDER_BY`
+  naming; the real, current annotations are `@Selection` and `@ORDER`. Unlike the other two READMEs, this one has
+  not yet been corrected.
+- `ReturnOnInsert` lives in package `lang`, not `model`.
 
 None of these affect table-schema modeling directly (they're all query-side), but they're a good reminder to check
 source over prose anywhere in this plugin.
@@ -259,7 +252,7 @@ public interface User extends TableModel {
 
   @DefaultValueStrategy(AUTO_ASSIGN_ID)
   @UniqueKey
-  default long internalId() {
+  default int internalId() {
     throw new UnsupportedOperationException(
         "'internalId' value is auto-assigned and cannot be inserted via this model.");
   }

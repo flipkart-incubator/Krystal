@@ -222,7 +222,7 @@ InsertQueryBuilder.buildInsertSql(model, config, syntax, returningColumnNames)
 ```
 
 The `SqlDriverConfig` provides driver-specific placeholder syntax (e.g. `$1` for PostgreSQL/Vert.x).
-`syntax` is a dialect-specific `SqlSyntax` (see below); when non-null and `returningColumnNames` is
+`syntax` is a dialect-specific `SqlSyntax` (see below); when `returningColumnNames` is
 non-empty, a `RETURNING` clause is appended via `syntax.returningClause(...)`.
 
 ---

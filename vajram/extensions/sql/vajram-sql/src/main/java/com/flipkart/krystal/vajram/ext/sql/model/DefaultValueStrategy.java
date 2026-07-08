@@ -5,7 +5,6 @@ import static java.lang.annotation.ElementType.METHOD;
 
 import java.lang.annotation.Target;
 import java.time.Instant;
-import java.time.LocalDateTime;
 
 /** Specifies the strategy with which the default value to be stored in a column is computed */
 @Target(METHOD)
@@ -23,12 +22,13 @@ public @interface DefaultValueStrategy {
     /**
      * Marks a column whose value is auto-assigned by the database (e.g. auto-increment IDs). Such
      * columns are excluded from INSERT value lists. To return auto-assigned values from an INSERT,
-     * declare a {@code @ReturnOnInsert} interface listing the columns to return.
+     * declare a {@code @ReturnOnInsert} interface listing the columns to return. Applicable to
+     * model fields of type {@code int}.
      */
     AUTO_ASSIGN_ID,
     /**
-     * Applicable to columns of type {@link Instant}, and {@link LocalDateTime}. This will cause the
-     * column to be set to the current timestamp when the row is inserted.
+     * This will cause the column to be set to the current timestamp in the UTC timezone when the
+     * row is inserted/updated. Applicable to model fields of type {@link Instant}.
      */
     CURRENT_TIMESTAMP,
   }

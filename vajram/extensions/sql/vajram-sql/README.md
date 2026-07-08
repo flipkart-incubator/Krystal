@@ -487,8 +487,7 @@ than just `id = $1`).
 - A `@WHERE` interface **must** also carry `@ModelRoot`; omitting it produces:
   `[vajram-sql] @WHERE interface '...' must also be annotated with @ModelRoot.`
 - A `@WHERE` interface **must** extend `ColumnPredicate`; omitting it produces:
-  `[vajram-sql] @WHERE interface '...' must extend WhereClause.` (the message text still refers to
-  the old type name, `ColumnPredicate` is the current one to extend)
+  `[vajram-sql] @WHERE interface '...' must extend SqlWherePredicate.`
 
 #### Comparison Operators
 

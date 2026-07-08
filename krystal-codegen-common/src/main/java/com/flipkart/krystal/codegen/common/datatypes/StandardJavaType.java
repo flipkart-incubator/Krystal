@@ -96,11 +96,11 @@ public enum StandardJavaType implements CodeGenType {
   OFFSET_DATE_TIME(
       TypeKind.DECLARED,
       CodeBlock.of("$T.parse(\"1970-01-01T00:00:00+00:00\")", OffsetDateTime.class),
-      LocalDateTime.class.getCanonicalName()),
+      OffsetDateTime.class.getCanonicalName()),
   INSTANT(
       TypeKind.DECLARED,
       CodeBlock.of("$T.parse(\"1970-01-01T00:00:00Z\")", Instant.class),
-      LocalDateTime.class.getCanonicalName()),
+      Instant.class.getCanonicalName()),
 
   /* ** networking types ***/
   URL(TypeKind.DECLARED, null, URL.class.getCanonicalName());

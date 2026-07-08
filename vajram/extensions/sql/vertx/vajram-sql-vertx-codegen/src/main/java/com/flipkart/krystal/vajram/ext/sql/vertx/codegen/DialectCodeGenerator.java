@@ -15,7 +15,7 @@ sealed interface DialectCodeGenerator
 
   static DialectCodeGenerator forDialect(SqlDialect dialect, VertxSqlUtil vertxSqlUtil) {
     return switch (dialect) {
-      case SQL_2023 -> null;
+      case SQL_2023 -> new Sql2023CodeGenerator();
       case MYSQL_8 -> new MySqlCodeGenerator(vertxSqlUtil);
       case POSTGRESQL_18 -> new PostGreCodeGenerator(vertxSqlUtil);
       case SQL_LITE_3_35 -> new SqlLiteCodeGenerator(vertxSqlUtil);
