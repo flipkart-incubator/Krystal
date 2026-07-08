@@ -316,7 +316,7 @@ public final class JavaModelsGen implements CodeGenerator {
         "Field in pure model '%s' has disallowed type '%s'. "
                 .formatted(codeGenContext.modelRootType().getQualifiedName(), type)
             + "Pure models only allow, pure Models, Standard Java Types (%s) or Containers (List, Map, Range) of these."
-                .formatted((Object) StandardJavaType.values()),
+                .formatted(Arrays.toString(StandardJavaType.values())),
         method);
     return false;
   }

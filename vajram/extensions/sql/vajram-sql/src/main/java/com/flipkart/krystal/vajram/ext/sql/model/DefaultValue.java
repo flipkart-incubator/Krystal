@@ -8,8 +8,6 @@ import java.lang.annotation.Target;
 @Target(METHOD)
 public @interface DefaultValue {
 
-  /**
-   * The string representation of the value from which the actual default value is calculated.
-   */
+  /** The string representation of the value from which the actual default value is calculated. */
   String value();
 }

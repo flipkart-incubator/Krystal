@@ -11,6 +11,7 @@ import com.google.common.collect.Range;
 import com.squareup.javapoet.CodeBlock;
 import java.net.URL;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
@@ -93,6 +94,10 @@ public enum StandardJavaType implements CodeGenType {
       TypeKind.DECLARED,
       CodeBlock.of("$T.parse(\"1970-01-01T00:00:00\")", LocalDateTime.class),
       LocalDateTime.class.getCanonicalName()),
+  LOCAL_DATE(
+      TypeKind.DECLARED,
+      CodeBlock.of("$T.parse(\"1970-01-01T00:00:00\")", LocalDate.class),
+      LocalDate.class.getCanonicalName()),
   OFFSET_DATE_TIME(
       TypeKind.DECLARED,
       CodeBlock.of("$T.parse(\"1970-01-01T00:00:00+00:00\")", OffsetDateTime.class),

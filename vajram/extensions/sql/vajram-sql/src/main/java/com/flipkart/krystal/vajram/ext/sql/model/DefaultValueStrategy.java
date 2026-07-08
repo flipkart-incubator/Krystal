@@ -4,7 +4,7 @@ import static com.flipkart.krystal.vajram.ext.sql.model.DefaultValueStrategy.Tri
 import static java.lang.annotation.ElementType.METHOD;
 
 import java.lang.annotation.Target;
-import java.time.Instant;
+import java.time.OffsetDateTime;
 
 /** Specifies the strategy with which the default value to be stored in a column is computed */
 @Target(METHOD)
@@ -28,7 +28,7 @@ public @interface DefaultValueStrategy {
     AUTO_ASSIGN_ID,
     /**
      * This will cause the column to be set to the current timestamp in the UTC timezone when the
-     * row is inserted/updated. Applicable to model fields of type {@link Instant}.
+     * row is inserted/updated. Applicable to model fields of type {@link OffsetDateTime}.
      */
     CURRENT_TIMESTAMP,
   }
