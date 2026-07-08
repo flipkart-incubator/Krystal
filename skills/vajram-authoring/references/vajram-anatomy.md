@@ -194,6 +194,15 @@ static Map<UserService_BatchItem, Errable<UserInfo>> unbatch(
 `executor.execute(...)`. Without it, `execute` throws `RejectedExecutionException`; the Vajram is only
 reachable as another Vajram's dependency inside the graph.
 
+This is a **production contract, not a testability requirement** — add it only when application code
+outside the graph genuinely needs to call the Vajram directly. Don't add it to a Vajram purely so a test can
+invoke it: the Krystal Gradle plugin automatically sets the system property
+`RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME` (`com.flipkart.krystal.config.PropertyNames`,
+`@TestOnly`) to `true` for test runs, which disables this check entirely — so any Vajram, annotated or not,
+is directly `execute()`-able from test code with no extra setup. You never need to set this property
+yourself; just don't let its existence tempt you into tagging a Vajram `@InvocableOutsideGraph` when its
+only caller is a test.
+
 ## Traits — polymorphism across implementations
 
 A `Trait` defines a behavioral contract (inputs + output shape) with **no implementation** — like a Java

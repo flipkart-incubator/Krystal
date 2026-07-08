@@ -56,8 +56,13 @@ Key behavioral notes:
 - Request objects are the generated `<VajramName>_ReqImmutPojo`, built via `._builder()....(fields)....
   _build()`. For a Trait, the generated request is parameterized by the concrete implementation, e.g.
   `GetPiece_ReqImmutPojo.<Knight>_builder()`.
-- Only Vajrams annotated `@InvocableOutsideGraph` can be passed directly to `execute(...)` — otherwise it
-  throws `RejectedExecutionException`. A Vajram not marked this way is only reachable as a dependency.
+- Only Vajrams annotated `@InvocableOutsideGraph` can be passed directly to `execute(...)` in *production*
+  code — otherwise it throws `RejectedExecutionException`. This doesn't affect tests: the Krystal Gradle
+  plugin auto-sets the `@TestOnly` system property `PropertyNames
+  .RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME` to `true` for test runs, so any Vajram is
+  directly `execute()`-able from a test with no extra setup on your part. Reserve `@InvocableOutsideGraph`
+  itself for Vajrams application code genuinely calls from outside the graph — don't add it just because a
+  test needs direct access.
 - `VajramExecutionConfig` (per-call): `executionId`, `disabledDependentChains` (bounds recursive/cyclic
   dependency chains — required for testing a self-referential fan-out Vajram like `ChainAdd`, computed via
   `graph.computeDependentChain(vajramId, depSlot, depSlot, ...)`), `staticDispatchQualifier` (for Trait

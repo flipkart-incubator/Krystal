@@ -137,8 +137,10 @@ samples) are in `references/examples.md`.
   a `CompletableFuture` immediately rather than blocking on one.
 - `@Resolve(dep = ..., depInputs = ...)` uses generated `_n` constants, never string literals.
 - If you added a new module's first Vajram, the build wiring from Step 1 is in place.
-- If the feature needs to be callable directly (not just as another Vajram's dependency), it's annotated
-  `@InvocableOutsideGraph`.
+- If *production* code needs to call the feature directly (not just as another Vajram's dependency), it's
+  annotated `@InvocableOutsideGraph`. Don't add it just so a test can invoke the Vajram directly — the
+  Krystal Gradle plugin already makes every Vajram directly executable in tests regardless of this
+  annotation (see `references/testing.md`).
 
 ## Step 8 — Write or update the test
 
