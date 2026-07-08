@@ -21,7 +21,7 @@ ext {
     protobuf_version = '4.35.0'
     grpc_version = '1.81.0'
     fory_version = '0.17.0'
-    quarkus_version = '3.35.3'
+    quarkus_version = '3.37.1'
     lombok_version = '1.18.46'
     kordamp_jandex_version = '2.3.0'
 }

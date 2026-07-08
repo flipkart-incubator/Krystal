@@ -8,11 +8,6 @@ public record Sql2023Syntax() implements SqlSyntax {
       new com.flipkart.krystal.vajram.ext.sql.codegen.syntax.Sql2023Syntax();
 
   @Override
-  public boolean supportsReturning() {
-    return false;
-  }
-
-  @Override
   public String returningClause(List<String> columnNames) {
     return "";
   }

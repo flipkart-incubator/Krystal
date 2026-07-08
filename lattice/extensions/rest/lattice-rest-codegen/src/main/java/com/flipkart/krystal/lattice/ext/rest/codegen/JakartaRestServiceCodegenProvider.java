@@ -114,7 +114,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
     }
 
     private void jakartaResources(TypeElement latticeAppElem) {
-      RestService restService = latticeAppElem.getAnnotation(RestService.class);
+      RestService restService = requireNonNull(latticeAppElem.getAnnotation(RestService.class));
       String pathPrefix = restService.pathPrefix();
       pathPrefix = (pathPrefix.isEmpty() ? "" : "/") + pathPrefix;
       for (TypeElement vajramElem : getRestResourceVajramElems(latticeAppElem, util)) {
@@ -168,7 +168,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
       List<TypeElement> restResourceVajramElems =
           util
               .getTypesFromAnnotationMember(
-                  latticeAppElem.getAnnotation(RestService.class)::resourceVajrams)
+                  requireNonNull(latticeAppElem.getAnnotation(RestService.class))::resourceVajrams)
               .stream()
               .<@NonNull TypeElement>map(
                   typeMirror ->
@@ -289,26 +289,14 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
       for (FacetGenModel facet : vajramInfo.facetStream().toList()) {
         Element facetField = facet.facetElement();
         if (facetField.getAnnotation(PathParam.class) != null) {
-          if (!explicitPath) {
-            util.error("Path param cannot be used without @Path annotation", facetField);
-          } else {
-            assignTypeToFacet(facet, FacetParamType.PATH, params);
-          }
+          assignTypeToFacet(facet, FacetParamType.PATH, params);
         }
         if (facetField.getAnnotation(QueryParam.class) != null) {
-          if (!explicitPath) {
-            util.error("Query param cannot be used without @Path annotation", facetField);
-          } else {
-            assignTypeToFacet(facet, FacetParamType.QUERY, params);
-          }
+          assignTypeToFacet(facet, FacetParamType.QUERY, params);
         }
         if (facetField.getAnnotation(Body.class) != null) {
-          if (!explicitPath) {
-            util.error("Body param cannot be used without @Path annotation", facetField);
-          } else {
-            assignTypeToFacet(facet, FacetParamType.BODY, params);
-            bodyFacet = facet;
-          }
+          assignTypeToFacet(facet, FacetParamType.BODY, params);
+          bodyFacet = facet;
         }
       }
 
@@ -559,6 +547,6 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
 
   public static ClassName getJaxRsResourceName(VajramInfo vajramInfo, TypeElement vajramElem) {
     return ClassName.get(
-        vajramInfo.packageName(), vajramElem.getSimpleName().toString() + "_JakartaRestResource");
+        vajramInfo.packageName(), vajramElem.getSimpleName() + "_JakartaRestResource");
   }
 }

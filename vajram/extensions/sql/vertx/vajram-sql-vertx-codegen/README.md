@@ -397,7 +397,7 @@ public interface UserInfo extends Model {
 @ModelRoot
 @SupportedModelProtocol(PlainJavaObject.class)
 @WHERE(inTable = User.class)
-public interface UserIdEquals extends WhereClause {
+public interface UserIdEquals extends ColumnPredicate {
     long id();
 }
 ```

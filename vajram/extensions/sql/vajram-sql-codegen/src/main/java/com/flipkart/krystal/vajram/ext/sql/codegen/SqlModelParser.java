@@ -126,9 +126,9 @@ public final class SqlModelParser {
    *
    * <ul>
    *   <li><b>Simple predicate</b> — the input type is annotated with {@code @WHERE} and extends
-   *       {@code SelectionPredicate}. A single {@link WhereLeaf} is produced.
+   *       {@code ColumnPredicate}. A single {@link WhereLeaf} is produced.
    *   <li><b>OR predicate</b> — the input type extends {@code SqlOrPredicate}. Each method of the
-   *       OR interface returns a {@code SelectionPredicate} subtype annotated with {@code @WHERE};
+   *       OR interface returns a {@code ColumnPredicate} subtype annotated with {@code @WHERE};
    *       these are collected as multiple {@link WhereLeaf}s joined by {@code OR}.
    * </ul>
    *
@@ -178,7 +178,7 @@ public final class SqlModelParser {
         continue;
       }
 
-      // ── Simple SelectionPredicate path ─────────────────────────────────────────
+      // ── Simple ColumnPredicate path ─────────────────────────────────────────
       WHERE whereAnno = typeElem.getAnnotation(WHERE.class);
       if (whereAnno == null) {
         continue;
@@ -190,9 +190,9 @@ public final class SqlModelParser {
   }
 
   /**
-   * Parses a single {@code @WHERE}-annotated {@code SelectionPredicate} into a {@link WhereLeaf}.
-   * Each method in the predicate interface becomes a {@link WhereColumn} with resolved DB column
-   * name (via {@code @Column}) and comparison operator (example: {@code @IsEqualTo}, defaulting to
+   * Parses a single {@code @WHERE}-annotated {@code ColumnPredicate} into a {@link WhereLeaf}. Each
+   * method in the predicate interface becomes a {@link WhereColumn} with resolved DB column name
+   * (via {@code @Column}) and comparison operator (example: {@code @IsEqualTo}, defaulting to
    * {@code "="}).
    */
   private WhereLeaf parseWhereLeaf(
@@ -647,7 +647,7 @@ public final class SqlModelParser {
    * <ul>
    *   <li>{@code @Table} interface must have {@code @ModelRoot} and must extend {@code TableModel}.
    *   <li>{@code @WHERE} interface must have {@code @ModelRoot} and must extend {@code
-   *       WhereClause}.
+   *       SqlWherePredicate}.
    * </ul>
    *
    * <p>Errors are reported via {@link CodeGenUtility#error} so that the compiler surfaces them as
@@ -703,7 +703,7 @@ public final class SqlModelParser {
         util.error(
             "[vajram-sql] @WHERE interface '"
                 + te.getQualifiedName()
-                + "' must extend WhereClause.",
+                + "' must extend SqlWherePredicate.",
             te);
       }
     }

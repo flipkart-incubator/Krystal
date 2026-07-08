@@ -27,7 +27,7 @@ these classes:
 | `SqlQueryModel`        | Immutable data records that represent a parsed SQL SELECT query                    |
 | `SqlModelParser`       | Reads annotations from source elements and produces `SqlQueryModel` records         |
 | `SqlQueryBuilder`      | Accepts `SqlQueryModel` records and produces SQL SELECT query strings               |
-| `WhereOperator`        | Interface for WHERE clause operators — `toSql` for SQL generation, `toJavaParams` for runtime parameter extraction |
+| `WhereOperator`        | Interface for WHERE clause operators — `toSql` for SQL generation, `getJavaParamAccessors` for runtime parameter extraction |
 | `SimpleWhereOperator`  | Implements `WhereOperator` for simple comparisons (`=`, `>`, `>=`, `<`, `<=`)      |
 | `RangeWhereOperator`   | Implements `WhereOperator` for `@IsInRange` — generates dual-bound SQL with runtime-adaptive open/closed comparison |
 
@@ -61,10 +61,10 @@ with no behaviour — purely structural.
 | Record        | Purpose                                                                                          |
 |---------------|--------------------------------------------------------------------------------------------------|
 | `WhereColumn` | A single column comparison: accessor method name, DB column name, SQL operator (e.g. `=`)        |
-| `WhereLeaf`   | An AND group of `WhereColumn`s from one `SelectionPredicate`; carries the accessor prefix and table name |
+| `WhereLeaf`   | An AND group of `WhereColumn`s from one `ColumnPredicate`; carries the accessor prefix and table name |
 | `WhereInput`  | Complete WHERE spec for one `_Inputs` method — `isOr` flag + list of `WhereLeaf`s                |
 
-For a simple `SelectionPredicate`, `WhereInput.isOr()` is `false` and `leaves` has one entry.
+For a simple `ColumnPredicate`, `WhereInput.isOr()` is `false` and `leaves` has one entry.
 For an `SqlOrPredicate`, `isOr()` is `true` and `leaves` has one entry per OR branch.
 
 ### Other records
@@ -86,7 +86,7 @@ This class is **framework-agnostic** — it does not reference Vert.x or any spe
 | Method                          | Input                     | Output             | Description                                                                                                                                                                                                                                                                     |
 |---------------------------------|---------------------------|--------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `collectWhereInputs`            | `VajramInfo`              | `List<WhereInput>` | Scans `_Inputs` facets for `@WHERE`-annotated or `SqlOrPredicate` types; returns parsed WHERE specs                                                                                                                                                                             |
-| `parseScalarColumns`            | `TypeElement` (selection) | `List<ScalarColumn>` | Extracts scalar columns from a `@Selection` interface                                                                                                                                                                                                                           |
+| `parseScalarColumns`            | `TypeElement` (selection), `TypeElement` (table) | `List<ScalarColumn>` | Extracts scalar columns from a `@Selection` interface                                                                                                                                                                                                                           |
 | `resolveColumnName`             | `ExecutableElement`       | `String`           | Returns `@Column.value()` or falls back to the method name                                                                                                                                                                                                                      |
 | `resolveComparisonOperator`     | `ExecutableElement`       | `WhereOperator`    | Returns the SQL operator from annotations (`@IsEqualTo`→`=`, `@IsGreaterThan`→`>`, `@IsGreaterThanOrEqual`→`>=`, `@IsLessThan`→`<`, `@IsLessThanOrEqual`→`<=`, `@IsInRange`→range comparison); validates comparable type for ordering operators and `Range<T>` for `@IsInRange` |
 | `getTableName`                  | `TypeElement` (table)     | `String`           | Returns `@Table(name = "...")` value                                                                                                                                                                                                                                            |
@@ -105,13 +105,13 @@ _Inputs method (e.g. UserOrPredicate where())
     │
     ├─ type extends SqlOrPredicate?
     │   YES → for each method in the interface:
-    │         └─ return type is a SelectionPredicate → parseWhereLeaf()
+    │         └─ return type is a ColumnPredicate → parseWhereLeaf()
     │             └─ for each method in the predicate:
     │                 ├─ @Column("col") → DB column name
     │                 └─ @IsEqualTo     → operator "="
     │         → WhereInput(isOr=true, leaves=[...])
     │
-    └─ type extends SelectionPredicate?
+    └─ type extends ColumnPredicate?
         YES → parseWhereLeaf() directly
             → WhereInput(isOr=false, leaves=[single leaf])
 ```
@@ -173,18 +173,22 @@ Data records for parsed `@SQL @INSERT @Trait` interfaces.
 |------------------|-------------------------------------------------------------------------------------------|
 | `tableElement`   | The `@Table`-annotated type element                                                       |
 | `tableName`      | The SQL table name from `@Table(name = ...)`                                              |
-| `columns`        | List of `InsertColumn` records — the table's insertable columns                           |
+| `columns`        | List of `TableColumn` records — the table's insertable columns (auto-assigned columns are filtered out by the `columns()` accessor) |
 | `inputParamName` | The method name of the single input in `_Inputs`                                          |
 | `isList`         | `true` if the input type is `List<@Table>`, `false` for a single `@Table`                 |
 
-### InsertColumn
+### TableColumn
 
-| Field              | Purpose                                                                 |
-|--------------------|-------------------------------------------------------------------------|
-| `columnName`       | DB column name (from `@Column` or the method name)                      |
-| `javaType`         | Java type of the column (unwrapped if `Optional`)                       |
-| `accessorMethodName` | Method name on the Table model to call                                |
-| `isOptional`       | `true` if the column's return type is `Optional<T>`                     |
+Nested inside `InsertQueryModel`.
+
+| Field                   | Purpose                                                                 |
+|-------------------------|---------------------------------------------------------------------------|
+| `declaringMethod`       | The `ExecutableElement` on the Table model; `methodName()` derives the method name from it |
+| `columnName`            | DB column name (from `@Column` or the method name)                      |
+| `javaType`              | Java type of the column (unwrapped if `Optional`)                       |
+| `isOptional`            | `true` if the column's return type is `Optional<T>`                     |
+| `serdeInfo`             | Serialization info if the column's type has `@SupportedModelProtocol`, else `null` |
+| `isEligibleForInsertion` | `false` for columns whose values are auto-assigned (e.g. auto-increment IDs, current timestamp) |
 
 ---
 
@@ -203,21 +207,40 @@ Reads `@INSERT` trait inputs and validates their structure.
 - The trait must have **exactly one** input
 - That input must be a `@Table`-annotated type or `List<@Table>`
 - `@IncomingForeignKey` methods are excluded (not real DB columns)
-- `@ForeignKey` columns are treated as plain scalars (their `String` return type is the FK value)
+- `@ForeignKey` columns are treated as plain scalars, using whatever type they declare (typically the same type as the referenced `@PrimaryKey`)
 - DB column names are resolved via `@Column` annotation (falling back to method name)
 
 ---
 
 ## InsertQueryBuilder
 
-Stateless utility that builds parameterized INSERT SQL strings.
+Builds parameterized INSERT SQL strings.
 
 ```
-InsertQueryBuilder.buildInsertSql(model, config)
+InsertQueryBuilder.buildInsertSql(model, config, syntax, returningColumnNames)
 → "INSERT INTO users (id, name, email, phoneNumber) VALUES ($1, $2, $3, $4)"
 ```
 
 The `SqlDriverConfig` provides driver-specific placeholder syntax (e.g. `$1` for PostgreSQL/Vert.x).
+`syntax` is a dialect-specific `SqlSyntax` (see below); when `returningColumnNames` is
+non-empty, a `RETURNING` clause is appended via `syntax.returningClause(...)`.
+
+---
+
+## SqlSyntax
+
+A sealed interface (`syntax` package) that encapsulates dialect-specific SQL differences needed at
+code-generation time — currently the `RETURNING` clause syntax for `@ReturnOnInsert` and how column
+names get transformed in dialect-specific result sets.
+
+| Implementation      | Dialect          | `returningClause`                          |
+|----------------------|------------------|---------------------------------------------|
+| `Sql2023Syntax`      | `SQL_2023`       | Always returns `""` — the standard doesn't define `RETURNING`      |
+| `PostgreSqlSyntax`   | `POSTGRESQL_18`  | `RETURNING col1, col2, ...`; also lowercases unquoted identifiers via `columnNameInResult` |
+| `SqlLite3_35Syntax`  | `SQL_LITE_3_35`  | `RETURNING col1, col2, ...`                  |
+| `MySql8Syntax`       | `MYSQL_8`        | Returns `""` for a single returning column (relies on the driver's `LAST_INSERT_ID`); throws `UnsupportedOperationException` if more than one column is requested |
+
+Obtain the right implementation via `SqlSyntax.forDialect(SqlDialect)`.
 
 ---
 
@@ -229,15 +252,17 @@ dependencies {
     api project(':krystal-codegen-common')
     api project(':vajram:vajram-codegen-common')
     implementation project(':vajram:vajram-java-sdk')
+    implementation 'com.squareup:javapoet'
 }
 ```
 
 This module depends on:
 - **vajram-sql** — annotation types (`@Table`, `@Selection`, `@WHERE`, `@Column`, `@IsEqualTo`,
-  `SqlOrPredicate`, `SelectionPredicate`, etc.)
+  `SqlOrPredicate`, `ColumnPredicate`, etc.)
 - **krystal-codegen-common** — `CodeGenUtility` for annotation processing helpers
 - **vajram-codegen-common** — `VajramInfo`, `VajramCodeGenUtility` for facet introspection
 - **vajram-java-sdk** — facet type constants
+- **javapoet** — used by `WhereOperator` implementations to build `CodeBlock`s
 
 ---
 
@@ -247,7 +272,7 @@ A driver-specific codegen module (like `vajram-sql-vertx-codegen`) typically:
 
 1. Creates a `SqlModelParser` from its `VajramCodeGenUtility`
 2. Calls `collectWhereInputs(vajramInfo)` to get WHERE specs
-3. Calls `parseScalarColumns(selectionElement)` and related methods to get the selection model
+3. Calls `parseScalarColumns(selectionElement, tableElement)` and related methods to get the selection model
 4. Passes the parsed `SelectionInfo` + `List<WhereInput>` to `SqlQueryBuilder.buildSimpleSql`
    or `buildJoinSql` to get the SQL string
 5. Uses the parsed model records to generate driver-specific Java code (e.g. JavaPoet classes
