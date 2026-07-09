@@ -1,11 +1,13 @@
 # Vajram anatomy — annotations, generated code, and naming
 
-This reference is verified against the actual current source under
-`vajram/vajram-java-sdk/src/main/java/com/flipkart/krystal/vajram/**` and the real, compiling sample
-Vajrams under `vajram/vajram-samples/src/main/java/com/flipkart/krystal/vajram/samples/**`, not just the
-prose docs (`README.md`, `VAJRAM_DEV_GUIDE.md`). Where the docs describe older concepts (`@VajramDef`,
-`IOVajram`/`ComputeVajram` base classes, field-level `@Input`, `_Facets`), this file gives the corrected,
-current syntax. Trust this file and the real samples over the prose docs when they disagree.
+This reference is verified against the Krystal framework's actual current source
+(`com.flipkart.krystal.vajram.**` in `vajram-java-sdk`) and its own real, compiling sample Vajrams, in
+[flipkart-incubator/Krystal](https://github.com/flipkart-incubator/Krystal) — not just the framework's prose
+docs. That framework repo is a separate codebase from whatever repo you're authoring Vajrams in; you won't
+find these files locally unless you're working inside Krystal itself. Where the framework's own prose docs
+describe older concepts (`@VajramDef`, `IOVajram`/`ComputeVajram` base classes, field-level `@Input`,
+`_Facets`), this file gives the corrected, current syntax — trust this file (and the class/annotation names
+it cites) over anything older you might find in blog posts or outdated internal docs.
 
 ## Class shape
 
@@ -188,6 +190,16 @@ static Map<UserService_BatchItem, Errable<UserInfo>> unbatch(
   for cache-invalidation permission checks (a mutating Vajram can only invalidate cache keys of Vajrams
   declaring the same dataset — a mismatch throws `IllegalStateException` at runtime).
 
+## `@SupportedModelProtocol` — usually omit it
+
+`com.flipkart.krystal.model.SupportedModelProtocol`, on a `@ModelRoot`/`Model` type (a Vajram's output type, an
+`_Inputs`/`_InternalFacets` facet type, or any nested type used as one), declares which wire protocol(s) the model
+can be (de)serialized as (JSON, protobuf, Fory, plain Java object, ...). **Plain Java object is what the codegen
+falls back to whenever no `@SupportedModelProtocol` is declared at all**, so `@SupportedModelProtocol
+(PlainJavaObject.class)` on its own says nothing the absence of the annotation didn't already say — don't add it.
+Reach for it only when a model genuinely needs a non-default protocol (or more than one at once, since it's
+`@Repeatable`), e.g. a Vajram output that also needs to cross a gRPC boundary as protobuf.
+
 ## `@InvocableOutsideGraph`
 
 `com.flipkart.krystal.annos.InvocableOutsideGraph` — marks a Vajram as a valid entry point for
@@ -196,12 +208,13 @@ reachable as another Vajram's dependency inside the graph.
 
 This is a **production contract, not a testability requirement** — add it only when application code
 outside the graph genuinely needs to call the Vajram directly. Don't add it to a Vajram purely so a test can
-invoke it: the Krystal Gradle plugin automatically sets the system property
+invoke it: on Gradle, Krystal's own Gradle plugin automatically sets the system property
 `RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME` (`com.flipkart.krystal.config.PropertyNames`,
-`@TestOnly`) to `true` for test runs, which disables this check entirely — so any Vajram, annotated or not,
-is directly `execute()`-able from test code with no extra setup. You never need to set this property
-yourself; just don't let its existence tempt you into tagging a Vajram `@InvocableOutsideGraph` when its
-only caller is a test.
+`@TestOnly`) to `true` for `Test` tasks, which disables this check entirely — so any Vajram, annotated or
+not, is directly `execute()`-able from test code with no extra setup on your part. If this repo doesn't use
+the Krystal Gradle plugin (e.g. it's a Maven build, or a Gradle build that didn't apply the plugin), set that
+system property yourself in test setup instead of reaching for `@InvocableOutsideGraph` — either way, don't
+let this annotation's existence tempt you into adding it just because a test needs direct access.
 
 ## Traits — polymorphism across implementations
 
@@ -214,8 +227,6 @@ implementation.
 ### Declaring a Trait
 
 ```java
-package com.flipkart.krystal.vajram.samples.chess;
-
 @Trait
 @CallGraphDelegationMode(SYNC)
 public interface GetPiece<T extends Piece> extends TraitDef<T> {
@@ -324,12 +335,12 @@ Codegen produces (never hand-edit or instantiate these directly):
 - `<VajramId>Impl` — the final class implementing all the framework-internal plumbing. Framework-internal
   only; you never reference it.
 
-Build commands trigger this: `./gradlew build` (or `./gradlew krystalModelsGen` for just model generation).
-A bare Vajram with nothing depending on it or referencing it can still trigger codegen once it's loaded
-into a `VajramGraph`; don't be surprised if nothing appears to happen until something actually exercises
-the class.
+This repo's normal build command triggers it (`./gradlew build`/`./gradlew krystalModelsGen` for Gradle
+projects, `mvn compile` for Maven — whichever this repo actually uses). A bare Vajram with nothing depending
+on it or referencing it can still trigger codegen once it's loaded into a `VajramGraph`; don't be surprised
+if nothing appears to happen until something actually exercises the class.
 
-## Naming (from `VAJRAM_NAMING_GUIDE.md`)
+## Naming
 
 1. Vajram names are verbs, UpperCamelCase: `GetX` (retrieval), `UpdateY` (mutation), `GetAndUpdateZ`,
    `LoginUser`, `SendSMS`. The Vajram ID is the class's simple name unless overridden, and — unlike a plain
@@ -341,3 +352,18 @@ the class.
 3. Keep names short — the Vajram ID prefixes every generated class name (`<Id>_Req`, `<Id>_Fac`,
    `<Id>_BatchItem`, `<Id>Impl`), so a long Vajram name cascades into unwieldy generated names.
 4. Input/facet names: lowerCamelCase, descriptive, unique within the Vajram.
+
+## Import style
+
+Statically import platform-level constants — `IfAbsentThen.FAIL`, `ComputeDelegationMode.SYNC`,
+`equalsEnum`/`isInstanceOf` from `InputValueMatcher`, and similar — rather than qualifying them inline
+(`IfAbsent.IfAbsentThen.FAIL`). Every real sample in the Krystal framework's own codebase does this, and it's
+worth matching in yours too; a fully-qualified constant at a call site is usually a sign something was
+written without checking existing style, not a deliberate choice.
+
+Codegen-generated constants (`<VajramId>_Fac.someInput_n`, `<VajramId>_Req.someInput_s`, and friends) are the
+one place with real judgment involved: static-import them when a file references its own facets repeatedly
+(a test with several assertions against `sum2_s`/`sum3_s`/`chainSum_s`-style constants, say), but leave them
+qualified when the file touches other Vajrams' facets and the qualifier is what keeps straight which Vajram
+each constant
+belongs to (`GetPiece_Req.type_s` reads clearer than a same-named `type_s` imported from who-knows-where).

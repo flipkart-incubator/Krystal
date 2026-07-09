@@ -21,7 +21,6 @@ want returned after an INSERT (see `@ReturnOnInsert` below).
 
 ```java
 @ModelRoot(type = ModelRoot.ModelType.RESPONSE)
-@SupportedModelProtocol(PlainJavaObject.class)
 @Selection(from = User.class)
 public interface UserInfo extends Model {
   long id();
@@ -33,6 +32,12 @@ public interface UserInfo extends Model {
   Optional<String> phoneNumber();
 }
 ```
+
+Don't annotate a `Model` with `@SupportedModelProtocol(PlainJavaObject.class)` — plain Java object is what the
+codegen falls back to when no `@SupportedModelProtocol` is declared at all, so stating it explicitly changes
+nothing. Only add `@SupportedModelProtocol(...)` when the model genuinely needs a *different* (or additional)
+wire protocol — e.g. `@SupportedModelProtocol(Json.class)` for a model also serialized as JSON by another Krystal
+extension.
 
 A projection can also pull in a **related table's rows** — declare a method returning `List<OtherSelection>` (or a
 single `OtherSelection`) and it becomes a join:
@@ -71,6 +76,13 @@ public interface UserIdPredicate extends ColumnPredicate {
   }
 }
 ```
+
+**Every predicate method needs an explicit `@Column("columnName")`** — unlike a `@Table`/`@Selection` method (where
+the column name defaults to the method name and `@Column` is only needed on the exceptions), a `ColumnPredicate`
+method's name is conventionally the column name plus the comparison it applies (`idIs`, `amountGt`, `createdAtLt`),
+so it never matches the real column name on its own. Leaving `@Column` off a predicate method isn't a fallback to a
+sensible default here — it's a codegen error waiting to happen, since the derived name (`idIs`, `amountGt`, ...)
+doesn't correspond to any real column.
 
 If a `ColumnPredicate` declares **multiple** methods, they're implicitly AND'ed. Available comparison operators
 (each `@Target(METHOD)`, applied above the column method, method name itself is just a label — semantics come from
@@ -160,7 +172,6 @@ public interface InsertUser extends TraitDef<Integer> {
 
 ```java
 @ModelRoot(type = ModelRoot.ModelType.RESPONSE)
-@SupportedModelProtocol(PlainJavaObject.class)
 @ReturnOnInsert(inTable = User.class)
 public interface UserInsertResult extends Model {
   long id();     // must match a real column name+type on User; typically the AUTO_ASSIGN_ID column
@@ -224,6 +235,16 @@ stack multiple `@ORDER` annotations for a multi-column sort; they apply in the o
 correct, not just which one compiles). Supported dialects as of current source: `SQL_2023`, `POSTGRESQL_18`,
 `MYSQL_8`, `SQL_LITE_3_35`.
 
+## Import style
+
+Statically import platform-level constants (`SqlDialect.POSTGRESQL_18`, `LIMIT.NO_LIMIT`, comparison-operator
+factories like `equalsEnum`, `isInstanceOf` when used with predicate dispatch) rather than qualifying them
+inline — every real sample does this. Codegen-generated `_s` facet constants (`GetPiece_Req.type_s`,
+`AddUsingTraits_Fac.sum2_s`) are more of a judgment call: static-import them when a file repeatedly references
+one Vajram/predicate's facets, but leave them qualified when a file spans several tables/traits and the
+qualifier is what keeps straight which one a given constant belongs to. Match whichever reads clearer, not a
+fixed rule either way.
+
 ## Where things live (package convention from the samples)
 
 The samples module organizes query-related files as:
@@ -237,6 +258,10 @@ convention of its own (check first, per SKILL.md Step 1).
 
 ## Sanity checklist for a new query
 
+- Every `ColumnPredicate`/`SqlOrPredicate` method has an explicit `@Column("columnName")` (its name won't match the
+  column by convention); every `@Selection` method only has one if its name genuinely diverges from the column.
+- No `Model` interface carries `@SupportedModelProtocol(PlainJavaObject.class)` — that's the implicit default, so
+  stating it is redundant; only present when the model needs a genuinely different/additional protocol.
 - Every `List<T>` result (top-level or nested join field) has an explicit `@LIMIT`.
 - A non-list result either has no `@LIMIT` (relying on the runtime uniqueness check) or `@LIMIT(1)` deliberately —
   pick based on whether the WHERE clause is provably unique.

@@ -1,10 +1,11 @@
 package com.flipkart.krystal.vajram.ext.sql.vertx.codegen;
 
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.InsertResultType;
 import com.flipkart.krystal.vajram.ext.sql.lang.SqlDialect;
 import com.squareup.javapoet.MethodSpec;
 
 sealed interface DialectCodeGenerator
-    permits MySqlCodeGenerator, PostGreCodeGenerator, Sql2023CodeGenerator, SqlLiteCodeGenerator {
+    permits MySqlCodeGenerator, PostGreCompatibleCodeGenerator, Sql2023CodeGenerator {
 
   /**
    * Builds the mapResult method for INSERT where some data is returned by the Database (For example
@@ -18,7 +19,7 @@ sealed interface DialectCodeGenerator
       case SQL_2023 -> new Sql2023CodeGenerator();
       case MYSQL_8 -> new MySqlCodeGenerator(vertxSqlUtil);
       case POSTGRESQL_18 -> new PostGreCodeGenerator(vertxSqlUtil);
-      case SQL_LITE_3_35 -> new SqlLiteCodeGenerator(vertxSqlUtil);
+      case SQL_LITE_3_35 -> new SqliteCodeGenerator(vertxSqlUtil);
     };
   }
 }

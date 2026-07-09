@@ -17,21 +17,54 @@ public final class SqlQueryModel {
 
   private SqlQueryModel() {}
 
+  public interface ColumnModel {
+    String columnName();
+
+    String methodName();
+
+    TypeMirror javaType();
+
+    boolean isOptional();
+
+    @Nullable SerdeColumnInfo serdeInfo();
+  }
+
   /**
    * A scalar (non-join) column in a selection.
    *
-   * @param methodName the method name in the selection interface (used as the SQL alias)
-   * @param dbColumnName the actual DB column name ({@code methodName} unless {@code @Column} is
+   * @param columnName the actual DB column name ({@code methodName} unless {@code @Column} is
    *     present)
+   * @param methodName the method name in the selection interface (used as the SQL alias)
    * @param javaType the Java type of the column value
    * @param isOptional {@code true} when the selection method returns {@code Optional<T>}
    */
   public record ScalarColumn(
+      String columnName,
       String methodName,
-      String dbColumnName,
       TypeMirror javaType,
       boolean isOptional,
-      @Nullable SerdeColumnInfo serdeInfo) {}
+      @Nullable SerdeColumnInfo serdeInfo)
+      implements ColumnModel {}
+
+  /**
+   * A column declared in a {@code @ReturnOnInsert} interface.
+   *
+   * @param columnName the DB column name (from {@code @Column} or the method name)
+   * @param methodName the Java method name on the {@code @ReturnOnInsert} interface
+   * @param javaType the Java return type (unwrapped if Optional)
+   * @param isOptional {@code true} if the return type is {@code Optional<T>}
+   * @param serdeInfo serde info from the corresponding table column; {@code null} if none
+   * @param isAutoAssignId {@code true} if the corresponding table column has
+   *     {@code @DefaultValueStrategy(AUTO_ASSIGN_ID)}
+   */
+  public record ReturningColumn(
+      String columnName,
+      String methodName,
+      TypeMirror javaType,
+      boolean isOptional,
+      @Nullable SerdeColumnInfo serdeInfo,
+      boolean isAutoAssignId)
+      implements ColumnModel {}
 
   /** A single {@code ORDER BY col [ASC|DESC]} term. */
   public record OrderByClause(String columnName, ORDER.Direction direction) {}
@@ -144,4 +177,14 @@ public final class SqlQueryModel {
    * @param columnType
    */
   public record SerdeColumnInfo(TypeElement protocolTypeElement, TypeMirror columnType) {}
+
+  /**
+   * Captures the INSERT trait's response type and the columns to be returned from the database.
+   *
+   * @param selectionElement the {@code @ReturnOnInsert}-annotated model interface
+   * @param isListResult {@code true} if the response type is {@code List<ReturnOnInsert>}
+   * @param returningColumns columns declared in the {@code @ReturnOnInsert} interface
+   */
+  public record InsertResultType(
+      TypeElement selectionElement, boolean isListResult, List<ReturningColumn> returningColumns) {}
 }

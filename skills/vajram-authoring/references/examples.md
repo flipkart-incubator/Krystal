@@ -1,14 +1,19 @@
 # Worked examples
 
-All examples below are reproduced verbatim (or near-verbatim, trimmed of unrelated imports) from real,
-compiling code under `vajram/vajram-samples/src/main/java/com/flipkart/krystal/vajram/samples/**`. Read
-`vajram-anatomy.md` first for what each annotation means; this file is for pattern-matching your own case
-against a real one.
+All examples below are drawn (verbatim or near-verbatim, trimmed of unrelated imports) from the Krystal
+framework's own sample module, in
+[flipkart-incubator/Krystal](https://github.com/flipkart-incubator/Krystal/tree/main/vajram/vajram-samples).
+That's a separate codebase from wherever you're authoring Vajrams — these classes, and the packages they're
+named after (`calculator.add`, `greet`, `chess`, ...), won't exist in your repo. Treat every class/package
+name below as illustrative naming from the framework's own samples, not a convention you need to match; the
+point is the annotation usage and structure, which is real and current regardless of which codebase you're
+writing in. Read `vajram-anatomy.md` first for what each annotation means; this file is for pattern-matching
+your own case against a real one.
 
 ## 1. Simplest possible compute vajram, with a default value
 
-`calculator/add/SimpleAdd.java` — no dependencies, one input with `ASSUME_DEFAULT_VALUE`, implements a
-Trait (`MultiAdd`, see example 6):
+`SimpleAdd` — no dependencies, one input with `ASSUME_DEFAULT_VALUE`, implements a Trait (`MultiAdd`, see
+example 7):
 
 ```java
 @Vajram
@@ -27,8 +32,8 @@ public abstract class SimpleAdd extends ComputeVajramDef<Integer> implements Mul
 
 ## 2. IO vajram with input batching, and an injected control flag
 
-`calculator/add/Add.java` — batched inputs, `@Output.Batched` + `@Output.Unbatch`, an injected boolean used
-to simulate failure, a static counter for test assertions:
+`Add` — batched inputs, `@Output.Batched` + `@Output.Unbatch`, an injected boolean used to simulate failure,
+a static counter for test assertions:
 
 ```java
 @Slf4j
@@ -87,7 +92,7 @@ public abstract class Add extends IOVajramDef<Integer> {
 }
 ```
 
-Matching test (`AddTest.java`) — the canonical minimal executor pattern:
+Matching test — the canonical minimal executor pattern:
 
 ```java
 VajramGraph graph = VajramGraph.builder().loadClasses(Add.class).build();
@@ -107,8 +112,8 @@ assertThat(future).succeedsWithin(TEST_TIMEOUT).isEqualTo(5);
 
 ## 3. Dependency injection + composing a vajram dependency
 
-`greet/Greet.java` — a compute vajram with an injected `Logger` and a `@Named` sink, plus a dependency on
-an IO vajram (`UserService`, example 4):
+`Greet` — a compute vajram with an injected `Logger` and a `@Named` sink, plus a dependency on an IO vajram
+(`UserService`, example 4):
 
 ```java
 @InvocableOutsideGraph
@@ -160,7 +165,7 @@ other examples for new code, as it's the more common current convention.
 
 ## 4. IO vajram with batching, as a dependency
 
-`greet/UserService.java`:
+`UserService`:
 
 ```java
 @Vajram
@@ -197,8 +202,8 @@ public abstract class UserService extends IOVajramDef<UserInfo> {
 
 ## 5. Fan-out over a list, with cache invalidation via an injected facet
 
-`user/GetUserProfilesFromUserIds.java` — a compute vajram fanning out to a dependency once per element of
-a list, reading the fanned-out responses via `FanoutDepResponses`:
+`GetUserProfilesFromUserIds` — a compute vajram fanning out to a dependency once per element of a list,
+reading the fanned-out responses via `FanoutDepResponses`:
 
 ```java
 @Vajram
@@ -246,8 +251,8 @@ public abstract class GetUserProfilesFromUserIds extends ComputeVajramDef<List<U
 }
 ```
 
-`GetUserWithProfile.java` (the dependency being fanned out to — also shows sequential dependency chaining,
-where the second resolver depends on the *value* of the first dependency's output):
+`GetUserWithProfile` (the dependency being fanned out to — also shows sequential dependency chaining, where
+the second resolver depends on the *value* of the first dependency's output):
 
 ```java
 @Vajram
@@ -287,9 +292,9 @@ public abstract class GetUserWithProfile extends ComputeVajramDef<UserWithProfil
 
 ## 6. Recursive fan-out with a conditional skip
 
-`calculator/add/ChainAdd.java` — a compute vajram that depends on itself, using `skipFanout` to hit a base
-case, and reading one non-fanout dependency as `Errable` alongside a fanout dependency as
-`FanoutDepResponses` in the same output method:
+`ChainAdd` — a compute vajram that depends on itself, using `skipFanout` to hit a base case, and reading one
+non-fanout dependency as `Errable` alongside a fanout dependency as `FanoutDepResponses` in the same output
+method:
 
 ```java
 @Resolve(dep = chainSum_n, depInputs = ChainAdd_Req.numbers_n)
@@ -314,14 +319,14 @@ static Integer add(Errable<Integer> sum, FanoutDepResponses<ChainAdd_Req, Intege
 ```
 
 Because this vajram depends on itself, a test invoking it must bound the recursion via
-`VajramExecutionConfig.builder().disabledDependentChains(computedSet).build()` — see
-`references/testing.md` and `ChainAddTest.java` for the exact call. Without this, the executor will keep
-enumerating the (in principle unbounded) set of possible dependent chains.
+`VajramExecutionConfig.builder().disabledDependentChains(computedSet).build()` — see `references/testing.md`
+for the exact call. Without this, the executor will keep enumerating the (in principle unbounded) set of
+possible dependent chains.
 
 ## 7. Trait — static/qualifier dispatch across multiple implementations
 
-`calculator/add/MultiAdd.java` (the Trait) and `calculator/add/AddUsingTraits.java` (a consumer that
-disambiguates three dependencies on the same Trait via a custom `@Qualifier`):
+`MultiAdd` (the Trait) and `AddUsingTraits` (a consumer that disambiguates three dependencies on the same
+Trait via a custom `@Qualifier`):
 
 ```java
 @Trait
@@ -387,10 +392,10 @@ writing three near-identical `@Resolve` methods.
 
 ## 8. Trait — predicate dispatch based on a runtime value
 
-`chess/GetPiece.java` — a generic Trait (`T extends Piece`) dispatched purely by the runtime value of an
-enum-typed `@UseForPredicateDispatch` input, no qualifier annotation needed at any call site. Use this
-pattern instead of static/qualifier dispatch when the choice of implementation is a genuine runtime decision
-(e.g. based on user input) rather than a fixed choice per call site.
+`GetPiece` — a generic Trait (`T extends Piece`) dispatched purely by the runtime value of an enum-typed
+`@UseForPredicateDispatch` input, no qualifier annotation needed at any call site. Use this pattern instead
+of static/qualifier dispatch when the choice of implementation is a genuine runtime decision (e.g. based on
+user input) rather than a fixed choice per call site.
 
 ```java
 public interface Piece {}
@@ -411,9 +416,9 @@ public interface GetPiece<T extends Piece> extends TraitDef<T> {
 }
 ```
 
-`GetKnight.java` / `GetRook.java` — each restates the Trait's `_Inputs` shape and binds `T` to its own
-output type; the `type` input isn't otherwise used inside the implementation, since dispatch already
-consumed it before the implementation was ever selected:
+`GetKnight` / `GetRook` — each restates the Trait's `_Inputs` shape and binds `T` to its own output type;
+the `type` input isn't otherwise used inside the implementation, since dispatch already consumed it before
+the implementation was ever selected:
 
 ```java
 @Vajram
@@ -430,7 +435,7 @@ abstract class GetKnight extends ComputeVajramDef<Knight> implements GetPiece<Kn
 }
 ```
 
-`GetPieceTest.java` — registering the predicate dispatch policy and executing directly against the Trait's
+The matching test — registering the predicate dispatch policy and executing directly against the Trait's
 generated request type, parameterized by the concrete output type:
 
 ```java
@@ -456,8 +461,8 @@ don't assume you need to add it purely to make a Trait request executable in a t
 
 ## 9. Trait — predicate dispatch with multiple inputs and a cascading fallback
 
-`customer_service/CustomerServiceAgent.java` — a Trait dispatched on *two* `@UseForPredicateDispatch`
-inputs at once (an enum and a sealed-interface subtype), with seven conforming Vajrams
+`CustomerServiceAgent` — a Trait dispatched on *two* `@UseForPredicateDispatch` inputs at once (an enum and
+a sealed-interface subtype), with seven conforming Vajrams
 (`L1CallAgent`/`L1EmailAgent`/`L2CallAgent`/`L3EmailAgent`/`DefaultCallAgent`/`DefaultEmailAgent`/
 `DefaultCustomerServiceAgent`) — a realistic shape for "handle this the specific way if we can, otherwise
 fall back":
@@ -490,10 +495,10 @@ public interface CustomerServiceAgent extends TraitDef<String> {
 }
 ```
 
-The dispatch policy (`CustomerServiceAgentPredicateTest.java`) combines two matcher kinds — `equalsEnum` for
-`AgentType`, `isInstanceOf` for which `InitialCommunication` subtype was supplied — and chains them with
-`.and(...)` so a case only matches when *both* conditions hold. Specific cases are listed before broader
-ones, since **the first matching case wins**:
+The dispatch policy (from the matching test) combines two matcher kinds — `equalsEnum` for `AgentType`,
+`isInstanceOf` for which `InitialCommunication` subtype was supplied — and chains them with `.and(...)` so a
+case only matches when *both* conditions hold. Specific cases are listed before broader ones, since **the
+first matching case wins**:
 
 ```java
 kGraph.traitDispatchPolicies(

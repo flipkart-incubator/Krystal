@@ -17,17 +17,21 @@ doesn't need to be composed as a DAG node (fanned out, depended on by other vajr
 just write a plain static Java method — wrapping pure computation in a Vajram only adds DAG overhead for
 no benefit.
 
-## Step 1 — Find how the repo already does this
+## Step 1 — Find how this codebase already does this
 
-Before writing anything:
-- Search for existing Vajrams near the feature you're adding (same module, or a sibling domain package
-  under `vajram-samples`-style projects) to match package layout, naming, and whether the repo prefers
-  `@Resolve` methods vs. the `getSimpleInputResolvers()` DSL for similar cases.
-- If this is the first Vajram in a module, check a sibling module's `build.gradle`/`build.gradle.kts` for
-  how the `vajram-java-sdk` dependency and annotation processor are wired, and match that.
-- Check `vajram/vajram-java-sdk/VAJRAM_NAMING_GUIDE.md` and `VAJRAM_DEV_GUIDE.md` directly if anything below
-  is ambiguous for your case — they're short and this skill's `references/` files already fold in their
-  content plus corrections against the real, current source.
+Every team that adopts Krystal settles into its own conventions on top of the framework's rules — before
+writing anything, spend a minute finding them in *this* repo rather than assuming the patterns below are
+the only valid ones:
+- Search this repo for existing Vajrams near the feature you're adding (same module, or a sibling domain
+  package) to match its package layout, naming, and whether it prefers `@Resolve` methods vs. the
+  `getSimpleInputResolvers()` DSL for similar cases.
+- If this is the first Vajram in a module, check a sibling module's build file for how the `vajram-java-sdk`
+  dependency and annotation processor are wired (Gradle and Maven both work; match whichever this repo
+  already uses), and copy that wiring rather than inventing your own.
+- If anything below is ambiguous for your case, the Krystal framework's own naming/dev guides (in the
+  [flipkart-incubator/Krystal](https://github.com/flipkart-incubator/Krystal) repo) go into more depth —
+  but this skill's `references/` files already fold in their content plus corrections against the real,
+  current framework source, so you shouldn't need to leave this skill for the common cases.
 
 ## Step 2 — Pick the Vajram type
 
@@ -123,13 +127,14 @@ any inherited `_Inputs`), and pick a dispatch mechanism based on *when* the choi
 A single Trait can support both mechanisms at once for different call sites — see `MultiAdd` in
 `references/examples.md`. Read `references/vajram-anatomy.md`'s Traits section for the full annotation
 reference and `references/testing.md`'s Trait dispatch wiring section for exactly how to register either
-policy on a `KrystexGraph`; full worked examples of both dispatch mechanisms (verbatim, from real compiling
-samples) are in `references/examples.md`.
+policy on a `KrystexGraph`; full worked examples of both dispatch mechanisms (drawn from the Krystal
+framework's own sample module) are in `references/examples.md`.
 
 ## Step 7 — Sanity-check before calling it done
 
 - Vajram name is a verb, UpperCamelCase, with no `Node`/`Vajram`/`Kryon`/`Batch` suffix (see
-  `VAJRAM_NAMING_GUIDE.md` — batching is an internal detail that can change later without a rename).
+  `references/vajram-anatomy.md`'s Naming section — batching is an internal detail that can change later
+  without a rename).
 - Every input has a deliberate `@IfAbsent(...)`, not a default you didn't think about.
 - Every `@Dependency` has exactly one resolver per input it needs; every fan-out dependency has exactly one
   fanout resolver.
@@ -138,9 +143,8 @@ samples) are in `references/examples.md`.
 - `@Resolve(dep = ..., depInputs = ...)` uses generated `_n` constants, never string literals.
 - If you added a new module's first Vajram, the build wiring from Step 1 is in place.
 - If *production* code needs to call the feature directly (not just as another Vajram's dependency), it's
-  annotated `@InvocableOutsideGraph`. Don't add it just so a test can invoke the Vajram directly — the
-  Krystal Gradle plugin already makes every Vajram directly executable in tests regardless of this
-  annotation (see `references/testing.md`).
+  annotated `@InvocableOutsideGraph`. Don't add it just so a test can invoke the Vajram directly — see
+  `references/vajram-anatomy.md` for the test-only escape hatch that covers that case instead.
 
 ## Step 8 — Write or update the test
 
@@ -158,10 +162,12 @@ mocking dependencies). The shape of a test:
    avoid a real downstream call in a unit test), use `VajramTestHarness.prepareForTest(...).withMock(...)`
    — see `references/testing.md` for the exact call shape.
 
-Match whichever pattern (module-specific unit test vs. cross-module `*-sample`/end-to-end test) this
-repo's `CLAUDE.md` calls for given the scope of the change, and after writing the vajram + test, follow the
-publish/test/build sequence in `CONTRIBUTING.md`: `upgradeVersionLocal.macOS.sh`, then
-`./gradlew test --rerun-tasks -PunsafeCompile=true`, then `./gradlew build -PunsafeCompile=true`.
+Match whichever pattern (a fast module-local unit test vs. a broader cross-module/end-to-end test) this repo
+already uses for Vajrams of similar scope — check any project-level contributor docs (e.g. a `CONTRIBUTING.md`
+or `CLAUDE.md`) for a required sequence first. After writing the Vajram and its test, run this repo's normal
+build/test command (`./gradlew test`/`./gradlew build`, `mvn test`, or whatever it actually uses) to trigger
+the annotation processor and confirm the generated code compiles — the codegen only runs as part of a real
+build, so a Vajram that merely "looks right" isn't confirmed until this has run at least once.
 
 ## Reference files
 
@@ -172,6 +178,6 @@ publish/test/build sequence in `CONTRIBUTING.md`: `upgradeVersionLocal.macOS.sh`
 - `references/testing.md` — `VajramGraph`/`KrystexGraph`/`VajramKryonExecutor` setup, request-object
   construction, `VajramTestHarness` mocking, and the non-blocking-execution rule that governs what
   output/resolver logic is allowed to do.
-- `references/examples.md` — full, verbatim, real worked examples: a simple compute vajram with a default
-  value, an IO vajram with batching, dependency chaining, fan-out with conditional skip, and Trait-based
-  static + predicate dispatch.
+- `references/examples.md` — real worked examples from the Krystal framework's own sample module: a simple
+  compute vajram with a default value, an IO vajram with batching, dependency chaining, fan-out with
+  conditional skip, and Trait-based static + predicate dispatch.

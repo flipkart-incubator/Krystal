@@ -1,10 +1,10 @@
 # Executing and testing a Vajram graph (krystex)
 
-Verified against `krystex/README.md` and its current source
-(`krystex/src/main/java/com/flipkart/krystal/krystex/**`), and real test code under
-`vajram/vajram-samples/src/test/java/com/flipkart/krystal/vajram/samples/**`. The README's class names are
-slightly stale relative to the code (it says `KrystexVajramExecutor`/`KryonExecutor`); the real executor
-class is `VajramKryonExecutor`. Trust the code/samples over the README's prose where they disagree.
+Verified against the Krystal framework's `krystex` module source and its own sample test suite, in
+[flipkart-incubator/Krystal](https://github.com/flipkart-incubator/Krystal) — a separate codebase from
+whatever repo you're testing Vajrams in. The framework's own `krystex/README.md` uses class names that are
+slightly stale relative to i/ts current code (it says `KrystexVajramExecutor`/`KryonExecutor`); the real
+executor class is `VajramKryonExecutor`. This file reflects the current code, not that README.
 
 ## The one rule that governs everything: never block the event loop
 
@@ -22,7 +22,7 @@ are `Object`/`Throwable`/`HashMap` at this layer, no batching built in). You nev
 Kryons directly; this translation is automatic. It's useful to know when reading a stack trace that
 mentions `KryonDefinition`/`Kryon` — that's the compiled form of the Vajram you wrote.
 
-## Minimal executor setup (from real sample tests)
+## Minimal executor setup
 
 ```java
 // 1. Build a VajramGraph — loads/compiles vajram definitions into kryon definitions.
@@ -57,12 +57,13 @@ Key behavioral notes:
   _build()`. For a Trait, the generated request is parameterized by the concrete implementation, e.g.
   `GetPiece_ReqImmutPojo.<Knight>_builder()`.
 - Only Vajrams annotated `@InvocableOutsideGraph` can be passed directly to `execute(...)` in *production*
-  code — otherwise it throws `RejectedExecutionException`. This doesn't affect tests: the Krystal Gradle
-  plugin auto-sets the `@TestOnly` system property `PropertyNames
-  .RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME` to `true` for test runs, so any Vajram is
-  directly `execute()`-able from a test with no extra setup on your part. Reserve `@InvocableOutsideGraph`
-  itself for Vajrams application code genuinely calls from outside the graph — don't add it just because a
-  test needs direct access.
+  code — otherwise it throws `RejectedExecutionException`. This doesn't affect tests on a Gradle build using
+  Krystal's own Gradle plugin: it auto-sets the `@TestOnly` system property `PropertyNames
+  .RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME` to `true` for `Test` tasks, so any Vajram is
+  directly `execute()`-able from a test with no extra setup. If this repo doesn't use that plugin (Maven, or
+  a Gradle build without it), set the same system property yourself in test setup. Either way, reserve
+  `@InvocableOutsideGraph` itself for Vajrams application code genuinely calls from outside the graph — don't
+  add it just because a test needs direct access.
 - `VajramExecutionConfig` (per-call): `executionId`, `disabledDependentChains` (bounds recursive/cyclic
   dependency chains — required for testing a self-referential fan-out Vajram like `ChainAdd`, computed via
   `graph.computeDependentChain(vajramId, depSlot, depSlot, ...)`), `staticDispatchQualifier` (for Trait
@@ -95,26 +96,25 @@ import static com.flipkart.krystal.krystex.batching.DepChainBatcherConfig.comput
 kGraph.inputBatcherConfig(computeSharedBatcherConfig(graph, _vajramId -> 100));
 ```
 
-The second argument is a `BatchSizeSupplier` (`VajramID -> int`) — a trivial constant lambda is the norm in
-real tests (`_v -> 100`, `_v -> 3`). `computeSharedBatcherConfig` walks the graph to find every batchable IO
-vajram reachable from an entry point and registers a shared batcher for each.
+The second argument is a `BatchSizeSupplier` (`VajramID -> int`) — a trivial constant lambda is fine
+(`_v -> 100`, `_v -> 3`). `computeSharedBatcherConfig` walks the graph to find every batchable IO vajram
+reachable from an entry point and registers a shared batcher for each.
 
 **This traversal only starts from vajrams annotated `@InvocableOutsideGraph`** — it collects
 `graph.vajramDefinitions()` filtered to that annotation as its root set, then walks dependency chains from
 there. A batched vajram reachable only through a non-`@InvocableOutsideGraph` entry point will never get a
 batcher registered, and the batching test needs a way to trigger multiple concurrent invocations of the
-batched vajram within one execution anyway (a single top-level call obviously can't batch against itself).
-The established pattern (`ChainAddTest`, `VajramKryonExecutorTest`) is a small `@InvocableOutsideGraph`
-compute vajram that fans out over a list to the batched IO vajram, so one test execution triggers several
-concurrent calls to it:
+batched vajram within one execution anyway (a single top-level call obviously can't batch against itself). A
+reliable pattern: write a small `@InvocableOutsideGraph` compute vajram that fans out over a list to the
+batched IO vajram, so one test execution triggers several concurrent calls to it:
 
 ```java
 @Dependency(onVajram = MyBatchedIOVajram.class, canFanout = true)
 ```
 
-Then assert the batched vajram's own call-counter (a static `LongAdder`, following `Add`/`UserService`'s
-pattern) is `1` despite N logical invocations, proving they were coalesced — not just that the fan-out
-vajram's output is correct.
+Then assert the batched vajram's own call-counter (a static `LongAdder`, incremented once per real downstream
+call) is `1` despite N logical invocations, proving they were coalesced — not just that the fan-out vajram's
+output is correct.
 
 ## Dependency injection into the graph
 
@@ -189,11 +189,11 @@ kGraph.traitDispatchPolicies(
   dispatch — mostly useful in tests) and `.computingTargetWith(selectorFn, targets)` for dispatch logic that
   doesn't reduce to per-input value matching.
 - **Cases are evaluated in the order passed to `.conditionally(...)`, and the first matching case wins** —
-  order specific combinations before broader fallbacks, not the other way around. The real
-  `CustomerServiceAgent` sample dispatches on `(agentType, initialCommunication)` this way: exact
-  `(L1, Call)`/`(L1, Email)`/`(L2, Call)`/`(L3, Email)` cases first, then comm-type-only fallbacks
-  (`when(initialCommunication_s, isInstanceOf(Call.class)).to(DefaultCallAgent_Req.class)`), then a true
-  catch-all (`when(agentType_s, isAnyValue()).and(initialCommunication_s, isAnyValue()).to(...)`) last.
+  order specific combinations before broader fallbacks, not the other way around. For example, a support-
+  ticket-routing Trait dispatching on `(agentLevel, communicationType)` would list its exact
+  `(L1, Call)`/`(L1, Email)`/`(L2, Call)` cases first, then comm-type-only fallbacks
+  (`when(communicationType_s, isInstanceOf(Call.class)).to(DefaultCallAgent_Req.class)`), then a true
+  catch-all (`when(agentLevel_s, isAnyValue()).and(communicationType_s, isAnyValue()).to(...)`) last.
   Putting the catch-all first would shadow every other case.
 - **A Trait with no registered dispatch policy at all throws `IllegalStateException` the moment it's
   invoked** (`"Unknown dispatch policy: null"`), and a predicate-dispatch case set that leaves some possible
@@ -229,15 +229,19 @@ double-register.
 
 ## Choosing where the test lives
 
-Per this repo's `CONTRIBUTING.md`/`CLAUDE.md`:
-- **Module-specific unit test** (`src/test` of the module the Vajram lives in) — for a Vajram whose logic
-  is locally testable within that one module.
-- **End-to-end test** (in a `*-sample` project) — for a Vajram that composes across modules, so the
-  cross-module wiring itself is what's being verified.
+Two natural layers, and most repos that adopt Krystal end up wanting both:
+- **Module-local unit test** (`src/test` of the module the Vajram lives in) — for a Vajram whose logic is
+  locally testable within that one module, mocking dependencies via `VajramTestHarness` where needed.
+- **Cross-module/end-to-end test** — for a Vajram that composes across modules, so the cross-module wiring
+  itself (real dependencies, real graph assembly) is what's being verified, not just this Vajram's own logic
+  in isolation.
 
-Prefer covering new Vajrams in both layers where the feature genuinely spans both concerns (unit-level
-resolver/output correctness, and end-to-end graph wiring).
+Check this repo's own contributor docs (a `CONTRIBUTING.md`/`CLAUDE.md`/similar, if one exists) for which
+layer(s) it expects for a change of this shape, and follow existing test files in the same module as a
+template for structure/naming rather than inventing a new convention. Prefer covering new Vajrams in both
+layers where the feature genuinely spans both concerns (unit-level resolver/output correctness, and
+end-to-end graph wiring).
 
-After writing/updating the Vajram and its test, run the full sequence from `CONTRIBUTING.md`:
-`upgradeVersionLocal.macOS.sh`, then `./gradlew test --rerun-tasks -PunsafeCompile=true`, then
-`./gradlew build -PunsafeCompile=true`.
+After writing/updating the Vajram and its test, run this repo's normal test command (`./gradlew test`,
+`mvn test`, or whatever it actually uses) — this is what triggers the annotation processor and confirms the
+generated code (`_Req`, `_Fac`, etc.) actually compiles against what you wrote.

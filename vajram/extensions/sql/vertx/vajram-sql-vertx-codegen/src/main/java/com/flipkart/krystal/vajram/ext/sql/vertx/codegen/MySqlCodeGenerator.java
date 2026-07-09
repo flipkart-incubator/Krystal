@@ -5,8 +5,9 @@ import static javax.lang.model.element.Modifier.STATIC;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.models.Constants;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.InsertResultType;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.ReturningColumn;
 import com.flipkart.krystal.vajram.ext.sql.vertx.VertxSqlInsertResultUtil;
-import com.flipkart.krystal.vajram.ext.sql.vertx.codegen.InsertResultType.ReturningColumn;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;

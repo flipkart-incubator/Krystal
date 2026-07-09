@@ -23,7 +23,7 @@ public @interface DefaultValueStrategy {
      * Marks a column whose value is auto-assigned by the database (e.g. auto-increment IDs). Such
      * columns are excluded from INSERT value lists. To return auto-assigned values from an INSERT,
      * declare a {@code @ReturnOnInsert} interface listing the columns to return. Applicable to
-     * model fields of type {@code int}.
+     * model fields of integral type ({@code int}, {@code long}).
      */
     AUTO_ASSIGN_ID,
     /**

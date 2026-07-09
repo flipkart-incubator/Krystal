@@ -1,9 +1,12 @@
 package com.flipkart.krystal.vajram.ext.sql.vertx.codegen;
 
+import static java.util.Objects.requireNonNull;
+
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider;
 import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider.ModelProtocolConfig;
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.ColumnModel;
 import com.flipkart.krystal.vajram.ext.sql.codegen.syntax.SqlSyntax;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
@@ -18,15 +21,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.ServiceLoader.Provider;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.TypeMirror;
-import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
-final class VertxSqlUtil {
+record VertxSqlUtil(CodeGenUtility util, SqlSyntax syntax) {
+
   static final String SQL_VAJRAM_SUFFIX = "_VertxSql";
   static final String VERTX_SQL_POOL_FACET = "vertxSql_pool";
   static final String SQL_RESULT_FACET = "sqlResult";
@@ -35,13 +39,6 @@ final class VertxSqlUtil {
   static final ParameterizedTypeName ERRABLE_OF_ROW_SET_OF_ROW =
       ParameterizedTypeName.get(
           ClassName.get(Errable.class), ParameterizedTypeName.get(RowSet.class, Row.class));
-  @Getter private final CodeGenUtility util;
-  @Getter private final SqlSyntax syntax;
-
-  public VertxSqlUtil(CodeGenUtility util, SqlSyntax syntax) {
-    this.util = util;
-    this.syntax = syntax;
-  }
 
   static CodeBlock varArgsToList(List<CodeBlock> args) {
     return CodeBlock.of(
@@ -74,37 +71,56 @@ final class VertxSqlUtil {
     return config;
   }
 
-  public String vertxColumnGetter(String rowVar, String columnName, TypeMirror type) {
-    String q = "\"" + syntax.columnNameInResult(columnName) + "\"";
-    switch (type.getKind()) {
-      case LONG:
-        return rowVar + ".getLong(" + q + ")";
-      case INT:
-        return rowVar + ".getInteger(" + q + ")";
-      case BOOLEAN:
-        return rowVar + ".getBoolean(" + q + ")";
-      case DOUBLE:
-        return rowVar + ".getDouble(" + q + ")";
-      case FLOAT:
-        return rowVar + ".getFloat(" + q + ")";
-      case SHORT:
-        return rowVar + ".getShort(" + q + ")";
+  public CodeBlock readColumnAndSetValue(ColumnModel col, String alias) {
+    CodeBlock columnExpression = vertxColumnGetter(col, alias);
+    if (col.serdeInfo() != null) {
+      columnExpression =
+          loadProtocolConfig(requireNonNull(col.serdeInfo()).protocolTypeElement())
+              .createDeserializationExpression(columnExpression, col.javaType(), util());
     }
-    if (util.isRawAssignable(type, String.class)) {
-      return rowVar + ".getString(" + q + ")";
-    }
-    if (util.isRawAssignable(type, LocalDate.class)) {
-      return rowVar + ".getLocalDate(" + q + ")";
-    }
-    if (util.isRawAssignable(type, LocalDateTime.class)) {
-      return rowVar + ".getLocalDateTime(" + q + ")";
-    }
-    if (util.isRawAssignable(type, OffsetDateTime.class)) {
-      return rowVar + ".getOffsetDateTime(" + q + ")";
-    }
-    if (util.isRawAssignable(type, UUID.class)) {
-      return rowVar + ".getUUID(" + q + ")";
-    }
-    return rowVar + ".getValue(" + q + ")";
+    return CodeBlock.of("\n    .$L($L)", col.methodName(), columnExpression);
+  }
+
+  private static final Set<String> CUSTOM_GETTERS =
+      Set.of(
+          Boolean.class.getCanonicalName(),
+          Byte.class.getCanonicalName(),
+          Short.class.getCanonicalName(),
+          Integer.class.getCanonicalName(),
+          Long.class.getCanonicalName(),
+          Double.class.getCanonicalName(),
+          Float.class.getCanonicalName(),
+          String.class.getCanonicalName(),
+          UUID.class.getCanonicalName(),
+          LocalDate.class.getCanonicalName(),
+          LocalDateTime.class.getCanonicalName(),
+          OffsetDateTime.class.getCanonicalName());
+
+  private CodeBlock vertxColumnGetter(ColumnModel column, String alias) {
+    String computedGetterName =
+        column.serdeInfo() != null
+            ?
+            // If serdeInfo is present, read the raw value which can be used for deserialized
+            "getValue"
+            : switch (column.javaType().getKind()) {
+              case BOOLEAN -> "getBoolean";
+              case BYTE -> "getByte";
+              case SHORT -> "getShort";
+              case INT -> "getInteger";
+              case LONG -> "getLong";
+              case DOUBLE -> "getDouble";
+              case FLOAT -> "getFloat";
+              default -> {
+                String getterName = "getValue";
+                if (util.processingEnv().getTypeUtils().asElement(column.javaType())
+                    instanceof QualifiedNameable qualifiedNameable) {
+                  if (CUSTOM_GETTERS.contains(qualifiedNameable.getQualifiedName().toString())) {
+                    getterName = "get" + qualifiedNameable.getSimpleName();
+                  }
+                }
+                yield getterName;
+              }
+            };
+    return CodeBlock.of("$L.$L($S)", "_row", computedGetterName, syntax.columnNameInResult(alias));
   }
 }
