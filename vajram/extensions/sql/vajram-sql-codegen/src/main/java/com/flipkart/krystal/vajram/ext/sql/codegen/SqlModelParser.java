@@ -91,7 +91,6 @@ public final class SqlModelParser {
     String tableName = getTableName(tableElement);
     String parentPkColumn = findPkColumn(tableElement);
 
-    List<ScalarColumn> scalars = new ArrayList<>();
     List<JoinRelation> joins = new ArrayList<>();
 
     for (ExecutableElement method : util.getModelFields(selectionElement)) {
@@ -102,19 +101,16 @@ public final class SqlModelParser {
         if (join != null) {
           joins.add(join);
         }
-      } else {
-        boolean isOpt = util.isOptional(returnType);
-        TypeMirror actualType = util.getOptionalInnerType(returnType);
-        String dbColumnName = resolveColumnName(method);
-        SerdeColumnInfo serdeInfo = resolveSerdeInfoFromTable(dbColumnName, tableElement);
-        scalars.add(
-            new ScalarColumn(
-                method.getSimpleName().toString(), dbColumnName, actualType, isOpt, serdeInfo));
       }
     }
 
     return new SelectionInfo(
-        selectionElement, tableElement, tableName, parentPkColumn, scalars, joins);
+        selectionElement,
+        tableElement,
+        tableName,
+        parentPkColumn,
+        parseScalarColumns(selectionElement, tableElement),
+        joins);
   }
 
   // ─── WHERE inputs ─────────────────────────────────────────────────────────────
@@ -447,7 +443,7 @@ public final class SqlModelParser {
     for (ExecutableElement m : util.getModelFields(selectionElement)) {
       TypeMirror rt = m.getReturnType();
       if (getListElementSelection(rt) != null) {
-        continue; // skip List<@Selection> join methods
+        continue; // skip List<@Selection> join methods as these are not scalars
       }
       boolean isOpt = util.isOptional(rt);
       TypeMirror actualType = util.getOptionalInnerType(rt);
@@ -455,7 +451,7 @@ public final class SqlModelParser {
       SerdeColumnInfo serdeInfo = resolveSerdeInfoFromTable(dbColumnName, tableElement);
       result.add(
           new ScalarColumn(
-              m.getSimpleName().toString(), dbColumnName, actualType, isOpt, serdeInfo));
+              dbColumnName, m.getSimpleName().toString(), actualType, isOpt, serdeInfo));
     }
     return result;
   }

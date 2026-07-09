@@ -1,12 +1,11 @@
 package com.flipkart.krystal.vajram.ext.sql.vertx.codegen;
 
 import static com.flipkart.krystal.vajram.ext.sql.vertx.codegen.VertxSqlUtil.SQL_RESULT_FACET;
-import static com.flipkart.krystal.vajram.ext.sql.vertx.codegen.VertxSqlUtil.loadProtocolConfig;
-import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.Modifier.STATIC;
 
 import com.flipkart.krystal.codegen.common.models.Constants;
-import com.flipkart.krystal.vajram.ext.sql.vertx.codegen.InsertResultType.ReturningColumn;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.InsertResultType;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.ReturningColumn;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
@@ -19,13 +18,13 @@ import io.vertx.sqlclient.Row;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public final class SqlLiteCodeGenerator implements DialectCodeGenerator {
+public abstract sealed class PostGreCompatibleCodeGenerator implements DialectCodeGenerator
+    permits PostGreCodeGenerator, SqliteCodeGenerator {
   private final VertxSqlUtil vertxSqlUtil;
 
-  SqlLiteCodeGenerator(VertxSqlUtil vertxSqlUtil) {
+  PostGreCompatibleCodeGenerator(VertxSqlUtil vertxSqlUtil) {
     this.vertxSqlUtil = vertxSqlUtil;
   }
 
@@ -80,7 +79,7 @@ public final class SqlLiteCodeGenerator implements DialectCodeGenerator {
 
     CodeBlock.Builder chain = CodeBlock.builder().add("return $T._builder()", resultImmutPojo);
     for (ReturningColumn col : returningColumns) {
-      chain.add("\n    .$L($L)", col.methodName(), returningColumnExpression("_row", col));
+      chain.add(vertxSqlUtil.readColumnAndSetValue(col, col.methodName()));
     }
     chain.add("\n    ._build()");
     method.addStatement(chain.build());
@@ -117,7 +116,7 @@ public final class SqlLiteCodeGenerator implements DialectCodeGenerator {
 
     CodeBlock.Builder chain = CodeBlock.builder().add("_result.add($T._builder()", resultImmutPojo);
     for (ReturningColumn col : returningColumns) {
-      chain.add("\n    .$L($L)", col.methodName(), returningColumnExpression("_row", col));
+      chain.add(vertxSqlUtil.readColumnAndSetValue(col, col.methodName()));
     }
     chain.add("\n    ._build())");
     method.addStatement(chain.build());
@@ -125,32 +124,5 @@ public final class SqlLiteCodeGenerator implements DialectCodeGenerator {
     method.endControlFlow();
     method.addStatement("return _result");
     return method.build();
-  }
-
-  /**
-   * Returns a {@link CodeBlock} for extracting a column value from a RETURNING row. For columns
-   * with serde info, generates a deserialization call; otherwise delegates to {@link
-   * VertxSqlUtil#vertxColumnGetter}.
-   */
-  public CodeBlock returningColumnExpression(String rowVar, ReturningColumn col) {
-    if (col.serdeInfo() != null) {
-      return loadProtocolConfig(requireNonNull(col.serdeInfo()).protocolTypeElement())
-          .createDeserializationExpression(
-              CodeBlock.of(
-                  "$L.getValue($S)",
-                  rowVar,
-                  vertxSqlUtil.syntax().columnNameInResult(col.columnName())),
-              col.javaType(),
-              vertxSqlUtil.util());
-    }
-    if (col.isOptional()) {
-      // Wrap nullable DB value in Optional
-      return CodeBlock.of(
-          "$T.ofNullable($L)",
-          Optional.class,
-          vertxSqlUtil.vertxColumnGetter(rowVar, col.columnName(), col.javaType()));
-    }
-    return CodeBlock.of(
-        "$L", vertxSqlUtil.vertxColumnGetter(rowVar, col.columnName(), col.javaType()));
   }
 }
