@@ -12,7 +12,8 @@ implementations, builders, and serde wrappers.
 ```java
 
 @ModelRoot(type = RESPONSE)
-@SupportedModelProtocol({PlainJavaObject.class, Protobuf3.class})
+@SupportedModelProtocol(PlainJavaObject.class)
+@SupportedModelProtocol(Protobuf3.class)
 public interface OrderResponse extends Model {
 
   @SerialId(1)
@@ -59,6 +60,7 @@ public interface OrderResponse extends Model {
 | `pure`                    | `true`       | If true, all field types are restricted to primitives, boxed primitives, `String`, `PrimitiveArray` subtypes, `@ModelRoot` enums, pure `Model`s, and `List`/`Map` of these types. See [Model Purity](#model-purity).                                                                                                                                                                           |
 | `builderExtendsModelRoot` | `false`      | If true, the generated `Builder` interface also extends the model root interface, so builder instances can be used wherever the model root type is expected. See [Builder Extends ModelRoot](#builderExtendsModelRoot).                                                                                                                                                                        |
 | `suffixSeparator`         | `"_"`        | The separator between the model root name and the generated class suffix (e.g. `_Immut`, `_ImmutPojo`).                                                                                                                                                                                                                                                                                        |
+| `isShared`                | `false`      | If true, this model root is intended to be shared across other client modules/projects, which may generate their own code based on this model root. Client modules may need to generate code in a subpackage instead of the same package as the model root, to avoid split-package issues across modules.                                                                                    |
 
 ### Field Annotations
 
@@ -89,8 +91,10 @@ Documents the behavior when a field has no value. The possible strategies are:
   never fail if this field is `null`. In `RESPONSE` models it means that the API may return `null`
   for this field.
 - **`ASSUME_DEFAULT_VALUE`** — If absent, a type-specific default is assumed (0 for numbers, empty
-  string, empty list/map, false for booleans, empty model for models). This enables serialization
-  optimizations in protocols like Protobuf where defaults are not transmitted on the wire.
+  string, empty list/map, false for booleans, empty model for models, and — for a `@ModelRoot` enum
+  field — the constant annotated `@DefaultValue` on that enum, see [Enum ModelRoots](#enum-modelroots)).
+  This enables serialization optimizations in protocols like Protobuf where defaults are not
+  transmitted on the wire.
 
 **Models with `type = {REQUEST, RESPONSE}`:** Since `REQUEST` and `RESPONSE` have different
 `@IfAbsent` defaults, models with both types **must** have an explicit `@IfAbsent` annotation on
@@ -176,16 +180,21 @@ based on the model's `@SupportedModelProtocol`:
 | `PlainJavaObject` | `_ImmutPojo`    | In-memory POJO (generated in MODELS phase, see above).                                                                                                                                                                                                                               |
 | `Json`            | `_ImmutJson`    | Jackson-annotated wrapper. Implements `SerializableJsonModel`. Uses `@JsonProperty` and `@JsonDeserialize` for nested models. Deserialization of unknown enum values falls back to `UNKNOWN`.                                                                                        |
 | `Protobuf3`       | `_ImmutProto`   | Wraps a generated protobuf `_Proto` message builder. Implements `SerializableModel`. Getters and setters translate between proto types and Java types. For nested models, wraps/unwraps `_ImmutProto` instances. For enum fields, uses generated `<Enum>_ProtoUtils` for conversion. |
+| `Fory`            | `_ImmutFory`    | Wraps [Apache Fory](https://fory.apache.org/)'s JIT-compiled object-graph serializer. Implements `SerializableModel`. No IDL/schema file is generated (unlike Protobuf3) — Fory serializes the Java object graph directly.                                                          |
 
 Each serde implementation provides its own `Builder` inner class that also implements
 `_Immut.Builder`, so all implementations share the same builder contract.
 
 ### `@SupportedModelProtocol`
 
-Lists which `ModelProtocol` implementations the model supports:
+Lists which `ModelProtocol` implementations the model supports. `@SupportedModelProtocol` is
+`@Repeatable` and takes a single `Class` per annotation instance — declare one annotation per
+protocol, not a single annotation with an array value:
 
 ```java
-@SupportedModelProtocol({PlainJavaObject.class, Json.class, Protobuf3.class})
+@SupportedModelProtocol(PlainJavaObject.class)
+@SupportedModelProtocol(Json.class)
+@SupportedModelProtocol(Protobuf3.class)
 ```
 
 - If absent or empty, only the `_Immut` interface is generated (no POJO, no serde implementations).
@@ -199,9 +208,9 @@ Lists which `ModelProtocol` implementations the model supports:
 
 - **`ModelProtocol`** — base interface. `PlainJavaObject` implements this directly (no
   serialization).
-- **`SerdeProtocol`** — extends `ModelProtocol`. `Json` and `Protobuf3` implement this. Models that
-  support a `SerdeProtocol` are subject to additional constraints (e.g. enum map keys are
-  disallowed — see below).
+- **`SerdeProtocol`** — extends `ModelProtocol`. `Json`, `Protobuf3`, and `Fory` implement this.
+  Models that support a `SerdeProtocol` are subject to additional constraints (e.g. enum map keys
+  are disallowed — see below).
 
 ### Model Purity
 
@@ -348,6 +357,7 @@ For a model root `MyModel`:
 | `MyModel_ImmutJson` (class + inner Builder)  | FINAL  | `Json` in `@SupportedModelProtocol`                       |
 | `MyModel_ImmutProto` (class + inner Builder) | FINAL  | `Protobuf3` in `@SupportedModelProtocol`                  |
 | `MyModel_Proto.proto` (schema)               | FINAL  | `Protobuf3` in `@SupportedModelProtocol`                  |
+| `MyModel_ImmutFory` (class + inner Builder)  | FINAL  | `Fory` in `@SupportedModelProtocol`                       |
 
 ## Enum ModelRoots
 
@@ -359,9 +369,11 @@ annotated with `@ModelRoot` that implements the `EnumModel` marker interface.
 ```java
 
 @ModelRoot
-@SupportedModelProtocol({PlainJavaObject.class, Json.class, Protobuf3.class})
+@SupportedModelProtocol(PlainJavaObject.class)
+@SupportedModelProtocol(Json.class)
+@SupportedModelProtocol(Protobuf3.class)
 public enum Priority implements EnumModel {
-  @SerialId(0) UNKNOWN,
+  @DefaultValue @SerialId(0) UNKNOWN,
   @SerialId(1) LOW,
   @SerialId(2) MEDIUM,
   @SerialId(3) HIGH
@@ -377,6 +389,10 @@ public enum Priority implements EnumModel {
   allowed. If `@SerialId` is not used, the binary index used by serde protocols defaults to the
   ordinal (declaration order), with `UNKNOWN = 0`. This all-or-none rule applies to all `@ModelRoot`
   types (both enums and interface models).
+- **`@DefaultValue`.** Mark exactly one constant (conventionally `UNKNOWN`, the required first
+  constant) with `@DefaultValue`. This is the constant a field of this enum type resolves to when
+  `@IfAbsent(ASSUME_DEFAULT_VALUE)` applies and no value was supplied — see [`@IfAbsent`](#ifabsent).
+  At least one constant must carry `@DefaultValue` for the enum to be usable with that strategy.
 - **Pure models.** Pure models (where `@ModelRoot(pure = true)`) can only reference enums that
   themselves carry a `@ModelRoot` annotation. Plain Java enums without `@ModelRoot` are not allowed
   as field types in pure models.
@@ -408,7 +424,9 @@ Enum models can be used as fields in other `@ModelRoot` models:
 ```java
 
 @ModelRoot
-@SupportedModelProtocol({PlainJavaObject.class, Json.class, Protobuf3.class})
+@SupportedModelProtocol(PlainJavaObject.class)
+@SupportedModelProtocol(Json.class)
+@SupportedModelProtocol(Protobuf3.class)
 public interface Task extends Model {
 
   @SerialId(1)
@@ -454,18 +472,18 @@ public interface GetOrderInputs extends VajramInputs<OrderResponse> {
 
 | Attribute       | Description                                                                                                             |
 |-----------------|-------------------------------------------------------------------------------------------------------------------------|
-| `parentPackage` | The parent package for the generated request interface. The request is generated in `parentPackage + ".shared_models"`. |
+| `parentPackage` | The parent package for the generated request interface. The request is generated in `parentPackage + ".gen"` (the same `SHARED_MODELS_SUB_PACKAGE` suffix used for any model with `@ModelRoot(isShared = true)`). |
 | `vajramId`      | The ID of the Vajram that uses this interface as its inputs definition.                                                 |
 
 ### How It Works
 
-1. The `SharedModelsGenProcessor` (an annotation processor) discovers interfaces annotated with
+1. The `VajramInputsGenProcessor` (an annotation processor) discovers interfaces annotated with
    `@InputsForVajram`.
 2. It extracts the response type from the `VajramInputs<T>` type parameter.
 3. It builds `DefaultFacetModel` instances from the interface's methods (each method becomes an
    input facet).
 4. It delegates to `VajramCodeGenerator.generateVajramRequest()` to generate the request interface
-   (`_Req`) in the `parentPackage.shared_models` package.
+   (`_Req`) in the `parentPackage.gen` package.
 
 ### Repeatable Annotation
 

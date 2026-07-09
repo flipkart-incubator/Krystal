@@ -4,7 +4,6 @@ import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryBuilder.buildJoinSql;
 import static com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryBuilder.buildSimpleSql;
 import static com.flipkart.krystal.vajram.ext.sql.lang.LIMIT.NO_LIMIT;
-import static com.flipkart.krystal.vajram.ext.sql.vertx.codegen.VertxSqlUtil.loadProtocolConfig;
 import static com.flipkart.krystal.vajram.ext.sql.vertx.codegen.VertxSqlUtil.varArgsToList;
 import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.Modifier.ABSTRACT;
@@ -79,6 +78,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
   private final VajramCodeGenUtility vajramUtil;
   private final VajramInfo executeSqlVajram;
   private final SqlSyntax syntax;
+  private final VertxSqlUtil vertxSqlUtil;
 
   public SqlSelectVajramGen(
       VajramCodeGenUtility vajramUtil,
@@ -91,6 +91,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
     this.vajramUtil = vajramUtil;
     this.executeSqlVajram = vajramUtil.computeVajramInfo(ExecuteVertxSql.class);
     this.syntax = SqlSyntax.forDialect(sqlDialect);
+    this.vertxSqlUtil = new VertxSqlUtil(util, syntax);
   }
 
   // ─── Entry point ─────────────────────────────────────────────────────────────
@@ -445,23 +446,12 @@ public class SqlSelectVajramGen implements CodeGenerator {
 
     CodeBlock.Builder chain = CodeBlock.builder().add("return $T._builder()", resultImmutPojo);
     for (ScalarColumn col : proj.scalars()) {
-      chain.add(readColumnAndSetValue(col, col.methodName()));
+      chain.add(vertxSqlUtil.readColumnAndSetValue(col, col.methodName()));
     }
     chain.add("\n    ._build()");
     method.addStatement(chain.build());
 
     return method.build();
-  }
-
-  private CodeBlock readColumnAndSetValue(ScalarColumn col, String alias) {
-    CodeBlock columnExpression =
-        rowGetter("_row", syntax.columnNameInResult(alias), col.javaType());
-    if (col.serdeInfo() != null) {
-      columnExpression =
-          loadProtocolConfig(requireNonNull(col.serdeInfo()).protocolTypeElement())
-              .createDeserializationExpression(columnExpression, col.javaType(), util);
-    }
-    return CodeBlock.of("\n    .$L($L)", col.methodName(), columnExpression);
   }
 
   /** Maps all rows to a {@code List<result>}. */
@@ -482,7 +472,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
 
     CodeBlock.Builder chain = CodeBlock.builder().add("_result.add($T._builder()", resultImmutPojo);
     for (ScalarColumn col : proj.scalars()) {
-      chain.add(readColumnAndSetValue(col, col.methodName()));
+      chain.add(vertxSqlUtil.readColumnAndSetValue(col, col.methodName()));
     }
     chain.add("\n    ._build())");
     method.addStatement(chain.build());
@@ -592,7 +582,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
         CodeBlock.builder().add("_parentBuilders.put(_parentKey, $T._builder()", resultImmutPojo);
     for (ScalarColumn col : selection.scalars()) {
       String alias = selection.tableName() + "_" + col.methodName();
-      parentChain.add(readColumnAndSetValue(col, alias));
+      parentChain.add(vertxSqlUtil.readColumnAndSetValue(col, alias));
     }
     parentChain.add(")");
     method.addStatement(parentChain.build());
@@ -635,7 +625,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
                 .add("_$L.get(_parentKey).add($T._builder()", join.methodName(), joinImmutPojo);
         for (ScalarColumn col : join.columns()) {
           String alias = join.methodName() + "_" + col.methodName();
-          childChain.add(readColumnAndSetValue(col, alias));
+          childChain.add(vertxSqlUtil.readColumnAndSetValue(col, alias));
         }
         childChain.add("\n    ._build())");
         method.addStatement(childChain.build());
@@ -667,7 +657,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
                     joinImmutPojo);
         for (ScalarColumn col : join.columns()) {
           String alias = join.methodName() + "_" + col.methodName();
-          l1Chain.add(readColumnAndSetValue(col, alias));
+          l1Chain.add(vertxSqlUtil.readColumnAndSetValue(col, alias));
         }
         l1Chain.add(")");
         method.addStatement(l1Chain.build());
@@ -705,7 +695,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
                       nestedImmutPojo);
           for (ScalarColumn col : nested.columns()) {
             String alias = nested.methodName() + "_" + col.methodName();
-            l2Chain.add(readColumnAndSetValue(col, alias));
+            l2Chain.add(vertxSqlUtil.readColumnAndSetValue(col, alias));
           }
           l2Chain.add("\n    ._build())");
           method.addStatement(l2Chain.build());
@@ -858,7 +848,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
         CodeBlock.builder().add("_parent = $T._builder()", resultImmutPojo);
     for (ScalarColumn col : proj.scalars()) {
       String alias = proj.tableName() + "_" + col.methodName();
-      parentChain.add(readColumnAndSetValue(col, alias));
+      parentChain.add(vertxSqlUtil.readColumnAndSetValue(col, alias));
     }
     method.addStatement(parentChain.build());
 
@@ -901,7 +891,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
             CodeBlock.builder().add("_$L.add($T._builder()", join.methodName(), joinImmutPojo);
         for (ScalarColumn col : join.columns()) {
           String alias = join.methodName() + "_" + col.methodName();
-          childChain.add(readColumnAndSetValue(col, alias));
+          childChain.add(vertxSqlUtil.readColumnAndSetValue(col, alias));
         }
         childChain.add("\n    ._build())");
         method.addStatement(childChain.build());
@@ -933,7 +923,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
                     joinImmutPojo);
         for (ScalarColumn col : join.columns()) {
           String alias = join.methodName() + "_" + col.methodName();
-          l1Chain.add(readColumnAndSetValue(col, alias));
+          l1Chain.add(vertxSqlUtil.readColumnAndSetValue(col, alias));
         }
         l1Chain.add(")");
         method.addStatement(l1Chain.build());
@@ -973,7 +963,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
                       nestedImmutPojo);
           for (ScalarColumn col : nested.columns()) {
             String alias = nested.methodName() + "_" + col.methodName();
-            l2Chain.add(readColumnAndSetValue(col, alias));
+            l2Chain.add(vertxSqlUtil.readColumnAndSetValue(col, alias));
           }
           l2Chain.add("\n    ._build())");
           method.addStatement(l2Chain.build());
@@ -1052,13 +1042,13 @@ public class SqlSelectVajramGen implements CodeGenerator {
   private String findSentinelMethodName(JoinRelation join) {
     if (join.childPkColumn() != null) {
       for (ScalarColumn col : join.columns()) {
-        if (col.dbColumnName().equals(join.childPkColumn())) {
+        if (col.columnName().equals(join.childPkColumn())) {
           return col.methodName();
         }
       }
     }
     for (ScalarColumn col : join.columns()) {
-      if (col.dbColumnName().equals(join.childJoinColumn())) {
+      if (col.columnName().equals(join.childJoinColumn())) {
         return col.methodName();
       }
     }
@@ -1092,7 +1082,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
   private String findDedupeKeyMethodName(JoinRelation join) {
     if (join.childPkColumn() != null) {
       for (ScalarColumn col : join.columns()) {
-        if (col.dbColumnName().equals(join.childPkColumn())) {
+        if (col.columnName().equals(join.childPkColumn())) {
           return col.methodName();
         }
       }

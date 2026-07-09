@@ -11,7 +11,7 @@ import java.util.List;
  * <p>Obtain an instance via {@link #forDialect(SqlDialect)}.
  */
 public sealed interface SqlSyntax
-    permits MySql8Syntax, PostgreSqlSyntax, Sql2023Syntax, SqlLite3_35Syntax {
+    permits MySql8Syntax, PostgreSqlSyntax, Sql2023Syntax, Sqlite3_35Syntax {
 
   /**
    * Returns the appropriate {@link SqlSyntax} implementation for the given SQL dialect.
@@ -24,7 +24,7 @@ public sealed interface SqlSyntax
       case POSTGRESQL_18 -> PostgreSqlSyntax.INSTANCE;
       case MYSQL_8 -> MySql8Syntax.INSTANCE;
       case SQL_2023 -> Sql2023Syntax.INSTANCE;
-      case SQL_LITE_3_35 -> SqlLite3_35Syntax.INSTANCE;
+      case SQLITE_3_35 -> Sqlite3_35Syntax.INSTANCE;
     };
   }
 

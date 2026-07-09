@@ -55,6 +55,12 @@ when you want the Java accessor name to diverge from the physical column (e.g. `
 column). Also usable at the type level for aliasing in `@Selection`/`@WHERE` interfaces (out of scope for this
 skill — that's query modeling, not schema modeling).
 
+**Don't add `@Column` on a `@Table`/`@Selection` method whose name already matches the column name.** The column
+name defaults to the method name, so restating it with `@Column("sameName")` is redundant noise — reserve the
+annotation for the actual divergence case above. (`@WHERE` predicate methods are the one place this default doesn't
+help — see `references/queries.md`, since predicate method names are conventionally named for the operator, not the
+column, so `@Column` is doing real work there on every method, not just the exceptions.)
+
 ## `@PrimaryKey`
 
 Method-level, no attributes. Marks the single PK column. There must be exactly one per table.

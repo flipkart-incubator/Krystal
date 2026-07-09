@@ -46,7 +46,7 @@ public final class SqlQueryBuilder {
       SelectionInfo proj, List<WhereInput> whereInputs, List<ORDER> orderBys, int limit) {
     List<String> cols = new ArrayList<>();
     for (ScalarColumn col : proj.scalars()) {
-      cols.add(colExpr(col.dbColumnName(), col.methodName()));
+      cols.add(colExpr(col.columnName(), col.methodName()));
     }
     CodeBlock.Builder sql = CodeBlock.builder();
     sql.add(
@@ -99,7 +99,7 @@ public final class SqlQueryBuilder {
     // Add parent PK sentinel only if it is not already projected as a scalar.
     boolean pkAlreadyProjected =
         parentPkCol != null
-            && selection.scalars().stream().anyMatch(c -> c.dbColumnName().equals(parentPkCol));
+            && selection.scalars().stream().anyMatch(c -> c.columnName().equals(parentPkCol));
 
     if (parentPkAlias != null && !pkAlreadyProjected) {
       cols.add(selection.tableName() + "." + parentPkCol + " AS " + parentPkAlias);
@@ -109,7 +109,7 @@ public final class SqlQueryBuilder {
       cols.add(
           selection.tableName()
               + "."
-              + col.dbColumnName()
+              + col.columnName()
               + " AS "
               + selection.tableName()
               + "_"
@@ -121,7 +121,7 @@ public final class SqlQueryBuilder {
       // Add child PK sentinel if this join has nested joins and the PK is not already projected
       if (!join.nestedJoins().isEmpty() && join.childPkColumn() != null) {
         boolean childPkSelected =
-            join.columns().stream().anyMatch(c -> c.dbColumnName().equals(join.childPkColumn()));
+            join.columns().stream().anyMatch(c -> c.columnName().equals(join.childPkColumn()));
         if (!childPkSelected) {
           cols.add(
               join.methodName()
@@ -137,7 +137,7 @@ public final class SqlQueryBuilder {
         cols.add(
             join.methodName()
                 + "."
-                + col.dbColumnName()
+                + col.columnName()
                 + " AS "
                 + join.methodName()
                 + "_"
@@ -149,7 +149,7 @@ public final class SqlQueryBuilder {
           cols.add(
               nested.methodName()
                   + "."
-                  + col.dbColumnName()
+                  + col.columnName()
                   + " AS "
                   + nested.methodName()
                   + "_"

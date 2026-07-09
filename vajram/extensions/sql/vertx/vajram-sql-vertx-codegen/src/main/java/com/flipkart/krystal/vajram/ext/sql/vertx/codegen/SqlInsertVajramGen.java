@@ -25,6 +25,9 @@ import com.flipkart.krystal.vajram.ext.sql.codegen.InsertQueryModel;
 import com.flipkart.krystal.vajram.ext.sql.codegen.InsertQueryModel.TableColumn;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlDriverConfig;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlModelParser;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.InsertResultType;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.ReturningColumn;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.SerdeColumnInfo;
 import com.flipkart.krystal.vajram.ext.sql.codegen.syntax.SqlSyntax;
 import com.flipkart.krystal.vajram.ext.sql.lang.ReturnOnInsert;
@@ -34,7 +37,6 @@ import com.flipkart.krystal.vajram.ext.sql.model.DefaultValueStrategy;
 import com.flipkart.krystal.vajram.ext.sql.model.DefaultValueStrategy.ValueComputation;
 import com.flipkart.krystal.vajram.ext.sql.model.IncomingForeignKey;
 import com.flipkart.krystal.vajram.ext.sql.vertx.ExecuteVertxSql;
-import com.flipkart.krystal.vajram.ext.sql.vertx.codegen.InsertResultType.ReturningColumn;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
@@ -370,7 +372,7 @@ public class SqlInsertVajramGen implements CodeGenerator {
       SqlSyntax syntax,
       List<ReturningColumn> returningColumns) {
     List<String> returningColNames =
-        returningColumns.stream().map(ReturningColumn::columnName).toList();
+        returningColumns.stream().map(SqlQueryModel.ReturningColumn::columnName).toList();
     MethodSpec.Builder method =
         MethodSpec.methodBuilder("resolveSql")
             .addModifiers(STATIC)
@@ -476,7 +478,7 @@ public class SqlInsertVajramGen implements CodeGenerator {
     for (TableColumn col : model.columns()) {
       args.add(columnAccessor(model.inputParamName(), col));
     }
-    method.addStatement("return $T.from($L)", ClassName.get(Tuple.class), varArgsToList(args));
+    method.addStatement("return $T.wrap($L)", ClassName.get(Tuple.class), varArgsToList(args));
   }
 
   private void buildDynamicParams(MethodSpec.Builder method, InsertQueryModel model) {
@@ -489,7 +491,7 @@ public class SqlInsertVajramGen implements CodeGenerator {
     }
 
     method.endControlFlow();
-    method.addStatement("return $T.from(_params)", ClassName.get(Tuple.class));
+    method.addStatement("return $T.wrap(_params)", ClassName.get(Tuple.class));
   }
 
   /** Generates the code to access a column value from a table model variable. */
