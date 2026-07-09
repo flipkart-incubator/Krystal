@@ -4,5 +4,5 @@ public enum SqlDialect {
   SQL_2023,
   MYSQL_8,
   POSTGRESQL_18,
-  SQL_LITE_3_35
+  SQLITE_3_35
 }

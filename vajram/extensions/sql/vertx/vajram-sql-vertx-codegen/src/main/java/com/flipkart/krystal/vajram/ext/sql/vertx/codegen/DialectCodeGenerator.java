@@ -19,7 +19,7 @@ sealed interface DialectCodeGenerator
       case SQL_2023 -> new Sql2023CodeGenerator();
       case MYSQL_8 -> new MySqlCodeGenerator(vertxSqlUtil);
       case POSTGRESQL_18 -> new PostGreCodeGenerator(vertxSqlUtil);
-      case SQL_LITE_3_35 -> new SqliteCodeGenerator(vertxSqlUtil);
+      case SQLITE_3_35 -> new SqliteCodeGenerator(vertxSqlUtil);
     };
   }
 }

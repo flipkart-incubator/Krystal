@@ -258,7 +258,7 @@ convention of its own (check first, per SKILL.md Step 1).
 
 ## Sanity checklist for a new query
 
-- Every `ColumnPredicate`/`SqlOrPredicate` method has an explicit `@Column("columnName")` (its name won't match the
+- Every `ColumnPredicate` method has an explicit `@Column("columnName")` (its name won't match the
   column by convention); every `@Selection` method only has one if its name genuinely diverges from the column.
 - No `Model` interface carries `@SupportedModelProtocol(PlainJavaObject.class)` — that's the implicit default, so
   stating it is redundant; only present when the model needs a genuinely different/additional protocol.
