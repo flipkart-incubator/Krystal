@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajram.codegen.common.models;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.lang.Boolean.TRUE;
+import static java.util.Arrays.stream;
 
 import com.flipkart.krystal.annos.CallGraphDelegationMode;
 import com.flipkart.krystal.vajram.codegen.common.models.LogicMethods.OutputLogics;
@@ -13,12 +14,13 @@ import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.google.common.collect.ImmutableList;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -78,19 +80,12 @@ public record ParsedVajramData(
           util.extractFacetName(
               vajramInfo.lite().vajramId().id(), checkNotNull(resolve).dep(), method);
       @SuppressWarnings("method.invocation")
-      String depVajramId =
+      DependencyModel dependency =
           vajramInfo.dependencies().stream()
               .filter(d -> d.name().equals(dep))
               .findFirst()
-              .orElseThrow()
-              .depVajramInfo()
-              .vajramId()
-              .id();
-      List<String> depInputNames =
-          Arrays.stream(resolve.depInputs())
-              .map(di -> util.extractFacetName(depVajramId, di, method))
-              .toList();
-      for (String depInputName : depInputNames) {
+              .orElseThrow();
+      for (String depInputName : getDepInputNames(method, dependency, resolve, util)) {
         if (TRUE.equals(
             lookUpMap.computeIfAbsent(dep, k -> new LinkedHashMap<>()).put(depInputName, true))) {
           String errorMessage =
@@ -204,5 +199,24 @@ public record ParsedVajramData(
 
   private static boolean isStatic(Element element) {
     return element.getModifiers().contains(Modifier.STATIC);
+  }
+
+  public static Set<String> getDepInputNames(
+      ExecutableElement method,
+      DependencyModel dependencyModel,
+      Resolve resolve,
+      VajramCodeGenUtility util) {
+    VajramInputsInfo depVajramInfo = dependencyModel.depVajramInfo();
+    String[] depInputs = resolve.depInputs();
+    if (depInputs.length == 0) {
+      // This means all depInputs need to be resolved. so infer the same
+      return depVajramInfo.inputs().stream()
+          .map(DefaultFacetModel::name)
+          .collect(LinkedHashSet::new, LinkedHashSet::add, LinkedHashSet::addAll);
+    } else {
+      return stream(depInputs)
+          .map(di -> util.extractFacetName(depVajramInfo.vajramId().id(), di, method))
+          .collect(LinkedHashSet::new, LinkedHashSet::add, LinkedHashSet::addAll);
+    }
   }
 }

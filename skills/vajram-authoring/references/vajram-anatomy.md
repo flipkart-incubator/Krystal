@@ -31,12 +31,12 @@ public abstract class GetUserWithProfile extends ComputeVajramDef<UserWithProfil
   }
 
   @Resolve(dep = user_n, depInputs = GetUser_Req.userId_n)
-  public static One2OneCommand<String> userIdForGetUser(String userId) {
+  static One2OneCommand<String> userIdForGetUser(String userId) {
     return executeWith(userId);
   }
 
   @Resolve(dep = userProfile_n, depInputs = GetUserProfile_Req.userProfileId_n)
-  public static One2OneCommand<String> profileIdForGetUserProfile(User user) {
+  static One2OneCommand<String> profileIdForGetUserProfile(User user) {
     return executeWith(user.userProfileId());
   }
 
@@ -56,6 +56,9 @@ The nested types are literally named `_Inputs` and `_InternalFacets` (underscore
 annotation processor scans for these exact names. `_Inputs` holds client-facing inputs (the public
 contract); `_InternalFacets` holds `@Dependency` and `@Inject` facets the client never supplies.
 
+**Always declare both as `interface` with no-arg methods.** The older `static class`-with-fields style
+is legacy and may lose codegen support in a future framework version — do not use it for new code.
+
 ## `@IfAbsent` — the only optionality mechanism
 
 `com.flipkart.krystal.model.IfAbsent`, on every input/dependency facet. This replaced older
@@ -73,6 +76,12 @@ contract); `_InternalFacets` holds `@Dependency` and `@Inject` facets the client
 On a `@Dependency` facet, `@IfAbsent` describes what happens if the dependency was never invoked, or all
 its (possibly fanned-out) invocations failed.
 
+**Facet data types must never be `Optional<T>`.** All facets are optional-by-default at the framework
+level; the `@IfAbsent` annotation is the sole mechanism for expressing optionality. Always declare the raw
+return type `T` on `_Inputs` and `_InternalFacets` methods — wrapping in `Optional` is incorrect, is not
+understood by the codegen, and will produce confusing behavior. `Optional<T>` is valid *only* as a
+parameter type in `@Resolve` or `@Output` methods, where it means "give me the value if present".
+
 **One-way door**: never flip a facet between mandatory and optional on a Vajram that already has callers —
 treat it as a breaking API change.
 
@@ -80,47 +89,123 @@ treat it as a breaking API change.
 
 `com.flipkart.krystal.vajram.facets.Dependency`, on an `_InternalFacets` member:
 
-- `onVajram = SomeVajram.class` — direct reference to the dependency's implementation class. Only use this
-  within the same buildable module; it's tight coupling (pulls the dependency's implementation onto this
-  Vajram's classpath).
-- `withVajramReq = SomeVajram_Req.class` — reference only the dependency's generated request class.
-  Prefer this when possible — it keeps the dependency's implementation off this Vajram's compile classpath,
-  so the dependency can later move to a different service/runtime without touching dependents.
+- `onVajram = SomeVajram.class` — use when the dependency Vajram's implementation is on this project's
+  compile classpath, i.e. it lives in the same project or in a project that this project directly depends
+  on. This is the common case for intra-service dependencies.
+- `withVajramReq = SomeVajram_Req.class` — use **only** when the dependency Vajram runs in a separate
+  process and its implementation class is intentionally **not** on this project's classpath (e.g. a
+  cross-service call whose impl lives in another deployable). Using `withVajramReq` when the implementation
+  is actually on the classpath is incorrect — the runtime won't be able to locate and wire the Vajram.
 - `canFanout = true` — this dependency may be invoked multiple times per invocation of the current Vajram
   (e.g. once per element of a list). Requires exactly one fanout resolver (see below).
 
 ## `@Resolve` — the primary resolver mechanism
 
-A Vajram is responsible for computing the inputs of its own dependencies. Prefer `@Resolve`-annotated
-static methods over the `getSimpleInputResolvers()` DSL (below) whenever possible — only `@Resolve`
-methods are statically analyzable by the annotation processor, which matters for batching correctness and
-build-time DAG validation.
+A Vajram is responsible for computing the inputs of its own dependencies using `@Resolve`-annotated
+package-private static methods. Two project-level style options exist (choose one per project via
+Convention B in the skill's Step 2 — the choice applies uniformly across all Vajrams in the codebase):
+
+### Option 1 *(Recommended)* — one `@Resolve` per dependency, returning the req builder
+
+Resolves **all** inputs of a dependency in a single method by leaving `depInputs` unset (empty default)
+and returning the dependency's **request builder**. Declare the return type as `<Dep>_Req` — the
+generated builder (`<Dep>_ReqImmut.Builder`) extends `<Dep>_Req`, so this compiles and reads more
+concisely. The framework interprets an empty `depInputs` as "resolve every input of this dependency".
+Do **not** call `._build()` — return the builder itself. Instantiate via `<Dep>_Req._builder()`.
 
 ```java
-@Resolve(dep = userInfo_n, depInputs = UserService_Req.userId_n)
-public static String userIdForUserService(String userId) { return userId; }
+@Resolve(dep = userInfo_n)
+static UserService_Req resolveUserInfo(String userId, String region) {
+    return UserService_Req._builder().userId(userId).region(region);
+}
 ```
 
-- `dep` — the qualified facet-name constant (generated, `<facetName>_n`) of the dependency facet on *this*
-  Vajram being resolved. Never a hand-written string.
-- `depInputs` — one or more qualified facet-name constants from the dependency's generated `<Dep>_Req`
-  class, identifying which input(s) of the dependency this method resolves. A `String[]` for multiple
-  (tuple) inputs.
-- Parameters bind by name to already-available facets of the current Vajram: its own inputs, or another
-  dependency's already-resolved output. Parameter type is the raw type `T` (mandatory facet), `Optional<T>`,
-  or `Errable<T>` (optional facet).
-- Return type, non-fanout dependency:
-  - `T` or `Optional<T>` — value(s) bound directly to the dependency input(s).
-  - `One2OneCommand<T>` — `One2OneCommand.executeWith(value)` or `.skipExecution("reason")`, when the
-    resolver needs to conditionally skip the dependency call entirely.
-- Return type, fanout dependency (`canFanout = true`):
-  - `FanoutCommand<T>` — `FanoutCommand.executeFanoutWith(collection)` or `.skipFanout("reason")`.
-  - Or a plain `Collection<T>`/`Collection<R>` (R = dependency's request type), one element per invocation.
+Two important properties of the empty-`depInputs` form:
+
+1. **Covers future inputs automatically.** Because it is interpreted as "all inputs, including any
+   added later", adding a new input to the dependency does not require creating a new resolver in the
+   calling Vajram — the existing method just needs the new input set on the builder.
+2. **No other resolvers allowed.** A Vajram that has a resolver with empty `depInputs` for a given
+   dependency **must not** have any other resolver for that same dependency — neither another
+   `@Resolve` method nor an entry in `getSimpleInputResolvers()`. This is a hard framework constraint.
+
+### Option 2 — per-input resolvers (plus DSL for single-facet resolvers)
+
+Set `depInputs` to one or more `<Dep>_Req.<inputName>_n` constants to resolve specific inputs
+individually. The framework enforces different return-type rules depending on how many constants you
+list:
+
+**Sub-form 2a — exactly one `depInputs` entry** (typical case for Option 2):
+The method resolves one dependency input and returns a single value.
+
+```java
+// One facet consumed to resolve one dep input:
+@Resolve(dep = userInfo_n, depInputs = UserService_Req.userId_n)
+static String userIdForUserService(String userId, String tenantId) { ... }
+
+// Single-facet → DSL (getSimpleInputResolvers):
+// dep(userInfo_s, depInput(UserService_Req.region_s).usingAsIs(region_s).asResolver())
+```
+
+**Sub-form 2b — two or more `depInputs` entries** (partial bulk-resolution):
+The method resolves multiple dependency inputs at once and **must** return a `<Dep>_Req` (same as
+Option 1) — the framework requires a request/builder whenever more than one input is being set.
+
+```java
+@Resolve(dep = userInfo_n, depInputs = {UserService_Req.userId_n, UserService_Req.region_n})
+static UserService_Req resolveUserInfoPartial(String userId, String region) {
+    return UserService_Req._builder().userId(userId).region(region);
+}
+```
+
+More verbose than Option 1, but supports lazy/streaming use cases where individual dependency inputs
+become available at different times.
+
+### Common rules for both options
+
+- `dep` — always the generated `<facetName>_n` constant of the dependency facet on *this* Vajram. Never
+  a hand-written string.
+- `depInputs` — omit (empty) for Option 1; one or more `<Dep>_Req.<inputName>_n` constants for
+  Option 2. Never hand-written strings.
+- Parameters bind by name to already-available facets of the current Vajram: its own inputs or another
+  dependency's already-resolved output. Parameter type options:
+  - `T` — mandatory facet (`@IfAbsent(FAIL)` or `ASSUME_DEFAULT_VALUE`).
+  - `@Nullable T` or `Optional<T>` — optional facet; use whichever the project chose in Convention A.
+  - `Errable<T>` — only when you need to distinguish "value was absent" from "dependency failed".
+- **Return type — non-fanout dependency, determined by `depInputs` length:**
+  - `depInputs` **empty** (Option 1) or **2+ entries** (Option 2b): return `<Dep>_Req`
+    (the builder from `<Dep>_Req._builder()` is a `<Dep>_Req`; do not call `._build()`), or
+    `One2OneCommand<<Dep>_Req>` to conditionally skip.
+  - `depInputs` **exactly one entry** (Option 2a): return `T`, `Optional<T>`, or
+    `One2OneCommand<T>` to conditionally skip.
+- **Return type — fanout dependency** (`canFanout = true`):
+  - For Option 1 (empty `depInputs`) and Option 2b (2+ `depInputs`): must return
+    `FanoutCommand<<Dep>_ReqImmut.Builder>` — Krystal enforces the concrete builder type (not
+    `<Dep>_Req`) for fanout resolvers for performance reasons. Use
+    `FanoutCommand.executeFanoutWith(builderCollection)` or `.skipFanout("reason")`.
+  - For Option 2a (single `depInputs`): return `FanoutCommand<T>` where `T` is the single input's
+    value type, or a plain `Collection<T>`, one element per invocation.
 - At most one fanout resolver per fanout dependency.
-- Resolvers must never perform IO or block. Prefer `skipExecution`/`skipFanout` over throwing for
-  expected-skip cases (throwing carries stack-trace-creation overhead); if you must throw for a
-  performance-sensitive path, use `StackTracelessException` from `krystal-common`.
+- Resolvers must never perform IO or block.
+- **For expected-skip cases, always use `skipExecution`/`skipFanout` — never throw.** Throwing creates a
+  stack trace even when the exception is caught immediately, which is expensive on hot paths. Only throw
+  for genuinely unexpected errors.
+- **When you must throw**, prefer `KrystalCompletionException`
+  (`com.flipkart.krystal.except.KrystalCompletionException`) or a custom subtype over a plain
+  `RuntimeException`. Benefits:
+  - Stack-trace filling is controlled per-thread via `KrystalExceptions.getStackTracingStrategyForCurrentThread()`
+    (`FILL` / `DEFAULT` / `DONT_FILL`) — production threads can skip the expensive `fillInStackTrace`
+    call while debugging threads still get full traces.
+  - It extends `CompletionException` directly, so `CompletableFuture` does not double-wrap it in
+    another `CompletionException` (double-wrapping has been observed to cost up to 20% extra CPU).
+  - Use the static helper `KrystalCompletionException.wrapAsCompletionException(Throwable)` to safely
+    wrap an arbitrary exception without double-wrapping.
+  - Create a domain-specific subtype (e.g. `class UserNotFoundException extends KrystalCompletionException`)
+    for better caller-side error categorisation without sacrificing any of the above.
 - No resolver cycles — the build fails if resolvers form a dependency cycle.
+- **Access modifier**: `@Resolve` methods must be package-private (no modifier). They cannot be `private`
+  because the generated `_Wrpr` subclass invokes them; they must not be `public` or `protected` because
+  nothing outside the package should call them directly.
 
 ## `getSimpleInputResolvers()` — the DSL alternative
 
@@ -147,9 +232,16 @@ Exactly one `@Output` method per Vajram computes the final result, after depende
 `ComputeVajramDef` output methods return the raw type `T`; `IOVajramDef` output methods return
 `CompletableFuture<T>` and must return promptly — kick off async work and return the future, never block.
 
-Parameters bind by name to facets, typed as `T`, `Optional<T>`, `Errable<T>`, or — for a fan-out dependency
-— `FanoutDepResponses<DepReq, DepOutput>`, which exposes `.requestResponsePairs()`; each pair's
-`.response()` is an `Errable<DepOutput>` (use `.valueOpt()`).
+Parameters bind by name to facets. Supported parameter types:
+- `T` — mandatory facet (`@IfAbsent(FAIL)` / `ASSUME_DEFAULT_VALUE`).
+- `@Nullable T` or `Optional<T>` — optional facet (`@IfAbsent(WILL_NEVER_FAIL)` /
+  `MAY_FAIL_CONDITIONALLY`); use whichever the project chose in Convention A (skill Step 2).
+  `@Nullable T` options: `org.checkerframework.checker.nullness.qual.Nullable` (recommended) or
+  `org.jspecify.annotations.Nullable`.
+- `Errable<T>` — when you need to distinguish "absent" from "dependency failed" (business-logic choice,
+  independent of Convention A).
+- `FanoutDepResponses<DepReq, DepOutput>` — for a fan-out dependency; exposes `.requestResponsePairs()`,
+  each pair's `.response()` is an `Errable<DepOutput>` (use `.valueOpt()`).
 
 For an `IOVajramDef` that should batch multiple independent callers' calls into one downstream call:
 
@@ -178,6 +270,9 @@ static Map<UserService_BatchItem, Errable<UserInfo>> unbatch(
   `getSimpleInputResolvers()` DSL — the codegen can't classify a facet as batched-or-not unless it can
   statically trace resolution, which only `@Resolve` methods support. Prefer `@Resolve` methods for any
   dependency chain that touches a batched facet.
+- **Access modifier**: `@Output`, `@Output.Batched`, and `@Output.Unbatch` methods must be package-private
+  (no modifier). They cannot be `private` because the generated `_Wrpr` subclass invokes them; they must
+  not be `public` or `protected` because nothing outside the package should call them directly.
 
 ## `@Inject` and `@DataAccess`
 
@@ -325,9 +420,11 @@ types, `@Resolve` methods, the `@Output` method(s), optionally a `getSimpleInput
 plain domain POJOs/records used as input/output/dependency types.
 
 Codegen produces (never hand-edit or instantiate these directly):
-- `<VajramId>_Req` / `<VajramId>_ReqImmutPojo` — the request type, built via `._builder()...._build()`,
-  used both by clients constructing a top-level request and by other Vajrams' `@Resolve` methods
-  referencing this Vajram's input facet constants (`<VajramId>_Req.someInput_n`).
+- `<VajramId>_Req` / `<VajramId>_ReqImmutPojo` — the request type. Prefer `<VajramId>_Req._builder()...._build()`
+  to construct requests; `_Req` is the generated interface and its `_builder()` delegates to the
+  concrete `_ReqImmutPojo`. Use `_ReqImmutPojo.<T>_builder()` only when you need to supply a generic
+  type parameter (e.g. parameterized Trait requests). Used both by clients constructing top-level
+  requests and by `@Resolve` methods referencing input facet constants (`<VajramId>_Req.someInput_n`).
 - `<VajramId>_Fac` — facet-spec constants: `<facetName>_n` (qualified name, for `@Resolve(dep = ...)`) and
   `<facetName>_s` (facet spec, for the `getSimpleInputResolvers()` DSL), for every facet.
 - `<VajramId>_BatchItem` — for batched Vajrams, one row per unbatched caller, with a
@@ -353,17 +450,123 @@ if nothing appears to happen until something actually exercises the class.
    `<Id>_BatchItem`, `<Id>Impl`), so a long Vajram name cascades into unwieldy generated names.
 4. Input/facet names: lowerCamelCase, descriptive, unique within the Vajram.
 
-## Import style
+## Fully-qualified names — annotations and platform classes
 
-Statically import platform-level constants — `IfAbsentThen.FAIL`, `ComputeDelegationMode.SYNC`,
-`equalsEnum`/`isInstanceOf` from `InputValueMatcher`, and similar — rather than qualifying them inline
-(`IfAbsent.IfAbsentThen.FAIL`). Every real sample in the Krystal framework's own codebase does this, and it's
-worth matching in yours too; a fully-qualified constant at a call site is usually a sign something was
-written without checking existing style, not a deliberate choice.
+Use these when writing import statements. If any name below causes a compilation error after a
+framework upgrade, look in the framework jars on the classpath (or in the
+`flipkart-incubator/Krystal` source repo) for the current package — don't guess.
 
-Codegen-generated constants (`<VajramId>_Fac.someInput_n`, `<VajramId>_Req.someInput_s`, and friends) are the
-one place with real judgment involved: static-import them when a file references its own facets repeatedly
-(a test with several assertions against `sum2_s`/`sum3_s`/`chainSum_s`-style constants, say), but leave them
-qualified when the file touches other Vajrams' facets and the qualifier is what keeps straight which Vajram
-each constant
-belongs to (`GetPiece_Req.type_s` reads clearer than a same-named `type_s` imported from who-knows-where).
+### Annotations
+
+| Annotation | Fully-qualified name |
+|---|---|
+| `@Vajram` | `com.flipkart.krystal.vajram.Vajram` |
+| `@Trait` | `com.flipkart.krystal.vajram.Trait` |
+| `@CallGraphDelegationMode` | `com.flipkart.krystal.annos.CallGraphDelegationMode` |
+| `@InvocableOutsideGraph` | `com.flipkart.krystal.annos.InvocableOutsideGraph` |
+| `@IfAbsent` | `com.flipkart.krystal.model.IfAbsent` |
+| `@DefaultValue` | `com.flipkart.krystal.model.DefaultValue` |
+| `@SupportedModelProtocol` | `com.flipkart.krystal.model.SupportedModelProtocol` |
+| `@Dependency` | `com.flipkart.krystal.vajram.facets.Dependency` |
+| `@Resolve` | `com.flipkart.krystal.vajram.facets.resolution.Resolve` |
+| `@Output` | `com.flipkart.krystal.vajram.facets.Output` |
+| `@Batched` | `com.flipkart.krystal.vajram.batching.Batched` |
+| `@BatchesGroupedBy` | `com.flipkart.krystal.vajram.batching.BatchesGroupedBy` |
+| `@UseForPredicateDispatch` | `com.flipkart.krystal.traits.UseForPredicateDispatch` |
+| `@DataAccess` | `com.flipkart.krystal.data.DataAccess` |
+| `@Inject` | `jakarta.inject.Inject` |
+| `@Named` | `jakarta.inject.Named` |
+| `@Qualifier` | `jakarta.inject.Qualifier` |
+| `@Nullable` (checkerframework) | `org.checkerframework.checker.nullness.qual.Nullable` |
+| `@Nullable` (jspecify) | `org.jspecify.annotations.Nullable` |
+
+### Vajram base classes
+
+| Class | Fully-qualified name |
+|---|---|
+| `ComputeVajramDef<T>` | `com.flipkart.krystal.vajram.ComputeVajramDef` |
+| `IOVajramDef<T>` | `com.flipkart.krystal.vajram.IOVajramDef` |
+| `VajramDef<T>` | `com.flipkart.krystal.vajram.VajramDef` |
+| `VajramDefRoot<T>` | `com.flipkart.krystal.vajram.VajramDefRoot` |
+| `TraitDef<T>` | `com.flipkart.krystal.vajram.TraitDef` |
+
+### Resolver and output helpers
+
+| Class | Fully-qualified name |
+|---|---|
+| `One2OneCommand<T>` | `com.flipkart.krystal.vajram.facets.One2OneCommand` |
+| `FanoutCommand<T>` | `com.flipkart.krystal.vajram.facets.FanoutCommand` |
+| `FanoutDepResponses<Req, Out>` | `com.flipkart.krystal.data.FanoutDepResponses` |
+| `Errable<T>` | `com.flipkart.krystal.data.Errable` |
+| `NonNil<T>` | `com.flipkart.krystal.data.NonNil` |
+| `ResolverCommand<T>` | `com.flipkart.krystal.facets.resolution.ResolverCommand` |
+| `SimpleInputResolver` | `com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver` |
+| `SimpleInputResolverSpec` | `com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec` |
+
+### Graph construction and execution
+
+| Class | Fully-qualified name |
+|---|---|
+| `VajramGraph` | `com.flipkart.krystal.krystex.VajramGraph` |
+| `KrystexGraph` | `com.flipkart.krystal.krystex.KrystexGraph` |
+| `VajramKryonExecutor` | `com.flipkart.krystal.krystex.kryon.VajramKryonExecutor` |
+| `KrystalExecutorConfig` | `com.flipkart.krystal.krystex.KrystalExecutorConfig` |
+| `VajramExecutionConfig` | `com.flipkart.krystal.krystex.kryon.VajramExecutionConfig` |
+| `VajramID` | `com.flipkart.krystal.core.VajramID` |
+
+### Testing
+
+| Class | Fully-qualified name |
+|---|---|
+| `VajramTestHarness` | `com.flipkart.krystal.krystex.testharness.VajramTestHarness` |
+
+### Concurrency
+
+| Class | Fully-qualified name |
+|---|---|
+| `SingleThreadExecutor` | `com.flipkart.krystal.concurrent.SingleThreadExecutor` |
+| `SingleThreadExecutorsPool` | `com.flipkart.krystal.concurrent.SingleThreadExecutorsPool` |
+
+### Trait dispatch
+
+| Class | Fully-qualified name |
+|---|---|
+| `TraitDispatchPolicies` | `com.flipkart.krystal.traits.TraitDispatchPolicies` |
+| `TraitBinder` | `com.flipkart.krystal.vajram.guice.traitbinding.TraitBinder` |
+| `GuiceyStaticDispatchPolicy` | `com.flipkart.krystal.vajram.guice.traitbinding.GuiceyStaticDispatchPolicy` |
+| `PredicateDispatchUtil` | `com.flipkart.krystal.krystex.traits.PredicateDispatchUtil` |
+| `InputValueMatcher` | `com.flipkart.krystal.traits.matchers.InputValueMatcher` |
+
+### Batching
+
+| Class | Fully-qualified name |
+|---|---|
+| `DepChainBatcherConfig` | `com.flipkart.krystal.krystex.batching.DepChainBatcherConfig` |
+
+### Injection and caching
+
+| Class | Fully-qualified name |
+|---|---|
+| `VajramGuiceInputInjector` | `com.flipkart.krystal.vajram.guice.injection.VajramGuiceInputInjector` |
+| `RequestLevelCacheInvalidator` | `com.flipkart.krystal.krystex.caching.RequestLevelCacheInvalidator` |
+
+### Exceptions
+
+| Class | Fully-qualified name |
+|---|---|
+| `KrystalCompletionException` | `com.flipkart.krystal.except.KrystalCompletionException` |
+| `KrystalExceptions` (thread strategy util) | `com.flipkart.krystal.except.KrystalExceptions` |
+
+## Import style (rules, not conventions)
+
+**Platform-level constants** (`IfAbsentThen.FAIL`, `ComputeDelegationMode.SYNC`,
+`equalsEnum`/`isInstanceOf` from `InputValueMatcher`, and similar) must always be statically imported.
+Qualifying them inline (`IfAbsent.IfAbsentThen.FAIL`) is unnecessarily verbose and inconsistent with
+every real Krystal sample.
+
+**Codegen-generated facet constants** (`_n` / `_s` suffixes) follow a fixed rule:
+- **Always statically import** the current Vajram's own facet constants (e.g. `userId_n`, `userInfo_n`,
+  `numbers_s`). This is the norm in all Vajram method bodies and `@Resolve` / `@Output` signatures.
+- **Never statically import** facet constants from other Vajrams. Leave them qualified
+  (`OtherVajram_Req.someInput_n`, `GetPiece_Req.type_s`) so it is always unambiguous which Vajram's
+  constant is being referenced.

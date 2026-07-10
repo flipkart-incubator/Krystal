@@ -104,7 +104,7 @@ KrystalExecutorConfigBuilder config = KrystalExecutorConfig.builder()
 
 try (VajramKryonExecutor executor = kGraph.build().createExecutor(config)) {
   future = executor.execute(
-      Add_ReqImmutPojo._builder().numberOne(5)._build(),
+      Add_Req._builder().numberOne(5)._build(),
       VajramExecutionConfig.builder().build());
 }
 assertThat(future).succeedsWithin(TEST_TIMEOUT).isEqualTo(5);

@@ -256,7 +256,11 @@ public class CodeGenUtility {
     addCommonObjectMethods(classBuilder);
 
     classBuilder.addMethod(
-        MethodSpec.overriding(getMethod(Object.class, "equals", 1))
+        MethodSpec.methodBuilder("equals")
+            .addAnnotation(Override.class)
+            .returns(boolean.class)
+            .addModifiers(PUBLIC)
+            .addParameter(Object.class, "obj")
             .addCode(
                 """
                 if (this == obj) {

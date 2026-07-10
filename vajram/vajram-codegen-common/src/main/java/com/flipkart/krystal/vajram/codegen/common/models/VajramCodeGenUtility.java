@@ -204,7 +204,7 @@ public class VajramCodeGenUtility {
   }
 
   public VajramInfo computeVajramInfo(TypeElement vajramClass) {
-    VajramInfoLite vajramInfoLite = computeVajramInfoLite(vajramClass, List.of());
+    VajramInfoLite vajramInfoLite = computeVajramInfoLiteWithExactTypeArgs(vajramClass.asType());
     var vajramPackageName = elementUtils.getPackageOf(vajramClass).getQualifiedName().toString();
     VajramInfoLite conformsToTraitInfo = getConformToTraitInfoFromVajram(vajramClass);
     String parentClassName = null;

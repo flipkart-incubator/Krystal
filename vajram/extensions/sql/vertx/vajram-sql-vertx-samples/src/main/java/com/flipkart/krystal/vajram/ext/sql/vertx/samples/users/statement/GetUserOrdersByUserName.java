@@ -20,7 +20,7 @@ import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserNamePr
 @CallGraphDelegationMode(SYNC)
 public interface GetUserOrdersByUserName
     extends TraitDef<
-        // Limit is needed because the where clause matched username which is not a unique key and
+        // Limit is needed because the where clause matches username which is not a unique key and
         // can match multiple rows. Skipping @LIMIT can lead to an exception at runtime.
         @LIMIT(1) UserNameAndOrders> {
   interface _Inputs {
