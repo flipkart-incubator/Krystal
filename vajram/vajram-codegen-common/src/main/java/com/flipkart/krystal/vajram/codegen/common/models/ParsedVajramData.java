@@ -76,21 +76,23 @@ public record ParsedVajramData(
     Map<String, Map<String, Boolean>> lookUpMap = new HashMap<>();
     for (ExecutableElement method : methods) {
       Resolve resolve = method.getAnnotation(Resolve.class);
-      String dep =
+      String depName =
           util.extractFacetName(
               vajramInfo.lite().vajramId().id(), checkNotNull(resolve).dep(), method);
       @SuppressWarnings("method.invocation")
       DependencyModel dependency =
           vajramInfo.dependencies().stream()
-              .filter(d -> d.name().equals(dep))
+              .filter(d -> d.name().equals(depName))
               .findFirst()
               .orElseThrow();
       for (String depInputName : getDepInputNames(method, dependency, resolve, util)) {
         if (TRUE.equals(
-            lookUpMap.computeIfAbsent(dep, k -> new LinkedHashMap<>()).put(depInputName, true))) {
+            lookUpMap
+                .computeIfAbsent(depName, k -> new LinkedHashMap<>())
+                .put(depInputName, true))) {
           String errorMessage =
               "Two Resolver resolving same input (%s) for dependency name (%s)"
-                  .formatted(depInputName, dep);
+                  .formatted(depInputName, depName);
           throw util.codegenUtil().errorAndThrow(errorMessage, method);
         }
       }
