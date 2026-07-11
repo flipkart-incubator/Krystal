@@ -200,7 +200,7 @@ public interface SubMessage extends Model {
 Note every field carries `@SerialId` here (unlike `Priority` above) — required because `Protobuf3` needs a
 stable wire index per field, and the all-or-none rule means once one field has it, they all must.
 
-## A Fory-only model — the protocol `Krystal-models.md` doesn't document
+## A Fory model (`ForyRequest`)
 
 [`ForyRequest`](https://github.com/flipkart-incubator/Krystal/blob/main/lattice/samples/rest/fory/quarkus/rest-fory-quarkus-lattice-sample/src/main/java/com/flipkart/krystal/lattice/samples/rest/fory/quarkus/sampleForyService/models/ForyRequest.java):
 

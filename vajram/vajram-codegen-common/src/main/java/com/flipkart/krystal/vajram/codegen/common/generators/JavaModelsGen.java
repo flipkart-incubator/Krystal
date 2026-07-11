@@ -1451,10 +1451,7 @@ this.$L = $L == null
       try {
         CodeBlock defaultExpr = dataType.defaultValueExpr(util.processingEnv());
         return CodeBlock.of(
-            "$T.requireNonNullElse($L, $L)",
-            ClassName.get(Objects.class),
-            fieldAccessorExpr,
-            defaultExpr);
+            "$T.requireNonNullElse($L, $L)", Objects.class, fieldAccessorExpr, defaultExpr);
       } catch (CodeGenerationException e) {
         throw util.errorAndThrow(
             "Could not find default value expression for type '%s'. Please check if @IfAbsent(ASSUME_DEFAULT_VALUE) is appropriate for this type."

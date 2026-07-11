@@ -1,0 +1,13 @@
+[versions]
+quarkus = "3.37.1"
+
+# This is the version of vertx compatible with the above version of quarkus. Upgrade only in sync with quarkus version
+# Source: https://github.com/quarkusio/quarkus-platform/blob/3.37/generated-platform-project/quarkus/bom/pom.xml
+# As can be seen in the above file, all vertx dependencies (<groupId>io.vertx</groupId>) have been pinned to the following version
+vertx = "4.5.28"
+
+[libraries]
+vertx-stack-depchain = { module = "io.vertx:vertx-stack-depchain", version.ref = "vertx" }
+quarkus-bom = { module = "io.quarkus.platform:quarkus-bom", version.ref = "quarkus" }
+
+scram-client = { module = "com.ongres.scram:scram-client" }

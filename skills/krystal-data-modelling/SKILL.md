@@ -100,10 +100,9 @@ order. Enum constants follow the same all-or-none rule, with `UNKNOWN` always `@
 
 ## Step 8 — Declare `@SupportedModelProtocol`
 
-Real syntax, verified against source and every real sample in this framework — **one annotation per protocol**,
-not an array-valued single annotation (the framework's own `Krystal-models.md` doc shows the array form, but it
-doesn't compile against the actual `@interface SupportedModelProtocol { Class<? extends ModelProtocol> value(); }`
-— see `references/annotations.md`):
+One annotation per protocol — `value()` takes a single `Class`, not an array. Both `Krystal-models.md`
+and every framework sample use this repeated form (see `references/annotations.md` for the full
+`@interface` definition):
 
 ```java
 @SupportedModelProtocol(PlainJavaObject.class)

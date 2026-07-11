@@ -129,10 +129,9 @@ public @interface SupportedModelProtocol {
 }
 ```
 
-**The framework's own `Krystal-models.md` shows `@SupportedModelProtocol({PlainJavaObject.class,
-Protobuf3.class})` — this does not compile.** `value()` takes one `Class`, not an array; the annotation is
-`@Repeatable` instead, so multiple protocols are declared as multiple annotations. Every real sample in the
-framework (lattice REST/gRPC samples, vajram-sql samples) uses the repeated form:
+`value()` takes one `Class`, not an array; the annotation is `@Repeatable`, so multiple protocols are
+declared as multiple annotations. `Krystal-models.md` and all framework samples (lattice REST/gRPC,
+vajram-sql) use this repeated form:
 
 ```java
 @SupportedModelProtocol(PlainJavaObject.class)
@@ -147,12 +146,12 @@ framework (lattice REST/gRPC samples, vajram-sql samples) uses the repeated form
 - `Protobuf3` (`com.flipkart.krystal.vajram.protobuf3.Protobuf3`) → `_ImmutProto`, wraps a generated protobuf
   message. Requires purity (`pure = true`) — compile error otherwise.
 - `Fory` (`com.flipkart.krystal.vajram.fory.Fory`) → `_ImmutFory`, backed by Apache Fory (JIT-compiled
-  object-graph serialization, no IDL). **Not mentioned in `Krystal-models.md`'s protocol table** — it's a real,
-  fourth supported protocol; treat the doc's table as incomplete, not authoritative, on this point too.
+  object-graph serialization, no IDL). Listed in `Krystal-models.md`'s protocol table alongside
+  `PlainJavaObject`, `Json`, and `Protobuf3`.
 - A nested model field must support **at least** the same protocol set as its parent (compile-time checked by
   `SerdeModelValidator`).
-- `Json` and `Fory` implement `SerdeProtocol` (extends `ModelProtocol`); `PlainJavaObject` implements
-  `ModelProtocol` directly (no actual serialization).
+- `Json`, `Protobuf3`, and `Fory` implement `SerdeProtocol` (extends `ModelProtocol`); `PlainJavaObject`
+  implements `ModelProtocol` directly (no actual serialization).
 
 ## Model purity
 

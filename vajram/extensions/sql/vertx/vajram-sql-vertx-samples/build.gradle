@@ -7,7 +7,7 @@ dependencies {
     implementation platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
     krystalModelsGenProcessor platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
 
-    implementation platform('io.vertx:vertx-stack-depchain:5.0.11')
+    implementation platform(libs.vertx.stack.depchain)
     implementation platform('org.slf4j:slf4j-bom:2.0.13')
 
     implementation 'com.flipkart.krystal:vajram-sql'
@@ -24,6 +24,8 @@ dependencies {
     implementation 'org.checkerframework:checker-qual:3.48.4'
     implementation 'com.google.guava:guava:33.6.0-jre'
 
+    testImplementation platform(libs.quarkus.bom)
+    testImplementation libs.scram.client
     testImplementation platform('org.mockito:mockito-bom:5.17.0')
     testImplementation 'org.mockito:mockito-core'
     testImplementation platform('org.assertj:assertj-bom:3.27.7')

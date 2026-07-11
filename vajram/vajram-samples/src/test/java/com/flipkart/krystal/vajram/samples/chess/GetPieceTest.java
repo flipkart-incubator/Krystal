@@ -64,7 +64,7 @@ class GetPieceTest {
   void getPiece_KnightType_returnsKnight() {
     CompletableFuture<Knight> result;
     try (var executor = kGraph.build().createExecutor(getExecutorConfig())) {
-      result = executor.execute(GetPiece_ReqImmutPojo.<Knight>_builder().type(KNIGHT)._build());
+      result = executor.execute(GetPiece_Req.<Knight>_builder().type(KNIGHT)._build());
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT).isEqualTo(new Knight());
   }

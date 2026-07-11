@@ -104,7 +104,7 @@ KrystalExecutorConfigBuilder config = KrystalExecutorConfig.builder()
 
 try (VajramKryonExecutor executor = kGraph.build().createExecutor(config)) {
   future = executor.execute(
-      Add_ReqImmutPojo._builder().numberOne(5)._build(),
+      Add_Req._builder().numberOne(5)._build(),
       VajramExecutionConfig.builder().build());
 }
 assertThat(future).succeedsWithin(TEST_TIMEOUT).isEqualTo(5);
@@ -376,7 +376,7 @@ public abstract class AddUsingTraits extends ComputeVajramDef<ThreeSums> {
   }
 
   @Output
-  public static ThreeSums output(
+  static ThreeSums output(
       Optional<Integer> sum1, Optional<Integer> sum2, Optional<Integer> sum3) {
     return new ThreeSums(sum1.orElse(0), sum2.orElse(0), sum3.orElse(0));
   }
@@ -448,15 +448,15 @@ kGraph.traitDispatchPolicies(
 
 CompletableFuture<Knight> result;
 try (var executor = kGraph.build().createExecutor(getExecutorConfig())) {
-  result = executor.execute(GetPiece_ReqImmutPojo.<Knight>_builder().type(KNIGHT)._build());
+  result = executor.execute(GetPiece_Req.<Knight>_builder().type(KNIGHT)._build());
 }
 assertThat(result).succeedsWithin(TEST_TIMEOUT).isEqualTo(new Knight());
 ```
 
-Note `GetPiece` has no `@InvocableOutsideGraph` yet its request is still executed directly in this sample —
-unlike a plain Vajram, a Trait's own `@InvocableOutsideGraph` status isn't the only thing that matters here;
-don't assume you need to add it purely to make a Trait request executable in a test. If you hit
-`RejectedExecutionException` in your own case, add `@InvocableOutsideGraph` to the Trait interface (as
+Note `GetPiece` has no `@InvocableOutsideGraph` yet its request is still executed directly in this sample if it is being executed in a test case, since in tests, all vajrams and traits are open to be executed externally —
+But in production a Trait needs `@InvocableOutsideGraph` to be executed directly via its request object;
+Don't assume you need to add it purely to make a Trait request executable in a test - krystal framework internally takes care of it. If you hit
+`RejectedExecutionException` in prod code testing (like integration testing) in your own case, add `@InvocableOutsideGraph` to the Trait interface (as
 `MultiAdd` in example 7 does) rather than guessing further.
 
 ## 9. Trait — predicate dispatch with multiple inputs and a cascading fallback

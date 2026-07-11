@@ -40,7 +40,7 @@ KrystalExecutorConfigBuilder config = KrystalExecutorConfig.builder()
 
 try (VajramKryonExecutor executor = kGraph.build().createExecutor(config)) {
   future = executor.execute(
-      Add_ReqImmutPojo._builder().numberOne(5)._build(),
+      Add_Req._builder().numberOne(5)._build(),
       VajramExecutionConfig.builder().build());
 }
 assertThat(future).succeedsWithin(TEST_TIMEOUT).isEqualTo(5);
@@ -53,9 +53,9 @@ Key behavioral notes:
 - `executor.execute(...)` only **enqueues** the request; nothing runs until `close()` (end of the
   try-with-resources block) flushes the queue and actually submits the work. Capture the returned
   `CompletableFuture` inside the block, then assert on it after the block exits.
-- Request objects are the generated `<VajramName>_ReqImmutPojo`, built via `._builder()....(fields)....
-  _build()`. For a Trait, the generated request is parameterized by the concrete implementation, e.g.
-  `GetPiece_ReqImmutPojo.<Knight>_builder()`.
+- Request objects are built via `<VajramName>_Req._builder()....(fields)...._build()`. For a Trait
+  whose request carries a generic type parameter, use the concrete class instead:
+  `GetPiece_Req.<Knight>_builder()`.
 - Only Vajrams annotated `@InvocableOutsideGraph` can be passed directly to `execute(...)` in *production*
   code — otherwise it throws `RejectedExecutionException`. This doesn't affect tests on a Gradle build using
   Krystal's own Gradle plugin: it auto-sets the `@TestOnly` system property `PropertyNames
@@ -68,8 +68,9 @@ Key behavioral notes:
   dependency chains — required for testing a self-referential fan-out Vajram like `ChainAdd`, computed via
   `graph.computeDependentChain(vajramId, depSlot, depSlot, ...)`), `staticDispatchQualifier` (for Trait
   static dispatch).
-- `KrystalExecutorConfig` (per-executor): `executorId`, `executorService` (a `SingleThreadExecutor` — lease
-  one from a `SingleThreadExecutorsPool` for reuse across tests rather than constructing fresh each time),
+- `KrystalExecutorConfig` (per-executor): `executorId`, `executorService` (a `SingleThreadExecutor` —
+  lease from a `SingleThreadExecutorsPool` when the project has one to avoid repeated construction
+  overhead, otherwise construct fresh per test; match whatever pattern existing tests in this repo use),
   `kryonExecStrategy` (`DIRECT` default, or `BATCH`), `graphTraversalStrategy` (`DEPTH` default — required
   for `DIRECT`; `BREADTH` for debugging), plus decorator config maps and a `debug` flag (adds stack
   tracing / readable names, at a perf cost — fine for tests).
@@ -201,8 +202,8 @@ kGraph.traitDispatchPolicies(
   logic (Traits can't have one), so it fails there instead of surfacing a targeted error. If a Trait's
   legitimate inputs don't cleanly map into your `.conditionally(...)` cases, add an explicit catch-all case
   (`isAnyValue()`) rather than relying on every real input matching one of the specific cases.
-- A request built against the Trait type (e.g. `GetPiece_ReqImmutPojo.<Knight>_builder().type(KNIGHT).
-  _build()`) can be `execute()`d directly if the resolved concrete implementation (or the Trait itself) is
+- A request built against the Trait type (e.g. `GetPiece_Req.<Knight>_builder().type(KNIGHT).
+  _build()`) can be `execute()`d directly if the Trait itself is
   reachable per the `@InvocableOutsideGraph` rule above — match `MultiAdd`'s pattern (annotate the Trait
   interface itself) if the top-level caller invokes the Trait's request type directly.
 
