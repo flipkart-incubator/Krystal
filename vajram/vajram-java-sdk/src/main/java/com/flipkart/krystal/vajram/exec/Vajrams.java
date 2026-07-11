@@ -1,10 +1,12 @@
 package com.flipkart.krystal.vajram.exec;
 
 import static com.flipkart.krystal.core.VajramID.vajramID;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.flipkart.krystal.annos.ComputeDelegationMode;
 import com.flipkart.krystal.annos.OutputLogicDelegationMode;
 import com.flipkart.krystal.core.VajramID;
+import com.flipkart.krystal.facets.InputMirror;
 import com.flipkart.krystal.facets.resolution.ResolverDefinition;
 import com.flipkart.krystal.tags.ElementTags;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
@@ -13,9 +15,11 @@ import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramDefRoot;
+import com.flipkart.krystal.vajram.exception.VajramDefinitionException;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.lang.annotation.Annotation;
@@ -23,7 +27,10 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -39,7 +46,7 @@ final class Vajrams {
    * Returns the exact class in the class hierarchy which has the {@link Vajram} or {@link Trait}
    * annotation
    *
-   * @param aClass the class in whose class hierarcgy the vajram def class is to be searched for.
+   * @param aClass the class in whose class hierarchy the vajram def class is to be searched for.
    */
   @SuppressWarnings("unchecked")
   static Class<? extends VajramDefRoot<?>> getVajramDefClass(
@@ -66,9 +73,36 @@ final class Vajrams {
   static ImmutableMap<ResolverDefinition, InputResolver> parseInputResolvers(
       VajramDefRoot<?> vajramDef) {
     return vajramDef instanceof VajramDef<?> v
-        ? v.getInputResolvers().stream()
-            .collect(ImmutableMap.toImmutableMap(InputResolver::definition, Function.identity()))
+        ? getInputResolvers(v).stream()
+            .collect(toImmutableMap(InputResolver::definition, Function.identity()))
         : ImmutableMap.of();
+  }
+
+  private static ImmutableCollection<? extends InputResolver> getInputResolvers(VajramDef<?> v) {
+    ImmutableCollection<? extends InputResolver> inputResolvers = v.getInputResolvers();
+    validateNoDuplicateResolvers(inputResolvers);
+    return inputResolvers;
+  }
+
+  private static void validateNoDuplicateResolvers(
+      ImmutableCollection<? extends InputResolver> inputResolvers) {
+    Map<String, Map<String, InputResolver>> lookUpMap = new HashMap<>();
+    for (InputResolver inputResolver : inputResolvers) {
+      String depName = inputResolver.definition().target().dependency().name();
+      for (InputMirror depInput : inputResolver.definition().target().targetInputs()) {
+        String depInputName = depInput.name();
+        InputResolver existingResolver =
+            lookUpMap
+                .computeIfAbsent(depName, k -> new LinkedHashMap<>())
+                .put(depInputName, inputResolver);
+        if (existingResolver != null) {
+          String errorMessage =
+              "Two resolvers cannot resolve the same dependency input. Resolvers: %s, resolving input (%s) for dependency name (%s)"
+                  .formatted(List.of(existingResolver, inputResolver), depInputName, depName);
+          throw new VajramDefinitionException(errorMessage);
+        }
+      }
+    }
   }
 
   private static Optional<FacetSpec> inferFacet(

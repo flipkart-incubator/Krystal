@@ -3,7 +3,6 @@ description = "Vert.x SQL codegen extension for Krystal - Generates Immut result
 dependencies {
     api project(':vajram:vajram-java-sdk')
 
-    implementation platform('io.vertx:vertx-stack-depchain:5.0.11')
     implementation project(':vajram:extensions:sql:vajram-sql')
     implementation project(':vajram:extensions:sql:vajram-sql-codegen')
     implementation project(':vajram:extensions:sql:vertx:vajram-sql-vertx')

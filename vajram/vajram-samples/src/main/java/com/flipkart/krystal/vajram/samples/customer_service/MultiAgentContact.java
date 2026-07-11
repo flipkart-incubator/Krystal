@@ -2,9 +2,6 @@ package com.flipkart.krystal.vajram.samples.customer_service;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
-import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent_Req.agentType_n;
-import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent_Req.customerName_n;
-import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent_Req.initialCommunication_n;
 import static com.flipkart.krystal.vajram.samples.customer_service.MultiAgentContact_Fac.responses_n;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
@@ -46,9 +43,7 @@ abstract class MultiAgentContact extends ComputeVajramDef<List<String>> {
     String responses();
   }
 
-  @Resolve(
-      dep = responses_n,
-      depInputs = {customerName_n, agentType_n, initialCommunication_n})
+  @Resolve(dep = responses_n)
   static FanoutCommand<CustomerServiceAgent_ReqImmut.Builder> sendCommunications(
       String name, String communication) {
     List<CustomerServiceAgent_ReqImmut.Builder> result = new ArrayList<>();

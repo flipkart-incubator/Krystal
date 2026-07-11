@@ -1,13 +1,13 @@
 package com.flipkart.krystal.vajram.samples.calculator.subtract;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
+import static java.util.Objects.requireNonNullElse;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
-import java.util.Objects;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @InvocableOutsideGraph
@@ -22,6 +22,6 @@ public abstract class Subtract extends ComputeVajramDef<Integer> {
 
   @Output
   static int subtract(int numberOne, @Nullable Integer numberTwo) {
-    return numberOne - Objects.requireNonNullElse(numberTwo, 0);
+    return numberOne - requireNonNullElse(numberTwo, 0);
   }
 }

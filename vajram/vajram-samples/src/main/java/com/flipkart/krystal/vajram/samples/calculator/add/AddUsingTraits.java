@@ -67,8 +67,7 @@ public abstract class AddUsingTraits extends ComputeVajramDef<ThreeSums> {
   }
 
   @Output
-  public static ThreeSums output(
-      Optional<Integer> sum1, Optional<Integer> sum2, Optional<Integer> sum3) {
+  static ThreeSums output(Optional<Integer> sum1, Optional<Integer> sum2, Optional<Integer> sum3) {
     return new ThreeSums(sum1.orElse(0), sum2.orElse(0), sum3.orElse(0));
   }
 

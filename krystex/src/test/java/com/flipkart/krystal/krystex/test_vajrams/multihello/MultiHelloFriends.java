@@ -75,9 +75,7 @@ public abstract class MultiHelloFriends extends ComputeVajramDef<String> {
                             .toList())));
   }
 
-  @Resolve(
-      dep = hellos_n,
-      depInputs = {HelloFriends_Req.userId_n, HelloFriends_Req.numberOfFriends_n})
+  @Resolve(dep = hellos_n)
   static FanoutCommand<HelloFriends_ReqImmut.Builder> sayHello(
       List<String> userIds, Optional<Boolean> skip) {
     if (skip.orElse(false)) {

@@ -570,10 +570,6 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                         "$T.$L_n",
                         getFacetClassName(schemaReaderUtil.getAggregatorName(parentTypeName)),
                         facetName)
-                    .addMember(
-                        "depInputs",
-                        "$L",
-                        depInputNames.stream().collect(CodeBlock.joining(",", "{", "}")))
                     .build())
             .addModifiers(STATIC)
             .returns(
@@ -793,14 +789,6 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                         "$T.$L_n",
                         getFacetClassName(schemaReaderUtil.getAggregatorName(parentTypeName)),
                         fieldName)
-                    .addMember(
-                        "depInputs",
-                        "{$T.graphql_executionContext_n, $T.graphql_executionStrategy_n, $T.graphql_executionStrategyParams_n, $T.$L_n}",
-                        vajramReqClass,
-                        vajramReqClass,
-                        vajramReqClass,
-                        vajramReqClass,
-                        Facets.ENTITY_ID)
                     .build())
             .addModifiers(STATIC)
             .returns(

@@ -21,7 +21,7 @@ ext {
     protobuf_version = '4.35.0'
     grpc_version = '1.81.0'
     fory_version = '0.17.0'
-    quarkus_version = '3.37.1'
+    quarkus_version = libs.versions.quarkus.get()
     lombok_version = '1.18.46'
     kordamp_jandex_version = '2.3.0'
 }
@@ -181,7 +181,7 @@ configure(subprojects.findAll {
         api platform('com.fasterxml.jackson:jackson-bom:2.21.4')
         api platform("com.google.protobuf:protobuf-bom:${protobuf_version}")
         api platform("io.grpc:grpc-bom:${grpc_version}")
-        implementation platform('io.vertx:vertx-stack-depchain:5.1.1')
+        implementation platform(libs.vertx.stack.depchain)
 
         constraints { c ->
             c.implementation "org.projectlombok:lombok:$lombok_version"
