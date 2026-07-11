@@ -55,7 +55,7 @@ Key behavioral notes:
   `CompletableFuture` inside the block, then assert on it after the block exits.
 - Request objects are built via `<VajramName>_Req._builder()....(fields)...._build()`. For a Trait
   whose request carries a generic type parameter, use the concrete class instead:
-  `GetPiece_ReqImmutPojo.<Knight>_builder()`.
+  `GetPiece_Req.<Knight>_builder()`.
 - Only Vajrams annotated `@InvocableOutsideGraph` can be passed directly to `execute(...)` in *production*
   code — otherwise it throws `RejectedExecutionException`. This doesn't affect tests on a Gradle build using
   Krystal's own Gradle plugin: it auto-sets the `@TestOnly` system property `PropertyNames
@@ -202,8 +202,8 @@ kGraph.traitDispatchPolicies(
   logic (Traits can't have one), so it fails there instead of surfacing a targeted error. If a Trait's
   legitimate inputs don't cleanly map into your `.conditionally(...)` cases, add an explicit catch-all case
   (`isAnyValue()`) rather than relying on every real input matching one of the specific cases.
-- A request built against the Trait type (e.g. `GetPiece_ReqImmutPojo.<Knight>_builder().type(KNIGHT).
-  _build()`) can be `execute()`d directly if the resolved concrete implementation (or the Trait itself) is
+- A request built against the Trait type (e.g. `GetPiece_Req.<Knight>_builder().type(KNIGHT).
+  _build()`) can be `execute()`d directly if the Trait itself is
   reachable per the `@InvocableOutsideGraph` rule above — match `MultiAdd`'s pattern (annotate the Trait
   interface itself) if the top-level caller invokes the Trait's request type directly.
 
