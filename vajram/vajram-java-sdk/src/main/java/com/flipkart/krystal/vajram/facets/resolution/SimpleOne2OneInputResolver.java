@@ -12,8 +12,10 @@ import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.One2OneCommand;
 import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
 import java.util.List;
+import lombok.ToString;
 
 /** A resolver which resolves exactly one input of a dependency. */
+@ToString(callSuper = true)
 public final class SimpleOne2OneInputResolver<S, T, CV extends Request<?>, DV extends Request<?>>
     extends AbstractSimpleInputResolver<S, T, CV, DV> implements One2OneInputResolver {
 
