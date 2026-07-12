@@ -13,6 +13,7 @@ import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
 import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
 import com.google.common.collect.ImmutableList;
+import lombok.ToString;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
@@ -23,6 +24,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  * @param <CV> the type of the current vajram
  * @param <DV> the type of the dependency vajram
  */
+@ToString(callSuper = true)
 public final class SimpleFanoutInputResolver<S, T, CV extends Request<?>, DV extends Request<?>>
     extends AbstractSimpleInputResolver<S, T, CV, DV> implements FanoutInputResolver {
 

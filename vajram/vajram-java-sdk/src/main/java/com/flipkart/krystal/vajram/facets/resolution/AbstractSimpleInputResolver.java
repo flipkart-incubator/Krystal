@@ -3,8 +3,10 @@ package com.flipkart.krystal.vajram.facets.resolution;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.resolution.ResolutionTarget;
 import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
+import lombok.ToString;
 
 /** A resolver which resolves exactly one input of a dependency. */
+@ToString(callSuper = true)
 public abstract sealed class AbstractSimpleInputResolver<
         S, T, CV extends Request, DV extends Request<?>>
     extends AbstractInputResolver implements SimpleInputResolver

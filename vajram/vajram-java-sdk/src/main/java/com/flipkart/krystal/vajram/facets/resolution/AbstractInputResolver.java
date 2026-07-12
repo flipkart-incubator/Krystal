@@ -4,7 +4,9 @@ import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.resolution.ResolutionTarget;
 import com.flipkart.krystal.facets.resolution.ResolverDefinition;
 import com.google.common.collect.ImmutableSet;
+import lombok.ToString;
 
+@ToString
 public abstract sealed class AbstractInputResolver implements InputResolver
     permits AbstractFanoutInputResolver, AbstractSimpleInputResolver, AbstractOne2OneInputResolver {
 
