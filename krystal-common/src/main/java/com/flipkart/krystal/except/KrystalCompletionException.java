@@ -48,13 +48,21 @@ public class KrystalCompletionException extends CompletionException {
     };
   }
 
+  /**
+   * Wraps the throwable in a {@link KrystalCompletionException} if it is not of type {@link
+   * CompletionException}. Else returns the throwable as it is.
+   */
   public static CompletionException wrapAsCompletionException(Throwable t) {
     return wrapAsCompletionException(t, null);
   }
 
+  /**
+   * If {@code wrapperMessage} is null, and {@code t} is a {@link CompletionException}, returns t as
+   * it is. Else, wraps the t in a {@link KrystalCompletionException}
+   */
   public static CompletionException wrapAsCompletionException(
       Throwable t, @Nullable String wrapperMessage) {
-    if (t instanceof CompletionException c) {
+    if (t instanceof CompletionException c && wrapperMessage == null) {
       return c;
     }
     if (wrapperMessage == null) {

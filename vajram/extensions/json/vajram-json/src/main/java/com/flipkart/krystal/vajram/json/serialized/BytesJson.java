@@ -3,21 +3,15 @@ package com.flipkart.krystal.vajram.json.serialized;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.fasterxml.jackson.databind.ObjectReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.Arrays;
-import java.util.Objects;
 
-public final class BytesJson implements SerializedJson {
+public final class BytesJson extends AbstractJsonRepresentation {
   private final byte[] data;
   private final int start;
   private final int length;
-
-  /* ---------- DERIVED FIELDS ----------- */
-
-  private byte[] bytes;
-  private String string;
 
   public BytesJson(InputStream inputStream) throws IOException {
     this(inputStream.readAllBytes());
@@ -39,15 +33,8 @@ public final class BytesJson implements SerializedJson {
   }
 
   @Override
-  public byte[] asBytes() {
-    if (bytes == null) {
-      if (start == 0 && length == data.length) {
-        bytes = data;
-      } else {
-        bytes = Arrays.copyOfRange(data, start, start + length);
-      }
-    }
-    return bytes.clone();
+  public InputStream newInputStream() {
+    return new ByteArrayInputStream(data, start, length);
   }
 
   @Override
@@ -59,8 +46,14 @@ public final class BytesJson implements SerializedJson {
   }
 
   @Override
-  public void writeTo(OutputStream outputStream) throws IOException {
-    outputStream.write(data, start, length);
+  protected byte[] asBytes() {
+    byte[] bytes;
+    if (start == 0 && length == data.length) {
+      bytes = data;
+    } else {
+      bytes = Arrays.copyOfRange(data, start, start + length);
+    }
+    return bytes;
   }
 
   @Override
@@ -83,7 +76,11 @@ public final class BytesJson implements SerializedJson {
 
   @Override
   public int hashCode() {
-    return Objects.hash(data, start, length);
+    int result = 1;
+    for (int i = start; i < start + length; i++) {
+      result = 31 * result + data[i];
+    }
+    return result;
   }
 
   @Override

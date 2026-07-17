@@ -1,37 +1,37 @@
 package com.flipkart.krystal.vajram.json.serialized;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.flipkart.krystal.model.array.ByteArray;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 
-public sealed interface SerializedJson permits BytesJson, StringJson, ByteArrayJson {
+public sealed interface JsonRepresentation permits AbstractJsonRepresentation {
   <T> T deserialize(ObjectReader reader) throws IOException;
 
-  byte[] asBytes();
+  InputStream newInputStream();
 
   String asString();
-
-  void writeTo(OutputStream outputStream) throws IOException;
 
   default boolean isReusable() {
     return true;
   }
 
-  static SerializedJson of(Object payload) throws IOException {
-    SerializedJson serializedJson;
+  static JsonRepresentation of(Object payload) throws IOException {
+    JsonRepresentation jsonRepresentation;
     if (payload instanceof InputStream inputStream) {
-      serializedJson = new BytesJson(inputStream);
+      jsonRepresentation = new BytesJson(inputStream);
     } else if (payload instanceof byte[] bytes) {
-      serializedJson = new BytesJson(bytes);
+      jsonRepresentation = new BytesJson(bytes);
     } else if (payload instanceof String string) {
-      serializedJson = new StringJson(string);
+      jsonRepresentation = new StringJson(string);
     } else if (payload instanceof ByteArray byteArray) {
-      serializedJson = new ByteArrayJson(byteArray);
+      jsonRepresentation = new ByteArrayJson(byteArray);
+    } else if (payload instanceof JsonNode jsonNode) {
+      jsonRepresentation = new NodeJson(jsonNode);
     } else {
       throw new IllegalArgumentException("Unsupported payload type: " + payload.getClass());
     }
-    return serializedJson;
+    return jsonRepresentation;
   }
 }

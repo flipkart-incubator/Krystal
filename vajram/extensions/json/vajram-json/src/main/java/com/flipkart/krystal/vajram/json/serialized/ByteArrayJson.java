@@ -1,21 +1,18 @@
 package com.flipkart.krystal.vajram.json.serialized;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.flipkart.krystal.model.array.ByteArray;
 import com.flipkart.krystal.vajram.json.array.JsonByteArray;
 import java.io.IOException;
-import java.io.OutputStream;
+import java.io.InputStream;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
-public final class ByteArrayJson implements SerializedJson {
+public final class ByteArrayJson extends AbstractJsonRepresentation {
 
   private final ByteArray data;
 
   /* ---------- DERIVED FIELDS ----------- */
   private byte @MonotonicNonNull [] bytes;
-  private @MonotonicNonNull String string;
 
   public ByteArrayJson(ByteArray data) {
     this.data = data;
@@ -31,24 +28,8 @@ public final class ByteArrayJson implements SerializedJson {
   }
 
   @Override
-  public byte[] asBytes() {
-    if (bytes == null) {
-      bytes = data.toArray();
-    }
-    return bytes.clone();
-  }
-
-  @Override
-  public String asString() {
-    if (string == null) {
-      string = new String(asBytes(), UTF_8);
-    }
-    return string;
-  }
-
-  @Override
-  public void writeTo(OutputStream outputStream) throws IOException {
-    outputStream.write(asBytes());
+  public InputStream newInputStream() {
+    return data.newInputStream();
   }
 
   @Override
@@ -62,5 +43,13 @@ public final class ByteArrayJson implements SerializedJson {
   @Override
   public int hashCode() {
     return data.hashCode();
+  }
+
+  @Override
+  protected byte[] asBytes() {
+    if (bytes == null) {
+      bytes = data.toArray();
+    }
+    return bytes;
   }
 }

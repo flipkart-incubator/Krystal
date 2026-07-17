@@ -33,7 +33,7 @@ class JsonResponseTest {
             .nestedData(InnerData_ImmutJson._builder().value("Hello").count(11)._build())
             .priority(Priority.HIGH)
             ._build();
-    byte[] serializedPayload = immutJson._serialize();
+    byte[] serializedPayload = immutJson._serialize().readAllBytes();
     System.out.println(new String(serializedPayload, UTF_8));
     JsonResponse_ImmutJson deserialized = new JsonResponse_ImmutJson(serializedPayload);
     assertThat(deserialized).isEqualTo(immutJson);
@@ -54,7 +54,7 @@ class JsonResponseTest {
             .nestedData(InnerData_ImmutJson._builder().value("v").count(1)._build())
             .priority(Priority.HIGH)
             ._build();
-    String json = new String(original._serialize(), UTF_8);
+    String json = new String(original._serialize().readAllBytes(), UTF_8);
 
     // Replace "HIGH" with a non-existent enum value
     String modifiedJson = json.replace("\"HIGH\"", "\"NONEXISTENT\"");

@@ -1,12 +1,13 @@
 package com.flipkart.krystal.serial;
 
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.InputStream;
 
 public interface SerializableModel {
-  byte[] _serialize() throws Exception;
 
-  void _serialize(OutputStream outputStream) throws IOException;
+  /**
+   * Returns a non-blocking {@link InputStream} representing the serialized version of this object.
+   */
+  InputStream _serialize() throws Exception;
 
   SerdeProtocol _serdeProtocol();
 }
