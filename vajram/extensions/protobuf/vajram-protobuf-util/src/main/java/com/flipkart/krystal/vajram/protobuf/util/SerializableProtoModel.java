@@ -2,8 +2,6 @@ package com.flipkart.krystal.vajram.protobuf.util;
 
 import com.flipkart.krystal.serial.SerializableModel;
 import com.google.protobuf.Message;
-import java.io.IOException;
-import java.io.OutputStream;
 
 /**
  * Common base interface for any model whose on-wire representation is a protobuf message,
@@ -14,9 +12,4 @@ import java.io.OutputStream;
  */
 public interface SerializableProtoModel<P extends Message> extends SerializableModel {
   P _proto();
-
-  @Override
-  default void _serialize(OutputStream outputStream) throws IOException {
-    _proto().writeTo(outputStream);
-  }
 }

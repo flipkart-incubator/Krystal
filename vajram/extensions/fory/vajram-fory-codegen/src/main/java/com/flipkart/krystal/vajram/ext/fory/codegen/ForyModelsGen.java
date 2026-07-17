@@ -43,6 +43,7 @@ import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
+import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -130,8 +131,9 @@ final class ForyModelsGen implements CodeGenerator {
                 if (_serializedPayload == null) {
                   this._serializedPayload = _FORY.serialize(this);
                 }
-                return _serializedPayload;
-                """)
+                return new $T(_serializedPayload);
+                """,
+                ByteArrayInputStream.class)
             .build());
 
     // _deserialize method (lazily copies fields from a Fory-deserialized temp instance)

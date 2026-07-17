@@ -21,7 +21,7 @@ import com.flipkart.krystal.serial.SerdeProtocol;
 import com.flipkart.krystal.vajram.json.array.ByteArrays.ByteArrayDeserializer;
 import com.flipkart.krystal.vajram.json.array.ByteArrays.ByteArraySerializer;
 import com.flipkart.krystal.vajram.json.array.JsonByteArray;
-import com.flipkart.krystal.vajram.json.serialized.SerializedJson;
+import com.flipkart.krystal.vajram.json.serialized.JsonRepresentation;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import java.io.IOException;
@@ -133,7 +133,7 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
       return deserialize(innerPayload, reader);
     }
     try {
-      return SerializedJson.of(payload).deserialize(reader);
+      return JsonRepresentation.of(payload).deserialize(reader);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

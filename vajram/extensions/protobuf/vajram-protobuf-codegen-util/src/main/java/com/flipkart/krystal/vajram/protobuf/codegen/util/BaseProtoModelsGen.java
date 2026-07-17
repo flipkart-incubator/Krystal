@@ -39,6 +39,7 @@ import com.flipkart.krystal.vajram.protobuf.util.SerializableProtoModel;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.protobuf.ByteString;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ClassName;
@@ -215,8 +216,6 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
         ParameterizedTypeName.get(
             ClassName.get(config.serializableProtoSubInterface()), protoMsgType);
 
-    TypeName byteArrayType = ArrayTypeName.of(TypeName.BYTE);
-
     Builder classBuilder =
         util.classBuilder(protoClassName, modelRootType.getQualifiedName().toString())
             .addModifiers(PUBLIC)
@@ -224,11 +223,7 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
             .addSuperinterface(serializableTypeName);
 
     classBuilder.addField(
-        FieldSpec.builder(
-                byteArrayType.annotated(AnnotationSpec.builder(MonotonicNonNull.class).build()),
-                "_serializedPayload",
-                PRIVATE)
-            .build());
+        FieldSpec.builder(ByteString.class, "_serializedPayload", PRIVATE).build());
     classBuilder.addField(
         FieldSpec.builder(
                 protoMsgType.annotated(AnnotationSpec.builder(MonotonicNonNull.class).build()),
@@ -239,7 +234,14 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
     classBuilder.addMethod(
         MethodSpec.constructorBuilder()
             .addModifiers(PUBLIC)
-            .addParameter(byteArrayType, "_serializedPayload")
+            .addParameter(ArrayTypeName.of(TypeName.BYTE), "_serializedPayload")
+            .addStatement("this($T.copyFrom(_serializedPayload))", ByteString.class)
+            .build());
+
+    classBuilder.addMethod(
+        MethodSpec.constructorBuilder()
+            .addModifiers(PUBLIC)
+            .addParameter(ByteString.class, "_serializedPayload")
             .addStatement("this._serializedPayload = _serializedPayload")
             .addStatement("this._proto = null")
             .build());
@@ -266,10 +268,10 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
         MethodSpec.overriding(util.getMethod(SerializableModel.class, "_serialize", 0))
             .addCode(
 """
-if (_serializedPayload == null){
-  this._serializedPayload = _proto.toByteArray();
-}
-return _serializedPayload.clone();
+    if (_serializedPayload == null){
+      this._serializedPayload = _proto.toByteString();
+    }
+    return _serializedPayload.newInput();
 """)
             .build());
 

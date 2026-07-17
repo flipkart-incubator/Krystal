@@ -42,7 +42,7 @@ class Proto3LatticeSampleResponseTest {
             ._build();
 
     // Serialize to bytes
-    byte[] serialized = original._serialize();
+    byte[] serialized = original._serialize().readAllBytes();
     assertThat(serialized).isNotEmpty();
 
     // Deserialize from bytes
@@ -107,7 +107,7 @@ class Proto3LatticeSampleResponseTest {
             .status(Status.UNKNOWN)
             ._build();
 
-    byte[] serialized = original._serialize();
+    byte[] serialized = original._serialize().readAllBytes();
     Proto3LatticeSampleResponse_ImmutProto3 deserialized =
         new Proto3LatticeSampleResponse_ImmutProto3(serialized);
 
@@ -229,7 +229,7 @@ class Proto3LatticeSampleResponseTest {
             .status(Status.IN_PROGRESS)
             ._build();
 
-    byte[] serialized = original._serialize();
+    byte[] serialized = original._serialize().readAllBytes();
     Proto3LatticeSampleResponse_ImmutProto3 deserialized =
         new Proto3LatticeSampleResponse_ImmutProto3(serialized);
 
@@ -326,7 +326,7 @@ class Proto3LatticeSampleResponseTest {
             .subStatuses(List.of(Status.COMPLETED, Status.UNKNOWN))
             ._build();
 
-    byte[] serialized = original._serialize();
+    byte[] serialized = original._serialize().readAllBytes();
     SubMessage_ImmutProto3 deserialized = new SubMessage_ImmutProto3(serialized);
 
     assertThat(deserialized.count()).isEqualTo(99);
@@ -353,7 +353,7 @@ class Proto3LatticeSampleResponseTest {
   }
 
   @Test
-  void unknownProtoEnumValue_deserializesToUnknown() throws Exception {
+  void unknownProtoEnumValue_deserializesToUnknown() {
     // Build a raw proto message with an unrecognized enum value (999) for the status field
     Proto3LatticeSampleResponseProto3 rawProto =
         Proto3LatticeSampleResponseProto3.newBuilder()
@@ -405,7 +405,7 @@ class Proto3LatticeSampleResponseTest {
             .namedStatuses(Map.of("x", Status.FAILED, "y", Status.IN_PROGRESS))
             ._build();
 
-    byte[] serialized = original._serialize();
+    byte[] serialized = original._serialize().readAllBytes();
     Proto3LatticeSampleResponse_ImmutProto3 deserialized =
         new Proto3LatticeSampleResponse_ImmutProto3(serialized);
 

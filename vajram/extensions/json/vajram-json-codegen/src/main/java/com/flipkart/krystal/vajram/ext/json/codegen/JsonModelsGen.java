@@ -34,7 +34,7 @@ import com.flipkart.krystal.vajram.codegen.common.generators.SerdeModelValidator
 import com.flipkart.krystal.vajram.json.Json;
 import com.flipkart.krystal.vajram.json.SerializableJsonModel;
 import com.flipkart.krystal.vajram.json.serialized.BytesJson;
-import com.flipkart.krystal.vajram.json.serialized.SerializedJson;
+import com.flipkart.krystal.vajram.json.serialized.JsonRepresentation;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -53,7 +53,6 @@ import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeSpec.Builder;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -129,7 +128,7 @@ final class JsonModelsGen implements CodeGenerator {
     jacksonToolFields(classBuilder, immutableJsonModelName);
 
     classBuilder.addField(
-        FieldSpec.builder(SerializedJson.class, "_serializedPayload", PRIVATE)
+        FieldSpec.builder(JsonRepresentation.class, "_serializedPayload", PRIVATE)
             .addAnnotation(JsonIgnore.class)
             .build());
     classBuilder.addField(
@@ -144,12 +143,10 @@ final class JsonModelsGen implements CodeGenerator {
             .addCode(
                 """
                 if (_serializedPayload == null) {
-                  this._serializedPayload = new BytesJson(_WRITER.get().writeValueAsBytes(this));
+                  this._serializedPayload = new $T(_WRITER.get().writeValueAsBytes(this));
                 }
                 return _serializedPayload;
                 """,
-                BytesJson.class,
-                BytesJson.class,
                 BytesJson.class)
             .build());
 
@@ -181,21 +178,6 @@ final class JsonModelsGen implements CodeGenerator {
         MethodSpec.overriding(
                 util.getMethod(() -> SerializableJsonModel.class.getMethod("_writer")))
             .addStatement("return _WRITER.get()")
-            .build());
-
-    classBuilder.addMethod(
-        MethodSpec.overriding(
-                util.getMethod(
-                    () -> SerializableJsonModel.class.getMethod("_serialize", OutputStream.class)))
-            .addCode(
-"""
-      if(_serializedPayload != null) {
-        _serializedPayload.writeTo(outputStream);
-      } else {
-        $T.super._serialize(outputStream);
-      }
-""",
-                SerializableJsonModel.class)
             .build());
 
     List<MethodSpec> methods = new ArrayList<>();
@@ -269,7 +251,7 @@ final class JsonModelsGen implements CodeGenerator {
             // Primary constructor accepting SerializedJson
             MethodSpec.constructorBuilder()
                 .addModifiers(PUBLIC)
-                .addParameter(SerializedJson.class, "_serializedPayload")
+                .addParameter(JsonRepresentation.class, "_serializedPayload")
                 .addStatement("this._serializedPayload = _serializedPayload")
                 .addStatement("this._deserializationPending = true")
                 .build())

@@ -72,7 +72,7 @@ class QuarkusRestEndpointsE2eTest {
     HttpResponse<CompletionStage<JsonResponse_ImmutJson>> resp =
         httpClient.send(
             HttpRequest.newBuilder(baseUri.resolve("foo/bar"))
-                .POST(BodyPublishers.ofByteArray(body._serialize()))
+                .POST(BodyPublishers.ofByteArray(body._serialize().readAllBytes()))
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")
                 .build(),

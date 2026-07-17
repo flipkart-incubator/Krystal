@@ -10,9 +10,8 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.vajram.json.serialized.BytesJson;
-import com.flipkart.krystal.vajram.json.serialized.SerializedJson;
-import java.io.IOException;
-import java.io.OutputStream;
+import com.flipkart.krystal.vajram.json.serialized.JsonRepresentation;
+import java.io.InputStream;
 
 @SupportedModelProtocol(Json.class)
 public interface SerializableJsonModel extends SerializableModel {
@@ -23,16 +22,11 @@ public interface SerializableJsonModel extends SerializableModel {
   }
 
   @Override
-  default byte[] _serialize() throws JsonProcessingException {
-    return _serializedJson().asBytes().clone();
+  default InputStream _serialize() throws JsonProcessingException {
+    return _serializedJson().newInputStream();
   }
 
-  @Override
-  default void _serialize(OutputStream outputStream) throws IOException {
-    _writer().writeValue(outputStream, this);
-  }
-
-  default SerializedJson _serializedJson() throws JsonProcessingException {
+  default JsonRepresentation _serializedJson() throws JsonProcessingException {
     return new BytesJson(_writer().writeValueAsBytes(this));
   }
 
