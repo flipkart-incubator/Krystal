@@ -5,6 +5,8 @@ import static java.util.Collections.unmodifiableList;
 
 import com.google.common.primitives.Bytes;
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -88,11 +90,18 @@ public abstract class ByteArrayBase implements ByteArray {
     if (!(obj instanceof ByteArray other)) {
       return false;
     }
+    if (other instanceof ByteArrayBase byteArrayBase) {
+      return Arrays.equals(data, byteArrayBase.data);
+    }
     return areEqual(this, other);
   }
 
   public ByteArrayInputStream newInputStream() {
     return new ByteArrayInputStream(data);
+  }
+
+  public void writeTo(OutputStream outputStream) throws IOException {
+    outputStream.write(data);
   }
 
   @Override

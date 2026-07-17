@@ -1,5 +1,6 @@
 module flipkart.krystal.vajram.ext.json {
   exports com.flipkart.krystal.vajram.json;
+  exports com.flipkart.krystal.vajram.json.serialized;
 
   requires com.fasterxml.jackson.databind;
   requires com.fasterxml.jackson.datatype.guava;

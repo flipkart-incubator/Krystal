@@ -49,10 +49,20 @@ public class KrystalCompletionException extends CompletionException {
   }
 
   public static CompletionException wrapAsCompletionException(Throwable t) {
+    return wrapAsCompletionException(t, null);
+  }
+
+  public static CompletionException wrapAsCompletionException(
+      Throwable t, @Nullable String wrapperMessage) {
     if (t instanceof CompletionException c) {
       return c;
     }
-    String message = t.getMessage();
-    return new KrystalCompletionException(message != null ? message : t.getClass().getName(), t);
+    if (wrapperMessage == null) {
+      wrapperMessage = t.getMessage();
+    }
+    if (wrapperMessage == null) {
+      wrapperMessage = t.getClass().getSimpleName();
+    }
+    return new KrystalCompletionException(wrapperMessage, t);
   }
 }

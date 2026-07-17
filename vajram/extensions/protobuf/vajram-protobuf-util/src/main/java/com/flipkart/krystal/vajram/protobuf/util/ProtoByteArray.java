@@ -4,7 +4,9 @@ import com.flipkart.krystal.model.array.ByteArray;
 import com.flipkart.krystal.model.array.ByteConsumer;
 import com.google.common.primitives.Bytes;
 import com.google.protobuf.ByteString;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -103,6 +105,11 @@ public final class ProtoByteArray implements ByteArray {
   }
 
   @Override
+  public void writeTo(OutputStream outputStream) throws IOException {
+    byteString.writeTo(outputStream);
+  }
+
+  @Override
   public List<Byte> asList() {
     return Bytes.asList(byteString.toByteArray());
   }
@@ -121,6 +128,9 @@ public final class ProtoByteArray implements ByteArray {
   public boolean equals(@Nullable Object obj) {
     if (!(obj instanceof ByteArray other)) {
       return false;
+    }
+    if (other instanceof ProtoByteArray protoByteArray) {
+      return this.byteString.equals(protoByteArray.byteString);
     }
     return ByteArray.areEqual(this, other);
   }
