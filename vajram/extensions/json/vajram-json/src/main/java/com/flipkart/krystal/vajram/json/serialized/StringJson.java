@@ -32,7 +32,7 @@ public final class StringJson extends AbstractJsonRepresentation {
     try {
       return CharSource.wrap(string).asByteSource(UTF_8).openStream();
     } catch (IOException e) {
-      throw new ArrayStoreException("String CharSource cannot throw exception when opening Stream");
+      throw new AssertionError("String CharSource cannot throw exception when opening Stream");
     }
   }
 
