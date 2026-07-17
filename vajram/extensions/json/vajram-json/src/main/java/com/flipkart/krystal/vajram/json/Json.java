@@ -21,6 +21,7 @@ import com.flipkart.krystal.serial.SerdeProtocol;
 import com.flipkart.krystal.vajram.json.array.ByteArrays.ByteArrayDeserializer;
 import com.flipkart.krystal.vajram.json.array.ByteArrays.ByteArraySerializer;
 import com.flipkart.krystal.vajram.json.array.JsonByteArray;
+import com.flipkart.krystal.vajram.json.serialized.SerializedJson;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import java.io.IOException;
@@ -84,7 +85,7 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
                 : OBJECT_WRITER.writeValueAsBytes(transformed);
         case STRING ->
             transformed instanceof SerializableJsonModel jsonModel
-                ? jsonModel._serializeAsString()
+                ? jsonModel._serializedJson().asString()
                 : OBJECT_WRITER.writeValueAsString(transformed);
       };
     } catch (Exception e) {
@@ -132,7 +133,7 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
       return deserialize(innerPayload, reader);
     }
     try {
-      return readValue(payload, reader);
+      return SerializedJson.of(payload).deserialize(reader);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -173,19 +174,6 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
         .addAbstractTypeMapping(ByteArray.class, JsonByteArray.class)
         .addSerializer(ByteArray.class, new ByteArraySerializer())
         .addDeserializer(JsonByteArray.class, new ByteArrayDeserializer());
-  }
-
-  private static <T> @Nullable T readValue(Object payload, ObjectReader reader) throws IOException {
-    if (payload instanceof JsonByteArray jsonByteArray) {
-      return jsonByteArray.readFromJson(reader);
-    } else if (payload instanceof ByteArray byteArray) {
-      return reader.readValue(byteArray.newInputStream());
-    } else if (payload instanceof byte[] bytes) {
-      return reader.readValue(bytes);
-    } else if (payload instanceof String string) {
-      return reader.readValue(string);
-    }
-    throw new IllegalArgumentException("Unsupported payload type: " + payload.getClass());
   }
 
   private Json() {}

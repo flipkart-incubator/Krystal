@@ -269,7 +269,7 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
 if (_serializedPayload == null){
   this._serializedPayload = _proto.toByteArray();
 }
-return _serializedPayload;
+return _serializedPayload.clone();
 """)
             .build());
 
