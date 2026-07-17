@@ -42,7 +42,7 @@ class Proto2024eLatticeSampleResponseTest {
             ._build();
 
     // Serialize to bytes
-    byte[] serialized = original._serialize();
+    byte[] serialized = original._serialize().readAllBytes();
     assertThat(serialized).isNotEmpty();
 
     // Deserialize from bytes
@@ -107,7 +107,7 @@ class Proto2024eLatticeSampleResponseTest {
             .status(Status.UNKNOWN)
             ._build();
 
-    byte[] serialized = original._serialize();
+    byte[] serialized = original._serialize().readAllBytes();
     Proto2024eLatticeSampleResponse_ImmutProto deserialized =
         new Proto2024eLatticeSampleResponse_ImmutProto(serialized);
 
@@ -229,7 +229,7 @@ class Proto2024eLatticeSampleResponseTest {
             .status(Status.IN_PROGRESS)
             ._build();
 
-    byte[] serialized = original._serialize();
+    byte[] serialized = original._serialize().readAllBytes();
     Proto2024eLatticeSampleResponse_ImmutProto deserialized =
         new Proto2024eLatticeSampleResponse_ImmutProto(serialized);
 
@@ -325,7 +325,7 @@ class Proto2024eLatticeSampleResponseTest {
             .subStatuses(List.of(Status.COMPLETED, Status.UNKNOWN))
             ._build();
 
-    byte[] serialized = original._serialize();
+    byte[] serialized = original._serialize().readAllBytes();
     SubMessage_ImmutProto deserialized = new SubMessage_ImmutProto(serialized);
 
     assertThat(deserialized.count()).isEqualTo(99);
@@ -352,7 +352,7 @@ class Proto2024eLatticeSampleResponseTest {
   }
 
   @Test
-  void unknownProtoEnumValue_deserializesToUnknown() throws Exception {
+  void unknownProtoEnumValue_deserializesToUnknown() {
     // Build a raw proto message with an unrecognized enum value (999) for the status field
     Proto2024eLatticeSampleResponseProto rawProto =
         Proto2024eLatticeSampleResponseProto.newBuilder()
@@ -404,7 +404,7 @@ class Proto2024eLatticeSampleResponseTest {
             .namedStatuses(Map.of("x", Status.FAILED, "y", Status.IN_PROGRESS))
             ._build();
 
-    byte[] serialized = original._serialize();
+    byte[] serialized = original._serialize().readAllBytes();
     Proto2024eLatticeSampleResponse_ImmutProto deserialized =
         new Proto2024eLatticeSampleResponse_ImmutProto(serialized);
 

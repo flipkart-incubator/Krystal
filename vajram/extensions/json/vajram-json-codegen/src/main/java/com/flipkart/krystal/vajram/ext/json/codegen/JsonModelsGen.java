@@ -33,6 +33,8 @@ import com.flipkart.krystal.model.map.ModelsMapBuilder;
 import com.flipkart.krystal.vajram.codegen.common.generators.SerdeModelValidator;
 import com.flipkart.krystal.vajram.json.Json;
 import com.flipkart.krystal.vajram.json.SerializableJsonModel;
+import com.flipkart.krystal.vajram.json.serialized.BytesJson;
+import com.flipkart.krystal.vajram.json.serialized.JsonRepresentation;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -49,6 +51,8 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeSpec.Builder;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -124,7 +128,7 @@ final class JsonModelsGen implements CodeGenerator {
     jacksonToolFields(classBuilder, immutableJsonModelName);
 
     classBuilder.addField(
-        FieldSpec.builder(byteArrayType, "_serializedPayload", PRIVATE)
+        FieldSpec.builder(JsonRepresentation.class, "_serializedPayload", PRIVATE)
             .addAnnotation(JsonIgnore.class)
             .build());
     classBuilder.addField(
@@ -135,14 +139,15 @@ final class JsonModelsGen implements CodeGenerator {
     // Add _serialize method from Serializable interface with lazy initialization
     classBuilder.addMethod(
         MethodSpec.overriding(
-                util.getMethod(() -> SerializableJsonModel.class.getMethod("_serialize")))
+                util.getMethod(() -> SerializableJsonModel.class.getMethod("_serializedJson")))
             .addCode(
-"""
-if (_serializedPayload == null) {
-  this._serializedPayload = _WRITER.get().writeValueAsBytes(this);
-}
-return _serializedPayload;
-""")
+                """
+                if (_serializedPayload == null) {
+                  this._serializedPayload = new $T(_WRITER.get().writeValueAsBytes(this));
+                }
+                return _serializedPayload;
+                """,
+                BytesJson.class)
             .build());
 
     classBuilder.addMethod(
@@ -150,17 +155,29 @@ return _serializedPayload;
             .addModifiers(PRIVATE)
             .addCode(
                 """
-                try{
-                  if (_deserializationPending) {
-                    _READER.get().withValueToUpdate(this).readValue(_serializedPayload);
+                if (_deserializationPending) {
+                  try{
+                    _serializedPayload.deserialize(_READER.get().withValueToUpdate(this));
                     this._deserializationPending = false;
+                  } catch ($T e) {
+                    throw new $T(e);
                   }
-                } catch ($T e) {
-                  throw new $T(e);
                 }
                 """,
                 Exception.class,
                 RuntimeException.class)
+            .build());
+
+    classBuilder.addMethod(
+        MethodSpec.overriding(
+                util.getMethod(() -> SerializableJsonModel.class.getMethod("_reader")))
+            .addStatement("return _READER.get()")
+            .build());
+
+    classBuilder.addMethod(
+        MethodSpec.overriding(
+                util.getMethod(() -> SerializableJsonModel.class.getMethod("_writer")))
+            .addStatement("return _WRITER.get()")
             .build());
 
     List<MethodSpec> methods = new ArrayList<>();
@@ -231,12 +248,37 @@ return _serializedPayload;
         .addSuperinterface(SerializableJsonModel.class)
         .addFields(fields(modelMethods, false))
         .addMethod(
-            // Add constructor for serialized payload
+            // Primary constructor accepting SerializedJson
+            MethodSpec.constructorBuilder()
+                .addModifiers(PUBLIC)
+                .addParameter(JsonRepresentation.class, "_serializedPayload")
+                .addStatement("this._serializedPayload = _serializedPayload")
+                .addStatement("this._deserializationPending = true")
+                .build())
+        .addMethod(
+            // Convenience constructor for raw bytes — delegates to the SerializedJson constructor
             MethodSpec.constructorBuilder()
                 .addModifiers(PUBLIC)
                 .addParameter(byteArrayType, "_serializedPayload")
-                .addStatement("this._serializedPayload = _serializedPayload")
-                .addStatement("this._deserializationPending = true")
+                .addStatement("this(new $T(_serializedPayload))", BytesJson.class)
+                .build())
+        .addMethod(
+            // Convenience constructor for inputStream
+            MethodSpec.constructorBuilder()
+                .addModifiers(PUBLIC)
+                .addParameter(InputStream.class, "_inputStream")
+                .addParameter(boolean.class, "_retainBytes")
+                .addException(IOException.class)
+                .addCode(
+"""
+    if (_retainBytes) {
+      this._serializedPayload = new $T(_inputStream.readAllBytes());
+      this._deserializationPending = true;
+    } else {
+      _reader().withValueToUpdate(this).readValue(_inputStream);
+    }
+""",
+                    BytesJson.class)
                 .build())
         .addMethod(allArgCtor(modelMethods).build())
         .addMethod(copyCtor(modelRootType, util))

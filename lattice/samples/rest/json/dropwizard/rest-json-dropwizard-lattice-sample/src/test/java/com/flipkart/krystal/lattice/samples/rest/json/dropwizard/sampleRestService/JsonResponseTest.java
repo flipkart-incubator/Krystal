@@ -26,7 +26,7 @@ class JsonResponseTest {
             .mapTypedField(Map.of("X", "A", "Y", "B", "Z", "C"))
             .byteArray(JsonByteArray.copyOf(new byte[] {23, 45, 23, 56, 67, 64, 45, 45, 3, 45, 56}))
             ._build();
-    byte[] serializedPayload = immutJson._serialize();
+    byte[] serializedPayload = immutJson._serialize().readAllBytes();
     System.out.println(new String(serializedPayload, StandardCharsets.UTF_8));
     JsonResponse_ImmutJson deserialized = new JsonResponse_ImmutJson(serializedPayload);
     assertThat(deserialized).isEqualTo(immutJson);

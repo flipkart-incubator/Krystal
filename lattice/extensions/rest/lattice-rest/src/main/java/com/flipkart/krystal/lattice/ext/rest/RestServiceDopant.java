@@ -33,6 +33,7 @@ import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.Response.ResponseBuilder;
 import jakarta.ws.rs.core.UriInfo;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
@@ -80,8 +81,8 @@ public abstract class RestServiceDopant implements Dopant<RestService, RestServi
                     if (response == null || response instanceof Unit) {
                       responseBuilder = Response.ok();
                     } else if (response instanceof SerializableModel serializableResponse) {
-                      byte[] bytes = serializableResponse._serialize();
-                      contentLength = bytes.length;
+                      InputStream bytes = serializableResponse._serialize();
+                      contentLength = bytes.available();
                       responseBuilder =
                           Response.ok(bytes)
                               .header(

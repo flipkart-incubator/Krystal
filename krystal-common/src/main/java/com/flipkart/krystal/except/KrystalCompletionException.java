@@ -48,11 +48,29 @@ public class KrystalCompletionException extends CompletionException {
     };
   }
 
+  /**
+   * Wraps the throwable in a {@link KrystalCompletionException} if it is not of type {@link
+   * CompletionException}. Else returns the throwable as it is.
+   */
   public static CompletionException wrapAsCompletionException(Throwable t) {
-    if (t instanceof CompletionException c) {
+    return wrapAsCompletionException(t, null);
+  }
+
+  /**
+   * If {@code wrapperMessage} is null, and {@code t} is a {@link CompletionException}, returns t as
+   * it is. Else, wraps the t in a {@link KrystalCompletionException}
+   */
+  public static CompletionException wrapAsCompletionException(
+      Throwable t, @Nullable String wrapperMessage) {
+    if (t instanceof CompletionException c && wrapperMessage == null) {
       return c;
     }
-    String message = t.getMessage();
-    return new KrystalCompletionException(message != null ? message : t.getClass().getName(), t);
+    if (wrapperMessage == null) {
+      wrapperMessage = t.getMessage();
+    }
+    if (wrapperMessage == null) {
+      wrapperMessage = t.getClass().getSimpleName();
+    }
+    return new KrystalCompletionException(wrapperMessage, t);
   }
 }

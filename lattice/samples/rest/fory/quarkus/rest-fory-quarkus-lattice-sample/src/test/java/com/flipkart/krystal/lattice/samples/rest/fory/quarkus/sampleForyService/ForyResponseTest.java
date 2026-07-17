@@ -27,7 +27,7 @@ class ForyResponseTest {
             .nestedData(ForyInnerData_ImmutFory._builder().value("inner").count(10)._build())
             ._build();
 
-    byte[] serialized = original._serialize();
+    byte[] serialized = original._serialize().readAllBytes();
     assertThat(serialized).isNotEmpty();
 
     ForyResponse_ImmutFory deserialized = new ForyResponse_ImmutFory(serialized);
@@ -47,7 +47,7 @@ class ForyResponseTest {
     ForyResponse_ImmutFory original =
         ForyResponse_ImmutFory._builder().message("Sparse").mandatoryInt(1)._build();
 
-    byte[] serialized = original._serialize();
+    byte[] serialized = original._serialize().readAllBytes();
     ForyResponse_ImmutFory deserialized = new ForyResponse_ImmutFory(serialized);
 
     assertThat(deserialized.message()).isEqualTo("Sparse");
@@ -69,7 +69,7 @@ class ForyResponseTest {
                     ForyInnerData_ImmutFory._builder().value("B").count(2)._build()))
             ._build();
 
-    byte[] serialized = original._serialize();
+    byte[] serialized = original._serialize().readAllBytes();
     ForyResponse_ImmutFory deserialized = new ForyResponse_ImmutFory(serialized);
 
     assertThat(deserialized.nestedDataList()).hasSize(2);
@@ -91,7 +91,7 @@ class ForyResponseTest {
                     ForyInnerData_ImmutFory._builder().value("Y").count(20)._build()))
             ._build();
 
-    byte[] serialized = original._serialize();
+    byte[] serialized = original._serialize().readAllBytes();
     ForyResponse_ImmutFory deserialized = new ForyResponse_ImmutFory(serialized);
 
     assertThat(deserialized.namedInnerData()).hasSize(2);
@@ -110,7 +110,7 @@ class ForyResponseTest {
             .innerData(ForyInnerData_ImmutFory._builder().value("nested").count(5)._build())
             ._build();
 
-    byte[] serialized = original._serialize();
+    byte[] serialized = original._serialize().readAllBytes();
     ForyRequest_ImmutFory deserialized = new ForyRequest_ImmutFory(serialized);
 
     assertThat(deserialized.mandatoryInput()).isEqualTo(7);

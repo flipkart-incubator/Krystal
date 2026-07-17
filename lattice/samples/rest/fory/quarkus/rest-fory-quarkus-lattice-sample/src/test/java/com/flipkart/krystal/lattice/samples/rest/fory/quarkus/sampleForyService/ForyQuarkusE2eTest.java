@@ -54,7 +54,7 @@ class ForyQuarkusE2eTest {
     ForyRequest_ImmutFory request =
         ForyRequest_ImmutFory._builder().mandatoryInput(7).mandatoryLongInput(99L)._build();
 
-    byte[] requestBytes = request._serialize();
+    byte[] requestBytes = request._serialize().readAllBytes();
 
     HttpResponse<byte[]> resp =
         httpClient.send(
