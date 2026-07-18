@@ -23,6 +23,7 @@ import com.flipkart.krystal.traits.TraitDispatchPolicy;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
 import com.google.common.collect.ImmutableList;
+import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import lombok.Builder;
@@ -176,5 +177,30 @@ public final class KrystexGraph {
       }
       configBuilder.outputLogicDecoratorConfig(batchingDecoratorConfig);
     };
+  }
+
+  public static class KrystexGraphBuilder {
+
+    private TraitDispatchPolicies traitDispatchPolicies = new TraitDispatchPolicies();
+
+    public KrystexGraphBuilder traitDispatchPolicies(TraitDispatchPolicy... traitDispatchPolicies) {
+      this.traitDispatchPolicies = this.traitDispatchPolicies.merge(traitDispatchPolicies);
+      return this;
+    }
+
+    public KrystexGraphBuilder traitDispatchPolicies(TraitDispatchPolicies traitDispatchPolicies) {
+      this.traitDispatchPolicies = this.traitDispatchPolicies.merge(traitDispatchPolicies);
+      return this;
+    }
+
+    public KrystexGraphBuilder traitDispatchPolicies(
+        Collection<? extends TraitDispatchPolicy> traitDispatchPolicies) {
+      this.traitDispatchPolicies = this.traitDispatchPolicies.merge(traitDispatchPolicies);
+      return this;
+    }
+
+    public TraitDispatchPolicies traitDispatchPolicies() {
+      return this.traitDispatchPolicies;
+    }
   }
 }

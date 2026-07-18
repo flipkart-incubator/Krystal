@@ -1,7 +1,6 @@
 package com.flipkart.krystal.lattice.ext.rest;
 
 import static com.flipkart.krystal.lattice.core.headers.StandardHeaderNames.REQUEST_ID;
-import static jakarta.ws.rs.core.HttpHeaders.CONTENT_LENGTH;
 import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 
 import com.flipkart.krystal.data.ImmutableRequest;
@@ -33,7 +32,6 @@ import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.Response.ResponseBuilder;
 import jakarta.ws.rs.core.UriInfo;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
@@ -75,30 +73,31 @@ public abstract class RestServiceDopant implements Dopant<RestService, RestServi
                     .executorConfigBuilder(executorConfigBuilder))
             .thenApply(
                 response -> {
-                  ResponseBuilder responseBuilder;
-                  int contentLength = 0;
                   try {
+                    if (response instanceof Publisher<?>) {
+                      // Return publisher as is as it represents a streaming API.
+                      return response;
+                    }
+
+                    // For all non-streaming use cases, return a Response object for consistency
                     if (response == null || response instanceof Unit) {
-                      responseBuilder = Response.ok();
+                      return Response.ok().build();
                     } else if (response instanceof SerializableModel serializableResponse) {
-                      InputStream bytes = serializableResponse._serialize();
-                      contentLength = bytes.available();
-                      responseBuilder =
-                          Response.ok(bytes)
-                              .header(
-                                  CONTENT_TYPE,
-                                  serializableResponse._serdeProtocol().defaultContentType());
+                      return Response.ok(serializableResponse._serialize())
+                          .header(
+                              CONTENT_TYPE,
+                              serializableResponse._serdeProtocol().defaultContentType())
+                          .build();
                     } else if (response instanceof ResponseBuilder rb) {
                       return rb.build();
                     } else if (response instanceof Response r) {
                       return r;
                     } else {
-                      return response;
+                      return Response.ok(response).build();
                     }
                   } catch (Throwable e) {
-                    responseBuilder = Response.serverError();
+                    return Response.serverError().build();
                   }
-                  return responseBuilder.header(CONTENT_LENGTH, contentLength).build();
                 });
   }
 
