@@ -22,6 +22,19 @@ public interface SerdeProtocol<A extends Annotation, T extends SerializableModel
    */
   String defaultContentType();
 
+  default @Nullable Object serialize(Object object) {
+    return serialize(object, null);
+  }
+
+  default @Nullable Object serialize(Object object, @Nullable A customConfig) {
+    return serialize(
+        object,
+        model -> {
+          throw new UnsupportedOperationException();
+        },
+        customConfig);
+  }
+
   /**
    * Serializes the given object using the given custom config if possible. Else throws a runtime
    * exception.

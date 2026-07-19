@@ -22,7 +22,6 @@ import com.flipkart.krystal.lattice.vajram.RequestInitializer;
 import com.flipkart.krystal.lattice.vajram.VajramRequestExecutionContext;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
-import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.util.ArrayList;
@@ -63,18 +62,17 @@ public final class KrystexDopant implements SimpleDopant {
         configBuilder ->
             krystexDopantSpec.configureExecutorWith().forEach(configBuilder::configureWith);
 
-    TraitDispatchPolicies traitDispatchPolicies =
-        new TraitDispatchPolicies(krystexDopantSpec.traitDispatchPolicies());
     KrystexGraphBuilder graphBuilder =
         krystexGraphBuilder
             .vajramGraph(vajramGraph)
             .injectionProvider(dependencyInjectionFramework.toVajramInjectionProvider())
-            .traitDispatchPolicies(traitDispatchPolicies);
+            .traitDispatchPolicies(krystexDopantSpec.traitDispatchPolicies());
     if (krystexDopantSpec.enableSharedAutoBatchers()) {
       BatchSizeSupplier batchSizeSupplier = krystexDopantSpec.batchSizeSupplier();
       if (batchSizeSupplier != null) {
         krystexGraphBuilder.inputBatcherConfig(
-            computeSharedBatcherConfig(vajramGraph, batchSizeSupplier, traitDispatchPolicies));
+            computeSharedBatcherConfig(
+                vajramGraph, batchSizeSupplier, graphBuilder.traitDispatchPolicies()));
       }
     }
     this.krystexGraph = graphBuilder.build();

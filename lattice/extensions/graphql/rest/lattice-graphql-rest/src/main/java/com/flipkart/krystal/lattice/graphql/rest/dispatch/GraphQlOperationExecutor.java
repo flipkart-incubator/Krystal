@@ -7,6 +7,7 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponseFuture;
 import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.commands.ClientSideCommand;
+import com.flipkart.krystal.krystex.commands.DirectForwardCommand;
 import com.flipkart.krystal.krystex.commands.DirectForwardSend;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecoratorConfig;
@@ -114,7 +115,7 @@ public final class GraphQlOperationExecutor implements DependencyDecorator {
                                     @SuppressWarnings("unchecked")
                                     ClientSideCommand<R> newCommand =
                                         (ClientSideCommand<R>)
-                                            new DirectForwardSend(
+                                            new DirectForwardCommand(
                                                 computedRequest._vajramID(),
                                                 List.of(
                                                     new RequestResponseFuture<>(

@@ -47,6 +47,7 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.HttpHeaders;
+import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
@@ -72,11 +73,11 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @AutoService(LatticeCodeGeneratorProvider.class)
-public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorProvider {
+public class JakartaRestResourceGenProvider implements LatticeCodeGeneratorProvider {
 
   @Override
   public CodeGenerator create(LatticeCodegenContext latticeCodegenContext) {
-    return new JakartaRestServiceResourceGen(latticeCodegenContext);
+    return new JakartaRestResourceGen(latticeCodegenContext);
   }
 
   public static List<ClassName> resourceClasses(LatticeCodegenContext context) {
@@ -84,7 +85,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
     List<ClassName> resourceClasses = new ArrayList<>();
     CodeGenUtility util = context.codeGenUtility().codegenUtil();
     for (TypeElement vajramElem :
-        JakartaRestServiceResourceGen.getRestResourceVajramElems(latticeAppElem, util)) {
+        JakartaRestResourceGen.getRestResourceVajramElems(latticeAppElem, util)) {
       VajramInfo vajramInfo = context.codeGenUtility().computeVajramInfo(vajramElem);
       ClassName jaxRsResourceName = getJaxRsResourceName(vajramInfo, vajramElem);
       resourceClasses.add(jaxRsResourceName);
@@ -92,13 +93,13 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
     return resourceClasses;
   }
 
-  private static class JakartaRestServiceResourceGen implements CodeGenerator {
+  private static class JakartaRestResourceGen implements CodeGenerator {
 
     private final LatticeCodegenContext context;
 
     private final CodeGenUtility util;
 
-    public JakartaRestServiceResourceGen(LatticeCodegenContext context) {
+    public JakartaRestResourceGen(LatticeCodegenContext context) {
       this.context = context;
       this.util = context.codeGenUtility().codegenUtil();
     }
@@ -265,7 +266,8 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
         returnsPublisher = true;
       } else {
         jakartaResourceReturnType =
-            ParameterizedTypeName.get(ClassName.get(CompletionStage.class), wildCard);
+            ParameterizedTypeName.get(
+                ClassName.get(CompletionStage.class), ClassName.get(Response.class));
         returnsPublisher = false;
       }
 
@@ -491,7 +493,7 @@ public class JakartaRestServiceCodegenProvider implements LatticeCodeGeneratorPr
                       """,
                     ParameterizedTypeName.get(
                         ClassName.get(CompletionStage.class),
-                        returnsPublisher ? publisherType : wildCard));
+                        returnsPublisher ? publisherType : ClassName.get(Response.class)));
                 if (returnsPublisher) {
                   r.addStatement(
                       """

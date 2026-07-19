@@ -12,8 +12,8 @@ import com.flipkart.krystal.data.RequestResponseFuture;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
+import com.flipkart.krystal.krystex.commands.DirectForwardCommand;
 import com.flipkart.krystal.krystex.commands.DirectForwardReceive;
-import com.flipkart.krystal.krystex.commands.DirectForwardSend;
 import com.flipkart.krystal.krystex.commands.MultiRequestDirectCommand;
 import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
@@ -53,7 +53,8 @@ public final class DirectKryon extends AbstractKryon<MultiRequestDirectCommand, 
     VajramID vajramID = kryonDefinition.vajramID();
 
     if (kryonCommand instanceof DirectForwardReceive directForwardReceive) {
-      List<ExecutionItem> executionItems = directForwardReceive.executionItems();
+      List<ExecutionItem> executionItems =
+          directForwardReceive.executionItems(kryonDefinition.kryonDefinitionRegistry());
 
       try {
         CommunicationFacade communicationFacade =
@@ -71,7 +72,7 @@ public final class DirectKryon extends AbstractKryon<MultiRequestDirectCommand, 
                         dependency.onVajramID(),
                         kryonExecutor::executeCommand);
                 kryonResponseDependencyInvocation.invokeDependency(
-                    new DirectForwardSend(
+                    new DirectForwardCommand(
                         dependency.onVajramID(),
                         requestResponseFutureList,
                         extendedDependentChain));
@@ -95,7 +96,7 @@ public final class DirectKryon extends AbstractKryon<MultiRequestDirectCommand, 
               .forEach(
                   dependency ->
                       kryonExecutor.executeCommand(
-                          new DirectForwardSend(
+                          new DirectForwardCommand(
                               dependency.onVajramID(),
                               ImmutableList.of(),
                               dependentChain.extend(vajramID, dependency))));
