@@ -10,6 +10,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @Slf4j
 public record RequestResponseFuture<R extends Request<T>, T>(
     R request, CompletableFuture<@Nullable T> response) {
+
   @SuppressWarnings("Convert2Diamond") // Needed to prevent null-checker errors
   public static <R extends Request<T>, T> RequestResponseFuture<R, T> forRequest(R request) {
     return new RequestResponseFuture<R, T>(request, new CompletableFuture<@Nullable T>());

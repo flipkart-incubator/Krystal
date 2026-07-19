@@ -37,11 +37,12 @@ import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.KrystexGraph;
-import com.flipkart.krystal.krystex.commands.DirectForwardReceive;
+import com.flipkart.krystal.krystex.commands.DirectForwardCommand;
 import com.flipkart.krystal.krystex.commands.DirectForwardSend;
 import com.flipkart.krystal.krystex.commands.ForwardReceiveBatch;
 import com.flipkart.krystal.krystex.commands.ForwardSendBatch;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
+import com.flipkart.krystal.krystex.commands.ServerSideCommand;
 import com.flipkart.krystal.krystex.decoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecoratorConfig;
@@ -489,44 +490,46 @@ public final class VajramKryonExecutor implements KrystalExecutor {
     try {
       VajramKryonDefinition vajramKryonDefinition =
           KryonUtils.validateAsVajram(kryonDefinitionRegistry.getOrThrow(kryonCommand.vajramID()));
-      if (kryonCommand instanceof DirectForwardSend forwardSend) {
-        List<ExecutionItem> list = new ArrayList<>();
-        for (RequestResponseFuture<? extends Request<?>, ?> executableRequest :
-            forwardSend.executableRequests()) {
-          @SuppressWarnings("unchecked")
-          CompletableFuture<@Nullable Object> response =
-              (CompletableFuture<@Nullable Object>) executableRequest.response();
-          list.add(
-              new ExecutionItem(
-                  vajramKryonDefinition
-                      .facetsFromRequest()
-                      .logic()
-                      .facetsFromRequest(executableRequest.request()),
-                  response));
+      if (!(kryonCommand instanceof ServerSideCommand<? extends R>)) {
+        if (kryonCommand instanceof DirectForwardSend forwardSend) {
+          List<ExecutionItem> list = new ArrayList<>();
+          for (RequestResponseFuture<? extends Request<?>, ?> executableRequest :
+              forwardSend.executableRequests()) {
+            @SuppressWarnings("unchecked")
+            CompletableFuture<@Nullable Object> response =
+                (CompletableFuture<@Nullable Object>) executableRequest.response();
+            list.add(
+                new ExecutionItem(
+                    vajramKryonDefinition
+                        .facetsFromRequest()
+                        .logic()
+                        .facetsFromRequest(executableRequest.request()),
+                    response));
+          }
+
+          //noinspection unchecked
+          return _executeCommand(
+              (KryonCommand<? extends R>)
+                  DirectForwardCommand.ofExecutionItems(
+                      forwardSend.vajramID(), list, forwardSend.dependentChain()));
+
+        } else if (kryonCommand instanceof ForwardSendBatch forwardSend) {
+          //noinspection unchecked
+          return (CompletableFuture<R>)
+              _executeCommand(
+                  new ForwardReceiveBatch(
+                      forwardSend.vajramID(),
+                      forwardSend.executableRequests().entrySet().stream()
+                          .collect(
+                              toImmutableMap(
+                                  Entry::getKey,
+                                  e ->
+                                      vajramKryonDefinition
+                                          .facetsFromRequest()
+                                          .logic()
+                                          .facetsFromRequest(e.getValue()))),
+                      forwardSend.dependentChain()));
         }
-
-        //noinspection unchecked
-        return _executeCommand(
-            (KryonCommand<? extends R>)
-                new DirectForwardReceive(
-                    forwardSend.vajramID(), list, forwardSend.dependentChain()));
-
-      } else if (kryonCommand instanceof ForwardSendBatch forwardSend) {
-        //noinspection unchecked
-        return (CompletableFuture<R>)
-            _executeCommand(
-                new ForwardReceiveBatch(
-                    forwardSend.vajramID(),
-                    forwardSend.executableRequests().entrySet().stream()
-                        .collect(
-                            toImmutableMap(
-                                Entry::getKey,
-                                e ->
-                                    vajramKryonDefinition
-                                        .facetsFromRequest()
-                                        .logic()
-                                        .facetsFromRequest(e.getValue()))),
-                    forwardSend.dependentChain()));
       }
       try {
         validate(kryonCommand);
@@ -658,7 +661,7 @@ public final class VajramKryonExecutor implements KrystalExecutor {
           try {
             CompletableFuture<DirectResponse> submissionResponse =
                 this.executeCommand(
-                    new DirectForwardSend(
+                    new DirectForwardCommand(
                         vajramID,
                         asRequestResponseFutures(kryonExecutions),
                         kryonDefinitionRegistry.getDependentChainsStart()));
