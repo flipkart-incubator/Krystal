@@ -96,6 +96,10 @@ public abstract class RestServiceDopant implements Dopant<RestService, RestServi
                       return Response.ok(response).build();
                     }
                   } catch (Throwable e) {
+                    log.error(
+                        "Encountered exception when executing vajram {} over REST",
+                        vajramRequest._vajramID(),
+                        e);
                     return Response.serverError().build();
                   }
                 });
