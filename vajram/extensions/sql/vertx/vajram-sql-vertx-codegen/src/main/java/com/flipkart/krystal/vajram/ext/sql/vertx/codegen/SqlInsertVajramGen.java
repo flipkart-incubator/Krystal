@@ -2,7 +2,6 @@ package com.flipkart.krystal.vajram.ext.sql.vertx.codegen;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.ext.sql.vertx.codegen.VertxSqlUtil.SQL_RESULT_FACET;
-import static com.flipkart.krystal.vajram.ext.sql.vertx.codegen.VertxSqlUtil.loadProtocolConfig;
 import static com.flipkart.krystal.vajram.ext.sql.vertx.codegen.VertxSqlUtil.varArgsToList;
 import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.Modifier.ABSTRACT;
@@ -23,6 +22,7 @@ import com.flipkart.krystal.vajram.ext.sql.codegen.InsertModelParser;
 import com.flipkart.krystal.vajram.ext.sql.codegen.InsertQueryBuilder;
 import com.flipkart.krystal.vajram.ext.sql.codegen.InsertQueryModel;
 import com.flipkart.krystal.vajram.ext.sql.codegen.InsertQueryModel.TableColumn;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlCodegenUtil;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlDriverConfig;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlModelParser;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel;
@@ -32,7 +32,6 @@ import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.SerdeColumnInfo
 import com.flipkart.krystal.vajram.ext.sql.codegen.syntax.SqlSyntax;
 import com.flipkart.krystal.vajram.ext.sql.lang.ReturnOnInsert;
 import com.flipkart.krystal.vajram.ext.sql.lang.SqlDialect;
-import com.flipkart.krystal.vajram.ext.sql.model.DefaultValue;
 import com.flipkart.krystal.vajram.ext.sql.model.DefaultValueStrategy;
 import com.flipkart.krystal.vajram.ext.sql.model.DefaultValueStrategy.ValueComputation;
 import com.flipkart.krystal.vajram.ext.sql.model.IncomingForeignKey;
@@ -56,7 +55,6 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeKind;
@@ -90,6 +88,7 @@ public class SqlInsertVajramGen implements CodeGenerator {
   private final SqlSyntax syntax;
   private final InsertQueryBuilder insertQueryBuilder;
   private final DialectCodeGenerator dialectGen;
+  private final VertxSqlUtil vertxSqlUtil;
 
   public SqlInsertVajramGen(
       VajramCodeGenUtility vajramUtil,
@@ -104,8 +103,9 @@ public class SqlInsertVajramGen implements CodeGenerator {
     this.vajramUtil = vajramUtil;
     this.executeSqlVajram = vajramUtil.computeVajramInfo(ExecuteVertxSql.class);
     this.syntax = SqlSyntax.forDialect(sqlDialect);
-    this.insertQueryBuilder = new InsertQueryBuilder(vajramUtil);
-    this.dialectGen = DialectCodeGenerator.forDialect(sqlDialect, new VertxSqlUtil(util, syntax));
+    this.insertQueryBuilder = new InsertQueryBuilder(vajramUtil, sqlDialect);
+    this.vertxSqlUtil = new VertxSqlUtil(new SqlCodegenUtil(util, sqlDialect), syntax, sqlDialect);
+    this.dialectGen = DialectCodeGenerator.forDialect(sqlDialect, vertxSqlUtil);
   }
 
   // ─── Entry point ─────────────────────────────────────────────────────────────
@@ -476,7 +476,7 @@ public class SqlInsertVajramGen implements CodeGenerator {
   private void buildStaticParams(MethodSpec.Builder method, InsertQueryModel model) {
     List<CodeBlock> args = new ArrayList<>();
     for (TableColumn col : model.columns()) {
-      args.add(columnAccessor(model.inputParamName(), col));
+      args.add(insertQueryBuilder.columnAccessor(model.inputParamName(), col));
     }
     method.addStatement("return $T.wrap($L)", ClassName.get(Tuple.class), varArgsToList(args));
   }
@@ -487,79 +487,11 @@ public class SqlInsertVajramGen implements CodeGenerator {
         "for ($T _item : $L)", TypeName.get(model.tableElement().asType()), model.inputParamName());
 
     for (TableColumn col : model.columns()) {
-      method.addStatement("_params.add($L)", columnAccessor("_item", col));
+      method.addStatement("_params.add($L)", insertQueryBuilder.columnAccessor("_item", col));
     }
 
     method.endControlFlow();
     method.addStatement("return $T.wrap(_params)", ClassName.get(Tuple.class));
-  }
-
-  /** Generates the code to access a column value from a table model variable. */
-  private CodeBlock columnAccessor(String varName, TableColumn col) {
-    CodeBlock codeBlock =
-        CodeBlock.of(
-            "$L.$L()$L", varName, col.methodName(), col.isOptional() ? ".orElse(null)" : "");
-    SerdeColumnInfo serde = col.serdeInfo();
-    if (serde != null) {
-      // Serde — e.g. Json.JSON.serialize(user.address(), config)
-      // Serde is supposed to handle null values
-      codeBlock = serializeExpression(codeBlock, serde);
-    }
-
-    DefaultValue defaultValue = col.declaringMethod().getAnnotation(DefaultValue.class);
-    if (defaultValue != null) {
-      codeBlock =
-          CodeBlock.of(
-              "$T.requireNonNullElse($L, $L)",
-              Objects.class,
-              codeBlock,
-              convertDefaultValue(defaultValue, col));
-    }
-
-    return codeBlock;
-  }
-
-  private CodeBlock convertDefaultValue(DefaultValue defaultValue, TableColumn column) {
-    TypeMirror typeMirror = column.javaType();
-    final String defaultValueString = defaultValue.value();
-    try {
-      return CodeBlock.of(
-          "$L",
-          switch (typeMirror.getKind()) {
-            case BOOLEAN -> Boolean.valueOf(defaultValueString);
-            case BYTE -> Byte.valueOf(defaultValueString);
-            case SHORT -> Short.valueOf(defaultValueString);
-            case INT -> Integer.valueOf(defaultValueString);
-            case LONG -> Long.valueOf(defaultValueString);
-            case CHAR -> {
-              if (defaultValueString.length() != 1) {
-                throw new IllegalArgumentException(
-                    "@DefaultValue(value) must be exactly one character long for type "
-                        + typeMirror);
-              }
-              yield defaultValueString.charAt(0);
-            }
-            case FLOAT -> Float.valueOf(defaultValueString);
-            case DOUBLE -> Double.valueOf(defaultValueString);
-            default -> CodeBlock.of("$S", defaultValueString);
-          });
-    } catch (Exception e) {
-      util.error(e, column.declaringMethod());
-      throw e;
-    }
-  }
-
-  /**
-   * Generates a {@code facetVar.serialize(value, configOrNull)} expression wrapped in {@code
-   * SqlSerdeUtil.toSqlValue(...)}.
-   *
-   * <p>If the protocol's config annotation type is not {@code NoAnnotation}, the config is read
-   * from the column's type via {@code Type.class.getAnnotation(ConfigAnno.class)}. Otherwise,
-   * {@code null} is passed.
-   */
-  private CodeBlock serializeExpression(CodeBlock valueExpr, SerdeColumnInfo serde) {
-    return loadProtocolConfig(serde.protocolTypeElement())
-        .createSerializationExpression(CodeBlock.of("$L", valueExpr), serde.columnType(), util);
   }
 
   // ─── @Resolve resolvePool ───────────────────────────────────────────────────

@@ -1,8 +1,8 @@
 package com.flipkart.krystal.vajram.ext.sql.vertx.codegen;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
-import static com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryBuilder.buildJoinSql;
-import static com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryBuilder.buildSimpleSql;
+import static com.flipkart.krystal.vajram.ext.sql.codegen.SelectQueryBuilder.buildJoinSql;
+import static com.flipkart.krystal.vajram.ext.sql.codegen.SelectQueryBuilder.buildSimpleSql;
 import static com.flipkart.krystal.vajram.ext.sql.lang.LIMIT.NO_LIMIT;
 import static com.flipkart.krystal.vajram.ext.sql.vertx.codegen.VertxSqlUtil.varArgsToList;
 import static java.util.Objects.requireNonNull;
@@ -18,8 +18,9 @@ import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SelectQueryBuilder;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlCodegenUtil;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlModelParser;
-import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryBuilder;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.JoinRelation;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.JoinSqlResult;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.ScalarColumn;
@@ -67,8 +68,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * Generates a {@code @Vajram} ComputeVajram for each {@code @SQL @SELECT @Trait} interface.
  *
  * <p>SQL model parsing and query building are delegated to the framework-agnostic {@code
- * vajram-sql-codegen} module ({@link SqlModelParser}, {@link SqlQueryBuilder}). This class handles
- * only the Vert.x-specific JavaPoet code generation.
+ * vajram-sql-codegen} module ({@link SqlModelParser}, {@link SelectQueryBuilder}). This class
+ * handles only the Vert.x-specific JavaPoet code generation.
  */
 public class SqlSelectVajramGen implements CodeGenerator {
 
@@ -91,7 +92,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
     this.vajramUtil = vajramUtil;
     this.executeSqlVajram = vajramUtil.computeVajramInfo(ExecuteVertxSql.class);
     this.syntax = SqlSyntax.forDialect(sqlDialect);
-    this.vertxSqlUtil = new VertxSqlUtil(util, syntax);
+    this.vertxSqlUtil = new VertxSqlUtil(new SqlCodegenUtil(util, sqlDialect), syntax, sqlDialect);
   }
 
   // ─── Entry point ─────────────────────────────────────────────────────────────

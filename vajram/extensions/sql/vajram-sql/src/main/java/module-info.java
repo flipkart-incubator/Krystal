@@ -4,10 +4,12 @@ module krystal.vajram.ext.sql {
   exports com.flipkart.krystal.vajram.ext.sql.lang.operators.comparison;
   exports com.flipkart.krystal.vajram.ext.sql.lang.operators.logical;
   exports com.flipkart.krystal.vajram.ext.sql.lang.operators;
+  exports com.flipkart.krystal.vajram.ext.sql.data;
 
   requires flipkart.krystal.common;
   requires static lombok;
   requires com.google.auto.value.annotations;
   requires java.compiler;
   requires com.google.common;
+  requires org.checkerframework.checker.qual;
 }
