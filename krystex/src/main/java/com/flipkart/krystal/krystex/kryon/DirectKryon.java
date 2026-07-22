@@ -101,13 +101,14 @@ public final class DirectKryon extends AbstractKryon<MultiRequestDirectCommand, 
                               ImmutableList.of(),
                               dependentChain.extend(vajramID, dependency))));
           flushDecorators(dependentChain);
+        } else {
+          kryonDefinition.executeGraph(
+              new GraphExecutionData(
+                  executionItems,
+                  communicationFacade,
+                  getContextEnricher(),
+                  kryonExecutor.commandQueue()));
         }
-        kryonDefinition.executeGraph(
-            new GraphExecutionData(
-                executionItems,
-                communicationFacade,
-                getContextEnricher(),
-                kryonExecutor.commandQueue()));
       } catch (Throwable e) {
         for (ExecutionItem executionItem : executionItems) {
           if (!executionItem.response().isDone()) {

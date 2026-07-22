@@ -25,7 +25,7 @@ public final class MySqlCodeGenerator implements DialectCodeGenerator {
   private final CodeGenUtility util;
 
   MySqlCodeGenerator(VertxSqlUtil vertxSqlUtil) {
-    this.util = vertxSqlUtil.util();
+    this.util = vertxSqlUtil.sqlUtil().util();
   }
 
   @Override

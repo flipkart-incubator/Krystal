@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.EmbeddingIdPredicate;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.EmbeddingInfo;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderInfo;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderItemInfo;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderUserIdEquals;
@@ -59,6 +61,24 @@ class SqlVajramMapResultTest {
     assertThat(GetUserInfoById_VertxSql.resolveSql(mock(UserIdPredicate.class)))
         .isEqualTo(
             "SELECT id, name, email AS contactEmail, phoneNumber FROM UserEntity WHERE id = $1 LIMIT 1");
+  }
+
+  @Test
+  void getEmbeddingById_mapsFloatArrayFromPostgresRow() {
+    Row row = mockRow();
+    stubLong(row, "id", 1L);
+    stubFloatArray(row, "embeddingvalues", 1.25f, -2.5f, 3.75f);
+
+    EmbeddingInfo result = GetEmbeddingById_VertxSql.mapResult(rowSetOf(row));
+
+    assertThat(result.id()).isEqualTo(1L);
+    assertThat(result.embeddingValues().toArray()).containsExactly(1.25f, -2.5f, 3.75f);
+  }
+
+  @Test
+  void getEmbeddingById_sql_isCorrect() {
+    assertThat(GetEmbeddingById_VertxSql.resolveSql(mock(EmbeddingIdPredicate.class)))
+        .isEqualTo("SELECT id, embeddingValues FROM EmbeddingEntity WHERE id = $1 LIMIT 1");
   }
 
   // ─── GetOrderInfoByUserId (multi-row, simple projection) ─────────────────────
@@ -397,6 +417,10 @@ class SqlVajramMapResultTest {
 
   private static void stubString(Row row, String col, String value) {
     when(row.getString(col)).thenReturn(value);
+  }
+
+  private static void stubFloatArray(Row row, String col, Float... values) {
+    when(row.getArrayOfFloats(col)).thenReturn(values);
   }
 
   private static void stubObject(Row row, String col, Object value) {

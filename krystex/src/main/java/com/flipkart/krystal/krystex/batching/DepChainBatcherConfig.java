@@ -182,15 +182,19 @@ public record DepChainBatcherConfig(
     Map<VajramID, Map<Integer, Set<DependentChain>>> ioVajramsToOrdinalChains = new HashMap<>();
     Map<VajramID, Integer> vajramsToOutgoingOrdinals = new HashMap<>();
     for (VajramDefinition vajramDefinition : externallyInvocableVajrams) {
-      collateDepChainOrdinals(
-          ioVajramsToOrdinalChains,
-          vajramsToOutgoingOrdinals,
-          graph,
-          vajramDefinition.vajramId(),
-          graph.kryonDefinitionRegistry().getDependentChainsStart(),
-          0,
-          disabledDependentChains,
-          traitDispatchPolicies);
+      Collection<VajramID> dispatchTargets =
+          getDispatchTargets(vajramDefinition.vajramId(), graph, traitDispatchPolicies);
+      for (VajramID dispatchTargetID : dispatchTargets) {
+        collateDepChainOrdinals(
+            ioVajramsToOrdinalChains,
+            vajramsToOutgoingOrdinals,
+            graph,
+            dispatchTargetID,
+            graph.kryonDefinitionRegistry().getDependentChainsStart(),
+            0,
+            disabledDependentChains,
+            traitDispatchPolicies);
+      }
     }
     return registerBatchers(ioVajramsToOrdinalChains, batchSizeSupplier, graph);
   }
@@ -208,6 +212,10 @@ public record DepChainBatcherConfig(
       return;
     }
     VajramDefinition vajramBeingInvoked = graph.getVajramDefinition(vajramIDBeingInvoked);
+    if (vajramBeingInvoked.isTrait()) {
+      throw new IllegalArgumentException(
+          "collateDepChainOrdinals cannot be called for traits. First resolve dispatch targets before calling this method.");
+    }
     List<Dependency> dependencies = getDependencies(vajramBeingInvoked);
     Map<Dependency, Integer> dependencyOrdinals = new HashMap<>();
     for (Dependency dependency : dependencies) {

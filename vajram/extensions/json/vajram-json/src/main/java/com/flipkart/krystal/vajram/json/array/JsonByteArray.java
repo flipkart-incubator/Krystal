@@ -17,13 +17,13 @@ public final class JsonByteArray extends ByteArrayBase {
     this.data = data;
   }
 
-  public static JsonByteArray of() {
+  public static JsonByteArray empty() {
     return EMPTY;
   }
 
   /** Wraps a cloned copy of the provided byte array into a {@link JsonByteArray}. */
   public static JsonByteArray copyOf(byte... data) {
-    return of(data.clone());
+    return backedBy(data.clone());
   }
 
   /**
@@ -34,7 +34,7 @@ public final class JsonByteArray extends ByteArrayBase {
    * 100% sure that the passed bytes are not modified after passing it to this method. Otherwise,
    * use {@link #copyOf(byte...)}.
    */
-  public static JsonByteArray of(byte... data) {
+  public static JsonByteArray backedBy(byte... data) {
     return new JsonByteArray(data);
   }
 
@@ -48,7 +48,7 @@ public final class JsonByteArray extends ByteArrayBase {
     return reader.readValue(data);
   }
 
-  /** The ObjectReader must not modify the provided byte array. */
+  /** The JsonGenerator must not modify the provided byte array. */
   public void writeBase64ToJson(JsonGenerator generator) throws IOException {
     generator.writeBinary(data);
   }

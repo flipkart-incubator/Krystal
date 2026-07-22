@@ -10,7 +10,8 @@ import java.util.List;
  *
  * @param <P> the boxed version of the primitive type
  */
-public sealed interface PrimitiveArray<P> permits ByteArray, DoubleArray, IntArray, LongArray {
+public sealed interface PrimitiveArray<P>
+    permits ByteArray, DoubleArray, FloatArray, IntArray, LongArray {
   /** Returns an unmodifiable list view of the array. */
   List<P> asList();
 

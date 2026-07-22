@@ -32,6 +32,7 @@ public abstract sealed class PostGreCompatibleCodeGenerator implements DialectCo
   public MethodSpec mapResultsForInsertReturn(InsertResultType resultType) {
     String resultPkg =
         vertxSqlUtil
+            .sqlUtil()
             .util()
             .processingEnv()
             .getElementUtils()

@@ -17,9 +17,14 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.array.ByteArray;
+import com.flipkart.krystal.model.array.FloatArray;
+import com.flipkart.krystal.model.array.SimpleFloatArray;
 import com.flipkart.krystal.serial.SerdeProtocol;
+import com.flipkart.krystal.vajram.json.JsonConfig.Creator;
 import com.flipkart.krystal.vajram.json.array.ByteArrays.ByteArrayDeserializer;
 import com.flipkart.krystal.vajram.json.array.ByteArrays.ByteArraySerializer;
+import com.flipkart.krystal.vajram.json.array.FloatArrays.FloatArrayDeserializer;
+import com.flipkart.krystal.vajram.json.array.FloatArrays.FloatArraySerializer;
 import com.flipkart.krystal.vajram.json.array.JsonByteArray;
 import com.flipkart.krystal.vajram.json.serialized.JsonRepresentation;
 import com.google.common.collect.Lists;
@@ -48,7 +53,7 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
               new JavaTimeModule(),
               new Jdk8Module(),
               new ParameterNamesModule(),
-              byteArrayModule(),
+              primitiveArrayModule(),
               new EnumModelModule())
           .build();
 
@@ -74,14 +79,14 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
       return null;
     }
     if (customConfig == null) {
-      customConfig = JsonConfig.Creator.createDefault();
+      customConfig = Creator.createDefault();
     }
     try {
       @Nullable Object transformed = tryAsJsonModel(object, mapper);
       return switch (customConfig.serializeAs()) {
         case BYTE_ARRAY ->
             transformed instanceof SerializableJsonModel jsonModel
-                ? jsonModel._serialize()
+                ? jsonModel._serialize().readAllBytes()
                 : OBJECT_WRITER.writeValueAsBytes(transformed);
         case STRING ->
             transformed instanceof SerializableJsonModel jsonModel
@@ -169,11 +174,20 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
     }
   }
 
-  private static SimpleModule byteArrayModule() {
-    return new SimpleModule("KrystalByteArrayModule")
+  private static SimpleModule primitiveArrayModule() {
+    SimpleModule primitiveArrayModule = new SimpleModule("KrystalPrimitiveArrayModule");
+
+    primitiveArrayModule
         .addAbstractTypeMapping(ByteArray.class, JsonByteArray.class)
         .addSerializer(ByteArray.class, new ByteArraySerializer())
         .addDeserializer(JsonByteArray.class, new ByteArrayDeserializer());
+
+    primitiveArrayModule
+        .addAbstractTypeMapping(FloatArray.class, SimpleFloatArray.class)
+        .addSerializer(FloatArray.class, new FloatArraySerializer())
+        .addDeserializer(SimpleFloatArray.class, new FloatArrayDeserializer());
+
+    return primitiveArrayModule;
   }
 
   private Json() {}

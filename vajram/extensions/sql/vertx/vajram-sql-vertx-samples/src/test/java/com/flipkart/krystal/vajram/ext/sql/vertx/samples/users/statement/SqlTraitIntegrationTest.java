@@ -10,10 +10,14 @@ import com.flipkart.krystal.krystex.KrystexGraph;
 import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
+import com.flipkart.krystal.model.array.FloatArray;
+import com.flipkart.krystal.model.array.SimpleFloatArray;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.vajram.ext.sql.vertx.ExecuteVertxSql;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.EmbeddingIdPredicate;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.EmbeddingInfo;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderAmountGtPredicate;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderAmountLtePredicate;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.OrderInfo;
@@ -31,6 +35,8 @@ import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserWithAd
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.clause.UserWithOrdersAndItems;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.Address;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.Address_ImmutJson;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.Embedding;
+import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.Embedding_ImmutPojo;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.Order;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.Order_ImmutPojo;
 import com.flipkart.krystal.vajram.ext.sql.vertx.samples.users.model.User;
@@ -50,10 +56,13 @@ import io.vertx.pgclient.PgBuilder;
 import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.sqlclient.Pool;
 import io.vertx.sqlclient.PoolOptions;
+import io.vertx.sqlclient.Tuple;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -121,6 +130,10 @@ class SqlTraitIntegrationTest {
             + "itemName VARCHAR(255) NOT NULL, "
             + "itemPriceCents BIGINT NOT NULL, "
             + "orderId BIGINT NOT NULL)");
+    runSql(
+        "CREATE TABLE EmbeddingEntity ("
+            + "id BIGINT PRIMARY KEY, "
+            + "embeddingValues REAL[] NOT NULL)");
 
     // Seed user and order data via INSERT vajrams; order items remain as raw SQL (no vajram).
     Lease<SingleThreadExecutor> seedLease = EXEC_POOL.lease();
@@ -216,6 +229,10 @@ class SqlTraitIntegrationTest {
   static void afterAll() {
     pool.close().toCompletionStage().toCompletableFuture().join();
     vertx.close().toCompletionStage().toCompletableFuture().join();
+  }
+
+  public static @Nullable Float[] toSqlArray(@Nullable FloatArray values) {
+    return values == null ? null : values.boxedStream().toArray(Float[]::new);
   }
 
   @BeforeEach
@@ -353,6 +370,40 @@ class SqlTraitIntegrationTest {
               VajramExecutionConfig.builder().executionId("getUserInfoById_missing_exec").build());
     }
     assertThat(future).succeedsWithin(TIMEOUT).isNull();
+  }
+
+  @Test
+  void insertAndSelectEmbedding_roundTripsPostgresFloatArray() throws Exception {
+    FloatArray expected = SimpleFloatArray.copyOf(1.25f, -2.5f, 3.75f);
+    Embedding embedding =
+        Embedding_ImmutPojo._builder().id(500L).embeddingValues(expected)._build();
+    try {
+      CompletableFuture<Integer> insertFuture;
+      try (VajramKryonExecutor executor = createExecutor("insertEmbedding")) {
+        insertFuture =
+            executor.execute(
+                InsertEmbedding_Req._builder().embedding(embedding)._build(),
+                VajramExecutionConfig.builder().executionId("insertEmbedding_exec").build());
+      }
+      assertThat(insertFuture).succeedsWithin(TIMEOUT).isEqualTo(1);
+
+      CompletableFuture<EmbeddingInfo> selectFuture;
+      try (VajramKryonExecutor executor = createExecutor("getEmbeddingById")) {
+        selectFuture =
+            executor.execute(
+                GetEmbeddingById_Req._builder()
+                    .where(EmbeddingIdPredicate._builder().idIs(500L)._build())
+                    ._build(),
+                VajramExecutionConfig.builder().executionId("getEmbeddingById_exec").build());
+      }
+      assertThat(selectFuture)
+          .succeedsWithin(TIMEOUT)
+          .satisfies(
+              result ->
+                  assertThat(FloatArray.areEqual(result.embeddingValues(), expected)).isTrue());
+    } finally {
+      runSql("DELETE FROM EmbeddingEntity WHERE id = 500");
+    }
   }
 
   // ─── GetOrderInfoByUserId ─────────────────────────────────────────────────────
@@ -1415,6 +1466,8 @@ class SqlTraitIntegrationTest {
     traitBinder
         .bindTrait(GetUserWithAddressById_Req.class)
         .to(GetUserWithAddressById_VertxSql_Req.class);
+    traitBinder.bindTrait(GetEmbeddingById_Req.class).to(GetEmbeddingById_VertxSql_Req.class);
+    traitBinder.bindTrait(InsertEmbedding_Req.class).to(InsertEmbedding_VertxSql_Req.class);
 
     kGraph.traitDispatchPolicies(
         new TraitDispatchPolicies(
@@ -1436,7 +1489,9 @@ class SqlTraitIntegrationTest {
                     InsertUsers_Req._VAJRAM_ID,
                     InsertUserReturning_Req._VAJRAM_ID,
                     InsertUsersReturning_Req._VAJRAM_ID,
-                    GetUserWithAddressById_Req._VAJRAM_ID)
+                    GetUserWithAddressById_Req._VAJRAM_ID,
+                    GetEmbeddingById_Req._VAJRAM_ID,
+                    InsertEmbedding_Req._VAJRAM_ID)
                 .map(vajramID -> new GuiceyStaticDispatchPolicy(vajramGraph, vajramID, traitBinder))
                 .toList()));
     return kGraph
@@ -1474,6 +1529,32 @@ class SqlTraitIntegrationTest {
 
   private static void runSql(String sql) throws Exception {
     pool.preparedQuery(sql).execute().toCompletionStage().toCompletableFuture().get();
+  }
+
+  private static void insertNearestEmbeddingFixtures() throws Exception {
+    pool.preparedQuery("INSERT INTO EmbeddingEntity (id, embeddingValues) VALUES ($1, $2)")
+        .executeBatch(
+            List.of(
+                Tuple.of(601L, (Object) toSqlArray(SimpleFloatArray.copyOf(1, 0))),
+                Tuple.of(602L, (Object) toSqlArray(SimpleFloatArray.copyOf(100, 10))),
+                Tuple.of(603L, (Object) toSqlArray(SimpleFloatArray.copyOf(0.7f, 0.7f)))))
+        .toCompletionStage()
+        .toCompletableFuture()
+        .get();
+  }
+
+  private static List<Long> nearestEmbeddingIds(String sql, FloatArray query, int limit)
+      throws Exception {
+    List<Long> ids = new ArrayList<>();
+    for (var row :
+        pool.preparedQuery(sql)
+            .execute(Tuple.of(toSqlArray(query), limit))
+            .toCompletionStage()
+            .toCompletableFuture()
+            .get()) {
+      ids.add(row.getLong("id"));
+    }
+    return ids;
   }
 
   @Test
