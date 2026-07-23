@@ -1,7 +1,6 @@
 package com.flipkart.krystal.krystex.batching;
 
 import static java.lang.Math.max;
-import static java.util.stream.Collectors.groupingBy;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.core.VajramID;
@@ -30,6 +29,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -199,6 +199,20 @@ public record DepChainBatcherConfig(
     return registerBatchers(ioVajramsToOrdinalChains, batchSizeSupplier, graph);
   }
 
+  /**
+   * For every IO Vajram, this method collates all depChains ending in that IO Vajram by its ordinal
+   *
+   * @param ioVajramsToOrdinalChains a cache which maps a vajram to depth(ordinal) to set of
+   *     depChains which map to that depth
+   * @param vajramsToResponseOrdinals a cache which maps a vajram to its response ordinals
+   * @param graph
+   * @param vajramIDBeingInvoked the vajram for which depchain ordinals need to be collated
+   * @param incomingDepChain
+   * @param incomingOrdinal the current ordinal at the invocation location from where this vajram is
+   *     being invoked
+   * @param disabledDependentChains
+   * @param traitDispatchPolicies
+   */
   private static void collateDepChainOrdinals(
       Map<VajramID, Map<Integer, Set<DependentChain>>> ioVajramsToOrdinalChains,
       Map<VajramID, Integer> vajramsToResponseOrdinals,
@@ -217,27 +231,24 @@ public record DepChainBatcherConfig(
           "collateDepChainOrdinals cannot be called for traits. First resolve dispatch targets before calling this method.");
     }
     List<Dependency> dependencies = getDependencies(vajramBeingInvoked);
-    Map<Dependency, Integer> dependencyOrdinals = new HashMap<>();
+    Map<SourceOrdinalKey, Integer> sourceOrdinals = new HashMap<>();
     for (Dependency dependency : dependencies) {
       DependentChain outgoingDepChain =
           incomingDepChain.extend(vajramBeingInvoked.vajramId(), dependency);
       for (VajramID depVajramID :
           getDispatchTargets(dependency.onVajramID(), graph, traitDispatchPolicies)) {
-        int depSourceOrdinal =
-            computeSourceOrdinal(
-                dependency,
-                incomingOrdinal,
-                dependencyOrdinals,
-                vajramsToResponseOrdinals,
-                graph,
-                traitDispatchPolicies);
         collateDepChainOrdinals(
             ioVajramsToOrdinalChains,
             vajramsToResponseOrdinals,
             graph,
             depVajramID,
             outgoingDepChain,
-            depSourceOrdinal,
+            computeSourceOrdinal(
+                new SourceOrdinalKey(new DepResolvers(dependency), incomingOrdinal),
+                sourceOrdinals,
+                vajramsToResponseOrdinals,
+                graph,
+                traitDispatchPolicies),
             disabledDependentChains,
             traitDispatchPolicies);
       }
@@ -247,7 +258,11 @@ public record DepChainBatcherConfig(
       final int depChainOrdinal =
           incomingOrdinal
               + computeResponseOrdinal(
-                  vajramIDBeingInvoked, vajramsToResponseOrdinals, graph, traitDispatchPolicies);
+                  vajramIDBeingInvoked,
+                  sourceOrdinals,
+                  vajramsToResponseOrdinals,
+                  graph,
+                  traitDispatchPolicies);
       ioVajramsToOrdinalChains
           .computeIfAbsent(vajramIDBeingInvoked, _vid -> new HashMap<>())
           .computeIfAbsent(depChainOrdinal, _depth -> new HashSet<>())
@@ -285,91 +300,143 @@ public record DepChainBatcherConfig(
     return depVajramIDs;
   }
 
+  /**
+   * Given A LogicSet of a given vajram (ex: resolvers of a dependency or output logics) and an
+   * incoming ordinal, this method computes the effective ordinal of all the facets which are the
+   * sources to the logic set.
+   *
+   * <p>For example: if a vajram has an output logic which has two sources which are dependency
+   * vajrams with response ordinals 1 and 2 respectively, then the source ordinal of the output
+   * logic will be
+   *
+   * <ul>
+   *   <li>2 if the two dependencies are parallel (max 1,2)
+   *   <li>3 if the two dependencies are sequential (1 + 2)
+   * </ul>
+   *
+   * @param sourceOrdinalKey
+   * @param sourceOrdinals
+   * @param vajramsToResponseOrdinals
+   * @param graph
+   * @param traitDispatchPolicies
+   * @return
+   */
   private static int computeSourceOrdinal(
-      Dependency dependency,
-      int incomingOrdinal,
-      Map<Dependency, Integer> dependencySourceOrdinals,
+      SourceOrdinalKey sourceOrdinalKey,
+      Map<SourceOrdinalKey, Integer> sourceOrdinals,
       Map<VajramID, Integer> vajramsToResponseOrdinals,
       VajramGraph graph,
       TraitDispatchPolicies traitDispatchPolicies) {
-    if (dependencySourceOrdinals.containsKey(dependency)) {
-      return dependencySourceOrdinals.get(dependency);
+    if (sourceOrdinals.containsKey(sourceOrdinalKey)) {
+      return sourceOrdinals.get(sourceOrdinalKey);
     }
-    VajramDefinition vajramBeingInvoked = graph.getVajramDefinition(dependency.ofVajramID());
+    LogicSet logicSet = sourceOrdinalKey.logicSet();
+    int incomingOrdinal = sourceOrdinalKey.incomingOrdinal();
     int sourceOrdinal = incomingOrdinal;
-    List<ResolverDefinition> resolvers =
-        vajramBeingInvoked.inputResolvers().keySet().stream()
-            .filter(r -> r.target().dependency().equals(dependency))
-            .toList();
-    for (ResolverDefinition resolver : resolvers) {
-      ImmutableSet<? extends Facet> sources = resolver.sources();
-      for (Facet source : sources) {
-        if (source instanceof Dependency depSource) {
-          for (VajramID sourceDispatchTarget :
-              getDispatchTargets(depSource.onVajramID(), graph, traitDispatchPolicies)) {
-            sourceOrdinal =
-                max(
-                    sourceOrdinal,
-                    computeSourceOrdinal(
-                            depSource,
-                            incomingOrdinal,
-                            dependencySourceOrdinals,
-                            vajramsToResponseOrdinals,
-                            graph,
-                            traitDispatchPolicies)
-                        + computeResponseOrdinal(
-                            sourceDispatchTarget,
-                            vajramsToResponseOrdinals,
-                            graph,
-                            traitDispatchPolicies));
-          }
+    for (Facet source : logicSet.sources(graph)) {
+      if (source instanceof Dependency sourceDependency) {
+        int i =
+            computeSourceOrdinal(
+                new SourceOrdinalKey(new DepResolvers(sourceDependency), incomingOrdinal),
+                sourceOrdinals,
+                vajramsToResponseOrdinals,
+                graph,
+                traitDispatchPolicies);
+        for (VajramID sourceDispatchTarget :
+            getDispatchTargets(sourceDependency.onVajramID(), graph, traitDispatchPolicies)) {
+          sourceOrdinal =
+              max(
+                  sourceOrdinal,
+                  i
+                      + computeResponseOrdinal(
+                          sourceDispatchTarget,
+                          sourceOrdinals,
+                          vajramsToResponseOrdinals,
+                          graph,
+                          traitDispatchPolicies));
         }
       }
     }
-    dependencySourceOrdinals.put(dependency, sourceOrdinal);
+    sourceOrdinals.put(sourceOrdinalKey, sourceOrdinal);
     return sourceOrdinal;
   }
 
+  /**
+   * Given a vajram, computes the response ordinal of that vajram in isolation (irrespective of
+   * where it's invoked from - i.e. assuming incoming ordinal is 0)
+   *
+   * @param vajramBeingInvokedID
+   * @param sourceOrdinals
+   * @param vajramsToResponseOrdinals
+   * @param graph
+   * @param traitDispatchPolicies
+   * @return
+   */
   private static int computeResponseOrdinal(
       VajramID vajramBeingInvokedID,
+      Map<SourceOrdinalKey, Integer> sourceOrdinals,
       Map<VajramID, Integer> vajramsToResponseOrdinals,
       VajramGraph graph,
       TraitDispatchPolicies traitDispatchPolicies) {
     if (!vajramsToResponseOrdinals.containsKey(vajramBeingInvokedID)) {
-      VajramDefinition vajramBeingInvoked = graph.getVajramDefinition(vajramBeingInvokedID);
-      List<Dependency> dependencies = getDependencies(vajramBeingInvoked);
-      Map<Dependency, List<ResolverDefinition>> resolversByTargetDep =
-          vajramBeingInvoked.inputResolvers().keySet().stream()
-              .collect(groupingBy(r -> r.target().dependency()));
-      int sourceOrdinal = 0;
-      for (Dependency dependency : dependencies) {
-        List<ResolverDefinition> resolvers =
-            resolversByTargetDep.getOrDefault(dependency, List.of());
-        for (ResolverDefinition resolver : resolvers) {
-          ImmutableSet<? extends Facet> sources = resolver.sources();
-          for (Facet source : sources) {
-            if (source instanceof Dependency depSource) {
-              Collection<VajramID> dispatchTargets =
-                  getDispatchTargets(depSource.onVajramID(), graph, traitDispatchPolicies);
-              for (VajramID dispatchTarget : dispatchTargets) {
-                sourceOrdinal =
-                    max(
-                        sourceOrdinal,
-                        computeResponseOrdinal(
-                            dispatchTarget,
-                            vajramsToResponseOrdinals,
-                            graph,
-                            traitDispatchPolicies));
-              }
-            }
-          }
-        }
+      int responseOrdinal =
+          computeSourceOrdinal(
+              new SourceOrdinalKey(new OutputLogics(vajramBeingInvokedID), 0),
+              sourceOrdinals,
+              vajramsToResponseOrdinals,
+              graph,
+              traitDispatchPolicies);
+      if (graph.getVajramDefinition(vajramBeingInvokedID).def() instanceof IOVajramDef<?>) {
+        responseOrdinal++;
       }
-      if (vajramBeingInvoked.def() instanceof IOVajramDef<Object>) {
-        sourceOrdinal++;
-      }
-      vajramsToResponseOrdinals.put(vajramBeingInvokedID, sourceOrdinal);
+      vajramsToResponseOrdinals.put(vajramBeingInvokedID, responseOrdinal);
     }
     return vajramsToResponseOrdinals.get(vajramBeingInvokedID);
   }
+
+  /**
+   * A set of one or more logics which have sources - and a source ordinal can be computed
+   * considering these sources
+   */
+  private sealed interface LogicSet {
+    Set<? extends Facet> sources(VajramGraph graph);
+  }
+
+  /**
+   * Represents all the resolvers which resolve the given {@code dependency}
+   *
+   * @param dependency the dependency whose resolvers together form a logic set
+   */
+  private record DepResolvers(Dependency dependency) implements LogicSet {
+
+    @Override
+    public Set<Facet> sources(VajramGraph graph) {
+      VajramDefinition vajramDef = graph.getVajramDefinition(dependency.ofVajramID());
+      List<ResolverDefinition> resolvers =
+          vajramDef.inputResolvers().keySet().stream()
+              .filter(r -> r.target().dependency().equals(dependency))
+              .toList();
+      Set<Facet> set = new LinkedHashSet<>();
+      for (ResolverDefinition resolver : resolvers) {
+        set.addAll(resolver.sources());
+      }
+      return set;
+    }
+  }
+
+  /**
+   * Represents the output logic(s) (multiple in case there is @Output.Batched and @Output.Unbatch)
+   * of a vajram
+   *
+   * @param vajramID whose output logic(s) are considered a logic set
+   */
+  private record OutputLogics(VajramID vajramID) implements LogicSet {
+
+    @Override
+    public Set<FacetSpec> sources(VajramGraph graph) {
+      return graph.getVajramDefinition(vajramID()).outputLogicSources();
+    }
+  }
+
+  private record SourceOrdinalKey(LogicSet logicSet, int incomingOrdinal) {}
 }
