@@ -362,7 +362,7 @@ public record DepChainBatcherConfig(
 
   /**
    * Given a vajram, computes the response ordinal of that vajram in isolation (irrespective of
-   * where it's invoked from - i.e. irrespective of incoming ordinal)
+   * where it's invoked from - i.e. assuming incoming ordinal is 0)
    *
    * @param vajramBeingInvokedID
    * @param sourceOrdinals
