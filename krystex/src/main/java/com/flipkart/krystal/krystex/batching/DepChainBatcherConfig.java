@@ -357,6 +357,7 @@ public record DepChainBatcherConfig(
         }
       }
     }
+    sourceOrdinals.put(sourceOrdinalKey, sourceOrdinal);
     return sourceOrdinal;
   }
 
@@ -385,7 +386,7 @@ public record DepChainBatcherConfig(
               vajramsToResponseOrdinals,
               graph,
               traitDispatchPolicies);
-      if (graph.getVajramDefinition(vajramBeingInvokedID).def() instanceof IOVajramDef<Object>) {
+      if (graph.getVajramDefinition(vajramBeingInvokedID).def() instanceof IOVajramDef<?>) {
         responseOrdinal++;
       }
       vajramsToResponseOrdinals.put(vajramBeingInvokedID, responseOrdinal);
