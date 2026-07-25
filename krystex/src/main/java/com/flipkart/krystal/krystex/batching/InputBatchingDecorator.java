@@ -78,7 +78,7 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
   public void executeCommand(DecoratorCommand logicDecoratorCommand) {
     if (activeDependantChains == null
         && logicDecoratorCommand instanceof InitiateActiveDepChains initiateActiveDepChains) {
-      Set<DependentChain> allActiveDepChains = initiateActiveDepChains.dependantsChains();
+      Set<DependentChain> allActiveDepChains = initiateActiveDepChains.dependentChains();
       Set<DependentChain> builder = new LinkedHashSet<>(allActiveDepChains.size());
       // Retain only the ones which are applicable for this input batching decorator
       for (DependentChain activeDepChain : allActiveDepChains) {

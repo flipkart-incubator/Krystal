@@ -64,7 +64,8 @@ class DivideTest {
                   krystexVajramExecutor.execute(
                       Divide_ReqImmutPojo._builder().numerator(5).denominator(7)._build()))
           .isInstanceOf(RejectedExecutionException.class)
-          .hasMessage("External invocation is not enabled for vajramId: v<Divide>");
+          .hasMessage(
+              "Invocation from outside krystal graph has not been enabled for vajramId: v<Divide>");
     }
     if (previousValue != null) {
       System.setProperty(RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME, previousValue);

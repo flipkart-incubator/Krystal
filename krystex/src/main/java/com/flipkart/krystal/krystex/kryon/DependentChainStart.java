@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import lombok.EqualsAndHashCode;
@@ -16,9 +17,18 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * have this as their dependantChain.
  */
 @EqualsAndHashCode(callSuper = false, cacheStrategy = CacheStrategy.LAZY)
-public final class DependentChainStart extends AbstractDependentChain {
+public final class DependentChainStart extends AbstractDependentChainBase<DependentChain>
+    implements DependentChain {
 
-  DependentChainStart() {}
+  @Override
+  protected DependentChain _extend(VajramID vajramID, Dependency dependency) {
+    return new DependentChainImpl(vajramID, dependency, this);
+  }
+
+  @Override
+  public boolean endsWith(DependentChainBase dependentChain) {
+    return dependentChain instanceof DependentChainStart;
+  }
 
   /**
    * @return A string representation that depicts the beginning of the DependantChain.
@@ -29,7 +39,12 @@ public final class DependentChainStart extends AbstractDependentChain {
   }
 
   @Override
-  public @Nullable Dependency latestDependency() {
+  public boolean startsWith(DependentChain dependentChain) {
+    return dependentChain instanceof DependentChainStart;
+  }
+
+  @Override
+  public @Nullable VajramID getFirstVajram() {
     return null;
   }
 }

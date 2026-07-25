@@ -1,6 +1,5 @@
 package com.flipkart.krystal.lattice.krystex;
 
-import static com.flipkart.krystal.krystex.batching.DepChainBatcherConfig.computeSharedBatcherConfig;
 import static com.flipkart.krystal.lattice.krystex.KrystexDopant.DOPANT_TYPE;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
@@ -9,7 +8,6 @@ import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigB
 import com.flipkart.krystal.krystex.KrystexGraph;
 import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.krystex.VajramGraph;
-import com.flipkart.krystal.krystex.batching.DepChainBatcherConfig.BatchSizeSupplier;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
 import com.flipkart.krystal.lattice.core.di.Bindings;
@@ -62,20 +60,12 @@ public final class KrystexDopant implements SimpleDopant {
         configBuilder ->
             krystexDopantSpec.configureExecutorWith().forEach(configBuilder::configureWith);
 
-    KrystexGraphBuilder graphBuilder =
+    this.krystexGraph =
         krystexGraphBuilder
             .vajramGraph(vajramGraph)
             .injectionProvider(dependencyInjectionFramework.toVajramInjectionProvider())
-            .traitDispatchPolicies(krystexDopantSpec.traitDispatchPolicies());
-    if (krystexDopantSpec.enableSharedAutoBatchers()) {
-      BatchSizeSupplier batchSizeSupplier = krystexDopantSpec.batchSizeSupplier();
-      if (batchSizeSupplier != null) {
-        krystexGraphBuilder.inputBatcherConfig(
-            computeSharedBatcherConfig(
-                vajramGraph, batchSizeSupplier, graphBuilder.traitDispatchPolicies()));
-      }
-    }
-    this.krystexGraph = graphBuilder.build();
+            .traitDispatchPolicies(krystexDopantSpec.traitDispatchPolicies())
+            .build();
   }
 
   public <RespT extends @Nullable Object> CompletionStage<RespT> executeRequest(

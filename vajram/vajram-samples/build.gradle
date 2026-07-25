@@ -48,6 +48,10 @@ dependencies {
     /** END: Test dependencies **/
 }
 
+test {
+    maxHeapSize = "12g"
+}
+
 checkerFramework {
     excludeTests = true
 }

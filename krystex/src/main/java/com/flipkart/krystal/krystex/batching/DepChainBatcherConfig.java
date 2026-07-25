@@ -2,15 +2,13 @@ package com.flipkart.krystal.krystex.batching;
 
 import static java.lang.Math.max;
 
-import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.resolution.ResolverDefinition;
+import com.flipkart.krystal.krystex.DependentChainDisabler;
 import com.flipkart.krystal.krystex.VajramGraph;
-import com.flipkart.krystal.krystex.kryon.DefaultDependentChain;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
-import com.flipkart.krystal.krystex.kryon.DependentChainStart;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.OutputLogicDecoratorContext;
@@ -62,7 +60,7 @@ public record DepChainBatcherConfig(
   public static DepChainBatcherConfig simple(Supplier<InputBatcher> inputBatcherSupplier) {
     return new DepChainBatcherConfig(
         logicExecutionContext -> true,
-        logicExecutionContext -> generateInstanceId(logicExecutionContext.dependents()).toString(),
+        logicExecutionContext -> generateInstanceId(logicExecutionContext.dependents()),
         outputLogicDecoratorContext ->
             new InputBatchingDecorator(
                 outputLogicDecoratorContext.instanceId(),
@@ -122,23 +120,8 @@ public record DepChainBatcherConfig(
    * @return decorator instanceId of the form {@code
    *     [Start]>vajramId_1:dep_1>vajramId_2:dep_2>....>vajramId_n:dep_n}
    */
-  private static StringBuilder generateInstanceId(DependentChain dependentChain) {
-    if (dependentChain instanceof DependentChainStart dependantChainStart) {
-      return new StringBuilder(dependantChainStart.toString());
-    } else if (dependentChain instanceof DefaultDependentChain defaultDependantChain) {
-      if (defaultDependantChain.incomingDependentChain() instanceof DependentChainStart) {
-        return generateInstanceId(defaultDependantChain.incomingDependentChain())
-            .append('>')
-            .append(defaultDependantChain.vajramID().id())
-            .append(':')
-            .append(defaultDependantChain.latestDependency());
-      } else {
-        return generateInstanceId(defaultDependantChain.incomingDependentChain())
-            .append('>')
-            .append(defaultDependantChain.latestDependency());
-      }
-    }
-    throw new UnsupportedOperationException();
+  private static String generateInstanceId(DependentChain dependentChain) {
+    return dependentChain.toString();
   }
 
   private static boolean isBatchingNeededForIoVajram(VajramGraph graph, VajramID ioNode) {
@@ -157,28 +140,13 @@ public record DepChainBatcherConfig(
   }
 
   public static InputBatcherConfig computeSharedBatcherConfig(
-      VajramGraph graph, BatchSizeSupplier batchSizeSupplier) {
-    return computeSharedBatcherConfig(graph, batchSizeSupplier, new TraitDispatchPolicies());
-  }
-
-  public static InputBatcherConfig computeSharedBatcherConfig(
-      VajramGraph graph,
-      BatchSizeSupplier batchSizeSupplier,
-      TraitDispatchPolicies traitDispatchPolicies) {
-    return computeSharedBatcherConfig(
-        graph, batchSizeSupplier, traitDispatchPolicies, ImmutableSet.of());
-  }
-
-  public static InputBatcherConfig computeSharedBatcherConfig(
       VajramGraph graph,
       BatchSizeSupplier batchSizeSupplier,
       TraitDispatchPolicies traitDispatchPolicies,
-      ImmutableSet<DependentChain> disabledDependentChains) {
+      DependentChainDisabler dependentChainDisabler,
+      Collection<VajramID> externallyInvocableVajramIds) {
     List<VajramDefinition> externallyInvocableVajrams =
-        graph.vajramDefinitions().values().stream()
-            .filter(
-                v -> v.vajramTags().getAnnotationByType(InvocableOutsideGraph.class).isPresent())
-            .toList();
+        externallyInvocableVajramIds.stream().map(graph::getVajramDefinition).toList();
     Map<VajramID, Map<Integer, Set<DependentChain>>> ioVajramsToOrdinalChains = new HashMap<>();
     Map<VajramID, Integer> vajramsToOutgoingOrdinals = new HashMap<>();
     for (VajramDefinition vajramDefinition : externallyInvocableVajrams) {
@@ -192,7 +160,7 @@ public record DepChainBatcherConfig(
             dispatchTargetID,
             graph.kryonDefinitionRegistry().getDependentChainsStart(),
             0,
-            disabledDependentChains,
+            dependentChainDisabler,
             traitDispatchPolicies);
       }
     }
@@ -210,7 +178,7 @@ public record DepChainBatcherConfig(
    * @param incomingDepChain
    * @param incomingOrdinal the current ordinal at the invocation location from where this vajram is
    *     being invoked
-   * @param disabledDependentChains
+   * @param dependentChainDisabler
    * @param traitDispatchPolicies
    */
   private static void collateDepChainOrdinals(
@@ -220,9 +188,9 @@ public record DepChainBatcherConfig(
       VajramID vajramIDBeingInvoked,
       DependentChain incomingDepChain,
       int incomingOrdinal,
-      ImmutableSet<DependentChain> disabledDependentChains,
+      DependentChainDisabler dependentChainDisabler,
       TraitDispatchPolicies traitDispatchPolicies) {
-    if (disabledDependentChains.contains(incomingDepChain)) {
+    if (dependentChainDisabler.isDisabled(incomingDepChain)) {
       return;
     }
     VajramDefinition vajramBeingInvoked = graph.getVajramDefinition(vajramIDBeingInvoked);
@@ -249,7 +217,7 @@ public record DepChainBatcherConfig(
                 vajramsToResponseOrdinals,
                 graph,
                 traitDispatchPolicies),
-            disabledDependentChains,
+            dependentChainDisabler,
             traitDispatchPolicies);
       }
     }

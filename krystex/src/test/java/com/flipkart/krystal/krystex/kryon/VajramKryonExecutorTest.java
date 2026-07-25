@@ -1,7 +1,6 @@
 package com.flipkart.krystal.krystex.kryon;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Value.ALL_NON_NULL;
-import static com.flipkart.krystal.krystex.batching.DepChainBatcherConfig.computeSharedBatcherConfig;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy.BATCH;
@@ -28,6 +27,8 @@ import com.flipkart.krystal.krystex.TestRequestContext;
 import com.flipkart.krystal.krystex.VajramGraph.VajramGraphBuilder;
 import com.flipkart.krystal.krystex.batching.DepChainBatcherConfig;
 import com.flipkart.krystal.krystex.batching.InputBatcherConfig;
+import com.flipkart.krystal.krystex.batching.InputBatcherStrategy.CustomBatcherStrategy;
+import com.flipkart.krystal.krystex.batching.InputBatcherStrategy.DefaultBatcherStrategy;
 import com.flipkart.krystal.krystex.batching.InputBatchingDecorator;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
@@ -195,7 +196,7 @@ class VajramKryonExecutorTest {
         loadFromClasspath(
             "com.flipkart.krystal.krystex.test_vajrams.userservice",
             "com.flipkart.krystal.krystex.test_vajrams.hellofriends");
-    kGraph.inputBatcherConfig(computeSharedBatcherConfig(vGraph, _v -> 3));
+    kGraph.inputBatcherStrategy(new DefaultBatcherStrategy(_v -> 3));
     CompletableFuture<String> helloString;
     requestContext.requestId("ioVajramWithBatcherMultipleRequests");
     try (VajramKryonExecutor krystexVajramExecutor =
@@ -220,8 +221,9 @@ class VajramKryonExecutorTest {
             "com.flipkart.krystal.krystex.test_vajrams.userservice",
             "com.flipkart.krystal.krystex.test_vajrams.friendsservice",
             "com.flipkart.krystal.krystex.test_vajrams.hellofriendsv2");
-    kGraph.inputBatcherConfig(
-        singleBatcherConfig(TestUserService.class, () -> new InputBatcherImpl(2)));
+    kGraph.inputBatcherStrategy(
+        new CustomBatcherStrategy(
+            singleBatcherConfig(TestUserService.class, () -> new InputBatcherImpl(2))));
     CompletableFuture<String> helloString;
     requestContext.requestId("sequentialDependency");
     try (VajramKryonExecutor krystexVajramExecutor =
@@ -244,8 +246,9 @@ class VajramKryonExecutorTest {
             "com.flipkart.krystal.krystex.test_vajrams.userservice",
             "com.flipkart.krystal.krystex.test_vajrams.friendsservice",
             "com.flipkart.krystal.krystex.test_vajrams.hellofriendsv2");
-    kGraph.inputBatcherConfig(
-        singleBatcherConfig(TestUserService.class, () -> new InputBatcherImpl(2)));
+    kGraph.inputBatcherStrategy(
+        new CustomBatcherStrategy(
+            singleBatcherConfig(TestUserService.class, () -> new InputBatcherImpl(2))));
     CompletableFuture<String> helloString;
     requestContext.requestId("sequentialDependency");
     try (VajramKryonExecutor krystexVajramExecutor =
@@ -390,8 +393,9 @@ class VajramKryonExecutorTest {
             "com.flipkart.krystal.krystex.test_vajrams.userservice",
             "com.flipkart.krystal.krystex.test_vajrams.hellofriends",
             "com.flipkart.krystal.krystex.test_vajrams.multihello");
-    kGraph.inputBatcherConfig(
-        singleBatcherConfig(TestUserService.class, () -> new InputBatcherImpl(6)));
+    kGraph.inputBatcherStrategy(
+        new CustomBatcherStrategy(
+            singleBatcherConfig(TestUserService.class, () -> new InputBatcherImpl(6))));
     CompletableFuture<String> multiHellos;
     requestContext.requestId("execute_multiResolverFanouts_permutesTheFanouts");
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
@@ -433,8 +437,9 @@ class VajramKryonExecutorTest {
             "com.flipkart.krystal.krystex.test_vajrams.userservice",
             "com.flipkart.krystal.krystex.test_vajrams.hellofriends",
             "com.flipkart.krystal.krystex.test_vajrams.multihello");
-    kGraph.inputBatcherConfig(
-        singleBatcherConfig(TestUserService.class, () -> new InputBatcherImpl(100)));
+    kGraph.inputBatcherStrategy(
+        new CustomBatcherStrategy(
+            singleBatcherConfig(TestUserService.class, () -> new InputBatcherImpl(100))));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (VajramKryonExecutor krystexVajramExecutor =
@@ -473,7 +478,7 @@ class VajramKryonExecutorTest {
             "com.flipkart.krystal.krystex.test_vajrams.userservice",
             "com.flipkart.krystal.krystex.test_vajrams.hellofriends",
             "com.flipkart.krystal.krystex.test_vajrams.multihello");
-    kGraph.inputBatcherConfig(computeSharedBatcherConfig(vGraph, _v -> 100));
+    kGraph.inputBatcherStrategy(new DefaultBatcherStrategy(_v -> 100));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (VajramKryonExecutor krystexVajramExecutor =
@@ -534,7 +539,7 @@ class VajramKryonExecutorTest {
             "com.flipkart.krystal.krystex.test_vajrams.friendsservice",
             "com.flipkart.krystal.krystex.test_vajrams.hellofriends",
             "com.flipkart.krystal.krystex.test_vajrams.multihello");
-    kGraph.inputBatcherConfig(computeSharedBatcherConfig(vGraph, _v -> 100));
+    kGraph.inputBatcherStrategy(new DefaultBatcherStrategy(_v -> 100));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (VajramKryonExecutor krystexVajramExecutor =
@@ -569,14 +574,16 @@ class VajramKryonExecutorTest {
             "com.flipkart.krystal.krystex.test_vajrams.friendsservice",
             "com.flipkart.krystal.krystex.test_vajrams.hellofriendsv2",
             "com.flipkart.krystal.krystex.test_vajrams.multihellov2");
-    kGraph.inputBatcherConfig(
-        new InputBatcherConfig(
-            ImmutableMap.of(
-                vGraph.getVajramIdByVajramDefType(TestUserService.class),
-                    ImmutableList.of(DepChainBatcherConfig.simple(() -> new InputBatcherImpl(100))),
-                vGraph.getVajramIdByVajramDefType(FriendsService.class),
-                    ImmutableList.of(
-                        DepChainBatcherConfig.simple(() -> new InputBatcherImpl(100))))));
+    kGraph.inputBatcherStrategy(
+        new CustomBatcherStrategy(
+            new InputBatcherConfig(
+                ImmutableMap.of(
+                    vGraph.getVajramIdByVajramDefType(TestUserService.class),
+                        ImmutableList.of(
+                            DepChainBatcherConfig.simple(() -> new InputBatcherImpl(100))),
+                    vGraph.getVajramIdByVajramDefType(FriendsService.class),
+                        ImmutableList.of(
+                            DepChainBatcherConfig.simple(() -> new InputBatcherImpl(100)))))));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (VajramKryonExecutor krystexVajramExecutor =
@@ -606,7 +613,7 @@ class VajramKryonExecutorTest {
             "com.flipkart.krystal.krystex.test_vajrams.friendsservice",
             "com.flipkart.krystal.krystex.test_vajrams.hellofriendsv2",
             "com.flipkart.krystal.krystex.test_vajrams.mutualFriendsHello");
-    kGraph.inputBatcherConfig(computeSharedBatcherConfig(vGraph, vajramId -> 100));
+    kGraph.inputBatcherStrategy(new DefaultBatcherStrategy(_v -> 100));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (VajramKryonExecutor krystexVajramExecutor =
@@ -634,7 +641,7 @@ class VajramKryonExecutorTest {
             "com.flipkart.krystal.krystex.test_vajrams.friendsservice",
             "com.flipkart.krystal.krystex.test_vajrams.hellofriendsv2",
             "com.flipkart.krystal.krystex.test_vajrams.mutualFriendsHello");
-    kGraph.inputBatcherConfig(computeSharedBatcherConfig(vGraph, _v -> 100));
+    kGraph.inputBatcherStrategy(new DefaultBatcherStrategy(_v -> 100));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (VajramKryonExecutor krystexVajramExecutor =
@@ -660,51 +667,52 @@ class VajramKryonExecutorTest {
             "com.flipkart.krystal.krystex.test_vajrams.hellofriendsv2",
             "com.flipkart.krystal.krystex.test_vajrams.multihellov2");
 
-    kGraph.inputBatcherConfig(
-        new InputBatcherConfig(
-            ImmutableMap.of(
-                vGraph.getVajramIdByVajramDefType(FriendsService.class),
-                ImmutableList.of(
-                    new DepChainBatcherConfig(
-                        _x -> true,
-                        logicExecutionContext -> "",
-                        batcherContext ->
-                            new OutputLogicDecorator() {
-                              @Override
-                              public OutputLogic<Object> decorateLogic(
-                                  OutputLogic<Object> logicToDecorate,
-                                  OutputLogicDefinition<Object> originalLogicDefinition) {
-                                return logicToDecorate;
-                              }
+    kGraph.inputBatcherStrategy(
+        new CustomBatcherStrategy(
+            new InputBatcherConfig(
+                ImmutableMap.of(
+                    vGraph.getVajramIdByVajramDefType(FriendsService.class),
+                    ImmutableList.of(
+                        new DepChainBatcherConfig(
+                            _x -> true,
+                            logicExecutionContext -> "",
+                            batcherContext ->
+                                new OutputLogicDecorator() {
+                                  @Override
+                                  public OutputLogic<Object> decorateLogic(
+                                      OutputLogic<Object> logicToDecorate,
+                                      OutputLogicDefinition<Object> originalLogicDefinition) {
+                                    return logicToDecorate;
+                                  }
 
-                              @Override
-                              public void executeCommand(DecoratorCommand decoratorCommand) {
-                                if (decoratorCommand instanceof FlushCommand flushCommand) {
-                                  friendServiceFlushCommand.complete(flushCommand);
-                                }
-                              }
-                            })),
-                vGraph.getVajramIdByVajramDefType(TestUserService.class),
-                ImmutableList.of(
-                    new DepChainBatcherConfig(
-                        _x -> true,
-                        logicExecutionContext1 -> "1",
-                        batcherContext ->
-                            new OutputLogicDecorator() {
-                              @Override
-                              public OutputLogic<Object> decorateLogic(
-                                  OutputLogic<Object> logicToDecorate,
-                                  OutputLogicDefinition<Object> originalLogicDefinition) {
-                                return logicToDecorate;
-                              }
+                                  @Override
+                                  public void executeCommand(DecoratorCommand decoratorCommand) {
+                                    if (decoratorCommand instanceof FlushCommand flushCommand) {
+                                      friendServiceFlushCommand.complete(flushCommand);
+                                    }
+                                  }
+                                })),
+                    vGraph.getVajramIdByVajramDefType(TestUserService.class),
+                    ImmutableList.of(
+                        new DepChainBatcherConfig(
+                            _x -> true,
+                            logicExecutionContext1 -> "1",
+                            batcherContext ->
+                                new OutputLogicDecorator() {
+                                  @Override
+                                  public OutputLogic<Object> decorateLogic(
+                                      OutputLogic<Object> logicToDecorate,
+                                      OutputLogicDefinition<Object> originalLogicDefinition) {
+                                    return logicToDecorate;
+                                  }
 
-                              @Override
-                              public void executeCommand(DecoratorCommand decoratorCommand) {
-                                if (decoratorCommand instanceof FlushCommand flushCommand) {
-                                  userServiceFlushCommand.complete(flushCommand);
-                                }
-                              }
-                            })))));
+                                  @Override
+                                  public void executeCommand(DecoratorCommand decoratorCommand) {
+                                    if (decoratorCommand instanceof FlushCommand flushCommand) {
+                                      userServiceFlushCommand.complete(flushCommand);
+                                    }
+                                  }
+                                }))))));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (VajramKryonExecutor krystexVajramExecutor =
