@@ -252,11 +252,6 @@ public final class VajramKryonExecutor implements KrystalExecutor {
    */
   private Set<DependentChain> disabledDependentChainsForExecutor() {
     if (disabledDependentChainsForExecutor == null) {
-      List<ImmutableSet<DependentChain>> disabledDependentChainsPerExecution = new ArrayList<>();
-      for (KryonExecution<?> kryonExecution : allExecutions.values()) {
-        disabledDependentChainsPerExecution.add(
-            kryonExecution.executionConfig().disabledDependentChains());
-      }
       Set<DependentChain> depChainsDisabledInAllExecutions = new LinkedHashSet<>();
       {
         // Find those dependentChains which are disabled in ALL the execution-level disabled chains.
@@ -264,7 +259,9 @@ public final class VajramKryonExecutor implements KrystalExecutor {
 
         // Algo: Take the first set, and call retainAll for all other sets
         boolean first = true;
-        for (ImmutableSet<DependentChain> disabledDepChains : disabledDependentChainsPerExecution) {
+        for (KryonExecution<?> kryonExecution : allExecutions.values()) {
+          ImmutableSet<DependentChain> disabledDepChains =
+              kryonExecution.executionConfig().disabledDependentChains();
           if (first) {
             depChainsDisabledInAllExecutions.addAll(disabledDepChains);
             first = false;
