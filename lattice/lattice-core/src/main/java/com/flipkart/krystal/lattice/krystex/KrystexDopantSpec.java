@@ -4,7 +4,6 @@ import static com.flipkart.krystal.lattice.krystex.KrystexDopant.DOPANT_TYPE;
 import static java.util.Objects.requireNonNullElse;
 
 import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
-import com.flipkart.krystal.krystex.batching.DepChainBatcherConfig.BatchSizeSupplier;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
 import com.flipkart.krystal.lattice.core.doping.SimpleDopantSpec;
@@ -20,7 +19,6 @@ import java.util.Set;
 import java.util.function.Consumer;
 import lombok.Builder;
 import lombok.Singular;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Builder(buildMethodName = "_buildSpec")
 public record KrystexDopantSpec(
@@ -28,9 +26,7 @@ public record KrystexDopantSpec(
     @Singular("configureExecutorWith")
         ImmutableList<KryonExecutorConfigurator> configureExecutorWith,
     Collection<? extends TraitDispatchPolicy> traitDispatchPolicies,
-    Set<DependentChain> disabledDependentChains,
-    @Nullable BatchSizeSupplier batchSizeSupplier,
-    boolean enableSharedAutoBatchers)
+    Set<DependentChain> disabledDependentChains)
     implements SimpleDopantSpec<KrystexDopant> {
 
   public KrystexDopantSpec {

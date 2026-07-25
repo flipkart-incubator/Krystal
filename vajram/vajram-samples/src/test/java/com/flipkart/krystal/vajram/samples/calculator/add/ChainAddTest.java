@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Value.ALL_NON_NULL;
-import static com.flipkart.krystal.krystex.batching.DepChainBatcherConfig.computeSharedBatcherConfig;
 import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
@@ -20,18 +19,19 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.krystex.DependentChainDisabler;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.KrystexGraph;
 import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.krystex.VajramGraph;
+import com.flipkart.krystal.krystex.batching.InputBatcherStrategy.DefaultBatcherStrategy;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
 import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
-import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.visualization.executiongraph.DefaultKryonExecutionReport;
 import com.flipkart.krystal.visualization.executiongraph.KryonExecutionReport;
 import com.flipkart.krystal.visualization.executiongraph.MainLogicExecReporter;
@@ -67,7 +67,10 @@ class ChainAddTest {
   void setUp() throws LeaseUnavailableException {
     Add.CALL_COUNTER.reset();
     this.graph = VajramGraph.builder().loadClasses(ChainAdd.class, Add.class).build();
-    this.kGraph = KrystexGraph.builder().vajramGraph(graph);
+    this.kGraph =
+        KrystexGraph.builder()
+            .vajramGraph(graph)
+            .dependentChainDisabler(new DependentChainDisabler(getDisabledDependentChains(graph)));
     this.executorLease = EXEC_POOL.lease();
     this.objectMapper =
         JsonMapper.builder()
@@ -86,9 +89,7 @@ class ChainAddTest {
   void chainer_success() throws Exception {
     CompletableFuture<Integer> future;
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
-    kGraph.inputBatcherConfig(
-        computeSharedBatcherConfig(
-            graph, _v -> 100, new TraitDispatchPolicies(), getDisabledDependentChains(graph)));
+    kGraph.inputBatcherStrategy(new DefaultBatcherStrategy(_v -> 100));
     try (VajramKryonExecutor krystexVajramExecutor =
         kGraph
             .build()
@@ -135,9 +136,7 @@ class ChainAddTest {
     long startTime = System.nanoTime();
     long timeToCreateExecutors = 0;
     long timeToEnqueueVajram = 0;
-    kGraph.inputBatcherConfig(
-        computeSharedBatcherConfig(
-            graph, _v -> 100, new TraitDispatchPolicies(), getDisabledDependentChains(graph)));
+    kGraph.inputBatcherStrategy(new DefaultBatcherStrategy(_v -> 100));
     for (int value = 0; value < loopCount; value++) {
       long iterStartTime = System.nanoTime();
       try (VajramKryonExecutor krystexVajramExecutor =
@@ -202,9 +201,7 @@ class ChainAddTest {
     long startTime = System.nanoTime();
     long timeToCreateExecutors = 0;
     long timeToEnqueueVajram = 0;
-    kGraph.inputBatcherConfig(
-        computeSharedBatcherConfig(
-            graph, _v -> 100, new TraitDispatchPolicies(), getDisabledDependentChains(graph)));
+    kGraph.inputBatcherStrategy(new DefaultBatcherStrategy(_v -> 100));
     for (int outer_i = 0; outer_i < outerLoopCount; outer_i++) {
       long iterStartTime = System.nanoTime();
       try (VajramKryonExecutor krystexVajramExecutor =

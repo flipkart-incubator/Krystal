@@ -14,6 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.krystex.DependentChainDisabler;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.KrystexGraph;
@@ -82,11 +83,15 @@ class AddUsingTraitsTest {
         .annotatedWith(AdditionMethod.Creator.create(SPLIT))
         .to(SplitAdd_Req.class);
     this.graph = Util.loadFromClasspath(AddUsingTraits.class.getPackageName()).build();
-    this.kGraph = KrystexGraph.builder().vajramGraph(graph);
-    this.kGraph.traitDispatchPolicies(
-        new TraitDispatchPolicies(
-            new GuiceyStaticDispatchPolicy(
-                graph, graph.getVajramIdByVajramDefType(MultiAdd.class), traitBinder)));
+    this.kGraph =
+        KrystexGraph.builder()
+            .vajramGraph(graph)
+            .externallyInvocableVajramIds(ImmutableSet.of(AddUsingTraits_Req._VAJRAM_ID))
+            .dependentChainDisabler(new DependentChainDisabler(getDisabledDependentChains(graph)))
+            .traitDispatchPolicies(
+                new TraitDispatchPolicies(
+                    new GuiceyStaticDispatchPolicy(
+                        graph, graph.getVajramIdByVajramDefType(MultiAdd.class), traitBinder)));
   }
 
   @Test

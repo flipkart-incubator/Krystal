@@ -16,15 +16,20 @@ import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServi
 import static com.flipkart.krystal.visualization.staticgraph.StaticCallGraphGenerator.generateStaticCallGraphContent;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.flipkart.krystal.krystex.DependentChainDisabler;
 import com.flipkart.krystal.krystex.KrystexGraph;
 import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.krystex.VajramGraph;
+import com.flipkart.krystal.krystex.kryon.DependentChainBase;
+import com.flipkart.krystal.krystex.kryon.DependentChainSlice;
 import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.vajram.guice.traitbinding.GuiceyStaticDispatchPolicy;
 import com.flipkart.krystal.vajram.guice.traitbinding.TraitBinder;
+import com.flipkart.krystal.vajram.samples.calculator.A2MinusB2_Req;
 import com.flipkart.krystal.vajram.samples.calculator.add.Add;
 import com.flipkart.krystal.vajram.samples.calculator.add.AddUsingTraits;
 import com.flipkart.krystal.vajram.samples.calculator.add.ChainAdd;
+import com.flipkart.krystal.vajram.samples.calculator.add.ChainAdd_Fac;
 import com.flipkart.krystal.vajram.samples.calculator.add.ChainAdd_Req;
 import com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd;
 import com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.AdditionMethod;
@@ -32,6 +37,7 @@ import com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd_Req;
 import com.flipkart.krystal.vajram.samples.calculator.add.SimpleAdd;
 import com.flipkart.krystal.vajram.samples.calculator.add.SimpleAdd_Req;
 import com.flipkart.krystal.vajram.samples.calculator.add.SplitAdd;
+import com.flipkart.krystal.vajram.samples.calculator.add.SplitAdd_Fac;
 import com.flipkart.krystal.vajram.samples.calculator.add.SplitAdd_Req;
 import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent.Call;
 import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent.Email;
@@ -44,6 +50,8 @@ import com.flipkart.krystal.vajram.samples.customer_service.L1EmailAgent_Req;
 import com.flipkart.krystal.vajram.samples.customer_service.L2CallAgent_Req;
 import com.flipkart.krystal.vajram.samples.customer_service.L3EmailAgent_Req;
 import com.flipkart.krystal.visualization.staticgraph.models.GraphGenerationResult;
+import com.google.common.collect.ImmutableSet;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
 class StaticCallGraphTest {
@@ -54,10 +62,16 @@ class StaticCallGraphTest {
         VajramGraph.builder()
             .loadFromPackage("com.flipkart.krystal.vajram.samples.calculator")
             .build();
-    KrystexGraph kGraph = KrystexGraph.builder().vajramGraph(vajramGraph).build();
+    KrystexGraph kGraph =
+        KrystexGraph.builder()
+            .vajramGraph(vajramGraph)
+            .dependentChainDisabler(
+                new DependentChainDisabler(ImmutableSet.of(), getDisabledSlices()))
+            .build();
 
     // Generate static call graph for A2MinusB2
-    GraphGenerationResult result = generateStaticCallGraphContent(kGraph, "A2MinusB2");
+    GraphGenerationResult result =
+        generateStaticCallGraphContent(kGraph, A2MinusB2_Req._VAJRAM_ID.id());
 
     String htmlContent = result.html();
 
@@ -103,7 +117,11 @@ class StaticCallGraphTest {
   void testCompleteStaticCallGraph() {
     VajramGraph graph =
         VajramGraph.builder().loadFromPackage("com.flipkart.krystal.vajram.samples").build();
-    KrystexGraphBuilder kGraph = KrystexGraph.builder().vajramGraph(graph);
+    KrystexGraphBuilder kGraph =
+        KrystexGraph.builder()
+            .vajramGraph(graph)
+            .dependentChainDisabler(
+                new DependentChainDisabler(ImmutableSet.of(), getDisabledSlices()));
     {
       TraitBinder traitBinder = new TraitBinder();
       traitBinder
@@ -191,7 +209,11 @@ class StaticCallGraphTest {
                 SplitAdd.class,
                 Add.class)
             .build();
-    KrystexGraphBuilder kGraph = KrystexGraph.builder().vajramGraph(graph);
+    KrystexGraphBuilder kGraph =
+        KrystexGraph.builder()
+            .vajramGraph(graph)
+            .dependentChainDisabler(
+                new DependentChainDisabler(ImmutableSet.of(), getDisabledSlices()));
     TraitBinder traitBinder = new TraitBinder();
     traitBinder
         .bindTrait(MultiAdd_Req.class)
@@ -270,5 +292,12 @@ class StaticCallGraphTest {
     assertThat(htmlContent)
         .as("HTML should contain an empty nodes array in the graphData")
         .contains("graphData = {\"nodes\":[],\"links\":[]}");
+  }
+
+  private static @NonNull ImmutableSet<DependentChainBase> getDisabledSlices() {
+    return ImmutableSet.of(
+        DependentChainSlice.newStartingFrom(ChainAdd_Req._VAJRAM_ID, ChainAdd_Fac.chainSum_s),
+        DependentChainSlice.newStartingFrom(SplitAdd_Req._VAJRAM_ID, SplitAdd_Fac.splitSum1_s),
+        DependentChainSlice.newStartingFrom(SplitAdd_Req._VAJRAM_ID, SplitAdd_Fac.splitSum2_s));
   }
 }

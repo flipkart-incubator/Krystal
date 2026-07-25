@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.except.KrystalCompletionException;
+import com.flipkart.krystal.krystex.DependentChainDisabler;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.KrystexGraph;
@@ -94,7 +95,11 @@ class MultiAddTest {
   void setUp() {
     this.executorLease = EXECUTOR_LEASES[0];
     this.vGraph = Util.loadFromClasspath(AddUsingTraits.class.getPackageName()).build();
-    this.kGraph = KrystexGraph.builder().vajramGraph(vGraph);
+    this.kGraph =
+        KrystexGraph.builder()
+            .vajramGraph(vGraph)
+            .externallyInvocableVajramIds(ImmutableSet.of(MultiAdd_Req._VAJRAM_ID))
+            .dependentChainDisabler(new DependentChainDisabler(getDisabledDependentChains(vGraph)));
   }
 
   @Test
