@@ -49,7 +49,7 @@ dependencies {
 }
 
 test {
-    maxHeapSize = "6g"
+    maxHeapSize = "12g"
 }
 
 checkerFramework {
