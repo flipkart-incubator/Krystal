@@ -16,9 +16,9 @@ import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServi
 import static com.flipkart.krystal.visualization.staticgraph.StaticCallGraphGenerator.generateStaticCallGraphContent;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.flipkart.krystal.krystex.DependentChainDisabler;
 import com.flipkart.krystal.krystex.KrystexGraph;
 import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
+import com.flipkart.krystal.krystex.SimpleDependentChainDisabler;
 import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.kryon.DependentChainBase;
 import com.flipkart.krystal.krystex.kryon.DependentChainSlice;
@@ -66,7 +66,7 @@ class StaticCallGraphTest {
         KrystexGraph.builder()
             .vajramGraph(vajramGraph)
             .dependentChainDisabler(
-                new DependentChainDisabler(ImmutableSet.of(), getDisabledSlices()))
+                new SimpleDependentChainDisabler(ImmutableSet.of(), getDisabledSlices()))
             .build();
 
     // Generate static call graph for A2MinusB2
@@ -121,7 +121,7 @@ class StaticCallGraphTest {
         KrystexGraph.builder()
             .vajramGraph(graph)
             .dependentChainDisabler(
-                new DependentChainDisabler(ImmutableSet.of(), getDisabledSlices()));
+                new SimpleDependentChainDisabler(ImmutableSet.of(), getDisabledSlices()));
     {
       TraitBinder traitBinder = new TraitBinder();
       traitBinder
@@ -213,7 +213,7 @@ class StaticCallGraphTest {
         KrystexGraph.builder()
             .vajramGraph(graph)
             .dependentChainDisabler(
-                new DependentChainDisabler(ImmutableSet.of(), getDisabledSlices()));
+                new SimpleDependentChainDisabler(ImmutableSet.of(), getDisabledSlices()));
     TraitBinder traitBinder = new TraitBinder();
     traitBinder
         .bindTrait(MultiAdd_Req.class)

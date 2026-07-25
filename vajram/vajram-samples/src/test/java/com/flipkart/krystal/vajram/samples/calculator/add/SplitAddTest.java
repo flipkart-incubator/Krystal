@@ -20,9 +20,9 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
-import com.flipkart.krystal.krystex.DependentChainDisabler;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig;
 import com.flipkart.krystal.krystex.KrystexGraph;
+import com.flipkart.krystal.krystex.SimpleDependentChainDisabler;
 import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.VajramGraph.VajramGraphBuilder;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
@@ -87,7 +87,7 @@ class SplitAddTest {
         KrystexGraph.builder()
             .vajramGraph(graph)
             .externallyInvocableVajramIds(ImmutableSet.of(SplitAdd_Req._VAJRAM_ID))
-            .dependentChainDisabler(new DependentChainDisabler(disabledDepChains(graph)))
+            .dependentChainDisabler(new SimpleDependentChainDisabler(disabledDepChains(graph)))
             .build()
             .createExecutor(
                 KrystalExecutorConfig.builder()
@@ -112,7 +112,7 @@ class SplitAddTest {
         KrystexGraph.builder()
             .vajramGraph(graph)
             .externallyInvocableVajramIds(ImmutableSet.of(SplitAdd_Req._VAJRAM_ID))
-            .dependentChainDisabler(new DependentChainDisabler(disabledDepChains(graph)))
+            .dependentChainDisabler(new SimpleDependentChainDisabler(disabledDepChains(graph)))
             .build()
             .createExecutor(
                 KrystalExecutorConfig.builder()

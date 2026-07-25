@@ -31,7 +31,7 @@ final class DependentChainImpl extends AbstractDependentChainBase<DependentChain
         }
       }
     }
-    return false;
+    return true;
   }
 
   @Override

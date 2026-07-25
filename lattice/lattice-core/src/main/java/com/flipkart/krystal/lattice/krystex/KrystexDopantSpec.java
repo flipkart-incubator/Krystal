@@ -25,8 +25,7 @@ public record KrystexDopantSpec(
     @Singular("buildKrystexGraphWith") List<Consumer<KrystexGraphBuilder>> buildKrystexGraphWith,
     @Singular("configureExecutorWith")
         ImmutableList<KryonExecutorConfigurator> configureExecutorWith,
-    Collection<? extends TraitDispatchPolicy> traitDispatchPolicies,
-    Set<DependentChain> disabledDependentChains)
+    Collection<? extends TraitDispatchPolicy> traitDispatchPolicies)
     implements SimpleDopantSpec<KrystexDopant> {
 
   public KrystexDopantSpec {

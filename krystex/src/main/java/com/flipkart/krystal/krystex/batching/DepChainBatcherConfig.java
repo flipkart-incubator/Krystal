@@ -144,7 +144,7 @@ public record DepChainBatcherConfig(
       BatchSizeSupplier batchSizeSupplier,
       TraitDispatchPolicies traitDispatchPolicies,
       DependentChainDisabler dependentChainDisabler,
-      List<VajramID> externallyInvocableVajramIds) {
+      Collection<VajramID> externallyInvocableVajramIds) {
     List<VajramDefinition> externallyInvocableVajrams =
         externallyInvocableVajramIds.stream().map(graph::getVajramDefinition).toList();
     Map<VajramID, Map<Integer, Set<DependentChain>>> ioVajramsToOrdinalChains = new HashMap<>();

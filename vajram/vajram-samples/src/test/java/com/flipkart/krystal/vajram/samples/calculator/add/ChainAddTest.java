@@ -19,11 +19,11 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
-import com.flipkart.krystal.krystex.DependentChainDisabler;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.KrystexGraph;
 import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
+import com.flipkart.krystal.krystex.SimpleDependentChainDisabler;
 import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.batching.InputBatcherStrategy.DefaultBatcherStrategy;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
@@ -70,7 +70,8 @@ class ChainAddTest {
     this.kGraph =
         KrystexGraph.builder()
             .vajramGraph(graph)
-            .dependentChainDisabler(new DependentChainDisabler(getDisabledDependentChains(graph)));
+            .dependentChainDisabler(
+                new SimpleDependentChainDisabler(getDisabledDependentChains(graph)));
     this.executorLease = EXEC_POOL.lease();
     this.objectMapper =
         JsonMapper.builder()
