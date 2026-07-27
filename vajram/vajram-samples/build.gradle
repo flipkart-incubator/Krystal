@@ -6,6 +6,7 @@ plugins {
 
     //Needed only if you want your project to be modularized using JPMS
     id 'org.gradlex.extra-java-module-info' version '1.11'
+    id 'me.champeau.jmh' version '0.7.3'
 }
 
 dependencies {
@@ -41,6 +42,13 @@ dependencies {
     testImplementation platform('org.mockito:mockito-bom:5.17.0')
     testImplementation 'org.mockito:mockito-core'
 
+    jmhImplementation platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
+    jmhImplementation 'com.flipkart.krystal:vajram-krystex'
+    jmhImplementation 'com.flipkart.krystal:krystex'
+    jmhImplementation 'com.flipkart.krystal:vajram-java-sdk'
+    jmhImplementation 'com.google.guava:guava:33.0.0-jre'
+    jmhAnnotationProcessor 'com.google.guava:failureaccess:1.0.2'
+
     testImplementation 'com.fasterxml.jackson.core:jackson-annotations'
     testImplementation 'com.fasterxml.jackson.core:jackson-databind'
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
@@ -48,9 +56,19 @@ dependencies {
     /** END: Test dependencies **/
 }
 
+tasks.withType(JavaCompile).matching { it.name.containsIgnoreCase("Jmh") }.configureEach {
+    checkerFramework {
+        skipCheckerFramework = true
+    }
+}
+
 test {
     minHeapSize = "128m" // initial heap size
     maxHeapSize = "4g" // maximum heap size
+}
+
+spotlessJava {
+    mustRunAfter('compileJmhJava')
 }
 
 checkerFramework {
@@ -74,6 +92,12 @@ extraJavaModuleInfo {
     module('javax.cache:cache-api', 'javax.cache.api')
     module('org.hdrhistogram:HdrHistogram', 'org.hdrhistogram')
     module('org.latencyutils:LatencyUtils', 'org.latencyutils')
+    module('org.openjdk.jmh:jmh-core', 'org.openjdk.jmh')
+    module('org.openjdk.jmh:jmh-generator-asm', 'org.openjdk.jmh.generator.asm')
+    module('org.openjdk.jmh:jmh-generator-bytecode', 'org.openjdk.jmh.generator.bytecode')
+    module('org.openjdk.jmh:jmh-generator-reflection', 'org.openjdk.jmh.generator.reflection')
+    module('net.sf.jopt-simple:jopt-simple', 'joptsimple')
+    module('org.apache.commons:commons-math3', 'org.apache.commons.math3')
 
     knownModule('org.slf4j:slf4j-api', 'org.slf4j')
     knownModule('jakarta.inject:jakarta.inject-api', 'jakarta.inject')
@@ -88,6 +112,7 @@ extraJavaModuleInfo {
     knownModule('com.google.j2objc:j2objc-annotations', 'com.google.j2objc.annotations')
     knownModule('org.reflections:reflections', 'org.reflections')
     knownModule('org.javassist:javassist', 'org.javassist')
+    knownModule('org.ow2.asm:asm', 'org.objectweb.asm')
 
 }
 /** END: JPMS compatibility configurations **/
