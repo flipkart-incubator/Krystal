@@ -1,23 +1,38 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
+import static com.flipkart.krystal.traits.matchers.InputValueMatcher.isAnyValue;
+import static com.flipkart.krystal.vajram.samples.calculator.add.ChainAdd_Fac.chainSum_s;
+import static com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd_Req.numbers_s;
+import static com.flipkart.krystal.vajram.samples.calculator.add.SplitAdd_Fac.splitSum1_s;
+import static com.flipkart.krystal.vajram.samples.calculator.add.SplitAdd_Fac.splitSum2_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.traits.PredicateDispatchUtil.dispatchTrait;
+import static com.flipkart.krystal.vajramexecutor.krystex.traits.PredicateDispatchUtil.when;
+
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
-import com.flipkart.krystal.krystex.kryon.DependantChain;
+import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
-import com.flipkart.krystal.vajram.VajramID;
-import com.flipkart.krystal.vajram.VajramRequest;
-import com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdder;
-import com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderRequest;
-import com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdder;
-import com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderRequest;
+import com.flipkart.krystal.vajram.samples.calculator.add.ChainAdd;
+import com.flipkart.krystal.vajram.samples.calculator.add.ChainAdd_Req;
+import com.flipkart.krystal.vajram.samples.calculator.add.ChainAdd_ReqImmutPojo;
+import com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd_Req;
+import com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd_ReqImmutPojo;
+import com.flipkart.krystal.vajram.samples.calculator.add.SimpleAdd_Req;
+import com.flipkart.krystal.vajram.samples.calculator.add.SplitAdd;
+import com.flipkart.krystal.vajram.samples.calculator.add.SplitAdd_Req;
+import com.flipkart.krystal.vajram.samples.calculator.add.SplitAdd_ReqImmutPojo;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.traits.PredicateDispatchPolicyImpl;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -39,12 +54,12 @@ import org.openjdk.jmh.annotations.Warmup;
  * <pre>
  * Benchmark                  Mode  Cnt      Score      Error  Units
  * -----------------------------------------------------------------
- * VajramBenchmark.chainAdd             thrpt    5  33143.782 ± 4003.976  ops/s
- * VajramBenchmark.chainAddTenRequests  thrpt    5   6450.434 ± 1921.872  ops/s
- * VajramBenchmark.formula              thrpt    5  44004.536 ± 1032.764  ops/s
- * VajramBenchmark.formulaTenRequests   thrpt    5  11289.078 ±  528.886  ops/s
- * VajramBenchmark.splitAdd             thrpt    5  28780.704 ± 6997.917  ops/s
- * VajramBenchmark.splitAddTenRequests  thrpt    5   7184.289 ±  182.837  ops/s
+ * chainAdd             thrpt    5  33143.782 ± 4003.976  ops/s
+ * chainAddTenRequests  thrpt    5   6450.434 ± 1921.872  ops/s
+ * formula              thrpt    5  44004.536 ± 1032.764  ops/s
+ * formulaTenRequests   thrpt    5  11289.078 ±  528.886  ops/s
+ * splitAdd             thrpt    5  28780.704 ± 6997.917  ops/s
+ * splitAddTenRequests  thrpt    5   7184.289 ±  182.837  ops/s
  * </pre>
  *
  * Krystal 8:
@@ -52,13 +67,28 @@ import org.openjdk.jmh.annotations.Warmup;
  * <pre>
  * Benchmark                  Mode  Cnt      Score      Error  Units
  * -----------------------------------------------------------------
- * VajramBenchmark.chainAdd             thrpt    5  32196.856 ± 2525.545  ops/s
- * VajramBenchmark.chainAddTenRequests  thrpt    5   7245.813 ±  576.884  ops/s
- * VajramBenchmark.formula              thrpt    5  43702.018 ± 4186.676  ops/s
- * VajramBenchmark.formulaTenRequests   thrpt    5  10898.207 ± 1656.681  ops/s
- * VajramBenchmark.splitAdd             thrpt    5  27701.727 ±  586.085  ops/s
- * VajramBenchmark.splitAddTenRequests  thrpt    5   7325.645 ±  120.427  ops/s
+ * chainAdd             thrpt    5  32196.856 ± 2525.545  ops/s
+ * chainAddTenRequests  thrpt    5   7245.813 ±  576.884  ops/s
+ * formula              thrpt    5  43702.018 ± 4186.676  ops/s
+ * formulaTenRequests   thrpt    5  10898.207 ± 1656.681  ops/s
+ * splitAdd             thrpt    5  27701.727 ±  586.085  ops/s
+ * splitAddTenRequests  thrpt    5   7325.645 ±  120.427  ops/s
  * </pre>
+ *
+ * Krystal 9:
+ *
+ *<pre>
+ * Benchmark                  Mode  Cnt      Score      Error  Units
+ * -----------------------------------------------------------------
+ * chainAdd                           thrpt    5  44853.195 ±  2627.742  ops/s
+ * chainAddTenRequests                thrpt    5  13030.911 ±   479.204  ops/s
+ * formula                            thrpt    5  55569.819 ±  1773.361  ops/s
+ * formulaTenRequests                 thrpt    5  18151.606 ±   420.070  ops/s
+ * multiAddWithSimpleAdd              thrpt    5  87963.394 ± 11119.658  ops/s
+ * multiAddWithSimpleAddTenRequests   thrpt    5  50977.265 ±  1551.162  ops/s
+ * splitAdd                           thrpt    5  38869.913 ±   852.005  ops/s
+ * splitAddTenRequests                thrpt    5  12481.518 ±   578.171  ops/s
+ *</pre>
  */
 @State(Scope.Benchmark)
 @Threads(1)
@@ -68,15 +98,15 @@ import org.openjdk.jmh.annotations.Warmup;
 public class VajramBenchmark {
   private static final KryonExecutionConfig EXECUTION_CONFIG =
       KryonExecutionConfig.builder().build();
-  private static final FormulaRequest FORMULA_REQUEST =
-      FormulaRequest.builder().a(100).p(20).q(5).build();
+  private static final Formula_Req FORMULA_REQUEST =
+      Formula_ReqImmutPojo._builder().a(100).p(20).q(5)._build();
   private static final List<Integer> RECURSIVE_ADDENDS = List.of(1, 2, 3, 4);
-  private static final ChainAdderRequest CHAIN_ADD_REQUEST =
-      ChainAdderRequest.builder().numbers(RECURSIVE_ADDENDS).build();
-  private static final SplitAdderRequest SPLIT_ADD_REQUEST =
-      SplitAdderRequest.builder().numbers(RECURSIVE_ADDENDS).build();
-  //  private static final MultiAdd_ReqImmutPojo MULTI_ADD_REQUEST =
-  //      MultiAdd_ReqImmutPojo._builder().numbers(RECURSIVE_ADDENDS)._build();
+  private static final ChainAdd_Req CHAIN_ADD_REQUEST =
+      ChainAdd_ReqImmutPojo._builder().numbers(RECURSIVE_ADDENDS)._build();
+  private static final SplitAdd_Req SPLIT_ADD_REQUEST =
+      SplitAdd_ReqImmutPojo._builder().numbers(RECURSIVE_ADDENDS)._build();
+  private static final MultiAdd_Req MULTI_ADD_REQUEST =
+      MultiAdd_ReqImmutPojo._builder().numbers(RECURSIVE_ADDENDS)._build();
 
   private SingleThreadExecutorsPool executorPool;
   private Lease<SingleThreadExecutor> executorLease;
@@ -112,6 +142,9 @@ public class VajramBenchmark {
     //    VajramGraph graph = VajramGraph.builder().loadClasses(MultiAdd.class,
     // SimpleAdd.class).build();
     multiAddGraph = graphFor();
+    multiAddGraph.registerTraitDispatchPolicies(
+        dispatchTrait(MultiAdd_Req.class, multiAddGraph)
+            .conditionally(when(numbers_s, isAnyValue()).to(SimpleAdd_Req.class)));
     //        KrystexGraph.builder()
     //            .vajramGraph(graph)
     //            .externallyInvocableVajramIds(ImmutableSet.of(MultiAdd_Req._VAJRAM_ID))
@@ -131,62 +164,55 @@ public class VajramBenchmark {
 
   @Benchmark
   public int formula() {
-    return execute(
-        formulaGraph,
-        formulaGraph.getVajramId(Formula.class),
-        FORMULA_REQUEST,
-        splitAddDisabledChains(splitAddGraph));
+    return execute(formulaGraph, FORMULA_REQUEST, splitAddDisabledChains(splitAddGraph));
   }
 
   @Benchmark
   public int formulaTenRequests() {
-    return executeTenRequests(
-        formulaGraph,
-        formulaGraph.getVajramId(Formula.class),
-        FORMULA_REQUEST,
-        splitAddDisabledChains(splitAddGraph));
+    return executeTenRequests(formulaGraph, FORMULA_REQUEST, splitAddDisabledChains(splitAddGraph));
   }
 
   @Benchmark
   public int splitAdd() {
-    return execute(
-        splitAddGraph,
-        splitAddGraph.getVajramId(SplitAdder.class),
-        SPLIT_ADD_REQUEST,
-        splitAddDisabledChains(splitAddGraph));
+    return execute(splitAddGraph, SPLIT_ADD_REQUEST, splitAddDisabledChains(splitAddGraph));
   }
 
   @Benchmark
   public int splitAddTenRequests() {
     return executeTenRequests(
-        splitAddGraph,
-        splitAddGraph.getVajramId(SplitAdder.class),
-        SPLIT_ADD_REQUEST,
-        splitAddDisabledChains(splitAddGraph));
+        splitAddGraph, SPLIT_ADD_REQUEST, splitAddDisabledChains(splitAddGraph));
   }
 
   @Benchmark
   public int chainAdd() {
-    return execute(
-        chainAddGraph,
-        chainAddGraph.getVajramId(ChainAdder.class),
-        CHAIN_ADD_REQUEST,
-        chainAddDisabledChains(chainAddGraph));
+    return execute(chainAddGraph, CHAIN_ADD_REQUEST, chainAddDisabledChains(chainAddGraph));
   }
 
   @Benchmark
   public int chainAddTenRequests() {
     return executeTenRequests(
-        chainAddGraph,
-        chainAddGraph.getVajramId(ChainAdder.class),
-        CHAIN_ADD_REQUEST,
-        chainAddDisabledChains(chainAddGraph));
+        chainAddGraph, CHAIN_ADD_REQUEST, chainAddDisabledChains(chainAddGraph));
   }
 
-  //  @Benchmark
-  //  public int multiAdd() {
-  //    return execute(multiAddGraph, VajramID.ofVajram(Formula.class), MULTI_ADD_REQUEST);
-  //  }
+  @Benchmark
+  public int multiAddWithSimpleAdd() {
+    return execute(
+        multiAddGraph,
+        MULTI_ADD_REQUEST,
+        ImmutableSet.copyOf(
+            Sets.union(
+                chainAddDisabledChains(multiAddGraph), splitAddDisabledChains(multiAddGraph))));
+  }
+
+  @Benchmark
+  public int multiAddWithSimpleAddTenRequests() {
+    return executeTenRequests(
+        multiAddGraph,
+        MULTI_ADD_REQUEST,
+        ImmutableSet.copyOf(
+            Sets.union(
+                chainAddDisabledChains(multiAddGraph), splitAddDisabledChains(multiAddGraph))));
+  }
 
   private static VajramKryonGraph graphFor() {
     return VajramKryonGraph.builder()
@@ -206,55 +232,52 @@ public class VajramBenchmark {
   //        .build();
   //  }
 
-  private static ImmutableSet<DependantChain> chainAddDisabledChains(VajramKryonGraph graph) {
-    String vajramId = graph.getVajramId(ChainAdder.class).vajramId();
-    return ImmutableSet.of(graph.computeDependantChain(vajramId, "chainSum", "chainSum"));
+  private static ImmutableSet<DependentChain> chainAddDisabledChains(VajramKryonGraph graph) {
+    String vajramId = graph.getVajramIdByVajramDefType(ChainAdd.class).id();
+    return ImmutableSet.of(graph.computeDependentChain(vajramId, chainSum_s, chainSum_s));
   }
 
-  private static ImmutableSet<DependantChain> splitAddDisabledChains(VajramKryonGraph graph) {
-    String vajramId = graph.getVajramId(SplitAdder.class).vajramId();
+  private static ImmutableSet<DependentChain> splitAddDisabledChains(VajramKryonGraph graph) {
+    String vajramId = graph.getVajramIdByVajramDefType(SplitAdd.class).id();
     return ImmutableSet.of(
-        graph.computeDependantChain(vajramId, "splitSum1", "splitSum1"),
-        graph.computeDependantChain(vajramId, "splitSum1", "splitSum2"),
-        graph.computeDependantChain(vajramId, "splitSum2", "splitSum1"),
-        graph.computeDependantChain(vajramId, "splitSum2", "splitSum2"));
+        graph.computeDependentChain(vajramId, splitSum1_s, splitSum1_s),
+        graph.computeDependentChain(vajramId, splitSum1_s, splitSum2_s),
+        graph.computeDependentChain(vajramId, splitSum2_s, splitSum1_s),
+        graph.computeDependentChain(vajramId, splitSum2_s, splitSum2_s));
   }
 
   private int execute(
       VajramKryonGraph graph,
-      VajramID vajramID,
-      VajramRequest<Integer> request,
-      ImmutableSet<DependantChain> disabledDependantChains) {
-    CompletableFuture<Integer> result;
-    try (KrystexVajramExecutor executor =
-        graph.createExecutor(
-            KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder()
-                        .singleThreadExecutor(executorLease.get())
-                        .disabledDependantChains(disabledDependantChains))
-                .build())) {
-      result = executor.execute(vajramID, request);
-    }
-    return result.join();
+      Request<Integer> request,
+      ImmutableSet<DependentChain> disabledDependantChains) {
+    return executeNTimes(graph, request, disabledDependantChains, 1);
   }
 
   private int executeTenRequests(
       VajramKryonGraph graph,
-      VajramID vajramID,
-      VajramRequest<Integer> request,
-      ImmutableSet<DependantChain> disabledDependantChains) {
-    CompletableFuture<Integer>[] results = new CompletableFuture[10];
+      Request<Integer> request,
+      ImmutableSet<DependentChain> disabledDependantChains) {
+    return executeNTimes(graph, request, disabledDependantChains, 10);
+  }
+
+  private Integer executeNTimes(
+      VajramKryonGraph graph,
+      Request<Integer> request,
+      ImmutableSet<DependentChain> disabledDependantChains,
+      int times) {
+    CompletableFuture<Integer>[] results = new CompletableFuture[times];
     try (KrystexVajramExecutor executor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .kryonExecutorConfigBuilder(
+                .vajramKryonGraph(graph)
+                .kryonExecutorConfig(
                     KryonExecutorConfig.builder()
                         .singleThreadExecutor(executorLease.get())
-                        .disabledDependantChains(disabledDependantChains))
+                        .disabledDependentChains(disabledDependantChains)
+                        .build())
                 .build())) {
       for (int i = 0; i < results.length; i++) {
-        results[i] = executor.execute(vajramID, request);
+        results[i] = executor.execute(request._build());
       }
     }
     return CompletableFuture.allOf(results).thenApply(ignored -> results[0].join()).join();

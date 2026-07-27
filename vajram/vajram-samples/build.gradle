@@ -16,10 +16,12 @@ dependencies {
     testImplementation project(':vajram:vajram-krystex')
     testImplementation project(':vajram:extensions:guice:vajram-guice')
 
-    jmhImplementation platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
-    jmhImplementation 'com.flipkart.krystal:vajram-krystex'
-    jmhImplementation 'com.flipkart.krystal:krystex'
-    jmhImplementation 'com.flipkart.krystal:vajram'
+    jmhImplementation platform("com.flipkart.krystal.legacy:krystal-bom:${krystal_version}")
+    jmhImplementation 'com.flipkart.krystal.legacy:vajram-krystex'
+    jmhImplementation 'com.flipkart.krystal.legacy:krystex'
+    jmhImplementation 'com.flipkart.krystal.legacy:vajram-java-sdk'
+    jmhImplementation 'com.google.guava:guava:33.0.0-jre'
+    jmhAnnotationProcessor 'com.google.guava:failureaccess:1.0.2'
 
     testImplementation 'com.fasterxml.jackson.core:jackson-annotations'
     testImplementation 'com.fasterxml.jackson.core:jackson-databind'
@@ -38,10 +40,3 @@ test {
     maxHeapSize = "4g" // maximum heap size
 }
 tasks.named("spotlessJava").configure { dependsOn("codeGenVajramModels") }
-
-//module('org.openjdk.jmh:jmh-core', 'org.openjdk.jmh')
-//module('org.openjdk.jmh:jmh-generator-asm', 'org.openjdk.jmh.generator.asm')
-//module('org.openjdk.jmh:jmh-generator-bytecode', 'org.openjdk.jmh.generator.bytecode')
-//module('org.openjdk.jmh:jmh-generator-reflection', 'org.openjdk.jmh.generator.reflection')
-//module('net.sf.jopt-simple:jopt-simple', 'joptsimple')
-//module('org.apache.commons:commons-math3', 'org.apache.commons.math3')
