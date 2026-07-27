@@ -76,7 +76,8 @@ class InjectingDecoratedKryon
 
   private CompletableFuture<KryonCommandResponse> injectFacets(
       DirectForwardReceive forwardReceive, VajramDefinition vajramDefinition) {
-    for (ExecutionItem executionItem : forwardReceive.executionItems()) {
+    for (ExecutionItem executionItem :
+        forwardReceive.executionItems(getKryonDefinition().kryonDefinitionRegistry())) {
       FacetValuesBuilder facetsBuilder = executionItem.facetValues();
       List<AutoCloseable> closeables = injectFacetsOfVajram(vajramDefinition, facetsBuilder);
       // For DI frameworks which support manual lifecycle management, call close so that any

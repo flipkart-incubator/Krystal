@@ -79,7 +79,11 @@ class Resilience4JBulkheadTest {
     VajramGraph vajramGraph = VajramGraph.builder().build();
     this.kryonDefinitionRegistry = vajramGraph.kryonDefinitionRegistry();
     this.logicDefinitionRegistry = kryonDefinitionRegistry.logicDefinitionRegistry();
-    this.krystexGraph = KrystexGraph.builder().vajramGraph(vajramGraph).build();
+    this.krystexGraph =
+        KrystexGraph.builder()
+            .vajramGraph(vajramGraph)
+            .externallyInvocableVajramIds(ImmutableSet.of(vajramID("kryon")))
+            .build();
   }
 
   @AfterEach

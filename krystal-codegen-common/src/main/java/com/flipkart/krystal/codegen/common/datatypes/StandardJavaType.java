@@ -4,7 +4,9 @@ import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenerationException;
 import com.flipkart.krystal.model.array.ByteArray;
+import com.flipkart.krystal.model.array.FloatArray;
 import com.flipkart.krystal.model.array.SimpleByteArray;
+import com.flipkart.krystal.model.array.SimpleFloatArray;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Range;
@@ -81,10 +83,16 @@ public enum StandardJavaType implements CodeGenType {
       // consequences for devs - so we force them to specify their own default as needed.
       null,
       Range.class.getCanonicalName()),
+
+  // PRIMITIVE ARRAYS
   BYTE_ARRAY(
       TypeKind.DECLARED,
-      CodeBlock.of("$T.of()", SimpleByteArray.class),
+      CodeBlock.of("$T.empty()", SimpleByteArray.class),
       ByteArray.class.getCanonicalName()),
+  FLOAT_ARRAY( // Useful for storing vector embeddings
+      TypeKind.DECLARED,
+      CodeBlock.of("$T.empty()", SimpleFloatArray.class),
+      FloatArray.class.getCanonicalName()),
   // ...
   // Other Primitive Arrays to be added here
   // ...

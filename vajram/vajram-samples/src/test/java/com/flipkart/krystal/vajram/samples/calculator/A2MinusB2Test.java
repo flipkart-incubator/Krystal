@@ -16,6 +16,7 @@ import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.samples.Util;
+import com.google.common.collect.ImmutableSet;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -52,6 +53,7 @@ class A2MinusB2Test {
     try (VajramKryonExecutor krystexVajramExecutor =
         KrystexGraph.builder()
             .vajramGraph(graph)
+            .externallyInvocableVajramIds(ImmutableSet.of(A2MinusB2_Req._VAJRAM_ID))
             .build()
             .createExecutor(
                 KrystalExecutorConfig.builder()

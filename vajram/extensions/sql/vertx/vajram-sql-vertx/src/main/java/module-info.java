@@ -1,12 +1,15 @@
 module krystal.vajram.ext.sql.vertx {
-  requires java.compiler;
-  requires flipkart.krystal.vajram;
-  requires io.vertx.core;
-  requires org.checkerframework.checker.qual;
-  requires static lombok;
-  requires org.slf4j;
-  requires jakarta.inject;
-  requires com.google.common;
-
   exports com.flipkart.krystal.vajram.ext.sql.vertx;
+
+  requires com.google.common;
+  requires flipkart.krystal.common;
+  requires flipkart.krystal.vajram;
+  requires io.vertx.client.sql.mysql;
+  requires io.vertx.client.sql;
+  requires io.vertx.core;
+  requires jakarta.inject;
+  requires java.compiler;
+  requires org.checkerframework.checker.qual;
+  requires org.slf4j;
+  requires static lombok;
 }

@@ -9,7 +9,7 @@ import javax.lang.model.type.TypeMirror;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * Data model types shared between {@link SqlModelParser} and {@link SqlQueryBuilder} — and by
+ * Data model types shared between {@link SqlModelParser} and {@link SelectQueryBuilder} — and by
  * downstream codegen modules (e.g. {@code vajram-sql-vertx-codegen}) that need to produce code from
  * parsed SQL selection models.
  */
@@ -162,7 +162,7 @@ public final class SqlQueryModel {
   public record WhereInput(String paramName, boolean isOr, List<WhereLeaf> leaves) {}
 
   /**
-   * Result of {@link SqlQueryBuilder#buildJoinSql}.
+   * Result of {@link SelectQueryBuilder#buildJoinSql}.
    *
    * @param sql the generated SQL string
    * @param parentPkAlias the alias of the parent PK column in the SELECT (e.g. {@code "users_id"});

@@ -62,7 +62,7 @@ public final class Fory implements SerdeProtocol<NoAnnotation, SerializableModel
       Object object,
       Function<Model, SerializableModel> modelMapper,
       @Nullable NoAnnotation customConfig) {
-    return SimpleByteArray.of(FORY_INSTANCE.serialize(object));
+    return SimpleByteArray.backedBy(FORY_INSTANCE.serialize(object));
   }
 
   @SuppressWarnings({"unchecked", "TypeParameterUnusedInFormals"})

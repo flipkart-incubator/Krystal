@@ -18,6 +18,7 @@ import com.flipkart.krystal.krystex.KrystalExecutorConfig;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.KrystexGraph;
 import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
+import com.flipkart.krystal.krystex.SimpleDependentChainDisabler;
 import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
@@ -82,11 +83,16 @@ class AddUsingTraitsTest {
         .annotatedWith(AdditionMethod.Creator.create(SPLIT))
         .to(SplitAdd_Req.class);
     this.graph = Util.loadFromClasspath(AddUsingTraits.class.getPackageName()).build();
-    this.kGraph = KrystexGraph.builder().vajramGraph(graph);
-    this.kGraph.traitDispatchPolicies(
-        new TraitDispatchPolicies(
-            new GuiceyStaticDispatchPolicy(
-                graph, graph.getVajramIdByVajramDefType(MultiAdd.class), traitBinder)));
+    this.kGraph =
+        KrystexGraph.builder()
+            .vajramGraph(graph)
+            .externallyInvocableVajramIds(ImmutableSet.of(AddUsingTraits_Req._VAJRAM_ID))
+            .dependentChainDisabler(
+                new SimpleDependentChainDisabler(getDisabledDependentChains(graph)))
+            .traitDispatchPolicies(
+                new TraitDispatchPolicies(
+                    new GuiceyStaticDispatchPolicy(
+                        graph, graph.getVajramIdByVajramDefType(MultiAdd.class), traitBinder)));
   }
 
   @Test

@@ -2,6 +2,7 @@ module flipkart.krystal.krystex {
   exports com.flipkart.krystal.krystex.batching;
   exports com.flipkart.krystal.krystex.caching;
   exports com.flipkart.krystal.krystex.commands;
+  exports com.flipkart.krystal.krystex.decoration;
   exports com.flipkart.krystal.krystex.dependencydecoration;
   exports com.flipkart.krystal.krystex.dependencydecorators;
   exports com.flipkart.krystal.krystex.kryon;
