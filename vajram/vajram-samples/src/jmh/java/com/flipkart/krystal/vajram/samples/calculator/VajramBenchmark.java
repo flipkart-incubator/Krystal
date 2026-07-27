@@ -52,9 +52,12 @@ import org.openjdk.jmh.annotations.Warmup;
  * <pre>
  * Benchmark                  Mode  Cnt      Score      Error  Units
  * -----------------------------------------------------------------
- * VajramBenchmark.chainAdd  thrpt    5  33653.700 ± 1606.651  ops/s
- * VajramBenchmark.formula   thrpt    5  43394.155 ± 1043.490  ops/s
- * VajramBenchmark.splitAdd  thrpt    5  27807.120 ±  558.146  ops/s
+ * VajramBenchmark.chainAdd             thrpt    5  32196.856 ± 2525.545  ops/s
+ * VajramBenchmark.chainAddTenRequests  thrpt    5   7245.813 ±  576.884  ops/s
+ * VajramBenchmark.formula              thrpt    5  43702.018 ± 4186.676  ops/s
+ * VajramBenchmark.formulaTenRequests   thrpt    5  10898.207 ± 1656.681  ops/s
+ * VajramBenchmark.splitAdd             thrpt    5  27701.727 ±  586.085  ops/s
+ * VajramBenchmark.splitAddTenRequests  thrpt    5   7325.645 ±  120.427  ops/s
  * </pre>
  */
 @State(Scope.Benchmark)
@@ -139,7 +142,7 @@ public class VajramBenchmark {
   public int formulaTenRequests() {
     return executeTenRequests(
         formulaGraph,
-        VajramID.ofVajram(Formula.class),
+        formulaGraph.getVajramId(Formula.class),
         FORMULA_REQUEST,
         splitAddDisabledChains(splitAddGraph));
   }
@@ -157,7 +160,7 @@ public class VajramBenchmark {
   public int splitAddTenRequests() {
     return executeTenRequests(
         splitAddGraph,
-        VajramID.ofVajram(SplitAdder.class),
+        splitAddGraph.getVajramId(SplitAdder.class),
         SPLIT_ADD_REQUEST,
         splitAddDisabledChains(splitAddGraph));
   }
@@ -175,7 +178,7 @@ public class VajramBenchmark {
   public int chainAddTenRequests() {
     return executeTenRequests(
         chainAddGraph,
-        VajramID.ofVajram(ChainAdder.class),
+        chainAddGraph.getVajramId(ChainAdder.class),
         CHAIN_ADD_REQUEST,
         chainAddDisabledChains(chainAddGraph));
   }
@@ -247,7 +250,7 @@ public class VajramBenchmark {
             KrystexVajramExecutorConfig.builder()
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
-                        .customExecutorService(Optional.of(executorLease.get()))
+                        .singleThreadExecutor(executorLease.get())
                         .disabledDependantChains(disabledDependantChains))
                 .build())) {
       for (int i = 0; i < results.length; i++) {
