@@ -6,8 +6,9 @@ dependencies {
     constraints {
         api 'com.flipkart.krystal.legacy:com.flipkart.krystal.gradle.plugin:' + project.krystal_version
         api 'com.flipkart.krystal.legacy:vajram-codegen:' + project.krystal_version
-        api 'com.flipkart.krystal.legacy:vajram:' + project.krystal_version
+        api 'com.flipkart.krystal.legacy:vajram-java-sdk:' + project.krystal_version
         api 'com.flipkart.krystal.legacy:krystal-common:' + project.krystal_version
+        api 'com.flipkart.krystal.legacy:krystex:' + project.krystal_version
         api 'com.flipkart.krystal.legacy:vajram-krystex:' + project.krystal_version
         api 'com.flipkart.krystal.legacy:vajram-guice:' + project.krystal_version
         api 'com.flipkart.krystal.legacy:krystal-visualization:' + project.krystal_version

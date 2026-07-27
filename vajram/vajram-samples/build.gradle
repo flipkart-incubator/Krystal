@@ -1,5 +1,6 @@
 plugins {
     id 'com.flipkart.krystal.legacy' version "${krystal_version}"
+    id 'me.champeau.jmh' version '0.7.3'
 }
 
 dependencies {
@@ -15,10 +16,23 @@ dependencies {
     testImplementation project(':vajram:vajram-krystex')
     testImplementation project(':vajram:extensions:guice:vajram-guice')
 
+    jmhImplementation platform("com.flipkart.krystal.legacy:krystal-bom:${krystal_version}")
+    jmhImplementation 'com.flipkart.krystal.legacy:vajram-krystex'
+    jmhImplementation 'com.flipkart.krystal.legacy:krystex'
+    jmhImplementation 'com.flipkart.krystal.legacy:vajram-java-sdk'
+    jmhImplementation 'com.google.guava:guava:33.0.0-jre'
+    jmhAnnotationProcessor 'com.google.guava:failureaccess:1.0.2'
+
     testImplementation 'com.fasterxml.jackson.core:jackson-annotations'
     testImplementation 'com.fasterxml.jackson.core:jackson-databind'
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+}
+
+tasks.withType(JavaCompile).matching { it.name.containsIgnoreCase("Jmh") }.configureEach {
+    checkerFramework {
+        skipCheckerFramework = true
+    }
 }
 
 test {
