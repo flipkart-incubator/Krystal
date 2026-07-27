@@ -116,14 +116,14 @@ import org.openjdk.jmh.annotations.Warmup;
  * <pre>
  * Benchmark                          Mode  Cnt      Score      Error  Units
  * -----------------------------------------------------------------
- * chainAdd                          thrpt    5   57903.597 ±   5456.565  ops/s
- * chainAddTenRequests               thrpt    5   21863.351 ±   1533.453  ops/s
- * formula                           thrpt    5   42273.086 ±   6099.932  ops/s
- * formulaTenRequests                thrpt    5   24702.678 ±   3431.427  ops/s
- * multiAddWithSimpleAdd             thrpt    5  148826.406 ± 125428.852  ops/s
- * multiAddWithSimpleAddTenRequests  thrpt    5  103041.960 ±  18661.613  ops/s
- * splitAdd                          thrpt    5   86079.560 ±   2167.610  ops/s
- * splitAddTenRequests               thrpt    5   33766.330 ±  13915.911  ops/s
+ * chainAdd                          thrpt    5   26806.432 ±  4654.726  ops/s
+ * chainAddTenRequests               thrpt    5    6828.987 ±   441.981  ops/s
+ * formula                           thrpt    5   41005.974 ±  7662.465  ops/s
+ * formulaTenRequests                thrpt    5   21169.613 ±  1375.816  ops/s
+ * multiAddWithSimpleAdd             thrpt    5  173033.013 ± 13604.987  ops/s
+ * multiAddWithSimpleAddTenRequests  thrpt    5  103889.849 ± 16227.674  ops/s
+ * splitAdd                          thrpt    5   15928.178 ±  1847.165  ops/s
+ * splitAddTenRequests               thrpt    5    5986.915 ±   493.400  ops/s
  * </pre>
  */
 @State(Scope.Benchmark)
