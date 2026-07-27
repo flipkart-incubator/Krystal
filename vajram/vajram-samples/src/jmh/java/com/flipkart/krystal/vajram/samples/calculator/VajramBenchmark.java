@@ -52,12 +52,12 @@ import org.openjdk.jmh.annotations.Warmup;
  * <pre>
  * Benchmark                  Mode  Cnt      Score      Error  Units
  * -----------------------------------------------------------------
- * VajramBenchmark.chainAdd             thrpt    5  32196.856 ± 2525.545  ops/s
- * VajramBenchmark.chainAddTenRequests  thrpt    5   7245.813 ±  576.884  ops/s
- * VajramBenchmark.formula              thrpt    5  43702.018 ± 4186.676  ops/s
- * VajramBenchmark.formulaTenRequests   thrpt    5  10898.207 ± 1656.681  ops/s
- * VajramBenchmark.splitAdd             thrpt    5  27701.727 ±  586.085  ops/s
- * VajramBenchmark.splitAddTenRequests  thrpt    5   7325.645 ±  120.427  ops/s
+ * chainAdd             thrpt    5   9265.238 ±  539.952  ops/s
+ * chainAddTenRequests  thrpt    5   1382.489 ±  112.046  ops/s
+ * formula              thrpt    5  37223.270 ± 3935.870  ops/s
+ * formulaTenRequests   thrpt    5  10933.280 ±  511.317  ops/s
+ * splitAdd             thrpt    5   4242.873 ±   40.167  ops/s
+ * splitAddTenRequests  thrpt    5   1038.458 ±   44.929  ops/s
  * </pre>
  */
 @State(Scope.Benchmark)
