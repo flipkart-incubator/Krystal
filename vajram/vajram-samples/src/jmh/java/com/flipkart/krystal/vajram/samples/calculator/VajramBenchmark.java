@@ -38,14 +38,14 @@ import org.openjdk.jmh.annotations.Warmup;
  * <p>Krystal 7:
  *
  * <pre>
- * Benchmark                  Mode  Cnt      Score      Error  Units
+ * Benchmark             Mode  Cnt      Score      Error  Units
  * -----------------------------------------------------------------
- * VajramBenchmark.chainAdd             thrpt    5  33143.782 ± 4003.976  ops/s
- * VajramBenchmark.chainAddTenRequests  thrpt    5   6450.434 ± 1921.872  ops/s
- * VajramBenchmark.formula              thrpt    5  44004.536 ± 1032.764  ops/s
- * VajramBenchmark.formulaTenRequests   thrpt    5  11289.078 ±  528.886  ops/s
- * VajramBenchmark.splitAdd             thrpt    5  28780.704 ± 6997.917  ops/s
- * VajramBenchmark.splitAddTenRequests  thrpt    5   7184.289 ±  182.837  ops/s
+ * chainAdd             thrpt    5   9283.580 ±  538.633  ops/s
+ * chainAddTenRequests  thrpt    5   1374.468 ±   56.580  ops/s
+ * formula              thrpt    5  39480.908 ± 3024.456  ops/s
+ * formulaTenRequests   thrpt    5  11019.657 ±  544.938  ops/s
+ * splitAdd             thrpt    5   4434.492 ±   83.799  ops/s
+ * splitAddTenRequests  thrpt    5   1026.046 ±   28.474  ops/s
  * </pre>
  */
 @State(Scope.Benchmark)
@@ -58,7 +58,7 @@ public class VajramBenchmark {
       KryonExecutionConfig.builder().build();
   private static final FormulaRequest FORMULA_REQUEST =
       FormulaRequest.builder().a(100).p(20).q(5).build();
-  private static final List<Integer> RECURSIVE_ADDENDS = List.of(1, 2, 3, 4);
+  private static final List<Integer> RECURSIVE_ADDENDS = List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
   private static final ChainAdderRequest CHAIN_ADD_REQUEST =
       ChainAdderRequest.builder().numbers(RECURSIVE_ADDENDS).build();
   private static final SplitAdderRequest SPLIT_ADD_REQUEST =
@@ -196,16 +196,87 @@ public class VajramBenchmark {
 
   private static ImmutableSet<DependantChain> chainAddDisabledChains(VajramKryonGraph graph) {
     String vajramId = VajramID.ofVajram(ChainAdder.class).vajramId();
-    return ImmutableSet.of(graph.computeDependantChain(vajramId, "chainSum", "chainSum"));
+    return ImmutableSet.of(
+        graph.computeDependantChain(
+            vajramId,
+            "chainSum",
+            "chainSum",
+            "chainSum",
+            "chainSum",
+            "chainSum",
+            "chainSum",
+            "chainSum",
+            "chainSum",
+            "chainSum"));
   }
 
   private static ImmutableSet<DependantChain> splitAddDisabledChains(VajramKryonGraph graph) {
     String vajramId = VajramID.ofVajram(SplitAdder.class).vajramId();
     return ImmutableSet.of(
-        graph.computeDependantChain(vajramId, "splitSum1", "splitSum1"),
-        graph.computeDependantChain(vajramId, "splitSum1", "splitSum2"),
-        graph.computeDependantChain(vajramId, "splitSum2", "splitSum1"),
-        graph.computeDependantChain(vajramId, "splitSum2", "splitSum2"));
+        graph.computeDependantChain(
+            vajramId, "splitSum1", "splitSum1", "splitSum1", "splitSum1", "splitSum1"),
+        graph.computeDependantChain(
+            vajramId, "splitSum1", "splitSum1", "splitSum1", "splitSum1", "splitSum2"),
+        graph.computeDependantChain(
+            vajramId, "splitSum1", "splitSum1", "splitSum1", "splitSum2", "splitSum1"),
+        graph.computeDependantChain(
+            vajramId, "splitSum1", "splitSum1", "splitSum1", "splitSum2", "splitSum2"),
+        graph.computeDependantChain(
+            vajramId, "splitSum1", "splitSum1", "splitSum2", "splitSum1", "splitSum1"),
+        graph.computeDependantChain(
+            vajramId, "splitSum1", "splitSum1", "splitSum2", "splitSum1", "splitSum2"),
+        graph.computeDependantChain(
+            vajramId, "splitSum1", "splitSum1", "splitSum2", "splitSum2", "splitSum1"),
+        graph.computeDependantChain(
+            vajramId, "splitSum1", "splitSum1", "splitSum2", "splitSum2", "splitSum2"),
+        graph.computeDependantChain(
+            vajramId, "splitSum1", "splitSum2", "splitSum1", "splitSum1", "splitSum1"),
+        graph.computeDependantChain(
+            vajramId, "splitSum1", "splitSum2", "splitSum1", "splitSum1", "splitSum2"),
+        graph.computeDependantChain(
+            vajramId, "splitSum1", "splitSum2", "splitSum1", "splitSum2", "splitSum1"),
+        graph.computeDependantChain(
+            vajramId, "splitSum1", "splitSum2", "splitSum1", "splitSum2", "splitSum2"),
+        graph.computeDependantChain(
+            vajramId, "splitSum1", "splitSum2", "splitSum2", "splitSum1", "splitSum1"),
+        graph.computeDependantChain(
+            vajramId, "splitSum1", "splitSum2", "splitSum2", "splitSum1", "splitSum2"),
+        graph.computeDependantChain(
+            vajramId, "splitSum1", "splitSum2", "splitSum2", "splitSum2", "splitSum1"),
+        graph.computeDependantChain(
+            vajramId, "splitSum1", "splitSum2", "splitSum2", "splitSum2", "splitSum2"),
+        graph.computeDependantChain(
+            vajramId, "splitSum2", "splitSum1", "splitSum1", "splitSum1", "splitSum1"),
+        graph.computeDependantChain(
+            vajramId, "splitSum2", "splitSum1", "splitSum1", "splitSum1", "splitSum2"),
+        graph.computeDependantChain(
+            vajramId, "splitSum2", "splitSum1", "splitSum1", "splitSum2", "splitSum1"),
+        graph.computeDependantChain(
+            vajramId, "splitSum2", "splitSum1", "splitSum1", "splitSum2", "splitSum2"),
+        graph.computeDependantChain(
+            vajramId, "splitSum2", "splitSum1", "splitSum2", "splitSum1", "splitSum1"),
+        graph.computeDependantChain(
+            vajramId, "splitSum2", "splitSum1", "splitSum2", "splitSum1", "splitSum2"),
+        graph.computeDependantChain(
+            vajramId, "splitSum2", "splitSum1", "splitSum2", "splitSum2", "splitSum1"),
+        graph.computeDependantChain(
+            vajramId, "splitSum2", "splitSum1", "splitSum2", "splitSum2", "splitSum2"),
+        graph.computeDependantChain(
+            vajramId, "splitSum2", "splitSum2", "splitSum1", "splitSum1", "splitSum1"),
+        graph.computeDependantChain(
+            vajramId, "splitSum2", "splitSum2", "splitSum1", "splitSum1", "splitSum2"),
+        graph.computeDependantChain(
+            vajramId, "splitSum2", "splitSum2", "splitSum1", "splitSum2", "splitSum1"),
+        graph.computeDependantChain(
+            vajramId, "splitSum2", "splitSum2", "splitSum1", "splitSum2", "splitSum2"),
+        graph.computeDependantChain(
+            vajramId, "splitSum2", "splitSum2", "splitSum2", "splitSum1", "splitSum1"),
+        graph.computeDependantChain(
+            vajramId, "splitSum2", "splitSum2", "splitSum2", "splitSum1", "splitSum2"),
+        graph.computeDependantChain(
+            vajramId, "splitSum2", "splitSum2", "splitSum2", "splitSum2", "splitSum1"),
+        graph.computeDependantChain(
+            vajramId, "splitSum2", "splitSum2", "splitSum2", "splitSum2", "splitSum2"));
   }
 
   private int execute(
