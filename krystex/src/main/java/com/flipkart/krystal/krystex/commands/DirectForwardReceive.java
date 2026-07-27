@@ -1,5 +1,7 @@
 package com.flipkart.krystal.krystex.commands;
 
+import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
+
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
@@ -8,4 +10,11 @@ import java.util.List;
 
 public record DirectForwardReceive(
     VajramID vajramID, List<ExecutionItem> executionItems, DependentChain dependentChain)
-    implements MultiRequestDirectCommand<DirectResponse>, ServerSideCommand<DirectResponse> {}
+    implements MultiRequestDirectCommand<DirectResponse>, ServerSideCommand<DirectResponse> {
+  @Override
+  public void error(Throwable throwable) {
+    for (ExecutionItem executionItem : executionItems()) {
+      executionItem.response().completeExceptionally(stackTracelessWrap(throwable));
+    }
+  }
+}

@@ -514,11 +514,7 @@ public final class KryonExecutor implements KrystalExecutor {
                                     .facetsFromRequest(e.getValue()))),
                 forwardSend.dependentChain()));
       }
-      try {
-        validate(kryonCommand);
-      } catch (Throwable e) {
-        return failedFuture(e);
-      }
+      validate(kryonCommand);
       VajramID vajramID = kryonCommand.vajramID();
       Kryon<KryonCommand<?>, R> kryon = getDecoratedKryon(kryonCommand, vajramID);
       executionInfo.activeKryon(kryon.getKryonDefinition().vajramID());
