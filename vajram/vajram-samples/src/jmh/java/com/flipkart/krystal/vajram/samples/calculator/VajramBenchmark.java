@@ -39,9 +39,12 @@ import org.openjdk.jmh.annotations.Warmup;
  * <pre>
  * Benchmark                  Mode  Cnt      Score      Error  Units
  * -----------------------------------------------------------------
- * VajramBenchmark.formula   thrpt    5  48946.238 ± 7058.979  ops/s
- * VajramBenchmark.chainAdd  thrpt    5  38487.574 ± 2789.382  ops/s
- * VajramBenchmark.splitAdd  thrpt    5  32155.006 ±  780.358  ops/s
+ * VajramBenchmark.chainAdd             thrpt    5  33143.782 ± 4003.976  ops/s
+ * VajramBenchmark.chainAddTenRequests  thrpt    5   6450.434 ± 1921.872  ops/s
+ * VajramBenchmark.formula              thrpt    5  44004.536 ± 1032.764  ops/s
+ * VajramBenchmark.formulaTenRequests   thrpt    5  11289.078 ±  528.886  ops/s
+ * VajramBenchmark.splitAdd             thrpt    5  28780.704 ± 6997.917  ops/s
+ * VajramBenchmark.splitAddTenRequests  thrpt    5   7184.289 ±  182.837  ops/s
  * </pre>
  *
  * Krystal 8:
@@ -133,6 +136,15 @@ public class VajramBenchmark {
   }
 
   @Benchmark
+  public int formulaTenRequests() {
+    return executeTenRequests(
+        formulaGraph,
+        VajramID.ofVajram(Formula.class),
+        FORMULA_REQUEST,
+        splitAddDisabledChains(splitAddGraph));
+  }
+
+  @Benchmark
   public int splitAdd() {
     return execute(
         splitAddGraph,
@@ -142,10 +154,28 @@ public class VajramBenchmark {
   }
 
   @Benchmark
+  public int splitAddTenRequests() {
+    return executeTenRequests(
+        splitAddGraph,
+        VajramID.ofVajram(SplitAdder.class),
+        SPLIT_ADD_REQUEST,
+        splitAddDisabledChains(splitAddGraph));
+  }
+
+  @Benchmark
   public int chainAdd() {
     return execute(
         chainAddGraph,
         chainAddGraph.getVajramId(ChainAdder.class),
+        CHAIN_ADD_REQUEST,
+        chainAddDisabledChains(chainAddGraph));
+  }
+
+  @Benchmark
+  public int chainAddTenRequests() {
+    return executeTenRequests(
+        chainAddGraph,
+        VajramID.ofVajram(ChainAdder.class),
         CHAIN_ADD_REQUEST,
         chainAddDisabledChains(chainAddGraph));
   }
@@ -204,5 +234,26 @@ public class VajramBenchmark {
       result = executor.execute(vajramID, request);
     }
     return result.join();
+  }
+
+  private int executeTenRequests(
+      VajramKryonGraph graph,
+      VajramID vajramID,
+      VajramRequest<Integer> request,
+      ImmutableSet<DependantChain> disabledDependantChains) {
+    CompletableFuture<Integer>[] results = new CompletableFuture[10];
+    try (KrystexVajramExecutor executor =
+        graph.createExecutor(
+            KrystexVajramExecutorConfig.builder()
+                .kryonExecutorConfigBuilder(
+                    KryonExecutorConfig.builder()
+                        .customExecutorService(Optional.of(executorLease.get()))
+                        .disabledDependantChains(disabledDependantChains))
+                .build())) {
+      for (int i = 0; i < results.length; i++) {
+        results[i] = executor.execute(vajramID, request);
+      }
+    }
+    return CompletableFuture.allOf(results).thenApply(ignored -> results[0].join()).join();
   }
 }
