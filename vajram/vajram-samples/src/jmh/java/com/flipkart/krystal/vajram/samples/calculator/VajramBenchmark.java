@@ -78,16 +78,16 @@ import org.openjdk.jmh.annotations.Warmup;
  * Krystal 9:
  *
  * <pre>
- * Benchmark                  Mode  Cnt      Score      Error  Units
+ * Benchmark                          Mode  Cnt      Score      Error  Units
  * -----------------------------------------------------------------
- * chainAdd                           thrpt    5  44853.195 ±  2627.742  ops/s
- * chainAddTenRequests                thrpt    5  13030.911 ±   479.204  ops/s
- * formula                            thrpt    5  55569.819 ±  1773.361  ops/s
- * formulaTenRequests                 thrpt    5  18151.606 ±   420.070  ops/s
- * multiAddWithSimpleAdd              thrpt    5  87963.394 ± 11119.658  ops/s
- * multiAddWithSimpleAddTenRequests   thrpt    5  50977.265 ±  1551.162  ops/s
- * splitAdd                           thrpt    5  38869.913 ±   852.005  ops/s
- * splitAddTenRequests                thrpt    5  12481.518 ±   578.171  ops/s
+ * chainAdd                          thrpt    5  14754.443 ±  3452.352  ops/s
+ * chainAddTenRequests               thrpt    5   2708.863 ±   155.802  ops/s
+ * formula                           thrpt    5  44321.926 ±  3367.481  ops/s
+ * formulaTenRequests                thrpt    5  16996.218 ±  1522.687  ops/s
+ * multiAddWithSimpleAdd             thrpt    5  62730.325 ± 10245.642  ops/s
+ * multiAddWithSimpleAddTenRequests  thrpt    5  38436.398 ±  1368.890  ops/s
+ * splitAdd                          thrpt    5   5696.577 ±  1094.206  ops/s
+ * splitAddTenRequests               thrpt    5   1660.296 ±   125.501  ops/s
  * </pre>
  */
 @State(Scope.Benchmark)
