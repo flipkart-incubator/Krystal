@@ -90,7 +90,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
       new ConcurrentHashMap<>();
 
   /** These are those call graphs of a vajram where no other vajram depends on this. */
-  private final Map<VajramID, KryonId> vajramExecutables = new LinkedHashMap<>();
+  private final Map<VajramID, KryonId> vajramExecutables = new ConcurrentHashMap<>();
 
   private final VajramIndex vajramIndex = new VajramIndex();
 
