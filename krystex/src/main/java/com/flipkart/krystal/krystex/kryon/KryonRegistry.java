@@ -10,7 +10,7 @@ import java.util.function.Function;
 final class KryonRegistry<
     T extends Kryon<? extends KryonCommand<?>, ? extends KryonCommandResponse>> {
 
-  private final Map<String, T> kryons = new HashMap<>();
+  private final Map<VajramID, T> kryons = new HashMap<>();
 
   public T get(VajramID vajramID) {
     return tryGet(vajramID)
@@ -19,10 +19,10 @@ final class KryonRegistry<
   }
 
   public Optional<T> tryGet(VajramID vajramID) {
-    return Optional.ofNullable(kryons.get(vajramID.id()));
+    return Optional.ofNullable(kryons.get(vajramID));
   }
 
-  public T createIfAbsent(VajramID vajramID, Function<String, ? extends T> supplier) {
-    return kryons.computeIfAbsent(vajramID.id(), supplier);
+  public T createIfAbsent(VajramID vajramID, Function<VajramID, ? extends T> supplier) {
+    return kryons.computeIfAbsent(vajramID, supplier);
   }
 }

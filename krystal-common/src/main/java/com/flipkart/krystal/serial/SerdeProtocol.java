@@ -6,6 +6,7 @@ import com.flipkart.krystal.model.array.ByteArray;
 import java.lang.annotation.Annotation;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.checker.nullness.qual.PolyNull;
 
 /**
  * Represents a serialization protocol used to serialize and deserialize facets values.
@@ -22,6 +23,19 @@ public interface SerdeProtocol<A extends Annotation, T extends SerializableModel
    */
   String defaultContentType();
 
+  default @Nullable Object serialize(Object object) {
+    return serialize(object, null);
+  }
+
+  default @PolyNull Object serialize(@PolyNull Object object, @Nullable A customConfig) {
+    return serialize(
+        object,
+        model -> {
+          throw new UnsupportedOperationException();
+        },
+        customConfig);
+  }
+
   /**
    * Serializes the given object using the given custom config if possible. Else throws a runtime
    * exception.
@@ -32,8 +46,9 @@ public interface SerdeProtocol<A extends Annotation, T extends SerializableModel
    * @return the serialized value. The type of the return value depends on the serde protocol and
    *     the custom config. Examples: {@link ByteArray}, {@link String}
    */
-  @Nullable Object serialize(
-      Object object, Function<Model, T> modelMapper, @Nullable A customConfig);
+  @PolyNull
+  Object serialize(
+      @PolyNull Object object, Function<Model, T> modelMapper, @Nullable A customConfig);
 
   /**
    * Deserializes the given payload using the given type info and custom config if possible. Else
@@ -44,5 +59,5 @@ public interface SerdeProtocol<A extends Annotation, T extends SerializableModel
    * @param customConfig custom configuration on how to deserialize
    * @return the deserialized object
    */
-  <T> @Nullable T deserialize(@Nullable Object payload, Object typeInfo, @Nullable A customConfig);
+  <T> @PolyNull T deserialize(@PolyNull Object payload, Object typeInfo, @Nullable A customConfig);
 }

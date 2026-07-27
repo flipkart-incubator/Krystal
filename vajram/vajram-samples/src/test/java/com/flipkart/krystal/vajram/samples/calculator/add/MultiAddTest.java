@@ -25,6 +25,7 @@ import com.flipkart.krystal.krystex.KrystalExecutorConfig;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.KrystexGraph;
 import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
+import com.flipkart.krystal.krystex.SimpleDependentChainDisabler;
 import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
@@ -94,7 +95,12 @@ class MultiAddTest {
   void setUp() {
     this.executorLease = EXECUTOR_LEASES[0];
     this.vGraph = Util.loadFromClasspath(AddUsingTraits.class.getPackageName()).build();
-    this.kGraph = KrystexGraph.builder().vajramGraph(vGraph);
+    this.kGraph =
+        KrystexGraph.builder()
+            .vajramGraph(vGraph)
+            .externallyInvocableVajramIds(ImmutableSet.of(MultiAdd_Req._VAJRAM_ID))
+            .dependentChainDisabler(
+                new SimpleDependentChainDisabler(getDisabledDependentChains(vGraph)));
   }
 
   @Test

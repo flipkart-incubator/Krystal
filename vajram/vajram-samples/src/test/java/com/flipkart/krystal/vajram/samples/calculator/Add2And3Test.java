@@ -10,6 +10,7 @@ import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
+import com.google.common.collect.ImmutableSet;
 import java.util.concurrent.CompletableFuture;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
@@ -46,6 +47,7 @@ class Add2And3Test {
     try (VajramKryonExecutor krystexVajramExecutor =
         KrystexGraph.builder()
             .vajramGraph(graph)
+            .externallyInvocableVajramIds(ImmutableSet.of(Add2And3_Req._VAJRAM_ID))
             .build()
             .createExecutor(
                 KrystalExecutorConfig.builder()

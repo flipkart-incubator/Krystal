@@ -1,28 +1,49 @@
 package com.flipkart.krystal.krystex;
 
+import static com.flipkart.krystal.krystex.batching.DepChainBatcherConfig.computeSharedBatcherConfig;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
+import static java.util.Objects.requireNonNullElse;
 import static java.util.Objects.requireNonNullElseGet;
 
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.core.VajramID;
+import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.batching.DepChainBatcherConfig;
 import com.flipkart.krystal.krystex.batching.InputBatcherConfig;
+import com.flipkart.krystal.krystex.batching.InputBatcherStrategy;
+import com.flipkart.krystal.krystex.batching.InputBatcherStrategy.CustomBatcherStrategy;
+import com.flipkart.krystal.krystex.batching.InputBatcherStrategy.DefaultBatcherStrategy;
 import com.flipkart.krystal.krystex.batching.InputBatchingDecorator;
 import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
 import com.flipkart.krystal.krystex.inputinjection.KryonInputInjector;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
+import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
+import com.flipkart.krystal.krystex.kryon.TraitKryonDefinition;
+import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.kryondecoration.KryonExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.traits.DefaultTraitDispatcher;
+import com.flipkart.krystal.traits.StaticDispatchPolicy;
 import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import lombok.Builder;
@@ -39,6 +60,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class KrystexGraph {
 
   @Getter private final VajramGraph vajramGraph;
+
   private final TraitDispatchPolicies traitDispatchPolicies;
 
   @Getter private final @Nullable TraitDispatchDecorator traitDispatchDecorator;
@@ -47,19 +69,65 @@ public final class KrystexGraph {
 
   @Getter private final KryonExecutorConfigurator injectionConfig;
 
+  /**
+   * Maps each vajram to all the incoming dependent chains ending in that vajram which start from
+   * one of {@link #externallyInvocableVajramIds()} and which are not disabled by {@link
+   * #dependentChainDisabler()}
+   */
+  @Getter private final ImmutableMap<VajramID, Set<DependentChain>> dependentChainsByVajram;
+
+  @Getter private final ImmutableSet<VajramID> externallyInvocableVajramIds;
+
+  @Getter private final DependentChainDisabler dependentChainDisabler;
+
+  /**
+   * @param vajramGraph
+   * @param traitDispatchPolicies
+   * @param inputBatcherStrategy
+   * @param injectionProvider
+   * @param dependentChainDisabler used to determine which {@link DependentChain}s are disabled
+   */
   @Builder
   private KrystexGraph(
       @NonNull VajramGraph vajramGraph,
       @Nullable TraitDispatchPolicies traitDispatchPolicies,
-      @Nullable InputBatcherConfig inputBatcherConfig,
-      @Nullable VajramInjectionProvider injectionProvider) {
+      @Nullable InputBatcherStrategy inputBatcherStrategy,
+      @Nullable VajramInjectionProvider injectionProvider,
+      @Nullable ImmutableSet<VajramID> externallyInvocableVajramIds,
+      @Nullable DependentChainDisabler dependentChainDisabler) {
     this.vajramGraph = vajramGraph;
     this.traitDispatchPolicies =
         requireNonNullElseGet(traitDispatchPolicies, TraitDispatchPolicies::new);
     this.traitDispatchDecorator =
-        new DefaultTraitDispatcher(vajramGraph, this.traitDispatchPolicies);
-    this.injectionConfig = create(injectionProvider, vajramGraph);
-    this.inputBatchingConfig = create(inputBatcherConfig, vajramGraph);
+        new DefaultTraitDispatcher(this.vajramGraph, this.traitDispatchPolicies);
+    this.dependentChainDisabler =
+        requireNonNullElse(dependentChainDisabler, DependentChainDisabler.DISABLE_NONE);
+    this.injectionConfig = create(injectionProvider, this.vajramGraph);
+    this.externallyInvocableVajramIds =
+        requireNonNullElseGet(
+            externallyInvocableVajramIds,
+            () ->
+                vajramGraph.vajramDefinitions().values().stream()
+                    .filter(
+                        v ->
+                            v.vajramTags()
+                                .getAnnotationByType(InvocableOutsideGraph.class)
+                                .isPresent())
+                    .map(VajramDefinition::vajramId)
+                    .collect(toImmutableSet()));
+    this.inputBatchingConfig =
+        create(
+            inputBatcherStrategy,
+            this.vajramGraph,
+            this.externallyInvocableVajramIds,
+            this.traitDispatchPolicies,
+            this.dependentChainDisabler);
+    this.dependentChainsByVajram =
+        computeIncomingDependentChains(
+            this.vajramGraph,
+            this.traitDispatchDecorator,
+            this.dependentChainDisabler,
+            this.externallyInvocableVajramIds);
   }
 
   public VajramKryonExecutor createExecutor(KrystalExecutorConfigBuilder vajramExecConfig) {
@@ -111,9 +179,26 @@ public final class KrystexGraph {
   }
 
   private static KryonExecutorConfigurator create(
-      @Nullable InputBatcherConfig inputBatcherConfig, VajramGraph vajramGraph) {
-    if (inputBatcherConfig == null) {
+      @Nullable InputBatcherStrategy inputBatcherStrategy,
+      VajramGraph vajramGraph,
+      ImmutableSet<VajramID> externallyInvocableVajramIds,
+      TraitDispatchPolicies traitDispatchPolicies,
+      DependentChainDisabler dependentChainDisabler) {
+    InputBatcherConfig inputBatcherConfig;
+    if (inputBatcherStrategy == null) {
       return KryonExecutorConfigurator.NO_OP;
+    } else if (inputBatcherStrategy instanceof CustomBatcherStrategy customStrategy) {
+      inputBatcherConfig = customStrategy.customBatcherConfig();
+    } else if (inputBatcherStrategy instanceof DefaultBatcherStrategy defaultStrategy) {
+      inputBatcherConfig =
+          computeSharedBatcherConfig(
+              vajramGraph,
+              defaultStrategy.batchSizeSupplier(),
+              traitDispatchPolicies,
+              dependentChainDisabler,
+              externallyInvocableVajramIds);
+    } else {
+      throw new AssertionError("Not possible");
     }
     ConcurrentHashMap<DependentChain, DepChainBatcherConfig> batcherConfigByDepChain =
         new ConcurrentHashMap<>();
@@ -176,5 +261,101 @@ public final class KrystexGraph {
       }
       configBuilder.outputLogicDecoratorConfig(batchingDecoratorConfig);
     };
+  }
+
+  private static ImmutableMap<VajramID, Set<DependentChain>> computeIncomingDependentChains(
+      VajramGraph vajramGraph,
+      TraitDispatchDecorator traitDispatchDecorator,
+      DependentChainDisabler dependentChainDisabler,
+      ImmutableSet<VajramID> externallyInvocableVajramIds) {
+    Map<VajramID, Set<DependentChain>> dependentChainsByVajramId = new HashMap<>();
+    DependentChain depChain = vajramGraph.kryonDefinitionRegistry().getDependentChainsStart();
+    for (VajramID vajramID : externallyInvocableVajramIds) {
+      _computeIncomingDependentChains(
+          vajramID,
+          dependentChainsByVajramId,
+          depChain,
+          vajramGraph,
+          traitDispatchDecorator,
+          dependentChainDisabler);
+    }
+    return ImmutableMap.copyOf(dependentChainsByVajramId);
+  }
+
+  private static void _computeIncomingDependentChains(
+      VajramID vajramID,
+      Map<VajramID, Set<DependentChain>> dependentChainsByVajramId,
+      DependentChain incomingDependentChain,
+      VajramGraph vajramGraph,
+      TraitDispatchDecorator traitDispatchDecorator,
+      DependentChainDisabler dependentChainDisabler) {
+    if (dependentChainDisabler.isDisabled(incomingDependentChain)) {
+      // If a dependantChain is disabled, don't create further depChains
+      return;
+    }
+    KryonDefinitionRegistry kryonDefinitionRegistry = vajramGraph.kryonDefinitionRegistry();
+    List<VajramID> concreteVajramIds = new ArrayList<>();
+    if (kryonDefinitionRegistry.get(vajramID) instanceof TraitKryonDefinition) {
+      @Nullable Dependency dependency = incomingDependentChain.latestDependency();
+      @Nullable TraitDispatchPolicy traitDispatchPolicy =
+          traitDispatchDecorator.traitDispatchPolicies().get(vajramID);
+      if (traitDispatchPolicy != null) {
+        if (traitDispatchPolicy instanceof StaticDispatchPolicy staticDispatchPolicy
+            && dependency != null) {
+          concreteVajramIds.add(staticDispatchPolicy.getDispatchTargetID(dependency));
+        } else {
+          concreteVajramIds.addAll(traitDispatchPolicy.dispatchTargetIDs());
+          dependentChainsByVajramId
+              .computeIfAbsent(vajramID, _n -> new LinkedHashSet<>())
+              .add(incomingDependentChain);
+        }
+      }
+    } else {
+      concreteVajramIds.add(vajramID);
+    }
+    for (VajramID finalVajramId : concreteVajramIds) {
+      ImmutableSet<Dependency> dependencies = ImmutableSet.of();
+      if (kryonDefinitionRegistry.get(finalVajramId)
+          instanceof VajramKryonDefinition vajramKryonDefinition) {
+        dependencies = vajramKryonDefinition.dependencies();
+      }
+      for (Dependency dependency : dependencies) {
+        _computeIncomingDependentChains(
+            dependency.onVajramID(),
+            dependentChainsByVajramId,
+            incomingDependentChain.extend(finalVajramId, dependency),
+            vajramGraph,
+            traitDispatchDecorator,
+            dependentChainDisabler);
+      }
+      dependentChainsByVajramId
+          .computeIfAbsent(finalVajramId, _n -> new LinkedHashSet<>())
+          .add(incomingDependentChain);
+    }
+  }
+
+  public static class KrystexGraphBuilder {
+
+    private TraitDispatchPolicies traitDispatchPolicies = new TraitDispatchPolicies();
+
+    public KrystexGraphBuilder traitDispatchPolicies(TraitDispatchPolicy... traitDispatchPolicies) {
+      this.traitDispatchPolicies = this.traitDispatchPolicies.merge(traitDispatchPolicies);
+      return this;
+    }
+
+    public KrystexGraphBuilder traitDispatchPolicies(TraitDispatchPolicies traitDispatchPolicies) {
+      this.traitDispatchPolicies = this.traitDispatchPolicies.merge(traitDispatchPolicies);
+      return this;
+    }
+
+    public KrystexGraphBuilder traitDispatchPolicies(
+        Collection<? extends TraitDispatchPolicy> traitDispatchPolicies) {
+      this.traitDispatchPolicies = this.traitDispatchPolicies.merge(traitDispatchPolicies);
+      return this;
+    }
+
+    public TraitDispatchPolicies traitDispatchPolicies() {
+      return this.traitDispatchPolicies;
+    }
   }
 }

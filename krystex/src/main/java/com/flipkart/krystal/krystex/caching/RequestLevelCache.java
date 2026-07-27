@@ -21,6 +21,7 @@ import com.flipkart.krystal.except.KrystalCompletionException;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.VajramGraph;
+import com.flipkart.krystal.krystex.commands.DirectForwardCommand;
 import com.flipkart.krystal.krystex.commands.DirectForwardReceive;
 import com.flipkart.krystal.krystex.commands.ForwardReceiveBatch;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
@@ -192,7 +193,8 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
     private CompletableFuture<KryonCommandResponse> readFromCache(
         Kryon<KryonCommand<?>, KryonCommandResponse> kryon, DirectForwardReceive command) {
       List<ExecutionItem> cacheMisses = new ArrayList<>();
-      for (ExecutionItem executionItem : command.executionItems()) {
+      for (ExecutionItem executionItem :
+          command.executionItems(getKryonDefinition().kryonDefinitionRegistry())) {
         FacetValues facetValues = executionItem.facetValues();
         var cacheKey = newCacheKey(facetValues);
         if (cacheKey == null) {
@@ -212,7 +214,8 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
         propagateCompletion(cachedFuture, executionItem.response());
       }
       return kryon.executeCommand(
-          new DirectForwardReceive(command.vajramID(), cacheMisses, command.dependentChain()));
+          DirectForwardCommand.ofExecutionItems(
+              command.vajramID(), cacheMisses, command.dependentChain()));
     }
 
     @SuppressWarnings("FutureReturnValueIgnored")

@@ -30,9 +30,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  *       #buildJoinSql(SelectionInfo, List, List, int, boolean)})
  * </ol>
  */
-public final class SqlQueryBuilder {
+public final class SelectQueryBuilder {
 
-  private SqlQueryBuilder() {}
+  private SelectQueryBuilder() {}
 
   // ─── Simple SELECT (no JOIN) ──────────────────────────────────────────────────
   /**

@@ -16,7 +16,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public final class SimpleRequestBuilder<T> implements ImmutableRequest.Builder<T> {
+public final class SimpleRequestBuilder<T>
+    implements ImmutableRequest.Builder<T>, SimpleRequest<T> {
 
   private final ImmutableSet<? extends InputMirror> _facets;
   private final Map<String, ErrableFacetValue<Object>> _data;

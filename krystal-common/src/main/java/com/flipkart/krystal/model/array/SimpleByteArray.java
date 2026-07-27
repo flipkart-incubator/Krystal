@@ -9,20 +9,16 @@ import java.util.Arrays;
 public final class SimpleByteArray extends ByteArrayBase {
 
   private static final SimpleByteArray EMPTY = new SimpleByteArray(new byte[0]);
+
   private final byte[] data;
 
-  private SimpleByteArray(byte[] data) {
-    super(data);
-    this.data = data;
-  }
-
-  public static SimpleByteArray of() {
+  public static SimpleByteArray empty() {
     return EMPTY;
   }
 
   /** Wraps a cloned copy of the provided byte array into a {@link SimpleByteArray}. */
   public static SimpleByteArray copyOf(byte... data) {
-    return of(data.clone());
+    return backedBy(data.clone());
   }
 
   /**
@@ -33,8 +29,13 @@ public final class SimpleByteArray extends ByteArrayBase {
    * 100% sure that the passed bytes are not modified after passing it to this method. Otherwise,
    * use {@link #copyOf(byte...)}.
    */
-  public static SimpleByteArray of(byte... data) {
+  public static SimpleByteArray backedBy(byte... data) {
     return new SimpleByteArray(data);
+  }
+
+  private SimpleByteArray(byte[] data) {
+    super(data);
+    this.data = data;
   }
 
   @Override

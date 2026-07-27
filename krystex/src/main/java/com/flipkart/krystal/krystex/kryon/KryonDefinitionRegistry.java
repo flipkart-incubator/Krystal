@@ -22,7 +22,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class KryonDefinitionRegistry {
 
   private final LogicDefinitionRegistry logicDefinitionRegistry;
-  private final Map<String, KryonDefinition> kryonDefinitions = new HashMap<>();
+  private final Map<VajramID, KryonDefinition> kryonDefinitions = new HashMap<>();
   private final DependentChainStart dependentChainStart = new DependentChainStart();
 
   public KryonDefinitionRegistry(LogicDefinitionRegistry logicDefinitionRegistry) {
@@ -34,7 +34,7 @@ public final class KryonDefinitionRegistry {
   }
 
   public @Nullable KryonDefinition get(VajramID vajramID) {
-    return kryonDefinitions.get(vajramID.id());
+    return kryonDefinitions.get(vajramID);
   }
 
   public Collection<KryonDefinition> getDefinitions() {
@@ -69,7 +69,7 @@ public final class KryonDefinitionRegistry {
             this,
             graphExecutionLogic,
             tags);
-    kryonDefinitions.put(kryonDefinition.vajramID().id(), kryonDefinition);
+    kryonDefinitions.put(kryonDefinition.vajramID(), kryonDefinition);
     return kryonDefinition;
   }
 
@@ -80,7 +80,7 @@ public final class KryonDefinitionRegistry {
       ElementTags tags) {
     TraitKryonDefinition kryonDefinition =
         new TraitKryonDefinition(new VajramID(kryonId), facets, createNewRequest, this, tags);
-    kryonDefinitions.put(kryonDefinition.vajramID().id(), kryonDefinition);
+    kryonDefinitions.put(kryonDefinition.vajramID(), kryonDefinition);
     return kryonDefinition;
   }
 

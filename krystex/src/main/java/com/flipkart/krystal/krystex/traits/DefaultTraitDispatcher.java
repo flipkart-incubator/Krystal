@@ -11,6 +11,7 @@ import com.flipkart.krystal.data.RequestResponseFuture;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.commands.ClientSideCommand;
+import com.flipkart.krystal.krystex.commands.DirectForwardCommand;
 import com.flipkart.krystal.krystex.commands.DirectForwardSend;
 import com.flipkart.krystal.krystex.commands.ForwardSendBatch;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyInvocation;
@@ -27,7 +28,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -75,7 +75,6 @@ public class DefaultTraitDispatcher implements TraitDispatchDecorator {
           Map<VajramID, Map<InvocationId, Request<Object>>> dispatchRequests =
               new LinkedHashMap<>();
           Map<VajramID, CompletableFuture<BatchResponse>> dispatchResponses = new LinkedHashMap<>();
-          Set<InvocationId> orphanedRequests = new LinkedHashSet<>();
           for (Entry<InvocationId, ? extends Request<Object>> requestEntry :
               originalExecutableRequests.entrySet()) {
             InvocationId invocationId = requestEntry.getKey();
@@ -86,8 +85,6 @@ public class DefaultTraitDispatcher implements TraitDispatchDecorator {
               dispatchRequests
                   .computeIfAbsent(dispatchTarget, k -> new LinkedHashMap<>())
                   .put(invocationId, originalRequest);
-            } else {
-              orphanedRequests.add(invocationId);
             }
           }
           ImmutableSet<VajramID> dispatchTargets = dynamicPolicy.dispatchTargetIDs();
@@ -171,7 +168,7 @@ public class DefaultTraitDispatcher implements TraitDispatchDecorator {
             CompletableFuture<R> depResponse =
                 invocationToDecorate.invokeDependency(
                     (ClientSideCommand<R>)
-                        new DirectForwardSend(
+                        new DirectForwardCommand(
                             dispatchTargetId, requestsForTarget, forwardSend.dependentChain()));
           }
           for (Entry<VajramID, List<RequestResponseFuture<? extends Request<?>, ?>>> entry :
@@ -180,7 +177,7 @@ public class DefaultTraitDispatcher implements TraitDispatchDecorator {
             CompletableFuture<R> depResponse =
                 invocationToDecorate.invokeDependency(
                     (ClientSideCommand<R>)
-                        new DirectForwardSend(
+                        new DirectForwardCommand(
                             entry.getKey(), entry.getValue(), forwardSend.dependentChain()));
           }
           return completedFuture(DirectResponse.instance());

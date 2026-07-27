@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.facets.resolution;
 
 import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.vajram.facets.resolution.Transformer.FanoutTransformer;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
 import com.google.common.collect.ImmutableSet;
@@ -21,7 +22,7 @@ public record SimpleInputResolverSpec<T, CV extends Request, DV extends Request>
     Transformer transformer) {
 
   public boolean canFanout() {
-    return transformer.canFanout();
+    return transformer instanceof FanoutTransformer;
   }
 
   public ImmutableSet<FacetSpec<?, CV>> sources() {

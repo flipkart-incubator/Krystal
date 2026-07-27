@@ -1,13 +1,14 @@
 package com.flipkart.krystal.vajram.ext.sql.vertx.codegen;
 
+import static com.flipkart.krystal.vajram.ext.sql.codegen.InsertQueryBuilder.loadProtocolConfig;
 import static java.util.Objects.requireNonNull;
 
-import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
-import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider;
-import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider.ModelProtocolConfig;
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.vajram.ext.sql.codegen.SqlCodegenUtil;
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.ColumnModel;
 import com.flipkart.krystal.vajram.ext.sql.codegen.syntax.SqlSyntax;
+import com.flipkart.krystal.vajram.ext.sql.data.DataUtils;
+import com.flipkart.krystal.vajram.ext.sql.lang.SqlDialect;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.ParameterizedTypeName;
@@ -18,18 +19,11 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.ServiceLoader;
-import java.util.ServiceLoader.Provider;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import javax.lang.model.element.QualifiedNameable;
-import javax.lang.model.element.TypeElement;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
-record VertxSqlUtil(CodeGenUtility util, SqlSyntax syntax) {
+record VertxSqlUtil(SqlCodegenUtil sqlUtil, SqlSyntax syntax, SqlDialect dialect) {
 
   static final String SQL_VAJRAM_SUFFIX = "_VertxSql";
   static final String VERTX_SQL_POOL_FACET = "vertxSql_pool";
@@ -49,34 +43,12 @@ record VertxSqlUtil(CodeGenUtility util, SqlSyntax syntax) {
     ;
   }
 
-  private static @MonotonicNonNull Map<String, ModelProtocolConfig> protocolConfigCache;
-
-  static ModelProtocolConfig loadProtocolConfig(TypeElement protocolTypeElement) {
-    if (protocolConfigCache == null) {
-      protocolConfigCache =
-          ServiceLoader.load(ModelProtocolConfigProvider.class, VertxSqlUtil.class.getClassLoader())
-              .stream()
-              .map(Provider::get)
-              .map(ModelProtocolConfigProvider::getConfig)
-              .collect(
-                  Collectors.toMap(
-                      c -> c.modelProtocol().getClass().getCanonicalName(), Function.identity()));
-    }
-    String key = protocolTypeElement.getQualifiedName().toString();
-    ModelProtocolConfig config = protocolConfigCache.get(key);
-    if (config == null) {
-      throw new IllegalStateException(
-          "[vajram-sql] No ModelProtocolConfigProvider found for protocol: " + key);
-    }
-    return config;
-  }
-
   public CodeBlock readColumnAndSetValue(ColumnModel col, String alias) {
     CodeBlock columnExpression = vertxColumnGetter(col, alias);
     if (col.serdeInfo() != null) {
       columnExpression =
           loadProtocolConfig(requireNonNull(col.serdeInfo()).protocolTypeElement())
-              .createDeserializationExpression(columnExpression, col.javaType(), util());
+              .createDeserializationExpression(columnExpression, col.javaType(), sqlUtil.util());
     }
     return CodeBlock.of("\n    .$L($L)", col.methodName(), columnExpression);
   }
@@ -97,6 +69,13 @@ record VertxSqlUtil(CodeGenUtility util, SqlSyntax syntax) {
           OffsetDateTime.class.getCanonicalName());
 
   private CodeBlock vertxColumnGetter(ColumnModel column, String alias) {
+    if (sqlUtil.isFloatArray(column.javaType()) && column.serdeInfo() == null) {
+      requirePostgresFloatArray(column.methodName());
+      return CodeBlock.of(
+          "$T.sqlValToFloatArray(_row.getArrayOfFloats($S))",
+          DataUtils.class,
+          syntax.columnNameInResult(alias));
+    }
     String computedGetterName =
         column.serdeInfo() != null
             ?
@@ -112,7 +91,7 @@ record VertxSqlUtil(CodeGenUtility util, SqlSyntax syntax) {
               case FLOAT -> "getFloat";
               default -> {
                 String getterName = "getValue";
-                if (util.processingEnv().getTypeUtils().asElement(column.javaType())
+                if (sqlUtil.util().processingEnv().getTypeUtils().asElement(column.javaType())
                     instanceof QualifiedNameable qualifiedNameable) {
                   if (CUSTOM_GETTERS.contains(qualifiedNameable.getQualifiedName().toString())) {
                     getterName = "get" + qualifiedNameable.getSimpleName();
@@ -122,5 +101,18 @@ record VertxSqlUtil(CodeGenUtility util, SqlSyntax syntax) {
               }
             };
     return CodeBlock.of("$L.$L($S)", "_row", computedGetterName, syntax.columnNameInResult(alias));
+  }
+
+  private void requirePostgresFloatArray(String columnName) {
+    if (dialect != SqlDialect.POSTGRESQL_18) {
+      throw sqlUtil
+          .util()
+          .errorAndThrow(
+              "[vajram-sql] FloatArray column '"
+                  + columnName
+                  + "' requires PostgreSQL REAL[] support. Dialect "
+                  + dialect
+                  + " has no native FloatArray mapping.");
+    }
   }
 }

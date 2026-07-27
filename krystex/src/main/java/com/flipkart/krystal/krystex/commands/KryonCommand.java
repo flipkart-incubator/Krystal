@@ -10,5 +10,10 @@ public sealed interface KryonCommand<R extends KryonCommandResponse>
 
   DependentChain dependentChain();
 
+  /**
+   * Fail this command and all its constituent requests with the given throwable where possible.
+   * This is generally possible only in implementations which have a placeholder for the result of
+   * each request.
+   */
   default void error(Throwable throwable) {}
 }
