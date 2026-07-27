@@ -52,14 +52,14 @@ import org.openjdk.jmh.annotations.Warmup;
  * <p>Krystal 7:
  *
  * <pre>
- * Benchmark                  Mode  Cnt      Score      Error  Units
+ * Benchmark             Mode  Cnt      Score      Error  Units
  * -----------------------------------------------------------------
- * chainAdd             thrpt    5  33143.782 ± 4003.976  ops/s
- * chainAddTenRequests  thrpt    5   6450.434 ± 1921.872  ops/s
- * formula              thrpt    5  44004.536 ± 1032.764  ops/s
- * formulaTenRequests   thrpt    5  11289.078 ±  528.886  ops/s
- * splitAdd             thrpt    5  28780.704 ± 6997.917  ops/s
- * splitAddTenRequests  thrpt    5   7184.289 ±  182.837  ops/s
+ * chainAdd             thrpt    5   9283.580 ±  538.633  ops/s
+ * chainAddTenRequests  thrpt    5   1374.468 ±   56.580  ops/s
+ * formula              thrpt    5  39480.908 ± 3024.456  ops/s
+ * formulaTenRequests   thrpt    5  11019.657 ±  544.938  ops/s
+ * splitAdd             thrpt    5   4434.492 ±   83.799  ops/s
+ * splitAddTenRequests  thrpt    5   1026.046 ±   28.474  ops/s
  * </pre>
  *
  * Krystal 8:
@@ -67,17 +67,17 @@ import org.openjdk.jmh.annotations.Warmup;
  * <pre>
  * Benchmark                  Mode  Cnt      Score      Error  Units
  * -----------------------------------------------------------------
- * chainAdd             thrpt    5  32196.856 ± 2525.545  ops/s
- * chainAddTenRequests  thrpt    5   7245.813 ±  576.884  ops/s
- * formula              thrpt    5  43702.018 ± 4186.676  ops/s
- * formulaTenRequests   thrpt    5  10898.207 ± 1656.681  ops/s
- * splitAdd             thrpt    5  27701.727 ±  586.085  ops/s
- * splitAddTenRequests  thrpt    5   7325.645 ±  120.427  ops/s
+ * chainAdd             thrpt    5   9265.238 ±  539.952  ops/s
+ * chainAddTenRequests  thrpt    5   1382.489 ±  112.046  ops/s
+ * formula              thrpt    5  37223.270 ± 3935.870  ops/s
+ * formulaTenRequests   thrpt    5  10933.280 ±  511.317  ops/s
+ * splitAdd             thrpt    5   4242.873 ±   40.167  ops/s
+ * splitAddTenRequests  thrpt    5   1038.458 ±   44.929  ops/s
  * </pre>
  *
  * Krystal 9:
  *
- *<pre>
+ * <pre>
  * Benchmark                  Mode  Cnt      Score      Error  Units
  * -----------------------------------------------------------------
  * chainAdd                           thrpt    5  44853.195 ±  2627.742  ops/s
@@ -88,7 +88,7 @@ import org.openjdk.jmh.annotations.Warmup;
  * multiAddWithSimpleAddTenRequests   thrpt    5  50977.265 ±  1551.162  ops/s
  * splitAdd                           thrpt    5  38869.913 ±   852.005  ops/s
  * splitAddTenRequests                thrpt    5  12481.518 ±   578.171  ops/s
- *</pre>
+ * </pre>
  */
 @State(Scope.Benchmark)
 @Threads(1)
@@ -100,7 +100,7 @@ public class VajramBenchmark {
       KryonExecutionConfig.builder().build();
   private static final Formula_Req FORMULA_REQUEST =
       Formula_ReqImmutPojo._builder().a(100).p(20).q(5)._build();
-  private static final List<Integer> RECURSIVE_ADDENDS = List.of(1, 2, 3, 4);
+  private static final List<Integer> RECURSIVE_ADDENDS = List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
   private static final ChainAdd_Req CHAIN_ADD_REQUEST =
       ChainAdd_ReqImmutPojo._builder().numbers(RECURSIVE_ADDENDS)._build();
   private static final SplitAdd_Req SPLIT_ADD_REQUEST =
@@ -233,17 +233,87 @@ public class VajramBenchmark {
   //  }
 
   private static ImmutableSet<DependentChain> chainAddDisabledChains(VajramKryonGraph graph) {
-    String vajramId = graph.getVajramIdByVajramDefType(ChainAdd.class).id();
-    return ImmutableSet.of(graph.computeDependentChain(vajramId, chainSum_s, chainSum_s));
+    return ImmutableSet.of(
+        graph.computeDependentChain(
+            graph.getVajramIdByVajramDefType(ChainAdd.class).id(),
+            chainSum_s,
+            chainSum_s,
+            chainSum_s,
+            chainSum_s,
+            chainSum_s,
+            chainSum_s,
+            chainSum_s,
+            chainSum_s,
+            chainSum_s));
   }
 
   private static ImmutableSet<DependentChain> splitAddDisabledChains(VajramKryonGraph graph) {
-    String vajramId = graph.getVajramIdByVajramDefType(SplitAdd.class).id();
+    String splitAdderId = graph.getVajramIdByVajramDefType(SplitAdd.class).id();
     return ImmutableSet.of(
-        graph.computeDependentChain(vajramId, splitSum1_s, splitSum1_s),
-        graph.computeDependentChain(vajramId, splitSum1_s, splitSum2_s),
-        graph.computeDependentChain(vajramId, splitSum2_s, splitSum1_s),
-        graph.computeDependentChain(vajramId, splitSum2_s, splitSum2_s));
+        graph.computeDependentChain(
+            splitAdderId, splitSum1_s, splitSum1_s, splitSum1_s, splitSum1_s, splitSum1_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum1_s, splitSum1_s, splitSum1_s, splitSum1_s, splitSum2_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum1_s, splitSum1_s, splitSum1_s, splitSum2_s, splitSum1_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum1_s, splitSum1_s, splitSum1_s, splitSum2_s, splitSum2_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum1_s, splitSum1_s, splitSum2_s, splitSum1_s, splitSum1_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum1_s, splitSum1_s, splitSum2_s, splitSum1_s, splitSum2_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum1_s, splitSum1_s, splitSum2_s, splitSum2_s, splitSum1_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum1_s, splitSum1_s, splitSum2_s, splitSum2_s, splitSum2_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum1_s, splitSum2_s, splitSum1_s, splitSum1_s, splitSum1_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum1_s, splitSum2_s, splitSum1_s, splitSum1_s, splitSum2_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum1_s, splitSum2_s, splitSum1_s, splitSum2_s, splitSum1_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum1_s, splitSum2_s, splitSum1_s, splitSum2_s, splitSum2_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum1_s, splitSum2_s, splitSum2_s, splitSum1_s, splitSum1_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum1_s, splitSum2_s, splitSum2_s, splitSum1_s, splitSum2_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum1_s, splitSum2_s, splitSum2_s, splitSum2_s, splitSum1_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum1_s, splitSum2_s, splitSum2_s, splitSum2_s, splitSum2_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum2_s, splitSum1_s, splitSum1_s, splitSum1_s, splitSum1_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum2_s, splitSum1_s, splitSum1_s, splitSum1_s, splitSum2_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum2_s, splitSum1_s, splitSum1_s, splitSum2_s, splitSum1_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum2_s, splitSum1_s, splitSum1_s, splitSum2_s, splitSum2_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum2_s, splitSum1_s, splitSum2_s, splitSum1_s, splitSum1_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum2_s, splitSum1_s, splitSum2_s, splitSum1_s, splitSum2_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum2_s, splitSum1_s, splitSum2_s, splitSum2_s, splitSum1_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum2_s, splitSum1_s, splitSum2_s, splitSum2_s, splitSum2_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum2_s, splitSum2_s, splitSum1_s, splitSum1_s, splitSum1_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum2_s, splitSum2_s, splitSum1_s, splitSum1_s, splitSum2_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum2_s, splitSum2_s, splitSum1_s, splitSum2_s, splitSum1_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum2_s, splitSum2_s, splitSum1_s, splitSum2_s, splitSum2_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum2_s, splitSum2_s, splitSum2_s, splitSum1_s, splitSum1_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum2_s, splitSum2_s, splitSum2_s, splitSum1_s, splitSum2_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum2_s, splitSum2_s, splitSum2_s, splitSum2_s, splitSum1_s),
+        graph.computeDependentChain(
+            splitAdderId, splitSum2_s, splitSum2_s, splitSum2_s, splitSum2_s, splitSum2_s));
   }
 
   private int execute(
