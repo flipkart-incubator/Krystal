@@ -84,16 +84,18 @@ import org.openjdk.jmh.annotations.Warmup;
  * <pre>
  * Benchmark                          Mode  Cnt      Score      Error  Units
  * -----------------------------------------------------------------
- * chainAdd                          thrpt    5  15305.294 ± 1250.485  ops/s
- * chainAddBatched                   thrpt    5  14021.194 ±  567.946  ops/s
- * chainAddTenRequests               thrpt    5   2601.975 ±  166.874  ops/s
- * chainAddTenRequestsBatched        thrpt    5   2663.188 ±  212.910  ops/s
- * formula                           thrpt    5  47017.984 ± 6088.152  ops/s
- * formulaTenRequests                thrpt    5  16364.449 ± 2428.222  ops/s
- * multiAddWithSimpleAdd             thrpt    5  58116.574 ± 1620.600  ops/s
- * multiAddWithSimpleAddTenRequests  thrpt    5  39454.128 ± 2618.884  ops/s
- * splitAdd                          thrpt    5   6054.680 ±  221.411  ops/s
- * splitAddTenRequests               thrpt    5   1537.064 ±   49.381  ops/s
+ * chainAdd                          thrpt    5  14784.531 ± 2779.631  ops/s
+ * chainAddBatched                   thrpt    5  14010.276 ± 1651.020  ops/s
+ * chainAddTenRequests               thrpt    5   2752.175 ±   98.626  ops/s
+ * chainAddTenRequestsBatched        thrpt    5   2677.978 ±   65.749  ops/s
+ * formula                           thrpt    5  46279.594 ± 2391.455  ops/s
+ * formulaTenRequests                thrpt    5  17062.473 ±  399.770  ops/s
+ * multiAddWithSimpleAdd             thrpt    5  64492.598 ± 1773.772  ops/s
+ * multiAddWithSimpleAddTenRequests  thrpt    5  37708.755 ±  807.959  ops/s
+ * splitAdd                          thrpt    5   5894.065 ±  100.944  ops/s
+ * splitAddBatched                   thrpt    5   5111.545 ±  130.098  ops/s
+ * splitAddTenRequests               thrpt    5   1555.872 ±   45.929  ops/s
+ * splitAddTenRequestsBatched        thrpt    5   1552.031 ±   73.449  ops/s
  * </pre>
  *
  * Krystal 10:
@@ -135,6 +137,7 @@ public class VajramBenchmark {
   private Lease<SingleThreadExecutor> executorLease;
   private VajramKryonGraph formulaGraph;
   private VajramKryonGraph splitAddGraph;
+  private VajramKryonGraph splitAddBatchedGraph;
   private VajramKryonGraph chainAddGraph;
   private VajramKryonGraph chainAddBatchedGraph;
   private VajramKryonGraph multiAddGraph;
@@ -151,6 +154,10 @@ public class VajramBenchmark {
     //            Add.class,
     //            Divide.class);
     splitAddGraph = graphFor();
+    splitAddBatchedGraph = VajramKryonGraph.builder().loadClasses(SplitAdd.class, Add.class).build();
+    autoRegisterSharedBatchersV2(
+        splitAddBatchedGraph, _v -> 100, splitAddDisabledChains(splitAddBatchedGraph));
+
     //        graphFor(
     //            SplitAdd_Req._VAJRAM_ID,
     //            VajramBenchmark::splitAddDisabledChains,
@@ -209,6 +216,17 @@ public class VajramBenchmark {
   public int splitAddTenRequests() {
     return executeTenRequests(
         splitAddGraph, SPLIT_ADD_REQUEST, splitAddDisabledChains(splitAddGraph));
+  }
+
+  @Benchmark
+  public int splitAddBatched() {
+    return execute(splitAddBatchedGraph, SPLIT_ADD_REQUEST, splitAddDisabledChains(splitAddBatchedGraph));
+  }
+
+  @Benchmark
+  public int splitAddTenRequestsBatched() {
+    return executeTenRequests(
+        splitAddBatchedGraph, SPLIT_ADD_REQUEST, splitAddDisabledChains(splitAddBatchedGraph));
   }
 
   @Benchmark
