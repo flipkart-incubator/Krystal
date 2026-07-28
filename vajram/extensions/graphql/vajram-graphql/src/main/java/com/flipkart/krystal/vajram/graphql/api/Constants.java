@@ -25,6 +25,7 @@ public class Constants {
     public static final String IN_ENTITY = "inEntity";
     public static final String SUB_PACKAGE = "subPackage";
     public static final String VAJRAM_ID = "vajramId";
+    public static final String MULTI_FIELD = "multiField";
     public static final String ENTITY_ID_FIELD = "entityIdField";
     public static final String NAME = "name";
   }

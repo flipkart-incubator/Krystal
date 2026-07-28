@@ -17,6 +17,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.squareup.javapoet.ClassName;
 import graphql.language.Argument;
+import graphql.language.BooleanValue;
 import graphql.language.Directive;
 import graphql.language.DirectivesContainer;
 import graphql.language.EnumTypeDefinition;
@@ -264,10 +265,13 @@ public class SchemaReaderUtil {
 
         String path = "";
         if (fieldDefinition.hasDirective(Directives.DATA_FETCHER)) {
+          GraphQlFieldSpec fieldSpec = fieldSpecFromField(fieldDefinition, "", parentType);
+          boolean multiField = isMultiFieldDataFetcher(fieldDefinition);
           fieldToFetcherMap.put(
-              fieldSpecFromField(fieldDefinition, "", parentType),
+              fieldSpec,
               new VajramFetcher(
-                  getDataFetcherClassName(fieldDefinition), SINGLE_FIELD_DATA_FETCHER));
+                  getDataFetcherClassName(fieldDefinition),
+                  multiField ? MULTI_FIELD_DATA_FETCHER : SINGLE_FIELD_DATA_FETCHER));
         } else if (fieldTypeDefinition.hasDirective(Directives.ENTITY)
             && fieldDefinition.hasDirective(Directives.ID_FETCHER)) {
           fieldToFetcherMap.put(
@@ -292,23 +296,9 @@ public class SchemaReaderUtil {
         }
       }
 
-      Map<Fetcher, List<GraphQlFieldSpec>> fetcherToFieldsMap = new HashMap<>();
-      fieldToFetcherMap.entrySet().stream()
-          // Convert Map<Field, Fetcher> to Map<Fetcher, List<Field>>
-          .collect(groupingBy(Entry::getValue, mapping(Entry::getKey, toList())))
-          .forEach(
-              (fetcher, graphQlFieldSpecs) -> {
-                if (graphQlFieldSpecs.size() == 1) {
-                  fetcherToFieldsMap.put(fetcher, graphQlFieldSpecs);
-                } else if (fetcher instanceof VajramFetcher vajramFetcher) {
-                  Fetcher newFetcher =
-                      new VajramFetcher(vajramFetcher.vajramClassName(), MULTI_FIELD_DATA_FETCHER);
-                  for (GraphQlFieldSpec graphQlFieldSpec : graphQlFieldSpecs) {
-                    fieldToFetcherMap.replace(graphQlFieldSpec, newFetcher);
-                  }
-                  fetcherToFieldsMap.put(newFetcher, graphQlFieldSpecs);
-                }
-              });
+      Map<Fetcher, List<GraphQlFieldSpec>> fetcherToFieldsMap =
+          fieldToFetcherMap.entrySet().stream()
+              .collect(groupingBy(Entry::getValue, mapping(Entry::getKey, toList())));
 
       entityTypeToFieldToFetcher.put(parentType, fieldToFetcherMap);
       typeToFetcherToFields.put(parentType, fetcherToFieldsMap);
@@ -406,12 +396,27 @@ public class SchemaReaderUtil {
   }
 
   public ClassName getDataFetcherClassName(DirectivesContainer<?> directivesContainer) {
-    String packageName = getPackageNameFromDirective(directivesContainer, Directives.DATA_FETCHER);
+    return getFetcherClassName(directivesContainer, Directives.DATA_FETCHER);
+  }
+
+  private ClassName getFetcherClassName(
+      DirectivesContainer<?> directivesContainer, String directiveName) {
+    String packageName = getPackageNameFromDirective(directivesContainer, directiveName);
     return ClassName.get(
         packageName,
-        getDirectiveArgumentString(
-                directivesContainer, Directives.DATA_FETCHER, DirectiveArgs.VAJRAM_ID)
+        getDirectiveArgumentString(directivesContainer, directiveName, DirectiveArgs.VAJRAM_ID)
             .orElseThrow());
+  }
+
+  public boolean isMultiFieldDataFetcher(DirectivesContainer<?> directivesContainer) {
+    List<Directive> directives = directivesContainer.getDirectives(Directives.DATA_FETCHER);
+    if (directives.isEmpty()) {
+      return false;
+    }
+    Argument argument = directives.get(0).getArgument(DirectiveArgs.MULTI_FIELD);
+    return argument != null
+        && argument.getValue() instanceof BooleanValue booleanValue
+        && booleanValue.isValue();
   }
 
   public ClassName getIdFetcherClassName(DirectivesContainer<?> directivesContainer) {

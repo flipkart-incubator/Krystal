@@ -99,6 +99,7 @@ public class VajramGraphQlTest {
                         order(id: "order1") {
                           orderItemNames
                           state
+                          stateDuplicate
                           orderPlacedAt
                           orderItemsCount
                           orderAcceptDate
@@ -129,6 +130,7 @@ public class VajramGraphQlTest {
     Order mostRecentOrder = requireNonNull(queryType.mostRecentOrder());
     assertThat(order.orderItemNames()).isEqualTo(List.of("order1_1", "order1_2"));
     assertThat(order.nameString()).isEqualTo("testOrderName");
+    assertThat(order.stateDuplicate()).isEqualTo(order.state());
     assertThat(order.__typename()).isEqualTo("Order");
     assertThat(order.orderItemsCount()).isEqualTo(Long.MAX_VALUE);
     assertThat(order.orderPlacedAt()).isEqualTo(UNIX_EPOCH_DATE_TIME);

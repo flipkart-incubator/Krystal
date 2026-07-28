@@ -20,8 +20,8 @@ type Person @entity{
 }
 
 type PersonImageData @composedType(inEntity: "Person"){
-    mainUrl: String @dataFetcher(vajramId: "GetImageDataOfPerson")
-    thumbnailUrl: String @dataFetcher(vajramId: "GetImageDataOfPerson")
+    mainUrl: String @dataFetcher(vajramId: "GetImageDataOfPerson", multiField: true)
+    thumbnailUrl: String @dataFetcher(vajramId: "GetImageDataOfPerson", multiField: true)
     bannerUrl: String @dataFetcher(vajramId: "GetPersonBanner")
 }
 
@@ -29,5 +29,3 @@ type Name {
     firstName: String!
     lastName: String!
 }
-
-
