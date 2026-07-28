@@ -92,16 +92,18 @@ import org.openjdk.jmh.annotations.Warmup;
  * <pre>
  * Benchmark                          Mode  Cnt      Score      Error  Units
  * -----------------------------------------------------------------
- * chainAdd                          thrpt    5  15305.294 ± 1250.485  ops/s
- * chainAddBatched                   thrpt    5  14021.194 ±  567.946  ops/s
- * chainAddTenRequests               thrpt    5   2601.975 ±  166.874  ops/s
- * chainAddTenRequestsBatched        thrpt    5   2663.188 ±  212.910  ops/s
- * formula                           thrpt    5  47017.984 ± 6088.152  ops/s
- * formulaTenRequests                thrpt    5  16364.449 ± 2428.222  ops/s
- * multiAddWithSimpleAdd             thrpt    5  58116.574 ± 1620.600  ops/s
- * multiAddWithSimpleAddTenRequests  thrpt    5  39454.128 ± 2618.884  ops/s
- * splitAdd                          thrpt    5   6054.680 ±  221.411  ops/s
- * splitAddTenRequests               thrpt    5   1537.064 ±   49.381  ops/s
+ * chainAdd                          thrpt    5  14784.531 ± 2779.631  ops/s
+ * chainAddBatched                   thrpt    5  14010.276 ± 1651.020  ops/s
+ * chainAddTenRequests               thrpt    5   2752.175 ±   98.626  ops/s
+ * chainAddTenRequestsBatched        thrpt    5   2677.978 ±   65.749  ops/s
+ * formula                           thrpt    5  46279.594 ± 2391.455  ops/s
+ * formulaTenRequests                thrpt    5  17062.473 ±  399.770  ops/s
+ * multiAddWithSimpleAdd             thrpt    5  64492.598 ± 1773.772  ops/s
+ * multiAddWithSimpleAddTenRequests  thrpt    5  37708.755 ±  807.959  ops/s
+ * splitAdd                          thrpt    5   5894.065 ±  100.944  ops/s
+ * splitAddBatched                   thrpt    5   5111.545 ±  130.098  ops/s
+ * splitAddTenRequests               thrpt    5   1555.872 ±   45.929  ops/s
+ * splitAddTenRequestsBatched        thrpt    5   1552.031 ±   73.449  ops/s
  * </pre>
  *
  * Krystal 10:
@@ -109,16 +111,18 @@ import org.openjdk.jmh.annotations.Warmup;
  * <pre>
  * Benchmark                          Mode  Cnt      Score      Error  Units
  * --------------------------------------------------------------------------
- * chainAdd                          thrpt    5   24403.843 ±   810.537  ops/s
- * chainAddBatched                   thrpt    5   22982.918 ±  4629.295  ops/s
- * chainAddTenRequests               thrpt    5    5258.464 ±   184.007  ops/s
- * chainAddTenRequestsBatched        thrpt    5    5806.499 ±   137.085  ops/s
- * formula                           thrpt    5   30819.458 ±  4917.633  ops/s
- * formulaTenRequests                thrpt    5   15072.681 ±  1309.876  ops/s
- * multiAddWithSimpleAdd             thrpt    5  135031.163 ± 35824.805  ops/s
- * multiAddWithSimpleAddTenRequests  thrpt    5   43111.917 ±  5871.448  ops/s
- * splitAdd                          thrpt    5    6757.415 ±   291.735  ops/s
- * splitAddTenRequests               thrpt    5    2741.471 ±   117.807  ops/s
+ * chainAdd                          thrpt    5   22509.394 ±  4389.478  ops/s
+ * chainAddBatched                   thrpt    5   23873.368 ±  2292.460  ops/s
+ * chainAddTenRequests               thrpt    5    5310.146 ±   196.610  ops/s
+ * chainAddTenRequestsBatched        thrpt    5    5885.704 ±   157.620  ops/s
+ * formula                           thrpt    5   34142.873 ±  4403.152  ops/s
+ * formulaTenRequests                thrpt    5   16020.431 ±   572.713  ops/s
+ * multiAddWithSimpleAdd             thrpt    5  170912.413 ± 16193.777  ops/s
+ * multiAddWithSimpleAddTenRequests  thrpt    5   40365.056 ±  3837.764  ops/s
+ * splitAdd                          thrpt    5    6690.845 ±   360.244  ops/s
+ * splitAddBatched                   thrpt    5    6962.749 ±   563.504  ops/s
+ * splitAddTenRequests               thrpt    5    2784.085 ±   106.404  ops/s
+ * splitAddTenRequestsBatched        thrpt    5    3104.847 ±   121.929  ops/s
  * </pre>
  *
  * Krystal 11:
@@ -126,16 +130,18 @@ import org.openjdk.jmh.annotations.Warmup;
  * <pre>
  * Benchmark                          Mode  Cnt      Score      Error  Units
  * -----------------------------------------------------------------
- * chainAdd                          thrpt    5   27469.753 ±  3708.750  ops/s
- * chainAddBatched                   thrpt    5   31268.050 ±  1274.901  ops/s
- * chainAddTenRequests               thrpt    5    6760.322 ±   233.124  ops/s
- * chainAddTenRequestsBatched        thrpt    5    7713.019 ±   883.110  ops/s
- * formula                           thrpt    5   44426.710 ±  2554.285  ops/s
- * formulaTenRequests                thrpt    5   23141.740 ±  1279.774  ops/s
- * multiAddWithSimpleAdd             thrpt    5  163652.518 ± 74410.728  ops/s
- * multiAddWithSimpleAddTenRequests  thrpt    5   94660.644 ± 16402.333  ops/s
- * splitAdd                          thrpt    5   15690.686 ±  1792.300  ops/s
- * splitAddTenRequests               thrpt    5    5537.490 ±   271.824  ops/s
+ * chainAdd                          thrpt    5   29005.062 ±  1031.420  ops/s
+ * chainAddBatched                   thrpt    5   29482.634 ±  4086.956  ops/s
+ * chainAddTenRequests               thrpt    5    6844.021 ±   631.362  ops/s
+ * chainAddTenRequestsBatched        thrpt    5    7589.766 ±   190.022  ops/s
+ * formula                           thrpt    5   41749.789 ±  6750.195  ops/s
+ * formulaTenRequests                thrpt    5   22645.667 ±  3851.465  ops/s
+ * multiAddWithSimpleAdd             thrpt    5  172631.797 ± 43027.517  ops/s
+ * multiAddWithSimpleAddTenRequests  thrpt    5  104980.144 ±  3429.577  ops/s
+ * splitAdd                          thrpt    5   18216.737 ±   718.836  ops/s
+ * splitAddBatched                   thrpt    5   13920.811 ±  1902.600  ops/s
+ * splitAddTenRequests               thrpt    5    6155.536 ±   336.507  ops/s
+ * splitAddTenRequestsBatched        thrpt    5    6081.799 ±   186.328  ops/s
  * </pre>
  */
 @State(Scope.Benchmark)
@@ -158,6 +164,7 @@ public class VajramBenchmark {
   private Lease<SingleThreadExecutor> executorLease;
   private KrystexGraph formulaGraph;
   private KrystexGraph splitAddGraph;
+  private KrystexGraph splitAddBatchedGraph;
   private KrystexGraph chainAddGraph;
   private KrystexGraph chainAddBatchedGraph;
   private KrystexGraph multiAddGraph;
@@ -175,6 +182,12 @@ public class VajramBenchmark {
             Divide.class);
     splitAddGraph =
         graphFor(
+            SplitAdd_Req._VAJRAM_ID,
+            VajramBenchmark::splitAddDisabledChains,
+            SplitAdd.class,
+            Add.class);
+    splitAddBatchedGraph =
+        batchedGraphFor(
             SplitAdd_Req._VAJRAM_ID,
             VajramBenchmark::splitAddDisabledChains,
             SplitAdd.class,
@@ -233,6 +246,22 @@ public class VajramBenchmark {
   public int splitAddTenRequests() {
     return executeTenRequests(
         splitAddGraph, SPLIT_ADD_REQUEST, splitAddDisabledChains(splitAddGraph.vajramGraph()));
+  }
+
+  @Benchmark
+  public int splitAddBatched() {
+    return execute(
+        splitAddBatchedGraph,
+        SPLIT_ADD_REQUEST,
+        splitAddDisabledChains(splitAddBatchedGraph.vajramGraph()));
+  }
+
+  @Benchmark
+  public int splitAddTenRequestsBatched() {
+    return executeTenRequests(
+        splitAddBatchedGraph,
+        SPLIT_ADD_REQUEST,
+        splitAddDisabledChains(splitAddBatchedGraph.vajramGraph()));
   }
 
   @Benchmark
