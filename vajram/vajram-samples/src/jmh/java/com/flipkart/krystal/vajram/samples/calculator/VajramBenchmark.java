@@ -5,6 +5,7 @@ import static com.flipkart.krystal.vajram.samples.calculator.add.ChainAdd_Fac.ch
 import static com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd_Req.numbers_s;
 import static com.flipkart.krystal.vajram.samples.calculator.add.SplitAdd_Fac.splitSum1_s;
 import static com.flipkart.krystal.vajram.samples.calculator.add.SplitAdd_Fac.splitSum2_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.batching.DepChainBatcherConfig.autoRegisterSharedBatchers;
 import static com.flipkart.krystal.vajramexecutor.krystex.traits.PredicateDispatchUtil.dispatchTrait;
 import static com.flipkart.krystal.vajramexecutor.krystex.traits.PredicateDispatchUtil.when;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -17,6 +18,7 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
+import com.flipkart.krystal.vajram.samples.calculator.add.Add;
 import com.flipkart.krystal.vajram.samples.calculator.add.ChainAdd;
 import com.flipkart.krystal.vajram.samples.calculator.add.ChainAdd_Req;
 import com.flipkart.krystal.vajram.samples.calculator.add.ChainAdd_ReqImmutPojo;
@@ -52,12 +54,14 @@ import org.openjdk.jmh.annotations.Warmup;
  * <pre>
  * Benchmark             Mode  Cnt      Score      Error  Units
  * -----------------------------------------------------------------
- * chainAdd             thrpt    5   9283.580 ±  538.633  ops/s
- * chainAddTenRequests  thrpt    5   1374.468 ±   56.580  ops/s
- * formula              thrpt    5  39480.908 ± 3024.456  ops/s
- * formulaTenRequests   thrpt    5  11019.657 ±  544.938  ops/s
- * splitAdd             thrpt    5   4434.492 ±   83.799  ops/s
- * splitAddTenRequests  thrpt    5   1026.046 ±   28.474  ops/s
+ * chainAdd                    thrpt    5   9384.372 ±  479.383  ops/s
+ * chainAddBatched             thrpt    5   9178.772 ±  428.988  ops/s
+ * chainAddTenRequests         thrpt    5   1369.916 ±   76.538  ops/s
+ * chainAddTenRequestsBatched  thrpt    5   1374.228 ±   59.572  ops/s
+ * formula                     thrpt    5  39361.727 ± 4096.927  ops/s
+ * formulaTenRequests          thrpt    5  11144.989 ±  399.647  ops/s
+ * splitAdd                    thrpt    5   4221.516 ±  142.111  ops/s
+ * splitAddTenRequests         thrpt    5   1025.806 ±   27.483  ops/s
  * </pre>
  *
  * Krystal 8:
@@ -65,12 +69,14 @@ import org.openjdk.jmh.annotations.Warmup;
  * <pre>
  * Benchmark             Mode  Cnt      Score      Error  Units
  * -----------------------------------------------------------------
- * chainAdd             thrpt    5   9265.238 ±  539.952  ops/s
- * chainAddTenRequests  thrpt    5   1382.489 ±  112.046  ops/s
- * formula              thrpt    5  37223.270 ± 3935.870  ops/s
- * formulaTenRequests   thrpt    5  10933.280 ±  511.317  ops/s
- * splitAdd             thrpt    5   4242.873 ±   40.167  ops/s
- * splitAddTenRequests  thrpt    5   1038.458 ±   44.929  ops/s
+ * chainAdd                    thrpt    5   9155.202 ±  560.568  ops/s
+ * chainAddBatched             thrpt    5   9090.014 ±  198.828  ops/s
+ * chainAddTenRequests         thrpt    5   1434.753 ±   31.601  ops/s
+ * chainAddTenRequestsBatched  thrpt    5   1396.423 ±  207.039  ops/s
+ * formula                     thrpt    5  30807.059 ± 8838.200  ops/s
+ * formulaTenRequests          thrpt    5  10548.213 ±  581.670  ops/s
+ * splitAdd                    thrpt    5   4272.903 ±  398.323  ops/s
+ * splitAddTenRequests         thrpt    5   1013.944 ±   32.664  ops/s
  * </pre>
  *
  * Krystal 9:
@@ -78,14 +84,16 @@ import org.openjdk.jmh.annotations.Warmup;
  * <pre>
  * Benchmark                          Mode  Cnt      Score      Error  Units
  * -----------------------------------------------------------------
- * chainAdd                          thrpt    5  14754.443 ±  3452.352  ops/s
- * chainAddTenRequests               thrpt    5   2708.863 ±   155.802  ops/s
- * formula                           thrpt    5  44321.926 ±  3367.481  ops/s
- * formulaTenRequests                thrpt    5  16996.218 ±  1522.687  ops/s
- * multiAddWithSimpleAdd             thrpt    5  62730.325 ± 10245.642  ops/s
- * multiAddWithSimpleAddTenRequests  thrpt    5  38436.398 ±  1368.890  ops/s
- * splitAdd                          thrpt    5   5696.577 ±  1094.206  ops/s
- * splitAddTenRequests               thrpt    5   1660.296 ±   125.501  ops/s
+ * chainAdd                          thrpt    5  15305.294 ± 1250.485  ops/s
+ * chainAddBatched                   thrpt    5  14021.194 ±  567.946  ops/s
+ * chainAddTenRequests               thrpt    5   2601.975 ±  166.874  ops/s
+ * chainAddTenRequestsBatched        thrpt    5   2663.188 ±  212.910  ops/s
+ * formula                           thrpt    5  47017.984 ± 6088.152  ops/s
+ * formulaTenRequests                thrpt    5  16364.449 ± 2428.222  ops/s
+ * multiAddWithSimpleAdd             thrpt    5  58116.574 ± 1620.600  ops/s
+ * multiAddWithSimpleAddTenRequests  thrpt    5  39454.128 ± 2618.884  ops/s
+ * splitAdd                          thrpt    5   6054.680 ±  221.411  ops/s
+ * splitAddTenRequests               thrpt    5   1537.064 ±   49.381  ops/s
  * </pre>
  *
  * Krystal 10:
@@ -93,20 +101,22 @@ import org.openjdk.jmh.annotations.Warmup;
  * <pre>
  * Benchmark                          Mode  Cnt      Score      Error  Units
  * --------------------------------------------------------------------------
- * chainAdd                          thrpt    5   22544.942 ±  2629.140  ops/s
- * chainAddTenRequests               thrpt    5    5227.917 ±   132.176  ops/s
- * formula                           thrpt    5   34365.315 ±  3287.154  ops/s
- * formulaTenRequests                thrpt    5   15474.605 ±   551.554  ops/s
- * multiAddWithSimpleAdd             thrpt    5  157125.328 ± 30848.510  ops/s
- * multiAddWithSimpleAddTenRequests  thrpt    5   41827.628 ±  1594.955  ops/s
- * splitAdd                          thrpt    5    7249.799 ±   897.954  ops/s
- * splitAddTenRequests               thrpt    5    2800.829 ±   702.517  ops/s
+ * chainAdd                          thrpt    5   24403.843 ±   810.537  ops/s
+ * chainAddBatched                   thrpt    5   22982.918 ±  4629.295  ops/s
+ * chainAddTenRequests               thrpt    5    5258.464 ±   184.007  ops/s
+ * chainAddTenRequestsBatched        thrpt    5    5806.499 ±   137.085  ops/s
+ * formula                           thrpt    5   30819.458 ±  4917.633  ops/s
+ * formulaTenRequests                thrpt    5   15072.681 ±  1309.876  ops/s
+ * multiAddWithSimpleAdd             thrpt    5  135031.163 ± 35824.805  ops/s
+ * multiAddWithSimpleAddTenRequests  thrpt    5   43111.917 ±  5871.448  ops/s
+ * splitAdd                          thrpt    5    6757.415 ±   291.735  ops/s
+ * splitAddTenRequests               thrpt    5    2741.471 ±   117.807  ops/s
  * </pre>
  */
 @State(Scope.Benchmark)
 @Threads(1)
-@Warmup(iterations = 5, time = 2, timeUnit = SECONDS)
-@Measurement(iterations = 5, time = 5, timeUnit = SECONDS)
+@Warmup(iterations = 5, time = 1, timeUnit = SECONDS)
+@Measurement(iterations = 5, time = 3, timeUnit = SECONDS)
 @Fork(1)
 public class VajramBenchmark {
   private static final KryonExecutionConfig EXECUTION_CONFIG =
@@ -126,6 +136,7 @@ public class VajramBenchmark {
   private VajramKryonGraph formulaGraph;
   private VajramKryonGraph splitAddGraph;
   private VajramKryonGraph chainAddGraph;
+  private VajramKryonGraph chainAddBatchedGraph;
   private VajramKryonGraph multiAddGraph;
 
   @Setup(Level.Trial)
@@ -146,6 +157,10 @@ public class VajramBenchmark {
     //            SplitAdd.class,
     //            Add.class);
     chainAddGraph = graphFor();
+    chainAddBatchedGraph =
+        VajramKryonGraph.builder().loadClasses(ChainAdd.class, Add.class).build();
+    autoRegisterSharedBatchers(
+        chainAddBatchedGraph, _v -> 100, chainAddDisabledChains(chainAddBatchedGraph));
     //        graphFor(
     //            ChainAdd_Req._VAJRAM_ID,
     //            VajramBenchmark::chainAddDisabledChains,
@@ -208,6 +223,18 @@ public class VajramBenchmark {
   }
 
   @Benchmark
+  public int chainAddBatched() {
+    return execute(
+        chainAddBatchedGraph, CHAIN_ADD_REQUEST, chainAddDisabledChains(chainAddBatchedGraph));
+  }
+
+  @Benchmark
+  public int chainAddTenRequestsBatched() {
+    return executeTenRequests(
+        chainAddBatchedGraph, CHAIN_ADD_REQUEST, chainAddDisabledChains(chainAddBatchedGraph));
+  }
+
+  @Benchmark
   public int multiAddWithSimpleAdd() {
     return execute(multiAddGraph, MULTI_ADD_REQUEST, ImmutableSet.of());
   }
@@ -227,18 +254,6 @@ public class VajramBenchmark {
         .loadFromPackage("com.flipkart.krystal.vajram.samples.calculator")
         .build();
   }
-
-  //  @SafeVarargs
-  //  private static VajramKryonGraph graphFor(
-  //      VajramID vajramId,
-  //      Function<VajramGraph, ImmutableSet<DependentChain>> disabledChains,
-  //      Class<? extends VajramDefRoot>... vajrams) {
-  //    VajramGraph graph = VajramGraph.builder().loadClasses(vajrams).build();
-  //    return KrystexGraph.builder()
-  //        .externallyInvocableVajramIds(ImmutableSet.of(vajramId))
-  //        .dependentChainDisabler(new SimpleDependentChainDisabler(disabledChains.apply(graph)))
-  //        .build();
-  //  }
 
   private static ImmutableSet<DependentChain> chainAddDisabledChains(VajramKryonGraph graph) {
     return ImmutableSet.of(
