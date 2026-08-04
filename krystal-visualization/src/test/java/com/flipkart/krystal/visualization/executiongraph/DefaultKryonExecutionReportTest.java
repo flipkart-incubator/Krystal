@@ -1,5 +1,6 @@
 package com.flipkart.krystal.visualization.executiongraph;
 
+import static com.flipkart.krystal.core.VajramID.vajramID;
 import static com.flipkart.krystal.data.Errable.withValue;
 import static com.flipkart.krystal.krystex.testfixtures.SimpleFacet.input;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -43,7 +44,7 @@ class DefaultKryonExecutionReportTest {
 
   @Test
   void reportStartAndEnd_success() {
-    VajramID vajramID = new VajramID("kryon_1");
+    VajramID vajramID = vajramID("kryon_1");
     KryonLogicId kryonLogicId = new KryonLogicId(vajramID, "kryon_1__logic_1");
     Set<SimpleFacet> allInputs = Set.of(input("facet1"));
     ImmutableList<ExecutionItem> facetValuesList =
@@ -123,7 +124,7 @@ class DefaultKryonExecutionReportTest {
 
   @Test
   void reportMainLogicStart_calledTwice_hasNoEffect() {
-    VajramID vajramID = new VajramID("kryon_1");
+    VajramID vajramID = vajramID("kryon_1");
     KryonLogicId kryonLogicId = new KryonLogicId(vajramID, "kryon_1__logic_1");
     ImmutableList<ExecutionItem> facetValuesList =
         ImmutableList.of(
@@ -162,7 +163,7 @@ class DefaultKryonExecutionReportTest {
 
   @Test
   void reportMainLogicEnd_calledTwice_hasNoEffect() {
-    VajramID vajramID = new VajramID("kryon_1");
+    VajramID vajramID = vajramID("kryon_1");
     KryonLogicId kryonLogicId = new KryonLogicId(vajramID, "kryon_1__logic_1");
     ImmutableList<ExecutionItem> facetValuesList =
         ImmutableList.of(
@@ -220,7 +221,7 @@ class DefaultKryonExecutionReportTest {
 
   @Test
   void reportMainLogicEnd_calledWithoutCallingStart_hasNoEffect() {
-    VajramID vajramID = new VajramID("kryon_1");
+    VajramID vajramID = vajramID("kryon_1");
     KryonLogicId kryonLogicId = new KryonLogicId(vajramID, "kryon_1__logic_1");
     ImmutableList<FacetValues> facetValuesList =
         ImmutableList.of(

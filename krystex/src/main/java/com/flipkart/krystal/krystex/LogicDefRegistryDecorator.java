@@ -12,10 +12,9 @@ import java.util.Set;
 public record LogicDefRegistryDecorator(LogicDefinitionRegistry delegate) {
 
   public LogicDefinition<ResolverLogic> newResolverLogic(
-      String kryonId, String kryonLogicId, Set<? extends Facet> inputs, ResolverLogic logic) {
+      VajramID vajramID, String kryonLogicId, Set<? extends Facet> inputs, ResolverLogic logic) {
     LogicDefinition<ResolverLogic> def =
-        new LogicDefinition<>(
-            new KryonLogicId(new VajramID(kryonId), kryonLogicId), inputs, emptyTags(), logic);
+        new LogicDefinition<>(new KryonLogicId(vajramID, kryonLogicId), inputs, emptyTags(), logic);
     delegate.addResolver(def);
     return def;
   }
