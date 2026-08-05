@@ -8,7 +8,7 @@ program
     : vajram_def EOF
     ;
 
-vajram_def: package_decl imports_decl* vajram_visibility? type ERRABLE? ID '(' input_decl? ')' permits? '{' (dependency)* annotated_delegatable_logic_block?'}' ;
+vajram_def: package_decl imports_decl* vajram_visibility? type ERRABLE? ID inputs_decl injection_decl? permits? '{' (dependency)* annotated_delegatable_logic_block?'}' ;
 
 package_decl: annotation* PACKAGE qualifiedName ';';
 
@@ -32,7 +32,13 @@ completion_time: (SOON | LATER)?;
 
 vajram_visibility: PUBLIC | PRIVATE;
 
-input_decl: ( grouper? annotation* input_id_declaration COMMA)* ( grouper? annotation* input_id_declaration)?;
+inputs_decl: 'input'? '(' inputs_list? ')';
+
+inputs_list : ( grouper? annotation* input_id_declaration COMMA)* ( grouper? annotation* input_id_declaration) ;
+
+injection_decl: 'inject' '(' injections_list?')';
+
+injections_list : ( annotation* injection_id_declaration COMMA)* ( annotation* injection_id_declaration) ;
 
 grouper: SPECIAL ID;
 
@@ -41,6 +47,8 @@ annotation: '@' ID param_list?;
 permits: PERMITS ID (COMMA ID)*;
 
 input_id_declaration: type ERRABLE? ID;
+
+injection_id_declaration: type ERRABLE? ID;
 
 dep_input_resolver: dep_input_resolver_stat | dep_input_resolver_func;
 

@@ -31,7 +31,8 @@ include 'krystal-gradle-plugin'
 include 'vajram:vajram-codegen'
 include 'vajram:vajram-codegen-common'
 include 'vajram:vajram-java-sdk'
-include 'vajram:vajram-lang'
+include 'vajram:vajram-lang:vajram-lang-grammar'
+include 'vajram:vajram-lang:vajram-lang-compiler'
 
 /* ******** VAJRAM EXTENSIONS : START *********** */
 
