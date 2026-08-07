@@ -1,6 +1,15 @@
-type QueryType {
+type Query {
     """will return order using id, using OrderGraphQLAggregator"""
     order(id: ID): Order @inferIdFromArgs
+    
     dummy(dummyId: ID): Dummy @inferIdFromArgs
-    mostRecentOrder(userId: String!): Order @idFetcher(vajramId: "GetMostRecentOrder", subPackage: "order")
+    
+    """Get seller by ID - demonstrates @entity aggregator generation"""
+    seller(id: ID): Seller @inferIdFromArgs
+
+    """
+    Fetch seller details with custom input - demonstrates SellerInput usage with @idFetcher
+    The idFetcher extracts SellerId from SellerInput, then the framework automatically fetches the full Seller entity
+    """
+    sellerDetails(input: SellerInput): Seller @idFetcher(vajramId: "FetchSellerId", subPackage: "seller")
 }

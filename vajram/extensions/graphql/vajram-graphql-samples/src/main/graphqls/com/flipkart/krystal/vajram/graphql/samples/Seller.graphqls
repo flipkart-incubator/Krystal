@@ -1,0 +1,30 @@
+# Seller entity with various fields
+type Seller @entity {
+    """Unique seller ID"""
+    id: ID
+    
+    """Seller name"""
+    name: String @dataFetcher(vajramId: "FetchSellerDetails", subPackage: "seller")
+    
+    """Seller email"""
+    email: String @dataFetcher(vajramId: "FetchSellerDetails", subPackage: "seller")
+    
+    """Seller rating"""
+    rating: Float @dataFetcher(vajramId: "FetchSellerDetails", subPackage: "seller")
+    
+    """Total sales in the date range"""
+    totalSales: Float @dataFetcher(vajramId: "FetchSellerDetails", subPackage: "seller")
+    
+    """Number of active orders"""
+    activeOrders: Int @dataFetcher(vajramId: "FetchSellerDetails", subPackage: "seller")
+    
+    """Seller status"""
+    status: String @dataFetcher(vajramId: "FetchSellerDetails", subPackage: "seller")
+    
+    """Account created date"""
+    createdDate: String @dataFetcher(vajramId: "FetchSellerDetails", subPackage: "seller")
+    
+    """Additional metadata"""
+    metadata: String @dataFetcher(vajramId: "FetchSellerDetails", subPackage: "seller")
+}
+
