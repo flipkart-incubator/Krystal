@@ -2,7 +2,6 @@ package com.flipkart.krystal.vajram.graphql.api.model;
 
 import com.flipkart.krystal.vajram.graphql.api.errors.ErrorCollector;
 import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject_Immut.Builder;
 import graphql.ExecutionResult;
 import graphql.execution.ExecutionContext;
 import graphql.execution.ExecutionStrategyParameters;
@@ -11,7 +10,7 @@ import java.util.Map;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public record GraphQlOperationError(ExecutionResult executionResult)
-    implements GraphQlOperationObject_Immut {
+    implements GraphQlOperationObject {
 
   public static @Nullable GraphQlOperationObject from(@Nullable ExecutionResult executionResult) {
     if (executionResult == null) {
@@ -26,27 +25,12 @@ public record GraphQlOperationError(ExecutionResult executionResult)
   }
 
   @Override
-  public GraphQlOperationObject_Immut _build() {
-    return this;
-  }
-
-  @Override
-  public @Nullable Map<Object, Object> _extensions() {
+  public @Nullable Map<Object, Object> graphql_extensions() {
     return executionResult.getExtensions();
   }
 
   @Override
-  public GraphQlOperationError _newCopy() {
-    return this;
-  }
-
-  @Override
-  public Builder _asBuilder() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public @Nullable String __typename() {
+  public @Nullable String graphql_typename() {
     return null;
   }
 
@@ -63,5 +47,10 @@ public record GraphQlOperationError(ExecutionResult executionResult)
   @Override
   public ExecutionStrategyParameters graphql_executionStrategyParams() {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Map<String, Object> graphql_data() {
+    return Map.of();
   }
 }

@@ -11,6 +11,7 @@ import graphql.execution.MergedSelectionSet;
 import graphql.language.SourceLocation;
 import graphql.scalars.ExtendedScalars;
 import graphql.schema.idl.RuntimeWiring;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,17 +92,58 @@ public class GraphQLUtils {
     }
   }
 
+  /**
+   * Returns true if the given field name is queried (by response key/alias OR by actual field
+   * name), allowing correct detection even when the field is requested under an alias.
+   */
   public static boolean isFieldQueried(String fieldName, ExecutionStrategyParameters params) {
     MergedSelectionSet fields = params.getFields();
     MergedField field = params.getField();
-    return fields.getSubFields().containsKey(fieldName)
-        || (field != null && field.getSingleField().getName().equals(fieldName));
+    // Check by response key (alias) first — fast path
+    if (fields.getSubFields().containsKey(fieldName)) {
+      return true;
+    }
+    // Check by actual field name to handle aliased requests
+    for (MergedField subField : fields.getSubFields().values()) {
+      if (subField.getName().equals(fieldName)) {
+        return true;
+      }
+    }
+    return field != null && field.getSingleField().getName().equals(fieldName);
   }
 
+  /**
+   * Returns true if any of the given field names are queried (by response key/alias OR by actual
+   * field name), allowing correct detection even when a field is requested under an alias.
+   */
   public static boolean isAnyFieldQueried(
       Set<String> fieldNames, ExecutionStrategyParameters params) {
     MergedSelectionSet fields = params.getFields();
-    return !Sets.intersection(fields.getSubFields().keySet(), fieldNames).isEmpty()
-        || fieldNames.contains(params.getField().getSingleField().getName());
+    // Check by response key (alias) first — fast path
+    if (!Sets.intersection(fields.getSubFields().keySet(), fieldNames).isEmpty()) {
+      return true;
+    }
+    // Check by actual field name to handle aliased requests
+    for (MergedField subField : fields.getSubFields().values()) {
+      if (fieldNames.contains(subField.getName())) {
+        return true;
+      }
+    }
+    return fieldNames.contains(params.getField().getSingleField().getName());
+  }
+
+  public static Map<String, List<String>> computeFieldNameToAliases(
+      ExecutionStrategyParameters graphql_executionStrategyParams) {
+    LinkedHashMap<String, List<String>> _fieldNameToAliases = new LinkedHashMap<>();
+    graphql_executionStrategyParams
+        .getFields()
+        .getSubFields()
+        .forEach(
+            (alias, mergedField) ->
+                _fieldNameToAliases
+                    .computeIfAbsent(
+                        mergedField.getSingleField().getName(), _k -> new ArrayList<>())
+                    .add(alias));
+    return _fieldNameToAliases;
   }
 }

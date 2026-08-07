@@ -23,10 +23,9 @@ import com.flipkart.krystal.vajram.graphql.api.execution.GraphQlExecutionFacade;
 import com.flipkart.krystal.vajram.graphql.api.schema.GraphQlInitializer;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate_Req;
-import com.flipkart.krystal.vajram.graphql.samples.dummy.Dummy;
-import com.flipkart.krystal.vajram.graphql.samples.order.Order;
-import com.flipkart.krystal.vajram.graphql.samples.query.Query;
+import com.flipkart.krystal.vajram.graphql.samples.dummy.DummyId;
 import com.flipkart.krystal.vajram.graphql.samples.query.Query_GQlAggr_Req;
+import com.flipkart.krystal.vajram.graphql.samples.state.State;
 import com.flipkart.krystal.vajram.json.Json;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
@@ -98,6 +97,7 @@ public class VajramGraphQlTest {
                       query {
                         order(id: "order1") {
                           orderItemNames
+                          nameString
                           state
                           stateDuplicate
                           orderPlacedAt
@@ -121,28 +121,114 @@ public class VajramGraphQlTest {
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
     ExecutionResult executionResult = result.join();
-    Object data = executionResult.getData();
-    assertThat(data).isInstanceOf(Query.class);
-    Query queryType = (Query) data;
-
-    Order order = requireNonNull(queryType.order());
-    Dummy dummy = requireNonNull(queryType.dummy());
-    Order mostRecentOrder = requireNonNull(queryType.mostRecentOrder());
-    assertThat(order.orderItemNames()).isEqualTo(List.of("order1_1", "order1_2"));
-    assertThat(order.nameString()).isEqualTo("testOrderName");
-    assertThat(order.stateDuplicate()).isEqualTo(order.state());
-    assertThat(order.__typename()).isEqualTo("Order");
-    assertThat(order.orderItemsCount()).isEqualTo(Long.MAX_VALUE);
-    assertThat(order.orderPlacedAt()).isEqualTo(UNIX_EPOCH_DATE_TIME);
-    assertThat(order.orderAcceptDate()).isEqualTo(UNIX_EPOCH_DATE);
-    assertThat(dummy.__typename()).isEqualTo("Dummy");
-    assertThat(mostRecentOrder.orderItemNames())
+    @SuppressWarnings("unchecked")
+    Map<String, Object> queryData = requireNonNull((Map<String, Object>) executionResult.getData());
+    @SuppressWarnings("unchecked")
+    Map<String, Object> orderData = requireNonNull((Map<String, Object>) queryData.get("order"));
+    @SuppressWarnings("unchecked")
+    Map<String, Object> dummyData = requireNonNull((Map<String, Object>) queryData.get("dummy"));
+    @SuppressWarnings("unchecked")
+    Map<String, Object> mostRecentOrderData =
+        requireNonNull((Map<String, Object>) queryData.get("mostRecentOrder"));
+    assertThat(orderData.get("orderItemNames")).isEqualTo(List.of("order1_1", "order1_2"));
+    assertThat(orderData.get("nameString")).isEqualTo("testOrderName");
+    assertThat(orderData.get("stateDuplicate")).isEqualTo(orderData.get("state"));
+    assertThat(orderData.get("__typename")).isEqualTo("Order");
+    assertThat(orderData.get("orderItemsCount")).isEqualTo(Long.MAX_VALUE);
+    assertThat(orderData.get("orderPlacedAt")).isEqualTo(UNIX_EPOCH_DATE_TIME);
+    assertThat(orderData.get("orderAcceptDate")).isEqualTo(UNIX_EPOCH_DATE);
+    assertThat(dummyData.get("__typename")).isEqualTo("Dummy");
+    assertThat(mostRecentOrderData.get("orderItemNames"))
         .isEqualTo(List.of("MostRecentOrderOf_user1_1", "MostRecentOrderOf_user1_2"));
 
     System.out.println(
         Json.OBJECT_WRITER
             .withDefaultPrettyPrinter()
             .writeValueAsString(executionResult.toSpecification()));
+  }
+
+  @Test
+  void graphqlQueryWithQueryLevelAliases_succeeds() throws JsonProcessingException {
+    // Two aliases for the same arg-bearing `order` field at query level, each with a different id
+    CompletableFuture<ExecutionResult> result;
+    try (VajramKryonExecutor executor = createExecutor()) {
+      result =
+          new GraphQlExecutionFacade(GRAPHQL)
+              .executeGraphQl(
+                  executor,
+                  VajramExecutionConfig.builder().build(),
+                  new GraphQLQuery(
+                      """
+                      query {
+                        o1: order(id: "order1") {
+                          s: state
+                          orderItemNames
+                        }
+                        o2: order(id: "order2") {
+                          state
+                          orderItemNames
+                        }
+                      }
+                      """,
+                      Map.of()));
+    }
+    assertThat(result).succeedsWithin(TEST_TIMEOUT);
+    ExecutionResult executionResult = result.join();
+    @SuppressWarnings("unchecked")
+    Map<String, Object> queryData = requireNonNull((Map<String, Object>) executionResult.getData());
+    @SuppressWarnings("unchecked")
+    Map<String, Object> o1Data = requireNonNull((Map<String, Object>) queryData.get("o1"));
+    @SuppressWarnings("unchecked")
+    Map<String, Object> o2Data = requireNonNull((Map<String, Object>) queryData.get("o2"));
+
+    // `s: state` alias resolves the `state` field under a different response key
+    assertThat(o1Data.get("s")).isEqualTo(State.COMPLETED);
+    assertThat(o1Data.get("orderItemNames")).isEqualTo(List.of("order1_1", "order1_2"));
+    assertThat(o2Data.get("state")).isEqualTo(State.COMPLETED);
+    assertThat(o2Data.get("orderItemNames")).isEqualTo(List.of("order2_1", "order2_2"));
+  }
+
+  @Test
+  void graphqlQueryWithNestedArgBearingAliases_succeeds() throws JsonProcessingException {
+    // Two aliases for the same arg-bearing `dummy(name)` field nested inside order
+    CompletableFuture<ExecutionResult> result;
+    try (VajramKryonExecutor executor = createExecutor()) {
+      result =
+          new GraphQlExecutionFacade(GRAPHQL)
+              .executeGraphQl(
+                  executor,
+                  VajramExecutionConfig.builder().build(),
+                  new GraphQLQuery(
+                      """
+                      query {
+                        order(id: "order1") {
+                          d1: dummy(name: "foo") {
+                            dummyId
+                          }
+                          d2: dummy(name: "bar") {
+                            dummyId
+                          }
+                        }
+                      }
+                      """,
+                      Map.of()));
+    }
+    assertThat(result).succeedsWithin(TEST_TIMEOUT);
+    ExecutionResult executionResult = result.join();
+    @SuppressWarnings("unchecked")
+    Map<String, Object> queryData = requireNonNull((Map<String, Object>) executionResult.getData());
+    @SuppressWarnings("unchecked")
+    Map<String, Object> orderData = requireNonNull((Map<String, Object>) queryData.get("order"));
+
+    // Both aliases map to separate Dummy responses keyed by alias
+    @SuppressWarnings("unchecked")
+    Map<String, Object> d1Data = requireNonNull((Map<String, Object>) orderData.get("d1"));
+    @SuppressWarnings("unchecked")
+    Map<String, Object> d2Data = requireNonNull((Map<String, Object>) orderData.get("d2"));
+
+    // GetDummyIdForOrder ignores `name` arg, always returns orderId_dummy_1
+    assertThat(((DummyId) d1Data.get("dummyId")).value()).isEqualTo("order1_dummy_1");
+    assertThat(((DummyId) d2Data.get("dummyId")).value()).isEqualTo("order1_dummy_1");
   }
 
   private VajramKryonExecutor createExecutor() {

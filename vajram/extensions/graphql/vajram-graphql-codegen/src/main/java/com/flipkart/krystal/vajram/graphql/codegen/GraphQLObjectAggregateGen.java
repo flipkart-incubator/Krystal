@@ -1,14 +1,12 @@
 package com.flipkart.krystal.vajram.graphql.codegen;
 
 import static com.flipkart.krystal.codegen.common.models.Constants.EMPTY_CODE_BLOCK;
-import static com.flipkart.krystal.codegen.common.models.Constants.IMMUT_SUFFIX;
 import static com.flipkart.krystal.model.PlainJavaObject.POJO;
-import static com.flipkart.krystal.vajram.codegen.common.models.Constants.REQUEST_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.common.models.Constants.IMMUT_REQUEST_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants._INTERNAL_FACETS_CLASS;
 import static com.flipkart.krystal.vajram.graphql.codegen.CodeGenConstants.IF_ABSENT_FAIL;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.INHERIT_ID_FROM_ARGS;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.INHERIT_ID_FROM_PARENT;
-import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.TYPE_AGGREGATOR;
 import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.getDirectiveArgumentString;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static java.util.Map.entry;
@@ -21,6 +19,7 @@ import static javax.lang.model.element.Modifier.STATIC;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.Failure;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -34,7 +33,9 @@ import com.flipkart.krystal.vajram.graphql.api.Constants.Directives;
 import com.flipkart.krystal.vajram.graphql.api.Constants.Facets;
 import com.flipkart.krystal.vajram.graphql.api.execution.GraphQLUtils;
 import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponse;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlObjectMap;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObjectMap;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlValue;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
 import com.google.common.collect.ImmutableMap;
 import com.squareup.javapoet.AnnotationSpec;
@@ -48,12 +49,14 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import graphql.execution.ExecutionContext;
 import graphql.execution.ExecutionStrategyParameters;
+import graphql.execution.MergedField;
 import graphql.language.FieldDefinition;
 import graphql.language.InputValueDefinition;
 import graphql.language.ObjectTypeDefinition;
 import graphql.language.TypeDefinition;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -151,9 +154,10 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
   }
 
   private ClassName asVajramReturnType(GraphQLTypeName objectTypeName) {
-    ClassName className = schemaReaderUtil.typeClassName(objectTypeName);
-    return ClassName.get(className.packageName(), className.simpleName() + "_" + IMMUT_SUFFIX)
-        .nestedClass("Builder");
+    if (schemaReaderUtil.isOperationType(objectTypeName)) {
+      return ClassName.get(GraphQlOperationObjectMap.class);
+    }
+    return ClassName.get(GraphQlObjectMap.class);
   }
 
   private List<TypeSpec> createFacetDefinitions(ObjectTypeDefinition typeDefinition) {
@@ -196,14 +200,20 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
     for (Entry<Fetcher, List<GraphQlFieldSpec>> entry : fetcherToFields.entrySet()) {
       if (entry.getKey() instanceof VajramFetcher fetcher) {
         List<GraphQlFieldSpec> fields = entry.getValue();
+        boolean hasArgs =
+            !fields.isEmpty()
+                && !fields.get(0).fieldDefinition().getInputValueDefinitions().isEmpty();
+        AnnotationSpec.Builder fetcherDepAnnotation =
+            AnnotationSpec.builder(Dependency.class)
+                .addMember("onVajram", "$T.class", fetcher.vajramClassName());
+        if (hasArgs) {
+          fetcherDepAnnotation.addMember("canFanout", "true");
+        }
         internalFacets.addMethod(
             MethodSpec.methodBuilder(getFacetName(fetcher, fields))
                 .returns(getFetcherResponseType(fetcher, fields))
                 .addModifiers(ABSTRACT, PUBLIC)
-                .addAnnotation(
-                    AnnotationSpec.builder(Dependency.class)
-                        .addMember("onVajram", "$T.class", fetcher.vajramClassName())
-                        .build())
+                .addAnnotation(fetcherDepAnnotation.build())
                 .build());
       }
     }
@@ -213,10 +223,11 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
       GraphQlFieldSpec fieldSpec = fieldToTypeAggregator.getKey();
       ClassName typeAggregatorClassName = fieldToTypeAggregator.getValue();
 
+      boolean typeAggHasArgs = !fieldSpec.fieldDefinition().getInputValueDefinitions().isEmpty();
       AnnotationSpec.Builder depAnnotation =
           AnnotationSpec.builder(Dependency.class)
               .addMember("onVajram", "$T.class", typeAggregatorClassName);
-      if (isGraphQlList(fieldSpec)) {
+      if (isGraphQlList(fieldSpec) || typeAggHasArgs) {
         depAnnotation.addMember("canFanout", "true");
       }
 
@@ -232,12 +243,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
   }
 
   private ClassName asVajramReturnType(GraphQlFieldSpec fieldSpec) {
-    return asVajramReturnType(
-        GraphQLTypeName.of(
-            schemaReaderUtil
-                .typeDefinitionRegistry()
-                .getType(getDeclaredActualFieldType(fieldSpec).graphQlType())
-                .orElseThrow()));
+    return ClassName.get(GraphQlObjectMap.class);
   }
 
   /**
@@ -325,71 +331,25 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
     return responseType;
   }
 
-  private CodeBlock getFieldSetters(
-      VajramFetcher fetcher, List<GraphQlFieldSpec> graphQlFieldSpecs) {
-    CodeBlock.Builder codeBlockBuilder = CodeBlock.builder();
-    String facetName = getFacetName(fetcher, graphQlFieldSpecs);
-
-    // Multiple fields from same fetcher: GetOrderItemNames returns {orderItemNames, name}
-    for (GraphQlFieldSpec graphQlFieldSpec : graphQlFieldSpecs) {
-      boolean canFanout = isGraphQlList(graphQlFieldSpec);
-
-      if (TYPE_AGGREGATOR.equals(fetcher.type()) && canFanout) {
-        // Fanout case: dummies.responses().handle(...)
-        codeBlockBuilder.addNamed(
-            """
-            entity.$fieldName:L($errable:T.withValue($facetName:L.responses()));
-            """,
-            Map.ofEntries(
-                entry("facetName", facetName),
-                entry("fieldName", graphQlFieldSpec.fieldName()),
-                entry("errable", Errable.class)));
-      } else {
-        // This covers:
-        // - One-to-one type aggregator:
-        // - Data fetcher returning single field
-        // - Data fetcher returning multiple fields:
-        //     Ex: GetOrderItemNames returns {orderItemNames, name}
-        codeBlockBuilder.addNamed(
-            """
-            $facetName:L.handle(
-                _failure -> entity.$fieldName:L(_failure.cast()),
-                _nonNil -> entity.$fieldName:L(_nonNil$fieldExtractor:L));
-
-            """,
-            Map.ofEntries(
-                entry("facetName", facetName),
-                entry("fieldName", graphQlFieldSpec.fieldName()),
-                entry(
-                    "fieldExtractor",
-                    fetcher.type() == GraphQlFetcherType.MULTI_FIELD_DATA_FETCHER
-                        ? CodeBlock.of(".$L()", graphQlFieldSpec.fieldName())
-                        : CodeBlock.of(""))));
-      }
-    }
-    return codeBlockBuilder.build();
-  }
-
   private MethodSpec outputLogic(GraphQLTypeName objectTypeName) {
     TypeDefinition objectTypeDefinition =
         schemaReaderUtil.typeDefinitionRegistry().getType(objectTypeName.value()).orElseThrow();
     boolean isEntity = objectTypeDefinition.hasDirective(Directives.ENTITY);
+    boolean isOpType = schemaReaderUtil.isOperationType(objectTypeName);
     String entityIdFieldName = schemaReaderUtil.getEntityIdFieldName(objectTypeDefinition);
-    ClassName immutGQlRespJsonClassName = getImmutGQlRespJsonClassName(objectTypeName);
+    ClassName returnType = asVajramReturnType(objectTypeName);
+
     MethodSpec.Builder builder =
         MethodSpec.methodBuilder("output")
             .addAnnotation(Output.class)
             .addModifiers(STATIC)
-            .returns(asVajramReturnType(objectTypeName));
+            .returns(returnType);
+
     if (isEntity) {
       builder.addParameter(schemaReaderUtil.entityIdClassName(objectTypeName), Facets.ENTITY_ID);
     }
-    builder.addStatement(
-        "$T.Builder entity = $T._builder()$L",
-        immutGQlRespJsonClassName,
-        immutGQlRespJsonClassName,
-        // Only entities have ids
-        isEntity ? CodeBlock.of(".$L($L)", entityIdFieldName, Facets.ENTITY_ID) : EMPTY_CODE_BLOCK);
+
+    // Add non-ID data fetcher parameters
     schemaReaderUtil
         .typeToFetcherToFields()
         .getOrDefault(objectTypeName, Map.of())
@@ -397,53 +357,355 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
             (fetcher, fields) -> {
               if (!(fetcher instanceof VajramFetcher vajramFetcher)
                   || vajramFetcher.type().equals(GraphQlFetcherType.ID_FETCHER)) {
-                // ID Fetchers are not needed in output logic
                 return;
               }
               builder.addParameter(
                   ParameterizedTypeName.get(
                       ClassName.get(Errable.class), getFetcherResponseType(vajramFetcher, fields)),
                   getFacetName(vajramFetcher, fields));
-              builder.addCode("$L", getFieldSetters(vajramFetcher, fields));
             });
+
+    // Collect arg-bearing list ID fetcher parameters (for slice sizes)
+    Map<String, String> argListFieldToIdFetcherFacet = new LinkedHashMap<>();
+    Map<String, TypeName> argListIdFetcherToResponseType = new LinkedHashMap<>();
     schemaReaderUtil
-        .entityTypeToFieldToTypeAggregator()
+        .typeToFetcherToFields()
         .getOrDefault(objectTypeName, Map.of())
         .forEach(
-            (fieldSpec, aggregatorClassName) -> {
-              VajramFetcher fetcher = new VajramFetcher(aggregatorClassName, TYPE_AGGREGATOR);
-              boolean canFanout = isGraphQlList(fieldSpec);
-              builder.addParameter(
-                  canFanout
-                      ? ParameterizedTypeName.get(
-                          ClassName.get(FanoutDepResponses.class),
-                          getRequestClassName(aggregatorClassName),
-                          asVajramReturnType(fieldSpec))
-                      : ParameterizedTypeName.get(
-                          ClassName.get(Errable.class), asVajramReturnType(fieldSpec)),
-                  fieldSpec.fieldName());
-              builder.addCode("$L", getFieldSetters(fetcher, List.of(fieldSpec)));
+            (fetcher, fields) -> {
+              if (!(fetcher instanceof VajramFetcher vajramFetcher)
+                  || !vajramFetcher.type().equals(GraphQlFetcherType.ID_FETCHER)) {
+                return;
+              }
+              if (fields.isEmpty()) {
+                return;
+              }
+              boolean hasArgs =
+                  !fields.get(0).fieldDefinition().getInputValueDefinitions().isEmpty();
+              boolean isList = isGraphQlList(fields.get(0));
+              if (hasArgs && isList) {
+                String facetName = getFacetName(vajramFetcher, fields);
+                TypeName responseType = getFetcherResponseType(vajramFetcher, fields);
+                builder.addParameter(
+                    ParameterizedTypeName.get(
+                        ClassName.get(FanoutDepResponses.class),
+                        getRequestClassName(vajramFetcher.vajramClassName()),
+                        responseType),
+                    facetName);
+                argListFieldToIdFetcherFacet.put(fields.get(0).fieldName(), facetName);
+                argListIdFetcherToResponseType.put(facetName, responseType);
+              }
             });
+
+    // Add type aggregator parameters
+    Map<GraphQlFieldSpec, ClassName> typeAggregators =
+        schemaReaderUtil.entityTypeToFieldToTypeAggregator().getOrDefault(objectTypeName, Map.of());
+    for (Entry<GraphQlFieldSpec, ClassName> entry : typeAggregators.entrySet()) {
+      GraphQlFieldSpec key = entry.getKey();
+      ClassName value = entry.getValue();
+      boolean hasArgs = !key.fieldDefinition().getInputValueDefinitions().isEmpty();
+      if (hasArgs) {
+        builder.addParameter(
+            ParameterizedTypeName.get(
+                ClassName.get(FanoutDepResponses.class),
+                getRequestClassName(value),
+                asVajramReturnType(key)),
+            key.fieldName());
+      } else {
+        builder.addParameter(
+            isGraphQlList(key)
+                ? ParameterizedTypeName.get(
+                    ClassName.get(FanoutDepResponses.class),
+                    getRequestClassName(value),
+                    asVajramReturnType(key))
+                : ParameterizedTypeName.get(ClassName.get(Errable.class), asVajramReturnType(key)),
+            key.fieldName());
+      }
+    }
+
     builder.addParameter(ExecutionContext.class, "graphql_executionContext");
     builder.addParameter(VajramExecutionStrategy.class, "graphql_executionStrategy");
     builder.addParameter(ExecutionStrategyParameters.class, "graphql_executionStrategyParams");
-    return builder
-        .addStatement(
-            """
-        return entity
-            .graphql_executionStrategy(graphql_executionStrategy)
-            .graphql_executionContext(graphql_executionContext)
-            .graphql_executionStrategyParams(graphql_executionStrategyParams)""")
-        .build();
-  }
 
-  private ClassName getImmutGQlRespJsonClassName(GraphQLTypeName objectTypeName) {
-    return ClassName.get(
-        schemaReaderUtil.getPackageNameForType(objectTypeName),
-        objectTypeName.value()
-            + "_"
-            + IMMUT_SUFFIX
-            + GraphQlResponse.INSTANCE.modelClassesSuffix());
+    // Initialize builder (GraphQlOperationObjectMapBuilder for op types, GraphQlObjectMapBuilder
+    // otherwise)
+    ClassName builderType =
+        isOpType
+            ? ClassName.get(GraphQlOperationObjectMap.class)
+                .nestedClass("GraphQlOperationObjectMapBuilder")
+            : ClassName.get(GraphQlObjectMap.class).nestedClass("GraphQlObjectMapBuilder");
+    builder.addNamedCode(
+        """
+        $builderType:T _builder = new $builderType:T()
+            .graphql_executionContext(graphql_executionContext)
+            .graphql_executionStrategy(graphql_executionStrategy)
+            .graphql_executionStrategyParams(graphql_executionStrategyParams);
+        """,
+        Map.of("builderType", builderType));
+
+    // Build fieldName → aliases map from execution context
+    builder.addNamedCode(
+        """
+        $linkedHashMap:T<$string:T, $list:T<$string:T>> _fieldNameToAliases = $T:graphQLUtils.computeFieldNameToAliases(graphql_executionStrategyParams);
+        """,
+        Map.ofEntries(
+            entry("linkedHashMap", LinkedHashMap.class),
+            entry("string", String.class),
+            entry("list", List.class),
+            entry("graphQLUtils", GraphQLUtils.class)));
+
+    // __typename: same value for all aliases
+    builder.addNamedCode(
+        """
+        if (_fieldNameToAliases.containsKey("__typename")) {
+          for ($string:T _alias : _fieldNameToAliases.get("__typename")) {
+            _builder.addField(_alias, new $scalarValue:T($errable:T.withValue($typeName:S), true));
+          }
+        }
+        """,
+        Map.ofEntries(
+            entry("string", String.class),
+            entry("scalarValue", GraphQlValue.ScalarValue.class),
+            entry("errable", Errable.class),
+            entry("typeName", objectTypeName.value())));
+
+    // Entity ID field: same value for all aliases
+    if (isEntity) {
+      builder.addNamedCode(
+          """
+          if (_fieldNameToAliases.containsKey($entityIdField:S)) {
+            for ($string:T _alias : _fieldNameToAliases.get($entityIdField:S)) {
+              _builder.addField(_alias, new $scalarValue:T($errable:T.withValue($entityId:L), true));
+            }
+          }
+          """,
+          Map.ofEntries(
+              entry("string", String.class),
+              entry("entityIdField", entityIdFieldName),
+              entry("scalarValue", GraphQlValue.ScalarValue.class),
+              entry("errable", Errable.class),
+              entry("entityId", Facets.ENTITY_ID)));
+    }
+
+    // Data fetcher fields: arg-less, same value for all aliases that map to each fieldname
+    schemaReaderUtil
+        .typeToFetcherToFields()
+        .getOrDefault(objectTypeName, Map.of())
+        .forEach(
+            (fetcher, fields) -> {
+              if (!(fetcher instanceof VajramFetcher vajramFetcher)
+                  || vajramFetcher.type().equals(GraphQlFetcherType.ID_FETCHER)) {
+                return;
+              }
+              String facetName = getFacetName(vajramFetcher, fields);
+              boolean isMultiField =
+                  vajramFetcher.type() == GraphQlFetcherType.MULTI_FIELD_DATA_FETCHER;
+              for (GraphQlFieldSpec fieldSpec : fields) {
+                String fieldName = fieldSpec.fieldName();
+                boolean isListField = isGraphQlList(fieldSpec);
+                if (isListField) {
+                  if (isMultiField) {
+                    builder.addNamedCode(
+                        """
+                        if (_fieldNameToAliases.containsKey($fieldName:S)) {
+                          $errable:T<$list:T<$singleValue:T>> _$fieldName:L_items =
+                              $facetName:L.mapToValue($failure:T::cast, $errable:T::nil, _v -> {
+                                $list:T<$singleValue:T> _items = new $arrayList:T<>();
+                                for (Object _s : _v.$fieldName:L()) {
+                                  _items.add(new $scalarValue:T($errable:T.withValue(_s), true));
+                                }
+                                return $errable:T.withValue(_items);
+                              });
+                          for ($string:T _alias : _fieldNameToAliases.get($fieldName:S)) {
+                            _builder.addField(_alias, new $listValue:T(_$fieldName:L_items, true));
+                          }
+                        }
+                        """,
+                        Map.ofEntries(
+                            entry("fieldName", fieldName),
+                            entry("errable", Errable.class),
+                            entry("list", List.class),
+                            entry("singleValue", GraphQlValue.SingleValue.class),
+                            entry("arrayList", ArrayList.class),
+                            entry("scalarValue", GraphQlValue.ScalarValue.class),
+                            entry("listValue", GraphQlValue.ListValue.class),
+                            entry("facetName", facetName),
+                            entry("failure", Failure.class),
+                            entry("string", String.class)));
+                  } else {
+                    builder.addNamedCode(
+                        """
+                        if (_fieldNameToAliases.containsKey($fieldName:S)) {
+                          $errable:T<$list:T<$singleValue:T>> _$fieldName:L_items =
+                              $facetName:L.mapToValue($failure:T::cast, $errable:T::nil, _list -> {
+                                $list:T<$singleValue:T> _items = new $arrayList:T<>();
+                                for (Object _s : _list) {
+                                  _items.add(new $scalarValue:T($errable:T.withValue(_s), true));
+                                }
+                                return $errable:T.withValue(_items);
+                              });
+                          for ($string:T _alias : _fieldNameToAliases.get($fieldName:S)) {
+                            _builder.addField(_alias, new $listValue:T(_$fieldName:L_items, true));
+                          }
+                        }
+                        """,
+                        Map.ofEntries(
+                            entry("fieldName", fieldName),
+                            entry("errable", Errable.class),
+                            entry("list", List.class),
+                            entry("singleValue", GraphQlValue.SingleValue.class),
+                            entry("arrayList", ArrayList.class),
+                            entry("scalarValue", GraphQlValue.ScalarValue.class),
+                            entry("listValue", GraphQlValue.ListValue.class),
+                            entry("facetName", facetName),
+                            entry("failure", Failure.class),
+                            entry("string", String.class)));
+                  }
+                } else {
+                  if (isMultiField) {
+                    builder.addNamedCode(
+                        """
+                        if (_fieldNameToAliases.containsKey($fieldName:S)) {
+                          for ($string:T _alias : _fieldNameToAliases.get($fieldName:S)) {
+                            _builder.addField(_alias, new $scalarValue:T($facetName:L.mapToValue($failure:T::cast, $errable:T::nil, _v -> $errable:T.withValue(_v.$fieldName:L())), true));
+                          }
+                        }
+                        """,
+                        Map.ofEntries(
+                            entry("fieldName", fieldName),
+                            entry("scalarValue", GraphQlValue.ScalarValue.class),
+                            entry("facetName", facetName),
+                            entry("failure", Failure.class),
+                            entry("errable", Errable.class),
+                            entry("string", String.class)));
+                  } else {
+                    builder.addNamedCode(
+                        """
+                        if (_fieldNameToAliases.containsKey($fieldName:S)) {
+                          for ($string:T _alias : _fieldNameToAliases.get($fieldName:S)) {
+                            _builder.addField(_alias, new $scalarValue:T($facetName:L, true));
+                          }
+                        }
+                        """,
+                        Map.ofEntries(
+                            entry("fieldName", fieldName),
+                            entry("scalarValue", GraphQlValue.ScalarValue.class),
+                            entry("facetName", facetName),
+                            entry("string", String.class)));
+                  }
+                }
+              }
+            });
+
+    // Type aggregator fields
+    typeAggregators.forEach(
+        (fieldSpec, aggregatorClassName) -> {
+          boolean hasArgs = !fieldSpec.fieldDefinition().getInputValueDefinitions().isEmpty();
+          String fieldName = fieldSpec.fieldName();
+          if (hasArgs) {
+            if (isGraphQlList(fieldSpec)) {
+              // Arg-bearing list: match each alias positionally to its response slice,
+              // using the corresponding ID fetcher to determine the slice size per alias.
+              String idFetcherFacet = argListFieldToIdFetcherFacet.get(fieldName);
+              TypeName idListType = argListIdFetcherToResponseType.get(idFetcherFacet);
+              builder.addNamedCode(
+                  """
+                  if (_fieldNameToAliases.containsKey($fieldName:S)) {
+                    $list:T<$string:T> _$fieldName:L_aliases = _fieldNameToAliases.get($fieldName:S);
+                    int _$fieldName:L_offset = 0;
+                    for (int _i = 0; _i < _$fieldName:L_aliases.size(); _i++) {
+                      $string:T _alias = _$fieldName:L_aliases.get(_i);
+                      $errable:T<$idListType:T> _idsErrable = $idFetcherFacet:L.requestResponsePairs().get(_i).response();
+                      if (_idsErrable.valueOpt().isPresent()) {
+                        int _count = _idsErrable.valueOpt().get().size();
+                        $list:T<$singleValue:T> _items = new $arrayList:T<>();
+                        for (int _j = _$fieldName:L_offset; _j < _$fieldName:L_offset + _count; _j++) {
+                          $fieldName:L.requestResponsePairs().get(_j).response().handle(
+                              _f -> _items.add(new $objectValue:T(_f.cast(), true)),
+                              _v -> _items.add(new $objectValue:T($errable:T.withValue(_v), true)));
+                        }
+                        _builder.addField(_alias, new $listValue:T($errable:T.withValue(_items), true));
+                        _$fieldName:L_offset += _count;
+                      }
+                    }
+                  }
+                  """,
+                  Map.ofEntries(
+                      entry("fieldName", fieldName),
+                      entry("string", String.class),
+                      entry("list", List.class),
+                      entry("errable", Errable.class),
+                      entry("idListType", idListType),
+                      entry("idFetcherFacet", idFetcherFacet),
+                      entry("singleValue", GraphQlValue.SingleValue.class),
+                      entry("arrayList", ArrayList.class),
+                      entry("objectValue", GraphQlValue.ObjectValue.class),
+                      entry("listValue", GraphQlValue.ListValue.class)));
+            } else {
+              // Arg-bearing non-list: match each alias positionally to its response
+              builder.addNamedCode(
+                  """
+                  if (_fieldNameToAliases.containsKey($fieldName:S)) {
+                    $list:T<$string:T> _$fieldName:L_aliases = _fieldNameToAliases.get($fieldName:S);
+                    for (int _i = 0; _i < _$fieldName:L_aliases.size() && _i < $fieldName:L.requestResponsePairs().size(); _i++) {
+                      $string:T _alias = _$fieldName:L_aliases.get(_i);
+                      $fieldName:L.requestResponsePairs().get(_i).response().handle(
+                          _failure -> _builder.addField(_alias, new $objectValue:T(_failure.cast(), true)),
+                          _val -> _builder.addField(_alias, new $objectValue:T($errable:T.withValue(_val), true)));
+                    }
+                  }
+                  """,
+                  Map.ofEntries(
+                      entry("fieldName", fieldName),
+                      entry("string", String.class),
+                      entry("list", List.class),
+                      entry("errable", Errable.class),
+                      entry("objectValue", GraphQlValue.ObjectValue.class)));
+            }
+          } else if (isGraphQlList(fieldSpec)) {
+            // Arg-less list: build items once, assign same value to all aliases
+            builder.addNamedCode(
+                """
+                if (_fieldNameToAliases.containsKey($fieldName:S)) {
+                  $list:T<$singleValue:T> _$fieldName:L_items = new $arrayList:T<>();
+                  for ($errable:T<$gqlObjectMap:T> _e : $fieldName:L.responses()) {
+                    _$fieldName:L_items.add(new $objectValue:T(_e, true));
+                  }
+                  for ($string:T _alias : _fieldNameToAliases.get($fieldName:S)) {
+                    _builder.addField(_alias, new $listValue:T($errable:T.withValue(_$fieldName:L_items), true));
+                  }
+                }
+                """,
+                Map.ofEntries(
+                    entry("fieldName", fieldName),
+                    entry("string", String.class),
+                    entry("list", List.class),
+                    entry("singleValue", GraphQlValue.SingleValue.class),
+                    entry("arrayList", ArrayList.class),
+                    entry("errable", Errable.class),
+                    entry("gqlObjectMap", GraphQlObjectMap.class),
+                    entry("objectValue", GraphQlValue.ObjectValue.class),
+                    entry("listValue", GraphQlValue.ListValue.class)));
+          } else {
+            // Arg-less non-list: same value for all aliases
+            builder.addNamedCode(
+                """
+                if (_fieldNameToAliases.containsKey($fieldName:S)) {
+                  for ($string:T _alias : _fieldNameToAliases.get($fieldName:S)) {
+                    _builder.addField(_alias, new $objectValue:T($fieldName:L, true));
+                  }
+                }
+                """,
+                Map.ofEntries(
+                    entry("fieldName", fieldName),
+                    entry("string", String.class),
+                    entry("objectValue", GraphQlValue.ObjectValue.class)));
+          }
+        });
+
+    builder.addStatement("return _builder.build()");
+
+    return builder.build();
   }
 
   private List<MethodSpec> getInputResolvers(
@@ -488,6 +750,97 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
     boolean parentTypeHasEntityId = !isParentOpType;
 
     String facetName = getFacetName(fetcher, fields);
+    boolean hasArgs =
+        !fields.isEmpty() && !fields.get(0).fieldDefinition().getInputValueDefinitions().isEmpty();
+    String fieldName = !fields.isEmpty() ? fields.get(0).fieldName() : facetName;
+
+    if (hasArgs && fetcher.type() != GraphQlFetcherType.MULTI_FIELD_DATA_FETCHER) {
+      // Arg-bearing fields use alias-based fanout: one request per alias
+      List<CodeBlock> depInputSetterCode = new ArrayList<>();
+      if (parentTypeHasEntityId) {
+        depInputSetterCode.add(
+            CodeBlock.of(
+                ".$L($L)", schemaReaderUtil.getEntityIdFieldName(parentTypeDef), Facets.ENTITY_ID));
+      }
+      for (InputValueDefinition inputValueDefinition :
+          fields.get(0).fieldDefinition().getInputValueDefinitions()) {
+        String argName = inputValueDefinition.getName();
+        depInputSetterCode.add(
+            CodeBlock.of(
+                ".$L($L.getExecutionStepInfo().getArgument($S))",
+                argName,
+                Facets.EXECUTION_STRATEGY_PARAMS + "_new",
+                argName));
+      }
+      ClassName reqPojoClass =
+          ClassName.get(
+              fetcher.vajramClassName().packageName(),
+              fetcher.vajramClassName().simpleName()
+                  + IMMUT_REQUEST_SUFFIX
+                  + POJO.modelClassesSuffix());
+      ClassName reqImmutClass =
+          ClassName.get(
+              fetcher.vajramClassName().packageName(),
+              fetcher.vajramClassName().simpleName() + IMMUT_REQUEST_SUFFIX);
+      MethodSpec.Builder fanoutBuilder =
+          MethodSpec.methodBuilder(facetName)
+              .addAnnotation(
+                  AnnotationSpec.builder(Resolve.class)
+                      .addMember(
+                          "dep",
+                          "$T.$L_n",
+                          getFacetClassName(schemaReaderUtil.getAggregatorName(parentTypeName)),
+                          facetName)
+                      .build())
+              .addModifiers(STATIC)
+              .returns(
+                  ParameterizedTypeName.get(
+                      ClassName.get(FanoutCommand.class), reqImmutClass.nestedClass("Builder")))
+              .addParameter(ExecutionContext.class, Facets.EXECUTION_CONTEXT)
+              .addParameter(VajramExecutionStrategy.class, Facets.EXECUTION_STRATEGY)
+              .addParameter(ExecutionStrategyParameters.class, Facets.EXECUTION_STRATEGY_PARAMS);
+      if (parentTypeHasEntityId) {
+        fanoutBuilder.addParameter(
+            schemaReaderUtil.entityIdClassName(parentTypeName), Facets.ENTITY_ID);
+      }
+      fanoutBuilder.addNamedCode(
+          """
+          $list:T<$reqBuilder:T> _reqs = new $arrayList:T<>();
+          for ($mapEntry:T<$string:T, $mergedField:T> _aliasEntry :
+              $executionStrategyParams:L.getFields().getSubFields().entrySet()) {
+            if (!$fieldName:S.equals(_aliasEntry.getValue().getSingleField().getName())) {
+              continue;
+            }
+            var graphql_executionStrategyParams_new =
+                graphql_executionStrategy.newParametersForFieldExecution(
+                    graphql_executionContext, graphql_executionStrategyParams,
+                    _aliasEntry.getValue());
+            _reqs.add($reqPojoClass:T._builder()
+                $depInputSetterCode:L);
+          }
+          if (_reqs.isEmpty()) {
+            return $fanoutCommand:T.skipFanout($facetName:S);
+          }
+          return $fanoutCommand:T.executeFanoutWith(_reqs);
+          """,
+          Map.ofEntries(
+              entry("list", List.class),
+              entry("reqBuilder", reqImmutClass.nestedClass("Builder")),
+              entry("arrayList", ArrayList.class),
+              entry("mapEntry", Map.Entry.class),
+              entry("string", String.class),
+              entry("mergedField", MergedField.class),
+              entry("executionStrategyParams", Facets.EXECUTION_STRATEGY_PARAMS),
+              entry("fieldName", fieldName),
+              entry("reqPojoClass", reqPojoClass),
+              entry(
+                  "depInputSetterCode",
+                  depInputSetterCode.stream().collect(CodeBlock.joining("\n"))),
+              entry("fanoutCommand", FanoutCommand.class),
+              entry("facetName", facetName)));
+      return fanoutBuilder.build();
+    }
+
     List<CodeBlock> depInputNames = new ArrayList<>();
     List<CodeBlock> depInputSetterCode = new ArrayList<>();
     if (parentTypeHasEntityId) {
@@ -545,28 +898,14 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                 GraphQLUtils.class,
                 facetName,
                 Facets.EXECUTION_STRATEGY_PARAMS,
-                fetcher.type() != GraphQlFetcherType.MULTI_FIELD_DATA_FETCHER && !fields.isEmpty()
-                    ?
-                    // Modify the strategy params only if exactly one field is fetched by this
-                    // fetcher. If the fields are multiple (i.e. this is a
-                    // MULTI_FIELD_DATA_FETCHER), then  modifying the strategy params has no
-                    // utility.
-                    CodeBlock.of(
-"""
-              var graphql_executionStrategyParams_new =
-                  graphql_executionStrategy.newParametersForFieldExecution(
-                      graphql_executionContext,
-                      graphql_executionStrategyParams,
-                      graphql_executionStrategyParams.getFields().getSubField($S));
-""",
-                        fields.get(0).fieldName())
-                    : EMPTY_CODE_BLOCK,
+                // Arg-bearing single-field fetchers are handled via the alias-fanout path above,
+                // so no fields reaching here have args — newParams would be a dead variable.
+                EMPTY_CODE_BLOCK,
                 One2OneCommand.class,
                 ClassName.get(
                     fetcher.vajramClassName().packageName(),
                     fetcher.vajramClassName().simpleName()
-                        + REQUEST_SUFFIX
-                        + IMMUT_SUFFIX
+                        + IMMUT_REQUEST_SUFFIX
                         + POJO.modelClassesSuffix()),
                 depInputSetterCode.stream().collect(CodeBlock.joining("\n")),
                 One2OneCommand.class,
@@ -658,6 +997,26 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                   parentComposingEntityType.map(GraphQLTypeName::value).orElse(null),
                   fieldComposingEntityType.map(GraphQLTypeName::value).orElse(null)));
     }
+    boolean hasArgs = !fieldSpec.fieldDefinition().getInputValueDefinitions().isEmpty();
+    if (hasArgs && fetcherType == GraphQlFetcherType.ID_FETCHER) {
+      return createAliasBasedTypeAggregatorInputResolver(
+          fetcher,
+          parentTypeName,
+          fieldSpec,
+          typeAggregatorClass,
+          entityIdFacetName,
+          canFanout,
+          fieldName);
+    }
+    if (hasArgs && fetcherType == INHERIT_ID_FROM_ARGS) {
+      return createInheritIdFromArgsAliasResolver(
+          parentTypeName,
+          typeAggregatorClass,
+          fieldName,
+          schemaReaderUtil.entityIdClassName(fieldTypeName),
+          entityIdFieldName);
+    }
+
     @Nullable CodeBlock entityIdAccessCode =
         switch (fetcherType) {
           case ID_FETCHER ->
@@ -676,7 +1035,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
     ClassName depReqImmutType =
         ClassName.get(
             typeAggregatorClass.packageName(),
-            typeAggregatorClass.simpleName() + REQUEST_SUFFIX + IMMUT_SUFFIX);
+            typeAggregatorClass.simpleName() + IMMUT_REQUEST_SUFFIX);
     ClassName depReqImmutPojoType =
         ClassName.get(
             depReqImmutType.packageName(),
@@ -811,6 +1170,250 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
             entityIdFacetName);
       }
     }
+    return methodBuilder.build();
+  }
+
+  /**
+   * Generates the type aggregator resolver for {@code @inferIdFromArgs} fields with arguments,
+   * using alias-based fanout: one type-aggregator request per alias, with the entity ID extracted
+   * from each alias's own execution args.
+   */
+  private MethodSpec createInheritIdFromArgsAliasResolver(
+      GraphQLTypeName parentTypeName,
+      ClassName typeAggregatorClass,
+      String fieldName,
+      ClassName entityIdClassName,
+      String entityIdFieldName) {
+
+    ClassName depReqImmutType =
+        ClassName.get(
+            typeAggregatorClass.packageName(),
+            typeAggregatorClass.simpleName() + IMMUT_REQUEST_SUFFIX);
+    ClassName depReqImmutPojoType =
+        ClassName.get(
+            depReqImmutType.packageName(),
+            depReqImmutType.simpleName() + POJO.modelClassesSuffix());
+
+    return MethodSpec.methodBuilder(fieldName)
+        .addAnnotation(
+            AnnotationSpec.builder(Resolve.class)
+                .addMember(
+                    "dep",
+                    "$T.$L_n",
+                    getFacetClassName(schemaReaderUtil.getAggregatorName(parentTypeName)),
+                    fieldName)
+                .build())
+        .addModifiers(STATIC)
+        .returns(
+            ParameterizedTypeName.get(
+                ClassName.get(FanoutCommand.class), depReqImmutType.nestedClass("Builder")))
+        .addParameter(ExecutionContext.class, Facets.EXECUTION_CONTEXT)
+        .addParameter(VajramExecutionStrategy.class, Facets.EXECUTION_STRATEGY)
+        .addParameter(ExecutionStrategyParameters.class, Facets.EXECUTION_STRATEGY_PARAMS)
+        .addNamedCode(
+            """
+            if (!$graphqlUtils:T.isFieldQueried($fieldName:S, $executionStrategyParams:L)) {
+              return $fanoutCommand:T.skipFanout($fieldNotQueried:S);
+            }
+            $list:T<$mapEntry:T<$string:T, $mergedField:T>> _aliases =
+                $executionStrategyParams:L.getFields().getSubFields().entrySet().stream()
+                    .filter(e -> $fieldName:S.equals(e.getValue().getSingleField().getName()))
+                    .toList();
+            $list:T<$depReqBuilder:T> _reqs = new $arrayList:T<>();
+            for ($mapEntry:T<$string:T, $mergedField:T> _aliasEntry : _aliases) {
+              var graphql_executionStrategyParams_new =
+                  graphql_executionStrategy.newParametersForFieldExecution(
+                      graphql_executionContext, graphql_executionStrategyParams,
+                      _aliasEntry.getValue());
+              var _entityId = new $entityIdClass:T(
+                  graphql_executionStrategyParams_new.getExecutionStepInfo().getArgument(
+                      $entityIdField:S));
+              _reqs.add($depReqPojoType:T._builder()
+                  .$entityIdFacet:L(_entityId)
+                  .graphql_executionContext(graphql_executionContext)
+                  .graphql_executionStrategy(graphql_executionStrategy)
+                  .graphql_executionStrategyParams(graphql_executionStrategyParams_new));
+            }
+            if (_reqs.isEmpty()) {
+              return $fanoutCommand:T.skipFanout($fieldNoIds:S);
+            }
+            return $fanoutCommand:T.executeFanoutWith(_reqs);
+            """,
+            Map.ofEntries(
+                entry("graphqlUtils", GraphQLUtils.class),
+                entry("fieldName", fieldName),
+                entry("fieldNotQueried", "'" + fieldName + "' not queried"),
+                entry("fieldNoIds", "'" + fieldName + "' no IDs"),
+                entry("fanoutCommand", FanoutCommand.class),
+                entry("executionStrategyParams", Facets.EXECUTION_STRATEGY_PARAMS),
+                entry("list", List.class),
+                entry("mapEntry", Map.Entry.class),
+                entry("string", String.class),
+                entry("mergedField", MergedField.class),
+                entry("depReqBuilder", depReqImmutType.nestedClass("Builder")),
+                entry("arrayList", ArrayList.class),
+                entry("depReqPojoType", depReqImmutPojoType),
+                entry("entityIdClass", entityIdClassName),
+                entry("entityIdField", entityIdFieldName),
+                entry("entityIdFacet", Facets.ENTITY_ID)))
+        .build();
+  }
+
+  /**
+   * Generates the type aggregator resolver method for fields with arguments, using alias-based
+   * fanout: one ID-fetcher request per alias, then one type-aggregator request per alias result.
+   */
+  private MethodSpec createAliasBasedTypeAggregatorInputResolver(
+      Fetcher fetcher,
+      GraphQLTypeName parentTypeName,
+      GraphQlFieldSpec fieldSpec,
+      ClassName typeAggregatorClass,
+      String entityIdFacetName,
+      boolean isList,
+      String fieldName) {
+
+    ClassName depReqImmutType =
+        ClassName.get(
+            typeAggregatorClass.packageName(),
+            typeAggregatorClass.simpleName() + IMMUT_REQUEST_SUFFIX);
+    ClassName depReqImmutPojoType =
+        ClassName.get(
+            depReqImmutType.packageName(),
+            depReqImmutType.simpleName() + POJO.modelClassesSuffix());
+
+    TypeName fetcherResponseType =
+        fetcher instanceof VajramFetcher vajramFetcher
+            ? getFetcherResponseType(vajramFetcher, List.of(fieldSpec))
+            : TypeName.OBJECT;
+    ClassName fetcherReqClass =
+        fetcher instanceof VajramFetcher vajramFetcher
+            ? getRequestClassName(vajramFetcher.vajramClassName())
+            : ClassName.get(Object.class);
+
+    MethodSpec.Builder methodBuilder =
+        MethodSpec.methodBuilder(fieldName)
+            .addAnnotation(
+                AnnotationSpec.builder(Resolve.class)
+                    .addMember(
+                        "dep",
+                        "$T.$L_n",
+                        getFacetClassName(schemaReaderUtil.getAggregatorName(parentTypeName)),
+                        fieldName)
+                    .build())
+            .addModifiers(STATIC)
+            .returns(
+                ParameterizedTypeName.get(
+                    ClassName.get(FanoutCommand.class), depReqImmutType.nestedClass("Builder")))
+            .addParameter(ExecutionContext.class, Facets.EXECUTION_CONTEXT)
+            .addParameter(VajramExecutionStrategy.class, Facets.EXECUTION_STRATEGY)
+            .addParameter(ExecutionStrategyParameters.class, Facets.EXECUTION_STRATEGY_PARAMS);
+
+    if (!entityIdFacetName.isBlank()) {
+      methodBuilder.addParameter(
+          ParameterizedTypeName.get(
+              ClassName.get(FanoutDepResponses.class), fetcherReqClass, fetcherResponseType),
+          entityIdFacetName);
+    }
+
+    methodBuilder.addNamedCode(
+        """
+        if (!$graphqlUtils:T.isFieldQueried($fieldName:S, $executionStrategyParams:L)) {
+          return $fanoutCommand:T.skipFanout($fieldNotQueried:S);
+        }
+        $list:T<$mapEntry:T<$string:T, $mergedField:T>> _aliases =
+            $executionStrategyParams:L.getFields().getSubFields().entrySet().stream()
+                .filter(e -> $fieldName:S.equals(e.getValue().getSingleField().getName()))
+                .toList();
+        $list:T<$depReqBuilder:T> _reqs = new $arrayList:T<>();
+        """,
+        Map.ofEntries(
+            entry("graphqlUtils", GraphQLUtils.class),
+            entry("fieldName", fieldName),
+            entry("fieldNotQueried", "'" + fieldName + "' not queried"),
+            entry("fanoutCommand", FanoutCommand.class),
+            entry("executionStrategyParams", Facets.EXECUTION_STRATEGY_PARAMS),
+            entry("list", List.class),
+            entry("mapEntry", Map.Entry.class),
+            entry("string", String.class),
+            entry("mergedField", MergedField.class),
+            entry("depReqBuilder", depReqImmutType.nestedClass("Builder")),
+            entry("arrayList", ArrayList.class)));
+
+    if (isList) {
+      // List entity: for each alias, iterate all IDs returned by the ID fetcher
+      methodBuilder.addNamedCode(
+          """
+          for (int _i = 0; _i < _aliases.size(); _i++) {
+            $mapEntry:T<$string:T, $mergedField:T> _aliasEntry = _aliases.get(_i);
+            $errable:T<$fetcherResponse:T> _idsErrable = $entityIdFacet:L.requestResponsePairs().get(_i).response();
+            if (_idsErrable.valueOpt().isEmpty()) {
+              continue;
+            }
+            var graphql_executionStrategyParams_new =
+                graphql_executionStrategy.newParametersForFieldExecution(
+                    graphql_executionContext, graphql_executionStrategyParams,
+                    _aliasEntry.getValue());
+            for (var _entityId : _idsErrable.valueOpt().get()) {
+              _reqs.add($depReqPojoType:T._builder()
+                  .$entityIdFacetName:L(_entityId)
+                  .graphql_executionContext(graphql_executionContext)
+                  .graphql_executionStrategy(graphql_executionStrategy)
+                  .graphql_executionStrategyParams(graphql_executionStrategyParams_new));
+            }
+          }
+          """,
+          Map.ofEntries(
+              entry("mapEntry", Map.Entry.class),
+              entry("string", String.class),
+              entry("mergedField", MergedField.class),
+              entry("errable", Errable.class),
+              entry("fetcherResponse", fetcherResponseType),
+              entry("entityIdFacet", entityIdFacetName),
+              entry("depReqPojoType", depReqImmutPojoType),
+              entry("entityIdFacetName", Facets.ENTITY_ID)));
+    } else {
+      // Single entity: for each alias, create one request using the alias's ID
+      methodBuilder.addNamedCode(
+          """
+          for (int _i = 0; _i < _aliases.size(); _i++) {
+            $mapEntry:T<$string:T, $mergedField:T> _aliasEntry = _aliases.get(_i);
+            $errable:T<$fetcherResponse:T> _idErrable = $entityIdFacet:L.requestResponsePairs().get(_i).response();
+            if (_idErrable.valueOpt().isEmpty()) {
+              continue;
+            }
+            var graphql_executionStrategyParams_new =
+                graphql_executionStrategy.newParametersForFieldExecution(
+                    graphql_executionContext, graphql_executionStrategyParams,
+                    _aliasEntry.getValue());
+            _reqs.add($depReqPojoType:T._builder()
+                .$entityIdFacetName:L(_idErrable.valueOpt().get())
+                .graphql_executionContext(graphql_executionContext)
+                .graphql_executionStrategy(graphql_executionStrategy)
+                .graphql_executionStrategyParams(graphql_executionStrategyParams_new));
+          }
+          """,
+          Map.ofEntries(
+              entry("mapEntry", Map.Entry.class),
+              entry("string", String.class),
+              entry("mergedField", MergedField.class),
+              entry("errable", Errable.class),
+              entry("fetcherResponse", fetcherResponseType),
+              entry("entityIdFacet", entityIdFacetName),
+              entry("depReqPojoType", depReqImmutPojoType),
+              entry("entityIdFacetName", Facets.ENTITY_ID)));
+    }
+
+    methodBuilder.addCode(
+        """
+        if (_reqs.isEmpty()) {
+          return $T.skipFanout($S);
+        }
+        return $T.executeFanoutWith(_reqs);
+        """,
+        FanoutCommand.class,
+        "'" + fieldName + "' no IDs",
+        FanoutCommand.class);
+
     return methodBuilder.build();
   }
 }

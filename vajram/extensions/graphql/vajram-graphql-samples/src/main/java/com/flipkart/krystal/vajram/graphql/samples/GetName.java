@@ -4,7 +4,6 @@ import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.graphql.samples.name.Name;
-import com.flipkart.krystal.vajram.graphql.samples.name.Name_ImmutGQlResp;
 
 @Vajram
 public abstract class GetName extends ComputeVajramDef<Name> {
@@ -14,6 +13,7 @@ public abstract class GetName extends ComputeVajramDef<Name> {
 
   @Output
   static Name getName() {
-    return Name_ImmutGQlResp._builder().value("Veerendra Vikramadeva");
+    // Name type has no @dataFetcher directives configured in schema; this vajram is a placeholder.
+    return null;
   }
 }

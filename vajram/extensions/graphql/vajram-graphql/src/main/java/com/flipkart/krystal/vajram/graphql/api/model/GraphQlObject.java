@@ -1,28 +1,33 @@
 package com.flipkart.krystal.vajram.graphql.api.model;
 
-import com.flipkart.krystal.model.Model;
-import com.flipkart.krystal.model.ModelClusterRoot;
 import com.flipkart.krystal.vajram.graphql.api.errors.ErrorCollector;
 import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy;
 import graphql.execution.ExecutionContext;
 import graphql.execution.ExecutionStrategyParameters;
 import java.util.List;
+import java.util.Map;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-@ModelClusterRoot(
-    immutableRoot = GraphQlObject_Immut.class,
-    builderRoot = GraphQlObject_Immut.Builder.class)
-public interface GraphQlObject extends Model {
+public sealed interface GraphQlObject permits GraphQlOperationObject, GraphQlObjectMap {
   /**
    * Returns the __typename of a graphql type according to the graphql spec or null if it has yet
    * been queried..
    */
-  @Nullable String __typename();
+  default @Nullable String graphql_typename() {
+    return null;
+  }
 
+  /**
+   * Returns the {@link ExecutionContext} which for the execution in which this object was created.
+   */
   ExecutionContext graphql_executionContext();
 
   VajramExecutionStrategy graphql_executionStrategy();
 
+  /**
+   * Returns the {@link ExecutionStrategyParameters} for the execution in which this object was
+   * created.
+   */
   ExecutionStrategyParameters graphql_executionStrategyParams();
 
   /**
@@ -31,14 +36,7 @@ public interface GraphQlObject extends Model {
    * @param errorCollector The collector to accumulate errors
    * @param path The current path in the GraphQL response tree
    */
-  void _collectErrors(ErrorCollector errorCollector, List<Object> path);
+  default void _collectErrors(ErrorCollector errorCollector, List<Object> path) {}
 
-  @Override
-  GraphQlObject _newCopy();
-
-  @Override
-  GraphQlObject_Immut.Builder _asBuilder();
-
-  @Override
-  GraphQlObject_Immut _build();
+  Map<String, Object> graphql_data();
 }

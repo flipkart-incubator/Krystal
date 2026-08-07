@@ -4,33 +4,23 @@ import static com.flipkart.krystal.vajram.graphql.api.errors.ErrorCollector.defa
 import static graphql.ErrorType.DataFetchingException;
 
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.model.ModelClusterRoot;
 import com.flipkart.krystal.vajram.graphql.api.errors.ErrorCollector;
-import com.flipkart.krystal.vajram.json.Json;
 import graphql.ExecutionResult;
 import graphql.GraphQLError;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-@ModelClusterRoot(
-    immutableRoot = GraphQlOperationObject_Immut.class,
-    builderRoot = GraphQlOperationObject_Immut.Builder.class)
-public interface GraphQlOperationObject extends GraphQlObject {
+public sealed interface GraphQlOperationObject extends GraphQlObject
+    permits GraphQlOperationObjectMap, GraphQlOperationError {
 
-  @Nullable Map<Object, Object> _extensions();
-
-  @Override
-  GraphQlOperationObject_Immut _build();
-
-  @Override
-  GraphQlOperationObject_Immut.Builder _asBuilder();
+  default @Nullable Map<Object, Object> graphql_extensions() {
+    return null;
+  }
 
   @Nullable
-  default List<GraphQLError> _errors() {
-    ErrorCollector errorCollector = defaultCollector();
+  default List<GraphQLError> graphql_errors(ErrorCollector errorCollector) {
     _collectErrors(errorCollector, new ArrayList<>());
     return errorCollector.getErrors();
   }
@@ -59,18 +49,9 @@ public interface GraphQlOperationObject extends GraphQlObject {
       return operationError.executionResult();
     }
     return ExecutionResult.newExecutionResult()
-        .data(this._build())
-        .errors(_errors())
-        .extensions(_extensions())
+        .data(graphql_data())
+        .errors(graphql_errors(defaultCollector()))
+        .extensions(graphql_extensions())
         .build();
-  }
-
-  // TODO: Delete
-  default byte[] _serialize() throws Exception {
-    Map<String, @Nullable Object> map = new HashMap<>(3);
-    map.put("data", this);
-    map.put("errors", _errors());
-    map.put("extensions", _extensions());
-    return Json.OBJECT_WRITER.writeValueAsBytes(map);
   }
 }

@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.graphql.codegen;
 
-import static com.flipkart.krystal.codegen.common.models.Constants.IMMUT_SUFFIX;
 import static com.flipkart.krystal.vajram.graphql.api.Constants.Directives.DATA_FETCHER;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQLObjectAggregateGen.GRAPHQL_RESPONSE;
 import static com.google.common.base.Throwables.getStackTraceAsString;
@@ -12,15 +11,8 @@ import static javax.lang.model.element.Modifier.PUBLIC;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
-import com.flipkart.krystal.model.Model;
-import com.flipkart.krystal.model.ModelRoot;
-import com.flipkart.krystal.model.ModelRoot.ModelType;
-import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.vajram.graphql.api.Constants.Directives;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlEntityId;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlObject;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponse;
 import com.google.common.collect.Maps;
 import com.squareup.javapoet.*;
 import com.squareup.javapoet.TypeName;
@@ -104,6 +96,12 @@ class GraphQLEntityGen implements CodeGenerator {
                 String fieldName = fieldDefinition.getName();
                 boolean isEntityIdField = entityIdFieldName.equals(fieldName);
 
+                // Skip fields with arguments — they can be queried with multiple aliases and are
+                // only accessible via graphql_data(), not typed Java methods.
+                if (!fieldDefinition.getInputValueDefinitions().isEmpty() && !isEntityIdField) {
+                  continue;
+                }
+
                 GraphQlFieldSpec fieldSpec =
                     schemaReaderUtil.fieldSpecFromField(fieldDefinition, "", enclosingType);
                 TypeName typeNameForField = graphQlCodeGenUtil.toTypeNameForField(fieldSpec);
@@ -131,45 +129,10 @@ class GraphQLEntityGen implements CodeGenerator {
             }
           }
 
-          ClassName immutableClassName =
-              ClassName.get(
-                  entityClassName.packageName(), entityClassName.simpleName() + "_" + IMMUT_SUFFIX);
-          methodSpecs.add(
-              MethodSpec.overriding(util.getMethod(() -> Model.class.getMethod("_asBuilder")))
-                  .returns(immutableClassName.nestedClass("Builder"))
-                  .addModifiers(PUBLIC, ABSTRACT)
-                  .build());
-
-          methodSpecs.add(
-              MethodSpec.overriding(util.getMethod(() -> Model.class.getMethod("_build")))
-                  .returns(immutableClassName)
-                  .addModifiers(PUBLIC, ABSTRACT)
-                  .build());
-
-          methodSpecs.add(
-              MethodSpec.overriding(util.getMethod(() -> Model.class.getMethod("_newCopy")))
-                  .returns(entityClassName)
-                  .addModifiers(PUBLIC, ABSTRACT)
-                  .build());
-
           typeSpec =
               util.interfaceBuilder(entityClassName.simpleName(), "")
-                  .addAnnotation(
-                      AnnotationSpec.builder(ModelRoot.class)
-                          .addMember("type", "{$T.$L}", ModelType.class, ModelType.RESPONSE.name())
-                          .addMember("builderExtendsModelRoot", "true")
-                          .addMember("pure", "false")
-                          .build())
-                  .addAnnotation(
-                      AnnotationSpec.builder(SupportedModelProtocol.class)
-                          .addMember("value", "$T.class", GraphQlResponse.class)
-                          .build())
                   .addModifiers(PUBLIC)
-                  .addMethods(methodSpecs)
-                  .addSuperinterface(
-                      isOpType
-                          ? ClassName.get(GraphQlOperationObject.class)
-                          : ClassName.get(GraphQlObject.class));
+                  .addMethods(methodSpecs);
           if (isEntity) {
             var entityIdClassName = schemaReaderUtil.entityIdClassName(graphQLTypeName);
             util.generateSourceFile(
