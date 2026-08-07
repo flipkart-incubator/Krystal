@@ -236,7 +236,7 @@ public final class VajramGraph {
             vajramDefRoot::newRequestBuilder);
     if (vajramDefinition.isTrait()) {
       kryonDefinitionRegistry.newTraitKryonDefinition(
-          vajramId.id(), facets, createNewRequest, vajramDefinition.vajramTags());
+          vajramId, facets, createNewRequest, vajramDefinition.vajramTags());
     } else if (vajramDefRoot instanceof VajramDef<Object> vajramDef) {
       InputResolverCreationResult inputResolverCreationResult =
           createKryonLogicsForInputResolvers(vajramDefinition);
@@ -343,7 +343,7 @@ public final class VajramGraph {
               facetDefinitions.stream().filter(sources::contains).collect(toImmutableList());
           LogicDefinition<ResolverLogic> inputResolverLogic =
               logicRegistryDecorator.newResolverLogic(
-                  vajramId.id(),
+                  vajramId,
                   "%s:dep(%s):inputResolver(%s)"
                       .formatted(
                           vajramId,
