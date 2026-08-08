@@ -36,7 +36,7 @@ class FkJavaCodeStandardPlugin implements Plugin<Project> {
     }
 
     private static checkerFramework(Project project) {
-        def checker_version = '3.52.0'
+        def checker_version = '3.53.1'
         project.pluginManager.apply('org.checkerframework')
         CheckerFrameworkExtension checkerFramework = project.extensions.findByType(CheckerFrameworkExtension)
 

@@ -2,6 +2,7 @@ package com.flipkart.krystal.tags;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Collections.synchronizedMap;
+import static java.util.Objects.requireNonNullElse;
 import static java.util.stream.Collectors.groupingBy;
 
 import com.flipkart.krystal.annos.ElementTagUtility;
@@ -265,7 +266,7 @@ public final class ElementTags {
     List<Annotation> unpacked = new ArrayList<>();
     try {
       Annotation[] nestedAnnos = (Annotation[]) containedAnnotationsMethod.invoke(annotation);
-      unpacked.addAll(Arrays.asList(nestedAnnos));
+      unpacked.addAll(Arrays.asList(requireNonNullElse(nestedAnnos, new Annotation[] {})));
     } catch (Exception e) {
       // Fallback in case of reflection exceptions
       unpacked.add(annotation);

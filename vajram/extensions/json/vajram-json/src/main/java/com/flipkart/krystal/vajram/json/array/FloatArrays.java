@@ -10,6 +10,7 @@ import com.flipkart.krystal.model.array.FloatArray;
 import com.flipkart.krystal.model.array.SimpleFloatArray;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class FloatArrays {
   /** Serializes {@link JsonByteArray} as a Base64-encoded string in JSON. */
@@ -35,9 +36,10 @@ public class FloatArrays {
   }
 
   /** Deserializes a Base64-encoded JSON string into {@link SimpleFloatArray}. */
-  public static final class FloatArrayDeserializer extends JsonDeserializer<SimpleFloatArray> {
+  public static final class FloatArrayDeserializer
+      extends JsonDeserializer<@Nullable SimpleFloatArray> {
     @Override
-    public SimpleFloatArray deserialize(JsonParser p, DeserializationContext context)
+    public @Nullable SimpleFloatArray deserialize(JsonParser p, DeserializationContext context)
         throws IOException {
       float[] data = p.readValueAs(float[].class);
       if (data == null) {

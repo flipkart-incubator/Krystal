@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.ServiceLoader;
 import java.util.Set;
-import java.util.stream.Collectors;
 import javax.annotation.processing.Processor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
@@ -144,23 +143,23 @@ public final class ModelGenProcessor extends AbstractKrystalAnnoProcessor {
         modelRootType.getAnnotationsByType(SupportedModelProtocol.class);
     SupportedModelProtocolName[] protocolNames =
         modelRootType.getAnnotationsByType(SupportedModelProtocolName.class);
-    Set<Class<? extends ModelProtocol>> modelProtocolClasses =
-        Arrays.stream(protocols)
-            .map(p -> util.getTypeElemFromAnnotationMember(p::value))
-            .map(element -> element.getQualifiedName().toString())
-            .map(
-                protocolName -> {
-                  try {
-                    //noinspection unchecked
-                    return (Class<? extends ModelProtocol>)
-                        Class.forName(protocolName, false, this.getClass().getClassLoader());
-                  } catch (ClassNotFoundException e) {
-                    util.error(Throwables.getStackTraceAsString(e), modelRootType);
-                    return null;
-                  }
-                })
-            .filter(Objects::nonNull)
-            .collect(Collectors.toCollection(LinkedHashSet::new));
+    Set<Class<? extends ModelProtocol>> modelProtocolClasses = new LinkedHashSet<>();
+
+    for (SupportedModelProtocol protocol : protocols) {
+      try {
+        //noinspection unchecked
+        modelProtocolClasses.add(
+            (Class<? extends ModelProtocol>)
+                Class.forName(
+                    util.getTypeElemFromAnnotationMember(protocol::value)
+                        .getQualifiedName()
+                        .toString(),
+                    false,
+                    this.getClass().getClassLoader()));
+      } catch (ClassNotFoundException e) {
+        util.error(Throwables.getStackTraceAsString(e), modelRootType);
+      }
+    }
 
     modelProtocolClasses.addAll(
         Arrays.stream(protocolNames)
@@ -179,6 +178,7 @@ public final class ModelGenProcessor extends AbstractKrystalAnnoProcessor {
                   }
                 })
             .filter(Objects::nonNull)
+            .map(Objects::requireNonNull)
             .collect(toSet()));
 
     if (modelProtocolClasses.isEmpty()) {

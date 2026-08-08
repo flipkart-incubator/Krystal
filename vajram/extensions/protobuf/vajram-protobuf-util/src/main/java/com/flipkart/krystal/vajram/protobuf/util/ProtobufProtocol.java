@@ -10,7 +10,9 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLite;
 import com.google.protobuf.Parser;
 import java.util.function.Function;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.checker.nullness.qual.PolyNull;
 
 /**
  * Marker interface for SerdeProtocols that represent a protobuf flavour (proto3, edition 2024,
@@ -56,10 +58,13 @@ public interface ProtobufProtocol extends SerdeProtocol<NoAnnotation, Serializab
   }
 
   @Override
-  default ByteArray serialize(
-      Object object,
+  default @PolyNull ByteArray serialize(
+      @PolyNull Object object,
       Function<Model, SerializableModel> modelMapper,
       @Nullable NoAnnotation customConfig) {
+    if (object == null) {
+      return null;
+    }
     if (object instanceof MessageLite.Builder builder) {
       object = builder.build();
     }
@@ -79,17 +84,21 @@ public interface ProtobufProtocol extends SerdeProtocol<NoAnnotation, Serializab
    */
   @SuppressWarnings("unchecked")
   @Override
-  default <T> T deserialize(Object payload, Object typeInfo, @Nullable NoAnnotation customConfig) {
+  default <T> @PolyNull T deserialize(
+      @PolyNull Object payload, Object typeInfo, @Nullable NoAnnotation customConfig) {
+    if (payload == null) {
+      return null;
+    }
     try {
       if (typeInfo instanceof Parser<?> parser) {
         if (payload instanceof byte[] bytes) {
-          return (T) parser.parseFrom(bytes);
+          return (@NonNull T) parser.parseFrom(bytes);
         } else if (payload instanceof ProtoByteArray protoByteArray) {
-          return (T) parser.parseFrom(protoByteArray.toByteString());
+          return (@NonNull T) parser.parseFrom(protoByteArray.toByteString());
         } else if (payload instanceof ByteString bytesString) {
-          return (T) parser.parseFrom(bytesString);
+          return (@NonNull T) parser.parseFrom(bytesString);
         } else if (payload instanceof ByteArray byteArray) {
-          return (T) parser.parseFrom(byteArray.toArray());
+          return (@NonNull T) parser.parseFrom(byteArray.toArray());
         }
       }
     } catch (InvalidProtocolBufferException e) {
