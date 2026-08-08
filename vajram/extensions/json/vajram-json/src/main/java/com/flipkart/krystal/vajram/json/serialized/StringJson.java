@@ -8,6 +8,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class StringJson extends AbstractJsonRepresentation {
 
@@ -25,7 +27,7 @@ public final class StringJson extends AbstractJsonRepresentation {
   }
 
   @Override
-  public <T> T deserialize(ObjectReader reader) throws IOException {
+  public <T> @NonNull T deserialize(ObjectReader reader) throws IOException {
     if (bytes != null) {
       return reader.readValue(bytes);
     }
@@ -65,7 +67,7 @@ public final class StringJson extends AbstractJsonRepresentation {
   }
 
   @Override
-  public boolean equals(Object obj) {
+  public boolean equals(@Nullable Object obj) {
     if (obj == this) {
       return true;
     }

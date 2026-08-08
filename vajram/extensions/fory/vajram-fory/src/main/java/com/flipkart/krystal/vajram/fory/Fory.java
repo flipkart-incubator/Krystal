@@ -10,7 +10,9 @@ import java.util.ServiceLoader;
 import java.util.function.Function;
 import org.apache.fory.ThreadSafeFory;
 import org.apache.fory.config.Language;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.checker.nullness.qual.PolyNull;
 
 /**
  * {@link SerdeProtocol} implementation backed by <a href="https://fory.apache.org/">Apache Fory</a>
@@ -58,21 +60,28 @@ public final class Fory implements SerdeProtocol<NoAnnotation, SerializableModel
   }
 
   @Override
-  public ByteArray serialize(
-      Object object,
+  public @PolyNull ByteArray serialize(
+      @PolyNull Object object,
       Function<Model, SerializableModel> modelMapper,
       @Nullable NoAnnotation customConfig) {
+    if (object == null) {
+      return null;
+    }
     return SimpleByteArray.backedBy(FORY_INSTANCE.serialize(object));
   }
 
   @SuppressWarnings({"unchecked", "TypeParameterUnusedInFormals"})
   @Override
-  public <T> T deserialize(Object payload, Object typeInfo, @Nullable NoAnnotation customConfig) {
+  public <T> @PolyNull T deserialize(
+      @PolyNull Object payload, Object typeInfo, @Nullable NoAnnotation customConfig) {
+    if (payload == null) {
+      return null;
+    }
     if (typeInfo instanceof Class<?> clazz) {
       if (payload instanceof byte[] bytes) {
-        return (T) FORY_INSTANCE.deserialize(bytes, clazz);
+        return (@NonNull T) FORY_INSTANCE.deserialize(bytes, clazz);
       } else if (payload instanceof ByteArray byteArray) {
-        return (T) FORY_INSTANCE.deserialize(byteArray.toArray(), clazz);
+        return (@NonNull T) FORY_INSTANCE.deserialize(byteArray.toArray(), clazz);
       }
     }
     throw new UnsupportedOperationException(

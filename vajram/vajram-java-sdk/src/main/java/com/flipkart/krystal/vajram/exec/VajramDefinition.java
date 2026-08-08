@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 @Slf4j
 @Getter
@@ -93,7 +94,7 @@ public final class VajramDefinition {
    * @param <T> The type of the metadata object
    */
   @SuppressWarnings("unchecked")
-  public <T> T getCustomMetadata(Class<T> clazz, Function<VajramDefinition, T> computer) {
+  public <T> T getCustomMetadata(Class<T> clazz, Function<VajramDefinition, @NonNull T> computer) {
     return (T) customMetadata.computeIfAbsent(clazz, _c -> computer.apply(this));
   }
 }

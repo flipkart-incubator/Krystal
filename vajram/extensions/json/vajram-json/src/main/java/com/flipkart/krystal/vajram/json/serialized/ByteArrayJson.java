@@ -6,6 +6,8 @@ import com.flipkart.krystal.vajram.json.array.JsonByteArray;
 import java.io.IOException;
 import java.io.InputStream;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class ByteArrayJson extends AbstractJsonRepresentation {
 
@@ -19,7 +21,7 @@ public final class ByteArrayJson extends AbstractJsonRepresentation {
   }
 
   @Override
-  public <T> T deserialize(ObjectReader reader) throws IOException {
+  public <T> @NonNull T deserialize(ObjectReader reader) throws IOException {
     if (data instanceof JsonByteArray jsonByteArray) {
       return jsonByteArray.readFromJson(reader);
     } else {
@@ -33,7 +35,7 @@ public final class ByteArrayJson extends AbstractJsonRepresentation {
   }
 
   @Override
-  public boolean equals(Object obj) {
+  public boolean equals(@Nullable Object obj) {
     if (obj == this) {
       return true;
     }
