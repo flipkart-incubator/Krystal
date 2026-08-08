@@ -10,7 +10,6 @@ import java.util.ServiceLoader;
 import java.util.function.Function;
 import org.apache.fory.ThreadSafeFory;
 import org.apache.fory.config.Language;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.checker.nullness.qual.PolyNull;
 
@@ -72,16 +71,16 @@ public final class Fory implements SerdeProtocol<NoAnnotation, SerializableModel
 
   @SuppressWarnings({"unchecked", "TypeParameterUnusedInFormals"})
   @Override
-  public <T> @PolyNull T deserialize(
-      @PolyNull Object payload, Object typeInfo, @Nullable NoAnnotation customConfig) {
+  public <T> @Nullable T deserialize(
+      @Nullable Object payload, Object typeInfo, @Nullable NoAnnotation customConfig) {
     if (payload == null) {
       return null;
     }
     if (typeInfo instanceof Class<?> clazz) {
       if (payload instanceof byte[] bytes) {
-        return (@NonNull T) FORY_INSTANCE.deserialize(bytes, clazz);
+        return (T) FORY_INSTANCE.deserialize(bytes, clazz);
       } else if (payload instanceof ByteArray byteArray) {
-        return (@NonNull T) FORY_INSTANCE.deserialize(byteArray.toArray(), clazz);
+        return (T) FORY_INSTANCE.deserialize(byteArray.toArray(), clazz);
       }
     }
     throw new UnsupportedOperationException(

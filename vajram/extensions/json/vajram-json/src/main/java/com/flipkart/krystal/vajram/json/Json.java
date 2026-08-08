@@ -100,35 +100,35 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
 
   @SuppressWarnings("unchecked")
   @Override
-  public <T> @PolyNull T deserialize(
-      @PolyNull Object payload, Object typeInfo, @Nullable JsonConfig customConfig) {
+  public <T> @Nullable T deserialize(
+      @Nullable Object payload, Object typeInfo, @Nullable JsonConfig customConfig) {
     if (typeInfo instanceof Class<?> clazz) {
       return (@NonNull T) deserialize(payload, clazz, customConfig);
     } else if (typeInfo instanceof Type type) {
       return deserialize(payload, type, customConfig);
     } else if (typeInfo instanceof TypeReference<?> typeRef) {
-      return (@NonNull T) deserialize(payload, typeRef, customConfig);
+      return (T) deserialize(payload, typeRef, customConfig);
     } else {
       throw new IllegalArgumentException("Unsupported typeInfo: " + typeInfo);
     }
   }
 
-  public <T> @PolyNull T deserialize(
-      @PolyNull Object payload, Class<? extends T> typeInfo, @Nullable JsonConfig customConfig) {
+  public <T> @Nullable T deserialize(
+      @Nullable Object payload, Class<? extends T> typeInfo, @Nullable JsonConfig customConfig) {
     return deserialize(payload, OBJECT_READER.forType(typeInfo));
   }
 
-  public <T> @PolyNull T deserialize(
-      @PolyNull Object payload, Type typeInfo, @Nullable JsonConfig customConfig) {
+  public <T> @Nullable T deserialize(
+      @Nullable Object payload, Type typeInfo, @Nullable JsonConfig customConfig) {
     return deserialize(payload, OBJECT_READER.forType(typeInfo));
   }
 
-  public <T> @PolyNull T deserialize(
-      @PolyNull Object payload, TypeReference<T> typeInfo, @Nullable JsonConfig customConfig) {
+  public <T> @Nullable T deserialize(
+      @Nullable Object payload, TypeReference<T> typeInfo, @Nullable JsonConfig customConfig) {
     return deserialize(payload, OBJECT_READER.forType(typeInfo));
   }
 
-  private static <T> @PolyNull T deserialize(@PolyNull Object payload, ObjectReader reader) {
+  private static <T> @Nullable T deserialize(@Nullable Object payload, ObjectReader reader) {
     if (payload == null) {
       return null;
     }

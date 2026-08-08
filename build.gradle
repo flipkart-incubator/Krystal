@@ -29,14 +29,8 @@ ext {
 // Load the gradle.private.properties file for dev-local settings
 def privateProperties = new Properties()
 def privatePropertiesFile = rootProject.file('gradle.private.properties')
-
 if (privatePropertiesFile.exists()) {
-    privateProperties.load(new FileInputStream(privatePropertiesFile))
-
-    // 2. Inject them into Gradle's extra properties
-    privateProperties.each { key, value ->
-        extensions.extraProperties.set(key, value)
-    }
+    new FileInputStream(privatePropertiesFile).withStream { stream -> privateProperties.load(stream) }
 }
 
 group = 'com.flipkart.krystal'
@@ -54,8 +48,7 @@ configure(subprojects.findAll {
     //Only leaf projects need publishing
     it.subprojects.isEmpty()
             //Exclude non java projects
-            && it.name != 'code-coverage-report'
-            && it.name != 'krystal-intellij-plugin'
+            && it.name != 'code-coverage-report' && it.name != 'krystal-intellij-plugin'
             // Exclude sample projects so that they are configured independently making
             // them a better representation of how clients should use krystal
             && !it.name.contains('sample')
@@ -131,6 +124,10 @@ configure(subprojects.findAll {
             required { System.getenv("CI") != null }
         }
     }
+}
+
+subprojects {
+    privateProperties.each { key, value -> project.extensions.extraProperties.set(key.toString(), value) }
 }
 
 configure(subprojects.findAll {

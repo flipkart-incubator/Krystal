@@ -7,7 +7,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class BytesJson extends AbstractJsonRepresentation {
@@ -30,7 +29,7 @@ public final class BytesJson extends AbstractJsonRepresentation {
   }
 
   @Override
-  public <T> @NonNull T deserialize(ObjectReader reader) throws IOException {
+  public <T> T deserialize(ObjectReader reader) throws IOException {
     return reader.readValue(data, start, length);
   }
 

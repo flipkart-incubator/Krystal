@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import com.flipkart.krystal.vajram.json.Json;
 import java.io.IOException;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 public final class NodeJson extends AbstractJsonRepresentation {
 
@@ -22,7 +21,7 @@ public final class NodeJson extends AbstractJsonRepresentation {
   }
 
   @Override
-  public <T> @NonNull T deserialize(ObjectReader reader) throws IOException {
+  public <T> T deserialize(ObjectReader reader) throws IOException {
     return reader.readValue(jsonNode);
   }
 

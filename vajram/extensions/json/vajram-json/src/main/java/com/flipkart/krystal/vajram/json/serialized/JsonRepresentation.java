@@ -5,10 +5,9 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import com.flipkart.krystal.model.array.ByteArray;
 import java.io.IOException;
 import java.io.InputStream;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 public sealed interface JsonRepresentation permits AbstractJsonRepresentation {
-  <T> @NonNull T deserialize(ObjectReader reader) throws IOException;
+  <T> T deserialize(ObjectReader reader) throws IOException;
 
   InputStream newInputStream();
 
