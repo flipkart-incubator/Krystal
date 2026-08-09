@@ -353,7 +353,8 @@ final class ForyModelsGen implements CodeGenerator {
                     : new $T($L)
             """,
             fieldName,
-            fieldModelRootInfo.get().annotation().builderExtendsModelRoot()
+            fieldModelRootInfo.isPresent()
+                    && fieldModelRootInfo.get().annotation().builderExtendsModelRoot()
                 ? CodeBlock.of(
                     ": $L instanceof $T _foryBuilder ? _foryBuilder._build()",
                     fieldName,
@@ -382,6 +383,7 @@ final class ForyModelsGen implements CodeGenerator {
         switch (fieldModelRootInfo.get().containerType()) {
           case LIST -> fieldBuilder.initializer("$T.empty()", ModelsListBuilder.class);
           case MAP -> fieldBuilder.initializer("$T.empty()", ModelsMapBuilder.class);
+          default -> {} // No op
         }
       }
       fields.add(fieldBuilder.build());

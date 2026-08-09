@@ -66,6 +66,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.function.Function;
@@ -211,8 +212,12 @@ public class VajramCodeGenUtility {
     if (vajramInfoLite.isVajram()) {
       // All vajrams must have a parent class
       parentClassName =
-          ((QualifiedNameable)
-                  codegenUtil.processingEnv().getTypeUtils().asElement(vajramClass.getSuperclass()))
+          requireNonNull(
+                  ((QualifiedNameable)
+                      codegenUtil
+                          .processingEnv()
+                          .getTypeUtils()
+                          .asElement(vajramClass.getSuperclass())))
               .getQualifiedName()
               .toString();
     }
@@ -497,6 +502,7 @@ public class VajramCodeGenUtility {
         vajramOrReqClass.getTypeParameters().stream()
             .map(TypeParameterElement::asType)
             .map(TypeVariable.class::cast)
+            .map(Objects::requireNonNull)
             .map(TypeVariable::getUpperBound)
             .toList());
   }
@@ -541,7 +547,7 @@ public class VajramCodeGenUtility {
               new DeclaredTypeVisitor(codegenUtil, vajramOrReqClass, DISALLOWED_FACET_TYPES), null);
       TypeElement inputsElement = getInputsClass(vajramOrReqClass).orElse(null);
       Element externalInputsElement = getExternalInputsElement(inputsElement);
-      if (externalInputsElement != null) {
+      if (inputsElement != null && externalInputsElement != null) {
         requestPackageName =
             validateExternalInputsAndGetPackage(
                     externalInputsElement, vajramId, inputsElement, responseTypeMirror)
@@ -646,6 +652,7 @@ public class VajramCodeGenUtility {
         vajramClass.getTypeParameters().stream()
             .map(TypeParameterElement::asType)
             .map(TypeVariable.class::cast)
+            .map(Objects::requireNonNull)
             .map(TypeVariable::getUpperBound)
             .toList());
   }
@@ -845,7 +852,9 @@ public class VajramCodeGenUtility {
         interfaces.stream()
             .map(typeUtils::asElement)
             .filter(TypeElement.class::isInstance)
+            .map(Objects::requireNonNull)
             .map(TypeElement.class::cast)
+            .map(Objects::requireNonNull)
             .filter(element -> element.getAnnotation(InputsForVajram.class) != null)
             .toList();
     if (externalInputsElements.size() > 1) {

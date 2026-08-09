@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Default implementation of {@link GraphQLErrorInfo} that builds a GraphQL-compliant error map.
@@ -15,7 +16,7 @@ public final class DefaultGraphQLErrorInfo implements GraphQLErrorInfo {
 
   private final List<String> messages = new ArrayList<>();
   private final List<Object> path;
-  private final Throwable throwable;
+  private final @Nullable Throwable throwable;
 
   /**
    * Creates a new error info with the given path and throwable.

@@ -42,6 +42,7 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -64,6 +65,7 @@ public class DopantBindingsProvider implements BindingsProvider {
         context.latticeAppTypeElement().getEnclosedElements().stream()
             .filter(e -> e instanceof ExecutableElement)
             .map(ExecutableElement.class::cast)
+            .map(Objects::requireNonNull)
             .filter(e -> e.getAnnotation(DopeWith.class) != null)
             .toList();
     for (ExecutableElement dopingMethod : dopingMethods) {
@@ -79,25 +81,28 @@ public class DopantBindingsProvider implements BindingsProvider {
       ProcessingEnvironment processingEnv = context.codeGenUtility().codegenUtil().processingEnv();
       TypeMirror dopantSpecBuilderType = dopingMethod.getReturnType();
       TypeElement dopantSpecBuilderElem =
-          (TypeElement) processingEnv.getTypeUtils().asElement(dopantSpecBuilderType);
+          (TypeElement)
+              requireNonNull(processingEnv.getTypeUtils().asElement(dopantSpecBuilderType));
       ImmutableList<TypeMirror> typeParamTypes =
           context
               .codeGenUtility()
               .codegenUtil()
               .getTypeParamTypes(
                   dopantSpecBuilderElem,
-                  processingEnv
-                      .getElementUtils()
-                      .getTypeElement(requireNonNull(DopantSpecBuilder.class.getCanonicalName())));
+                  requireNonNull(
+                      processingEnv
+                          .getElementUtils()
+                          .getTypeElement(
+                              requireNonNull(DopantSpecBuilder.class.getCanonicalName()))));
       TypeMirror dopantAnnoType = typeParamTypes.get(0);
       TypeElement dopantAnnoElement =
-          (TypeElement) processingEnv.getTypeUtils().asElement(dopantAnnoType);
+          (TypeElement) requireNonNull(processingEnv.getTypeUtils().asElement(dopantAnnoType));
       TypeMirror dopantConfigType = typeParamTypes.get(1);
       TypeElement dopantConfigElement =
-          (TypeElement) processingEnv.getTypeUtils().asElement(dopantConfigType);
+          (TypeElement) requireNonNull(processingEnv.getTypeUtils().asElement(dopantConfigType));
       TypeMirror dopantSpecType = typeParamTypes.get(2);
       TypeElement dopantSpecElement =
-          (TypeElement) processingEnv.getTypeUtils().asElement(dopantSpecType);
+          (TypeElement) requireNonNull(processingEnv.getTypeUtils().asElement(dopantSpecType));
 
       TypeMirror dopantTypeMirror =
           context
@@ -105,12 +110,13 @@ public class DopantBindingsProvider implements BindingsProvider {
               .codegenUtil()
               .getTypeParamTypes(
                   dopantSpecElement,
-                  processingEnv
-                      .getElementUtils()
-                      .getTypeElement(requireNonNull(DopantSpec.class.getCanonicalName())))
+                  requireNonNull(
+                      processingEnv
+                          .getElementUtils()
+                          .getTypeElement(requireNonNull(DopantSpec.class.getCanonicalName()))))
               .get(2);
       TypeElement dopantElement =
-          (TypeElement) processingEnv.getTypeUtils().asElement(dopantTypeMirror);
+          (TypeElement) requireNonNull(processingEnv.getTypeUtils().asElement(dopantTypeMirror));
       DopantType dopantType = dopantElement.getAnnotation(DopantType.class);
       if (dopantType == null) {
         context
@@ -145,6 +151,7 @@ public class DopantBindingsProvider implements BindingsProvider {
       dopantSpecTypeElement.getEnclosedElements().stream()
           .filter(e -> e instanceof ExecutableElement)
           .map(ExecutableElement.class::cast)
+          .map(Objects::requireNonNull)
           .forEach(
               method -> {
                 List<? extends VariableElement> autoConfigurables =
@@ -432,6 +439,7 @@ public class DopantBindingsProvider implements BindingsProvider {
       dopantElem.getEnclosedElements().stream()
           .filter(element -> element instanceof ExecutableElement)
           .map(ExecutableElement.class::cast)
+          .map(Objects::requireNonNull)
           .filter(element -> element.getAnnotation(Produces.class) != null)
           .filter(element -> element.getReturnType().getKind() != TypeKind.VOID)
           .forEach(
@@ -512,7 +520,8 @@ public class DopantBindingsProvider implements BindingsProvider {
   }
 
   private String variableName(TypeMirror typeMirror, ProcessingEnvironment processingEnv) {
-    TypeElement element = (TypeElement) processingEnv.getTypeUtils().asElement(typeMirror);
+    TypeElement element =
+        (TypeElement) requireNonNull(processingEnv.getTypeUtils().asElement(typeMirror));
     return lowerCaseFirstChar(element.getSimpleName().toString());
   }
 

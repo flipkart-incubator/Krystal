@@ -14,16 +14,18 @@ import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import java.io.Closeable;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
 @Singleton
 public final class CdiFramework implements DependencyInjectionFramework {
 
-  private final CDI<Object> currentCDI;
+  private final CDI<@Nullable Object> currentCDI;
 
   @Inject
   public CdiFramework() {
-    currentCDI = CDI.current();
+    //noinspection RedundantCast - Needed for Checkerframework
+    currentCDI = (CDI<@Nullable Object>) CDI.current();
   }
 
   @Override
@@ -46,7 +48,7 @@ public final class CdiFramework implements DependencyInjectionFramework {
     return new InjectionValueProvider() {
       @Override
       public <T> Errable<T> getInstance(Class<T> clazz) {
-        return errableFrom(() -> currentCDI.select(clazz).get());
+        return errableFrom(() -> currentCDI.<T>select(clazz).get());
       }
     };
   }

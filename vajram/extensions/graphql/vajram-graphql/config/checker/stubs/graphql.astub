@@ -1,0 +1,9 @@
+import org.checkerframework.checker.nullness.qual.Nullable;
+
+package graphql;
+
+interface GraphQLError {
+  @Nullable List<Object> getPath();
+
+  @Nullable Map<String, Object> getExtensions();
+}

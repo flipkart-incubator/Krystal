@@ -72,10 +72,7 @@ public final class Fory implements SerdeProtocol<NoAnnotation, SerializableModel
   @SuppressWarnings({"unchecked", "TypeParameterUnusedInFormals"})
   @Override
   public <T> @Nullable T deserialize(
-      @Nullable Object payload, Object typeInfo, @Nullable NoAnnotation customConfig) {
-    if (payload == null) {
-      return null;
-    }
+      Object payload, Object typeInfo, @Nullable NoAnnotation customConfig) {
     if (typeInfo instanceof Class<?> clazz) {
       if (payload instanceof byte[] bytes) {
         return (T) FORY_INSTANCE.deserialize(bytes, clazz);

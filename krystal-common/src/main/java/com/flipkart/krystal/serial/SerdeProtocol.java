@@ -59,5 +59,5 @@ public interface SerdeProtocol<A extends Annotation, T extends SerializableModel
    * @param customConfig custom configuration on how to deserialize
    * @return the deserialized object
    */
-  <T> @Nullable T deserialize(@Nullable Object payload, Object typeInfo, @Nullable A customConfig);
+  <T> @Nullable T deserialize(Object payload, Object typeInfo, @Nullable A customConfig);
 }

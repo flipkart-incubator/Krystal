@@ -84,11 +84,8 @@ public interface ProtobufProtocol extends SerdeProtocol<NoAnnotation, Serializab
    */
   @SuppressWarnings("unchecked")
   @Override
-  default <T> @PolyNull T deserialize(
-      @PolyNull Object payload, Object typeInfo, @Nullable NoAnnotation customConfig) {
-    if (payload == null) {
-      return null;
-    }
+  default <T> @NonNull T deserialize(
+      Object payload, Object typeInfo, @Nullable NoAnnotation customConfig) {
     try {
       if (typeInfo instanceof Parser<?> parser) {
         if (payload instanceof byte[] bytes) {

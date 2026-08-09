@@ -13,16 +13,19 @@ import jakarta.inject.Inject;
 import jakarta.inject.Provider;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
 public class VajramGuiceInputInjector implements VajramInjectionProvider {
 
   private final Injector injector;
-  private final Map<VajramID, Map<String, Provider<?>>> providerCache = new LinkedHashMap<>();
+  private final Map<VajramID, Map<String, Provider<? extends @Nullable Object>>> providerCache =
+      new LinkedHashMap<>();
 
   @Inject
   public VajramGuiceInputInjector(Injector injector) {
@@ -30,13 +33,13 @@ public class VajramGuiceInputInjector implements VajramInjectionProvider {
   }
 
   @Override
-  public <T> Provider<T> get(VajramID vajramID, FacetSpec<T, ?> facetDef) {
+  public <T> Provider<@Nullable T> get(VajramID vajramID, FacetSpec<T, ?> facetDef) {
     if (!INJECTION.equals(facetDef.facetType())) {
       return () -> null;
     }
     @SuppressWarnings("unchecked")
-    Provider<T> provider =
-        (Provider<T>)
+    Provider<@Nullable T> provider =
+        (Provider<@Nullable T>)
             providerCache
                 .computeIfAbsent(vajramID, _v -> new LinkedHashMap<>())
                 .computeIfAbsent(
@@ -68,7 +71,7 @@ public class VajramGuiceInputInjector implements VajramInjectionProvider {
       throw new IllegalStateException(
           ("More than one @jakarta.inject.Qualifier annotations (%s) found on input '%s' of vajram '%s'."
                   + " This is not allowed")
-              .formatted(qualifierAnnotations, facetDef.name(), vajramID));
+              .formatted(Arrays.toString(qualifierAnnotations), facetDef.name(), vajramID));
     }
   }
 }

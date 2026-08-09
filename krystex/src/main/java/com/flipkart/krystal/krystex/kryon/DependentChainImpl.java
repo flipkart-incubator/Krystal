@@ -13,6 +13,7 @@ final class DependentChainImpl extends AbstractDependentChainBase<DependentChain
     super(vajramID, latestDependency, incomingDependentChain);
   }
 
+  @Override
   protected DependentChain _extend(VajramID vajramID, Dependency dependency) {
     return new DependentChainImpl(vajramID, dependency, this);
   }

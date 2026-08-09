@@ -101,7 +101,7 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
   @SuppressWarnings("unchecked")
   @Override
   public <T> @Nullable T deserialize(
-      @Nullable Object payload, Object typeInfo, @Nullable JsonConfig customConfig) {
+      Object payload, Object typeInfo, @Nullable JsonConfig customConfig) {
     if (typeInfo instanceof Class<?> clazz) {
       return (@NonNull T) deserialize(payload, clazz, customConfig);
     } else if (typeInfo instanceof Type type) {
@@ -180,7 +180,8 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
     primitiveArrayModule
         .addAbstractTypeMapping(FloatArray.class, SimpleFloatArray.class)
         .addSerializer(FloatArray.class, new FloatArraySerializer())
-        .addDeserializer(SimpleFloatArray.class, new FloatArrayDeserializer());
+        .<@Nullable SimpleFloatArray>addDeserializer(
+            SimpleFloatArray.class, new FloatArrayDeserializer());
 
     return primitiveArrayModule;
   }

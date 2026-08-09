@@ -17,7 +17,7 @@ ext {
 }
 
 group 'com.flipkart.java.code.standard'
-version '5.9'
+version '6.0'
 
 gradlePlugin {
     plugins {
@@ -31,7 +31,7 @@ gradlePlugin {
 dependencies {
     implementation 'org.checkerframework:checkerframework-gradle-plugin:0.6.61'
     implementation 'com.diffplug.spotless:spotless-plugin-gradle:8.0.0'
-    implementation 'net.ltgt.gradle:gradle-errorprone-plugin:4.3.0'
+    implementation 'net.ltgt.gradle:gradle-errorprone-plugin:5.1.0'
 }
 
 publishing {
