@@ -267,6 +267,7 @@ configure(subprojects.findAll {
         module('gradle-api-8.14.5.jar', 'gradle.api')
         module('gradle-installation-beacon-8.14.5.jar', 'gradle.installation.beacon')
         module('gradle-test-kit-8.14.5.jar', 'gradle.test.kit')
+        module('jsr305-3.0.2.jar', 'com.google.code.findbugs.jsr305')
 
         module('aopalliance:aopalliance', 'aopalliance')
         module('ch.qos.reload4j:reload4j', 'ch.qos.reload4j')
@@ -275,7 +276,7 @@ configure(subprojects.findAll {
         module('com.google.auto.value:auto-value', 'com.google.auto.value')
         module('com.google.auto.value:auto-value-annotations', 'com.google.auto.value.annotations')
         module('com.google.auto:auto-common', 'com.google.auto.common')
-        module('com.google.code.findbugs:jsr305', 'com.google.code.findbugs.jsr305')
+//        module('com.google.code.findbugs:jsr305', 'com.google.code.findbugs.jsr305')
         module('javax.cache:cache-api', 'javax.cache.api')
         module('javax.inject:javax.inject', 'javax.inject')
         module('org.abego.treelayout:org.abego.treelayout.core', 'org.abego.treelayout.core')

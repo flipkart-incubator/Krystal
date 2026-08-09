@@ -83,6 +83,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.calledmethods.qual.CalledMethods;
 import org.checkerframework.checker.initialization.qual.Initialized;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -162,7 +163,8 @@ public final class VajramKryonExecutor implements KrystalExecutor {
   private boolean shutdownRequested;
 
   public VajramKryonExecutor(
-      KrystexGraph krystexGraph, KrystalExecutorConfigBuilder executorConfigBuilder) {
+      KrystexGraph krystexGraph,
+      @CalledMethods("executorService") KrystalExecutorConfigBuilder executorConfigBuilder) {
     this.executorConfig = executorConfigBuilder.build();
     this.kryonDefinitionRegistry = krystexGraph.vajramGraph().kryonDefinitionRegistry();
     this.krystexGraph = krystexGraph;
@@ -233,7 +235,8 @@ public final class VajramKryonExecutor implements KrystalExecutor {
               Sets.filter(
                   depChainsForVajram,
                   depChain -> {
-                    if (!invokedVajrams.contains(depChain.getFirstVajram())) {
+                    VajramID firstVajram = depChain.getFirstVajram();
+                    if (firstVajram != null && !invokedVajrams.contains(firstVajram)) {
                       return false;
                     }
                     for (DependentChain disabledDepChain : disabledDependentChainsForExecutor()) {
@@ -601,6 +604,7 @@ public final class VajramKryonExecutor implements KrystalExecutor {
         });
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   private void submitDirect(Collection<KryonExecution<?>> allExecutions) {
     Map<VajramID, List<KryonExecution<?>>> executionsByKryon = new HashMap<>();
     for (KryonExecution<?> anExecution : allExecutions) {
@@ -797,11 +801,11 @@ public final class VajramKryonExecutor implements KrystalExecutor {
       RequestResponseFuture<? extends Request<T>, T> requestResponseFuture,
       VajramExecutionConfig executionConfig) {
 
-    public CompletableFuture<@Nullable Object> response() {
+    private CompletableFuture<@Nullable Object> response() {
       return (CompletableFuture<@Nullable Object>) requestResponseFuture().response();
     }
 
-    public Request<Object> request() {
+    private Request<Object> request() {
       return (Request<Object>) requestResponseFuture().request();
     }
   }

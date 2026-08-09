@@ -58,11 +58,16 @@ public interface GraphQlOperationObject extends GraphQlObject {
     if (this instanceof GraphQlOperationError operationError) {
       return operationError.executionResult();
     }
-    return ExecutionResult.newExecutionResult()
-        .data(this._build())
-        .errors(_errors())
-        .extensions(_extensions())
-        .build();
+    ExecutionResult.Builder<?> builder = ExecutionResult.newExecutionResult().data(this._build());
+    List<GraphQLError> errors = _errors();
+    if (errors != null) {
+      builder.errors(errors);
+    }
+    Map<Object, Object> extensions = _extensions();
+    if (extensions != null) {
+      builder.extensions(extensions);
+    }
+    return builder.build();
   }
 
   // TODO: Delete

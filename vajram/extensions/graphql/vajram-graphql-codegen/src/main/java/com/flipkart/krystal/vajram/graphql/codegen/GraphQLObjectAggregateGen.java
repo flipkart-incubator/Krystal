@@ -217,7 +217,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
         TypeSpec.interfaceBuilder(_INTERNAL_FACETS_CLASS).addModifiers(STATIC);
 
     Map<Fetcher, List<GraphQlFieldSpec>> fetcherToFields =
-        schemaReaderUtil.typeToFetcherToFields().get(typeName);
+        schemaReaderUtil.typeToFetcherToFields().getOrDefault(typeName, Map.of());
     for (Entry<Fetcher, List<GraphQlFieldSpec>> entry : fetcherToFields.entrySet()) {
       if (entry.getKey() instanceof VajramFetcher fetcher) {
         List<GraphQlFieldSpec> fields = entry.getValue();
@@ -234,7 +234,10 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
     }
 
     for (Entry<GraphQlFieldSpec, ClassName> fieldToTypeAggregator :
-        schemaReaderUtil.entityTypeToFieldToTypeAggregator().get(typeName).entrySet()) {
+        schemaReaderUtil
+            .entityTypeToFieldToTypeAggregator()
+            .getOrDefault(typeName, Map.of())
+            .entrySet()) {
       GraphQlFieldSpec fieldSpec = fieldToTypeAggregator.getKey();
       ClassName typeAggregatorClassName = fieldToTypeAggregator.getValue();
 
@@ -499,7 +502,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
 
     schemaReaderUtil
         .typeToFetcherToFields()
-        .get(entityType)
+        .getOrDefault(entityType, Map.of())
         .forEach(
             (fetcher, fields) -> {
               if (fetcher instanceof VajramFetcher vajramFetcher) {
@@ -510,11 +513,14 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
 
     schemaReaderUtil
         .entityTypeToFieldToTypeAggregator()
-        .get(entityType)
+        .getOrDefault(entityType, Map.of())
         .forEach(
             (field, typeAggregatorClass) -> {
               @Nullable Fetcher fetcher =
-                  schemaReaderUtil.entityTypeToFieldToFetcher().get(entityType).get(field);
+                  schemaReaderUtil
+                      .entityTypeToFieldToFetcher()
+                      .getOrDefault(entityType, Map.of())
+                      .get(field);
               if (fetcher != null) {
                 methodSpecList.add(
                     createTypeAggregatorInputResolver(

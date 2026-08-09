@@ -50,6 +50,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.calledmethods.qual.CalledMethods;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -130,7 +131,8 @@ public final class KrystexGraph {
             this.externallyInvocableVajramIds);
   }
 
-  public VajramKryonExecutor createExecutor(KrystalExecutorConfigBuilder vajramExecConfig) {
+  public VajramKryonExecutor createExecutor(
+      @CalledMethods("executorService") KrystalExecutorConfigBuilder vajramExecConfig) {
     KrystalExecutorConfigBuilder executorConfigBuilder =
         vajramExecConfig.configureWith(inputBatchingConfig).configureWith(injectionConfig);
     if (traitDispatchDecorator != null) {

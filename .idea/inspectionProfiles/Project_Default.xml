@@ -515,6 +515,7 @@
           <option value="contracts.conditional.postcondition" />
           <option value="contracts.postcondition" />
           <option value="type.argument" />
+          <option value="JdkObsolete" />
         </list>
       </option>
     </inspection_tool>

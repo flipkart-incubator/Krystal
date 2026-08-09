@@ -1,6 +1,7 @@
 package com.flipkart.krystal.krystex.commands;
 
 import static com.flipkart.krystal.except.KrystalCompletionException.wrapAsCompletionException;
+import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.core.VajramID;
@@ -11,8 +12,8 @@ import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
 import com.flipkart.krystal.krystex.kryon.KryonUtils;
 import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import lombok.ToString;
@@ -70,26 +71,25 @@ public final class DirectForwardCommand implements DirectForwardSend, DirectForw
     }
   }
 
+  @Override
   public List<ExecutionItem> executionItems(KryonDefinitionRegistry kryonDefinitionRegistry) {
     if (executionItems == null) {
       VajramKryonDefinition vajramKryonDefinition =
           KryonUtils.validateAsVajram(kryonDefinitionRegistry.getOrThrow(vajramID()));
-      executionItems =
-          ImmutableList.copyOf(
-              Lists.transform(
-                  executableRequests,
-                  executableRequest -> {
-                    @SuppressWarnings("unchecked")
-                    CompletableFuture<@Nullable Object> response =
-                        (CompletableFuture<@Nullable Object>)
-                            requireNonNull(executableRequest).response();
-                    return new ExecutionItem(
-                        vajramKryonDefinition
-                            .facetsFromRequest()
-                            .logic()
-                            .facetsFromRequest(executableRequest.request()),
-                        response);
-                  }));
+      List<ExecutionItem> items = new ArrayList<>(executableRequests.size());
+      for (RequestResponseFuture<? extends Request<?>, ?> executableRequest : executableRequests) {
+        @SuppressWarnings("unchecked")
+        CompletableFuture<@Nullable Object> response =
+            (CompletableFuture<@Nullable Object>) requireNonNull(executableRequest).response();
+        items.add(
+            new ExecutionItem(
+                vajramKryonDefinition
+                    .facetsFromRequest()
+                    .logic()
+                    .facetsFromRequest(executableRequest.request()),
+                response));
+      }
+      executionItems = unmodifiableList(items);
     }
     return executionItems;
   }
@@ -99,6 +99,7 @@ public final class DirectForwardCommand implements DirectForwardSend, DirectForw
     return vajramID;
   }
 
+  @Override
   public List<? extends RequestResponseFuture<? extends Request<?>, ?>> executableRequests() {
     return executableRequests;
   }

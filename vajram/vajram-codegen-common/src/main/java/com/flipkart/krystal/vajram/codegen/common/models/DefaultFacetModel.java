@@ -4,7 +4,6 @@ import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.FacetType;
 import com.google.common.collect.ImmutableSet;
-import java.util.EnumSet;
 import javax.lang.model.element.Element;
 import lombok.Builder;
 import lombok.NonNull;
@@ -28,7 +27,7 @@ public record DefaultFacetModel(
     implements FacetGenModel {
 
   private static final ImmutableSet<FacetType> ALLOWED_FACET_TYPES =
-      ImmutableSet.copyOf(EnumSet.of(FacetType.INPUT, FacetType.INJECTION));
+      ImmutableSet.of(FacetType.INPUT, FacetType.INJECTION);
 
   public DefaultFacetModel {
     if (!ALLOWED_FACET_TYPES.contains(facetType)) {

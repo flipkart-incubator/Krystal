@@ -36,7 +36,6 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.SimpleAnnotationValueVisitor14;
 import javax.tools.Diagnostic.Kind;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 /**
  * Code generator which generates the protobuf schema describing a grpc service. Detects which
@@ -82,7 +81,7 @@ class ProtoServiceSchemaGen implements CodeGenerator {
   }
 
   /** Validates the Vajram for protobuf compatibility. Throws exceptions if validations fail. */
-  void validate(@MonotonicNonNull AnnotationInfo<GrpcServer> anno) throws CodeValidationException {
+  void validate(AnnotationInfo<GrpcServer> anno) throws CodeValidationException {
     Map<String, ? extends AnnotationValue> elementValues =
         anno.mirror().getElementValues().entrySet().stream()
             .collect(Collectors.toMap(e -> e.getKey().getSimpleName().toString(), Entry::getValue));

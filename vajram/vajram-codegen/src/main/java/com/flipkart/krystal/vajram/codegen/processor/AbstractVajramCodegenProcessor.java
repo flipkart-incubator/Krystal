@@ -28,6 +28,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 abstract sealed class AbstractVajramCodegenProcessor extends AbstractKrystalAnnoProcessor
     permits VajramModelGenProcessor, VajramWrapperGenProcessor {
 
+  @SuppressWarnings("JdkObsolete") // Need support for removal
   private final List<TypeElement> vajramDefinitions = new LinkedList<>();
 
   public AbstractVajramCodegenProcessor() {}
@@ -55,13 +56,11 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractKrystalAnno
                 VajramCodeGeneratorProvider.class, this.getClass().getClassLoader()));
 
     List<Failure> failures = new ArrayList<>();
-    List<VajramInfo> vajramInfos = new ArrayList<>();
     Iterator<TypeElement> iterator = vajramDefinitions.iterator();
     while (iterator.hasNext()) {
       TypeElement vajramDefinition = iterator.next();
       try {
         VajramInfo vajramInfo = util.computeVajramInfo(vajramDefinition);
-        vajramInfos.add(vajramInfo);
         VajramCodeGenContext creationContext =
             new VajramCodeGenContext(vajramInfo, util, codegenPhase());
         for (VajramCodeGeneratorProvider customCodeGeneratorProvider :

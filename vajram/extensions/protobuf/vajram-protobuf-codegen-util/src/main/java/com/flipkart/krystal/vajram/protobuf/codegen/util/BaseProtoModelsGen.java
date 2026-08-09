@@ -191,7 +191,7 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
   private ClassName getProtoUtilsClassName(TypeElement enumElement) {
     return ClassName.get(
         util.getCodegenPackageName(enumElement),
-        enumElement.getSimpleName().toString() + config.utilsSuffix());
+        enumElement.getSimpleName() + config.utilsSuffix());
   }
 
   private TypeSpec generateImplementationTypeSpec(
@@ -550,7 +550,7 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
         TypeMirror listElemType = util.getContentType(method.getReturnType());
         if (listElemType != null && util.isEnumModelType(listElemType)) {
           TypeElement enumElement =
-              (TypeElement) processingEnv.getTypeUtils().asElement(listElemType);
+              (TypeElement) requireNonNull(processingEnv.getTypeUtils().asElement(listElemType));
           getterBuilder.addStatement(
               "return $T.transform(_proto().get$LList(), $T::protoToJava)",
               Lists.class,
@@ -611,7 +611,7 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
         TypeMirror mapValueType = util.getMapValueType(method.getReturnType());
         if (mapValueType != null && util.isEnumModelType(mapValueType)) {
           TypeElement enumElement =
-              (TypeElement) processingEnv.getTypeUtils().asElement(mapValueType);
+              (TypeElement) requireNonNull(processingEnv.getTypeUtils().asElement(mapValueType));
           getterBuilder.addStatement(
               "return $T.transformValues(_proto().get$LMap(), $T::protoToJava)",
               Maps.class,
@@ -680,7 +680,8 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
 
     CodeBlock creatorCode;
     if (util.isEnumModelType(rawReturnType)) {
-      TypeElement enumElement = (TypeElement) processingEnv.getTypeUtils().asElement(rawReturnType);
+      TypeElement enumElement =
+          (TypeElement) requireNonNull(processingEnv.getTypeUtils().asElement(rawReturnType));
       creatorCode =
           CodeBlock.of(
               "$T.protoToJava(_proto().get$L())",
@@ -813,7 +814,7 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
           TypeMirror contentType = util.getContentType(returnType);
           if (contentType != null && util.isEnumModelType(contentType)) {
             TypeElement enumElement =
-                (TypeElement) processingEnv.getTypeUtils().asElement(contentType);
+                (TypeElement) requireNonNull(processingEnv.getTypeUtils().asElement(contentType));
             addAllArg =
                 CodeBlock.of(
                     "\n          $T.transform($L, $T::javaToProto)\n",
@@ -919,7 +920,7 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
               util.isOptional(returnType) ? util.getOptionalInnerType(returnType) : returnType;
           if (util.isEnumModelType(rawSetterType)) {
             TypeElement enumElement =
-                (TypeElement) processingEnv.getTypeUtils().asElement(rawSetterType);
+                (TypeElement) requireNonNull(processingEnv.getTypeUtils().asElement(rawSetterType));
             setterBuilder.addStatement(
                 "_proto.set$L($T.javaToProto($L))",
                 capitalizeFirstChar(fieldName),

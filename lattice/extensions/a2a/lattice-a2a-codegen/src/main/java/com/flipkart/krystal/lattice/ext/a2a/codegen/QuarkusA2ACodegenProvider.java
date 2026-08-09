@@ -35,6 +35,7 @@ import org.a2aproject.sdk.server.agentexecution.RequestContext;
 import org.a2aproject.sdk.server.tasks.AgentEmitter;
 import org.a2aproject.sdk.spec.A2AError;
 import org.a2aproject.sdk.spec.TextPart;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Generates a Quarkus CDI bean that implements {@link AgentExecutor} by routing A2A task execution
@@ -329,7 +330,7 @@ public class QuarkusA2ACodegenProvider implements LatticeCodeGeneratorProvider {
     return builder.build();
   }
 
-  private static String resolveContextExpression(String facetName, boolean isCanceller) {
+  private static @Nullable String resolveContextExpression(String facetName, boolean isCanceller) {
     return switch (facetName) {
       case "userInput", "input", "message", "text" -> isCanceller ? null : "getUserInput()";
       case "taskId" -> "getTaskId()";
