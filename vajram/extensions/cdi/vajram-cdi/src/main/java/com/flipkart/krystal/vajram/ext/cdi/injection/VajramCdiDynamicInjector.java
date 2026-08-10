@@ -16,6 +16,7 @@ import jakarta.inject.Provider;
 import java.lang.reflect.Type;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class VajramCdiDynamicInjector implements VajramInjectionProvider {
 
@@ -27,13 +28,13 @@ public class VajramCdiDynamicInjector implements VajramInjectionProvider {
   }
 
   @Override
-  public <T> Provider<T> get(VajramID vajramID, FacetSpec<T, ?> facetDef) {
+  public <T> Provider<@Nullable T> get(VajramID vajramID, FacetSpec<T, ?> facetDef) {
     if (!INJECTION.equals(facetDef.facetType())) {
       throw new IllegalArgumentException("Facet type of %s is not INJECTION".formatted(facetDef));
     }
     @SuppressWarnings("unchecked")
-    Provider<T> provider =
-        (Provider<T>)
+    Provider<@Nullable T> provider =
+        (Provider<@Nullable T>)
             providerCache
                 .computeIfAbsent(vajramID, _v -> new LinkedHashMap<>())
                 .computeIfAbsent(

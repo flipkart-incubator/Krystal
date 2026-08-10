@@ -36,7 +36,7 @@ class FkJavaCodeStandardPlugin implements Plugin<Project> {
     }
 
     private static checkerFramework(Project project) {
-        def checker_version = '3.52.0'
+        def checker_version = '4.2.2'
         project.pluginManager.apply('org.checkerframework')
         CheckerFrameworkExtension checkerFramework = project.extensions.findByType(CheckerFrameworkExtension)
 
@@ -44,9 +44,14 @@ class FkJavaCodeStandardPlugin implements Plugin<Project> {
             checkerFramework.skipCheckerFramework = true
         }
 
-        checkerFramework.checkers = ["org.checkerframework.checker.nullness.NullnessChecker",
-                                     "org.checkerframework.checker.calledmethods.CalledMethodsChecker",
-                                     "org.checkerframework.checker.optional.OptionalChecker",]
+        checkerFramework.checkers = [
+                'org.checkerframework.checker.nullness.NullnessChecker',
+                "org.checkerframework.checker.calledmethods.CalledMethodsChecker",
+                //Enabling OptionalChecker is causing errors like:
+                // error: cannot access UnknownNonEmpty
+                // error: cannot access NonEmpty
+//                'org.checkerframework.checker.optional.OptionalChecker',
+        ]
 
         def rootStubsDir = "${project.rootDir}/config/checker/stubs"
         def projectStubsDir = "${project.projectDir}/config/checker/stubs"
@@ -109,15 +114,18 @@ class FkJavaCodeStandardPlugin implements Plugin<Project> {
     }
 
     private static errorProne(Project project) {
-        project.dependencies.add('annotationProcessor', 'com.google.errorprone:error_prone_core:2.38.0')
-        project.dependencies.add('annotationProcessor', 'com.google.errorprone:error_prone_check_api:2.38.0')
-        project.dependencies.add('annotationProcessor', 'com.google.errorprone:error_prone_annotation:2.38.0')
-        project.dependencies.add('annotationProcessor', 'com.google.errorprone:error_prone_annotations:2.38.0')
-        project.dependencies.add('annotationProcessor', 'com.google.errorprone:error_prone_type_annotations:2.38.0')
+        def errorProneVersion = '2.42.0'
+
+        project.dependencies.add('annotationProcessor', "com.google.errorprone:error_prone_core:$errorProneVersion")
+        project.dependencies.add('annotationProcessor', "com.google.errorprone:error_prone_check_api:$errorProneVersion")
+        project.dependencies.add('annotationProcessor', "com.google.errorprone:error_prone_annotation:$errorProneVersion")
+        project.dependencies.add('annotationProcessor', "com.google.errorprone:error_prone_annotations:$errorProneVersion")
+        project.dependencies.add('annotationProcessor', "com.google.errorprone:error_prone_type_annotations:$errorProneVersion")
 
         project.pluginManager.apply('net.ltgt.errorprone')
 
-        project.dependencies.add('errorprone', 'com.google.errorprone:error_prone_core:2.38.0')
+
+        project.dependencies.add('errorprone', "com.google.errorprone:error_prone_core:$errorProneVersion")
         project.tasks.compileTestJava.configure { JavaCompile task -> task.options.errorprone.enabled = false }
         project.tasks
                 .withType(JavaCompile)

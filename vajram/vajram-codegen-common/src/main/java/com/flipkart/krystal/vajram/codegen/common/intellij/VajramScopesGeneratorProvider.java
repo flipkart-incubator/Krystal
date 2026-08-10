@@ -97,17 +97,18 @@ public class VajramScopesGeneratorProvider implements AllVajramsCodeGeneratorPro
     }
   }
 
-  private @Nullable Path findContainingModule(Path path) {
+  private @Nullable Path findContainingModule(@Nullable Path path) {
+    if (path == null) {
+      return null;
+    }
     Path containingModule = pathsToModuleCache.get(path);
     if (containingModule != null) {
       return containingModule;
     }
-    if (path != null) {
-      if (path.resolve("build.gradle").toFile().exists()) {
-        containingModule = path;
-      } else {
-        containingModule = findContainingModule(path.getParent());
-      }
+    if (path.resolve("build.gradle").toFile().exists()) {
+      containingModule = path;
+    } else {
+      containingModule = findContainingModule(path.getParent());
     }
     if (containingModule != null) {
       pathsToModuleCache.put(path, containingModule);

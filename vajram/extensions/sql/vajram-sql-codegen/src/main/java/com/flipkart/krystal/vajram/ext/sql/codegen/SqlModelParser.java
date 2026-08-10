@@ -53,7 +53,6 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -131,7 +130,7 @@ public final class SqlModelParser {
    * <p>{@code @Column} and {@code @IsEqualTo} annotations on predicate methods are respected for
    * column name resolution and comparison operator selection.
    */
-  public List<WhereInput> collectWhereInputs(@MonotonicNonNull VajramInfo vajramInfo) {
+  public List<WhereInput> collectWhereInputs(VajramInfo vajramInfo) {
     List<DefaultFacetModel> inputs =
         vajramInfo.givenFacets().stream().filter(fd -> fd.facetType() == FacetType.INPUT).toList();
     util.note("Input facets on " + vajramInfo.lite().vajramId() + " : " + vajramInfo.givenFacets());
@@ -334,7 +333,7 @@ public final class SqlModelParser {
    * <p>A compile-time error is reported if either annotation is absent, making the constraint
    * visible to developers at build time rather than at runtime.
    */
-  private JoinRelation parseJoinRelation(
+  private @Nullable JoinRelation parseJoinRelation(
       ExecutableElement method, TypeElement childSelectionElem, TypeElement parentTableElem) {
     Selection selectionAnno = childSelectionElem.getAnnotation(Selection.class);
     if (selectionAnno == null) {
@@ -522,7 +521,8 @@ public final class SqlModelParser {
    * Finds the FK column name in {@code childTable} whose {@code @ForeignKey(toTable = ...)} points
    * to {@code parentTable}.
    */
-  public String findFkColumnInChildForParent(TypeElement childTable, TypeElement parentTable) {
+  public @Nullable String findFkColumnInChildForParent(
+      TypeElement childTable, TypeElement parentTable) {
     for (ExecutableElement method : util.getModelFields(childTable)) {
       ForeignKey fkAnno = method.getAnnotation(ForeignKey.class);
       if (fkAnno == null) {
@@ -626,7 +626,7 @@ public final class SqlModelParser {
    * Extracts the element type from a return type that is either {@code T} or {@code List<T>}.
    * Returns {@code null} if the type cannot be resolved.
    */
-  private TypeElement extractSingleOrListType(TypeMirror rt) {
+  private @Nullable TypeElement extractSingleOrListType(TypeMirror rt) {
     return switch (util.getContainerType(rt)) {
       case NO_CONTAINER -> (TypeElement) util.processingEnv().getTypeUtils().asElement(rt);
       case LIST ->
@@ -929,7 +929,7 @@ public final class SqlModelParser {
 
     TypeMirror protocolType = util.getAnnotationElement(serdeWith, "value", TypeMirror.class);
     TypeElement protocolTypeElement =
-        (TypeElement) util.processingEnv().getTypeUtils().asElement(protocolType);
+        (TypeElement) requireNonNull(util.processingEnv().getTypeUtils().asElement(protocolType));
 
     // Determine the model type element for validation.
     // For List<T>/Optional<T>, we validate on the element type T.

@@ -15,6 +15,7 @@ public final class LatticeAppBootstrap {
 
   public LatticeAppBootstrap(DopantSpec<?, ?, ?>... dopantSpecs) {
     configuredSpecs =
-        Arrays.stream(dopantSpecs).collect(toImmutableMap(DopantSpec::getClass, identity()));
+        Arrays.stream(dopantSpecs)
+            .collect(toImmutableMap(dopantSpec -> dopantSpec.getClass(), identity()));
   }
 }

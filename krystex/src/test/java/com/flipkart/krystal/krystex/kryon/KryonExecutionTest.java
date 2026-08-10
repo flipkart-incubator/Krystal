@@ -640,7 +640,7 @@ class KryonExecutionTest {
         Exception.class,
         () ->
             kryonExecutor.execute(
-                SimpleImmutRequest.empty(new VajramID(kryonName)),
+                SimpleImmutRequest.empty(vajramID(kryonName)),
                 VajramExecutionConfig.builder().executionId("req_1").build()));
   }
 

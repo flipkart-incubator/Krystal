@@ -1,9 +1,6 @@
 package com.flipkart.krystal.vajram.graphql.api.model;
 
 import com.flipkart.krystal.vajram.graphql.api.errors.ErrorCollector;
-import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy;
-import graphql.execution.ExecutionContext;
-import graphql.execution.ExecutionStrategyParameters;
 import java.util.List;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -16,19 +13,6 @@ public sealed interface GraphQlObject permits GraphQlOperationObject, GraphQlObj
   default @Nullable String graphql_typename() {
     return null;
   }
-
-  /**
-   * Returns the {@link ExecutionContext} which for the execution in which this object was created.
-   */
-  ExecutionContext graphql_executionContext();
-
-  VajramExecutionStrategy graphql_executionStrategy();
-
-  /**
-   * Returns the {@link ExecutionStrategyParameters} for the execution in which this object was
-   * created.
-   */
-  ExecutionStrategyParameters graphql_executionStrategyParams();
 
   /**
    * Collects errors from this model and all nested models using the visitor pattern.

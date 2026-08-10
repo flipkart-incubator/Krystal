@@ -2,6 +2,8 @@ package com.flipkart.krystal.vajram.graphql.codegen;
 
 import static com.flipkart.krystal.vajram.graphql.api.Constants.Directives.DATA_FETCHER;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQLObjectAggregateGen.GRAPHQL_RESPONSE;
+import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.fieldSpecFromField;
+import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.isMultiFieldDataFetcher;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static java.util.Objects.requireNonNullElse;
 import static javax.lang.model.element.Modifier.ABSTRACT;
@@ -83,7 +85,6 @@ class GraphQLEntityGen implements CodeGenerator {
           typeSpec = enumTypeSpecBuilder;
         } else if (typeDefinition instanceof ObjectTypeDefinition) {
           boolean isEntity = typeDefinition.hasDirective(Directives.ENTITY);
-          boolean isOpType = opDefsByName.get(typeDefinition.getName()) != null;
           List<MethodSpec> methodSpecs = new ArrayList<>();
           GraphQLTypeName enclosingType = GraphQLTypeName.of(typeDefinition);
 
@@ -102,8 +103,7 @@ class GraphQLEntityGen implements CodeGenerator {
                   continue;
                 }
 
-                GraphQlFieldSpec fieldSpec =
-                    schemaReaderUtil.fieldSpecFromField(fieldDefinition, "", enclosingType);
+                GraphQlFieldSpec fieldSpec = fieldSpecFromField(fieldDefinition, "", enclosingType);
                 TypeName typeNameForField = graphQlCodeGenUtil.toTypeNameForField(fieldSpec);
 
                 if (isEntity && isEntityIdField) {
@@ -194,7 +194,7 @@ class GraphQLEntityGen implements CodeGenerator {
 
             for (FieldDefinition fieldDefinition : entityTypeDefinition.getFieldDefinitions()) {
               if (!fieldDefinition.getDirectives(DATA_FETCHER).isEmpty()
-                  && schemaReaderUtil.isMultiFieldDataFetcher(fieldDefinition)) {
+                  && isMultiFieldDataFetcher(fieldDefinition)) {
                 fieldDefinitions
                     .computeIfAbsent(
                         schemaReaderUtil.getDataFetcherClassName(fieldDefinition),
@@ -216,8 +216,7 @@ class GraphQLEntityGen implements CodeGenerator {
                     builder.addField(
                         FieldSpec.builder(
                                 graphQlCodeGenUtil.toTypeNameForField(
-                                    schemaReaderUtil.fieldSpecFromField(
-                                        fieldDefinitionDf, "", graphQLTypeName)),
+                                    fieldSpecFromField(fieldDefinitionDf, "", graphQLTypeName)),
                                 fieldDefinitionDf.getName(),
                                 PUBLIC)
                             .build());

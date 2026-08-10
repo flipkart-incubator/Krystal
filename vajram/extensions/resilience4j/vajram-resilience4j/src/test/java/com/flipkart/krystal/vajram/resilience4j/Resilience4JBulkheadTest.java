@@ -299,7 +299,7 @@ class Resilience4JBulkheadTest {
       String kryonId, Set<? extends Facet> usedFacets, Consumer<ExecutionItem> logic) {
     IOLogicDefinition<T> def =
         new IOLogicDefinition<>(
-            new KryonLogicId(new VajramID(kryonId), kryonId + ":asyncLogic"),
+            new KryonLogicId(vajramID(kryonId), kryonId + ":asyncLogic"),
             usedFacets,
             input -> input.executionItems().forEach(logic::accept),
             emptyTags());
@@ -310,7 +310,7 @@ class Resilience4JBulkheadTest {
   @SuppressWarnings("unchecked")
   @NonNull
   private static LogicDefinition<FacetsFromRequest> newFacetsFromRequestLogic() {
-    VajramID vajramID = new VajramID("kryon");
+    VajramID vajramID = vajramID("kryon");
     return new LogicDefinition<>(
         new KryonLogicId(vajramID, "kryon:facetsFromRequest"),
         request ->
@@ -321,7 +321,7 @@ class Resilience4JBulkheadTest {
   @NonNull
   private static LogicDefinition<CreateNewRequest> newCreateNewRequestLogic(
       Set<? extends InputMirror> inputs) {
-    VajramID vajramID = new VajramID("kryon");
+    VajramID vajramID = vajramID("kryon");
     return new LogicDefinition<>(
         new KryonLogicId(vajramID, "kryon:newRequest"),
         () -> new SimpleRequestBuilder<>(inputs, vajramID));

@@ -21,7 +21,7 @@ abstract sealed class AbstractDependentChainBase<T extends DependentChainBase>
   @Getter(PACKAGE)
   private final DependentChainNode[] array;
 
-  private final Dependency latestDependency;
+  private final @Nullable Dependency latestDependency;
 
   // Must use ConcurrentHashMap for thread safety - else we will encounter
   // ConcurrentModificationException
@@ -37,7 +37,9 @@ abstract sealed class AbstractDependentChainBase<T extends DependentChainBase>
   }
 
   protected AbstractDependentChainBase(
-      VajramID vajramID, Dependency latestDependency, DependentChainBase incomingDependentChain) {
+      VajramID vajramID,
+      Dependency latestDependency,
+      @Nullable DependentChainBase incomingDependentChain) {
     this.latestDependency = latestDependency;
     this.array = create(vajramID, latestDependency, incomingDependentChain);
   }
@@ -81,7 +83,9 @@ abstract sealed class AbstractDependentChainBase<T extends DependentChainBase>
   }
 
   private static DependentChainNode[] create(
-      VajramID vajramID, Dependency latestDependency, DependentChainBase incomingDependentChain) {
+      VajramID vajramID,
+      Dependency latestDependency,
+      @Nullable DependentChainBase incomingDependentChain) {
     DependentChainNode[] incomingArray;
     if (incomingDependentChain instanceof AbstractDependentChainBase abstractDependentChain) {
       incomingArray = abstractDependentChain.array;

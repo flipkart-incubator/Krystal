@@ -7,6 +7,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class BytesJson extends AbstractJsonRepresentation {
   private final byte[] data;
@@ -57,7 +58,7 @@ public final class BytesJson extends AbstractJsonRepresentation {
   }
 
   @Override
-  public boolean equals(Object obj) {
+  public boolean equals(@Nullable Object obj) {
     if (obj == this) {
       return true;
     }
@@ -85,6 +86,12 @@ public final class BytesJson extends AbstractJsonRepresentation {
 
   @Override
   public String toString() {
-    return "BytesJson[data=" + data + ", start= " + start + ", length= " + length + "]";
+    return "BytesJson[data="
+        + Arrays.toString(data)
+        + ", start= "
+        + start
+        + ", length= "
+        + length
+        + "]";
   }
 }

@@ -60,12 +60,11 @@ public class TypeNameVisitor extends AbstractTypeVisitor14<TypeName, Void> {
       return rawType;
     }
 
-    return enclosing instanceof ParameterizedTypeName
+    return enclosing instanceof ParameterizedTypeName parameterizedTypeName
         ? addTypeAnnotations(
             t,
-            ((ParameterizedTypeName) enclosing)
-                .nestedClass(
-                    rawType.simpleName(), t.getTypeArguments().stream().map(this::visit).toList()))
+            parameterizedTypeName.nestedClass(
+                rawType.simpleName(), t.getTypeArguments().stream().map(this::visit).toList()))
         : asTypeNameWithTypes(rawType, t.getTypeArguments());
   }
 

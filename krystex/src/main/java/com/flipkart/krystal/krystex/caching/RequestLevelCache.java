@@ -48,6 +48,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
@@ -64,8 +65,8 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
   private final CacheContainer cache = new CacheContainer();
 
   @Getter private final VajramGraph vajramGraph;
-  @Getter private final KryonDecorator kryonDecorator;
-  @Getter private final OutputLogicDecorator outputLogicDecorator;
+  private @MonotonicNonNull KryonDecorator kryonDecorator;
+  private @MonotonicNonNull OutputLogicDecorator outputLogicDecorator;
 
   /**
    * If a vajram doesn't have a @DataAccess annotation, then it is assumed that the vajram does not
@@ -76,8 +77,6 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
    */
   public RequestLevelCache(VajramGraph vajramGraph) {
     this.vajramGraph = vajramGraph;
-    this.kryonDecorator = CachingDecoratedKryon::new;
-    this.outputLogicDecorator = CachingDecoratedLogic::new;
   }
 
   /**
@@ -104,7 +103,7 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
                     && kryonCachingMetadata.isEligibleForCaching();
               }, // Apply kryon level cache to only compute vajrams
               _c -> KRYON_DECORATOR_TYPE, // Only one RequestLevelCache across the vajram graph
-              _c -> kryonDecorator // Reuse this instance across the graph
+              _c -> kryonDecorator() // Reuse this instance across the graph
               ));
       configBuilder.outputLogicDecoratorConfig(
           new OutputLogicDecoratorConfig(
@@ -117,9 +116,23 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
               }, // Apply output logic level cache only for IO vajrams
               _c ->
                   OUTPUT_LOGIC_DECORATOR_TYPE, // Only one RequestLevelCache across the vajram graph
-              _c -> outputLogicDecorator // Reuse this instance across the graph
+              _c -> outputLogicDecorator() // Reuse this instance across the graph
               ));
     };
+  }
+
+  public KryonDecorator kryonDecorator() {
+    if (kryonDecorator == null) {
+      kryonDecorator = CachingDecoratedKryon::new;
+    }
+    return kryonDecorator;
+  }
+
+  public OutputLogicDecorator outputLogicDecorator() {
+    if (outputLogicDecorator == null) {
+      outputLogicDecorator = CachingDecoratedLogic::new;
+    }
+    return outputLogicDecorator;
   }
 
   private KryonCachingMetadata getKryonCachingMetadata(VajramID vajramID) {
@@ -422,7 +435,7 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
     private final OutputLogic<Object> logicToDecorate;
     private final OutputLogicDefinition<Object> outputLogicDefinition;
 
-    public CachingDecoratedLogic(
+    private CachingDecoratedLogic(
         OutputLogic<Object> logicToDecorate, OutputLogicDefinition<Object> outputLogicDefinition) {
       this.logicToDecorate = logicToDecorate;
       this.outputLogicDefinition = outputLogicDefinition;

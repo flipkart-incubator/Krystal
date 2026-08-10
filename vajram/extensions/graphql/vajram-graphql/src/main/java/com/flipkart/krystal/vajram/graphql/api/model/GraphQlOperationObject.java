@@ -6,6 +6,7 @@ import static graphql.ErrorType.DataFetchingException;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.vajram.graphql.api.errors.ErrorCollector;
 import graphql.ExecutionResult;
+import graphql.ExecutionResult.Builder;
 import graphql.GraphQLError;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,10 +49,18 @@ public sealed interface GraphQlOperationObject extends GraphQlObject
     if (this instanceof GraphQlOperationError operationError) {
       return operationError.executionResult();
     }
-    return ExecutionResult.newExecutionResult()
-        .data(graphql_data())
-        .errors(graphql_errors(defaultCollector()))
-        .extensions(graphql_extensions())
-        .build();
+    Builder<?> builder = ExecutionResult.newExecutionResult().data(graphql_data());
+
+    List<GraphQLError> errors = graphql_errors(defaultCollector());
+    if (errors != null) {
+      builder.errors(errors);
+    }
+
+    Map<Object, Object> extensions = graphql_extensions();
+    if (extensions != null) {
+      builder.extensions(extensions);
+    }
+
+    return builder.build();
   }
 }

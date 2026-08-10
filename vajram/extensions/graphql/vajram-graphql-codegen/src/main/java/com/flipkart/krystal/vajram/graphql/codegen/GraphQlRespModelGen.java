@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.graphql.codegen;
 
 import static com.flipkart.krystal.vajram.graphql.codegen.CodeGenConstants.RESERVED_GRAPHQL_FIELDS_PREFIX;
+import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -183,7 +184,8 @@ final class GraphQlRespModelGen implements CodeGenerator {
           if (util.isModelRoot(elementType, method) && !isEntityIdType(elementType, util)) {
             // For custom model types (but NOT entity IDs), use _Immut suffix
             TypeElement elementTypeElement =
-                (TypeElement) util.processingEnv().getTypeUtils().asElement(elementType);
+                (TypeElement)
+                    requireNonNull(util.processingEnv().getTypeUtils().asElement(elementType));
             String packageName =
                 util.processingEnv()
                     .getElementUtils()
@@ -210,7 +212,7 @@ final class GraphQlRespModelGen implements CodeGenerator {
       } else if (util.isModelRoot(returnType) && !isEntityIdType(returnType, util)) {
         // For single custom model types (but NOT entity IDs), use _Immut suffix
         TypeElement typeElement =
-            (TypeElement) util.processingEnv().getTypeUtils().asElement(returnType);
+            (TypeElement) requireNonNull(util.processingEnv().getTypeUtils().asElement(returnType));
         fieldType = util.getImmutInterfaceName(typeElement);
       } else {
         fieldType = TypeName.get(returnType);
@@ -360,7 +362,7 @@ final class GraphQlRespModelGen implements CodeGenerator {
     // Get the entity type name and its _Immut interface
     TypeName elementTypeName = TypeName.get(elementType);
     TypeElement elementTypeElement =
-        (TypeElement) util.processingEnv().getTypeUtils().asElement(elementType);
+        (TypeElement) requireNonNull(util.processingEnv().getTypeUtils().asElement(elementType));
     String packageName =
         util.processingEnv()
             .getElementUtils()
@@ -526,7 +528,7 @@ final class GraphQlRespModelGen implements CodeGenerator {
       if (util.isListType(method.getReturnType())) {
         // For lists with nested Errable, unwrap both levels using for loop
         // Field is Errable<List<Errable<T_Immut>>>, getter returns List<T>
-        TypeMirror elementType = getListElementType(method.getReturnType());
+        TypeMirror elementType = requireNonNull(getListElementType(method.getReturnType()));
         TypeName elementTypeName = TypeName.get(elementType);
 
         // Determine the actual type stored in the field (with _Immut for custom models)
@@ -534,7 +536,8 @@ final class GraphQlRespModelGen implements CodeGenerator {
         if (util.isModelRoot(elementType, method) && !isEntityIdType(elementType, util)) {
           // For custom model types (but NOT entity IDs), field uses _Immut suffix
           TypeElement elementTypeElement =
-              (TypeElement) util.processingEnv().getTypeUtils().asElement(elementType);
+              (TypeElement)
+                  requireNonNull(util.processingEnv().getTypeUtils().asElement(elementType));
           String packageName =
               util.processingEnv()
                   .getElementUtils()
@@ -783,15 +786,15 @@ final class GraphQlRespModelGen implements CodeGenerator {
 
       TypeMirror returnType = method.getReturnType();
 
-      if (util.isListType(returnType)) {
-        TypeMirror elementType = getListElementType(returnType);
-        boolean listOfGraphQlModels = containsGraphQlModel(elementType, util);
+      TypeMirror listElementType = getListElementType(returnType);
+      if (listElementType != null) {
+        boolean listOfGraphQlModels = containsGraphQlModel(listElementType, util);
 
         // Get the proper TypeName for the element type
         TypeName elementTypeName;
         if (listOfGraphQlModels) {
           // For GraphQL models, use the _Immut interface type
-          Element element = util.processingEnv().getTypeUtils().asElement(elementType);
+          Element element = util.processingEnv().getTypeUtils().asElement(listElementType);
           if (element instanceof TypeElement elementTypeElement) {
             String packageName =
                 util.processingEnv()
@@ -802,11 +805,11 @@ final class GraphQlRespModelGen implements CodeGenerator {
             String simpleName = elementTypeElement.getSimpleName() + "_Immut";
             elementTypeName = ClassName.get(packageName, simpleName);
           } else {
-            elementTypeName = TypeName.get(elementType);
+            elementTypeName = TypeName.get(listElementType);
           }
         } else {
           // For standard types, use the actual type
-          elementTypeName = TypeName.get(elementType);
+          elementTypeName = TypeName.get(listElementType);
         }
 
         collectErrorsMethod.addCode(
@@ -1089,21 +1092,20 @@ final class GraphQlRespModelGen implements CodeGenerator {
       ClassName errableClassName) {
 
     String fieldName = method.getSimpleName().toString();
-    TypeMirror returnType = method.getReturnType();
+    final TypeMirror returnType = method.getReturnType();
     TypeName fieldType = util.getVariableType(method, true);
 
-    boolean isListType = util.isListType(returnType);
+    TypeMirror listElementType = getListElementType(returnType);
     boolean isListOfEntities = false;
 
-    if (isListType) {
-      TypeMirror elementType = getListElementType(returnType);
+    if (listElementType != null) {
       isListOfEntities =
-          util.isModelRoot(elementType, method) && !isEntityIdType(elementType, util);
+          util.isModelRoot(listElementType, method) && !isEntityIdType(listElementType, util);
     }
 
     // Determine the correct Errable field type for the second overload
     TypeName errableFieldType;
-    if (isListType) {
+    if (listElementType != null) {
       // For lists, use nested Errable structure
       TypeMirror elementType = getListElementType(returnType);
       if (elementType != null) {
@@ -1136,7 +1138,7 @@ final class GraphQlRespModelGen implements CodeGenerator {
             .addModifiers(PUBLIC)
             .returns(builderType);
     Optional<ModelRootInfo> fieldModelRoot = util.asModelRoot(returnType, method);
-    if (isListType) {
+    if (listElementType != null) {
       // For ALL lists (entities OR standard types), use complex wrapping logic
       directSetterBuilder.addParameter(fieldType, fieldName);
 
@@ -1160,7 +1162,7 @@ final class GraphQlRespModelGen implements CodeGenerator {
           Errable.class,
           List.class,
           Errable.class,
-          getListElementType(returnType),
+          listElementType,
           ArrayList.class,
           fieldName,
           elementType,
@@ -1221,10 +1223,9 @@ final class GraphQlRespModelGen implements CodeGenerator {
 
     // Errable setter (for aggregator use) - needs to match constructor parameter type
     // For entity lists, use wildcards and .mapToValue() for proper type conversion
-    if (isListType && isListOfEntities) {
+    if (listElementType != null && isListOfEntities) {
       // Parameter type with wildcards: Errable<? extends List<? extends Errable<? extends Dummy>>>
-      TypeMirror elementType = getListElementType(returnType);
-      TypeName elementTypeName = TypeName.get(elementType);
+      TypeName elementTypeName = TypeName.get(listElementType);
 
       // Create parameter type with wildcards
       TypeName innerErrableWithWildcard =
@@ -1414,7 +1415,7 @@ final class GraphQlRespModelGen implements CodeGenerator {
     // The Builder interface extends the model interface, so it must implement all getter methods
     for (ExecutableElement method : modelMethods) {
       String methodName = method.getSimpleName().toString();
-      TypeMirror returnType = method.getReturnType();
+      final TypeMirror returnType = method.getReturnType();
 
       // Skip GraphQL execution context methods
       if (methodName.startsWith(RESERVED_GRAPHQL_FIELDS_PREFIX)) {
@@ -1431,9 +1432,9 @@ final class GraphQlRespModelGen implements CodeGenerator {
 
       // Extract value from Errable field (fields are @NonNull, no null check needed)
       // For lists with nested Errable, unwrap both levels using for loop (same as main class)
-      if (util.isListType(returnType)) {
-        TypeMirror elementType = getListElementType(returnType);
-        TypeName elementTypeName = TypeName.get(elementType);
+      TypeMirror listElementType = getListElementType(returnType);
+      if (listElementType != null) {
+        TypeName elementTypeName = TypeName.get(listElementType);
 
         // For Builder fields, use interface types (NOT _Immut) to match field declarations
         // Builder fields are declared as Errable<List<Errable<Dummy>>> (interface type)
@@ -1527,8 +1528,8 @@ final class GraphQlRespModelGen implements CodeGenerator {
     return false;
   }
 
-  private TypeMirror getListElementType(TypeMirror listType) {
-    if (listType instanceof DeclaredType) {
+  private @Nullable TypeMirror getListElementType(TypeMirror listType) {
+    if (util.isListType(listType) && listType instanceof DeclaredType) {
       List<? extends TypeMirror> typeArgs = ((DeclaredType) listType).getTypeArguments();
       if (!typeArgs.isEmpty()) {
         return typeArgs.get(0);
@@ -1557,7 +1558,7 @@ final class GraphQlRespModelGen implements CodeGenerator {
     return simpleName.endsWith("Id");
   }
 
-  private boolean containsGraphQlModel(TypeMirror type, CodeGenUtility util) {
+  private boolean containsGraphQlModel(@Nullable TypeMirror type, CodeGenUtility util) {
     // Check if the type extends GraphQlTypeModel or GraphQlEntityModel
     if (type == null || type.getKind() != TypeKind.DECLARED) {
       return false;

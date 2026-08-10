@@ -196,7 +196,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
         TypeSpec.interfaceBuilder(_INTERNAL_FACETS_CLASS).addModifiers(STATIC);
 
     Map<Fetcher, List<GraphQlFieldSpec>> fetcherToFields =
-        schemaReaderUtil.typeToFetcherToFields().get(typeName);
+        schemaReaderUtil.typeToFetcherToFields().getOrDefault(typeName, Map.of());
     for (Entry<Fetcher, List<GraphQlFieldSpec>> entry : fetcherToFields.entrySet()) {
       if (entry.getKey() instanceof VajramFetcher fetcher) {
         List<GraphQlFieldSpec> fields = entry.getValue();
@@ -219,7 +219,10 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
     }
 
     for (Entry<GraphQlFieldSpec, ClassName> fieldToTypeAggregator :
-        schemaReaderUtil.entityTypeToFieldToTypeAggregator().get(typeName).entrySet()) {
+        schemaReaderUtil
+            .entityTypeToFieldToTypeAggregator()
+            .getOrDefault(typeName, Map.of())
+            .entrySet()) {
       GraphQlFieldSpec fieldSpec = fieldToTypeAggregator.getKey();
       ClassName typeAggregatorClassName = fieldToTypeAggregator.getValue();
 
@@ -436,20 +439,17 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
             : ClassName.get(GraphQlObjectMap.class).nestedClass("GraphQlObjectMapBuilder");
     builder.addNamedCode(
         """
-        $builderType:T _builder = new $builderType:T()
-            .graphql_executionContext(graphql_executionContext)
-            .graphql_executionStrategy(graphql_executionStrategy)
-            .graphql_executionStrategyParams(graphql_executionStrategyParams);
+        $builderType:T _builder = new $builderType:T();
         """,
         Map.of("builderType", builderType));
 
     // Build fieldName → aliases map from execution context
     builder.addNamedCode(
         """
-        $linkedHashMap:T<$string:T, $list:T<$string:T>> _fieldNameToAliases = $T:graphQLUtils.computeFieldNameToAliases(graphql_executionStrategyParams);
+        $map:T<$string:T, $list:T<$string:T>> _fieldNameToAliases = $graphQLUtils:T.computeFieldNameToAliases(graphql_executionStrategyParams);
         """,
         Map.ofEntries(
-            entry("linkedHashMap", LinkedHashMap.class),
+            entry("map", Map.class),
             entry("string", String.class),
             entry("list", List.class),
             entry("graphQLUtils", GraphQLUtils.class)));
@@ -714,7 +714,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
 
     schemaReaderUtil
         .typeToFetcherToFields()
-        .get(entityType)
+        .getOrDefault(entityType, Map.of())
         .forEach(
             (fetcher, fields) -> {
               if (fetcher instanceof VajramFetcher vajramFetcher) {
@@ -725,11 +725,14 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
 
     schemaReaderUtil
         .entityTypeToFieldToTypeAggregator()
-        .get(entityType)
+        .getOrDefault(entityType, Map.of())
         .forEach(
             (field, typeAggregatorClass) -> {
               @Nullable Fetcher fetcher =
-                  schemaReaderUtil.entityTypeToFieldToFetcher().get(entityType).get(field);
+                  schemaReaderUtil
+                      .entityTypeToFieldToFetcher()
+                      .getOrDefault(entityType, Map.of())
+                      .get(field);
               if (fetcher != null) {
                 methodSpecList.add(
                     createTypeAggregatorInputResolver(

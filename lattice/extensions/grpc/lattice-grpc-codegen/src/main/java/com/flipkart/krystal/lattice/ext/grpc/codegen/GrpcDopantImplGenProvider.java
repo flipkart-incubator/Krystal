@@ -33,6 +33,7 @@ import io.grpc.stub.StreamObserver;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
@@ -244,6 +245,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
           util.codegenUtil().getModelProtocols(modelType).stream()
               .filter(ProtobufProtocol.class::isInstance)
               .map(ProtobufProtocol.class::cast)
+              .map(Objects::requireNonNull)
               .toList();
       if (matches.isEmpty()) {
         throw util.codegenUtil()

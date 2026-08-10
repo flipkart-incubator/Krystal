@@ -1,18 +1,16 @@
 package com.flipkart.krystal.vajram.graphql.api.model;
 
 import com.flipkart.krystal.vajram.graphql.api.errors.ErrorCollector;
-import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy;
 import graphql.ExecutionResult;
-import graphql.execution.ExecutionContext;
-import graphql.execution.ExecutionStrategyParameters;
 import java.util.List;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.checker.nullness.qual.PolyNull;
 
 public record GraphQlOperationError(ExecutionResult executionResult)
     implements GraphQlOperationObject {
 
-  public static @Nullable GraphQlOperationObject from(@Nullable ExecutionResult executionResult) {
+  public static @PolyNull GraphQlOperationObject from(@PolyNull ExecutionResult executionResult) {
     if (executionResult == null) {
       return null;
     }
@@ -27,26 +25,6 @@ public record GraphQlOperationError(ExecutionResult executionResult)
   @Override
   public @Nullable Map<Object, Object> graphql_extensions() {
     return executionResult.getExtensions();
-  }
-
-  @Override
-  public @Nullable String graphql_typename() {
-    return null;
-  }
-
-  @Override
-  public ExecutionContext graphql_executionContext() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public VajramExecutionStrategy graphql_executionStrategy() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public ExecutionStrategyParameters graphql_executionStrategyParams() {
-    throw new UnsupportedOperationException();
   }
 
   @Override

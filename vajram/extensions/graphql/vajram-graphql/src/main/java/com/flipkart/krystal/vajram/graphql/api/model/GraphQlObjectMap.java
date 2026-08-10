@@ -5,12 +5,9 @@ import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.vajram.graphql.api.errors.DefaultGraphQLErrorInfo;
 import com.flipkart.krystal.vajram.graphql.api.errors.ErrorCollector;
-import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlValue.ListValue;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlValue.ObjectValue;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlValue.SingleValue;
-import graphql.execution.ExecutionContext;
-import graphql.execution.ExecutionStrategyParameters;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -20,36 +17,11 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 public sealed class GraphQlObjectMap implements GraphQlObject permits GraphQlOperationObjectMap {
 
-  private final ExecutionContext graphql_executionContext;
-  private final VajramExecutionStrategy graphql_executionStrategy;
-  private final ExecutionStrategyParameters graphql_executionStrategyParams;
   private final Map<String, GraphQlValue> graphql_values;
   private @MonotonicNonNull Map<String, Object> graphql_data;
 
-  GraphQlObjectMap(
-      ExecutionContext graphql_executionContext,
-      VajramExecutionStrategy graphql_executionStrategy,
-      ExecutionStrategyParameters graphql_executionStrategyParams,
-      Map<String, GraphQlValue> graphql_values) {
-    this.graphql_executionContext = graphql_executionContext;
-    this.graphql_executionStrategy = graphql_executionStrategy;
-    this.graphql_executionStrategyParams = graphql_executionStrategyParams;
+  GraphQlObjectMap(Map<String, GraphQlValue> graphql_values) {
     this.graphql_values = unmodifiableMap(graphql_values);
-  }
-
-  @Override
-  public ExecutionContext graphql_executionContext() {
-    return graphql_executionContext;
-  }
-
-  @Override
-  public VajramExecutionStrategy graphql_executionStrategy() {
-    return graphql_executionStrategy;
-  }
-
-  @Override
-  public ExecutionStrategyParameters graphql_executionStrategyParams() {
-    return graphql_executionStrategyParams;
   }
 
   @Override
@@ -98,17 +70,12 @@ public sealed class GraphQlObjectMap implements GraphQlObject permits GraphQlOpe
           .errable()
           .errorOpt()
           .ifPresent(
-              throwable -> {
-                errorCollector.addError(new DefaultGraphQLErrorInfo(path, throwable));
-              });
+              throwable -> errorCollector.addError(new DefaultGraphQLErrorInfo(path, throwable)));
       if (graphQlValue instanceof ObjectValue objectValue) {
         objectValue
             .errable()
             .valueOpt()
-            .ifPresent(
-                graphQlObjectMap -> {
-                  graphQlObjectMap._collectErrors(errorCollector, path);
-                });
+            .ifPresent(graphQlObjectMap -> graphQlObjectMap._collectErrors(errorCollector, path));
       }
     } else if (graphQlValue instanceof ListValue listValue) {
       listValue
@@ -128,26 +95,7 @@ public sealed class GraphQlObjectMap implements GraphQlObject permits GraphQlOpe
   @SuppressWarnings("unchecked")
   public static class GraphQlObjectMapBuilder<T extends GraphQlObjectMapBuilder<T>> {
 
-    protected ExecutionContext graphql_executionContext;
-    protected VajramExecutionStrategy graphql_executionStrategy;
-    protected ExecutionStrategyParameters graphql_executionStrategyParams;
     protected final Map<String, GraphQlValue> graphql_data = new LinkedHashMap<>();
-
-    public T graphql_executionContext(ExecutionContext graphql_executionContext) {
-      this.graphql_executionContext = graphql_executionContext;
-      return (T) this;
-    }
-
-    public T graphql_executionStrategy(VajramExecutionStrategy graphql_executionStrategy) {
-      this.graphql_executionStrategy = graphql_executionStrategy;
-      return (T) this;
-    }
-
-    public T graphql_executionStrategyParams(
-        ExecutionStrategyParameters graphql_executionStrategyParams) {
-      this.graphql_executionStrategyParams = graphql_executionStrategyParams;
-      return (T) this;
-    }
 
     public T addField(String alias, GraphQlValue value) {
       graphql_data.put(alias, value);
@@ -155,11 +103,7 @@ public sealed class GraphQlObjectMap implements GraphQlObject permits GraphQlOpe
     }
 
     public GraphQlObjectMap build() {
-      return new GraphQlObjectMap(
-          graphql_executionContext,
-          graphql_executionStrategy,
-          graphql_executionStrategyParams,
-          graphql_data);
+      return new GraphQlObjectMap(graphql_data);
     }
   }
 }

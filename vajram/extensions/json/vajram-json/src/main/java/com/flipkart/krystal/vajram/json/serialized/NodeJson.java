@@ -7,13 +7,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.flipkart.krystal.vajram.json.Json;
 import java.io.IOException;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 public final class NodeJson extends AbstractJsonRepresentation {
 
   private final JsonNode jsonNode;
 
   /* ----Derived fields ----- */
-  private byte[] bytes;
+  private byte @MonotonicNonNull [] bytes;
 
   public NodeJson(JsonNode jsonNode) {
     this.jsonNode = jsonNode;

@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.graphql.codegen;
 
+import static com.flipkart.krystal.vajram.graphql.api.Constants.DEFAULT_ENTITY_ID_FIELD;
 import static com.flipkart.krystal.vajram.graphql.api.Constants.GRAPHQL_AGGREGATOR_SUFFIX;
-import static com.flipkart.krystal.vajram.graphql.api.execution.QueryAnalyseUtil.DEFAULT_ENTITY_ID_FIELD;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.MULTI_FIELD_DATA_FETCHER;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.SINGLE_FIELD_DATA_FETCHER;
 import static java.util.Objects.requireNonNull;
@@ -38,6 +38,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -151,7 +152,13 @@ public class SchemaReaderUtil {
     }
 
     this.aggregatableTypes = aggregatableTypes;
-    setFieldVajramsForEachEntity(typeDefinitionRegistry);
+    setFieldVajramsForEachEntity(
+        entityTypeToFieldToTypeAggregator,
+        entityTypeToFieldToFetcher,
+        typeToFetcherToFields,
+        typeDefinitionRegistry,
+        aggregatableTypes,
+        rootPackageName);
   }
 
   private static TypeDefinitionRegistry getTypeDefinitionRegistry(File schemaFile) {
@@ -164,7 +171,8 @@ public class SchemaReaderUtil {
     String rootPackageName = getRootPackageName(typeDefinitionRegistry);
     String typesPath = rootPackageName.replace('.', File.separatorChar);
 
-    File graphqlsDir = schemaFile.getParentFile().toPath().resolve(typesPath).toFile();
+    File graphqlsDir =
+        requireNonNull(schemaFile.getParentFile()).toPath().resolve(typesPath).toFile();
 
     String[] graphqlSchemaFileNames =
         graphqlsDir.list((dir, name) -> name.endsWith(GRAPHQL_SCHEMA_EXTENSION));
@@ -233,7 +241,7 @@ public class SchemaReaderUtil {
     return ClassName.get(entityClassName.packageName(), entityClassName.simpleName() + "Id");
   }
 
-  public GraphQlFieldSpec fieldSpecFromField(
+  public static GraphQlFieldSpec fieldSpecFromField(
       FieldDefinition fieldDefinition, String nestingPrefix, GraphQLTypeName enclosingType) {
     return GraphQlFieldSpec.builder()
         .fieldName(nestingPrefix + fieldDefinition.getName())
@@ -242,7 +250,13 @@ public class SchemaReaderUtil {
         .build();
   }
 
-  private void setFieldVajramsForEachEntity(TypeDefinitionRegistry typeRegistry) {
+  private static void setFieldVajramsForEachEntity(
+      Map<GraphQLTypeName, Map<GraphQlFieldSpec, ClassName>> entityTypeToFieldToTypeAggregator,
+      Map<GraphQLTypeName, Map<GraphQlFieldSpec, Fetcher>> entityTypeToFieldToFetcher,
+      Map<GraphQLTypeName, Map<Fetcher, List<GraphQlFieldSpec>>> typeToFetcherToFields,
+      TypeDefinitionRegistry typeDefinitionRegistry,
+      Map<GraphQLTypeName, ObjectTypeDefinition> aggregatableTypes,
+      String rootPackageName) {
 
     for (Entry<GraphQLTypeName, ObjectTypeDefinition> entry : aggregatableTypes.entrySet()) {
       GraphQLTypeName parentType = entry.getKey();
@@ -256,7 +270,7 @@ public class SchemaReaderUtil {
       for (FieldDefinition fieldDefinition : objectTypeDefinition.getFieldDefinitions()) {
         Type<?> fieldDefinitionType = fieldDefinition.getType();
         TypeDefinition fieldTypeDefinition =
-            typeRegistry
+            typeDefinitionRegistry
                 .getType(fieldDefinitionType)
                 .orElseThrow(
                     () ->
@@ -270,29 +284,54 @@ public class SchemaReaderUtil {
           fieldToFetcherMap.put(
               fieldSpec,
               new VajramFetcher(
-                  getDataFetcherClassName(fieldDefinition),
+                  getDataFetcherClassName(fieldDefinition, rootPackageName),
                   multiField ? MULTI_FIELD_DATA_FETCHER : SINGLE_FIELD_DATA_FETCHER));
         } else if (fieldTypeDefinition.hasDirective(Directives.ENTITY)
             && fieldDefinition.hasDirective(Directives.ID_FETCHER)) {
           fieldToFetcherMap.put(
               fieldSpecFromField(fieldDefinition, "", parentType),
               new VajramFetcher(
-                  getIdFetcherClassName(fieldDefinition), GraphQlFetcherType.ID_FETCHER));
-          addAggregator(fieldDefinition, fieldTypeDefinition, parentType, fieldToTypeAggregator);
+                  getIdFetcherClassName(fieldDefinition, rootPackageName),
+                  GraphQlFetcherType.ID_FETCHER));
+          addAggregator(
+              fieldDefinition,
+              fieldTypeDefinition,
+              parentType,
+              fieldToTypeAggregator,
+              typeDefinitionRegistry,
+              rootPackageName);
         } else if (fieldTypeDefinition.hasDirective(Directives.ENTITY)
             && fieldDefinition.hasDirective(Directives.INHERIT_ID_FROM_ARGS)) {
           fieldToFetcherMap.put(
               fieldSpecFromField(fieldDefinition, "", parentType),
               new SimpleFetcher(GraphQlFetcherType.INHERIT_ID_FROM_ARGS));
-          addAggregator(fieldDefinition, fieldTypeDefinition, parentType, fieldToTypeAggregator);
+          addAggregator(
+              fieldDefinition,
+              fieldTypeDefinition,
+              parentType,
+              fieldToTypeAggregator,
+              typeDefinitionRegistry,
+              rootPackageName);
         } else if (fieldTypeDefinition.hasDirective(Directives.COMPOSED_TYPE)
             && fieldDefinition.hasDirective(Directives.INHERIT_ID_FROM_PARENT)) {
           fieldToFetcherMap.put(
               fieldSpecFromField(fieldDefinition, "", parentType),
               new SimpleFetcher(GraphQlFetcherType.INHERIT_ID_FROM_PARENT));
-          addAggregator(fieldDefinition, fieldTypeDefinition, parentType, fieldToTypeAggregator);
+          addAggregator(
+              fieldDefinition,
+              fieldTypeDefinition,
+              parentType,
+              fieldToTypeAggregator,
+              typeDefinitionRegistry,
+              rootPackageName);
         } else {
-          dfsSchema(fieldDefinition, path, fieldToFetcherMap, typeRegistry, parentType);
+          dfsSchema(
+              fieldDefinition,
+              path,
+              fieldToFetcherMap,
+              typeDefinitionRegistry,
+              parentType,
+              rootPackageName);
         }
       }
 
@@ -300,17 +339,19 @@ public class SchemaReaderUtil {
           fieldToFetcherMap.entrySet().stream()
               .collect(groupingBy(Entry::getValue, mapping(Entry::getKey, toList())));
 
+      entityTypeToFieldToTypeAggregator.put(parentType, fieldToTypeAggregator);
       entityTypeToFieldToFetcher.put(parentType, fieldToFetcherMap);
       typeToFetcherToFields.put(parentType, fetcherToFieldsMap);
-      entityTypeToFieldToTypeAggregator.put(parentType, fieldToTypeAggregator);
     }
   }
 
-  private void addAggregator(
+  private static void addAggregator(
       FieldDefinition fieldDefinition,
       TypeDefinition fieldTypeDefinition,
       GraphQLTypeName type,
-      Map<GraphQlFieldSpec, ClassName> fieldToTypeAggregator) {
+      Map<GraphQlFieldSpec, ClassName> fieldToTypeAggregator,
+      TypeDefinitionRegistry typeDefinitionRegistry,
+      String rootPackageName) {
     Type<?> fieldDefinitionType = fieldDefinition.getType();
     // Unwrap ListType and NonNullType recursively to get the actual entity type
     while (fieldDefinitionType instanceof NonNullType nonNullType) {
@@ -327,7 +368,8 @@ public class SchemaReaderUtil {
     }
     try {
       GraphQLTypeName graphQlTypeName = new GraphQLTypeName(fieldTypeDefinition.getName());
-      String packageName = getPackageNameForType(graphQlTypeName);
+      String packageName =
+          getPackageNameForType(graphQlTypeName, typeDefinitionRegistry, rootPackageName);
       String typeAggregatorSimpleName =
           graphQlTypeName.value() + Constants.GRAPHQL_AGGREGATOR_SUFFIX;
 
@@ -339,30 +381,39 @@ public class SchemaReaderUtil {
     }
   }
 
-  private void dfsSchema(
+  private static void dfsSchema(
       FieldDefinition incomingField,
       String path,
       Map<GraphQlFieldSpec, Fetcher> fieldToResolverMap,
       TypeDefinitionRegistry typeRegistry,
-      GraphQLTypeName enclosingType) {
+      GraphQLTypeName enclosingType,
+      String rootPackageName) {
     TypeDefinition<?> typeDefinition = typeRegistry.getType(incomingField.getType()).orElseThrow();
     String newPath = path + incomingField.getName() + ".";
     /* Check if its having dataFetcher directive */
     if (typeDefinition instanceof ObjectTypeDefinition typeDefinitionCast
         && typeDefinition.hasDirective(Directives.DATA_FETCHER)) {
       Fetcher baseFetcher =
-          new VajramFetcher(getDataFetcherClassName(typeDefinition), MULTI_FIELD_DATA_FETCHER);
+          new VajramFetcher(
+              getDataFetcherClassName(typeDefinition, rootPackageName), MULTI_FIELD_DATA_FETCHER);
       /* Iterate through the children fields and recursively call if they are having dataFetcher */
       for (FieldDefinition fieldDefinition : typeDefinitionCast.getFieldDefinitions()) {
         if (fieldDefinition.hasDirective(Directives.DATA_FETCHER)) {
           fieldToResolverMap.put(
               fieldSpecFromField(fieldDefinition, newPath, enclosingType),
               new VajramFetcher(
-                  getDataFetcherClassName(fieldDefinition), SINGLE_FIELD_DATA_FETCHER));
+                  getDataFetcherClassName(fieldDefinition, rootPackageName),
+                  SINGLE_FIELD_DATA_FETCHER));
         } else if (typeRegistry.getType(fieldDefinition.getType()).orElse(null)
             instanceof ObjectTypeDefinition innerFieldTypeDef) {
           if (innerFieldTypeDef.hasDirective(Directives.DATA_FETCHER)) {
-            dfsSchema(fieldDefinition, newPath, fieldToResolverMap, typeRegistry, enclosingType);
+            dfsSchema(
+                fieldDefinition,
+                newPath,
+                fieldToResolverMap,
+                typeRegistry,
+                enclosingType,
+                rootPackageName);
           } else {
             fieldToResolverMap.put(
                 fieldSpecFromField(fieldDefinition, newPath, GraphQLTypeName.of(innerFieldTypeDef)),
@@ -378,13 +429,17 @@ public class SchemaReaderUtil {
       if (typeDefinition.hasDirective(Directives.DATA_FETCHER)) {
         fieldToResolverMap.put(
             fieldSpecFromField(incomingField, newPath, enclosingType),
-            new VajramFetcher(getDataFetcherClassName(incomingField), SINGLE_FIELD_DATA_FETCHER));
+            new VajramFetcher(
+                getDataFetcherClassName(incomingField, rootPackageName),
+                SINGLE_FIELD_DATA_FETCHER));
       }
     }
   }
 
-  private @NonNull String getPackageNameFromDirective(
-      DirectivesContainer<?> directivesContainer, @Nullable String directiveName) {
+  private static String getPackageNameFromDirective(
+      DirectivesContainer<?> directivesContainer,
+      @Nullable String directiveName,
+      String rootPackageName) {
     if (directiveName == null) {
       return rootPackageName;
     }
@@ -396,19 +451,21 @@ public class SchemaReaderUtil {
   }
 
   public ClassName getDataFetcherClassName(DirectivesContainer<?> directivesContainer) {
-    return getFetcherClassName(directivesContainer, Directives.DATA_FETCHER);
+    return getDataFetcherClassName(directivesContainer, rootPackageName);
   }
 
-  private ClassName getFetcherClassName(
-      DirectivesContainer<?> directivesContainer, String directiveName) {
-    String packageName = getPackageNameFromDirective(directivesContainer, directiveName);
+  public static ClassName getDataFetcherClassName(
+      DirectivesContainer<?> directivesContainer, String rootPackageName) {
+    String packageName =
+        getPackageNameFromDirective(directivesContainer, Directives.DATA_FETCHER, rootPackageName);
     return ClassName.get(
         packageName,
-        getDirectiveArgumentString(directivesContainer, directiveName, DirectiveArgs.VAJRAM_ID)
+        getDirectiveArgumentString(
+                directivesContainer, Directives.DATA_FETCHER, DirectiveArgs.VAJRAM_ID)
             .orElseThrow());
   }
 
-  public boolean isMultiFieldDataFetcher(DirectivesContainer<?> directivesContainer) {
+  public static boolean isMultiFieldDataFetcher(DirectivesContainer<?> directivesContainer) {
     List<Directive> directives = directivesContainer.getDirectives(Directives.DATA_FETCHER);
     if (directives.isEmpty()) {
       return false;
@@ -420,8 +477,13 @@ public class SchemaReaderUtil {
   }
 
   public ClassName getIdFetcherClassName(DirectivesContainer<?> directivesContainer) {
+    return getIdFetcherClassName(directivesContainer, rootPackageName);
+  }
+
+  private static ClassName getIdFetcherClassName(
+      DirectivesContainer<?> directivesContainer, String rootPackageName) {
     return ClassName.get(
-        getPackageNameFromDirective(directivesContainer, Directives.ID_FETCHER),
+        getPackageNameFromDirective(directivesContainer, Directives.ID_FETCHER, rootPackageName),
         getDirectiveArgumentString(
                 directivesContainer, Directives.ID_FETCHER, DirectiveArgs.VAJRAM_ID)
             .orElseThrow());
@@ -452,13 +514,20 @@ public class SchemaReaderUtil {
   }
 
   String getPackageNameForType(GraphQLTypeName graphQLTypeName) {
+    return getPackageNameForType(graphQLTypeName, typeDefinitionRegistry, rootPackageName);
+  }
+
+  static String getPackageNameForType(
+      GraphQLTypeName graphQLTypeName,
+      TypeDefinitionRegistry typeDefinitionRegistry,
+      String rootPackageName) {
     TypeDefinition objectTypeDefinition =
         requireNonNull(
-            typeDefinitionRegistry().types().get(graphQLTypeName.value()),
+            typeDefinitionRegistry.types().get(graphQLTypeName.value()),
             () -> "Could not find type definition for type: " + graphQLTypeName);
     String subPackage =
         getDirectiveArgumentString(objectTypeDefinition, Directives.SUB_PACKAGE, DirectiveArgs.NAME)
-            .orElse(graphQLTypeName.value().toLowerCase())
+            .orElse(graphQLTypeName.value().toLowerCase(Locale.ROOT))
             .trim();
     if (!subPackage.isEmpty()) {
       subPackage = "." + subPackage;
@@ -481,10 +550,14 @@ public class SchemaReaderUtil {
   }
 
   public boolean isOperationType(GraphQLTypeName objectTypeName) {
-    return (queryType() != null && objectTypeName.value().equals(queryType().getName()))
-        || mutationType() != null && objectTypeName.value().equals(mutationType().getName())
-        || subscriptionType() != null
-            && objectTypeName.value().equals(subscriptionType().getName());
+    String value = objectTypeName.value();
+
+    ObjectTypeDefinition queryType = queryType();
+    ObjectTypeDefinition mutationType = mutationType();
+    ObjectTypeDefinition subscriptionType = subscriptionType();
+    return (queryType != null && value.equals(queryType.getName()))
+        || (mutationType != null && value.equals(mutationType.getName()))
+        || (subscriptionType != null && value.equals(subscriptionType.getName()));
   }
 
   public ClassName getAggregatorName(GraphQLTypeName typeName) {
@@ -493,7 +566,7 @@ public class SchemaReaderUtil {
   }
 
   /** Extracts ClassName from a @javaType directive's packageName and className arguments. */
-  static ClassName extractClassNameFromJavaTypeDirective(
+  static @Nullable ClassName extractClassNameFromJavaTypeDirective(
       DirectivesContainer<?> directivesContainer, String contextDescription) {
     List<Directive> javaTypeDirectives = directivesContainer.getDirectives(JAVA_TYPE_DIRECTIVE);
     if (javaTypeDirectives.isEmpty()) {

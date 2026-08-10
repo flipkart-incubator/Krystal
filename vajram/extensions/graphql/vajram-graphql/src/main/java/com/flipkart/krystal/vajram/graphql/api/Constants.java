@@ -7,6 +7,7 @@ public class Constants {
 
   public static final String GRAPHQL_AGGREGATOR_SUFFIX = "_GQlAggr";
   public static final String GRAPHQL_SCHEMA_FILENAME = "Schema.graphqls";
+  public static final String DEFAULT_ENTITY_ID_FIELD = "id";
 
   @UtilityClass
   public static class Directives {

@@ -2,6 +2,7 @@ package com.flipkart.krystal.gradle.plugin;
 
 import java.io.File;
 import java.util.List;
+import java.util.Locale;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -237,7 +238,8 @@ public class VajramPlugin implements Plugin<Project> {
   }
 
   private static @NonNull String capitalizeFirstChar(String krystalModelsGen) {
-    return krystalModelsGen.substring(0, 1).toUpperCase() + krystalModelsGen.substring(1);
+    return krystalModelsGen.substring(0, 1).toUpperCase(Locale.ROOT)
+        + krystalModelsGen.substring(1);
   }
 
   private static File getBuildDir(Project project) {
