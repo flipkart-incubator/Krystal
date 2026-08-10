@@ -47,7 +47,6 @@ public abstract class HttpPostGraphQl extends ComputeVajramDef<Response> {
 
     Map<String, Object> variables();
 
-    @IfAbsent(FAIL)
     String operationName();
 
     Map<String, Object> extensions();
@@ -63,7 +62,7 @@ public abstract class HttpPostGraphQl extends ComputeVajramDef<Response> {
       String query,
       @Nullable Map<String, Object> variables,
       @Nullable Map<String, Object> extensions,
-      String operationName) {
+      @Nullable String operationName) {
     return ExecutionInput.newExecutionInput()
         .query(query)
         .operationName(operationName)
