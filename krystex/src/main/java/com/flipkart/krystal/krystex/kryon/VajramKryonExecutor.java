@@ -153,7 +153,13 @@ public final class VajramKryonExecutor implements KrystalExecutor {
   private final Map<VajramID, Kryon<?, ?>> decoratedKryons = new HashMap<>();
   private final KryonExecutorMetrics kryonMetrics;
   private final Map<InvocationId, KryonExecution<?>> allExecutions = new LinkedHashMap<>();
-  private final Set<VajramID> invokedVajrams = new LinkedHashSet<>();
+
+  /**
+   * Vajrams invoked directly by using the executors. If a trait is invoked directly, then the
+   * vajram that the trait is resolved to is considered to be directly invoked
+   */
+  private final Set<VajramID> directlyInvokedVajrams = new LinkedHashSet<>();
+
   private final Map<VajramID, ImmutableSet<DependentChain>> dependentChainsPerKryon =
       new LinkedHashMap<>();
   private final RequestIdGenerator preferredReqGenerator;
@@ -236,7 +242,15 @@ public final class VajramKryonExecutor implements KrystalExecutor {
                   depChainsForVajram,
                   depChain -> {
                     VajramID firstVajram = depChain.getFirstVajram();
-                    if (firstVajram != null && !invokedVajrams.contains(firstVajram)) {
+                    if (firstVajram == null) {
+                      // This means that `depChain` is a DependentChainStart
+                      // which means `vajramId` has been configured so that it can be invoked
+                      // directly - so we should consider vajramId itself as the first vajram
+                      firstVajram = vajramID;
+                    }
+                    if (!directlyInvokedVajrams.contains(firstVajram)) {
+                      // Only consider those dependent chains which start with an vajram invoked
+                      // directly
                       return false;
                     }
                     for (DependentChain disabledDepChain : disabledDependentChainsForExecutor()) {
@@ -363,7 +377,7 @@ public final class VajramKryonExecutor implements KrystalExecutor {
                               "Received duplicate requests for same instanceId '%s' and execution Id '%s'"
                                   .formatted(executorId, executionId))));
             } else {
-              invokedVajrams.add(resolvedVajramId);
+              directlyInvokedVajrams.add(resolvedVajramId);
               allExecutions.put(
                   invocationId,
                   new KryonExecution<>(

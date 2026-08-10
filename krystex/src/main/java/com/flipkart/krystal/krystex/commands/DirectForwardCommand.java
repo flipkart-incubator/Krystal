@@ -77,9 +77,9 @@ public final class DirectForwardCommand implements DirectForwardSend, DirectForw
       VajramKryonDefinition vajramKryonDefinition =
           KryonUtils.validateAsVajram(kryonDefinitionRegistry.getOrThrow(vajramID()));
       List<ExecutionItem> items = new ArrayList<>(executableRequests.size());
-      for (RequestResponseFuture<? extends Request<?>, ?> executableRequest : executableRequests) {
+      for (var executableRequest : executableRequests) {
         @SuppressWarnings("unchecked")
-        CompletableFuture<@Nullable Object> response =
+        var response =
             (CompletableFuture<@Nullable Object>) requireNonNull(executableRequest).response();
         items.add(
             new ExecutionItem(

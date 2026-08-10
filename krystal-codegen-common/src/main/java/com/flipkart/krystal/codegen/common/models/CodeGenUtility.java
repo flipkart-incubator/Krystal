@@ -75,7 +75,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.ServiceLoader;
-import java.util.ServiceLoader.Provider;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
