@@ -75,7 +75,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.ServiceLoader;
-import java.util.ServiceLoader.Provider;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
@@ -252,7 +251,7 @@ public class CodeGenUtility {
   public void addImmutableModelObjectMethods(
       ClassName immutInterfaceName,
       Set<? extends CharSequence> modelFieldNames,
-      Builder classBuilder) {
+      TypeSpec.Builder classBuilder) {
     addCommonObjectMethods(classBuilder);
 
     classBuilder.addMethod(
@@ -349,14 +348,6 @@ public class CodeGenUtility {
       error("Model root type %s does not have @ModelRoot annotation", modelRootElem);
     }
     List<ExecutableElement> modelMethods = new ArrayList<>();
-
-    for (ExecutableElement executableElement :
-        ElementFilter.methodsIn(modelRootElem.getEnclosedElements())) {
-      if (executableElement.getModifiers().contains(STATIC)) {
-        // Static methods are considered application code which is ignored by Krystal
-        continue;
-      }
-    }
 
     for (ExecutableElement method :
         ElementFilter.methodsIn(processingEnv.getElementUtils().getAllMembers(modelRootElem))) {
@@ -1164,7 +1155,6 @@ public class CodeGenUtility {
    * @param isBuilder true of field is in a builder class. false if it's in an immutable class.
    * @param modelProtocol the model protocol to be used for the field. null means don't use any
    *     specific model
-   * @return
    */
   public ModelFieldTypeInfo getModelFieldType(
       ExecutableElement method, boolean isBuilder, @Nullable ModelProtocol modelProtocol) {
@@ -1411,7 +1401,7 @@ public class CodeGenUtility {
     Map<String, ModelProtocol> availableModelProtocols =
         ServiceLoader.load(ModelProtocolConfigProvider.class, this.getClass().getClassLoader())
             .stream()
-            .map(Provider::get)
+            .map(ServiceLoader.Provider::get)
             .map(ModelProtocolConfigProvider::getConfig)
             .map(ModelProtocolConfig::modelProtocol)
             .collect(

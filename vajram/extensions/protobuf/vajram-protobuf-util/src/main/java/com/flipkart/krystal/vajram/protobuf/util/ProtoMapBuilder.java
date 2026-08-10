@@ -3,7 +3,6 @@ package com.flipkart.krystal.vajram.protobuf.util;
 import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.model.ImmutableModel;
-import com.flipkart.krystal.model.ImmutableModel.Builder;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.map.ModelsMapBuilder;
 import com.flipkart.krystal.model.map.UnmodifiableModelsMap;
@@ -19,7 +18,8 @@ import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public class ProtoMapBuilder<K, M extends Model, I extends ImmutableModel, B extends Builder>
+public class ProtoMapBuilder<
+        K, M extends Model, I extends ImmutableModel, B extends ImmutableModel.Builder>
     implements ModelsMapBuilder<K, M, I, B> {
 
   private final Supplier<Map<K, I>> modelsMap;

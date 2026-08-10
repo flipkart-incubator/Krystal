@@ -12,7 +12,7 @@ public class FanoutCommand<T> implements DependencyCommand<T> {
   Collection<? extends T> values;
   boolean shouldSkip;
   String doc;
-  @Nullable Throwable skipCause;
+  private final @Nullable Throwable skipCause;
 
   private FanoutCommand(
       Collection<? extends T> values,

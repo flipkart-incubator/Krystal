@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.ext.json.codegen;
 
 import static com.flipkart.krystal.codegen.common.models.Constants.EMPTY_CODE_BLOCK;
 import static com.flipkart.krystal.vajram.json.Json.JSON;
+import static java.util.Objects.requireNonNull;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
@@ -99,7 +100,9 @@ public class JsonConfigProvider implements ModelProtocolConfigProvider {
               stringAnnotationValueMap ->
                   Creator.create(
                       SerdeOutputType.valueOf(
-                          ((Element) stringAnnotationValueMap.get("serializeAs").getValue())
+                          ((Element)
+                                  requireNonNull(stringAnnotationValueMap.get("serializeAs"))
+                                      .getValue())
                               .getSimpleName()
                               .toString())));
       return CodeBlock.of(

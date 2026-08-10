@@ -8,20 +8,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import lombok.EqualsAndHashCode;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-@EqualsAndHashCode(of = "error")
-public final class Failure<T> implements Errable<T> {
-  private final Throwable error;
-
-  @SuppressWarnings({"optional.field", "OptionalUsedAsFieldOrParameterType"})
-  private Optional<Throwable> o = Optional.empty();
-
-  public Failure(Throwable error) {
-    this.error = error;
-  }
+public record Failure<T>(Throwable error) implements Errable<T> {
 
   @Override
   public CompletableFuture<@Nullable T> toFuture() {
@@ -69,13 +59,9 @@ public final class Failure<T> implements Errable<T> {
     return error.toString();
   }
 
-  public Throwable error() {
-    return error;
-  }
-
   @Override
   public Optional<Throwable> errorOpt() {
-    return o.isPresent() ? o : (o = Optional.of(error));
+    return Optional.of(error);
   }
 
   private RuntimeException asRuntimeException() {

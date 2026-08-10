@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajram.ext.sql.data;
 import com.flipkart.krystal.model.array.FloatArray;
 import com.flipkart.krystal.model.array.SimpleFloatArray;
 import lombok.experimental.UtilityClass;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.checker.nullness.qual.PolyNull;
 
 @UtilityClass
@@ -24,7 +25,7 @@ public class DataUtils {
     throw new IllegalArgumentException("Cannot convert " + value.getClass() + " to FloatArray");
   }
 
-  public static float[] floatArrayToSqlVal(@PolyNull FloatArray value) {
+  public static float @Nullable [] floatArrayToSqlVal(@PolyNull FloatArray value) {
     if (value == null) {
       return null;
     }

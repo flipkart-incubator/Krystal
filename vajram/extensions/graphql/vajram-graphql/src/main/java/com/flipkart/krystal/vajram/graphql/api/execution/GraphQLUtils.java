@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import lombok.experimental.UtilityClass;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 @UtilityClass
 public class GraphQLUtils {
@@ -58,7 +59,7 @@ public class GraphQLUtils {
     @SuppressWarnings("unchecked")
     public List<SourceLocation> getLocations() {
       Object locations = errorMap.get("locations");
-      return locations instanceof List ? (List<SourceLocation>) locations : null;
+      return locations instanceof List<?> ? (List<SourceLocation>) locations : List.of();
     }
 
     @Override
@@ -72,14 +73,14 @@ public class GraphQLUtils {
 
     @Override
     @SuppressWarnings("unchecked")
-    public List<Object> getPath() {
+    public @Nullable List<Object> getPath() {
       Object path = errorMap.get("path");
       return path instanceof List ? (List<Object>) path : null;
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public Map<String, Object> getExtensions() {
+    public @Nullable Map<String, Object> getExtensions() {
       Object extensions = errorMap.get("extensions");
       return extensions instanceof Map ? (Map<String, Object>) extensions : null;
     }
@@ -101,7 +102,8 @@ public class GraphQLUtils {
   public static boolean isAnyFieldQueried(
       Set<String> fieldNames, ExecutionStrategyParameters params) {
     MergedSelectionSet fields = params.getFields();
-    return !Sets.intersection(fields.getSubFields().keySet(), fieldNames).isEmpty()
+    Set<String> subFields = fields.getSubFields().keySet();
+    return !Sets.intersection(subFields, fieldNames).isEmpty()
         || fieldNames.contains(params.getField().getSingleField().getName());
   }
 }

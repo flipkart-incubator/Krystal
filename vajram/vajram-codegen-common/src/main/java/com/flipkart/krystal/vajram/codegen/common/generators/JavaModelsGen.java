@@ -694,7 +694,8 @@ public final class JavaModelsGen implements CodeGenerator {
                   return parentModelRootAnno.map(
                       annotationMirror -> {
                         Element modelRootElement =
-                            util.processingEnv().getTypeUtils().asElement(parentModelRootType);
+                            requireNonNull(
+                                util.processingEnv().getTypeUtils().asElement(parentModelRootType));
                         return asTypeNameWithTypes(
                             util.getImmutInterfaceName(modelRootElement), typeArguments);
                       });
@@ -719,7 +720,8 @@ public final class JavaModelsGen implements CodeGenerator {
                   return parentModelRootAnno.map(
                       annotationMirror -> {
                         Element parentModelRoot =
-                            util.processingEnv().getTypeUtils().asElement(parentModelRootType);
+                            requireNonNull(
+                                util.processingEnv().getTypeUtils().asElement(parentModelRootType));
                         return asTypeNameWithTypes(
                             util.getImmutInterfaceName(parentModelRoot).nestedClass("Builder"),
                             typeArguments);
@@ -825,7 +827,7 @@ public final class JavaModelsGen implements CodeGenerator {
 
   private Optional<TypeMirror> getInterfaceWithAnnotation(
       TypeMirror typeMirror, Class<?> annotationClass, boolean skipFirst) {
-    Element element = util.processingEnv().getTypeUtils().asElement(typeMirror);
+    Element element = requireNonNull(util.processingEnv().getTypeUtils().asElement(typeMirror));
     Optional<? extends AnnotationMirror> annotation =
         skipFirst
             ? Optional.empty()

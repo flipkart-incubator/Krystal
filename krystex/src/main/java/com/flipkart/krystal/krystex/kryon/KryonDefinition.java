@@ -8,6 +8,7 @@ import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
 import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableSet;
 import java.util.function.Function;
+import org.jspecify.annotations.NonNull;
 
 public sealed interface KryonDefinition permits AbstractKryonDefinition {
 
@@ -36,5 +37,5 @@ public sealed interface KryonDefinition permits AbstractKryonDefinition {
    * @param <T> The type of the metadata object
    */
   @SuppressWarnings("unchecked")
-  <T> T getCustomMetadata(Class<T> clazz, Function<KryonDefinition, T> computer);
+  <T> T getCustomMetadata(Class<T> clazz, Function<KryonDefinition, @NonNull T> computer);
 }

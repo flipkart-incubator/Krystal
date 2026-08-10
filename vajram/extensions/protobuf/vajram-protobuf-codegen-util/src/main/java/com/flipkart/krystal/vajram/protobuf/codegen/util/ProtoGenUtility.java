@@ -58,6 +58,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Protocol-agnostic helpers shared across the protobuf codegen pipeline. */
 @Slf4j
@@ -187,10 +188,8 @@ public final class ProtoGenUtility {
       return false;
     }
 
-    Element annotationSource =
-        vajramInfo.inputsSource() != null ? vajramInfo.inputsSource() : vajramClass;
     List<? extends TypeMirror> serializationProtocols =
-        getSerializationProtocols(annotationSource, util);
+        getSerializationProtocols(vajramInfo.inputsSource(), util);
     if (serializationProtocols.stream()
         .noneMatch(
             serializationProtocol ->
@@ -363,8 +362,11 @@ public final class ProtoGenUtility {
     }
   }
 
-  public static List<? extends TypeMirror> getSerializationProtocols(
-      Element annotationSource, VajramCodeGenUtility util) {
+  private static List<? extends TypeMirror> getSerializationProtocols(
+      @Nullable Element annotationSource, VajramCodeGenUtility util) {
+    if (annotationSource == null) {
+      return List.of();
+    }
     return util.codegenUtil().getSupportedProtocolTypeElements(annotationSource).stream()
         .map(TypeElement::asType)
         .toList();

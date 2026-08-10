@@ -33,8 +33,8 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Function;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.checker.nullness.qual.PolyNull;
 
@@ -101,9 +101,9 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
   @SuppressWarnings("unchecked")
   @Override
   public <T> @Nullable T deserialize(
-      @Nullable Object payload, Object typeInfo, @Nullable JsonConfig customConfig) {
+      Object payload, Object typeInfo, @Nullable JsonConfig customConfig) {
     if (typeInfo instanceof Class<?> clazz) {
-      return (T) deserialize(payload, clazz, customConfig);
+      return (@NonNull T) deserialize(payload, clazz, customConfig);
     } else if (typeInfo instanceof Type type) {
       return deserialize(payload, type, customConfig);
     } else if (typeInfo instanceof TypeReference<?> typeRef) {
@@ -131,11 +131,6 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
   private static <T> @Nullable T deserialize(@Nullable Object payload, ObjectReader reader) {
     if (payload == null) {
       return null;
-    }
-    if (payload instanceof Optional<? extends @Nullable Object> optional) {
-      @SuppressWarnings("argument")
-      Object innerPayload = optional.orElse(null);
-      return deserialize(innerPayload, reader);
     }
     try {
       return JsonRepresentation.of(payload).deserialize(reader);
@@ -185,7 +180,8 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
     primitiveArrayModule
         .addAbstractTypeMapping(FloatArray.class, SimpleFloatArray.class)
         .addSerializer(FloatArray.class, new FloatArraySerializer())
-        .addDeserializer(SimpleFloatArray.class, new FloatArrayDeserializer());
+        .<@Nullable SimpleFloatArray>addDeserializer(
+            SimpleFloatArray.class, new FloatArrayDeserializer());
 
     return primitiveArrayModule;
   }

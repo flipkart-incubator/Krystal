@@ -83,6 +83,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.calledmethods.qual.CalledMethods;
 import org.checkerframework.checker.initialization.qual.Initialized;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -152,7 +153,13 @@ public final class VajramKryonExecutor implements KrystalExecutor {
   private final Map<VajramID, Kryon<?, ?>> decoratedKryons = new HashMap<>();
   private final KryonExecutorMetrics kryonMetrics;
   private final Map<InvocationId, KryonExecution<?>> allExecutions = new LinkedHashMap<>();
-  private final Set<VajramID> invokedVajrams = new LinkedHashSet<>();
+
+  /**
+   * Vajrams invoked directly by using the executors. If a trait is invoked directly, then the
+   * vajram that the trait is resolved to is considered to be directly invoked
+   */
+  private final Set<VajramID> directlyInvokedVajrams = new LinkedHashSet<>();
+
   private final Map<VajramID, ImmutableSet<DependentChain>> dependentChainsPerKryon =
       new LinkedHashMap<>();
   private final RequestIdGenerator preferredReqGenerator;
@@ -162,7 +169,8 @@ public final class VajramKryonExecutor implements KrystalExecutor {
   private boolean shutdownRequested;
 
   public VajramKryonExecutor(
-      KrystexGraph krystexGraph, KrystalExecutorConfigBuilder executorConfigBuilder) {
+      KrystexGraph krystexGraph,
+      @CalledMethods("executorService") KrystalExecutorConfigBuilder executorConfigBuilder) {
     this.executorConfig = executorConfigBuilder.build();
     this.kryonDefinitionRegistry = krystexGraph.vajramGraph().kryonDefinitionRegistry();
     this.krystexGraph = krystexGraph;
@@ -233,7 +241,16 @@ public final class VajramKryonExecutor implements KrystalExecutor {
               Sets.filter(
                   depChainsForVajram,
                   depChain -> {
-                    if (!invokedVajrams.contains(depChain.getFirstVajram())) {
+                    VajramID firstVajram = depChain.getFirstVajram();
+                    if (firstVajram == null) {
+                      // This means that `depChain` is a DependentChainStart
+                      // which means `vajramId` has been configured so that it can be invoked
+                      // directly - so we should consider vajramId itself as the first vajram
+                      firstVajram = vajramID;
+                    }
+                    if (!directlyInvokedVajrams.contains(firstVajram)) {
+                      // Only consider those dependent chains which start with an vajram invoked
+                      // directly
                       return false;
                     }
                     for (DependentChain disabledDepChain : disabledDependentChainsForExecutor()) {
@@ -360,7 +377,7 @@ public final class VajramKryonExecutor implements KrystalExecutor {
                               "Received duplicate requests for same instanceId '%s' and execution Id '%s'"
                                   .formatted(executorId, executionId))));
             } else {
-              invokedVajrams.add(resolvedVajramId);
+              directlyInvokedVajrams.add(resolvedVajramId);
               allExecutions.put(
                   invocationId,
                   new KryonExecution<>(
@@ -601,6 +618,7 @@ public final class VajramKryonExecutor implements KrystalExecutor {
         });
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   private void submitDirect(Collection<KryonExecution<?>> allExecutions) {
     Map<VajramID, List<KryonExecution<?>>> executionsByKryon = new HashMap<>();
     for (KryonExecution<?> anExecution : allExecutions) {
@@ -797,11 +815,11 @@ public final class VajramKryonExecutor implements KrystalExecutor {
       RequestResponseFuture<? extends Request<T>, T> requestResponseFuture,
       VajramExecutionConfig executionConfig) {
 
-    public CompletableFuture<@Nullable Object> response() {
+    private CompletableFuture<@Nullable Object> response() {
       return (CompletableFuture<@Nullable Object>) requestResponseFuture().response();
     }
 
-    public Request<Object> request() {
+    private Request<Object> request() {
       return (Request<Object>) requestResponseFuture().request();
     }
   }

@@ -394,7 +394,8 @@ this.$L = $L == null
                     : new $T($L)
             """,
             fieldName,
-            fieldModelRootInfo.get().annotation().builderExtendsModelRoot()
+            fieldModelRootInfo.isPresent()
+                    && fieldModelRootInfo.get().annotation().builderExtendsModelRoot()
                 ? CodeBlock.of(
                     ": $L instanceof $T _jsonBuilder ? _jsonBuilder._build()",
                     fieldName,

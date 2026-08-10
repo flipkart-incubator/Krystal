@@ -10,6 +10,7 @@ import com.flipkart.krystal.vajram.codegen.common.models.VajramInfoLite;
 import com.flipkart.krystal.vajram.protobuf.util.ProtobufProtocol;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
@@ -51,6 +52,7 @@ final class GrpcProtocolResolver {
             codegenUtil.getModelProtocols(responseTypeElement).stream()
                 .filter(ProtobufProtocol.class::isInstance)
                 .map(ProtobufProtocol.class::cast)
+                .map(Objects::requireNonNull)
                 .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
         foundAny = true;
         if (commonProtocols == null) {

@@ -130,18 +130,18 @@ import org.openjdk.jmh.annotations.Warmup;
  * <pre>
  * Benchmark                          Mode  Cnt      Score      Error  Units
  * -----------------------------------------------------------------
- * chainAdd                          thrpt    5   29005.062 ±  1031.420  ops/s
- * chainAddBatched                   thrpt    5   29482.634 ±  4086.956  ops/s
- * chainAddTenRequests               thrpt    5    6844.021 ±   631.362  ops/s
- * chainAddTenRequestsBatched        thrpt    5    7589.766 ±   190.022  ops/s
- * formula                           thrpt    5   41749.789 ±  6750.195  ops/s
- * formulaTenRequests                thrpt    5   22645.667 ±  3851.465  ops/s
- * multiAddWithSimpleAdd             thrpt    5  172631.797 ± 43027.517  ops/s
- * multiAddWithSimpleAddTenRequests  thrpt    5  104980.144 ±  3429.577  ops/s
- * splitAdd                          thrpt    5   18216.737 ±   718.836  ops/s
- * splitAddBatched                   thrpt    5   13920.811 ±  1902.600  ops/s
- * splitAddTenRequests               thrpt    5    6155.536 ±   336.507  ops/s
- * splitAddTenRequestsBatched        thrpt    5    6081.799 ±   186.328  ops/s
+ * chainAdd                          thrpt    5   28818.545 ±  1994.622  ops/s
+ * chainAddBatched                   thrpt    5   30640.696 ±  1105.751  ops/s
+ * chainAddTenRequests               thrpt    5    7073.114 ±   566.842  ops/s
+ * chainAddTenRequestsBatched        thrpt    5    7613.245 ±   356.693  ops/s
+ * formula                           thrpt    5   42350.575 ±  3959.098  ops/s
+ * formulaTenRequests                thrpt    5   22867.016 ±  1429.590  ops/s
+ * multiAddWithSimpleAdd             thrpt    5  174505.174 ± 23863.545  ops/s
+ * multiAddWithSimpleAddTenRequests  thrpt    5  100763.799 ± 10282.558  ops/s
+ * splitAdd                          thrpt    5   18696.038 ±   931.072  ops/s
+ * splitAddBatched                   thrpt    5   16026.172 ±  1170.135  ops/s
+ * splitAddTenRequests               thrpt    5    5930.381 ±   206.588  ops/s
+ * splitAddTenRequestsBatched        thrpt    5    6421.583 ±   176.142  ops/s
  * </pre>
  */
 @State(Scope.Benchmark)

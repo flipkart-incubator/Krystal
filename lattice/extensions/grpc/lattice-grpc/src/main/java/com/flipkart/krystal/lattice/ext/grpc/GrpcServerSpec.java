@@ -38,7 +38,7 @@ public record GrpcServerSpec(Context.Key<String> requestIdContextKey)
       implements DopantSpecBuilder<GrpcServer, GrpcServerConfig, GrpcServerSpec> {
 
     GrpcServerSpecBuilder() {
-      requestIdContextKey(Context.key(REQUEST_ID));
+      requestIdContextKey = Context.key(REQUEST_ID);
     }
 
     @Override

@@ -50,9 +50,9 @@ public final class ComputeDispatchPolicyImpl<T extends Request<?>> extends Compu
     }
     VajramID vajramID;
     Class<? extends Request<?>> dispatchTargetReqClass;
-    if (dispatchTarget instanceof VajramID) {
-      vajramID = (VajramID) dispatchTarget;
-      dispatchTargetReqClass = graph.getVajramReqByVajramId(vajramID).orElse(null);
+    if (dispatchTarget instanceof VajramID dispatchTargetVajramID) {
+      vajramID = dispatchTargetVajramID;
+      dispatchTargetReqClass = graph.getVajramReqByVajramId(dispatchTargetVajramID).orElse(null);
     } else if (dispatchTarget instanceof Class<?>) {
       dispatchTargetReqClass = (Class<? extends Request<?>>) dispatchTarget;
       vajramID = graph.getVajramIdByVajramReqType(dispatchTargetReqClass);
@@ -78,6 +78,7 @@ public final class ComputeDispatchPolicyImpl<T extends Request<?>> extends Compu
     return vajramID;
   }
 
+  @Override
   public ImmutableSet<Class<? extends Request<?>>> dispatchTargetReqs() {
     return ImmutableSet.copyOf(dispatchTargetReqs);
   }

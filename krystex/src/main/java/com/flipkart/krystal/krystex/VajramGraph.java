@@ -69,6 +69,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** The graph encompassing all registered vajrams along with inter-vajram dependencies. */
@@ -167,7 +168,7 @@ public final class VajramGraph {
    * @param <T> The type of the metadata object
    */
   @SuppressWarnings("unchecked")
-  public <T> T getCustomMetadata(Class<T> clazz, Supplier<T> computer) {
+  public <T> T getCustomMetadata(Class<T> clazz, Supplier<@NonNull T> computer) {
     return (T) customMetadata.computeIfAbsent(clazz, _c -> computer.get());
   }
 
@@ -181,7 +182,7 @@ public final class VajramGraph {
    * @param definitionByReqType
    * @return the {@link VajramDefinition} corresponding to the registered vajram
    */
-  private VajramDefinition registerVajram(
+  private static VajramDefinition registerVajram(
       VajramDefRoot<Object> vajramDef,
       Map<VajramID, VajramDefinition> vajramDefinitions,
       Map<Class<? extends VajramDefRoot>, VajramDefinition> definitionByDefType,

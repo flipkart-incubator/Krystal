@@ -74,6 +74,7 @@ class InjectingDecoratedKryon
     return kryon.executeCommand(kryonCommand);
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   private CompletableFuture<KryonCommandResponse> injectFacets(
       DirectForwardReceive forwardReceive, VajramDefinition vajramDefinition) {
     for (ExecutionItem executionItem :
@@ -99,6 +100,7 @@ class InjectingDecoratedKryon
     return kryon.executeCommand(forwardReceive);
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   private CompletableFuture<KryonCommandResponse> injectFacets(
       ForwardReceiveBatch forwardBatch, VajramDefinition vajramDefinition) {
     Map<InvocationId, ? extends FacetValues> requestIdToFacets =
@@ -145,7 +147,7 @@ class InjectingDecoratedKryon
       if (facetValue.valueOpt().isPresent()) {
         continue;
       }
-      Provider<Object> provider;
+      Provider<@Nullable Object> provider;
       Errable<Object> value;
       try {
         provider = getInjectedValue(vajramDefinition.vajramId(), facetSpec);
@@ -175,12 +177,12 @@ class InjectingDecoratedKryon
   }
 
   @SuppressWarnings("unchecked")
-  private Provider<Object> getInjectedValue(VajramID vajramId, FacetSpec<?, ?> facetDef)
+  private Provider<@Nullable Object> getInjectedValue(VajramID vajramId, FacetSpec<?, ?> facetDef)
       throws Exception {
     VajramInjectionProvider inputInjector = this.injectionProvider;
     if (inputInjector == null) {
       throw new KrystalCompletionException("Dependency injector is null");
     }
-    return (Provider<Object>) inputInjector.get(vajramId, facetDef);
+    return (Provider<@Nullable Object>) inputInjector.get(vajramId, facetDef);
   }
 }
