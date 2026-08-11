@@ -4,16 +4,15 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public final class GraphQlOperationObjectMap extends GraphQlObjectMap
-    implements GraphQlOperationObject {
+public final class GraphQlOperationEntity extends GraphQlEntity implements GraphQlOperation {
 
   private final @Nullable Map<Object, Object> extensions;
 
-  public GraphQlOperationObjectMap(Map<String, GraphQlValue> graphql_values) {
+  public GraphQlOperationEntity(Map<String, GraphQlValue> graphql_values) {
     this(graphql_values, null);
   }
 
-  public GraphQlOperationObjectMap(
+  public GraphQlOperationEntity(
       Map<String, GraphQlValue> graphql_values, @Nullable Map<Object, Object> extensions) {
     super(graphql_values);
     this.extensions = extensions;
@@ -37,8 +36,8 @@ public final class GraphQlOperationObjectMap extends GraphQlObjectMap
       return this;
     }
 
-    public GraphQlOperationObjectMap build() {
-      return new GraphQlOperationObjectMap(graphql_data, extensions);
+    public GraphQlOperationEntity build() {
+      return new GraphQlOperationEntity(graphql_data, extensions);
     }
   }
 }

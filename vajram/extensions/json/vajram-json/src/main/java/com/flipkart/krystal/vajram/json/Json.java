@@ -54,7 +54,8 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
               new Jdk8Module(),
               new ParameterNamesModule(),
               primitiveArrayModule(),
-              new EnumModelModule())
+              new EnumModelModule(),
+              new ErrableModule())
           .build();
 
   public static final ObjectReader OBJECT_READER = OBJECT_MAPPER.reader();

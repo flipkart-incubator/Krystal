@@ -15,12 +15,12 @@ import java.util.Map;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public sealed class GraphQlObjectMap implements GraphQlObject permits GraphQlOperationObjectMap {
+public sealed class GraphQlEntity implements GraphQlObject permits GraphQlOperationEntity {
 
   private final Map<String, GraphQlValue> graphql_values;
   private @MonotonicNonNull Map<String, Object> graphql_data;
 
-  GraphQlObjectMap(Map<String, GraphQlValue> graphql_values) {
+  GraphQlEntity(Map<String, GraphQlValue> graphql_values) {
     this.graphql_values = unmodifiableMap(graphql_values);
   }
 
@@ -28,13 +28,13 @@ public sealed class GraphQlObjectMap implements GraphQlObject permits GraphQlOpe
   public Map<String, Object> graphql_data() {
     if (graphql_data == null) {
       Map<String, Object> _data = new LinkedHashMap<>();
-      graphql_values.forEach((alias, value) -> _data.put(alias, _collectData(value)));
+      graphql_values.forEach((alias, value) -> _data.put(alias, graphql_data(value)));
       graphql_data = _data;
     }
     return graphql_data;
   }
 
-  private @Nullable Object _collectData(GraphQlValue graphQlValue) {
+  private @Nullable Object graphql_data(GraphQlValue graphQlValue) {
     Object value = graphQlValue.errable().value();
     if (value == null) {
       return null;
@@ -44,9 +44,9 @@ public sealed class GraphQlObjectMap implements GraphQlObject permits GraphQlOpe
       List<SingleValue> valueList =
           // The null case was handled at the beginning of the method
           requireNonNull(listValue.errable().value());
-      valueList.forEach(singleValue -> data.add(_collectData(singleValue)));
+      valueList.forEach(singleValue -> data.add(graphql_data(singleValue)));
       return data;
-    } else if (value instanceof GraphQlObjectMap nestedObject) {
+    } else if (value instanceof GraphQlEntity nestedObject) {
       return nestedObject.graphql_data();
     } else {
       return value;
@@ -102,8 +102,8 @@ public sealed class GraphQlObjectMap implements GraphQlObject permits GraphQlOpe
       return (T) this;
     }
 
-    public GraphQlObjectMap build() {
-      return new GraphQlObjectMap(graphql_data);
+    public GraphQlEntity build() {
+      return new GraphQlEntity(graphql_data);
     }
   }
 }

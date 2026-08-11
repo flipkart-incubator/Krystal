@@ -1,12 +1,12 @@
 package com.flipkart.krystal.vajram.graphql.api.execution;
 
 import static com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy.VAJRAM_INVOCATION_CTX_KEY;
-import static com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject._asExecutionResult;
+import static com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperation._asExecutionResult;
 
 import com.flipkart.krystal.core.VajramInvocation;
 import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperation;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
@@ -38,7 +38,7 @@ public class GraphQlExecutionFacade {
             .graphQLContext(
                 Map.of(
                     VAJRAM_INVOCATION_CTX_KEY,
-                    (VajramInvocation<GraphQlOperationObject>)
+                    (VajramInvocation<GraphQlOperation>)
                         requestResponseFuture ->
                             vajramKryonExecutor.execute(
                                 requestResponseFuture, vajramExecutionConfig)))

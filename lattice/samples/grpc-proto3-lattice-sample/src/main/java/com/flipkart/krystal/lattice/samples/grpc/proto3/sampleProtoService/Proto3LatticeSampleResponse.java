@@ -5,6 +5,7 @@ import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.WILL_NEVER_FAIL;
 import static com.flipkart.krystal.model.ModelRoot.ModelType.RESPONSE;
 
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
@@ -95,4 +96,13 @@ public interface Proto3LatticeSampleResponse extends Model {
   @SerialId(19)
   @IfAbsent(ASSUME_DEFAULT_VALUE)
   Map<String, Status> namedStatuses();
+
+  /**
+   * Demonstrates {@link Errable} field support in proto3 models: the inner value is stored in the
+   * proto field when present (NonNil), and the proto field is absent when Nil or Failure. The
+   * failure state is intentionally lost on round-trip.
+   */
+  @SerialId(20)
+  @IfAbsent(WILL_NEVER_FAIL)
+  Errable<String> errableMessage();
 }

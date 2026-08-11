@@ -12,8 +12,7 @@ public sealed interface GraphQlValue {
 
   record ScalarValue(Errable<?> errable, boolean isNullable) implements SingleValue {}
 
-  record ObjectValue(Errable<GraphQlObjectMap> errable, boolean isNullable)
-      implements SingleValue {}
+  record ObjectValue(Errable<GraphQlEntity> errable, boolean isNullable) implements SingleValue {}
 
   record ListValue(Errable<List<SingleValue>> errable, boolean isNullable)
       implements GraphQlValue {}

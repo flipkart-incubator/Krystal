@@ -8,7 +8,7 @@ import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperation;
 import graphql.ExecutionInput;
 import graphql.execution.ExecutionContext;
 import graphql.execution.ExecutionStrategyParameters;
@@ -16,7 +16,7 @@ import graphql.language.OperationDefinition.Operation;
 
 @CallGraphDelegationMode(SYNC)
 @Trait
-public interface GraphQlOperationAggregate<T extends GraphQlOperationObject> extends TraitDef<T> {
+public interface GraphQlOperationAggregate<T extends GraphQlOperation> extends TraitDef<T> {
   interface _Inputs {
     @IfAbsent(FAIL)
     ExecutionInput executionInput();

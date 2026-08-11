@@ -20,6 +20,7 @@ import com.flipkart.krystal.codegen.common.models.CodeGenUtility.ModelRootInfo;
 import com.flipkart.krystal.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.list.ModelsListBuilder;
@@ -377,7 +378,10 @@ final class ForyModelsGen implements CodeGenerator {
       FieldSpec.Builder fieldBuilder =
           FieldSpec.builder(fieldType, method.getSimpleName().toString(), PRIVATE);
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType(), method);
-      if (isBuilder
+      if (isBuilder && util.isErrable(method.getReturnType())) {
+        // Errable builder fields default to Errable.nil() (never null).
+        fieldBuilder.initializer("$T.nil()", Errable.class);
+      } else if (isBuilder
           && fieldModelRootInfo.isPresent()
           && !util.isEnumModel(fieldModelRootInfo.get().element())) {
         switch (fieldModelRootInfo.get().containerType()) {

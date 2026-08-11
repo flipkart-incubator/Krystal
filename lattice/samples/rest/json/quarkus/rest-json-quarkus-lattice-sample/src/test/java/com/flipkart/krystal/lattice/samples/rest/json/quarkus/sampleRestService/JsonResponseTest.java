@@ -3,6 +3,8 @@ package com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.NonNil;
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.InnerData_ImmutJson;
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.InnerData_ImmutPojo;
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.models.JsonResponse_ImmutJson;
@@ -105,5 +107,103 @@ class JsonResponseTest {
                     InnerData_ImmutPojo._builder().value("Hello Again").count(34)._build()))
             .priority(Priority.LOW);
     assertThat(immutJsonBuilder._build()).isEqualTo(immutJsonBuilder._newCopy()._build());
+  }
+
+  // --- Errable field tests ---
+
+  @Test
+  void errableField_withValue_serializesAndDeserializesInnerValue() throws Exception {
+    JsonResponse_ImmutJson original =
+        JsonResponse_ImmutJson._builder()
+            .string("errable-test")
+            .mandatoryInt(1)
+            .errableMessage("hello errable")
+            ._build();
+
+    assertThat(original.errableMessage()).isEqualTo(Errable.withValue("hello errable"));
+
+    byte[] bytes = original._serialize().readAllBytes();
+    String json = new String(bytes, UTF_8);
+    // The inner value should appear directly in the JSON
+    assertThat(json).contains("\"errableMessage\":\"hello errable\"");
+
+    JsonResponse_ImmutJson deserialized = new JsonResponse_ImmutJson(bytes);
+    assertThat(deserialized.errableMessage()).isEqualTo(Errable.withValue("hello errable"));
+  }
+
+  @Test
+  void errableField_absent_deserializesToNil() throws Exception {
+    // Build without setting errableMessage — field should default to Nil
+    JsonResponse_ImmutJson original =
+        JsonResponse_ImmutJson._builder().string("no-errable").mandatoryInt(2)._build();
+
+    assertThat(original.errableMessage()).isEqualTo(Errable.nil());
+
+    byte[] bytes = original._serialize().readAllBytes();
+    String json = new String(bytes, UTF_8);
+    // Nil Errable serializes as null JSON value
+    assertThat(json).contains("\"errableMessage\":null");
+
+    JsonResponse_ImmutJson deserialized = new JsonResponse_ImmutJson(bytes);
+    assertThat(deserialized.errableMessage()).isEqualTo(Errable.nil());
+  }
+
+  @Test
+  void errableField_setViaErrableSetter_withValue() {
+    JsonResponse_ImmutJson built =
+        JsonResponse_ImmutJson._builder()
+            .string("errable-setter")
+            .mandatoryInt(3)
+            .errableMessage(Errable.withValue("via errable setter"))
+            ._build();
+
+    assertThat(built.errableMessage()).isEqualTo(Errable.withValue("via errable setter"));
+  }
+
+  @Test
+  void errableField_setViaErrableSetter_nil() {
+    JsonResponse_ImmutJson built =
+        JsonResponse_ImmutJson._builder()
+            .string("errable-nil-setter")
+            .mandatoryInt(4)
+            .errableMessage(Errable.nil())
+            ._build();
+
+    assertThat(built.errableMessage()).isEqualTo(Errable.nil());
+  }
+
+  @Test
+  void errableField_setViaErrableSetter_failure() {
+    RuntimeException cause = new RuntimeException("upstream failure");
+    JsonResponse_ImmutJson built =
+        JsonResponse_ImmutJson._builder()
+            .string("errable-failure")
+            .mandatoryInt(5)
+            .errableMessage(Errable.withError(cause))
+            ._build();
+
+    assertThat(built.errableMessage()).isNotInstanceOf(NonNil.class);
+  }
+
+  @Test
+  void errableField_pojo_withValue_roundTrip() {
+    JsonResponse_ImmutPojo built =
+        JsonResponse_ImmutPojo._builder()
+            .string("pojo-errable")
+            .mandatoryInt(6)
+            .errableMessage("pojo value")
+            ._build();
+
+    assertThat(built.errableMessage()).isEqualTo(Errable.withValue("pojo value"));
+    assertThat(built).isEqualTo(built._newCopy()._build());
+  }
+
+  @Test
+  void errableField_pojo_nil_roundTrip() {
+    JsonResponse_ImmutPojo built =
+        JsonResponse_ImmutPojo._builder().string("pojo-nil").mandatoryInt(7)._build();
+
+    assertThat(built.errableMessage()).isEqualTo(Errable.nil());
+    assertThat(built).isEqualTo(built._newCopy()._build());
   }
 }

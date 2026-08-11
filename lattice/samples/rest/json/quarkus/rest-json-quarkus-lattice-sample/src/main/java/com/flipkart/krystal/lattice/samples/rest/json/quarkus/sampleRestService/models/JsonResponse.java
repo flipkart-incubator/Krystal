@@ -4,6 +4,7 @@ import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VA
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.WILL_NEVER_FAIL;
 import static com.flipkart.krystal.model.ModelRoot.ModelType.RESPONSE;
 
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
@@ -92,4 +93,10 @@ public interface JsonResponse extends Model {
 
   @IfAbsent(ASSUME_DEFAULT_VALUE)
   List<Priority> priorities();
+
+  /**
+   * An optional string that may carry a computation error. Demonstrates {@link Errable} field
+   * support in JSON models: serializes as the inner value when present, absent when nil/failure.
+   */
+  Errable<String> errableMessage();
 }

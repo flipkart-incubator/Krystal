@@ -26,6 +26,7 @@ import com.flipkart.krystal.codegen.common.models.CodeGenUtility.ModelRootInfo;
 import com.flipkart.krystal.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.list.ModelsListBuilder;
@@ -212,10 +213,15 @@ final class JsonModelsGen implements CodeGenerator {
       methods.add(getterBuilder.build());
 
       String fieldName = method.getSimpleName().toString();
+      // @JsonSetter for Errable<T> fields uses Errable<T> as parameter type.
+      // Jackson uses ErrableDeserializer (registered via ErrableModule) to produce an Errable<T>
+      // from the JSON value, so the setter must accept Errable<T>.
+      // All other field types use the standard non-builder type.
+      TypeName setterParamType = util.getVariableType(method, false);
       MethodSpec.Builder setter =
           MethodSpec.methodBuilder(fieldName)
               .addModifiers(PRIVATE)
-              .addParameter(util.getVariableType(method, false), fieldName)
+              .addParameter(setterParamType, fieldName)
               .addAnnotation(JsonSetter.class);
       setter.addCode(setterCode(method));
       methods.add(setter.build());
@@ -292,9 +298,18 @@ final class JsonModelsGen implements CodeGenerator {
 
     for (ExecutableElement method : modelMethods) {
       String fieldName = method.getSimpleName().toString();
+      // @JsonCreator receives Errable<T> directly (provided by ErrableDeserializer), so use
+      // the non-builder param type which preserves the full Errable<T>.
       constructorBuilder.addParameter(
           ParameterSpec.builder(util.getVariableType(method, false), fieldName).build());
-      constructorBuilder.addStatement("this.$L($L)", fieldName, fieldName);
+      if (util.isErrable(method.getReturnType())) {
+        // Bypass the @JsonSetter (which takes @Nullable T) and set the Errable<T> field directly.
+        // Null-safety: if Jackson passes null (absent field), convert to Errable.nil().
+        constructorBuilder.addStatement(
+            "this.$L = $L == null ? $T.nil() : $L", fieldName, fieldName, Errable.class, fieldName);
+      } else {
+        constructorBuilder.addStatement("this.$L($L)", fieldName, fieldName);
+      }
     }
     return constructorBuilder
         .addAnnotation(JsonCreator.class)
@@ -304,6 +319,14 @@ final class JsonModelsGen implements CodeGenerator {
   private CodeBlock setterCode(ExecutableElement method) {
     String fieldName = method.getSimpleName().toString();
     Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType(), method);
+
+    // Errable<T>: @JsonSetter accepts Errable<T> (provided by ErrableDeserializer).
+    // Jackson calls getNullValue() → Errable.nil() for absent fields, so null-guard here
+    // is just extra safety per the contract that Errable fields must never be null.
+    if (util.isErrable(method.getReturnType())) {
+      return CodeBlock.of(
+          "this.$L = $L == null ? $T.nil() : $L;", fieldName, fieldName, Errable.class, fieldName);
+    }
 
     return switch (util.getContainerType(method.getReturnType())) {
       case NO_CONTAINER -> {
@@ -419,7 +442,10 @@ this.$L = $L == null
       FieldSpec.Builder fieldBuilder =
           FieldSpec.builder(fieldType, method.getSimpleName().toString(), PRIVATE);
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType(), method);
-      if (isBuilder
+      if (util.isErrable(method.getReturnType())) {
+        // Initialize to Errable.nil() so absent JSON fields deserialize as Nil rather than null
+        fieldBuilder.initializer("$T.nil()", Errable.class);
+      } else if (isBuilder
           && fieldModelRootInfo.isPresent()
           && !util.isEnumModel(fieldModelRootInfo.get().element())) {
         switch (fieldModelRootInfo.get().containerType()) {

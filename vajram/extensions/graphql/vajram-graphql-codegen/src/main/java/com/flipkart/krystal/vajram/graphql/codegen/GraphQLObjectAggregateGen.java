@@ -33,8 +33,8 @@ import com.flipkart.krystal.vajram.graphql.api.Constants.Directives;
 import com.flipkart.krystal.vajram.graphql.api.Constants.Facets;
 import com.flipkart.krystal.vajram.graphql.api.execution.GraphQLUtils;
 import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlObjectMap;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObjectMap;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlEntity;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationEntity;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlValue;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
 import com.google.common.collect.ImmutableMap;
@@ -155,9 +155,9 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
 
   private ClassName asVajramReturnType(GraphQLTypeName objectTypeName) {
     if (schemaReaderUtil.isOperationType(objectTypeName)) {
-      return ClassName.get(GraphQlOperationObjectMap.class);
+      return ClassName.get(GraphQlOperationEntity.class);
     }
-    return ClassName.get(GraphQlObjectMap.class);
+    return ClassName.get(GraphQlEntity.class);
   }
 
   private List<TypeSpec> createFacetDefinitions(ObjectTypeDefinition typeDefinition) {
@@ -246,7 +246,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
   }
 
   private ClassName asVajramReturnType(GraphQlFieldSpec fieldSpec) {
-    return ClassName.get(GraphQlObjectMap.class);
+    return ClassName.get(GraphQlEntity.class);
   }
 
   /**
@@ -434,9 +434,9 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
     // otherwise)
     ClassName builderType =
         isOpType
-            ? ClassName.get(GraphQlOperationObjectMap.class)
+            ? ClassName.get(GraphQlOperationEntity.class)
                 .nestedClass("GraphQlOperationObjectMapBuilder")
-            : ClassName.get(GraphQlObjectMap.class).nestedClass("GraphQlObjectMapBuilder");
+            : ClassName.get(GraphQlEntity.class).nestedClass("GraphQlObjectMapBuilder");
     builder.addNamedCode(
         """
         $builderType:T _builder = new $builderType:T();
@@ -683,7 +683,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                     entry("singleValue", GraphQlValue.SingleValue.class),
                     entry("arrayList", ArrayList.class),
                     entry("errable", Errable.class),
-                    entry("gqlObjectMap", GraphQlObjectMap.class),
+                    entry("gqlObjectMap", GraphQlEntity.class),
                     entry("objectValue", GraphQlValue.ObjectValue.class),
                     entry("listValue", GraphQlValue.ListValue.class)));
           } else {

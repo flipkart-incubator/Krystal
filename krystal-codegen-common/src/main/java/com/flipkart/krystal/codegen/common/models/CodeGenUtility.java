@@ -23,6 +23,7 @@ import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.codegen.common.datatypes.DataTypeRegistry;
 import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider;
 import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider.ModelProtocolConfig;
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.model.EnumModel;
 import com.flipkart.krystal.model.IfAbsent;
@@ -313,7 +314,8 @@ public class CodeGenUtility {
         modelElement instanceof ExecutableElement executableElement
             ? executableElement.getReturnType()
             : modelElement.asType();
-    boolean optOrNullable = isOptional(returnType) || isAnyNullable(returnType, modelElement);
+    boolean optOrNullable =
+        isOptional(returnType) || isErrable(returnType) || isAnyNullable(returnType, modelElement);
     // Check if the modelElement has the @IfAbsent annotation
     IfAbsent ifAbsent = modelElement.getAnnotation(IfAbsent.class);
     if (ifAbsent == null) {
@@ -520,6 +522,21 @@ public class CodeGenUtility {
 
   public boolean isOptional(TypeMirror returnType) {
     return isRawAssignable(returnType, Optional.class);
+  }
+
+  public boolean isErrable(TypeMirror returnType) {
+    return isRawAssignable(returnType, Errable.class);
+  }
+
+  public TypeMirror getErrableInnerType(TypeMirror typeMirror) {
+    if (!isErrable(typeMirror)) {
+      return typeMirror;
+    }
+    if (typeMirror instanceof DeclaredType declaredType
+        && !declaredType.getTypeArguments().isEmpty()) {
+      return declaredType.getTypeArguments().get(0);
+    }
+    return objectType;
   }
 
   public TypeMirror getOptionalInnerType(TypeMirror typeMirror) {
@@ -1179,9 +1196,11 @@ public class CodeGenUtility {
     }
     TypeName typeName = contentType.accept(new TypeNameVisitor(), null);
 
+    boolean isErrable = isErrable(inferredType);
     if (!isList && !isMap) {
-      // Add @Nullable annotation for Optional types or methods with @Nullable annotation
-      if (isOptional || isNullable || isBuilder) {
+      // Add @Nullable annotation for Optional types or methods with @Nullable annotation.
+      // Errable fields are excluded: they store Errable<T> directly, initialized to Errable.nil().
+      if (!isErrable && (isOptional || isNullable || isBuilder)) {
         if (!hasNullableAnnotation(typeName)) {
           // Add @Nullable as a type annotation
           typeName =
@@ -1272,9 +1291,20 @@ public class CodeGenUtility {
     boolean isNullable = isAnyNullable(specifiedType, method);
     TypeMirror inferredType = specifiedType;
     boolean isOptional = isOptional(specifiedType);
+    boolean isErrable = isErrable(specifiedType);
     if (isOptional) {
       // For Optional<T>, use T as the parameter type
       inferredType = getOptionalInnerType(specifiedType);
+    } else if (isErrable) {
+      if (isBuilder) {
+        // Builder's standard setter takes @Nullable T (the convenience overload).
+        // The Errable<T> overload is generated separately in generateBuilderInterfaceMethods.
+        inferredType = getErrableInnerType(specifiedType);
+      } else {
+        // Non-builder (e.g. all-arg constructor) takes Errable<T> directly so that
+        // the full errable state (including Failure) is preserved.
+        return specifiedType.accept(new TypeNameVisitor(), null);
+      }
     }
     if (isBuilder && inferredType instanceof PrimitiveType primitiveType) {
       inferredType = typeUtils.boxedClass(primitiveType).asType();
@@ -1294,8 +1324,8 @@ public class CodeGenUtility {
       typeName = inferredType.accept(new TypeNameVisitor(), null);
     }
 
-    // Add @Nullable annotation for Optional types or methods with @Nullable annotation
-    if (isOptional || isNullable || isBuilder) {
+    // Add @Nullable annotation for Optional/Errable-builder types or methods with @Nullable.
+    if (isOptional || (isErrable && isBuilder) || isNullable || isBuilder) {
       if (!hasNullableAnnotation(typeName)) {
         // Add @Nullable as a type annotation
         typeName =

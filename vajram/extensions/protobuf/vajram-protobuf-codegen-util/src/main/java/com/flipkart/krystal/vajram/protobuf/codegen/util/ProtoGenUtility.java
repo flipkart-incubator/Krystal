@@ -280,6 +280,10 @@ public final class ProtoGenUtility {
       // explicit presence).
       ProtoFieldType inner = getProtobufType(typeParameters.get(0), util, element, config);
       return config.presenceWrapper().wrap(inner, util, element);
+    } else if (util.isErrable(javaModelType)) {
+      // Errable<T>: serialize/deserialize the inner type T. Nil/Failure → proto field absent;
+      // NonNil → proto field set. The outer caller applies explicit presence wrapping.
+      return getProtobufType(typeParameters.get(0), util, element, config);
     } else if (isProtoTypeRepeated(dataType)) {
       if (typeParameters.isEmpty()) {
         throw util.errorAndThrow("Raw list types are not supported by protobuf", element);

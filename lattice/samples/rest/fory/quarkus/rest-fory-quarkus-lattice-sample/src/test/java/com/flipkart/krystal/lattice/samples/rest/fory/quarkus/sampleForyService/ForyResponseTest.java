@@ -2,6 +2,8 @@ package com.flipkart.krystal.lattice.samples.rest.fory.quarkus.sampleForyService
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.NonNil;
 import com.flipkart.krystal.lattice.samples.rest.fory.quarkus.sampleForyService.models.ForyInnerData_ImmutFory;
 import com.flipkart.krystal.lattice.samples.rest.fory.quarkus.sampleForyService.models.ForyInnerData_ImmutPojo;
 import com.flipkart.krystal.lattice.samples.rest.fory.quarkus.sampleForyService.models.ForyRequest_ImmutFory;
@@ -128,5 +130,96 @@ class ForyResponseTest {
             .mandatoryInt(2)
             .nestedData(ForyInnerData_ImmutPojo._builder().value("v").count(1));
     assertThat(builder._build()).isEqualTo(builder._newCopy()._build());
+  }
+
+  // --- Errable field tests ---
+
+  @Test
+  void errableField_withValue_serializesAndDeserializes() throws Exception {
+    ForyResponse_ImmutFory original =
+        ForyResponse_ImmutFory._builder()
+            .message("errable-test")
+            .mandatoryInt(1)
+            .errableNote("hello fory errable")
+            ._build();
+
+    assertThat(original.errableNote()).isEqualTo(Errable.withValue("hello fory errable"));
+
+    byte[] bytes = original._serialize().readAllBytes();
+    ForyResponse_ImmutFory deserialized = new ForyResponse_ImmutFory(bytes);
+
+    assertThat(deserialized.errableNote()).isEqualTo(Errable.withValue("hello fory errable"));
+  }
+
+  @Test
+  void errableField_absent_deserializesToNil() throws Exception {
+    ForyResponse_ImmutFory original =
+        ForyResponse_ImmutFory._builder().message("no-errable").mandatoryInt(2)._build();
+
+    assertThat(original.errableNote()).isEqualTo(Errable.nil());
+
+    byte[] bytes = original._serialize().readAllBytes();
+    ForyResponse_ImmutFory deserialized = new ForyResponse_ImmutFory(bytes);
+
+    assertThat(deserialized.errableNote()).isEqualTo(Errable.nil());
+  }
+
+  @Test
+  void errableField_setViaErrableSetter_withValue() {
+    ForyResponse_ImmutFory built =
+        ForyResponse_ImmutFory._builder()
+            .message("errable-setter")
+            .mandatoryInt(3)
+            .errableNote(Errable.withValue("via errable setter"))
+            ._build();
+
+    assertThat(built.errableNote()).isEqualTo(Errable.withValue("via errable setter"));
+  }
+
+  @Test
+  void errableField_setViaErrableSetter_nil() {
+    ForyResponse_ImmutFory built =
+        ForyResponse_ImmutFory._builder()
+            .message("errable-nil")
+            .mandatoryInt(4)
+            .errableNote(Errable.nil())
+            ._build();
+
+    assertThat(built.errableNote()).isEqualTo(Errable.nil());
+  }
+
+  @Test
+  void errableField_setViaErrableSetter_failure() {
+    RuntimeException cause = new RuntimeException("upstream failure");
+    ForyResponse_ImmutFory built =
+        ForyResponse_ImmutFory._builder()
+            .message("errable-failure")
+            .mandatoryInt(5)
+            .errableNote(Errable.withError(cause))
+            ._build();
+
+    assertThat(built.errableNote()).isNotInstanceOf(NonNil.class);
+  }
+
+  @Test
+  void errableField_pojo_withValue_roundTrip() {
+    ForyResponse_ImmutPojo built =
+        ForyResponse_ImmutPojo._builder()
+            .message("pojo-errable")
+            .mandatoryInt(6)
+            .errableNote("pojo value")
+            ._build();
+
+    assertThat(built.errableNote()).isEqualTo(Errable.withValue("pojo value"));
+    assertThat(built).isEqualTo(built._newCopy()._build());
+  }
+
+  @Test
+  void errableField_pojo_nil_roundTrip() {
+    ForyResponse_ImmutPojo built =
+        ForyResponse_ImmutPojo._builder().message("pojo-nil").mandatoryInt(7)._build();
+
+    assertThat(built.errableNote()).isEqualTo(Errable.nil());
+    assertThat(built).isEqualTo(built._newCopy()._build());
   }
 }

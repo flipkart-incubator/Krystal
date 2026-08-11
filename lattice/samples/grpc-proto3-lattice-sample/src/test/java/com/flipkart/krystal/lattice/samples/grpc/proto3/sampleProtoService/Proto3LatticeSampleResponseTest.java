@@ -3,6 +3,8 @@ package com.flipkart.krystal.lattice.samples.grpc.proto3.sampleProtoService;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.NonNil;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -445,5 +447,145 @@ class Proto3LatticeSampleResponseTest {
 
     assertThat(copy.namedStatuses()).containsEntry("k1", Status.COMPLETED).hasSize(1);
     assertThat(copy).isEqualTo(original);
+  }
+
+  // --- Errable field tests ---
+
+  @Test
+  void errableField_withValue_serializesAndDeserializesInnerValue() throws Exception {
+    Proto3LatticeSampleResponse_ImmutProto3 original =
+        Proto3LatticeSampleResponse_ImmutProto3._builder()
+            .string("errable-test")
+            .mandatoryInt(1)
+            .mandatoryStringPartialConstruction("")
+            .status(Status.UNKNOWN)
+            .errableMessage("hello proto3 errable")
+            ._build();
+
+    assertThat(original.errableMessage()).isEqualTo(Errable.withValue("hello proto3 errable"));
+
+    byte[] bytes = original._serialize().readAllBytes();
+    Proto3LatticeSampleResponse_ImmutProto3 deserialized =
+        new Proto3LatticeSampleResponse_ImmutProto3(bytes);
+
+    assertThat(deserialized.errableMessage()).isEqualTo(Errable.withValue("hello proto3 errable"));
+    assertThat(deserialized).isEqualTo(original);
+  }
+
+  @Test
+  void errableField_absent_deserializesToNil() throws Exception {
+    Proto3LatticeSampleResponse_ImmutProto3 original =
+        Proto3LatticeSampleResponse_ImmutProto3._builder()
+            .string("no-errable")
+            .mandatoryInt(2)
+            .mandatoryStringPartialConstruction("")
+            .status(Status.UNKNOWN)
+            ._build();
+
+    assertThat(original.errableMessage()).isEqualTo(Errable.nil());
+
+    byte[] bytes = original._serialize().readAllBytes();
+    Proto3LatticeSampleResponse_ImmutProto3 deserialized =
+        new Proto3LatticeSampleResponse_ImmutProto3(bytes);
+
+    assertThat(deserialized.errableMessage()).isEqualTo(Errable.nil());
+    assertThat(deserialized).isEqualTo(original);
+  }
+
+  @Test
+  void errableField_setViaErrableSetter_withValue() {
+    Proto3LatticeSampleResponse_ImmutProto3 built =
+        Proto3LatticeSampleResponse_ImmutProto3._builder()
+            .string("errable-setter")
+            .mandatoryInt(3)
+            .mandatoryStringPartialConstruction("")
+            .status(Status.UNKNOWN)
+            .errableMessage(Errable.withValue("via errable setter"))
+            ._build();
+
+    assertThat(built.errableMessage()).isEqualTo(Errable.withValue("via errable setter"));
+  }
+
+  @Test
+  void errableField_setViaErrableSetter_nil() {
+    Proto3LatticeSampleResponse_ImmutProto3 built =
+        Proto3LatticeSampleResponse_ImmutProto3._builder()
+            .string("errable-nil")
+            .mandatoryInt(4)
+            .mandatoryStringPartialConstruction("")
+            .status(Status.UNKNOWN)
+            .errableMessage(Errable.nil())
+            ._build();
+
+    assertThat(built.errableMessage()).isEqualTo(Errable.nil());
+  }
+
+  @Test
+  void errableField_setViaErrableSetter_failure_losesErrorOnRoundTrip() throws Exception {
+    RuntimeException cause = new RuntimeException("upstream failure");
+    Proto3LatticeSampleResponse_ImmutProto3 built =
+        Proto3LatticeSampleResponse_ImmutProto3._builder()
+            .string("errable-failure")
+            .mandatoryInt(5)
+            .mandatoryStringPartialConstruction("")
+            .status(Status.UNKNOWN)
+            .errableMessage(Errable.withError(cause))
+            ._build();
+
+    // Failure stored in-memory is not-NonNil
+    assertThat(built.errableMessage()).isNotInstanceOf(NonNil.class);
+
+    // After proto round-trip, failure state is lost → Errable.nil()
+    byte[] bytes = built._serialize().readAllBytes();
+    Proto3LatticeSampleResponse_ImmutProto3 deserialized =
+        new Proto3LatticeSampleResponse_ImmutProto3(bytes);
+    assertThat(deserialized.errableMessage()).isEqualTo(Errable.nil());
+  }
+
+  @Test
+  void errableField_copyConstructor_preservesValue() {
+    Proto3LatticeSampleResponse_ImmutProto3 original =
+        Proto3LatticeSampleResponse_ImmutProto3._builder()
+            .string("errable-copy")
+            .mandatoryInt(6)
+            .mandatoryStringPartialConstruction("")
+            .status(Status.UNKNOWN)
+            .errableMessage("copy value")
+            ._build();
+
+    Proto3LatticeSampleResponse_ImmutProto3 copy =
+        new Proto3LatticeSampleResponse_ImmutProto3(original);
+
+    assertThat(copy.errableMessage()).isEqualTo(Errable.withValue("copy value"));
+    assertThat(copy).isEqualTo(original);
+  }
+
+  @Test
+  void errableField_pojo_withValue_roundTrip() {
+    Proto3LatticeSampleResponse_ImmutPojo built =
+        Proto3LatticeSampleResponse_ImmutPojo._builder()
+            .string("pojo-errable")
+            .mandatoryInt(7)
+            .mandatoryStringPartialConstruction("")
+            .status(Status.UNKNOWN)
+            .errableMessage("pojo value")
+            ._build();
+
+    assertThat(built.errableMessage()).isEqualTo(Errable.withValue("pojo value"));
+    assertThat(built).isEqualTo(built._newCopy()._build());
+  }
+
+  @Test
+  void errableField_pojo_nil_roundTrip() {
+    Proto3LatticeSampleResponse_ImmutPojo built =
+        Proto3LatticeSampleResponse_ImmutPojo._builder()
+            .string("pojo-nil")
+            .mandatoryInt(8)
+            .mandatoryStringPartialConstruction("")
+            .status(Status.UNKNOWN)
+            ._build();
+
+    assertThat(built.errableMessage()).isEqualTo(Errable.nil());
+    assertThat(built).isEqualTo(built._newCopy()._build());
   }
 }

@@ -13,8 +13,8 @@ import java.util.List;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public sealed interface GraphQlOperationObject extends GraphQlObject
-    permits GraphQlOperationObjectMap, GraphQlOperationError {
+public sealed interface GraphQlOperation extends GraphQlObject
+    permits GraphQlOperationEntity, GraphQlOperationError {
 
   default @Nullable Map<Object, Object> graphql_extensions() {
     return null;
@@ -26,7 +26,7 @@ public sealed interface GraphQlOperationObject extends GraphQlObject
     return errorCollector.getErrors();
   }
 
-  static ExecutionResult _asExecutionResult(Errable<GraphQlOperationObject> errable) {
+  static ExecutionResult _asExecutionResult(Errable<GraphQlOperation> errable) {
     return errable.mapToValue(
         /* ifFailure= */ failure -> {
           Throwable error = failure.error();
@@ -42,7 +42,7 @@ public sealed interface GraphQlOperationObject extends GraphQlObject
               .build();
         },
         /* ifNil= */ () -> ExecutionResult.newExecutionResult().build(),
-        /* ifNonNil= */ GraphQlOperationObject::_asExecutionResult);
+        /* ifNonNil= */ GraphQlOperation::_asExecutionResult);
   }
 
   default ExecutionResult _asExecutionResult() {

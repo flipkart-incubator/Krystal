@@ -29,6 +29,7 @@ import com.flipkart.krystal.codegen.common.models.CodeGenerationException;
 import com.flipkart.krystal.codegen.common.models.DeclaredTypeVisitor;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.model.DefaultValue;
 import com.flipkart.krystal.model.EnumModel;
 import com.flipkart.krystal.model.IfAbsent;
@@ -269,6 +270,9 @@ public final class JavaModelsGen implements CodeGenerator {
       TypeMirror returnType = method.getReturnType();
       if (util.isOptional(returnType)) {
         returnType = util.getOptionalInnerType(returnType);
+      } else if (util.isErrable(returnType)) {
+        // Errable<T> is allowed in pure models; validate the inner type T instead.
+        returnType = util.getErrableInnerType(returnType);
       }
       validatePureFieldType(method, returnType);
     }
@@ -919,6 +923,20 @@ public final class JavaModelsGen implements CodeGenerator {
         }
         methods.add(methodBuilder.build());
       }
+      // For Errable<T> fields: add an additional setter that accepts Errable<T> directly,
+      // allowing callers to propagate Failure state from upstream sources.
+      if (util.isErrable(method.getReturnType())) {
+        MethodSpec.Builder errableSetter =
+            MethodSpec.methodBuilder(methodName)
+                .addJavadoc("\n@see $T#$L", codeGenContext.modelRootType(), methodName)
+                .addModifiers(PUBLIC, ABSTRACT)
+                .addParameter(TypeName.get(method.getReturnType()), methodName)
+                .returns(builderType);
+        if (hasParentModelRoot) {
+          errableSetter.addAnnotation(Override.class);
+        }
+        methods.add(errableSetter.build());
+      }
       if (fieldModelRootInfo.isPresent()
           && !util.isEnumModel(fieldModelRootInfo.get().element())
           && fieldModelRootInfo.get().containerType().isContainer()) {
@@ -1081,6 +1099,14 @@ public final class JavaModelsGen implements CodeGenerator {
                 fieldName,
                 util.getModelFieldType(method, false, null).fieldType(),
                 fieldName);
+          } else if (util.isErrable(method.getReturnType())) {
+            // Errable<T> constructor parameter: null → Errable.nil()
+            constructorBuilder.addStatement(
+                "this.$L = $L == null ? $T.nil() : $L",
+                fieldName,
+                fieldName,
+                Errable.class,
+                fieldName);
           } else {
             constructorBuilder.addStatement("this.$L = $L", fieldName, fieldName);
           }
@@ -1152,6 +1178,8 @@ this.$L = $L == null
             .map(
                 method -> {
                   boolean isOptional = util.isOptional(method.getReturnType());
+                  // Errable fields: pass the full Errable (including Failure) to preserve state.
+                  // Optional fields: unwrap to @Nullable T for the all-arg constructor.
                   return CodeBlock.of(
                       "_from.$L()" + (isOptional ? ".orElse(null)" : ""),
                       method.getSimpleName().toString());
@@ -1356,7 +1384,11 @@ this.$L = $L == null
       TypeMirror methodReturnType = method.getReturnType();
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(methodReturnType, method);
       ContainerType containerType = util.getContainerType(methodReturnType);
-      if (fieldModelRootInfo.isPresent() && !util.isEnumModel(fieldModelRootInfo.get().element())) {
+      if (util.isErrable(methodReturnType)) {
+        // Errable builder fields default to Errable.nil() (never null).
+        fieldBuilder.initializer("$T.nil()", Errable.class);
+      } else if (fieldModelRootInfo.isPresent()
+          && !util.isEnumModel(fieldModelRootInfo.get().element())) {
         if (LIST.equals(containerType)) {
           fieldBuilder.initializer("$T.empty()", ModelsListBuilder.class);
         } else if (MAP.equals(fieldModelRootInfo.get().containerType())) {
@@ -1521,6 +1553,37 @@ this.$L = $L == null
     for (ExecutableElement method : modelMethods) {
       String methodName = method.getSimpleName().toString();
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType(), method);
+      CodeBlock standardSetterBody;
+      if (util.isErrable(method.getReturnType())) {
+        // Standard setter takes @Nullable T and wraps it in Errable.withValue().
+        standardSetterBody =
+            CodeBlock.of("this.$L = $T.withValue($L);", methodName, Errable.class, methodName);
+      } else {
+        standardSetterBody =
+            fieldModelRootInfo
+                .filter(info -> !util.isEnumModel(info.element()))
+                .map(ModelRootInfo::containerType)
+                .map(
+                    containerType ->
+                        switch (containerType) {
+                          case NO_CONTAINER, RANGE -> null;
+                          case LIST, MAP ->
+                              CodeBlock.of(
+                                  """
+                                      this.$L.clear();
+                                      if ($L == null) {
+                                          return this;
+                                      }
+                                      this.$L.$LAllModels($L);
+                                  """,
+                                  methodName,
+                                  methodName,
+                                  methodName,
+                                  LIST.equals(containerType) ? "add" : "put",
+                                  methodName);
+                        })
+                .orElse(CodeBlock.of("this.$L = $L;", methodName, methodName));
+      }
       dataAccessMethods.add(
           MethodSpec.methodBuilder(methodName)
               .addJavadoc("@see $T#$L", codeGenContext.modelRootType(), methodName)
@@ -1528,30 +1591,7 @@ this.$L = $L == null
               .addParameter(util.getVariableType(method, true), methodName)
               .addAnnotation(Override.class)
               .returns(builderType)
-              .addCode(
-                  fieldModelRootInfo
-                      .filter(info -> !util.isEnumModel(info.element()))
-                      .map(ModelRootInfo::containerType)
-                      .map(
-                          containerType ->
-                              switch (containerType) {
-                                case NO_CONTAINER, RANGE -> null;
-                                case LIST, MAP ->
-                                    CodeBlock.of(
-                                        """
-                                            this.$L.clear();
-                                            if ($L == null) {
-                                                return this;
-                                            }
-                                            this.$L.$LAllModels($L);
-                                        """,
-                                        methodName,
-                                        methodName,
-                                        methodName,
-                                        LIST.equals(containerType) ? "add" : "put",
-                                        methodName);
-                              })
-                      .orElse(CodeBlock.of("this.$L = $L;", methodName, methodName)))
+              .addCode(standardSetterBody)
               .addStatement("return this")
               .build());
 
@@ -1569,6 +1609,25 @@ this.$L = $L == null
                 .addAnnotation(Override.class)
                 .returns(builderType)
                 .addStatement("this.$L = $L", methodName, methodName)
+                .addStatement("return this")
+                .build());
+      }
+      // For Errable<T> fields: add the Errable<T> setter (stores the errable directly,
+      // including Failure state). This is the "additional" setter from the builder interface.
+      if (util.isErrable(method.getReturnType())) {
+        dataAccessMethods.add(
+            MethodSpec.methodBuilder(methodName)
+                .addJavadoc("@see $T#$L", codeGenContext.modelRootType(), methodName)
+                .addModifiers(PUBLIC)
+                .addParameter(TypeName.get(method.getReturnType()), methodName)
+                .addAnnotation(Override.class)
+                .returns(builderType)
+                .addStatement(
+                    "this.$L = $L == null ? $T.nil() : $L",
+                    methodName,
+                    methodName,
+                    Errable.class,
+                    methodName)
                 .addStatement("return this")
                 .build());
       }
@@ -1592,11 +1651,15 @@ this.$L = $L == null
    * use @IfAbsent(ASSUME_DEFAULT_VALUE) or be converted to boxed types.
    */
   private void validateOptionalField(ExecutableElement method) {
+    TypeMirror returnType = method.getReturnType();
+    // Errable fields carry their own absence/failure semantics; no @Nullable/@IfAbsent needed.
+    if (util.isErrable(returnType)) {
+      return;
+    }
     IfAbsentThen ifAbsentThen = util.getIfAbsent(method, modelRoot).value();
     ModelRoot modelRoot =
         requireNonNull(codeGenContext.modelRootType().getAnnotation(ModelRoot.class));
     Set<ModelType> types = Set.of(modelRoot.type());
-    TypeMirror returnType = method.getReturnType();
 
     // RESPONSE-only models cannot use MAY_FAIL_CONDITIONALLY
     // (dual-type {REQUEST, RESPONSE} models allow it since they also serve as REQUEST models)
@@ -1642,7 +1705,9 @@ this.$L = $L == null
   public static boolean isMethodOptionalOrNullable(ExecutableElement method, CodeGenUtility util) {
     TypeMirror returnType = method.getReturnType();
     return !returnType.getKind().isPrimitive()
-        && (util.isOptional(returnType) || util.isAnyNullable(returnType, method));
+        && (util.isOptional(returnType)
+            || util.isErrable(returnType)
+            || util.isAnyNullable(returnType, method));
   }
 
   /** Checks if a field has @IfAbsent(FAIL) annotation, meaning it is strictly mandatory. */

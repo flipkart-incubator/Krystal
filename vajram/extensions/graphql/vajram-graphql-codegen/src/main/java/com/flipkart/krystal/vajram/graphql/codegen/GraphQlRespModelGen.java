@@ -21,7 +21,7 @@ import com.flipkart.krystal.vajram.graphql.api.errors.ErrorCollector;
 import com.flipkart.krystal.vajram.graphql.api.execution.GraphQLUtils;
 import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlObject;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperation;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponse;
 import com.flipkart.krystal.vajram.json.Json;
 import com.google.common.base.Suppliers;
@@ -83,6 +83,22 @@ final class GraphQlRespModelGen implements CodeGenerator {
 
     // Extract and validate model methods
     List<ExecutableElement> modelMethods = util.getModelFieldsForCodegen(modelRootType);
+    // Reject Errable fields: GraphQL wraps all fields in Errable internally.
+    // Declaring Errable<T> in the model would produce Errable<Errable<T>>.
+    for (ExecutableElement method : modelMethods) {
+      if (util.isErrable(method.getReturnType())) {
+        util.error(
+            "Field '%s' in GraphQL response model '%s' returns Errable<%s>. "
+                    .formatted(
+                        method.getSimpleName(),
+                        modelRootType.getQualifiedName(),
+                        util.getErrableInnerType(method.getReturnType()))
+                + "GraphQL response models already wrap all fields in Errable internally. "
+                + "Declare the field as '%s' (without Errable) instead."
+                    .formatted(util.getErrableInnerType(method.getReturnType())),
+            method);
+      }
+    }
 
     // Generate the GQlRespJson model class
     TypeSpec gqlRespJsonClass =
@@ -642,8 +658,7 @@ final class GraphQlRespModelGen implements CodeGenerator {
       // extensions
       classBuilder.addMethod(
           MethodSpec.overriding(
-                  util.getMethod(
-                      () -> GraphQlOperationObject.class.getMethod("graphql_extensions")))
+                  util.getMethod(() -> GraphQlOperation.class.getMethod("graphql_extensions")))
               .addStatement("return null")
               .build());
     }
@@ -1499,8 +1514,7 @@ final class GraphQlRespModelGen implements CodeGenerator {
       // extensions
       builderClass.addMethod(
           MethodSpec.overriding(
-                  util.getMethod(
-                      () -> GraphQlOperationObject.class.getMethod("graphql_extensions")))
+                  util.getMethod(() -> GraphQlOperation.class.getMethod("graphql_extensions")))
               .addStatement("return null")
               .build());
     }
@@ -1509,7 +1523,7 @@ final class GraphQlRespModelGen implements CodeGenerator {
   // Helper methods
 
   private boolean isGraphQlOpType(TypeElement modelRootType, CodeGenUtility util) {
-    return doesImplementInterface(modelRootType, util, GraphQlOperationObject.class);
+    return doesImplementInterface(modelRootType, util, GraphQlOperation.class);
   }
 
   @SuppressWarnings("SameParameterValue")
@@ -1581,7 +1595,7 @@ final class GraphQlRespModelGen implements CodeGenerator {
       if (ifaceElement != null) {
         String ifaceName = ifaceElement.getQualifiedName().toString();
         if (ifaceName.equals(GraphQlObject.class.getCanonicalName())
-            || ifaceName.equals(GraphQlOperationObject.class.getCanonicalName())) {
+            || ifaceName.equals(GraphQlOperation.class.getCanonicalName())) {
           return true;
         }
       }

@@ -26,6 +26,7 @@ import com.flipkart.krystal.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.codegen.common.models.DeclaredTypeVisitor;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.model.MandatoryFieldMissingException;
 import com.flipkart.krystal.model.Model;
@@ -383,6 +384,7 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
             .map(
                 method -> {
                   boolean isOptional = util.isOptional(method.getReturnType());
+                  boolean isErrable = util.isErrable(method.getReturnType());
                   boolean isNullable = method.getReturnType().getAnnotation(Nullable.class) != null;
                   String methodName = method.getSimpleName().toString();
                   Optional<ModelRootInfo> modelRoot =
@@ -409,6 +411,16 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
                     } else {
                       accessor = CodeBlock.of("_from.$L()", methodName);
                     }
+                  } else if (isErrable) {
+                    // Errable<T>: extract inner value for the builder setter (@Nullable T).
+                    // Nil/Failure → null → proto field cleared; failure state is intentionally
+                    // lost.
+                    accessor =
+                        CodeBlock.of(
+                            "_from.$L() instanceof $T<?> _nonNil ? ($T) _nonNil.value() : null",
+                            methodName,
+                            ClassName.get("com.flipkart.krystal.data", "NonNil"),
+                            TypeName.get(util.getErrableInnerType(method.getReturnType())));
                   } else {
                     accessor =
                         CodeBlock.of(
@@ -459,7 +471,8 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
 
     if (needsPresenceCheckInModels(method)
         && !isMandatoryField(method)
-        && !util.isOptional(specifiedType)) {
+        && !util.isOptional(specifiedType)
+        && !util.isErrable(specifiedType)) {
       typeName = typeName.annotated(AnnotationSpec.builder(Nullable.class).build());
     }
 
@@ -623,6 +636,26 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
       }
       return;
     }
+
+    // Errable<T>: check proto presence; absent → Errable.nil(), present → Errable.withValue(value).
+    if (util.isErrable(method.getReturnType())) {
+      ClassName errableClass = ClassName.get(Errable.class);
+      // Use the inner type's CodeGenType so convertProtoToJavaCode applies correct conversions.
+      CodeGenType innerDataType = dataType.typeParameters().get(0);
+      getterBuilder
+          .addCode(
+              """
+              if (!_proto().has$L()){
+              """,
+              capitalizeFirstChar(fieldName))
+          .addCode("return $T.nil();\n}\n", errableClass)
+          .addStatement(
+              "return $T.withValue($L)",
+              errableClass,
+              convertProtoToJavaCode(innerDataType, fieldName));
+      return;
+    }
+
     TypeMirror methodReturnType = method.getReturnType();
     boolean isOptionalReturnType = util.isOptional(methodReturnType);
 
@@ -917,7 +950,9 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
               fieldName);
         } else {
           TypeMirror rawSetterType =
-              util.isOptional(returnType) ? util.getOptionalInnerType(returnType) : returnType;
+              util.isOptional(returnType)
+                  ? util.getOptionalInnerType(returnType)
+                  : util.isErrable(returnType) ? util.getErrableInnerType(returnType) : returnType;
           if (util.isEnumModelType(rawSetterType)) {
             TypeElement enumElement =
                 (TypeElement) requireNonNull(processingEnv.getTypeUtils().asElement(rawSetterType));
@@ -927,7 +962,11 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
                 getProtoUtilsClassName(enumElement),
                 fieldName);
           } else {
-            setterBuilder.addStatement(convertJavaToProtoCode(dataType, fieldName));
+            // For Errable<T>, the setter takes @Nullable T (inner type). Use the inner type's
+            // CodeGenType so convertJavaToProtoCode applies the correct type conversion.
+            CodeGenType effectiveDataType =
+                util.isErrable(returnType) ? dataType.typeParameters().get(0) : dataType;
+            setterBuilder.addStatement(convertJavaToProtoCode(effectiveDataType, fieldName));
           }
         }
       }
@@ -952,6 +991,36 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
                 .addAnnotation(Override.class)
                 .returns(builderType)
                 .addCode(setter.code)
+                .build());
+      }
+
+      if (util.isErrable(returnType)) {
+        // Generate the Errable<T> overload required by the _Immut.Builder interface.
+        // NonNil → unwrap and set proto field; Nil/Failure → clear proto field.
+        ClassName nonNilClass = ClassName.get("com.flipkart.krystal.data", "NonNil");
+        TypeName innerTypeName = TypeName.get(util.getErrableInnerType(returnType));
+        TypeName errableParamType =
+            ParameterizedTypeName.get(ClassName.get(Errable.class), innerTypeName);
+        builderClassBuilder.addMethod(
+            methodBuilder(fieldName)
+                .addAnnotation(Override.class)
+                .addModifiers(PUBLIC)
+                .returns(builderType)
+                .addParameter(errableParamType, fieldName)
+                .addCode(
+                    """
+                    if ($L instanceof $T<?> _nonNil) {
+                      _proto.set$L(($T) _nonNil.value());
+                    } else {
+                      _proto.clear$L();
+                    }
+                    """,
+                    fieldName,
+                    nonNilClass,
+                    capitalizeFirstChar(fieldName),
+                    innerTypeName,
+                    capitalizeFirstChar(fieldName))
+                .addStatement("return this")
                 .build());
       }
     }
@@ -985,7 +1054,9 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
   private boolean typeSupportsAbsentValues(ExecutableElement method) {
     TypeMirror returnType = method.getReturnType();
     return !returnType.getKind().isPrimitive()
-        && (util.isOptional(returnType) || util.isAnyNullable(returnType, method));
+        && (util.isOptional(returnType)
+            || util.isErrable(returnType)
+            || util.isAnyNullable(returnType, method));
   }
 
   private CodeBlock protoToJavaSwitchExpr(TypeElement javaEnumElement, ClassName javaEnumType) {

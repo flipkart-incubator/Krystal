@@ -17,8 +17,8 @@ import com.flipkart.krystal.krystex.kryon.DirectResponse;
 import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
 import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperation;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationError;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate_Req;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationDispatch;
@@ -79,8 +79,8 @@ public final class GraphQlOperationExecutor implements DependencyDecorator {
       }
 
       @SuppressWarnings("unchecked")
-      RequestResponseFuture<? extends Request<?>, GraphQlOperationObject> requestResponseFuture =
-          (RequestResponseFuture<? extends Request<?>, GraphQlOperationObject>)
+      RequestResponseFuture<? extends Request<?>, GraphQlOperation> requestResponseFuture =
+          (RequestResponseFuture<? extends Request<?>, GraphQlOperation>)
               requestResponseFutures.get(0);
       Request<?> request = requestResponseFuture.request();
       if (!(request instanceof GraphQlOperationAggregate_Req<?> graphQlOperationAggregateReq)) {
@@ -108,9 +108,9 @@ public final class GraphQlOperationExecutor implements DependencyDecorator {
                       execInputBuilder.graphQLContext(
                           Map.of(
                               VajramExecutionStrategy.VAJRAM_INVOCATION_CTX_KEY,
-                              (VajramInvocation<GraphQlOperationObject>)
+                              (VajramInvocation<GraphQlOperation>)
                                   computedRequestResponseFuture -> {
-                                    Request<GraphQlOperationObject> computedRequest =
+                                    Request<GraphQlOperation> computedRequest =
                                         computedRequestResponseFuture.request();
                                     @SuppressWarnings("unchecked")
                                     ClientSideCommand<R> newCommand =

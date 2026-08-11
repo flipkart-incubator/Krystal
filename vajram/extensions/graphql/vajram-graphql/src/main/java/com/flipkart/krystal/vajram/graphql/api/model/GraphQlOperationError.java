@@ -7,10 +7,9 @@ import java.util.Map;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.checker.nullness.qual.PolyNull;
 
-public record GraphQlOperationError(ExecutionResult executionResult)
-    implements GraphQlOperationObject {
+public record GraphQlOperationError(ExecutionResult executionResult) implements GraphQlOperation {
 
-  public static @PolyNull GraphQlOperationObject from(@PolyNull ExecutionResult executionResult) {
+  public static @PolyNull GraphQlOperation from(@PolyNull ExecutionResult executionResult) {
     if (executionResult == null) {
       return null;
     }
