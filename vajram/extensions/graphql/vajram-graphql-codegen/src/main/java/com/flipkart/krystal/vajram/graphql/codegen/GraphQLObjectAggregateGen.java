@@ -1152,7 +1152,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
             var graphql_executionStrategyParams_new = graphql_executionStrategy.newParametersForFieldExecution(
                     graphql_executionContext,
                     graphql_executionStrategyParams,
-                    graphql_executionStrategyParams.getFields().getSubField($fieldName:S));
+                    $graphqlUtils:T.getSubFieldByName($fieldName:S, graphql_executionStrategyParams));
             $forLoopStart:L
             var _req = $reqPojoType:T._builder()
                 .$aggregatorInputFacet:L(_entityId)

@@ -74,4 +74,38 @@ class GraphQlEndpointsE2eTest {
     assertThat(resp.statusCode()).isEqualTo(200);
     assertThat(resp.body()).contains("PRSNXYZ-FirstName");
   }
+
+  @Test
+  void graphQlQuery_aliasesOperationNormalAndComposedOnlyFields() throws Exception {
+    String query =
+        """
+        {
+          "query": "{
+            accountAlias: account(id: \\"ACC123\\") {
+              personAlias: owner {
+                imageAlias: imageData {
+                  mainAlias: mainUrl
+                  thumbnailAlias: thumbnailUrl
+                }
+              }
+            }
+          }"
+        }
+        """;
+    HttpResponse<String> resp =
+        httpClient.send(
+            HttpRequest.newBuilder(baseUri.resolve("HttpPostGraphQl"))
+                .POST(BodyPublishers.ofString(query))
+                .header("Content-Type", "application/json")
+                .header("Accept", "application/json")
+                .build(),
+            BodyHandlers.ofString());
+
+    assertThat(resp.statusCode()).isEqualTo(200);
+    assertThat(resp.body()).contains("\"accountAlias\"");
+    assertThat(resp.body()).contains("\"personAlias\"");
+    assertThat(resp.body()).contains("\"imageAlias\"");
+    assertThat(resp.body()).contains("\"mainAlias\":\"PRSNACC123-mainUrl.png\"");
+    assertThat(resp.body()).contains("\"thumbnailAlias\":\"PRSNACC123-thumbnailUrl.png\"");
+  }
 }

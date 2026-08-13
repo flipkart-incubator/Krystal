@@ -123,6 +123,17 @@ public class GraphQLUtils {
     return false;
   }
 
+  /** Returns the merged field for a GraphQL field name, irrespective of its response-key alias. */
+  public static @Nullable MergedField getSubFieldByName(
+      String fieldName, ExecutionStrategyParameters params) {
+    for (MergedField subField : params.getFields().getSubFields().values()) {
+      if (subField.getName().equals(fieldName)) {
+        return subField;
+      }
+    }
+    return null;
+  }
+
   public static Map<String, List<String>> computeFieldNameToAliases(
       ExecutionStrategyParameters graphql_executionStrategyParams) {
     Map<String, List<String>> _fieldNameToAliases = new LinkedHashMap<>();
