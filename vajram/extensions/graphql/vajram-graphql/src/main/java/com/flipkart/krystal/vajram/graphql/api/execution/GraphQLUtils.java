@@ -135,7 +135,7 @@ public class GraphQLUtils {
 
   public static Map<String, List<String>> computeFieldNameToAliases(
       ExecutionStrategyParameters graphql_executionStrategyParams) {
-    LinkedHashMap<String, List<String>> _fieldNameToAliases = new LinkedHashMap<>();
+    Map<String, List<String>> _fieldNameToAliases = new LinkedHashMap<>();
     graphql_executionStrategyParams
         .getFields()
         .getSubFields()

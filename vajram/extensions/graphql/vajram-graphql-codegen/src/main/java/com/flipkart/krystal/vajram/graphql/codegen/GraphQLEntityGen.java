@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.graphql.codegen;
 
 import static com.flipkart.krystal.vajram.graphql.api.Constants.Directives.DATA_FETCHER;
-import static com.flipkart.krystal.vajram.graphql.codegen.GraphQLObjectAggregateGen.GRAPHQL_RESPONSE;
+import static com.flipkart.krystal.vajram.graphql.codegen.GraphQLObjectAggregateGen.GRAPHQL_MODEL_SUFFIX;
 import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.fieldSpecFromField;
 import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.isMultiFieldDataFetcher;
 import static com.google.common.base.Throwables.getStackTraceAsString;
@@ -209,30 +209,43 @@ class GraphQLEntityGen implements CodeGenerator {
                   ClassName className =
                       ClassName.get(
                           dataFetcherName.packageName(),
-                          dataFetcherName.simpleName() + GRAPHQL_RESPONSE);
-                  Builder builder = TypeSpec.classBuilder(className);
+                          dataFetcherName.simpleName() + GRAPHQL_MODEL_SUFFIX);
+                  Builder builder = TypeSpec.interfaceBuilder(className);
 
                   for (FieldDefinition fieldDefinitionDf : fieldDefinitionList) {
-                    builder.addField(
-                        FieldSpec.builder(
+                    builder.addMethod(
+                        MethodSpec.methodBuilder(fieldDefinitionDf.getName())
+                            .addModifiers(PUBLIC, ABSTRACT)
+                            .returns(
                                 graphQlCodeGenUtil.toTypeNameForField(
-                                    fieldSpecFromField(fieldDefinitionDf, "", graphQLTypeName)),
-                                fieldDefinitionDf.getName(),
-                                PUBLIC)
+                                    fieldSpecFromField(fieldDefinitionDf, "", graphQLTypeName)))
                             .build());
                   }
+                  ClassName modelRootClassName =
+                      ClassName.get("com.flipkart.krystal.model", "ModelRoot");
                   builder
-                      .addModifiers(PUBLIC, FINAL)
+                      .addModifiers(PUBLIC)
+                      .addSuperinterface(ClassName.get("com.flipkart.krystal.model", "Model"))
                       .addAnnotation(
-                          AnnotationSpec.builder(ClassName.get("lombok.experimental", "Accessors"))
-                              .addMember("fluent", "true")
+                          AnnotationSpec.builder(modelRootClassName)
+                              .addMember(
+                                  "type",
+                                  "$T.$L",
+                                  modelRootClassName.nestedClass("ModelType"),
+                                  "RESPONSE")
+                              .addMember("pure", "false")
                               .build())
                       .addAnnotation(
-                          AnnotationSpec.builder(ClassName.get("lombok", "Getter")).build())
-                      .addAnnotation(
-                          AnnotationSpec.builder(ClassName.get("lombok", "Builder")).build())
-                      .addAnnotation(
-                          AnnotationSpec.builder(ClassName.get("lombok", "Setter")).build());
+                          AnnotationSpec.builder(
+                                  ClassName.get(
+                                      "com.flipkart.krystal.model", "SupportedModelProtocol"))
+                              .addMember(
+                                  "value",
+                                  "$T.class",
+                                  ClassName.get(
+                                      "com.flipkart.krystal.vajram.graphql.api.model",
+                                      "GraphQlResponse"))
+                              .build());
                   util.generateSourceFile(
                       className.canonicalName(),
                       JavaFile.builder(className.packageName(), builder.build()).build().toString(),

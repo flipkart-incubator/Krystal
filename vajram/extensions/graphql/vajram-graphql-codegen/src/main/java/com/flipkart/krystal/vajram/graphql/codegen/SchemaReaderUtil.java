@@ -98,8 +98,7 @@ public class SchemaReaderUtil {
             graphQLObjectTypes, typeDef -> typeDef.hasDirective(Directives.COMPOSED_TYPE));
 
     Map<GraphQLTypeName, @NonNull ObjectTypeDefinition> aggregatableTypes =
-        new HashMap<>(entityTypes);
-    aggregatableTypes.putAll(composedTypes);
+        new HashMap<>(graphQLObjectTypes);
 
     Optional<SchemaDefinition> schemaDefinition = typeDefinitionRegistry.schemaDefinition();
     if (schemaDefinition.isEmpty()) {

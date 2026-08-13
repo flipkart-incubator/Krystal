@@ -189,7 +189,7 @@ public class VajramGraphQlTest {
   }
 
   @Test
-  void graphqlQueryWithNestedArgBearingAliases_succeeds() throws JsonProcessingException {
+  void graphqlQueryWithNestedArgBearingAliases_succeeds() {
     // Two aliases for the same arg-bearing `dummy(name)` field nested inside order
     CompletableFuture<ExecutionResult> result;
     try (VajramKryonExecutor executor = createExecutor()) {
@@ -216,7 +216,7 @@ public class VajramGraphQlTest {
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
     ExecutionResult executionResult = result.join();
     @SuppressWarnings("unchecked")
-    Map<String, Object> queryData = requireNonNull((Map<String, Object>) executionResult.getData());
+    Map<String, Object> queryData = requireNonNull(executionResult.getData());
     @SuppressWarnings("unchecked")
     Map<String, Object> orderData = requireNonNull((Map<String, Object>) queryData.get("order"));
 

@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.graphql.samples.order;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -11,7 +12,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
 @Vajram
-public abstract class GetOrderSummary extends ComputeVajramDef<GetOrderSummary_GQlFields> {
+public abstract class GetOrderSummary extends ComputeVajramDef<GetOrderSummary_Model> {
 
   /** Unix epoch - January 1, 1970 00:00:00 UTC */
   public static final OffsetDateTime UNIX_EPOCH_DATE_TIME =
@@ -26,11 +27,11 @@ public abstract class GetOrderSummary extends ComputeVajramDef<GetOrderSummary_G
   }
 
   @Output
-  static GetOrderSummary_GQlFields output() {
-    return GetOrderSummary_GQlFields.builder()
-        .orderItemsCount(Long.MAX_VALUE)
-        .orderPlacedAt(UNIX_EPOCH_DATE_TIME)
-        .orderAcceptDate(UNIX_EPOCH_DATE)
-        .build();
+  static GetOrderSummary_Model output() {
+    return GetOrderSummary_Model_ImmutGQlResp._builder()
+        .orderItemsCount(Errable.withValue(Long.MAX_VALUE))
+        .orderPlacedAt(Errable.withValue(UNIX_EPOCH_DATE_TIME))
+        .orderAcceptDate(Errable.withValue(UNIX_EPOCH_DATE))
+        ._build();
   }
 }

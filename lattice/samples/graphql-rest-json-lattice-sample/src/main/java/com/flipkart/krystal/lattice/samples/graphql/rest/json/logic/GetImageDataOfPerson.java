@@ -9,18 +9,17 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
 
 @Vajram
-public abstract class GetImageDataOfPerson
-    extends ComputeVajramDef<GetImageDataOfPerson_GQlFields> {
+public abstract class GetImageDataOfPerson extends ComputeVajramDef<GetImageDataOfPerson_Model> {
   interface _Inputs {
     @IfAbsent(FAIL)
     PersonId id();
   }
 
   @Output
-  static GetImageDataOfPerson_GQlFields outputLogic(PersonId id) {
-    return GetImageDataOfPerson_GQlFields.builder()
+  static GetImageDataOfPerson_Model outputLogic(PersonId id) {
+    return GetImageDataOfPerson_Model_ImmutGQlResp._builder()
         .mainUrl(id.value() + "-mainUrl.png")
         .thumbnailUrl(id.value() + "-thumbnailUrl.png")
-        .build();
+        ._build();
   }
 }

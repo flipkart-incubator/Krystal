@@ -36,6 +36,9 @@ import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlEntity;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationEntity;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlValue;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlValue.ListValue;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlValue.ScalarValue;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlValue.SingleValue;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
 import com.google.common.collect.ImmutableMap;
 import com.squareup.javapoet.AnnotationSpec;
@@ -74,7 +77,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @Slf4j
 public class GraphQLObjectAggregateGen implements CodeGenerator {
 
-  public static final String GRAPHQL_RESPONSE = "_GQlFields";
+  public static final String GRAPHQL_MODEL_SUFFIX = "_Model";
 
   private final CodeGenUtility util;
   private final SchemaReaderUtil schemaReaderUtil;
@@ -236,7 +239,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
 
       internalFacets.addMethod(
           MethodSpec.methodBuilder(fieldSpec.fieldName())
-              .returns(asVajramReturnType(fieldSpec))
+              .returns(asVajramReturnType())
               .addModifiers(ABSTRACT, PUBLIC)
               .addAnnotation(depAnnotation.build())
               .build());
@@ -245,7 +248,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
     return List.of(inputs.build(), internalFacets.build());
   }
 
-  private ClassName asVajramReturnType(GraphQlFieldSpec fieldSpec) {
+  private ClassName asVajramReturnType() {
     return ClassName.get(GraphQlEntity.class);
   }
 
@@ -324,12 +327,12 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
           responseType = entityIdClassName;
         }
       } else {
-        responseType = graphQlCodeGenUtil.toTypeNameForField(fieldSpec.fieldType(), fieldSpec);
+        responseType = graphQlCodeGenUtil.toFacetTypeName(fieldSpec.fieldType(), fieldSpec);
       }
     } else {
       responseType =
           ClassName.get(
-              fetcherClassName.packageName(), fetcherClassName.simpleName() + GRAPHQL_RESPONSE);
+              fetcherClassName.packageName(), fetcherClassName.simpleName() + GRAPHQL_MODEL_SUFFIX);
     }
     return responseType;
   }
@@ -412,7 +415,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
             ParameterizedTypeName.get(
                 ClassName.get(FanoutDepResponses.class),
                 getRequestClassName(value),
-                asVajramReturnType(key)),
+                asVajramReturnType()),
             key.fieldName());
       } else {
         builder.addParameter(
@@ -420,8 +423,8 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                 ? ParameterizedTypeName.get(
                     ClassName.get(FanoutDepResponses.class),
                     getRequestClassName(value),
-                    asVajramReturnType(key))
-                : ParameterizedTypeName.get(ClassName.get(Errable.class), asVajramReturnType(key)),
+                    asVajramReturnType())
+                : ParameterizedTypeName.get(ClassName.get(Errable.class), asVajramReturnType()),
             key.fieldName());
       }
     }
@@ -457,33 +460,29 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
     // __typename: same value for all aliases
     builder.addNamedCode(
         """
-        if (_fieldNameToAliases.containsKey("__typename")) {
-          for ($string:T _alias : _fieldNameToAliases.get("__typename")) {
-            _builder.addField(_alias, new $scalarValue:T($errable:T.withValue($typeName:S), true));
-          }
+        for ($string:T _alias : _fieldNameToAliases.getOrDefault("__typename", $list:T.of())) {
+          _builder.addField(_alias, new $scalarValue:T($typeName:S, true));
         }
         """,
         Map.ofEntries(
             entry("string", String.class),
-            entry("scalarValue", GraphQlValue.ScalarValue.class),
-            entry("errable", Errable.class),
+            entry("scalarValue", ScalarValue.class),
+            entry("list", List.class),
             entry("typeName", objectTypeName.value())));
 
     // Entity ID field: same value for all aliases
     if (isEntity) {
       builder.addNamedCode(
           """
-          if (_fieldNameToAliases.containsKey($entityIdField:S)) {
-            for ($string:T _alias : _fieldNameToAliases.get($entityIdField:S)) {
-              _builder.addField(_alias, new $scalarValue:T($errable:T.withValue($entityId:L), true));
-            }
+          for ($string:T _alias : _fieldNameToAliases.getOrDefault($entityIdField:S, $list:T.of())) {
+            _builder.addField(_alias, new $scalarValue:T($entityId:L, true));
           }
           """,
           Map.ofEntries(
               entry("string", String.class),
               entry("entityIdField", entityIdFieldName),
-              entry("scalarValue", GraphQlValue.ScalarValue.class),
-              entry("errable", Errable.class),
+              entry("scalarValue", ScalarValue.class),
+              entry("list", List.class),
               entry("entityId", Facets.ENTITY_ID)));
     }
 
@@ -505,92 +504,121 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                 boolean isListField = isGraphQlList(fieldSpec);
                 if (isListField) {
                   if (isMultiField) {
+                    // Compute nullability from the GraphQL field type to generate correct Errable
+                    // unwrapping. The model method returns Errable<List<Errable<T>>>,
+                    // List<Errable<T>>,
+                    // Errable<List<T>>, or List<T> depending on outer/element nullability.
+                    boolean outerNullable = !fieldSpec.fieldType().isNonNull();
+                    GraphQlTypeDecorator listDecorator =
+                        outerNullable
+                            ? fieldSpec.fieldType()
+                            : fieldSpec.fieldType().innerType(); // skip outer NonNull
+                    boolean elementNullable = !listDecorator.innerType().isNonNull();
+                    // list access: unwrap outer Errable if nullable
+                    CodeBlock listAccess =
+                        outerNullable
+                            ? CodeBlock.of(
+                                "_v.$L().valueOpt().orElse($T.of())", fieldName, List.class)
+                            : CodeBlock.of("_v.$L()", fieldName);
+                    // element loop variable type and scalar value extraction
+                    CodeBlock elemVar =
+                        elementNullable
+                            ? CodeBlock.of("$T<?> _s", Errable.class)
+                            : CodeBlock.of("Object _s");
+                    CodeBlock elemVal =
+                        elementNullable
+                            ? CodeBlock.of("_s.valueOpt().orElse(null)")
+                            : CodeBlock.of("_s");
                     builder.addNamedCode(
                         """
-                        if (_fieldNameToAliases.containsKey($fieldName:S)) {
-                          $errable:T<$list:T<$singleValue:T>> _$fieldName:L_items =
-                              $facetName:L.mapToValue($failure:T::cast, $errable:T::nil, _v -> {
-                                $list:T<$singleValue:T> _items = new $arrayList:T<>();
-                                for (Object _s : _v.$fieldName:L()) {
-                                  _items.add(new $scalarValue:T($errable:T.withValue(_s), true));
-                                }
-                                return $errable:T.withValue(_items);
-                              });
-                          for ($string:T _alias : _fieldNameToAliases.get($fieldName:S)) {
-                            _builder.addField(_alias, new $listValue:T(_$fieldName:L_items, true));
-                          }
+                        $errable:T<$list:T<$singleValue:T>> _$fieldName:L_items =
+                            $facetName:L.map(_v -> {
+                              $list:T<$singleValue:T> _items = new $arrayList:T<>();
+                              for ($elemVar:L : $listAccess:L) {
+                                _items.add(new $scalarValue:T($elemVal:L, true));
+                              }
+                              return _items;
+                            });
+                        for ($string:T _alias : _fieldNameToAliases.getOrDefault($fieldName:S, $list:T.of())) {
+                          _builder.addField(_alias, new $listValue:T(_$fieldName:L_items, true));
                         }
                         """,
                         Map.ofEntries(
                             entry("fieldName", fieldName),
                             entry("errable", Errable.class),
                             entry("list", List.class),
-                            entry("singleValue", GraphQlValue.SingleValue.class),
+                            entry("singleValue", SingleValue.class),
                             entry("arrayList", ArrayList.class),
-                            entry("scalarValue", GraphQlValue.ScalarValue.class),
-                            entry("listValue", GraphQlValue.ListValue.class),
+                            entry("scalarValue", ScalarValue.class),
+                            entry("listValue", ListValue.class),
                             entry("facetName", facetName),
                             entry("failure", Failure.class),
-                            entry("string", String.class)));
+                            entry("string", String.class),
+                            entry("listAccess", listAccess),
+                            entry("elemVar", elemVar),
+                            entry("elemVal", elemVal)));
                   } else {
                     builder.addNamedCode(
                         """
-                        if (_fieldNameToAliases.containsKey($fieldName:S)) {
-                          $errable:T<$list:T<$singleValue:T>> _$fieldName:L_items =
-                              $facetName:L.mapToValue($failure:T::cast, $errable:T::nil, _list -> {
-                                $list:T<$singleValue:T> _items = new $arrayList:T<>();
-                                for (Object _s : _list) {
-                                  _items.add(new $scalarValue:T($errable:T.withValue(_s), true));
-                                }
-                                return $errable:T.withValue(_items);
-                              });
-                          for ($string:T _alias : _fieldNameToAliases.get($fieldName:S)) {
-                            _builder.addField(_alias, new $listValue:T(_$fieldName:L_items, true));
-                          }
+                        $errable:T<$list:T<$singleValue:T>> _$fieldName:L_items =
+                            $facetName:L.map(_list -> {
+                              $list:T<$singleValue:T> _items = new $arrayList:T<>();
+                              for (Object _s : _list) {
+                                _items.add(new $scalarValue:T(_s, true));
+                              }
+                              return _items;
+                            });
+                        for ($string:T _alias : _fieldNameToAliases.getOrDefault($fieldName:S, $list:T.of())) {
+                          _builder.addField(_alias, new $listValue:T(_$fieldName:L_items, true));
                         }
                         """,
                         Map.ofEntries(
                             entry("fieldName", fieldName),
                             entry("errable", Errable.class),
                             entry("list", List.class),
-                            entry("singleValue", GraphQlValue.SingleValue.class),
+                            entry("singleValue", SingleValue.class),
                             entry("arrayList", ArrayList.class),
-                            entry("scalarValue", GraphQlValue.ScalarValue.class),
-                            entry("listValue", GraphQlValue.ListValue.class),
+                            entry("scalarValue", ScalarValue.class),
+                            entry("listValue", ListValue.class),
                             entry("facetName", facetName),
                             entry("failure", Failure.class),
                             entry("string", String.class)));
                   }
                 } else {
                   if (isMultiField) {
+                    // Nullable scalar model methods return Errable<T>; unwrap to get T (or null).
+                    // Non-null model methods return T directly.
+                    boolean scalarNullable = !fieldSpec.fieldType().isNonNull();
+                    CodeBlock scalarAccess =
+                        scalarNullable
+                            ? CodeBlock.of("_v.$L().valueOpt().orElse(null)", fieldName)
+                            : CodeBlock.of("_v.$L()", fieldName);
                     builder.addNamedCode(
                         """
-                        if (_fieldNameToAliases.containsKey($fieldName:S)) {
-                          for ($string:T _alias : _fieldNameToAliases.get($fieldName:S)) {
-                            _builder.addField(_alias, new $scalarValue:T($facetName:L.mapToValue($failure:T::cast, $errable:T::nil, _v -> $errable:T.withValue(_v.$fieldName:L())), true));
-                          }
+                        for ($string:T _alias : _fieldNameToAliases.getOrDefault($fieldName:S, $list:T.of())) {
+                          _builder.addField(_alias, new $scalarValue:T($facetName:L.map(_v -> $scalarAccess:L), true));
                         }
                         """,
                         Map.ofEntries(
                             entry("fieldName", fieldName),
-                            entry("scalarValue", GraphQlValue.ScalarValue.class),
+                            entry("scalarValue", ScalarValue.class),
                             entry("facetName", facetName),
                             entry("failure", Failure.class),
-                            entry("errable", Errable.class),
-                            entry("string", String.class)));
+                            entry("list", List.class),
+                            entry("string", String.class),
+                            entry("scalarAccess", scalarAccess)));
                   } else {
                     builder.addNamedCode(
                         """
-                        if (_fieldNameToAliases.containsKey($fieldName:S)) {
-                          for ($string:T _alias : _fieldNameToAliases.get($fieldName:S)) {
-                            _builder.addField(_alias, new $scalarValue:T($facetName:L, true));
-                          }
+                        for ($string:T _alias : _fieldNameToAliases.getOrDefault($fieldName:S, $list:T.of())) {
+                          _builder.addField(_alias, new $scalarValue:T($facetName:L, true));
                         }
                         """,
                         Map.ofEntries(
                             entry("fieldName", fieldName),
-                            entry("scalarValue", GraphQlValue.ScalarValue.class),
+                            entry("scalarValue", ScalarValue.class),
                             entry("facetName", facetName),
+                            entry("list", List.class),
                             entry("string", String.class)));
                   }
                 }
@@ -610,23 +638,21 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
               TypeName idListType = argListIdFetcherToResponseType.get(idFetcherFacet);
               builder.addNamedCode(
                   """
-                  if (_fieldNameToAliases.containsKey($fieldName:S)) {
-                    $list:T<$string:T> _$fieldName:L_aliases = _fieldNameToAliases.get($fieldName:S);
-                    int _$fieldName:L_offset = 0;
-                    for (int _i = 0; _i < _$fieldName:L_aliases.size(); _i++) {
-                      $string:T _alias = _$fieldName:L_aliases.get(_i);
-                      $errable:T<$idListType:T> _idsErrable = $idFetcherFacet:L.requestResponsePairs().get(_i).response();
-                      if (_idsErrable.valueOpt().isPresent()) {
-                        int _count = _idsErrable.valueOpt().get().size();
-                        $list:T<$singleValue:T> _items = new $arrayList:T<>();
-                        for (int _j = _$fieldName:L_offset; _j < _$fieldName:L_offset + _count; _j++) {
-                          $fieldName:L.requestResponsePairs().get(_j).response().handle(
-                              _f -> _items.add(new $objectValue:T(_f.cast(), true)),
-                              _v -> _items.add(new $objectValue:T($errable:T.withValue(_v), true)));
-                        }
-                        _builder.addField(_alias, new $listValue:T($errable:T.withValue(_items), true));
-                        _$fieldName:L_offset += _count;
+                  $list:T<$string:T> _$fieldName:L_aliases = _fieldNameToAliases.getOrDefault($fieldName:S, $list:T.of());
+                  int _$fieldName:L_offset = 0;
+                  for (int _i = 0; _i < _$fieldName:L_aliases.size(); _i++) {
+                    $string:T _alias = _$fieldName:L_aliases.get(_i);
+                    $errable:T<$idListType:T> _idsErrable = $idFetcherFacet:L.requestResponsePairs().get(_i).response();
+                    if (_idsErrable.valueOpt().isPresent()) {
+                      int _count = _idsErrable.valueOpt().get().size();
+                      $list:T<$singleValue:T> _items = new $arrayList:T<>();
+                      for (int _j = _$fieldName:L_offset; _j < _$fieldName:L_offset + _count; _j++) {
+                        $fieldName:L.requestResponsePairs().get(_j).response().handle(
+                            _f -> _items.add(new $objectValue:T(_f.cast(), true)),
+                            _v -> _items.add(new $objectValue:T(_v, true)));
                       }
+                      _builder.addField(_alias, new $listValue:T(_items, true));
+                      _$fieldName:L_offset += _count;
                     }
                   }
                   """,
@@ -637,22 +663,20 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                       entry("errable", Errable.class),
                       entry("idListType", idListType),
                       entry("idFetcherFacet", idFetcherFacet),
-                      entry("singleValue", GraphQlValue.SingleValue.class),
+                      entry("singleValue", SingleValue.class),
                       entry("arrayList", ArrayList.class),
                       entry("objectValue", GraphQlValue.ObjectValue.class),
-                      entry("listValue", GraphQlValue.ListValue.class)));
+                      entry("listValue", ListValue.class)));
             } else {
               // Arg-bearing non-list: match each alias positionally to its response
               builder.addNamedCode(
                   """
-                  if (_fieldNameToAliases.containsKey($fieldName:S)) {
-                    $list:T<$string:T> _$fieldName:L_aliases = _fieldNameToAliases.get($fieldName:S);
-                    for (int _i = 0; _i < _$fieldName:L_aliases.size() && _i < $fieldName:L.requestResponsePairs().size(); _i++) {
-                      $string:T _alias = _$fieldName:L_aliases.get(_i);
-                      $fieldName:L.requestResponsePairs().get(_i).response().handle(
-                          _failure -> _builder.addField(_alias, new $objectValue:T(_failure.cast(), true)),
-                          _val -> _builder.addField(_alias, new $objectValue:T($errable:T.withValue(_val), true)));
-                    }
+                  $list:T<$string:T> _$fieldName:L_aliases = _fieldNameToAliases.getOrDefault($fieldName:S, $list:T.of());
+                  for (int _i = 0; _i < _$fieldName:L_aliases.size() && _i < $fieldName:L.requestResponsePairs().size(); _i++) {
+                    $string:T _alias = _$fieldName:L_aliases.get(_i);
+                    $fieldName:L.requestResponsePairs().get(_i).response().handle(
+                        _failure -> _builder.addField(_alias, new $objectValue:T(_failure.cast(), true)),
+                        _val -> _builder.addField(_alias, new $objectValue:T(_val, true)));
                   }
                   """,
                   Map.ofEntries(
@@ -666,39 +690,36 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
             // Arg-less list: build items once, assign same value to all aliases
             builder.addNamedCode(
                 """
-                if (_fieldNameToAliases.containsKey($fieldName:S)) {
-                  $list:T<$singleValue:T> _$fieldName:L_items = new $arrayList:T<>();
-                  for ($errable:T<$gqlObjectMap:T> _e : $fieldName:L.responses()) {
-                    _$fieldName:L_items.add(new $objectValue:T(_e, true));
-                  }
-                  for ($string:T _alias : _fieldNameToAliases.get($fieldName:S)) {
-                    _builder.addField(_alias, new $listValue:T($errable:T.withValue(_$fieldName:L_items), true));
-                  }
+                $list:T<$singleValue:T> _$fieldName:L_items = new $arrayList:T<>();
+                for ($errable:T<$gqlObjectMap:T> _e : $fieldName:L.responses()) {
+                  _$fieldName:L_items.add(new $objectValue:T(_e, true));
+                }
+                for ($string:T _alias : _fieldNameToAliases.getOrDefault($fieldName:S, $list:T.of())) {
+                  _builder.addField(_alias, new $listValue:T(_$fieldName:L_items, true));
                 }
                 """,
                 Map.ofEntries(
                     entry("fieldName", fieldName),
                     entry("string", String.class),
                     entry("list", List.class),
-                    entry("singleValue", GraphQlValue.SingleValue.class),
+                    entry("singleValue", SingleValue.class),
                     entry("arrayList", ArrayList.class),
                     entry("errable", Errable.class),
                     entry("gqlObjectMap", GraphQlEntity.class),
                     entry("objectValue", GraphQlValue.ObjectValue.class),
-                    entry("listValue", GraphQlValue.ListValue.class)));
+                    entry("listValue", ListValue.class)));
           } else {
             // Arg-less non-list: same value for all aliases
             builder.addNamedCode(
                 """
-                if (_fieldNameToAliases.containsKey($fieldName:S)) {
-                  for ($string:T _alias : _fieldNameToAliases.get($fieldName:S)) {
-                    _builder.addField(_alias, new $objectValue:T($fieldName:L, true));
-                  }
+                for ($string:T _alias : _fieldNameToAliases.getOrDefault($fieldName:S, $list:T.of())) {
+                  _builder.addField(_alias, new $objectValue:T($fieldName:L, true));
                 }
                 """,
                 Map.ofEntries(
                     entry("fieldName", fieldName),
                     entry("string", String.class),
+                    entry("list", List.class),
                     entry("objectValue", GraphQlValue.ObjectValue.class)));
           }
         });
@@ -1053,7 +1074,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                 entityIdAccessCode != null ? entityIdAccessCode : EMPTY_CODE_BLOCK),
             entry(
                 "entityType",
-                graphQlCodeGenUtil.toTypeNameForField(
+                graphQlCodeGenUtil.toFacetTypeName(
                     getDeclaredActualFieldType(fieldSpec), fieldSpec)),
             entry("reqPojoType", depReqImmutPojoType),
             entry("facet_entityId", Facets.ENTITY_ID),

@@ -20,7 +20,7 @@ type Person @entity{
 }
 
 type PersonImageData @composedType(inEntity: "Person"){
-    mainUrl: String @dataFetcher(vajramId: "GetImageDataOfPerson", multiField: true)
+    mainUrl: String @dataFetcher(vajramId: "GetImageDataOfPerson", multiField: true) #com.flipkart.krystal.lattice.samples.graphql.rest.json.logic.GetImageDataOfPerson
     thumbnailUrl: String @dataFetcher(vajramId: "GetImageDataOfPerson", multiField: true)
     bannerUrl: String @dataFetcher(vajramId: "GetPersonBanner")
 }

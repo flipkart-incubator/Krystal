@@ -16,8 +16,10 @@ public abstract class GetPersonName extends ComputeVajramDef<Name> {
     PersonId id();
   }
 
+  record NameImpl(String firstName, String lastName) implements Name {}
+
   @Output
   static Name outputLogic(PersonId id) {
-    return null;
+    return new NameImpl(id.value() + "-FirstName", id.value() + "-LastName");
   }
 }
