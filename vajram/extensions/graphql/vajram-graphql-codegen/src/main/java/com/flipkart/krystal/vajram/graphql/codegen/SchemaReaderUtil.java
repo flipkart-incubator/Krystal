@@ -37,11 +37,13 @@ import graphql.schema.idl.TypeDefinitionRegistry;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -274,6 +276,7 @@ public class SchemaReaderUtil {
         });
     graphQLObjectTypes.forEach(
         (parentName, parent) -> {
+          Set<GraphQLTypeName> extensionTypes = new HashSet<>();
           for (FieldDefinition field : parent.getFieldDefinitions()) {
             ObjectTypeDefinition extension =
                 typeDefinitionFor(field) instanceof ObjectTypeDefinition objectType
@@ -288,6 +291,17 @@ public class SchemaReaderUtil {
               throw invalid(
                   "Field '%s.%s' returns an @entityExtension but its parent is neither an @entity nor an @entityExtension",
                   parentName.value(), field.getName());
+            }
+            if (isList(field.getType())) {
+              throw invalid(
+                  "Field '%s.%s' returning an @entityExtension cannot be a list",
+                  parentName.value(), field.getName());
+            }
+            GraphQLTypeName extensionName = GraphQLTypeName.of(extension);
+            if (!extensionTypes.add(extensionName)) {
+              throw invalid(
+                  "@entityExtension '%s' can occur at most once as a field type in '%s'",
+                  extensionName.value(), parentName.value());
             }
             GraphQLTypeName expectedEntity =
                 getComposingEntityType(parent).orElse(GraphQLTypeName.of(parent));

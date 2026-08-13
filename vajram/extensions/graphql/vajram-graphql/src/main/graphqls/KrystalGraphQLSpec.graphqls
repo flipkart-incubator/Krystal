@@ -4,7 +4,7 @@
 directive @entity on OBJECT
 
 """
-Marks a field as part of the identity of its containing GraphQL type.
+Marks a field as part of the id of its containing GraphQL type.
 
 Invariants:
 Id fields cannot accept arguments
