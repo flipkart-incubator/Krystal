@@ -23,7 +23,6 @@ import com.flipkart.krystal.vajram.graphql.api.execution.GraphQlExecutionFacade;
 import com.flipkart.krystal.vajram.graphql.api.schema.GraphQlInitializer;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate_Req;
-import com.flipkart.krystal.vajram.graphql.samples.dummy.DummyId;
 import com.flipkart.krystal.vajram.graphql.samples.query.Query_GQlAggr_Req;
 import com.flipkart.krystal.vajram.graphql.samples.state.State;
 import com.flipkart.krystal.vajram.json.Json;
@@ -227,8 +226,8 @@ public class VajramGraphQlTest {
     Map<String, Object> d2Data = requireNonNull((Map<String, Object>) orderData.get("d2"));
 
     // GetDummyIdForOrder ignores `name` arg, always returns orderId_dummy_1
-    assertThat(((DummyId) d1Data.get("dummyId")).value()).isEqualTo("order1_dummy_1");
-    assertThat(((DummyId) d2Data.get("dummyId")).value()).isEqualTo("order1_dummy_1");
+    assertThat(d1Data.get("dummyId")).isEqualTo("order1_dummy_1");
+    assertThat(d2Data.get("dummyId")).isEqualTo("order1_dummy_1");
   }
 
   private VajramKryonExecutor createExecutor() {

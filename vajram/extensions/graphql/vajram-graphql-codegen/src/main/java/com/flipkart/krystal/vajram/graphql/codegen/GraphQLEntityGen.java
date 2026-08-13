@@ -1,20 +1,21 @@
 package com.flipkart.krystal.vajram.graphql.codegen;
 
 import static com.flipkart.krystal.vajram.graphql.api.Constants.Directives.DATA_FETCHER;
-import static com.flipkart.krystal.vajram.graphql.codegen.GraphQLObjectAggregateGen.GRAPHQL_MODEL_SUFFIX;
+import static com.flipkart.krystal.vajram.graphql.codegen.CodeGenConstants.IF_ABSENT_FAIL;
+import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlCodeGenUtil.GRAPHQL_FIELDS_SUFFIX;
 import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.fieldSpecFromField;
 import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.isMultiFieldDataFetcher;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static java.util.Objects.requireNonNullElse;
 import static javax.lang.model.element.Modifier.ABSTRACT;
-import static javax.lang.model.element.Modifier.FINAL;
-import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
+import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.vajram.graphql.api.Constants.Directives;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlEntityId;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponse;
+import com.flipkart.krystal.vajram.graphql.api.model.SimpleGraphQlObject;
 import com.google.common.collect.Maps;
 import com.squareup.javapoet.*;
 import com.squareup.javapoet.TypeName;
@@ -28,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 class GraphQLEntityGen implements CodeGenerator {
@@ -51,12 +51,6 @@ class GraphQLEntityGen implements CodeGenerator {
       util.note("No schema definition found - skipping entity generation");
       return;
     }
-    Map<String, OperationTypeDefinition> opDefsByName =
-        schemaDefinition.get().getOperationTypeDefinitions().stream()
-            .collect(
-                Collectors.toMap(
-                    operationTypeDefinition -> operationTypeDefinition.getTypeName().getName(),
-                    od -> od));
 
     Map<String, TypeDefinition> typesWithDataModels =
         Maps.filterValues(
@@ -85,31 +79,26 @@ class GraphQLEntityGen implements CodeGenerator {
           typeSpec = enumTypeSpecBuilder;
         } else if (typeDefinition instanceof ObjectTypeDefinition) {
           boolean isEntity = typeDefinition.hasDirective(Directives.ENTITY);
+          boolean isComposedType = typeDefinition.hasDirective(Directives.COMPOSED_TYPE);
+          if (!isEntity && !isComposedType) {
+            // Simple types are represented by their _Core GraphQlResponse model below.
+            continue;
+          }
           List<MethodSpec> methodSpecs = new ArrayList<>();
           GraphQLTypeName enclosingType = GraphQLTypeName.of(typeDefinition);
-
-          boolean idMissing = true;
-          String entityIdFieldName = schemaReaderUtil.getEntityIdFieldName(typeDefinition);
 
           if (typeDefinition.getChildren() != null) {
             for (int i = 0; i < typeDefinition.getChildren().size(); i++) {
               if (typeDefinition.getChildren().get(i) instanceof FieldDefinition fieldDefinition) {
                 String fieldName = fieldDefinition.getName();
-                boolean isEntityIdField = entityIdFieldName.equals(fieldName);
-
                 // Skip fields with arguments — they can be queried with multiple aliases and are
                 // only accessible via graphql_data(), not typed Java methods.
-                if (!fieldDefinition.getInputValueDefinitions().isEmpty() && !isEntityIdField) {
+                if (!fieldDefinition.getInputValueDefinitions().isEmpty()) {
                   continue;
                 }
 
                 GraphQlFieldSpec fieldSpec = fieldSpecFromField(fieldDefinition, "", enclosingType);
                 TypeName typeNameForField = graphQlCodeGenUtil.toTypeNameForField(fieldSpec);
-
-                if (isEntity && isEntityIdField) {
-                  idMissing = false;
-                  typeNameForField = schemaReaderUtil.entityIdClassName(graphQLTypeName);
-                }
 
                 methodSpecs.add(
                     MethodSpec.methodBuilder(fieldName)
@@ -119,48 +108,12 @@ class GraphQLEntityGen implements CodeGenerator {
                         .build());
               }
             }
-            if (isEntity && idMissing) {
-              util.error(
-                  """
-                  The entity %s does not have an '%s' field. Every entity MUST have an id.\
-                  Either remove the '@entity' directive from the type or add an '%s' field"""
-                      .formatted(
-                          entityClassName.simpleName(), entityIdFieldName, entityIdFieldName));
-            }
           }
 
           typeSpec =
               util.interfaceBuilder(entityClassName.simpleName(), "")
                   .addModifiers(PUBLIC)
                   .addMethods(methodSpecs);
-          if (isEntity) {
-            var entityIdClassName = schemaReaderUtil.entityIdClassName(graphQLTypeName);
-            util.generateSourceFile(
-                entityIdClassName.canonicalName(),
-                JavaFile.builder(
-                        entityIdClassName.packageName(),
-                        util.classBuilder(
-                                entityIdClassName.simpleName(), entityClassName.canonicalName())
-                            .addModifiers(PUBLIC)
-                            .addSuperinterface(GraphQlEntityId.class)
-                            .addField(String.class, "value", PRIVATE, FINAL)
-                            .addMethod(
-                                MethodSpec.methodBuilder("value")
-                                    .addModifiers(PUBLIC)
-                                    .returns(String.class)
-                                    .addStatement("return value")
-                                    .build())
-                            .addMethod(
-                                MethodSpec.constructorBuilder()
-                                    .addModifiers(PUBLIC)
-                                    .addParameter(String.class, "value")
-                                    .addStatement("this.value = value")
-                                    .build())
-                            .build())
-                    .build()
-                    .toString(),
-                null);
-          }
         } else {
           util.note("Skipping unknown entity type: " + typeDefinition);
           continue;
@@ -209,47 +162,8 @@ class GraphQLEntityGen implements CodeGenerator {
                   ClassName className =
                       ClassName.get(
                           dataFetcherName.packageName(),
-                          dataFetcherName.simpleName() + GRAPHQL_MODEL_SUFFIX);
-                  Builder builder = TypeSpec.interfaceBuilder(className);
-
-                  for (FieldDefinition fieldDefinitionDf : fieldDefinitionList) {
-                    builder.addMethod(
-                        MethodSpec.methodBuilder(fieldDefinitionDf.getName())
-                            .addModifiers(PUBLIC, ABSTRACT)
-                            .returns(
-                                graphQlCodeGenUtil.toTypeNameForField(
-                                    fieldSpecFromField(fieldDefinitionDf, "", graphQLTypeName)))
-                            .build());
-                  }
-                  ClassName modelRootClassName =
-                      ClassName.get("com.flipkart.krystal.model", "ModelRoot");
-                  builder
-                      .addModifiers(PUBLIC)
-                      .addSuperinterface(ClassName.get("com.flipkart.krystal.model", "Model"))
-                      .addAnnotation(
-                          AnnotationSpec.builder(modelRootClassName)
-                              .addMember(
-                                  "type",
-                                  "$T.$L",
-                                  modelRootClassName.nestedClass("ModelType"),
-                                  "RESPONSE")
-                              .addMember("pure", "false")
-                              .build())
-                      .addAnnotation(
-                          AnnotationSpec.builder(
-                                  ClassName.get(
-                                      "com.flipkart.krystal.model", "SupportedModelProtocol"))
-                              .addMember(
-                                  "value",
-                                  "$T.class",
-                                  ClassName.get(
-                                      "com.flipkart.krystal.vajram.graphql.api.model",
-                                      "GraphQlResponse"))
-                              .build());
-                  util.generateSourceFile(
-                      className.canonicalName(),
-                      JavaFile.builder(className.packageName(), builder.build()).build().toString(),
-                      null);
+                          dataFetcherName.simpleName() + GRAPHQL_FIELDS_SUFFIX);
+                  generateResponseModel(className, fieldDefinitionList, graphQLTypeName, false);
                 });
           } catch (Throwable e) {
             util.error(
@@ -257,6 +171,81 @@ class GraphQLEntityGen implements CodeGenerator {
                     .formatted(graphQLTypeName, getStackTraceAsString(e)));
           }
         });
+
+    schemaReaderUtil
+        .graphQLObjectTypes()
+        .forEach(
+            (graphQLTypeName, typeDefinition) -> {
+              if (typeDefinition.hasDirective(Directives.COMPOSED_TYPE)) {
+                return;
+              }
+              try {
+                List<FieldDefinition> idFields =
+                    typeDefinition.getFieldDefinitions().stream()
+                        .filter(field -> field.hasDirective(Directives.ID_FIELD))
+                        .filter(field -> field.getInputValueDefinitions().isEmpty())
+                        .toList();
+                if (idFields.isEmpty()) {
+                  return;
+                }
+                ClassName className =
+                    ClassName.get(
+                        schemaReaderUtil.getPackageNameForType(graphQLTypeName),
+                        graphQLTypeName.value() + GraphQlCodeGenUtil.GRAPHQL_ID_SUFFIX);
+                generateResponseModel(className, idFields, graphQLTypeName, true);
+              } catch (Throwable e) {
+                util.error(
+                    "Could not generate GraphQl Core Model for type '%s' due to error '%s'"
+                        .formatted(graphQLTypeName, getStackTraceAsString(e)));
+              }
+            });
+  }
+
+  private void generateResponseModel(
+      ClassName className,
+      List<FieldDefinition> fieldDefinitions,
+      GraphQLTypeName enclosingType,
+      boolean isCoreModel) {
+    Builder builder = TypeSpec.interfaceBuilder(className);
+    for (FieldDefinition fieldDefinition : fieldDefinitions) {
+      builder.addMethod(
+          MethodSpec.methodBuilder(fieldDefinition.getName())
+              .addModifiers(PUBLIC, ABSTRACT)
+              .addAnnotation(IF_ABSENT_FAIL)
+              .returns(
+                  graphQlCodeGenUtil.toTypeNameForField(
+                      fieldSpecFromField(fieldDefinition, "", enclosingType)))
+              .build());
+    }
+    ClassName modelRootClassName = ClassName.get("com.flipkart.krystal.model", "ModelRoot");
+    AnnotationSpec.Builder modelRoot =
+        AnnotationSpec.builder(modelRootClassName).addMember("pure", "false");
+    if (isCoreModel) {
+      modelRoot.addMember(
+          "type",
+          "{$T.$L, $T.$L}",
+          modelRootClassName.nestedClass("ModelType"),
+          "REQUEST",
+          modelRootClassName.nestedClass("ModelType"),
+          "RESPONSE");
+    } else {
+      modelRoot.addMember("type", "$T.$L", modelRootClassName.nestedClass("ModelType"), "RESPONSE");
+    }
+    builder
+        .addModifiers(PUBLIC)
+        .addSuperinterface(ClassName.get("com.flipkart.krystal.model", "Model"))
+        .addAnnotation(modelRoot.build())
+        .addAnnotation(
+            AnnotationSpec.builder(ClassName.get(SupportedModelProtocol.class))
+                .addMember("value", "$T.class", ClassName.get(GraphQlResponse.class))
+                .build());
+    if (isCoreModel) {
+      builder.addSuperinterface(ClassName.get(SimpleGraphQlObject.class));
+    }
+    util.generateSourceFile(
+        className.canonicalName(),
+        JavaFile.builder(className.packageName(), builder.build()).build().toString(),
+        null);
   }
 
   private static String getDescription(AbstractDescribedNode<?> describedNode) {

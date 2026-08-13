@@ -10,17 +10,17 @@ import com.flipkart.krystal.vajram.facets.Output;
 import java.util.List;
 
 @Vajram
-public abstract class GetOrderItemNames extends ComputeVajramDef<GetOrderItemNames_Model> {
+public abstract class GetOrderItemNames extends ComputeVajramDef<GetOrderItemNames_Fields> {
   interface _Inputs {
     @IfAbsent(FAIL)
-    OrderId id();
+    Order_Id id();
   }
 
   @Output
-  static GetOrderItemNames_Model orderItemNames(OrderId id) {
-    return GetOrderItemNames_Model_ImmutGQlResp._builder()
+  static GetOrderItemNames_Fields orderItemNames(Order_Id id) {
+    return GetOrderItemNames_Fields_ImmutGQlResp._builder()
         .orderItemNames(
-            List.of(Errable.withValue(id.value() + "_1"), Errable.withValue(id.value() + "_2")))
+            List.of(Errable.withValue(id.id() + "_1"), Errable.withValue(id.id() + "_2")))
         .nameString(Errable.withValue("testOrderName"))
         ._build();
   }

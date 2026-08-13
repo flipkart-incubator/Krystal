@@ -14,7 +14,7 @@ import java.util.Map;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public sealed interface GraphQlOperation extends GraphQlObject
-    permits GraphQlOperationEntity, GraphQlOperationError {
+    permits GraphQlOperationImpl, GraphQlOperationError {
 
   default @Nullable Map<Object, Object> graphql_extensions() {
     return null;

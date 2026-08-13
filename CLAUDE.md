@@ -4,6 +4,6 @@
 
 See [TESTING.md](TESTING.md)
 
-## Coding conventions
+## Coding rules
 
-See [CONVENTIONS.md](CONVENTIONS.md)
+See [RULES.md](RULES.md)

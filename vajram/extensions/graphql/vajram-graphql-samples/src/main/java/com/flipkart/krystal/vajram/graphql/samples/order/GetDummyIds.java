@@ -6,14 +6,15 @@ import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.graphql.samples.dummy.DummyId;
+import com.flipkart.krystal.vajram.graphql.samples.dummy.Dummy_Id;
+import com.flipkart.krystal.vajram.graphql.samples.dummy.Dummy_Id_ImmutGQlResp;
 import java.util.List;
 
 @Vajram
-public abstract class GetDummyIds extends ComputeVajramDef<List<DummyId>> {
+public abstract class GetDummyIds extends ComputeVajramDef<List<Dummy_Id>> {
   interface _Inputs {
     @IfAbsent(FAIL)
-    OrderId id();
+    Order_Id id();
 
     boolean filter();
 
@@ -23,7 +24,7 @@ public abstract class GetDummyIds extends ComputeVajramDef<List<DummyId>> {
   }
 
   @Output
-  static List<DummyId> dummyIds(OrderId id) {
-    return List.of(new DummyId(id.value() + "_dummy_1"));
+  static List<Dummy_Id> dummyIds(Order_Id id) {
+    return List.of(Dummy_Id_ImmutGQlResp._builder().dummyId(id.id() + "_dummy_1")._build());
   }
 }

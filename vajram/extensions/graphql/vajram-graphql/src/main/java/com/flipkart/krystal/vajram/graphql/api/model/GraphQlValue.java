@@ -13,13 +13,13 @@ public sealed interface GraphQlValue {
   record ScalarValue(Errable<?> errable, boolean isNullable) implements SingleValue {
 
     public ScalarValue(Object value, boolean isNullable) {
-      this(Errable.withValue(value), isNullable);
+      this(value instanceof Errable<?> errable ? errable : Errable.withValue(value), isNullable);
     }
   }
 
-  record ObjectValue(Errable<GraphQlEntity> errable, boolean isNullable) implements SingleValue {
+  record ObjectValue(Errable<GraphQlObject> errable, boolean isNullable) implements SingleValue {
 
-    public ObjectValue(GraphQlEntity value, boolean isNullable) {
+    public ObjectValue(GraphQlObject value, boolean isNullable) {
       this(Errable.withValue(value), isNullable);
     }
   }

@@ -1,8 +1,12 @@
 """
 
 """
-#TODO: Add support for defining an entity without having an id field (i.e id is implicit, not explicit)
-directive @entity(entityIdField: String) on OBJECT
+directive @entity on OBJECT
+
+"""
+Marks a field as part of the identity of its containing GraphQL type.
+"""
+directive @idField on FIELD_DEFINITION
 
 """
 Specifies the vajram responsible for fetching data for one or more fields of a GraphQL type.
@@ -16,25 +20,19 @@ entity or composedType throws an error.
 directive @dataFetcher(vajramId : String!, subPackage: String, multiField: Boolean = false) on FIELD_DEFINITION
 
 """
-Specifies the vajram which is responsible for fetching one or more entity ids of an graphQL entity.
-This is useful when there is a graphql field of an entity type depicting a one to one or one 2 many relationship between two graphQL entities.
-Fpr example, if an entity of type Book has a field "author" of entity type Author, an @idFetcher vajram would return the AuthorId of the "author" field.
-Can be used only on '@entity's. Using on any other field type throws error
+Specifies the vajram which is responsible for fetching the identity of a GraphQL object.
+This is useful when a field depicts a one-to-one or one-to-many relationship between GraphQL objects.
+For example, if an entity of type Book has a field "author" of type Author, an @idFetcher vajram returns Author_Id.
 """
-#TODO: Validation: Throw error if used on non @entity field types
 #TODO: TEst case: Should support fanout and one2one
 directive @idFetcher(vajramId : String!, subPackage: String) on FIELD_DEFINITION
 
 
 """
-This means the id to be used for type aggregation should be taken from the single argument passed to the field.
-The argument should be of type ID.
-If the number of arguments is not equal to 1 or if the type is not ID or if the argument name does not match the ID field name of the entity, an error is thrown.
-Only valid on fields of root operation types where the field type is an @entity.
+This means the identity used for type aggregation should be taken from the arguments passed to the field.
+Only valid on fields of root operation types where the field type has a single @idField.
 """
-#TODO Validation: inderIdFromArgs can only be present in @entity fields inside root operation types
-#TODO Validation: number of args should exactly be equal to 1
-#TODO Validation: the single arg name should match the entity id field inside the @entity type
+#TODO Validation: inferIdFromArgs can only be present in fields inside root operation types
 directive @inferIdFromArgs on FIELD_DEFINITION
 
 """
@@ -75,7 +73,7 @@ directive @subPackage(name: String!) on OBJECT
 """
 Specifies that a given non-entity type can be composed inside an entity of type entityType.
 This means that any @dataFetchers or @idFetchers on the fields of the type must accept
-the entity Id of the specified entity and compute the values of the fields based on the entity Id.
+the composing entity's _Id and compute the values of the fields based on it.
 Note: an instance of a composed type has a one to one correspondence with a given order id.
 """
 #TODO: Validation: Can be used only on @entity fields and @composedType fields.

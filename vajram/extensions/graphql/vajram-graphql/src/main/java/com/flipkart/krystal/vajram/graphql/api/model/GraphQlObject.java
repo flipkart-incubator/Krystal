@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public sealed interface GraphQlObject permits GraphQlOperation, GraphQlEntity, SimpleGraphQlObject {
+public sealed interface GraphQlObject permits GraphQlOperation, GraphQlObjectImpl {
   /**
    * Returns the __typename of a graphql type according to the graphql spec or null if it has yet
    * been queried..

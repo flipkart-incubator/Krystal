@@ -15,12 +15,12 @@ import java.util.Map;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public sealed class GraphQlEntity implements GraphQlObject permits GraphQlOperationEntity {
+public sealed class GraphQlObjectImpl implements GraphQlObject permits GraphQlOperationImpl {
 
   private final Map<String, GraphQlValue> graphql_values;
   private @MonotonicNonNull Map<String, Object> graphql_data;
 
-  GraphQlEntity(Map<String, GraphQlValue> graphql_values) {
+  GraphQlObjectImpl(Map<String, GraphQlValue> graphql_values) {
     this.graphql_values = unmodifiableMap(graphql_values);
   }
 
@@ -46,7 +46,7 @@ public sealed class GraphQlEntity implements GraphQlObject permits GraphQlOperat
           requireNonNull(listValue.errable().value());
       valueList.forEach(singleValue -> data.add(graphql_data(singleValue)));
       return data;
-    } else if (value instanceof GraphQlEntity nestedObject) {
+    } else if (value instanceof GraphQlObject nestedObject) {
       return nestedObject.graphql_data();
     } else {
       return value;
@@ -93,7 +93,7 @@ public sealed class GraphQlEntity implements GraphQlObject permits GraphQlOperat
   }
 
   @SuppressWarnings("unchecked")
-  public static class GraphQlObjectMapBuilder<T extends GraphQlObjectMapBuilder<T>> {
+  public static class GraphQlObjectImplBuilder<T extends GraphQlObjectImplBuilder<T>> {
 
     protected final Map<String, GraphQlValue> graphql_data = new LinkedHashMap<>();
 
@@ -102,8 +102,8 @@ public sealed class GraphQlEntity implements GraphQlObject permits GraphQlOperat
       return (T) this;
     }
 
-    public GraphQlEntity build() {
-      return new GraphQlEntity(graphql_data);
+    public GraphQlObjectImpl build() {
+      return new GraphQlObjectImpl(graphql_data);
     }
   }
 }

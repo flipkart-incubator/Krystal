@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.graphql.codegen;
 
-import static com.flipkart.krystal.vajram.graphql.api.Constants.DEFAULT_ENTITY_ID_FIELD;
 import static com.flipkart.krystal.vajram.graphql.api.Constants.GRAPHQL_AGGREGATOR_SUFFIX;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.MULTI_FIELD_DATA_FETCHER;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.SINGLE_FIELD_DATA_FETCHER;
@@ -222,22 +221,19 @@ public class SchemaReaderUtil {
       throw new IllegalArgumentException("Only ObjectTypeDefinitions can have entity ids");
     }
 
-    boolean isEntity = objectTypeDefinition.hasDirective(Directives.ENTITY);
-
     Optional<String> composedInEntity =
         getDirectiveArgumentString(
             objectTypeDefinition, Directives.COMPOSED_TYPE, DirectiveArgs.IN_ENTITY);
     if (composedInEntity.isPresent()) {
-      return entityIdClassName(typeClassName(GraphQLTypeName.of(composedInEntity.get())));
+      return entityIdClassName(GraphQLTypeName.of(composedInEntity.get()));
     }
-    if (isEntity) {
-      return entityIdClassName(typeClassName(graphQLTypeName));
+    if (objectTypeDefinition.hasDirective(Directives.ENTITY)
+        || isSimpleType(objectTypeDefinition)) {
+      return ClassName.get(
+          getPackageNameForType(graphQLTypeName),
+          graphQLTypeName.value() + GraphQlCodeGenUtil.GRAPHQL_ID_SUFFIX);
     }
-    throw new IllegalArgumentException("Only '@entity' and '@composedType' can have entity ids");
-  }
-
-  private ClassName entityIdClassName(ClassName entityClassName) {
-    return ClassName.get(entityClassName.packageName(), entityClassName.simpleName() + "Id");
+    throw new IllegalArgumentException("Only object types with an identity can have ids");
   }
 
   public static GraphQlFieldSpec fieldSpecFromField(
@@ -285,8 +281,9 @@ public class SchemaReaderUtil {
               new VajramFetcher(
                   getDataFetcherClassName(fieldDefinition, rootPackageName),
                   multiField ? MULTI_FIELD_DATA_FETCHER : SINGLE_FIELD_DATA_FETCHER));
-        } else if (fieldTypeDefinition.hasDirective(Directives.ENTITY)
-            && fieldDefinition.hasDirective(Directives.ID_FETCHER)) {
+        } else if (fieldDefinition.hasDirective(Directives.ID_FETCHER)
+            && (fieldTypeDefinition.hasDirective(Directives.ENTITY)
+                || isSimpleType(fieldTypeDefinition))) {
           fieldToFetcherMap.put(
               fieldSpecFromField(fieldDefinition, "", parentType),
               new VajramFetcher(
@@ -342,6 +339,12 @@ public class SchemaReaderUtil {
       entityTypeToFieldToFetcher.put(parentType, fieldToFetcherMap);
       typeToFetcherToFields.put(parentType, fetcherToFieldsMap);
     }
+  }
+
+  private static boolean isSimpleType(TypeDefinition<?> typeDefinition) {
+    return typeDefinition instanceof ObjectTypeDefinition objectTypeDefinition
+        && !objectTypeDefinition.hasDirective(Directives.ENTITY)
+        && !objectTypeDefinition.hasDirective(Directives.COMPOSED_TYPE);
   }
 
   private static void addAggregator(
@@ -535,9 +538,19 @@ public class SchemaReaderUtil {
   }
 
   public String getEntityIdFieldName(TypeDefinition fieldTypeDef) {
-    return getDirectiveArgumentString(
-            fieldTypeDef, Directives.ENTITY, DirectiveArgs.ENTITY_ID_FIELD)
-        .orElse(DEFAULT_ENTITY_ID_FIELD);
+    if (!(fieldTypeDef instanceof ObjectTypeDefinition objectTypeDefinition)) {
+      throw new IllegalArgumentException("Only object types can have identity fields");
+    }
+    List<FieldDefinition> idFields =
+        objectTypeDefinition.getFieldDefinitions().stream()
+            .filter(field -> field.hasDirective(Directives.ID_FIELD))
+            .toList();
+    if (idFields.size() != 1) {
+      throw new IllegalArgumentException(
+          "Type '%s' must declare exactly one @idField when its identity is used"
+              .formatted(objectTypeDefinition.getName()));
+    }
+    return idFields.get(0).getName();
   }
 
   public Optional<GraphQLTypeName> getComposingEntityType(ObjectTypeDefinition typeDefinition) {

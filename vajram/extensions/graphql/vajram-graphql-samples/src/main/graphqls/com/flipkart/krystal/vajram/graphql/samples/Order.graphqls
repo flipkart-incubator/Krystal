@@ -3,7 +3,7 @@
 An order
 """
 type Order @entity @subPackage(name: "order"){
-    id: ID
+    id: ID! @idField
     """
     List of order Item names in this order
     """
@@ -20,7 +20,7 @@ type Order @entity @subPackage(name: "order"){
     state: State @dataFetcher(vajramId: "GetOrderState", subPackage: "order")
     stateDuplicate: State @dataFetcher(vajramId: "GetOrderState", subPackage: "order")
     hello2: Hello
-    name: Name
+    name: Name #@dataFetcher(vajramId: "GetName")
 
     #TODO: Add check that fields with @inferIdFromParent must be @composedTypes
     #TODO: Add check that fields with @composedTypes cannot be fanout types
@@ -32,8 +32,8 @@ enum State {
     COMPLETED
 }
 
-type Dummy @entity(entityIdField: "dummyId"){
-    dummyId: ID
+type Dummy @entity{
+    dummyId: ID! @idField
     name: String!
     age: Int
     order: Order
@@ -49,8 +49,8 @@ type Hello @composedType(inEntity: "Order"){
 }
 
 type Name {
-    value: String
-    string: String
+    value: String @idField
+    string: String @idField
 }
 
 #{

@@ -8,6 +8,7 @@ import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
+import graphql.language.ObjectTypeDefinition;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -18,6 +19,9 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public final class GraphQlCodeGenUtil {
+
+  static final String GRAPHQL_FIELDS_SUFFIX = "_Fields";
+  static final String GRAPHQL_ID_SUFFIX = "_Id";
 
   @Getter private final SchemaReaderUtil schemaReaderUtil;
 
@@ -153,15 +157,26 @@ public final class GraphQlCodeGenUtil {
       case "Int" -> ClassName.get(Integer.class);
       case "Boolean" -> ClassName.get(Boolean.class);
       case "Float" -> ClassName.get(Float.class);
-      case "ID" -> {
-        GraphQLTypeName enclosingType = fieldSpec.enclosingType();
-        yield enclosingType != null
-            ? schemaReaderUtil.entityIdClassName(enclosingType)
-            : ClassName.get(Object.class);
-      }
+      case "ID" -> ClassName.get(String.class);
       default -> {
         GraphQLTypeName typeName = new GraphQLTypeName(graphQlTypeName);
-        yield ClassName.get(schemaReaderUtil.getPackageNameForType(typeName), typeName.value());
+        boolean isSimpleType =
+            schemaReaderUtil
+                .typeDefinitionRegistry()
+                .getType(graphQlTypeName)
+                .filter(ObjectTypeDefinition.class::isInstance)
+                .map(ObjectTypeDefinition.class::cast)
+                .filter(
+                    type ->
+                        !type.hasDirective(
+                                com.flipkart.krystal.vajram.graphql.api.Constants.Directives.ENTITY)
+                            && !type.hasDirective(
+                                com.flipkart.krystal.vajram.graphql.api.Constants.Directives
+                                    .COMPOSED_TYPE))
+                .isPresent();
+        yield ClassName.get(
+            schemaReaderUtil.getPackageNameForType(typeName),
+            typeName.value() + (isSimpleType ? GRAPHQL_ID_SUFFIX : ""));
       }
     };
   }

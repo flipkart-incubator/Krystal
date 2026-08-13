@@ -12,7 +12,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
 @Vajram
-public abstract class GetOrderSummary extends ComputeVajramDef<GetOrderSummary_Model> {
+public abstract class GetOrderSummary extends ComputeVajramDef<GetOrderSummary_Fields> {
 
   /** Unix epoch - January 1, 1970 00:00:00 UTC */
   public static final OffsetDateTime UNIX_EPOCH_DATE_TIME =
@@ -23,12 +23,12 @@ public abstract class GetOrderSummary extends ComputeVajramDef<GetOrderSummary_M
 
   interface _Inputs {
     @IfAbsent(FAIL)
-    OrderId id();
+    Order_Id id();
   }
 
   @Output
-  static GetOrderSummary_Model output() {
-    return GetOrderSummary_Model_ImmutGQlResp._builder()
+  static GetOrderSummary_Fields output() {
+    return GetOrderSummary_Fields_ImmutGQlResp._builder()
         .orderItemsCount(Errable.withValue(Long.MAX_VALUE))
         .orderPlacedAt(Errable.withValue(UNIX_EPOCH_DATE_TIME))
         .orderAcceptDate(Errable.withValue(UNIX_EPOCH_DATE))

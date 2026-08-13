@@ -4,15 +4,15 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public final class GraphQlOperationEntity extends GraphQlEntity implements GraphQlOperation {
+public final class GraphQlOperationImpl extends GraphQlObjectImpl implements GraphQlOperation {
 
   private final @Nullable Map<Object, Object> extensions;
 
-  public GraphQlOperationEntity(Map<String, GraphQlValue> graphql_values) {
+  public GraphQlOperationImpl(Map<String, GraphQlValue> graphql_values) {
     this(graphql_values, null);
   }
 
-  public GraphQlOperationEntity(
+  public GraphQlOperationImpl(
       Map<String, GraphQlValue> graphql_values, @Nullable Map<Object, Object> extensions) {
     super(graphql_values);
     this.extensions = extensions;
@@ -23,12 +23,12 @@ public final class GraphQlOperationEntity extends GraphQlEntity implements Graph
     return extensions;
   }
 
-  public static class GraphQlOperationObjectMapBuilder
-      extends GraphQlObjectMapBuilder<GraphQlOperationObjectMapBuilder> {
+  public static class GraphQlOperationImplBuilder
+      extends GraphQlObjectImplBuilder<GraphQlOperationImplBuilder> {
 
     private @Nullable Map<Object, Object> extensions;
 
-    public GraphQlOperationObjectMapBuilder addExtension(Object key, Object value) {
+    public GraphQlOperationImplBuilder addExtension(Object key, Object value) {
       if (extensions == null) {
         extensions = new LinkedHashMap<>();
       }
@@ -36,8 +36,8 @@ public final class GraphQlOperationEntity extends GraphQlEntity implements Graph
       return this;
     }
 
-    public GraphQlOperationEntity build() {
-      return new GraphQlOperationEntity(graphql_data, extensions);
+    public GraphQlOperationImpl build() {
+      return new GraphQlOperationImpl(graphql_data, extensions);
     }
   }
 }

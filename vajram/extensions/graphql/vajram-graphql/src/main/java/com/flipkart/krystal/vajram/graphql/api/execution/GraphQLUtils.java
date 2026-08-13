@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.graphql.api.execution;
 
 import com.flipkart.krystal.vajram.graphql.api.errors.GraphQLErrorInfo;
-import com.google.common.collect.Sets;
 import graphql.ErrorClassification;
 import graphql.ErrorType;
 import graphql.GraphQLError;
@@ -99,18 +98,13 @@ public class GraphQLUtils {
    */
   public static boolean isFieldQueried(String fieldName, ExecutionStrategyParameters params) {
     MergedSelectionSet fields = params.getFields();
-    MergedField field = params.getField();
-    // Check by response key (alias) first — fast path
-    if (fields.getSubFields().containsKey(fieldName)) {
-      return true;
-    }
     // Check by actual field name to handle aliased requests
     for (MergedField subField : fields.getSubFields().values()) {
       if (subField.getName().equals(fieldName)) {
         return true;
       }
     }
-    return field != null && field.getSingleField().getName().equals(fieldName);
+    return false;
   }
 
   /**
@@ -120,17 +114,13 @@ public class GraphQLUtils {
   public static boolean isAnyFieldQueried(
       Set<String> fieldNames, ExecutionStrategyParameters params) {
     MergedSelectionSet fields = params.getFields();
-    // Check by response key (alias) first — fast path
-    if (!Sets.intersection(fields.getSubFields().keySet(), fieldNames).isEmpty()) {
-      return true;
-    }
     // Check by actual field name to handle aliased requests
     for (MergedField subField : fields.getSubFields().values()) {
       if (fieldNames.contains(subField.getName())) {
         return true;
       }
     }
-    return fieldNames.contains(params.getField().getSingleField().getName());
+    return false;
   }
 
   public static Map<String, List<String>> computeFieldNameToAliases(
