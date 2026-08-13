@@ -6,6 +6,7 @@ import static com.flipkart.krystal.vajram.codegen.common.models.Constants.IMMUT_
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants._INTERNAL_FACETS_CLASS;
 import static com.flipkart.krystal.vajram.graphql.codegen.CodeGenConstants.IF_ABSENT_FAIL;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlCodeGenUtil.GRAPHQL_FIELDS_SUFFIX;
+import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlCodeGenUtil.INPUTS_CLASS_NAME;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.INHERIT_ID_FROM_ARGS;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.INHERIT_ID_FROM_PARENT;
 import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.getDirectiveArgumentString;
@@ -169,7 +170,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
     GraphQLTypeName typeName = GraphQLTypeName.of(typeDefinition);
     boolean hasId = !schemaReaderUtil.isOperationType(typeName);
 
-    TypeSpec.Builder inputs = TypeSpec.interfaceBuilder("_Inputs").addModifiers(STATIC);
+    TypeSpec.Builder inputs = TypeSpec.interfaceBuilder(INPUTS_CLASS_NAME).addModifiers(STATIC);
 
     if (hasId) {
       inputs.addMethod(
@@ -964,7 +965,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
       GraphQlFieldSpec fieldSpec,
       ClassName typeAggregatorClass) {
     getDirectiveArgumentString(
-        parentTypeDefinition, Directives.COMPOSED_TYPE, DirectiveArgs.IN_ENTITY);
+        parentTypeDefinition, Directives.ENTITY_EXTENSION, DirectiveArgs.OF_ENTITY);
     Optional<GraphQLTypeName> parentComposingEntityType =
         schemaReaderUtil.getComposingEntityType(parentTypeDefinition);
 
@@ -986,7 +987,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
     GraphQLTypeName fieldTypeName = GraphQLTypeName.of(fieldTypeDef);
     boolean fieldIsSimpleType =
         !fieldTypeDef.hasDirective(Directives.ENTITY)
-            && !fieldTypeDef.hasDirective(Directives.COMPOSED_TYPE);
+            && !fieldTypeDef.hasDirective(Directives.ENTITY_EXTENSION);
     Optional<GraphQLTypeName> fieldComposingEntityType =
         schemaReaderUtil.getComposingEntityType(fieldTypeDef);
     ClassName vajramReqClass = getRequestClassName(typeAggregatorClass);
@@ -1024,7 +1025,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
       throw util.errorAndThrow(
           """
           Directive @inheritFromParent on field '%s' in type '%s' specifies that the \
-          field type must be a @composedType whose 'inEntity' argument matches the parent entity of the field. \
+          field type must be an @entityExtension whose 'ofEntity' argument matches the parent entity of the field. \
           Expected: '%s', Found '%s'
           """
               .formatted(

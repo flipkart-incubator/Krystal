@@ -13,10 +13,10 @@ Specifies the vajram responsible for fetching data for one or more fields of a G
 By default, its response is assigned directly to the annotated field. Set multiField to true
 when the vajram returns an aggregate response: each field using the same vajramId receives the
 value from the correspondingly named field in that response. multiField defaults to false.
-Data fetchers can be used only for Scalar types and simple types. Using them on fields of type
-entity or composedType throws an error.
+Data fetchers can be used only for Scalar types. Using them on fields of type
+object throws an error.
 """
-#TODO: Validation: Throw error if used with entity or composedType
+#TODO: Validation: Throw error if used with object types
 directive @dataFetcher(vajramId : String!, subPackage: String, multiField: Boolean = false) on FIELD_DEFINITION
 
 """
@@ -36,11 +36,11 @@ Only valid on fields of root operation types where the field type has a single @
 directive @inferIdFromArgs on FIELD_DEFINITION
 
 """
-Specifies that the id of the parent entity should be used to aggregate the given field.
+Specifies that the id fields of the parent entity should be used to aggregate the given field.
 Using this directive on a field is only valid if the field type is an Object type
-with the directive @composedType whose "inEntity" argument matches the composing entity type
+with the directive @entityExtension whose "ofEntity" argument matches the composing entity type
 """
-#TODO: Validation: throw error if used in non-@composedType
+#TODO: Validation: throw error if used in non-@entityExtension
 #TODO: Validation: throw error if used with lists (fanout should not be supported)
 directive @inferIdFromParent on FIELD_DEFINITION
 
@@ -48,13 +48,13 @@ directive @inferIdFromParent on FIELD_DEFINITION
 Specifies the Java type mapping for a GraphQL scalar type.
 
 Example:
-  scalar Timestamp
-    @specifiedBy(url: "https://scalars.graphql.org/andimarek/date-time.html")
-    @javaType(packageName: "java.time", className: "OffsetDateTime")
+scalar Timestamp
+@specifiedBy(url: "https://scalars.graphql.org/andimarek/date-time.html")
+@javaType(packageName: "java.time", className: "OffsetDateTime")
 
-  type Order {
-    createdAt: Timestamp    # Will be mapped to java.time.OffsetDateTime
-  }
+type Order {
+createdAt: Timestamp    # Will be mapped to java.time.OffsetDateTime
+}
 """
 directive @javaType(packageName : String!, className: String!) on SCALAR
 
@@ -71,11 +71,16 @@ Specifies the sub package inside @rootPackage under which all the models corresp
 directive @subPackage(name: String!) on OBJECT
 
 """
-Specifies that a given non-entity type can be composed inside an entity of type entityType.
-This means that any @dataFetchers or @idFetchers on the fields of the type must accept
-the composing entity's _Id and compute the values of the fields based on it.
-Note: an instance of a composed type has a one to one correspondence with a given order id.
+Specifies that a given type is an "extension" of some entity. This means the "extension"
+entity organizes some fields of the "extended" entity into a new type for better field organization.
+This implies that any @dataFetchers or @idFetchers on the fields of an extension type must accept
+the extended entity's `<Entity>_Id` and compute the values of the fields based on it.
+
+Note: an instance of an entity extension has a one-to-one correspondence with an instance of the extended entity.
+i.e. An entity can have exactly one field of type EntityExtension and that field cannot have any arguments, nor can it be a array field.
+This implies that an entity extension can be used in very limited circumstances, for ex: an entity has many fields
+and we want to organize the fields into smaller types which "extend" that entity and group some of its fields into a different type.
 """
-#TODO: Validation: Can be used only on @entity fields and @composedType fields.
-#TODO: Validation: When used in @composedTypes, the "inEntity" must match the outer "inEntity"
-directive @composedType(inEntity: String!) on OBJECT
+#TODO: Validation: Can be used only on @entity fields and @entityExtension fields.
+#TODO: Validation: When used in @entityExtensions, the "ofEntity" must match the outer "ofEntity"
+directive @entityExtension(ofEntity: String!) on OBJECT

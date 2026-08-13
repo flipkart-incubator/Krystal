@@ -15,10 +15,7 @@ import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.vajram.graphql.api.Constants.Directives;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponse;
-import com.flipkart.krystal.vajram.graphql.api.model.SimpleGraphQlObject;
-import com.google.common.collect.Maps;
 import com.squareup.javapoet.*;
-import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec.Builder;
 import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
@@ -27,8 +24,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 class GraphQLEntityGen implements CodeGenerator {
@@ -46,95 +41,35 @@ class GraphQLEntityGen implements CodeGenerator {
   @Override
   public void generate() {
     TypeDefinitionRegistry typeDefinitionRegistry = schemaReaderUtil.typeDefinitionRegistry();
-    Optional<SchemaDefinition> schemaDefinition = typeDefinitionRegistry.schemaDefinition();
-    if (schemaDefinition.isEmpty()) {
-      util.note("No schema definition found - skipping entity generation");
-      return;
-    }
-
-    Map<String, TypeDefinition> typesWithDataModels =
-        Maps.filterValues(
-            typeDefinitionRegistry.types(),
-            typeDefinition ->
-                typeDefinition instanceof EnumTypeDefinition
-                    || typeDefinition instanceof ObjectTypeDefinition);
-    util.note("Generating id models and data models for types : %s".formatted(typesWithDataModels));
-    for (Entry<String, TypeDefinition> entry : typesWithDataModels.entrySet()) {
-      GraphQLTypeName graphQLTypeName = new GraphQLTypeName(entry.getKey());
-      TypeDefinition typeDefinition = entry.getValue();
-      try {
-        ClassName entityClassName = schemaReaderUtil.typeClassName(graphQLTypeName);
-
-        Builder typeSpec;
-        if (typeDefinition instanceof EnumTypeDefinition) {
-          Builder enumTypeSpecBuilder =
-              TypeSpec.enumBuilder(graphQLTypeName.value()).addModifiers(PUBLIC);
-
-          ((EnumTypeDefinition) typeDefinition)
+    util.note("Generating enum models for types : %s".formatted(typeDefinitionRegistry.types()));
+    for (TypeDefinition<?> typeDefinition : typeDefinitionRegistry.types().values()) {
+      if (typeDefinition instanceof EnumTypeDefinition enumTypeDefinition) {
+        GraphQLTypeName graphQLTypeName = GraphQLTypeName.of(typeDefinition);
+        try {
+          Builder typeSpec = TypeSpec.enumBuilder(graphQLTypeName.value()).addModifiers(PUBLIC);
+          enumTypeDefinition
               .getEnumValueDefinitions()
               .forEach(
-                  enumValueDefinition ->
-                      enumTypeSpecBuilder.addEnumConstant(enumValueDefinition.getName()));
-
-          typeSpec = enumTypeSpecBuilder;
-        } else if (typeDefinition instanceof ObjectTypeDefinition) {
-          boolean isEntity = typeDefinition.hasDirective(Directives.ENTITY);
-          boolean isComposedType = typeDefinition.hasDirective(Directives.COMPOSED_TYPE);
-          if (!isEntity && !isComposedType) {
-            // Simple types are represented by their _Core GraphQlResponse model below.
-            continue;
-          }
-          List<MethodSpec> methodSpecs = new ArrayList<>();
-          GraphQLTypeName enclosingType = GraphQLTypeName.of(typeDefinition);
-
-          if (typeDefinition.getChildren() != null) {
-            for (int i = 0; i < typeDefinition.getChildren().size(); i++) {
-              if (typeDefinition.getChildren().get(i) instanceof FieldDefinition fieldDefinition) {
-                String fieldName = fieldDefinition.getName();
-                // Skip fields with arguments — they can be queried with multiple aliases and are
-                // only accessible via graphql_data(), not typed Java methods.
-                if (!fieldDefinition.getInputValueDefinitions().isEmpty()) {
-                  continue;
-                }
-
-                GraphQlFieldSpec fieldSpec = fieldSpecFromField(fieldDefinition, "", enclosingType);
-                TypeName typeNameForField = graphQlCodeGenUtil.toTypeNameForField(fieldSpec);
-
-                methodSpecs.add(
-                    MethodSpec.methodBuilder(fieldName)
-                        .addModifiers(PUBLIC, ABSTRACT)
-                        .returns(typeNameForField)
-                        .addJavadoc(getDescription(fieldDefinition))
-                        .build());
-              }
-            }
-          }
-
-          typeSpec =
-              util.interfaceBuilder(entityClassName.simpleName(), "")
-                  .addModifiers(PUBLIC)
-                  .addMethods(methodSpecs);
-        } else {
-          util.note("Skipping unknown entity type: " + typeDefinition);
-          continue;
+                  enumValueDefinition -> typeSpec.addEnumConstant(enumValueDefinition.getName()));
+          typeSpec.addJavadoc(getDescription(enumTypeDefinition));
+          util.generateSourceFile(
+              schemaReaderUtil.typeClassName(graphQLTypeName).canonicalName(),
+              JavaFile.builder(
+                      schemaReaderUtil.typeClassName(graphQLTypeName).packageName(),
+                      typeSpec.build())
+                  .build()
+                  .toString(),
+              null);
+        } catch (Throwable e) {
+          util.error(
+              "Could not generate id models and data models for type '%s' due to error '%s'"
+                  .formatted(graphQLTypeName, getStackTraceAsString(e)));
         }
-        //noinspection ConstantValue
-        if (typeDefinition instanceof AbstractDescribedNode<?> describedNode) {
-          typeSpec.addJavadoc(getDescription(describedNode));
-        }
-        util.generateSourceFile(
-            entityClassName.canonicalName(),
-            JavaFile.builder(entityClassName.packageName(), typeSpec.build()).build().toString(),
-            null);
-      } catch (Throwable e) {
-        util.error(
-            "Could not generate id models and data models for type '%s' due to error '%s'"
-                .formatted(entry.getKey(), getStackTraceAsString(e)));
       }
     }
 
     Map<GraphQLTypeName, @NonNull ObjectTypeDefinition> aggregatableTypes =
-        schemaReaderUtil.aggregatableTypes();
+        schemaReaderUtil.graphQLObjectTypes();
     util.note(
         "Evaluating '%s' to generate GraphQl Field Models where needed (i.e. for multiField data fetchers)"
             .formatted(aggregatableTypes));
@@ -176,7 +111,7 @@ class GraphQLEntityGen implements CodeGenerator {
         .graphQLObjectTypes()
         .forEach(
             (graphQLTypeName, typeDefinition) -> {
-              if (typeDefinition.hasDirective(Directives.COMPOSED_TYPE)) {
+              if (typeDefinition.hasDirective(Directives.ENTITY_EXTENSION)) {
                 return;
               }
               try {
@@ -205,7 +140,7 @@ class GraphQLEntityGen implements CodeGenerator {
       ClassName className,
       List<FieldDefinition> fieldDefinitions,
       GraphQLTypeName enclosingType,
-      boolean isCoreModel) {
+      boolean isIdModel) {
     Builder builder = TypeSpec.interfaceBuilder(className);
     for (FieldDefinition fieldDefinition : fieldDefinitions) {
       builder.addMethod(
@@ -220,7 +155,7 @@ class GraphQLEntityGen implements CodeGenerator {
     ClassName modelRootClassName = ClassName.get("com.flipkart.krystal.model", "ModelRoot");
     AnnotationSpec.Builder modelRoot =
         AnnotationSpec.builder(modelRootClassName).addMember("pure", "false");
-    if (isCoreModel) {
+    if (isIdModel) {
       modelRoot.addMember(
           "type",
           "{$T.$L, $T.$L}",
@@ -239,9 +174,6 @@ class GraphQLEntityGen implements CodeGenerator {
             AnnotationSpec.builder(ClassName.get(SupportedModelProtocol.class))
                 .addMember("value", "$T.class", ClassName.get(GraphQlResponse.class))
                 .build());
-    if (isCoreModel) {
-      builder.addSuperinterface(ClassName.get(SimpleGraphQlObject.class));
-    }
     util.generateSourceFile(
         className.canonicalName(),
         JavaFile.builder(className.packageName(), builder.build()).build().toString(),

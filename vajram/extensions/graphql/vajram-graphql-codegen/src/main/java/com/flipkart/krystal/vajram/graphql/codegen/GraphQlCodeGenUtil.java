@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class GraphQlCodeGenUtil {
 
+  public static final String INPUTS_CLASS_NAME = "_Inputs";
   static final String GRAPHQL_FIELDS_SUFFIX = "_Fields";
   static final String GRAPHQL_ID_SUFFIX = "_Id";
 
@@ -172,7 +173,7 @@ public final class GraphQlCodeGenUtil {
                                 com.flipkart.krystal.vajram.graphql.api.Constants.Directives.ENTITY)
                             && !type.hasDirective(
                                 com.flipkart.krystal.vajram.graphql.api.Constants.Directives
-                                    .COMPOSED_TYPE))
+                                    .ENTITY_EXTENSION))
                 .isPresent();
         yield ClassName.get(
             schemaReaderUtil.getPackageNameForType(typeName),

@@ -1,4 +1,4 @@
-#TODO Testcases: A, A!, [A], [A]!, [A!], [A!]! -> 4 types of As (Scalars, entities, composedTypes, types)
+#TODO Testcases: A, A!, [A], [A!], [A!]! -> 4 types of As (Scalars, entities, entityExtensions, types)
 """
 An order
 """
@@ -22,8 +22,8 @@ type Order @entity @subPackage(name: "order"){
     hello2: Hello
     name: Name #@dataFetcher(vajramId: "GetName")
 
-    #TODO: Add check that fields with @inferIdFromParent must be @composedTypes
-    #TODO: Add check that fields with @composedTypes cannot be fanout types
+    #TODO: Add check that fields with @inferIdFromParent must be @entityExtensions
+    #TODO: Add check that fields with @entityExtensions cannot be fanout types
     #hellos: [Hello] @inferIdFromParent
 }
 
@@ -42,9 +42,9 @@ type Dummy @entity{
 
 #TODO Testcase: Can be used inside Order entity only - using inside any other entity throws error
 #TODO Testcase: Will be aggregated if @inferIdFromParent is present on field- in which case the composing entity's id is used for aggregation (Fanout should not be possible)
-#TODO Testcase: Using idFetcher on composedTypes is an error
+#TODO Testcase: Using idFetcher on entityExtensions is an error
 #TODO Testcase: ?? Can @composedEntities be allowed as lists or only single (canFanout or not?)
-type Hello @composedType(inEntity: "Order"){
+type Hello @entityExtension(ofEntity: "Order"){
     toName: String
 }
 

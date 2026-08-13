@@ -75,7 +75,7 @@ public class SchemaReaderUtil {
       graphQLObjectTypes;
 
   @Getter private final Map<GraphQLTypeName, @NonNull ObjectTypeDefinition> entityTypes;
-  @Getter private final Map<GraphQLTypeName, @NonNull ObjectTypeDefinition> composedTypes;
+  @Getter private final Map<GraphQLTypeName, @NonNull ObjectTypeDefinition> entityExtensions;
 
   /** Types which need a GraphqlAggregate vajram generated */
   @Getter private final Map<GraphQLTypeName, ObjectTypeDefinition> aggregatableTypes;
@@ -92,9 +92,9 @@ public class SchemaReaderUtil {
     this.graphQLObjectTypes = computeGraphQLTypes(typeDefinitionRegistry);
     this.entityTypes =
         Maps.filterValues(graphQLObjectTypes, typeDef -> typeDef.hasDirective(Directives.ENTITY));
-    this.composedTypes =
+    this.entityExtensions =
         Maps.filterValues(
-            graphQLObjectTypes, typeDef -> typeDef.hasDirective(Directives.COMPOSED_TYPE));
+            graphQLObjectTypes, typeDef -> typeDef.hasDirective(Directives.ENTITY_EXTENSION));
 
     Map<GraphQLTypeName, @NonNull ObjectTypeDefinition> aggregatableTypes =
         new HashMap<>(graphQLObjectTypes);
@@ -210,7 +210,7 @@ public class SchemaReaderUtil {
       return false;
     }
     return objectTypeDefinition.hasDirective(Directives.ENTITY)
-        || objectTypeDefinition.hasDirective(Directives.COMPOSED_TYPE);
+        || objectTypeDefinition.hasDirective(Directives.ENTITY_EXTENSION);
   }
 
   ClassName entityIdClassName(GraphQLTypeName graphQLTypeName) {
@@ -223,7 +223,7 @@ public class SchemaReaderUtil {
 
     Optional<String> composedInEntity =
         getDirectiveArgumentString(
-            objectTypeDefinition, Directives.COMPOSED_TYPE, DirectiveArgs.IN_ENTITY);
+            objectTypeDefinition, Directives.ENTITY_EXTENSION, DirectiveArgs.OF_ENTITY);
     if (composedInEntity.isPresent()) {
       return entityIdClassName(GraphQLTypeName.of(composedInEntity.get()));
     }
@@ -308,7 +308,7 @@ public class SchemaReaderUtil {
               fieldToTypeAggregator,
               typeDefinitionRegistry,
               rootPackageName);
-        } else if (fieldTypeDefinition.hasDirective(Directives.COMPOSED_TYPE)
+        } else if (fieldTypeDefinition.hasDirective(Directives.ENTITY_EXTENSION)
             && fieldDefinition.hasDirective(Directives.INHERIT_ID_FROM_PARENT)) {
           fieldToFetcherMap.put(
               fieldSpecFromField(fieldDefinition, "", parentType),
@@ -344,7 +344,7 @@ public class SchemaReaderUtil {
   private static boolean isSimpleType(TypeDefinition<?> typeDefinition) {
     return typeDefinition instanceof ObjectTypeDefinition objectTypeDefinition
         && !objectTypeDefinition.hasDirective(Directives.ENTITY)
-        && !objectTypeDefinition.hasDirective(Directives.COMPOSED_TYPE);
+        && !objectTypeDefinition.hasDirective(Directives.ENTITY_EXTENSION);
   }
 
   private static void addAggregator(
@@ -557,7 +557,7 @@ public class SchemaReaderUtil {
     return typeDefinition.hasDirective(Directives.ENTITY)
         ? Optional.of(GraphQLTypeName.of(typeDefinition))
         : getDirectiveArgumentString(
-                typeDefinition, Directives.COMPOSED_TYPE, DirectiveArgs.IN_ENTITY)
+                typeDefinition, Directives.ENTITY_EXTENSION, DirectiveArgs.OF_ENTITY)
             .map(GraphQLTypeName::of);
   }
 
