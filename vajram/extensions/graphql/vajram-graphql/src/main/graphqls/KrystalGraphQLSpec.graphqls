@@ -5,6 +5,10 @@ directive @entity on OBJECT
 
 """
 Marks a field as part of the identity of its containing GraphQL type.
+
+Invariants:
+Id fields cannot accept arguments
+Id fields have to be scalars - cannot be graphql objects
 """
 directive @idField on FIELD_DEFINITION
 
@@ -15,6 +19,9 @@ when the vajram returns an aggregate response: each field using the same vajramI
 value from the correspondingly named field in that response. multiField defaults to false.
 Data fetchers can be used only for Scalar types. Using them on fields of type
 object throws an error.
+
+Invariants:
+@dataFetchers can only be used on scalar types. Using on object types throws build-time error.
 """
 #TODO: Validation: Throw error if used with object types
 directive @dataFetcher(vajramId : String!, subPackage: String, multiField: Boolean = false) on FIELD_DEFINITION
@@ -29,8 +36,13 @@ directive @idFetcher(vajramId : String!, subPackage: String) on FIELD_DEFINITION
 
 
 """
-This means the identity used for type aggregation should be taken from the arguments passed to the field.
-Only valid on fields of root operation types where the field type has a single @idField.
+This means the identity used for type aggregation should be taken from the arguments passed to the field
+by matching the argument name with the idField name. If any of the non-null idFields of the type doesn't have a
+corresponding field argument with matching name and type, then a build-time error is thrown
+
+Invariants:
+Only valid on fields of root operation types.
+Every non-null idField of the type must have a corresponding field argument here with matching name and type
 """
 #TODO Validation: inferIdFromArgs can only be present in fields inside root operation types
 directive @inferIdFromArgs on FIELD_DEFINITION
@@ -39,6 +51,11 @@ directive @inferIdFromArgs on FIELD_DEFINITION
 Specifies that the id fields of the parent entity should be used to aggregate the given field.
 Using this directive on a field is only valid if the field type is an Object type
 with the directive @entityExtension whose "ofEntity" argument matches the composing entity type
+
+Invariants:
+Can only be used on a field whose type has @entityExtension with "ofEntity" arg matching the parent type of this field - else build-time error is thrown
+The field cannot be a list field - else build-time error is thrown
+Only one field of the the "extended" type can have this type - having more than one is a build-time error.
 """
 #TODO: Validation: throw error if used in non-@entityExtension
 #TODO: Validation: throw error if used with lists (fanout should not be supported)

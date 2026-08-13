@@ -21,6 +21,7 @@ import graphql.language.Directive;
 import graphql.language.DirectivesContainer;
 import graphql.language.EnumTypeDefinition;
 import graphql.language.FieldDefinition;
+import graphql.language.InputValueDefinition;
 import graphql.language.ListType;
 import graphql.language.NonNullType;
 import graphql.language.ObjectTypeDefinition;
@@ -150,6 +151,7 @@ public class SchemaReaderUtil {
     }
 
     this.aggregatableTypes = aggregatableTypes;
+    validateDirectiveInvariants();
     setFieldVajramsForEachEntity(
         entityTypeToFieldToTypeAggregator,
         entityTypeToFieldToFetcher,
@@ -157,6 +159,195 @@ public class SchemaReaderUtil {
         typeDefinitionRegistry,
         aggregatableTypes,
         rootPackageName);
+  }
+
+  private void validateDirectiveInvariants() {
+    graphQLObjectTypes.forEach(
+        (typeName, typeDefinition) -> {
+          for (FieldDefinition field : typeDefinition.getFieldDefinitions()) {
+            TypeDefinition<?> fieldType = typeDefinitionFor(field);
+            if (field.hasDirective(Directives.ID_FIELD)) {
+              if (!field.getInputValueDefinitions().isEmpty()) {
+                throw invalid(
+                    "@idField '%s.%s' cannot declare arguments", typeName.value(), field.getName());
+              }
+              if (!(fieldType instanceof ScalarTypeDefinition)
+                  && !(fieldType instanceof EnumTypeDefinition)) {
+                throw invalid(
+                    "@idField '%s.%s' must have a scalar or enum type",
+                    typeName.value(), field.getName());
+              }
+            }
+            if (field.hasDirective(Directives.DATA_FETCHER)
+                && !(fieldType instanceof ScalarTypeDefinition)
+                && !(fieldType instanceof EnumTypeDefinition)) {
+              throw invalid(
+                  "@dataFetcher '%s.%s' can only be used on scalar or enum fields",
+                  typeName.value(), field.getName());
+            }
+            if (field.hasDirective(Directives.INHERIT_ID_FROM_ARGS)) {
+              validateInferIdFromArgs(typeName, field, fieldType);
+            }
+            if (field.hasDirective(Directives.INHERIT_ID_FROM_PARENT)) {
+              validateInferIdFromParent(typeName, typeDefinition, field, fieldType);
+            }
+          }
+        });
+    validateEntityExtensionReferences();
+  }
+
+  private void validateInferIdFromArgs(
+      GraphQLTypeName parentType, FieldDefinition field, TypeDefinition<?> fieldType) {
+    if (!isOperationType(parentType)) {
+      throw invalid(
+          "@inferIdFromArgs '%s.%s' is only valid on root operation fields",
+          parentType.value(), field.getName());
+    }
+    if (!(fieldType instanceof ObjectTypeDefinition objectType)) {
+      throw invalid(
+          "@inferIdFromArgs '%s.%s' must return an object type",
+          parentType.value(), field.getName());
+    }
+    Map<String, InputValueDefinition> argsByName =
+        field.getInputValueDefinitions().stream()
+            .collect(Collectors.toMap(InputValueDefinition::getName, input -> input));
+    for (FieldDefinition idField : nonNullIdFields(objectType)) {
+      InputValueDefinition arg = argsByName.get(idField.getName());
+      if (arg == null || !arg.getType().toString().equals(idField.getType().toString())) {
+        throw invalid(
+            "@inferIdFromArgs '%s.%s' requires an argument '%s' with type '%s' for @idField '%s.%s'",
+            parentType.value(),
+            field.getName(),
+            idField.getName(),
+            idField.getType(),
+            objectType.getName(),
+            idField.getName());
+      }
+    }
+  }
+
+  private void validateInferIdFromParent(
+      GraphQLTypeName parentType,
+      ObjectTypeDefinition parent,
+      FieldDefinition field,
+      TypeDefinition<?> fieldType) {
+    if (isOperationType(parentType)) {
+      throw invalid(
+          "@inferIdFromParent '%s.%s' is not valid on root operation fields",
+          parentType.value(), field.getName());
+    }
+    if (isList(field.getType()) || !field.getInputValueDefinitions().isEmpty()) {
+      throw invalid(
+          "@inferIdFromParent '%s.%s' cannot be used on list fields or fields with arguments",
+          parentType.value(), field.getName());
+    }
+    if (!(fieldType instanceof ObjectTypeDefinition extension)
+        || !extension.hasDirective(Directives.ENTITY_EXTENSION)) {
+      throw invalid(
+          "@inferIdFromParent '%s.%s' must return an @entityExtension",
+          parentType.value(), field.getName());
+    }
+    if (!getComposingEntityType(parent).equals(getComposingEntityType(extension))) {
+      throw invalid(
+          "@inferIdFromParent '%s.%s' must reference an @entityExtension of '%s'",
+          parentType.value(),
+          field.getName(),
+          getComposingEntityType(parent).map(GraphQLTypeName::value).orElse(parentType.value()));
+    }
+  }
+
+  private void validateEntityExtensionReferences() {
+    entityExtensions.forEach(
+        (extensionName, extension) -> {
+          GraphQLTypeName extendedEntity =
+              entityExtensionOf(extension, extensionName)
+                  .orElseThrow(
+                      () ->
+                          invalid(
+                              "@entityExtension '%s' must declare ofEntity",
+                              extensionName.value()));
+          if (!entityTypes.containsKey(extendedEntity)) {
+            throw invalid(
+                "@entityExtension '%s' must reference an @entity with ofEntity, found '%s'",
+                extensionName.value(), extendedEntity.value());
+          }
+        });
+    graphQLObjectTypes.forEach(
+        (parentName, parent) -> {
+          for (FieldDefinition field : parent.getFieldDefinitions()) {
+            ObjectTypeDefinition extension =
+                typeDefinitionFor(field) instanceof ObjectTypeDefinition objectType
+                        && objectType.hasDirective(Directives.ENTITY_EXTENSION)
+                    ? objectType
+                    : null;
+            if (extension == null) {
+              continue;
+            }
+            if (!parent.hasDirective(Directives.ENTITY)
+                && !parent.hasDirective(Directives.ENTITY_EXTENSION)) {
+              throw invalid(
+                  "Field '%s.%s' returns an @entityExtension but its parent is neither an @entity nor an @entityExtension",
+                  parentName.value(), field.getName());
+            }
+            GraphQLTypeName expectedEntity =
+                getComposingEntityType(parent).orElse(GraphQLTypeName.of(parent));
+            GraphQLTypeName extensionEntity =
+                entityExtensionOf(extension, GraphQLTypeName.of(extension)).orElseThrow();
+            if (!expectedEntity.equals(extensionEntity)) {
+              throw invalid(
+                  "Field '%s.%s' must return an @entityExtension of '%s', but '%s' extends '%s'",
+                  parentName.value(),
+                  field.getName(),
+                  expectedEntity.value(),
+                  extension.getName(),
+                  extensionEntity.value());
+            }
+          }
+        });
+  }
+
+  private Optional<GraphQLTypeName> entityExtensionOf(
+      ObjectTypeDefinition extension, GraphQLTypeName extensionName) {
+    return getDirectiveArgumentString(
+            extension, Directives.ENTITY_EXTENSION, DirectiveArgs.OF_ENTITY)
+        .map(GraphQLTypeName::of);
+  }
+
+  private TypeDefinition<?> typeDefinitionFor(FieldDefinition field) {
+    return typeDefinitionRegistry
+        .getType(field.getType())
+        .orElseThrow(() -> invalid("Could not find type for field '%s'", field));
+  }
+
+  private static List<FieldDefinition> nonNullIdFields(ObjectTypeDefinition type) {
+    return type.getFieldDefinitions().stream()
+        .filter(field -> field.hasDirective(Directives.ID_FIELD))
+        .filter(field -> field.getType() instanceof NonNullType)
+        .toList();
+  }
+
+  private static boolean isList(Type<?> type) {
+    while (type instanceof NonNullType nonNullType) {
+      type = nonNullType.getType();
+    }
+    return type instanceof ListType;
+  }
+
+  private static String declaredTypeName(Type<?> type) {
+    while (type instanceof NonNullType nonNullType) {
+      type = nonNullType.getType();
+    }
+    while (type instanceof ListType listType) {
+      type = listType.getType();
+      while (type instanceof NonNullType nonNullType) {
+        type = nonNullType.getType();
+      }
+    }
+    return ((TypeName) type).getName();
+  }
+
+  private static IllegalArgumentException invalid(String message, Object... args) {
+    return new IllegalArgumentException(message.formatted(args));
   }
 
   private static TypeDefinitionRegistry getTypeDefinitionRegistry(File schemaFile) {

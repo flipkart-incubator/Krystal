@@ -1051,7 +1051,11 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
           typeAggregatorClass,
           fieldName,
           schemaReaderUtil.entityIdClassName(fieldTypeName),
-          schemaReaderUtil.getEntityIdFieldName(fieldTypeDef));
+          fieldTypeDef.getFieldDefinitions().stream()
+              .filter(idField -> idField.hasDirective(Directives.ID_FIELD))
+              .filter(idField -> idField.getType() instanceof NonNullType)
+              .toList(),
+          fieldTypeName);
     }
 
     @Nullable CodeBlock entityIdAccessCode =
@@ -1222,7 +1226,8 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
       ClassName typeAggregatorClass,
       String fieldName,
       ClassName entityIdClassName,
-      String entityIdFieldName) {
+      List<FieldDefinition> idFields,
+      GraphQLTypeName entityTypeName) {
 
     ClassName depReqImmutType =
         ClassName.get(
@@ -1232,6 +1237,19 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
         ClassName.get(
             depReqImmutType.packageName(),
             depReqImmutType.simpleName() + POJO.modelClassesSuffix());
+    CodeBlock idSetters =
+        idFields.stream()
+            .map(
+                idField ->
+                    CodeBlock.of(
+                        ".$L(($T) graphql_executionStrategyParams_new.getExecutionStepInfo().getArgument($S))",
+                        idField.getName(),
+                        graphQlCodeGenUtil.toFacetTypeName(
+                            SchemaReaderUtil.fieldSpecFromField(idField, "", entityTypeName)
+                                .fieldType(),
+                            SchemaReaderUtil.fieldSpecFromField(idField, "", entityTypeName)),
+                        idField.getName()))
+            .collect(CodeBlock.joining("\n"));
 
     return MethodSpec.methodBuilder(fieldName)
         .addAnnotation(
@@ -1265,8 +1283,8 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                       graphql_executionContext, graphql_executionStrategyParams,
                       _aliasEntry.getValue());
               var _entityId = $entityIdImplementation:T._builder()
-                  .$entityIdField:L(($string:T) graphql_executionStrategyParams_new.getExecutionStepInfo().getArgument(
-                      $entityIdField:S))._build();
+                  $idSetters:L
+                  ._build();
               _reqs.add($depReqPojoType:T._builder()
                   .$entityIdFacet:L(_entityId)
                   .graphql_executionContext(graphql_executionContext)
@@ -1293,7 +1311,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                 entry("arrayList", ArrayList.class),
                 entry("depReqPojoType", depReqImmutPojoType),
                 entry("entityIdImplementation", graphQlResponseImplementation(entityIdClassName)),
-                entry("entityIdField", entityIdFieldName),
+                entry("idSetters", idSetters),
                 entry("entityIdFacet", Facets.GQL_OBJECT_ID)))
         .build();
   }

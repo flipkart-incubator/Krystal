@@ -5,7 +5,7 @@
 After any framework change, always follow this sequence:
 
 1. **Publish locally** — run `upgradeVersionLocal.macOS.sh` so sample projects pick up the new framework version.
-2. **Run all tests** — `./gradlew test --rerun-tasks -PunsafeCompile=true`
+2. **Run all tests** — `./gradlew test --rerun -PunsafeCompile=true`
 3. **Full build + analysis** — `./gradlew build -PunsafeCompile=true`
 
 ### Testing layers
