@@ -10,8 +10,8 @@ public class Constants {
 
   @UtilityClass
   public static class Directives {
-    public static final String ENTITY = "entity";
-    public static final String ENTITY_EXTENSION = "entityExtension";
+    public static final String COMPOSED_ONLY = "composedOnly";
+    public static final String OPERATION = "operation";
     public static final String DATA_FETCHER = "dataFetcher";
     public static final String ID_FETCHER = "idFetcher";
     public static final String ID_FIELD = "idField";
@@ -23,11 +23,12 @@ public class Constants {
 
   @UtilityClass
   public static class DirectiveArgs {
-    public static final String OF_ENTITY = "ofEntity";
+    public static final String IN_ROOT_TYPE = "inRootType";
     public static final String SUB_PACKAGE = "subPackage";
     public static final String VAJRAM_ID = "vajramId";
     public static final String MULTI_FIELD = "multiField";
     public static final String NAME = "name";
+    public static final String TYPE = "type";
   }
 
   @UtilityClass

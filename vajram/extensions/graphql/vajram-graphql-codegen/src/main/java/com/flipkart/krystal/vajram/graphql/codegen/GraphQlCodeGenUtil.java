@@ -13,6 +13,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import javax.tools.StandardLocation;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -154,30 +155,21 @@ public final class GraphQlCodeGenUtil {
     }
 
     return switch (graphQlTypeName) {
-      case "String" -> ClassName.get(String.class);
+      case "String", "ID" -> ClassName.get(String.class);
       case "Int" -> ClassName.get(Integer.class);
       case "Boolean" -> ClassName.get(Boolean.class);
       case "Float" -> ClassName.get(Float.class);
-      case "ID" -> ClassName.get(String.class);
       default -> {
         GraphQLTypeName typeName = new GraphQLTypeName(graphQlTypeName);
-        boolean isSimpleType =
+        Optional<ObjectTypeDefinition> objectType =
             schemaReaderUtil
                 .typeDefinitionRegistry()
                 .getType(graphQlTypeName)
                 .filter(ObjectTypeDefinition.class::isInstance)
-                .map(ObjectTypeDefinition.class::cast)
-                .filter(
-                    type ->
-                        !type.hasDirective(
-                                com.flipkart.krystal.vajram.graphql.api.Constants.Directives.ENTITY)
-                            && !type.hasDirective(
-                                com.flipkart.krystal.vajram.graphql.api.Constants.Directives
-                                    .ENTITY_EXTENSION))
-                .isPresent();
-        yield ClassName.get(
-            schemaReaderUtil.getPackageNameForType(typeName),
-            typeName.value() + (isSimpleType ? GRAPHQL_ID_SUFFIX : ""));
+                .map(ObjectTypeDefinition.class::cast);
+        yield objectType.filter(schemaReaderUtil::hasObjectId).isPresent()
+            ? schemaReaderUtil.entityIdClassName(typeName)
+            : ClassName.get(schemaReaderUtil.getPackageNameForType(typeName), typeName.value());
       }
     };
   }

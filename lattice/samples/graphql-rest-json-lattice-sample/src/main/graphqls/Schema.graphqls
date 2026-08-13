@@ -2,24 +2,24 @@ schema @rootPackage(name: "com.flipkart.krystal.lattice.samples.graphql.rest.jso
     query: SampleQuery
 }
 
-type SampleQuery {
+type SampleQuery @operation(type: QUERY) {
     account(id: ID!): Account @inferIdFromArgs
 }
 
-type Account @entity{
+type Account {
     id: ID! @idField
     createdAt: String!
     owner: Person @idFetcher(vajramId: "GetOwnerOfAccount")
 }
 
-type Person @entity{
+type Person {
     id: ID! @idField
     name: Name! @idFetcher(vajramId: "GetPersonName") #com.flipkart.krystal.lattice.samples.graphql.rest.json.logic.GetPersonName
     email: String! @dataFetcher(vajramId: "GetPersonEmail")
     imageData: PersonImageData @inferIdFromParent
 }
 
-type PersonImageData @entityExtension(ofEntity: "Person"){
+type PersonImageData @composedOnly(inRootType: "Person") {
     mainUrl: String @dataFetcher(vajramId: "GetImageDataOfPerson", multiField: true) #com.flipkart.krystal.lattice.samples.graphql.rest.json.logic.GetImageDataOfPerson
     thumbnailUrl: String @dataFetcher(vajramId: "GetImageDataOfPerson", multiField: true)
     bannerUrl: String @dataFetcher(vajramId: "GetPersonBanner")

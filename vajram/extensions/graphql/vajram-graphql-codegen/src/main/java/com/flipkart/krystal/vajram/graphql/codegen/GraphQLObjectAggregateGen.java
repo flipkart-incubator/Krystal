@@ -9,7 +9,6 @@ import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlCodeGenUtil.GRA
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlCodeGenUtil.INPUTS_CLASS_NAME;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.INHERIT_ID_FROM_ARGS;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.INHERIT_ID_FROM_PARENT;
-import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.getDirectiveArgumentString;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static java.util.Map.entry;
 import static javax.lang.model.element.Modifier.ABSTRACT;
@@ -30,7 +29,6 @@ import com.flipkart.krystal.vajram.facets.FanoutCommand;
 import com.flipkart.krystal.vajram.facets.One2OneCommand;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
-import com.flipkart.krystal.vajram.graphql.api.Constants.DirectiveArgs;
 import com.flipkart.krystal.vajram.graphql.api.Constants.Directives;
 import com.flipkart.krystal.vajram.graphql.api.Constants.Facets;
 import com.flipkart.krystal.vajram.graphql.api.execution.GraphQLUtils;
@@ -168,7 +166,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
 
   private List<TypeSpec> createFacetDefinitions(ObjectTypeDefinition typeDefinition) {
     GraphQLTypeName typeName = GraphQLTypeName.of(typeDefinition);
-    boolean hasId = !schemaReaderUtil.isOperationType(typeName);
+    boolean hasId = schemaReaderUtil.hasObjectId(typeDefinition);
 
     TypeSpec.Builder inputs = TypeSpec.interfaceBuilder(INPUTS_CLASS_NAME).addModifiers(STATIC);
 
@@ -303,7 +301,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
       FieldDefinition fieldDefinition = fieldSpec.fieldDefinition();
       Optional<TypeDefinition> typeDefinition =
           schemaReaderUtil.typeDefinitionRegistry().getType(fieldDefinition.getType());
-      if (typeDefinition.isPresent() && schemaReaderUtil.hasEntityId(typeDefinition.get())) {
+      if (typeDefinition.isPresent() && schemaReaderUtil.hasObjectId(typeDefinition.get())) {
         ClassName entityIdClassName =
             schemaReaderUtil.entityIdClassName(GraphQLTypeName.of(typeDefinition.get()));
         GraphQlTypeDecorator innerType = fieldSpec.fieldType();
@@ -346,7 +344,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
     TypeDefinition objectTypeDefinition =
         schemaReaderUtil.typeDefinitionRegistry().getType(objectTypeName.value()).orElseThrow();
     boolean isOpType = schemaReaderUtil.isOperationType(objectTypeName);
-    boolean hasId = !isOpType;
+    boolean hasId = schemaReaderUtil.hasObjectId(objectTypeDefinition);
     ClassName returnType = asVajramReturnType(objectTypeName);
 
     MethodSpec.Builder builder =
@@ -785,8 +783,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
       TypeDefinition parentTypeDef) {
 
     ClassName vajramReqClass = getRequestClassName(fetcher.vajramClassName());
-    boolean isParentOpType = schemaReaderUtil.operationTypes().containsKey(parentTypeName);
-    boolean parentTypeHasEntityId = !isParentOpType;
+    boolean parentTypeHasEntityId = schemaReaderUtil.hasObjectId(parentTypeDef);
 
     String facetName = getFacetName(fetcher, fields);
     boolean hasArgs =
@@ -964,13 +961,10 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
       ObjectTypeDefinition parentTypeDefinition,
       GraphQlFieldSpec fieldSpec,
       ClassName typeAggregatorClass) {
-    getDirectiveArgumentString(
-        parentTypeDefinition, Directives.ENTITY_EXTENSION, DirectiveArgs.OF_ENTITY);
-    Optional<GraphQLTypeName> parentComposingEntityType =
-        schemaReaderUtil.getComposingEntityType(parentTypeDefinition);
+    Optional<GraphQLTypeName> parentRootIdentityType =
+        schemaReaderUtil.getRootIdentityType(parentTypeDefinition);
 
-    boolean isParentOpType = schemaReaderUtil.operationTypes().containsKey(parentTypeName);
-    boolean parentTypeHasEntityId = !isParentOpType;
+    boolean parentTypeHasEntityId = schemaReaderUtil.hasObjectId(parentTypeDefinition);
     boolean canFanout = isGraphQlList(fieldSpec);
     ObjectTypeDefinition fieldTypeDef =
         (ObjectTypeDefinition)
@@ -985,12 +979,8 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                                 + " of field "
                                 + fieldSpec.fieldDefinition()));
     GraphQLTypeName fieldTypeName = GraphQLTypeName.of(fieldTypeDef);
-    boolean fieldIsSimpleType =
-        !fieldTypeDef.hasDirective(Directives.ENTITY)
-            && !fieldTypeDef.hasDirective(Directives.ENTITY_EXTENSION);
-    Optional<GraphQLTypeName> fieldComposingEntityType =
-        schemaReaderUtil.getComposingEntityType(fieldTypeDef);
-    ClassName vajramReqClass = getRequestClassName(typeAggregatorClass);
+    Optional<GraphQLTypeName> fieldRootIdentityType =
+        schemaReaderUtil.getRootIdentityType(fieldTypeDef);
     String fieldName = fieldSpec.fieldName();
     String entityIdFacetName =
         fetcher instanceof VajramFetcher vajramFetcher
@@ -998,41 +988,19 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
             : parentTypeHasEntityId ? Facets.GQL_OBJECT_ID : "";
     String aggregatorInputFacet = Facets.GQL_OBJECT_ID;
     GraphQlFetcherType fetcherType = fetcher.type();
-    if (isParentOpType) {
-      if (fetcherType == INHERIT_ID_FROM_ARGS) {
-        // This means the user has declared that the arguments must contain exactly one ID which is
-        // same as the id of the entity type of the field
-        if (fieldSpec.fieldDefinition().getInputValueDefinitions().size() != 1) {
-          throw util.errorAndThrow(
-              "Entity fields in operation types must contain exactly one argument: " + fieldName);
-        } else {
-          String entityIdFieldName = schemaReaderUtil.getEntityIdFieldName(fieldTypeDef);
-          String argName = fieldSpec.fieldDefinition().getInputValueDefinitions().get(0).getName();
-          if (!entityIdFieldName.equals(argName)) {
-            throw util.errorAndThrow(
-                "Entity field argument name '%s' in operation type '%s' does not match entity id '%s' of entity '%s'"
-                    .formatted(
-                        argName, parentTypeName.value(), entityIdFieldName, fieldTypeName.value()));
-          }
-        }
-      } else if (fetcherType == INHERIT_ID_FROM_PARENT) {
-        throw util.errorAndThrow(
-            "Entity field '%s' cannot inherit id from parent when parent '%s' is an operation type"
-                .formatted(fieldName, parentTypeName.value()));
-      }
-    } else if (fetcherType == INHERIT_ID_FROM_PARENT
-        && !parentComposingEntityType.equals(fieldComposingEntityType)) {
+    if (fetcherType == INHERIT_ID_FROM_PARENT
+        && !parentRootIdentityType.equals(fieldRootIdentityType)) {
       throw util.errorAndThrow(
           """
-          Directive @inheritFromParent on field '%s' in type '%s' specifies that the \
-          field type must be an @entityExtension whose 'ofEntity' argument matches the parent entity of the field. \
+          Directive @inferIdFromParent on field '%s' in type '%s' specifies that the \
+          field type must be an @composedOnly type whose 'inRootType' argument matches the parent root type. \
           Expected: '%s', Found '%s'
           """
               .formatted(
                   fieldName,
                   parentTypeName.value(),
-                  parentComposingEntityType.map(GraphQLTypeName::value).orElse(null),
-                  fieldComposingEntityType.map(GraphQLTypeName::value).orElse(null)));
+                  parentRootIdentityType.map(GraphQLTypeName::value).orElse(null),
+                  fieldRootIdentityType.map(GraphQLTypeName::value).orElse(null)));
     }
     boolean hasArgs = !fieldSpec.fieldDefinition().getInputValueDefinitions().isEmpty();
     if (hasArgs && fetcherType == GraphQlFetcherType.ID_FETCHER) {
@@ -1201,7 +1169,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
 
     if (!entityIdFacetName.isBlank()) {
       if (fetcherType == INHERIT_ID_FROM_PARENT) {
-        fieldComposingEntityType.ifPresent(
+        fieldRootIdentityType.ifPresent(
             typeName ->
                 methodBuilder.addParameter(
                     schemaReaderUtil.entityIdClassName(typeName), entityIdFacetName));

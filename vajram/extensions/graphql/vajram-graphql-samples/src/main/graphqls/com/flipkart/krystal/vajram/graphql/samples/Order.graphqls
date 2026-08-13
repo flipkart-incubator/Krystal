@@ -2,7 +2,7 @@
 """
 An order
 """
-type Order @entity @subPackage(name: "order"){
+type Order @subPackage(name: "order"){
     id: ID! @idField
     """
     List of order Item names in this order
@@ -15,14 +15,11 @@ type Order @entity @subPackage(name: "order"){
     dummy(name: String): Dummy @idFetcher(vajramId: "GetDummyIdForOrder", subPackage: "order")
     dummies(filter: Boolean, preferredType: String, count: Int): [Dummy!]! @idFetcher(vajramId: "GetDummyIds", subPackage: "order")
     hello: Hello @inferIdFromParent
+    deprecatedHello: Hello @inferIdFromParent
     recommendedOrders: [Order]
     state: State @dataFetcher(vajramId: "GetOrderState", subPackage: "order")
     stateDuplicate: State @dataFetcher(vajramId: "GetOrderState", subPackage: "order")
     name: Name #@dataFetcher(vajramId: "GetName")
-
-    #TODO: Add check that fields with @inferIdFromParent must be @entityExtensions
-    #TODO: Add check that fields with @entityExtensions cannot be fanout types
-    #hellos: [Hello] @inferIdFromParent
 }
 
 enum State {
@@ -30,7 +27,7 @@ enum State {
     COMPLETED
 }
 
-type Dummy @entity{
+type Dummy {
     dummyId: ID! @idField
     name: String!
     age: Int
@@ -38,12 +35,13 @@ type Dummy @entity{
     f1: String
 }
 
-#TODO Testcase: Can be used inside Order entity only - using inside any other entity throws error
-#TODO Testcase: Will be aggregated if @inferIdFromParent is present on field- in which case the composing entity's id is used for aggregation (Fanout should not be possible)
-#TODO Testcase: Using idFetcher on entityExtensions is an error
-#TODO Testcase: ?? Can @composedEntities be allowed as lists or only single (canFanout or not?)
-type Hello @entityExtension(ofEntity: "Order"){
+type Hello @composedOnly(inRootType: "Order") {
     toName: String
+    details: HelloDetails
+}
+
+type HelloDetails @composedOnly(inRootType: "Order") {
+    message: String
 }
 
 type Name {

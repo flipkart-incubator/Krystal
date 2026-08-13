@@ -1,7 +1,16 @@
-"""
+"""The GraphQL operation kinds supported by Krystal root operation types."""
+enum OperationType {
+    QUERY
+    MUTATION
+    SUBSCRIPTION
+}
 
 """
-directive @entity on OBJECT
+Marks an object type as capable of serving the specified GraphQL schema operation.
+Every type referenced by `schema { query|mutation|subscription: ... }` must declare this directive
+with the corresponding operation type.
+"""
+directive @operation(type: OperationType!) on OBJECT
 
 """
 Marks a field as part of the id of its containing GraphQL type.
@@ -23,15 +32,13 @@ object throws an error.
 Invariants:
 @dataFetchers can only be used on scalar types. Using on object types throws build-time error.
 """
-#TODO: Validation: Throw error if used with object types
 directive @dataFetcher(vajramId : String!, subPackage: String, multiField: Boolean = false) on FIELD_DEFINITION
 
 """
 Specifies the vajram which is responsible for fetching the identity of a GraphQL object.
 This is useful when a field depicts a one-to-one or one-to-many relationship between GraphQL objects.
-For example, if an entity of type Book has a field "author" of type Author, an @idFetcher vajram returns Author_Id.
+For example, if a type Book has a field "author" of type Author, an @idFetcher vajram returns Author_Id.
 """
-#TODO: TEst case: Should support fanout and one2one
 directive @idFetcher(vajramId : String!, subPackage: String) on FIELD_DEFINITION
 
 
@@ -44,21 +51,17 @@ Invariants:
 Only valid on fields of root operation types.
 Every non-null idField of the type must have a corresponding field argument here with matching name and type
 """
-#TODO Validation: inferIdFromArgs can only be present in fields inside root operation types
 directive @inferIdFromArgs on FIELD_DEFINITION
 
 """
-Specifies that the id fields of the parent entity should be used to aggregate the given field.
+Specifies that the id fields of the parent type should be used as input to the aggregator vajram of the type of the given field.
 Using this directive on a field is only valid if the field type is an Object type
-with the directive @entityExtension whose "ofEntity" argument matches the composing entity type
+with the directive @composedOnly whose "inRootType" argument matches the parent type's root type.
 
 Invariants:
-Can only be used on a field whose type has @entityExtension with "ofEntity" arg matching the parent type of this field - else build-time error is thrown
+Can only be used on a field whose type has @composedOnly with "inRootType" matching the parent type's root type - else build-time error is thrown
 The field cannot be a list field - else build-time error is thrown
-Only one field of the the "extended" type can have this type - having more than one is a build-time error.
 """
-#TODO: Validation: throw error if used in non-@entityExtension
-#TODO: Validation: throw error if used with lists (fanout should not be supported)
 directive @inferIdFromParent on FIELD_DEFINITION
 
 """
@@ -88,16 +91,11 @@ Specifies the sub package inside @rootPackage under which all the models corresp
 directive @subPackage(name: String!) on OBJECT
 
 """
-Specifies that a given type is an "extension" of some entity. This means the "extension"
-entity organizes some fields of the "extended" entity into a new type for better field organization.
-This implies that any @dataFetchers or @idFetchers on the fields of an extension type must accept
-the extended entity's `<Entity>_Id` and compute the values of the fields based on it.
+Marks a type that exists only to organize fields of an identity-owning root type. A composed-only
+type reuses the `<inRootType>_Id` and cannot declare its own identity. Composition may be nested,
+provided every composed-only type in the chain declares the same `inRootType`.
 
-Note: an instance of an entity extension has a one-to-one correspondence with an instance of the extended entity.
-i.e. An entity can have exactly one field of type EntityExtension and that field cannot have any arguments, nor can it be a array field.
-This implies that an entity extension can be used in very limited circumstances, for ex: an entity has many fields
-and we want to organize the fields into smaller types which "extend" that entity and group some of its fields into a different type.
+Invariants:
+Fields returning a composed-only type cannot be lists.
 """
-#TODO: Validation: Can be used only on @entity fields and @entityExtension fields.
-#TODO: Validation: When used in @entityExtensions, the "ofEntity" must match the outer "ofEntity"
-directive @entityExtension(ofEntity: String!) on OBJECT
+directive @composedOnly(inRootType: String!) on OBJECT

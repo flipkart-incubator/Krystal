@@ -111,7 +111,7 @@ class GraphQLEntityGen implements CodeGenerator {
         .graphQLObjectTypes()
         .forEach(
             (graphQLTypeName, typeDefinition) -> {
-              if (typeDefinition.hasDirective(Directives.ENTITY_EXTENSION)) {
+              if (!schemaReaderUtil.hasOwnIdentity(typeDefinition)) {
                 return;
               }
               try {

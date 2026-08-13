@@ -20,6 +20,7 @@ import graphql.language.BooleanValue;
 import graphql.language.Directive;
 import graphql.language.DirectivesContainer;
 import graphql.language.EnumTypeDefinition;
+import graphql.language.EnumValue;
 import graphql.language.FieldDefinition;
 import graphql.language.InputValueDefinition;
 import graphql.language.ListType;
@@ -37,13 +38,11 @@ import graphql.schema.idl.TypeDefinitionRegistry;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -77,8 +76,7 @@ public class SchemaReaderUtil {
   private final ImmutableMap<@NonNull GraphQLTypeName, @NonNull ObjectTypeDefinition>
       graphQLObjectTypes;
 
-  @Getter private final Map<GraphQLTypeName, @NonNull ObjectTypeDefinition> entityTypes;
-  @Getter private final Map<GraphQLTypeName, @NonNull ObjectTypeDefinition> entityExtensions;
+  @Getter private final Map<GraphQLTypeName, @NonNull ObjectTypeDefinition> composedOnlyTypes;
 
   /** Types which need a GraphqlAggregate vajram generated */
   @Getter private final Map<GraphQLTypeName, ObjectTypeDefinition> aggregatableTypes;
@@ -93,11 +91,9 @@ public class SchemaReaderUtil {
     this.typeDefinitionRegistry = getTypeDefinitionRegistry(schemaFile);
     this.rootPackageName = getRootPackageName(typeDefinitionRegistry);
     this.graphQLObjectTypes = computeGraphQLTypes(typeDefinitionRegistry);
-    this.entityTypes =
-        Maps.filterValues(graphQLObjectTypes, typeDef -> typeDef.hasDirective(Directives.ENTITY));
-    this.entityExtensions =
+    this.composedOnlyTypes =
         Maps.filterValues(
-            graphQLObjectTypes, typeDef -> typeDef.hasDirective(Directives.ENTITY_EXTENSION));
+            graphQLObjectTypes, typeDef -> typeDef.hasDirective(Directives.COMPOSED_ONLY));
 
     Map<GraphQLTypeName, @NonNull ObjectTypeDefinition> aggregatableTypes =
         new HashMap<>(graphQLObjectTypes);
@@ -153,8 +149,8 @@ public class SchemaReaderUtil {
     }
 
     this.aggregatableTypes = aggregatableTypes;
-    validateDirectiveInvariants();
-    setFieldVajramsForEachEntity(
+    validateDirectiveInvariants(typeDefinitionRegistry, graphQLObjectTypes, composedOnlyTypes);
+    setFieldVajramsForEachType(
         entityTypeToFieldToTypeAggregator,
         entityTypeToFieldToFetcher,
         typeToFetcherToFields,
@@ -163,11 +159,14 @@ public class SchemaReaderUtil {
         rootPackageName);
   }
 
-  private void validateDirectiveInvariants() {
+  private static void validateDirectiveInvariants(
+      TypeDefinitionRegistry typeDefinitionRegistry,
+      Map<GraphQLTypeName, ObjectTypeDefinition> graphQLObjectTypes,
+      Map<GraphQLTypeName, ObjectTypeDefinition> composedOnlyTypes) {
     graphQLObjectTypes.forEach(
         (typeName, typeDefinition) -> {
           for (FieldDefinition field : typeDefinition.getFieldDefinitions()) {
-            TypeDefinition<?> fieldType = typeDefinitionFor(field);
+            TypeDefinition<?> fieldType = typeDefinitionFor(typeDefinitionRegistry, field);
             if (field.hasDirective(Directives.ID_FIELD)) {
               if (!field.getInputValueDefinitions().isEmpty()) {
                 throw invalid(
@@ -188,19 +187,24 @@ public class SchemaReaderUtil {
                   typeName.value(), field.getName());
             }
             if (field.hasDirective(Directives.INHERIT_ID_FROM_ARGS)) {
-              validateInferIdFromArgs(typeName, field, fieldType);
+              validateInferIdFromArgs(typeDefinitionRegistry, typeName, field, fieldType);
             }
             if (field.hasDirective(Directives.INHERIT_ID_FROM_PARENT)) {
-              validateInferIdFromParent(typeName, typeDefinition, field, fieldType);
+              validateInferIdFromParent(
+                  typeDefinitionRegistry, typeName, typeDefinition, field, fieldType);
             }
           }
         });
-    validateEntityExtensionReferences();
+    validateOperationTypes(typeDefinitionRegistry, graphQLObjectTypes);
+    validateComposedOnlyReferences(typeDefinitionRegistry, graphQLObjectTypes, composedOnlyTypes);
   }
 
-  private void validateInferIdFromArgs(
-      GraphQLTypeName parentType, FieldDefinition field, TypeDefinition<?> fieldType) {
-    if (!isOperationType(parentType)) {
+  private static void validateInferIdFromArgs(
+      TypeDefinitionRegistry typeDefinitionRegistry,
+      GraphQLTypeName parentType,
+      FieldDefinition field,
+      TypeDefinition<?> fieldType) {
+    if (!isOperationType(typeDefinitionRegistry, parentType)) {
       throw invalid(
           "@inferIdFromArgs '%s.%s' is only valid on root operation fields",
           parentType.value(), field.getName());
@@ -208,6 +212,11 @@ public class SchemaReaderUtil {
     if (!(fieldType instanceof ObjectTypeDefinition objectType)) {
       throw invalid(
           "@inferIdFromArgs '%s.%s' must return an object type",
+          parentType.value(), field.getName());
+    }
+    if (!hasOwnIdentity(typeDefinitionRegistry, objectType)) {
+      throw invalid(
+          "@inferIdFromArgs '%s.%s' must return a type with one or more @idField fields",
           parentType.value(), field.getName());
     }
     Map<String, InputValueDefinition> argsByName =
@@ -228,12 +237,13 @@ public class SchemaReaderUtil {
     }
   }
 
-  private void validateInferIdFromParent(
+  private static void validateInferIdFromParent(
+      TypeDefinitionRegistry typeDefinitionRegistry,
       GraphQLTypeName parentType,
       ObjectTypeDefinition parent,
       FieldDefinition field,
       TypeDefinition<?> fieldType) {
-    if (isOperationType(parentType)) {
+    if (isOperationType(typeDefinitionRegistry, parentType)) {
       throw invalid(
           "@inferIdFromParent '%s.%s' is not valid on root operation fields",
           parentType.value(), field.getName());
@@ -244,90 +254,131 @@ public class SchemaReaderUtil {
           parentType.value(), field.getName());
     }
     if (!(fieldType instanceof ObjectTypeDefinition extension)
-        || !extension.hasDirective(Directives.ENTITY_EXTENSION)) {
+        || !extension.hasDirective(Directives.COMPOSED_ONLY)) {
       throw invalid(
-          "@inferIdFromParent '%s.%s' must return an @entityExtension",
+          "@inferIdFromParent '%s.%s' must return an @composedOnly type",
           parentType.value(), field.getName());
     }
-    if (!getComposingEntityType(parent).equals(getComposingEntityType(extension))) {
+    if (!getRootIdentityType(typeDefinitionRegistry, parent)
+        .equals(getRootIdentityType(typeDefinitionRegistry, extension))) {
       throw invalid(
-          "@inferIdFromParent '%s.%s' must reference an @entityExtension of '%s'",
+          "@inferIdFromParent '%s.%s' must reference an @composedOnly type in root '%s'",
           parentType.value(),
           field.getName(),
-          getComposingEntityType(parent).map(GraphQLTypeName::value).orElse(parentType.value()));
+          getRootIdentityType(typeDefinitionRegistry, parent)
+              .map(GraphQLTypeName::value)
+              .orElse(parentType.value()));
     }
   }
 
-  private void validateEntityExtensionReferences() {
-    entityExtensions.forEach(
-        (extensionName, extension) -> {
-          GraphQLTypeName extendedEntity =
-              entityExtensionOf(extension, extensionName)
+  private static void validateOperationTypes(
+      TypeDefinitionRegistry typeDefinitionRegistry,
+      Map<GraphQLTypeName, ObjectTypeDefinition> graphQLObjectTypes) {
+    typeDefinitionRegistry
+        .schemaDefinition()
+        .orElseThrow()
+        .getOperationTypeDefinitions()
+        .forEach(
+            operation -> {
+              String expectedOperation = operation.getName();
+              GraphQLTypeName typeName = GraphQLTypeName.of(operation.getTypeName().getName());
+              ObjectTypeDefinition type = graphQLObjectTypes.get(typeName);
+              if (type == null) {
+                throw invalid(
+                    "Schema %s type '%s' must be an object type",
+                    expectedOperation, typeName.value());
+              }
+              List<Directive> directives = type.getDirectives(Directives.OPERATION);
+              if (directives.size() != 1) {
+                throw invalid(
+                    "Schema %s type '%s' must declare exactly one @operation(type: %s)",
+                    expectedOperation,
+                    typeName.value(),
+                    expectedOperation.toUpperCase(Locale.ROOT));
+              }
+              Argument typeArgument = directives.get(0).getArgument(DirectiveArgs.TYPE);
+              if (!(typeArgument.getValue() instanceof EnumValue enumValue)
+                  || !expectedOperation.equals(enumValue.getName().toLowerCase(Locale.ROOT))) {
+                throw invalid(
+                    "Schema %s type '%s' must declare @operation(type: %s)",
+                    expectedOperation,
+                    typeName.value(),
+                    expectedOperation.toUpperCase(Locale.ROOT));
+              }
+            });
+  }
+
+  private static void validateComposedOnlyReferences(
+      TypeDefinitionRegistry typeDefinitionRegistry,
+      Map<GraphQLTypeName, ObjectTypeDefinition> graphQLObjectTypes,
+      Map<GraphQLTypeName, ObjectTypeDefinition> composedOnlyTypes) {
+    composedOnlyTypes.forEach(
+        (composedTypeName, composedType) -> {
+          GraphQLTypeName rootType =
+              composedOnlyInRootType(composedType)
                   .orElseThrow(
                       () ->
                           invalid(
-                              "@entityExtension '%s' must declare ofEntity",
-                              extensionName.value()));
-          if (!entityTypes.containsKey(extendedEntity)) {
+                              "@composedOnly '%s' must declare inRootType",
+                              composedTypeName.value()));
+          ObjectTypeDefinition root = graphQLObjectTypes.get(rootType);
+          if (root == null
+              || root.hasDirective(Directives.COMPOSED_ONLY)
+              || isOperationType(typeDefinitionRegistry, rootType)
+              || !hasOwnIdentity(typeDefinitionRegistry, root)) {
             throw invalid(
-                "@entityExtension '%s' must reference an @entity with ofEntity, found '%s'",
-                extensionName.value(), extendedEntity.value());
+                "@composedOnly '%s' must reference an identity-owning non-operation root type with inRootType, found '%s'",
+                composedTypeName.value(), rootType.value());
           }
         });
     graphQLObjectTypes.forEach(
         (parentName, parent) -> {
-          Set<GraphQLTypeName> extensionTypes = new HashSet<>();
           for (FieldDefinition field : parent.getFieldDefinitions()) {
-            ObjectTypeDefinition extension =
-                typeDefinitionFor(field) instanceof ObjectTypeDefinition objectType
-                        && objectType.hasDirective(Directives.ENTITY_EXTENSION)
+            ObjectTypeDefinition composedType =
+                typeDefinitionFor(typeDefinitionRegistry, field)
+                            instanceof ObjectTypeDefinition objectType
+                        && objectType.hasDirective(Directives.COMPOSED_ONLY)
                     ? objectType
                     : null;
-            if (extension == null) {
+            if (composedType == null) {
               continue;
             }
-            if (!parent.hasDirective(Directives.ENTITY)
-                && !parent.hasDirective(Directives.ENTITY_EXTENSION)) {
+            if (isOperationType(typeDefinitionRegistry, parentName)
+                || getRootIdentityType(typeDefinitionRegistry, parent).isEmpty()) {
               throw invalid(
-                  "Field '%s.%s' returns an @entityExtension but its parent is neither an @entity nor an @entityExtension",
+                  "Field '%s.%s' returns an @composedOnly type but its parent has no identity root",
                   parentName.value(), field.getName());
             }
             if (isList(field.getType())) {
               throw invalid(
-                  "Field '%s.%s' returning an @entityExtension cannot be a list",
+                  "Field '%s.%s' returning an @composedOnly type cannot be a list",
                   parentName.value(), field.getName());
             }
-            GraphQLTypeName extensionName = GraphQLTypeName.of(extension);
-            if (!extensionTypes.add(extensionName)) {
+            GraphQLTypeName expectedRoot =
+                getRootIdentityType(typeDefinitionRegistry, parent).orElseThrow();
+            GraphQLTypeName composedRoot = composedOnlyInRootType(composedType).orElseThrow();
+            if (!expectedRoot.equals(composedRoot)) {
               throw invalid(
-                  "@entityExtension '%s' can occur at most once as a field type in '%s'",
-                  extensionName.value(), parentName.value());
-            }
-            GraphQLTypeName expectedEntity =
-                getComposingEntityType(parent).orElse(GraphQLTypeName.of(parent));
-            GraphQLTypeName extensionEntity =
-                entityExtensionOf(extension, GraphQLTypeName.of(extension)).orElseThrow();
-            if (!expectedEntity.equals(extensionEntity)) {
-              throw invalid(
-                  "Field '%s.%s' must return an @entityExtension of '%s', but '%s' extends '%s'",
+                  "Field '%s.%s' must return an @composedOnly type in root '%s', but '%s' declares root '%s'",
                   parentName.value(),
                   field.getName(),
-                  expectedEntity.value(),
-                  extension.getName(),
-                  extensionEntity.value());
+                  expectedRoot.value(),
+                  composedType.getName(),
+                  composedRoot.value());
             }
           }
         });
   }
 
-  private Optional<GraphQLTypeName> entityExtensionOf(
-      ObjectTypeDefinition extension, GraphQLTypeName extensionName) {
+  private static Optional<GraphQLTypeName> composedOnlyInRootType(
+      ObjectTypeDefinition composedType) {
     return getDirectiveArgumentString(
-            extension, Directives.ENTITY_EXTENSION, DirectiveArgs.OF_ENTITY)
+            composedType, Directives.COMPOSED_ONLY, DirectiveArgs.IN_ROOT_TYPE)
         .map(GraphQLTypeName::of);
   }
 
-  private TypeDefinition<?> typeDefinitionFor(FieldDefinition field) {
+  private static TypeDefinition<?> typeDefinitionFor(
+      TypeDefinitionRegistry typeDefinitionRegistry, FieldDefinition field) {
     return typeDefinitionRegistry
         .getType(field.getType())
         .orElseThrow(() -> invalid("Could not find type for field '%s'", field));
@@ -410,12 +461,14 @@ public class SchemaReaderUtil {
     return ClassName.get(getPackageNameForType(graphQLTypeName), graphQLTypeName.value());
   }
 
-  boolean hasEntityId(TypeDefinition typeDefinition) {
-    if (!(typeDefinition instanceof ObjectTypeDefinition objectTypeDefinition)) {
-      return false;
-    }
-    return objectTypeDefinition.hasDirective(Directives.ENTITY)
-        || objectTypeDefinition.hasDirective(Directives.ENTITY_EXTENSION);
+  boolean hasObjectId(TypeDefinition typeDefinition) {
+    return hasObjectId(typeDefinitionRegistry, typeDefinition);
+  }
+
+  private static boolean hasObjectId(
+      TypeDefinitionRegistry typeDefinitionRegistry, TypeDefinition typeDefinition) {
+    return typeDefinition instanceof ObjectTypeDefinition objectTypeDefinition
+        && getRootIdentityType(typeDefinitionRegistry, objectTypeDefinition).isPresent();
   }
 
   ClassName entityIdClassName(GraphQLTypeName graphQLTypeName) {
@@ -426,14 +479,14 @@ public class SchemaReaderUtil {
       throw new IllegalArgumentException("Only ObjectTypeDefinitions can have entity ids");
     }
 
-    Optional<String> composedInEntity =
-        getDirectiveArgumentString(
-            objectTypeDefinition, Directives.ENTITY_EXTENSION, DirectiveArgs.OF_ENTITY);
-    if (composedInEntity.isPresent()) {
-      return entityIdClassName(GraphQLTypeName.of(composedInEntity.get()));
+    Optional<GraphQLTypeName> rootIdentityType = getRootIdentityType(objectTypeDefinition);
+    if (rootIdentityType.isEmpty()) {
+      throw new IllegalArgumentException("Only object types with an identity can have ids");
     }
-    if (objectTypeDefinition.hasDirective(Directives.ENTITY)
-        || isSimpleType(objectTypeDefinition)) {
+    if (!rootIdentityType.get().equals(graphQLTypeName)) {
+      return entityIdClassName(rootIdentityType.get());
+    }
+    if (hasOwnIdentity(objectTypeDefinition)) {
       return ClassName.get(
           getPackageNameForType(graphQLTypeName),
           graphQLTypeName.value() + GraphQlCodeGenUtil.GRAPHQL_ID_SUFFIX);
@@ -450,7 +503,7 @@ public class SchemaReaderUtil {
         .build();
   }
 
-  private static void setFieldVajramsForEachEntity(
+  private static void setFieldVajramsForEachType(
       Map<GraphQLTypeName, Map<GraphQlFieldSpec, ClassName>> entityTypeToFieldToTypeAggregator,
       Map<GraphQLTypeName, Map<GraphQlFieldSpec, Fetcher>> entityTypeToFieldToFetcher,
       Map<GraphQLTypeName, Map<Fetcher, List<GraphQlFieldSpec>>> typeToFetcherToFields,
@@ -487,8 +540,7 @@ public class SchemaReaderUtil {
                   getDataFetcherClassName(fieldDefinition, rootPackageName),
                   multiField ? MULTI_FIELD_DATA_FETCHER : SINGLE_FIELD_DATA_FETCHER));
         } else if (fieldDefinition.hasDirective(Directives.ID_FETCHER)
-            && (fieldTypeDefinition.hasDirective(Directives.ENTITY)
-                || isSimpleType(fieldTypeDefinition))) {
+            && hasObjectId(typeDefinitionRegistry, fieldTypeDefinition)) {
           fieldToFetcherMap.put(
               fieldSpecFromField(fieldDefinition, "", parentType),
               new VajramFetcher(
@@ -501,7 +553,7 @@ public class SchemaReaderUtil {
               fieldToTypeAggregator,
               typeDefinitionRegistry,
               rootPackageName);
-        } else if (fieldTypeDefinition.hasDirective(Directives.ENTITY)
+        } else if (hasObjectId(typeDefinitionRegistry, fieldTypeDefinition)
             && fieldDefinition.hasDirective(Directives.INHERIT_ID_FROM_ARGS)) {
           fieldToFetcherMap.put(
               fieldSpecFromField(fieldDefinition, "", parentType),
@@ -513,7 +565,7 @@ public class SchemaReaderUtil {
               fieldToTypeAggregator,
               typeDefinitionRegistry,
               rootPackageName);
-        } else if (fieldTypeDefinition.hasDirective(Directives.ENTITY_EXTENSION)
+        } else if (fieldTypeDefinition.hasDirective(Directives.COMPOSED_ONLY)
             && fieldDefinition.hasDirective(Directives.INHERIT_ID_FROM_PARENT)) {
           fieldToFetcherMap.put(
               fieldSpecFromField(fieldDefinition, "", parentType),
@@ -544,12 +596,6 @@ public class SchemaReaderUtil {
       entityTypeToFieldToFetcher.put(parentType, fieldToFetcherMap);
       typeToFetcherToFields.put(parentType, fetcherToFieldsMap);
     }
-  }
-
-  private static boolean isSimpleType(TypeDefinition<?> typeDefinition) {
-    return typeDefinition instanceof ObjectTypeDefinition objectTypeDefinition
-        && !objectTypeDefinition.hasDirective(Directives.ENTITY)
-        && !objectTypeDefinition.hasDirective(Directives.ENTITY_EXTENSION);
   }
 
   private static void addAggregator(
@@ -758,23 +804,42 @@ public class SchemaReaderUtil {
     return idFields.get(0).getName();
   }
 
-  public Optional<GraphQLTypeName> getComposingEntityType(ObjectTypeDefinition typeDefinition) {
-    return typeDefinition.hasDirective(Directives.ENTITY)
+  public Optional<GraphQLTypeName> getRootIdentityType(ObjectTypeDefinition typeDefinition) {
+    return getRootIdentityType(typeDefinitionRegistry, typeDefinition);
+  }
+
+  private static Optional<GraphQLTypeName> getRootIdentityType(
+      TypeDefinitionRegistry typeDefinitionRegistry, ObjectTypeDefinition typeDefinition) {
+    if (typeDefinition.hasDirective(Directives.COMPOSED_ONLY)) {
+      return composedOnlyInRootType(typeDefinition);
+    }
+    return hasOwnIdentity(typeDefinitionRegistry, typeDefinition)
         ? Optional.of(GraphQLTypeName.of(typeDefinition))
-        : getDirectiveArgumentString(
-                typeDefinition, Directives.ENTITY_EXTENSION, DirectiveArgs.OF_ENTITY)
-            .map(GraphQLTypeName::of);
+        : Optional.empty();
+  }
+
+  boolean hasOwnIdentity(ObjectTypeDefinition typeDefinition) {
+    return hasOwnIdentity(typeDefinitionRegistry, typeDefinition);
+  }
+
+  private static boolean hasOwnIdentity(
+      TypeDefinitionRegistry typeDefinitionRegistry, ObjectTypeDefinition typeDefinition) {
+    return !typeDefinition.hasDirective(Directives.COMPOSED_ONLY)
+        && !isOperationType(typeDefinitionRegistry, GraphQLTypeName.of(typeDefinition))
+        && typeDefinition.getFieldDefinitions().stream()
+            .anyMatch(field -> field.hasDirective(Directives.ID_FIELD));
   }
 
   public boolean isOperationType(GraphQLTypeName objectTypeName) {
-    String value = objectTypeName.value();
+    return isOperationType(typeDefinitionRegistry, objectTypeName);
+  }
 
-    ObjectTypeDefinition queryType = queryType();
-    ObjectTypeDefinition mutationType = mutationType();
-    ObjectTypeDefinition subscriptionType = subscriptionType();
-    return (queryType != null && value.equals(queryType.getName()))
-        || (mutationType != null && value.equals(mutationType.getName()))
-        || (subscriptionType != null && value.equals(subscriptionType.getName()));
+  private static boolean isOperationType(
+      TypeDefinitionRegistry typeDefinitionRegistry, GraphQLTypeName objectTypeName) {
+    return typeDefinitionRegistry
+        .getType(objectTypeName.value(), ObjectTypeDefinition.class)
+        .map(typeDefinition -> typeDefinition.hasDirective(Directives.OPERATION))
+        .orElse(false);
   }
 
   public ClassName getAggregatorName(GraphQLTypeName typeName) {
