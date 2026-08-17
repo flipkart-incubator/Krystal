@@ -384,8 +384,7 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
             .map(
                 method -> {
                   boolean isOptional = util.isOptional(method.getReturnType());
-                  boolean isErrable = util.isErrable(method.getReturnType());
-                  boolean isNullable = method.getReturnType().getAnnotation(Nullable.class) != null;
+                  boolean isNullable = util.isAnyNullable(method.getReturnType(), method);
                   String methodName = method.getSimpleName().toString();
                   Optional<ModelRootInfo> modelRoot =
                       util.asModelRoot(method.getReturnType(), method);
@@ -411,16 +410,6 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
                     } else {
                       accessor = CodeBlock.of("_from.$L()", methodName);
                     }
-                  } else if (isErrable) {
-                    // Errable<T>: extract inner value for the builder setter (@Nullable T).
-                    // Nil/Failure → null → proto field cleared; failure state is intentionally
-                    // lost.
-                    accessor =
-                        CodeBlock.of(
-                            "_from.$L() instanceof $T<?> _nonNil ? ($T) _nonNil.value() : null",
-                            methodName,
-                            ClassName.get("com.flipkart.krystal.data", "NonNil"),
-                            TypeName.get(util.getErrableInnerType(method.getReturnType())));
                   } else {
                     accessor =
                         CodeBlock.of(
@@ -450,7 +439,16 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
     Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(specifiedType, method);
     if (isBuilder
         && fieldModelRootInfo.isPresent()
-        && !util.isEnumModel(fieldModelRootInfo.get().element())) {
+        && !util.isEnumModel(fieldModelRootInfo.get().element())
+        && !util.isContentErrable(specifiedType)
+        && !util.isErrable(specifiedType)) {
+      // The live UnmodifiableModelsList/Map view (backed by ProtoListBuilder/ProtoMapBuilder)
+      // covariantly narrows the return type, which only works when the declared type is exactly
+      // List<Model>/Map<K,Model> - it cannot represent per-element Errable-wrapping
+      // (List<Errable<Model>>/Map<K,Errable<Model>>, since ModelsListBuilder/ModelsMapBuilder
+      // require M extends Model) nor whole-field wrapping (Errable<List<Model>> is not a List, so
+      // it can't be covariantly narrowed to a List subtype at all). Fall through to the plain
+      // declared type in both cases, matching the non-builder getter's type.
       ClassName immutInterfaceName = util.getImmutInterfaceName(fieldModelRootInfo.get().element());
       if (LIST.equals(fieldModelRootInfo.get().containerType())) {
         typeName =
@@ -492,181 +490,55 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
       @Nullable ModelRoot modelRoot,
       @Nullable ClassName immutableProtoTypeName) {
 
-    Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType(), method);
-    if (isProtoTypeRepeated(dataType)) {
-      if (fieldModelRootInfo.isPresent() && !util.isEnumModel(fieldModelRootInfo.get().element())) {
-        ClassName immutProtoClass =
-            util.getImmutClassName(fieldModelRootInfo.get().element(), config.protocolInstance());
-        if (isBuilder) {
-          ClassName protoMsgOrBuilderType =
-              ClassName.get(
-                  immutProtoClass.packageName(),
-                  toTitleCaseProtoName(
-                          fieldModelRootInfo.get().element().getSimpleName().toString())
-                      + config.messageSuffix()
-                      + "OrBuilder");
-          getterBuilder.addStatement(
-              CodeBlock.builder()
-                  .addNamed(
-"""
-      return new $protoListBuilder:T<>(
-              $modelRoot:T.class,
-              $immutIface:T.class,
-              $immutIface:T.Builder.class,
-              $lists:T.transform(_proto().get$fieldNameCap:LList(), $immutProto:T::new),
-              $lists:T.transform(
-                  _proto().get$fieldNameCap:LBuilderList(), $immutProto:T.Builder::new),
-              _m -> _proto().add$fieldNameCap:L($immutProto:T._proto(_m)),
-              _b -> _proto().add$fieldNameCap:L($immutProto:T._proto(_b)),
-              (index, _model) ->
-                  _proto().add$fieldNameCap:L(index, $immutProto:T._proto(_model)),
-              (index, _builder) ->
-                  _proto().add$fieldNameCap:L(index, $immutProto:T._proto(_builder)),
-              _models -> {
-                _proto()
-                    .addAll$fieldNameCap:L(
-                        $iterables:T.transform(_models, $immutProto:T::_proto));
-                return _models.iterator().hasNext();
-              },
-              _proto()::clear$fieldNameCap:L,
-              (index, _model) ->
-                  _proto().set$fieldNameCap:L(index, $immutProto:T._proto(_model)),
-              (index, _builder) ->
-                  _proto().set$fieldNameCap:L(index, $immutProto:T._proto(_builder)),
-              index -> {
-                $protoMsgOrBuilder:T ret = _proto().get$fieldNameCap:LOrBuilder(index);
-                _proto().remove$fieldNameCap:L(index);
-                return new $immutProto:T(ret);
-              })
-          .unmodifiableModelsView()
-""",
-                      ofEntries(
-                          entry("protoListBuilder", ProtoListBuilder.class),
-                          entry("modelRoot", fieldModelRootInfo.get().type()),
-                          entry(
-                              "immutIface",
-                              util.getImmutInterfaceName(fieldModelRootInfo.get().element())),
-                          entry("immutProto", immutProtoClass),
-                          entry("lists", Lists.class),
-                          entry("fieldNameCap", capitalizeFirstChar(fieldName)),
-                          entry("iterables", Iterables.class),
-                          entry("protoMsgOrBuilder", protoMsgOrBuilderType)))
-                  .build());
-        } else {
-          getterBuilder.addStatement(
-              "return $T.transform(_proto().get$LList(), $T::new)",
-              Lists.class,
-              capitalizeFirstChar(fieldName),
-              immutProtoClass);
-        }
-      } else {
-        TypeMirror listElemType = util.getContentType(method.getReturnType());
-        if (listElemType != null && util.isEnumModelType(listElemType)) {
-          TypeElement enumElement =
-              (TypeElement) requireNonNull(processingEnv.getTypeUtils().asElement(listElemType));
-          getterBuilder.addStatement(
-              "return $T.transform(_proto().get$LList(), $T::protoToJava)",
-              Lists.class,
-              capitalizeFirstChar(fieldName),
-              getProtoUtilsClassName(enumElement));
-        } else {
-          getterBuilder.addStatement("return _proto().get$LList()", capitalizeFirstChar(fieldName));
-        }
-      }
+    TypeMirror rawReturnType = method.getReturnType();
+    boolean isWholeErrable = util.isErrable(rawReturnType);
+    boolean isContentErrable = util.isContentErrable(rawReturnType);
+    // Unwrap the outer Errable<> (if any) so LIST/MAP detection and content-type resolution below
+    // operate on the real container/scalar type. The whole-field Nil/Failure state, if present, is
+    // folded back in at the end by wrapping the computed expression in Errable.withValue(...) -
+    // protobuf repeated/map fields have no way to represent "absent" distinctly from "empty", so
+    // (mirroring the scalar Errable<T> design) Nil/Failure round-trips as an empty list/map wrapped
+    // in Errable.withValue(...), never as Errable.nil().
+    TypeMirror unwrappedReturnType =
+        isWholeErrable ? util.getErrableInnerType(rawReturnType) : rawReturnType;
+    CodeGenType unwrappedDataType =
+        isWholeErrable
+            ? new DeclaredTypeVisitor(util, method).visit(unwrappedReturnType)
+            : dataType;
+
+    Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(rawReturnType, method);
+    if (isProtoTypeRepeated(unwrappedDataType) || isProtoTypeMap(unwrappedDataType)) {
+      CodeBlock plainExpr =
+          isProtoTypeRepeated(unwrappedDataType)
+              ? listGetterExpr(
+                  unwrappedReturnType, fieldName, isBuilder, fieldModelRootInfo, isContentErrable)
+              : mapGetterExpr(
+                  unwrappedReturnType, fieldName, isBuilder, fieldModelRootInfo, isContentErrable);
+      getterBuilder.addStatement(
+          "return $L", isWholeErrable ? errableWithValue(plainExpr) : plainExpr);
       return;
     }
 
-    if (isProtoTypeMap(dataType)) {
-      if (fieldModelRootInfo.isPresent() && !util.isEnumModel(fieldModelRootInfo.get().element())) {
-        ClassName immutProtoClass =
-            util.getImmutClassName(fieldModelRootInfo.get().element(), config.protocolInstance());
-        if (isBuilder) {
-          getterBuilder.addStatement(
-              CodeBlock.builder()
-                  .addNamed(
-"""
-      return new $protoMapBuilder:T<>(
-              $modelRoot:T.class,
-              $immutIface:T.class,
-              $immutIface:T.Builder.class,
-              () -> $maps:T.transformValues(_proto().get$fieldNameCap:LMap(), $immutProto:T::new),
-              _proto()::get$fieldNameCap:LCount,
-              _proto()::contains$fieldNameCap:L,
-              (_k, _d) -> {
-                var _v = _proto().get$fieldNameCap:LOrDefault(_k, _d == null ? null : $immutProto:T._proto(($modelRoot:T) _d));
-                return _v == null ? null : new $immutProto:T(_v);
-              },
-              _k -> new $immutProto:T.Builder(_proto().put$fieldNameCap:LBuilderIfAbsent(_k)),
-              _map -> _proto().putAll$fieldNameCap:L($maps:T.transformValues(_map, _v -> $immutProto:T._proto(($modelRoot:T) _v))),
-              (_k, _i) -> _proto().put$fieldNameCap:L(_k, $immutProto:T._proto(($modelRoot:T) _i)),
-              _proto()::clear$fieldNameCap:L,
-              _k -> _proto().remove$fieldNameCap:L(_k))
-          .unmodifiableModelsView()
-""",
-                      ofEntries(
-                          entry("protoMapBuilder", ProtoMapBuilder.class),
-                          entry("modelRoot", fieldModelRootInfo.get().type()),
-                          entry(
-                              "immutIface",
-                              util.getImmutInterfaceName(fieldModelRootInfo.get().element())),
-                          entry("immutProto", immutProtoClass),
-                          entry("maps", Maps.class),
-                          entry("fieldNameCap", capitalizeFirstChar(fieldName))))
-                  .build());
-        } else {
-          getterBuilder.addStatement(
-              "return $T.transformValues(_proto().get$LMap(), $T::new)",
-              Maps.class,
-              capitalizeFirstChar(fieldName),
-              immutProtoClass);
-        }
-      } else {
-        TypeMirror mapValueType = util.getMapValueType(method.getReturnType());
-        if (mapValueType != null && util.isEnumModelType(mapValueType)) {
-          TypeElement enumElement =
-              (TypeElement) requireNonNull(processingEnv.getTypeUtils().asElement(mapValueType));
-          getterBuilder.addStatement(
-              "return $T.transformValues(_proto().get$LMap(), $T::protoToJava)",
-              Maps.class,
-              capitalizeFirstChar(fieldName),
-              getProtoUtilsClassName(enumElement));
-        } else {
-          getterBuilder.addStatement("return _proto().get$LMap()", capitalizeFirstChar(fieldName));
-        }
-      }
-      return;
-    }
+    // Scalar (non-container) field. Optional<T> and Errable<T> are mutually exclusive wrappers
+    // around T - unwrap whichever is present (if any) so the value expression underneath is
+    // computed exactly once, then re-wrap uniformly below.
+    boolean isOptionalReturnType = !isWholeErrable && util.isOptional(unwrappedReturnType);
+    TypeMirror scalarType =
+        isOptionalReturnType ? util.getOptionalInnerType(unwrappedReturnType) : unwrappedReturnType;
+    CodeBlock valueExpr =
+        scalarValueExpr(unwrappedDataType, scalarType, fieldName, fieldModelRootInfo);
 
     // Errable<T>: check proto presence; absent → Errable.nil(), present → Errable.withValue(value).
-    if (util.isErrable(method.getReturnType())) {
-      ClassName errableClass = ClassName.get(Errable.class);
-      // Use the inner type's CodeGenType so convertProtoToJavaCode applies correct conversions.
-      CodeGenType innerDataType = dataType.typeParameters().get(0);
+    // Errable fields have no "mandatory" concept (Errable itself represents absence-with-reason).
+    if (isWholeErrable) {
       getterBuilder
-          .addCode(
-              """
-              if (!_proto().has$L()){
-              """,
-              capitalizeFirstChar(fieldName))
-          .addCode("return $T.nil();\n}\n", errableClass)
-          .addStatement(
-              "return $T.withValue($L)",
-              errableClass,
-              convertProtoToJavaCode(innerDataType, fieldName));
+          .addCode(presenceCheckHeader(fieldName))
+          .addCode("return $T.nil();\n}\n", Errable.class)
+          .addStatement("return $L", errableWithValue(valueExpr));
       return;
     }
 
-    TypeMirror methodReturnType = method.getReturnType();
-    boolean isOptionalReturnType = util.isOptional(methodReturnType);
-
     if (needsPresenceCheckInModels(method)) {
-      CodeBlock protoPresenceCheck =
-          CodeBlock.of(
-              """
-              if (!_proto().has$L()){
-              """,
-              capitalizeFirstChar(fieldName));
-
       boolean isMandatory =
           isMandatoryField(method)
               || (isBuilder
@@ -677,7 +549,7 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
                       && fieldModelRootInfo.get().containerType().isContainer()));
       if (isMandatory) {
         getterBuilder
-            .addCode(protoPresenceCheck)
+            .addCode(presenceCheckHeader(fieldName))
             .addCode(
                 """
                 throw new $T($S, $S);
@@ -690,52 +562,257 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
                             codeGenContext.modelRootType(), config.protocolInstance())
                         .simpleName(),
                 fieldName);
-      } else if (isOptionalReturnType) {
-        getterBuilder
-            .addCode(protoPresenceCheck)
-            .addCode(
-                """
-                return Optional.empty();
-              }
-              """);
       } else {
         getterBuilder
-            .addCode(protoPresenceCheck)
+            .addCode(presenceCheckHeader(fieldName))
             .addCode(
-                """
-                return null;
-              }
-              """);
+                "return $L;\n}\n",
+                isOptionalReturnType
+                    ? CodeBlock.of("$T.empty()", Optional.class)
+                    : CodeBlock.of("null"));
       }
     }
-    TypeMirror rawReturnType =
-        isOptionalReturnType ? util.getOptionalInnerType(methodReturnType) : methodReturnType;
 
-    CodeBlock creatorCode;
-    if (util.isEnumModelType(rawReturnType)) {
+    getterBuilder.addStatement(
+        "return $L",
+        isOptionalReturnType ? CodeBlock.of("$T.of($L)", Optional.class, valueExpr) : valueExpr);
+  }
+
+  /** Wraps a value expression: {@code Errable.withValue(<expr>)}. */
+  private static CodeBlock errableWithValue(CodeBlock valueExpr) {
+    return CodeBlock.of("$T.withValue($L)", Errable.class, valueExpr);
+  }
+
+  /**
+   * {@code if (!_proto().has<FieldName>()){} - the caller fills in the block body and closes it.}
+   */
+  private static CodeBlock presenceCheckHeader(String fieldName) {
+    return CodeBlock.of(
+        """
+        if (!_proto().has$L()){
+        """,
+        capitalizeFirstChar(fieldName));
+  }
+
+  /**
+   * Builds the getter expression for a single (already Errable/Optional-unwrapped) scalar field - a
+   * {@code @ModelRoot} Model, an {@link com.flipkart.krystal.model.EnumModel}, or a plain
+   * proto-convertible value. Shared by both the whole-field-Errable and Optional/plain getter
+   * paths, which differ only in how the result is presence-checked and (un)wrapped.
+   */
+  private CodeBlock scalarValueExpr(
+      CodeGenType dataType,
+      TypeMirror scalarType,
+      String fieldName,
+      Optional<ModelRootInfo> fieldModelRootInfo) {
+    if (fieldModelRootInfo.isPresent() && !util.isEnumModel(fieldModelRootInfo.get().element())) {
+      return CodeBlock.of(
+          "new $T(_proto().get$L())",
+          util.getImmutClassName(fieldModelRootInfo.get().element(), config.protocolInstance()),
+          capitalizeFirstChar(fieldName));
+    } else if (util.isEnumModelType(scalarType)) {
       TypeElement enumElement =
-          (TypeElement) requireNonNull(processingEnv.getTypeUtils().asElement(rawReturnType));
-      creatorCode =
-          CodeBlock.of(
-              "$T.protoToJava(_proto().get$L())",
-              getProtoUtilsClassName(enumElement),
-              capitalizeFirstChar(fieldName));
+          (TypeElement) requireNonNull(processingEnv.getTypeUtils().asElement(scalarType));
+      return CodeBlock.of(
+          "$T.protoToJava(_proto().get$L())",
+          getProtoUtilsClassName(enumElement),
+          capitalizeFirstChar(fieldName));
     } else {
-      creatorCode =
-          fieldModelRootInfo
-              .map(
-                  _m ->
-                      CodeBlock.of(
-                          "new $T(_proto().get$L())",
-                          util.getImmutClassName(_m.element(), config.protocolInstance()),
-                          capitalizeFirstChar(fieldName)))
-              .orElseGet(() -> convertProtoToJavaCode(dataType, fieldName));
+      return convertProtoToJavaCode(dataType, fieldName);
     }
+  }
 
-    if (isOptionalReturnType) {
-      getterBuilder.addStatement("return $T.of($L)", Optional.class, creatorCode);
+  /**
+   * Builds the getter expression for a (already Errable-unwrapped) {@code List<T>} / {@code
+   * List<Errable<T>>} field, where {@code T} may be a primitive, an {@link
+   * com.flipkart.krystal.model.EnumModel}, or a {@code @ModelRoot} Model. Live {@link
+   * ProtoListBuilder}-backed views are only used for plain {@code List<Model>} builder getters (see
+   * the covariant-narrowing note in {@link #getterMethod}); every other case returns a plain,
+   * non-live {@code Lists.transform(...)} expression.
+   */
+  private CodeBlock listGetterExpr(
+      TypeMirror listType,
+      String fieldName,
+      boolean isBuilder,
+      Optional<ModelRootInfo> fieldModelRootInfo,
+      boolean isContentErrable) {
+    if (fieldModelRootInfo.isPresent() && !util.isEnumModel(fieldModelRootInfo.get().element())) {
+      ClassName immutProtoClass =
+          util.getImmutClassName(fieldModelRootInfo.get().element(), config.protocolInstance());
+      if (isBuilder && !isContentErrable) {
+        ClassName protoMsgOrBuilderType =
+            ClassName.get(
+                immutProtoClass.packageName(),
+                toTitleCaseProtoName(fieldModelRootInfo.get().element().getSimpleName().toString())
+                    + config.messageSuffix()
+                    + "OrBuilder");
+        return CodeBlock.builder()
+            .addNamed(
+"""
+new $protoListBuilder:T<>(
+        $modelRoot:T.class,
+        $immutIface:T.class,
+        $immutIface:T.Builder.class,
+        $lists:T.transform(_proto().get$fieldNameCap:LList(), $immutProto:T::new),
+        $lists:T.transform(
+            _proto().get$fieldNameCap:LBuilderList(), $immutProto:T.Builder::new),
+        _m -> _proto().add$fieldNameCap:L($immutProto:T._proto(_m)),
+        _b -> _proto().add$fieldNameCap:L($immutProto:T._proto(_b)),
+        (index, _model) ->
+            _proto().add$fieldNameCap:L(index, $immutProto:T._proto(_model)),
+        (index, _builder) ->
+            _proto().add$fieldNameCap:L(index, $immutProto:T._proto(_builder)),
+        _models -> {
+          _proto()
+              .addAll$fieldNameCap:L(
+                  $iterables:T.transform(_models, $immutProto:T::_proto));
+          return _models.iterator().hasNext();
+        },
+        _proto()::clear$fieldNameCap:L,
+        (index, _model) ->
+            _proto().set$fieldNameCap:L(index, $immutProto:T._proto(_model)),
+        (index, _builder) ->
+            _proto().set$fieldNameCap:L(index, $immutProto:T._proto(_builder)),
+        index -> {
+          $protoMsgOrBuilder:T ret = _proto().get$fieldNameCap:LOrBuilder(index);
+          _proto().remove$fieldNameCap:L(index);
+          return new $immutProto:T(ret);
+        })
+    .unmodifiableModelsView()""",
+                ofEntries(
+                    entry("protoListBuilder", ProtoListBuilder.class),
+                    entry("modelRoot", fieldModelRootInfo.get().type()),
+                    entry(
+                        "immutIface",
+                        util.getImmutInterfaceName(fieldModelRootInfo.get().element())),
+                    entry("immutProto", immutProtoClass),
+                    entry("lists", Lists.class),
+                    entry("fieldNameCap", capitalizeFirstChar(fieldName)),
+                    entry("iterables", Iterables.class),
+                    entry("protoMsgOrBuilder", protoMsgOrBuilderType)))
+            .build();
+      } else {
+        CodeBlock mapper =
+            isContentErrable
+                ? CodeBlock.of("_e -> $T.withValue(new $T(_e))", Errable.class, immutProtoClass)
+                : CodeBlock.of("$T::new", immutProtoClass);
+        return CodeBlock.of(
+            "$T.transform(_proto().get$LList(), $L)",
+            Lists.class,
+            capitalizeFirstChar(fieldName),
+            mapper);
+      }
     } else {
-      getterBuilder.addStatement("return $L", creatorCode);
+      TypeMirror listElemType = util.getContentType(listType);
+      if (isContentErrable) {
+        listElemType = util.getErrableInnerType(listElemType);
+      }
+      if (listElemType != null && util.isEnumModelType(listElemType)) {
+        TypeElement enumElement =
+            (TypeElement) requireNonNull(processingEnv.getTypeUtils().asElement(listElemType));
+        ClassName protoUtils = getProtoUtilsClassName(enumElement);
+        CodeBlock mapper =
+            isContentErrable
+                ? CodeBlock.of("_e -> $T.withValue($T.protoToJava(_e))", Errable.class, protoUtils)
+                : CodeBlock.of("$T::protoToJava", protoUtils);
+        return CodeBlock.of(
+            "$T.transform(_proto().get$LList(), $L)",
+            Lists.class,
+            capitalizeFirstChar(fieldName),
+            mapper);
+      } else if (isContentErrable) {
+        return CodeBlock.of(
+            "$T.transform(_proto().get$LList(), $T::withValue)",
+            Lists.class,
+            capitalizeFirstChar(fieldName),
+            Errable.class);
+      } else {
+        return CodeBlock.of("_proto().get$LList()", capitalizeFirstChar(fieldName));
+      }
+    }
+  }
+
+  /**
+   * Map analogue of {@link #listGetterExpr}, for {@code Map<K, V>} / {@code Map<K, Errable<V>>}.
+   */
+  private CodeBlock mapGetterExpr(
+      TypeMirror mapType,
+      String fieldName,
+      boolean isBuilder,
+      Optional<ModelRootInfo> fieldModelRootInfo,
+      boolean isContentErrable) {
+    if (fieldModelRootInfo.isPresent() && !util.isEnumModel(fieldModelRootInfo.get().element())) {
+      ClassName immutProtoClass =
+          util.getImmutClassName(fieldModelRootInfo.get().element(), config.protocolInstance());
+      if (isBuilder && !isContentErrable) {
+        return CodeBlock.builder()
+            .addNamed(
+"""
+new $protoMapBuilder:T<>(
+        $modelRoot:T.class,
+        $immutIface:T.class,
+        $immutIface:T.Builder.class,
+        () -> $maps:T.transformValues(_proto().get$fieldNameCap:LMap(), $immutProto:T::new),
+        _proto()::get$fieldNameCap:LCount,
+        _proto()::contains$fieldNameCap:L,
+        (_k, _d) -> {
+          var _v = _proto().get$fieldNameCap:LOrDefault(_k, _d == null ? null : $immutProto:T._proto(($modelRoot:T) _d));
+          return _v == null ? null : new $immutProto:T(_v);
+        },
+        _k -> new $immutProto:T.Builder(_proto().put$fieldNameCap:LBuilderIfAbsent(_k)),
+        _map -> _proto().putAll$fieldNameCap:L($maps:T.transformValues(_map, _v -> $immutProto:T._proto(($modelRoot:T) _v))),
+        (_k, _i) -> _proto().put$fieldNameCap:L(_k, $immutProto:T._proto(($modelRoot:T) _i)),
+        _proto()::clear$fieldNameCap:L,
+        _k -> _proto().remove$fieldNameCap:L(_k))
+    .unmodifiableModelsView()""",
+                ofEntries(
+                    entry("protoMapBuilder", ProtoMapBuilder.class),
+                    entry("modelRoot", fieldModelRootInfo.get().type()),
+                    entry(
+                        "immutIface",
+                        util.getImmutInterfaceName(fieldModelRootInfo.get().element())),
+                    entry("immutProto", immutProtoClass),
+                    entry("maps", Maps.class),
+                    entry("fieldNameCap", capitalizeFirstChar(fieldName))))
+            .build();
+      } else {
+        CodeBlock mapper =
+            isContentErrable
+                ? CodeBlock.of("_v -> $T.withValue(new $T(_v))", Errable.class, immutProtoClass)
+                : CodeBlock.of("$T::new", immutProtoClass);
+        return CodeBlock.of(
+            "$T.transformValues(_proto().get$LMap(), $L)",
+            Maps.class,
+            capitalizeFirstChar(fieldName),
+            mapper);
+      }
+    } else {
+      TypeMirror mapValueType = util.getMapValueType(mapType);
+      if (isContentErrable) {
+        mapValueType = util.getErrableInnerType(mapValueType);
+      }
+      if (mapValueType != null && util.isEnumModelType(mapValueType)) {
+        TypeElement enumElement =
+            (TypeElement) requireNonNull(processingEnv.getTypeUtils().asElement(mapValueType));
+        ClassName protoUtils = getProtoUtilsClassName(enumElement);
+        CodeBlock mapper =
+            isContentErrable
+                ? CodeBlock.of("_v -> $T.withValue($T.protoToJava(_v))", Errable.class, protoUtils)
+                : CodeBlock.of("$T::protoToJava", protoUtils);
+        return CodeBlock.of(
+            "$T.transformValues(_proto().get$LMap(), $L)",
+            Maps.class,
+            capitalizeFirstChar(fieldName),
+            mapper);
+      } else if (isContentErrable) {
+        return CodeBlock.of(
+            "$T.transformValues(_proto().get$LMap(), $T::withValue)",
+            Maps.class,
+            capitalizeFirstChar(fieldName),
+            Errable.class);
+      } else {
+        return CodeBlock.of("_proto().get$LMap()", capitalizeFirstChar(fieldName));
+      }
     }
   }
 
@@ -746,7 +823,7 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
       ClassName protoMsgClassName,
       ClassName immutInterfaceName,
       List<ExecutableElement> modelMethods) {
-    ModelRoot modelRoot = modelRootType.getAnnotation(ModelRoot.class);
+    ModelRoot modelRoot = requireNonNull(modelRootType.getAnnotation(ModelRoot.class));
 
     ClassName immutableProtoType = ClassName.get(packageName, protoClassName);
 
@@ -802,7 +879,9 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
 
     for (ExecutableElement method : modelMethods) {
       String fieldName = method.getSimpleName().toString();
-      TypeMirror returnType = method.getReturnType();
+      boolean isErrable = util.isErrable(method.getReturnType());
+      boolean isContentErrable = util.isContentErrable(method.getReturnType());
+      TypeMirror returnType = util.getErrableInnerType(method.getReturnType());
       CodeGenType dataType = new DeclaredTypeVisitor(util, method).visit(returnType);
 
       Optional<ModelRootInfo> fieldModelRoot = util.asModelRoot(method.getReturnType(), method);
@@ -819,6 +898,31 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
               .addModifiers(PUBLIC)
               .returns(builderType);
 
+      CodeBlock valueAccessor =
+          isErrable ? CodeBlock.of("$L.value()", fieldName) : CodeBlock.of("$L", fieldName);
+      // Per-element source to iterate for LIST/MAP fields. When the content is Errable-wrapped
+      // (List<Errable<T>>/Map<K, Errable<T>>), nil/failure elements have no way to be represented
+      // in a protobuf repeated/map field without changing its size or key set, so they are simply
+      // dropped on write (and every element read back is Errable.withValue(...), never nil -
+      // ponytail: lossy for nil/failure elements, same tradeoff already accepted for whole-field
+      // Errable; upgrade path is a dedicated presence side-channel if ever needed).
+      CodeBlock listSource =
+          isContentErrable
+              ? CodeBlock.of(
+                  "$T.newArrayList($T.transform($T.filter($L, _e -> _e != null && _e.value() != null), _e -> _e.value()))",
+                  Lists.class,
+                  Iterables.class,
+                  Iterables.class,
+                  valueAccessor)
+              : valueAccessor;
+      CodeBlock mapSource =
+          isContentErrable
+              ? CodeBlock.of(
+                  "$T.transformValues($T.filterValues($L, _e -> _e != null && _e.value() != null), _e -> _e.value())",
+                  Maps.class,
+                  Maps.class,
+                  valueAccessor)
+              : valueAccessor;
       if (isProtoTypeRepeated(dataType)) {
         Object addAllArg;
         if (fieldModelRoot.isPresent()
@@ -838,13 +942,16 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
                           : new $T(_element)._proto())
 """,
                   Lists.class,
-                  fieldName,
+                  listSource,
                   util.getImmutClassName(fieldModelRoot.get().element(), config.protocolInstance()),
                   util.getImmutClassName(fieldModelRoot.get().element(), config.protocolInstance()),
                   util.getImmutClassName(
                       fieldModelRoot.get().element(), config.protocolInstance()));
         } else {
           TypeMirror contentType = util.getContentType(returnType);
+          if (isContentErrable && contentType != null) {
+            contentType = util.getErrableInnerType(contentType);
+          }
           if (contentType != null && util.isEnumModelType(contentType)) {
             TypeElement enumElement =
                 (TypeElement) requireNonNull(processingEnv.getTypeUtils().asElement(contentType));
@@ -852,35 +959,37 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
                 CodeBlock.of(
                     "\n          $T.transform($L, $T::javaToProto)\n",
                     Lists.class,
-                    fieldName,
+                    listSource,
                     getProtoUtilsClassName(enumElement));
           } else {
-            addAllArg = fieldName;
+            addAllArg = listSource;
           }
         }
         setterBuilder.addCode(
             """
                 _proto.clear$L();
-                if ($L == null){
+                if ($L == null$L){
                   return this;
                 }
                 _proto.addAll$L($L);
               """,
             capitalizeFirstChar(fieldName),
             fieldName,
+            isErrable ? CodeBlock.of(" || $L == null", valueAccessor) : CodeBlock.of(""),
             capitalizeFirstChar(fieldName),
             addAllArg);
       } else if (isProtoTypeMap(dataType)) {
         setterBuilder.addCode(
             """
                   _proto.clear$L();
-                  if ($L == null){
+                  if ($L == null$L){
                     return this;
                   }
                   _proto.putAll$L($L);
                 """,
             capitalizeFirstChar(fieldName),
             fieldName,
+            isErrable ? CodeBlock.of(" || $L == null", valueAccessor) : CodeBlock.of(""),
             capitalizeFirstChar(fieldName),
             fieldModelRoot.isPresent()
                     && !util.isEnumModel(fieldModelRoot.get().element())
@@ -898,7 +1007,7 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
                           : new $T(_value)._proto())
 """,
                     Maps.class,
-                    fieldName,
+                    mapSource,
                     util.getImmutClassName(
                         fieldModelRoot.get().element(), config.protocolInstance()),
                     util.getImmutClassName(
@@ -911,20 +1020,20 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
                     ? CodeBlock.of(
                         "\n          $T.transformValues($L, $T::javaToProto)\n",
                         Maps.class,
-                        fieldName,
+                        mapSource,
                         getProtoUtilsClassName(fieldModelRoot.get().element()))
-                    : fieldName);
+                    : mapSource);
       } else {
         setterBuilder.addCode(
             """
-                  if ($L == null){
+                  if ($L == null$L){
                     _proto.clear$L();
                     return this;
                   }
                 """,
             fieldName,
+            isErrable ? CodeBlock.of(" || $L.value() == null", fieldName) : "",
             capitalizeFirstChar(fieldName));
-
         if (fieldModelRoot.isPresent() && !util.isEnumModel(fieldModelRoot.get().element())) {
           ClassName fieldProtoClassName =
               util.getImmutClassName(fieldModelRoot.get().element(), config.protocolInstance());
@@ -938,35 +1047,32 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
         _proto.set$L(new $T(($T)$L._build())._proto());
       }
 """,
-              fieldName,
+              valueAccessor,
               fieldProtoClassName.nestedClass("Builder"),
               capitalizeFirstChar(fieldName),
-              fieldName,
+              valueAccessor,
               fieldProtoClassName,
               capitalizeFirstChar(fieldName),
               capitalizeFirstChar(fieldName),
               fieldProtoClassName,
               fieldModelRoot.get().element(),
-              fieldName);
+              valueAccessor);
         } else {
-          TypeMirror rawSetterType =
+          TypeMirror rawFieldType =
               util.isOptional(returnType)
                   ? util.getOptionalInnerType(returnType)
-                  : util.isErrable(returnType) ? util.getErrableInnerType(returnType) : returnType;
-          if (util.isEnumModelType(rawSetterType)) {
+                  : isErrable ? util.getErrableInnerType(returnType) : returnType;
+          if (util.isEnumModelType(rawFieldType)) {
             TypeElement enumElement =
-                (TypeElement) requireNonNull(processingEnv.getTypeUtils().asElement(rawSetterType));
+                (TypeElement) requireNonNull(processingEnv.getTypeUtils().asElement(rawFieldType));
             setterBuilder.addStatement(
                 "_proto.set$L($T.javaToProto($L))",
                 capitalizeFirstChar(fieldName),
                 getProtoUtilsClassName(enumElement),
-                fieldName);
+                valueAccessor);
           } else {
-            // For Errable<T>, the setter takes @Nullable T (inner type). Use the inner type's
-            // CodeGenType so convertJavaToProtoCode applies the correct type conversion.
-            CodeGenType effectiveDataType =
-                util.isErrable(returnType) ? dataType.typeParameters().get(0) : dataType;
-            setterBuilder.addStatement(convertJavaToProtoCode(effectiveDataType, fieldName));
+            setterBuilder.addStatement(
+                convertJavaToProtoCode(dataType, fieldName, valueAccessor.toString()));
           }
         }
       }
@@ -991,36 +1097,6 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
                 .addAnnotation(Override.class)
                 .returns(builderType)
                 .addCode(setter.code)
-                .build());
-      }
-
-      if (util.isErrable(returnType)) {
-        // Generate the Errable<T> overload required by the _Immut.Builder interface.
-        // NonNil → unwrap and set proto field; Nil/Failure → clear proto field.
-        ClassName nonNilClass = ClassName.get("com.flipkart.krystal.data", "NonNil");
-        TypeName innerTypeName = TypeName.get(util.getErrableInnerType(returnType));
-        TypeName errableParamType =
-            ParameterizedTypeName.get(ClassName.get(Errable.class), innerTypeName);
-        builderClassBuilder.addMethod(
-            methodBuilder(fieldName)
-                .addAnnotation(Override.class)
-                .addModifiers(PUBLIC)
-                .returns(builderType)
-                .addParameter(errableParamType, fieldName)
-                .addCode(
-                    """
-                    if ($L instanceof $T<?> _nonNil) {
-                      _proto.set$L(($T) _nonNil.value());
-                    } else {
-                      _proto.clear$L();
-                    }
-                    """,
-                    fieldName,
-                    nonNilClass,
-                    capitalizeFirstChar(fieldName),
-                    innerTypeName,
-                    capitalizeFirstChar(fieldName))
-                .addStatement("return this")
                 .build());
       }
     }

@@ -459,7 +459,7 @@ class Proto3LatticeSampleResponseTest {
             .mandatoryInt(1)
             .mandatoryStringPartialConstruction("")
             .status(Status.UNKNOWN)
-            .errableMessage("hello proto3 errable")
+            .errableMessage(Errable.withValue("hello proto3 errable"))
             ._build();
 
     assertThat(original.errableMessage()).isEqualTo(Errable.withValue("hello proto3 errable"));
@@ -550,7 +550,7 @@ class Proto3LatticeSampleResponseTest {
             .mandatoryInt(6)
             .mandatoryStringPartialConstruction("")
             .status(Status.UNKNOWN)
-            .errableMessage("copy value")
+            .errableMessage(Errable.withValue("copy value"))
             ._build();
 
     Proto3LatticeSampleResponse_ImmutProto3 copy =
@@ -568,7 +568,7 @@ class Proto3LatticeSampleResponseTest {
             .mandatoryInt(7)
             .mandatoryStringPartialConstruction("")
             .status(Status.UNKNOWN)
-            .errableMessage("pojo value")
+            .errableMessage(Errable.withValue("pojo value"))
             ._build();
 
     assertThat(built.errableMessage()).isEqualTo(Errable.withValue("pojo value"));

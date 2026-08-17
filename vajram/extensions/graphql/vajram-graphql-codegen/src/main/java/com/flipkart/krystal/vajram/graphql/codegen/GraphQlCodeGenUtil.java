@@ -5,6 +5,7 @@ import static com.flipkart.krystal.vajram.graphql.api.Constants.GRAPHQL_SCHEMA_F
 import static com.flipkart.krystal.vajram.graphql.codegen.CodeGenConstants.GRAPHQL_SRC_DIR;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
+import com.flipkart.krystal.data.Errable;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
@@ -80,7 +81,7 @@ public final class GraphQlCodeGenUtil {
 
   TypeName toTypeNameForField(
       GraphQlTypeDecorator graphQlTypeDecorator, GraphQlFieldSpec fieldSpec) {
-    ClassName errable = ClassName.get("com.flipkart.krystal.data", "Errable");
+    ClassName errable = ClassName.get(Errable.class);
     if (graphQlTypeDecorator instanceof PlainType plainType) {
       // T → Errable<T>
       return ParameterizedTypeName.get(errable, getTypeNameForField(plainType, fieldSpec));
@@ -158,7 +159,11 @@ public final class GraphQlCodeGenUtil {
       case "String", "ID" -> ClassName.get(String.class);
       case "Int" -> ClassName.get(Integer.class);
       case "Boolean" -> ClassName.get(Boolean.class);
-      case "Float" -> ClassName.get(Float.class);
+
+      // GraphqlJava handles graphql Floats using java Doubles
+      // https://graphql-java.com/documentation/data-mapping/#scalars
+      case "Float" -> ClassName.get(Double.class);
+
       default -> {
         GraphQLTypeName typeName = new GraphQLTypeName(graphQlTypeName);
         Optional<ObjectTypeDefinition> objectType =

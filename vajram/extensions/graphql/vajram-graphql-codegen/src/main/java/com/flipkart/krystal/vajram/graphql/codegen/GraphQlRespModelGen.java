@@ -651,7 +651,7 @@ final class GraphQlRespModelGen implements CodeGenerator {
       boolean hasExecutionContext) {
 
     // Create ClassName constants for frequently used classes
-    ClassName failureClassName = ClassName.get("com.flipkart.krystal.data", "Failure");
+    ClassName failureClassName = ClassName.get(Failure.class);
     ClassName errableClassName = ClassName.get(Errable.class);
 
     // Determine if this is an entity and get the ID type
@@ -826,118 +826,126 @@ final class GraphQlRespModelGen implements CodeGenerator {
     }
 
     ClassName builderType = gqlRespJsonClassName.nestedClass("Builder");
+    // Whole-field Errable (method itself returns Errable<T>, e.g. `Errable<String> firstName()`)
+    // gets a single setter accepting Errable<T> (generated further down) - no separate "direct
+    // value" convenience overload, for simplicity and consistency with the rest of the Errable<T>
+    // model field API.
+    boolean wholeFieldErrable = listElementType == null && util.isErrable(returnType);
     // Direct value setter (convenience overload).
     // @Override only when model returns a non-Errable type: _Immut.Builder's abstract setter
     // takes the raw return type (T). When model returns Errable<T>, _Immut.Builder's abstract
     // setter takes Errable<T>, so @Override belongs on the Errable overload instead.
-    MethodSpec.Builder directSetterBuilder =
-        MethodSpec.methodBuilder(fieldName)
-            .addModifiers(PUBLIC)
-            .addAnnotation(Override.class)
-            .returns(builderType);
-    Optional<ModelRootInfo> fieldModelRoot = util.asModelRoot(returnType, method);
-    if (listElementType != null) {
-      // For ALL lists (entities OR standard types), use complex wrapping logic
-      directSetterBuilder.addParameter(fieldType, fieldName);
+    if (!wholeFieldErrable) {
+      MethodSpec.Builder directSetterBuilder =
+          MethodSpec.methodBuilder(fieldName)
+              .addModifiers(PUBLIC)
+              .addAnnotation(Override.class)
+              .returns(builderType);
+      Optional<ModelRootInfo> fieldModelRoot = util.asModelRoot(returnType, method);
+      if (listElementType != null) {
+        // For ALL lists (entities OR standard types), use complex wrapping logic
+        directSetterBuilder.addParameter(fieldType, fieldName);
 
-      // Generate the complex wrapping logic.
-      // When the declared element type is already Errable<T>, the parameter is List<Errable<T>>;
-      // just wrap the whole list rather than re-wrapping each element.
-      TypeMirror elementType = getListElementType(returnType);
-      boolean elementIsErrable = util.isErrable(elementType);
-      if (elementIsErrable) {
-        directSetterBuilder.addCode(
-            """
-            if ($L == null) {
-              this.$L = $T.nil();
-              return this;
-            }
-            this.$L = $T.withValue($L);
-            return this;
-            """,
-            fieldName,
-            fieldName,
-            Errable.class,
-            fieldName,
-            Errable.class,
-            fieldName);
-      } else {
-        directSetterBuilder.addCode(
-            """
-            if ($L == null) {
-              this.$L = $T.nil();
-              return this;
-            }
-            $T<$T<$T>> _result = new $T<>($L.size());
-            for ($T _item : $L) {
-              _result.add($T.withValue(_item));
-            }
-            this.$L = $T.withValue(_result);
-            return this;
-            """,
-            fieldName,
-            fieldName,
-            Errable.class,
-            List.class,
-            Errable.class,
-            elementType,
-            ArrayList.class,
-            fieldName,
-            elementType,
-            fieldName,
-            Errable.class,
-            fieldName,
-            Errable.class);
-      }
-    } else if (fieldModelRoot.isPresent()) {
-      // Standard scalar: simple wrap
-      // For single entity setters, wrap in Errable.withValue()
-      ClassName fieldGQlClassName =
-          this.util.getImmutClassName(fieldModelRoot.get().element(), GraphQlResponse.INSTANCE);
-      directSetterBuilder
-          .addParameter(fieldType, fieldName)
-          .addCode(
+        // Generate the complex wrapping logic.
+        // When the declared element type is already Errable<T>, the parameter is List<Errable<T>>;
+        // just wrap the whole list rather than re-wrapping each element.
+        TypeMirror elementType = getListElementType(returnType);
+        boolean elementIsErrable = util.isErrable(elementType);
+        if (elementIsErrable) {
+          directSetterBuilder.addCode(
               """
-                    if($L instanceof $T || $L instanceof $T){
-                      this.$L = $T.withValue($L);
-                    } else {
-                      throw new $T("Only GQlRespJson or its Builders are supported.");
-                    }
+              if ($L == null) {
+                this.$L = $T.nil();
+                return this;
+              }
+              this.$L = $T.withValue($L);
+              return this;
               """,
               fieldName,
-              fieldGQlClassName.nestedClass("Builder"),
-              fieldName,
-              fieldGQlClassName,
               fieldName,
               Errable.class,
               fieldName,
-              UnsupportedOperationException.class)
-          .addStatement("return this");
-    } else {
-      // Standard scalar: simple wrap
-      // For single entity setters, wrap in Errable.withValue()
-      directSetterBuilder
-          .addParameter(fieldType, fieldName)
-          .addStatement("this.$L = $T.withValue($L)", fieldName, Errable.class, fieldName)
-          .addStatement("return this");
-    }
+              Errable.class,
+              fieldName);
+        } else {
+          directSetterBuilder.addCode(
+              """
+              if ($L == null) {
+                this.$L = $T.nil();
+                return this;
+              }
+              $T<$T<$T>> _result = new $T<>($L.size());
+              for ($T _item : $L) {
+                _result.add($T.withValue(_item));
+              }
+              this.$L = $T.withValue(_result);
+              return this;
+              """,
+              fieldName,
+              fieldName,
+              Errable.class,
+              List.class,
+              Errable.class,
+              elementType,
+              ArrayList.class,
+              fieldName,
+              elementType,
+              fieldName,
+              Errable.class,
+              fieldName,
+              Errable.class);
+        }
+      } else if (fieldModelRoot.isPresent()) {
+        // Standard scalar: simple wrap
+        // For single entity setters, wrap in Errable.withValue()
+        ClassName fieldGQlClassName =
+            this.util.getImmutClassName(fieldModelRoot.get().element(), GraphQlResponse.INSTANCE);
+        directSetterBuilder
+            .addParameter(fieldType, fieldName)
+            .addCode(
+                """
+                      if($L instanceof $T || $L instanceof $T){
+                        this.$L = $T.withValue($L);
+                      } else {
+                        throw new $T("Only GQlRespJson or its Builders are supported.");
+                      }
+                """,
+                fieldName,
+                fieldGQlClassName.nestedClass("Builder"),
+                fieldName,
+                fieldGQlClassName,
+                fieldName,
+                Errable.class,
+                fieldName,
+                UnsupportedOperationException.class)
+            .addStatement("return this");
+      } else {
+        // Standard scalar: simple wrap
+        // For single entity setters, wrap in Errable.withValue()
+        directSetterBuilder
+            .addParameter(fieldType, fieldName)
+            .addStatement("this.$L = $T.withValue($L)", fieldName, Errable.class, fieldName)
+            .addStatement("return this");
+      }
 
-    MethodSpec directSetter = directSetterBuilder.build();
-    builderClass.addMethod(directSetter);
+      MethodSpec directSetter = directSetterBuilder.build();
+      builderClass.addMethod(directSetter);
 
-    if (fieldModelRoot.isPresent()
-        && !fieldModelRoot.get().annotation().builderExtendsModelRoot()) {
+      if (fieldModelRoot.isPresent()
+          && !fieldModelRoot.get().annotation().builderExtendsModelRoot()) {
 
-      builderClass.addMethod(
-          MethodSpec.methodBuilder(fieldName)
-              .addModifiers(PUBLIC)
-              .addParameter(
-                  util.getImmutInterfaceName(fieldModelRoot.get().element()).nestedClass("Builder"),
-                  fieldName)
-              .addAnnotation(Override.class)
-              .returns(builderType)
-              .addCode(directSetter.code)
-              .build());
+        builderClass.addMethod(
+            MethodSpec.methodBuilder(fieldName)
+                .addModifiers(PUBLIC)
+                .addParameter(
+                    util.getImmutInterfaceName(fieldModelRoot.get().element())
+                        .nestedClass("Builder"),
+                    fieldName)
+                .addAnnotation(Override.class)
+                .returns(builderType)
+                .addCode(directSetter.code)
+                .build());
+      }
     }
 
     // Errable setter (for aggregator use) - needs to match constructor parameter type
@@ -1105,7 +1113,7 @@ final class GraphQlRespModelGen implements CodeGenerator {
           MethodSpec.methodBuilder("graphql_executionContext")
               .addAnnotation(Override.class)
               .addModifiers(PUBLIC)
-              .returns(ClassName.get("graphql.execution", "ExecutionContext"))
+              .returns(ExecutionContext.class)
               .addStatement("return graphql_executionContext")
               .build());
 
@@ -1121,7 +1129,7 @@ final class GraphQlRespModelGen implements CodeGenerator {
           MethodSpec.methodBuilder("graphql_executionStrategyParams")
               .addAnnotation(Override.class)
               .addModifiers(PUBLIC)
-              .returns(ClassName.get("graphql.execution", "ExecutionStrategyParameters"))
+              .returns(ClassName.get(ExecutionStrategyParameters.class))
               .addStatement("return graphql_executionStrategyParams")
               .build());
 

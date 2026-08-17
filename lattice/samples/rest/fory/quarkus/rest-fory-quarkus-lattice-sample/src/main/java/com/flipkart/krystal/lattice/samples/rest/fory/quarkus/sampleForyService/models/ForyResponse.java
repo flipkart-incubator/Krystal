@@ -63,4 +63,8 @@ public interface ForyResponse extends Model {
    * support in Fory models: serializes as the inner value when present, as nil when absent.
    */
   Errable<String> errableNote();
+
+  Errable<ForyInnerData> errableInnerData();
+
+  Errable<List<Errable<ForyInnerData>>> nestedDataErrableList();
 }

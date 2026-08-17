@@ -114,7 +114,7 @@ public class JsonConfigProvider implements ModelProtocolConfigProvider {
 
     private TypeName toJsonType(TypeMirror typeMirror, CodeGenUtility util) {
       if (util.isModelRoot(typeMirror)) {
-        return util.replaceTypeWith(typeMirror, util.getImmutTypeName(typeMirror, JSON));
+        return util.replaceContentTypeWith(typeMirror, util.getImmutTypeName(typeMirror, JSON));
       }
       return TypeName.get(util.getOptionalInnerType(typeMirror));
     }

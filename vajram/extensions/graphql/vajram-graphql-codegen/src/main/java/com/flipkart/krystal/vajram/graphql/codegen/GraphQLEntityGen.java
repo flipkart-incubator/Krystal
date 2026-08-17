@@ -12,6 +12,8 @@ import static javax.lang.model.element.Modifier.PUBLIC;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
+import com.flipkart.krystal.model.Model;
+import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.vajram.graphql.api.Constants.Directives;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponse;
@@ -152,7 +154,7 @@ class GraphQLEntityGen implements CodeGenerator {
                       fieldSpecFromField(fieldDefinition, "", enclosingType)))
               .build());
     }
-    ClassName modelRootClassName = ClassName.get("com.flipkart.krystal.model", "ModelRoot");
+    ClassName modelRootClassName = ClassName.get(ModelRoot.class);
     AnnotationSpec.Builder modelRoot =
         AnnotationSpec.builder(modelRootClassName).addMember("pure", "false");
     if (isIdModel) {
@@ -168,7 +170,7 @@ class GraphQLEntityGen implements CodeGenerator {
     }
     builder
         .addModifiers(PUBLIC)
-        .addSuperinterface(ClassName.get("com.flipkart.krystal.model", "Model"))
+        .addSuperinterface(ClassName.get(Model.class))
         .addAnnotation(modelRoot.build())
         .addAnnotation(
             AnnotationSpec.builder(ClassName.get(SupportedModelProtocol.class))

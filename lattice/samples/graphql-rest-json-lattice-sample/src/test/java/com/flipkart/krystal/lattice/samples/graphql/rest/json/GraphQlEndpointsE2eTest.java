@@ -80,15 +80,15 @@ class GraphQlEndpointsE2eTest {
     String query =
         """
         {
-          "query": "{
-            accountAlias: account(id: \\"ACC123\\") {
-              personAlias: owner {
-                imageAlias: imageData {
-                  mainAlias: mainUrl
-                  thumbnailAlias: thumbnailUrl
-                }
-              }
-            }
+          "query": "{\
+            accountAlias: account(id: \\"ACC123\\") {\
+              personAlias: owner {\
+                imageAlias: imageData {\
+                  mainAlias: mainUrl\
+                  thumbnailAlias: thumbnailUrl\
+                }\
+              }\
+            }\
           }"
         }
         """;

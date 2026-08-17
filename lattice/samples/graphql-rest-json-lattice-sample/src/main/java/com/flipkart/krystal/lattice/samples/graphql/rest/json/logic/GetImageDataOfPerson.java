@@ -2,6 +2,7 @@ package com.flipkart.krystal.lattice.samples.graphql.rest.json.logic;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.logic.person.Person_Id;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
@@ -18,8 +19,8 @@ public abstract class GetImageDataOfPerson extends ComputeVajramDef<GetImageData
   @Output
   static GetImageDataOfPerson_Fields outputLogic(Person_Id id) {
     return GetImageDataOfPerson_Fields_ImmutGQlResp._builder()
-        .mainUrl(id.id() + "-mainUrl.png")
-        .thumbnailUrl(id.id() + "-thumbnailUrl.png")
+        .mainUrl(Errable.withValue(id.id() + "-mainUrl.png"))
+        .thumbnailUrl(Errable.withValue(id.id() + "-thumbnailUrl.png"))
         ._build();
   }
 }

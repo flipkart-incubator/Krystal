@@ -397,11 +397,22 @@ public final class ProtoGenUtility {
    * required proto value which can be set in the proto builder.
    */
   static CodeBlock convertJavaToProtoCode(CodeGenType dataType, String fieldName) {
+    return convertJavaToProtoCode(dataType, fieldName, fieldName);
+  }
+
+  /**
+   * Like {@link #convertJavaToProtoCode(CodeGenType, String)}, but allows the setter method name
+   * (derived from {@code fieldName}) and the value expression to be set to the same field to differ
+   * - needed for {@code Errable<T>} fields, where the setter is still {@code setFieldName} but the
+   * value written to the proto builder is {@code fieldName.value()}.
+   */
+  static CodeBlock convertJavaToProtoCode(
+      CodeGenType dataType, String fieldName, String valueExpr) {
     return CodeBlock.of(
         "_proto.set$L($L)",
         capitalizeFirstChar(fieldName),
         JAVA_TO_PROTO_CONVERSION_CODE
             .getOrDefault(dataType.unAnnotated(), identity())
-            .apply(CodeBlock.of("$L", fieldName)));
+            .apply(CodeBlock.of("$L", valueExpr)));
   }
 }

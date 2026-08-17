@@ -158,15 +158,24 @@ public class CodeGenUtility {
     return str.isEmpty() ? str : Character.toLowerCase(str.charAt(0)) + str.substring(1);
   }
 
-  public TypeName replaceTypeWith(TypeMirror typeMirror, TypeName replacement) {
-    return switch (getContainerType(typeMirror)) {
-      case NO_CONTAINER -> replacement;
-      case LIST -> ParameterizedTypeName.get(ClassName.get(List.class), replacement);
-      case RANGE -> ParameterizedTypeName.get(ClassName.get(Range.class), replacement);
-      case MAP ->
-          ParameterizedTypeName.get(
-              ClassName.get(Map.class), TypeName.get(getMapKeyType(typeMirror)), replacement);
-    };
+  public TypeName replaceContentTypeWith(TypeMirror typeMirror, TypeName replacementContentType) {
+    boolean isWholeContainerErrable = isErrable(typeMirror);
+    TypeMirror unwrapped = isWholeContainerErrable ? getErrableInnerType(typeMirror) : typeMirror;
+    TypeName result =
+        switch (getContainerType(typeMirror)) {
+          case NO_CONTAINER -> replacementContentType;
+          case LIST -> ParameterizedTypeName.get(ClassName.get(List.class), replacementContentType);
+          case RANGE ->
+              ParameterizedTypeName.get(ClassName.get(Range.class), replacementContentType);
+          case MAP ->
+              ParameterizedTypeName.get(
+                  ClassName.get(Map.class),
+                  TypeName.get(getMapKeyType(unwrapped)),
+                  replacementContentType);
+        };
+    return isWholeContainerErrable
+        ? ParameterizedTypeName.get(ClassName.get(Errable.class), result)
+        : result;
   }
 
   public boolean isListType(TypeMirror type) {
@@ -438,9 +447,34 @@ public class CodeGenUtility {
             "Optional of Optional (Optional<Optional<..>>) is not supported by Krystal Modelling framework",
             method);
       }
+      if (isErrable(type)) {
+        error(
+            "Optional of Errable (Optional<Errable<..>>) is not supported by Krystal Modelling framework",
+            method);
+      }
+    } else if (isErrable(type)) {
+      type = getErrableInnerType(type);
+      if (isErrable(type)) {
+        error(
+            "Errable of Errable (Errable<Errable<..>>) is not supported by Krystal Modelling framework",
+            method);
+      }
+      if (isOptional(type)) {
+        error(
+            "Errable of Optional (Errable<Optional<..>>) is not supported by Krystal Modelling framework",
+            method);
+      }
     }
     if (isListType(type)) {
       TypeMirror elementType = getContentType(type);
+      if (isErrable(elementType)) {
+        elementType = getErrableInnerType(elementType);
+        if (isErrable(elementType) || isOptional(elementType)) {
+          error(
+              "Nested Errable/Optional (List<Errable<Errable<..>>> or List<Errable<Optional<..>>>) is not supported by Krystal Modelling framework",
+              method);
+        }
+      }
       if (isListType(elementType)) {
         error(
             "Nested collections are not allowed in Krystal models. "
@@ -471,11 +505,27 @@ public class CodeGenUtility {
                 + "Field '%s' has type Map<Optional<...>, ...>.".formatted(method.getSimpleName()),
             method);
       }
+      if (isErrable(keyType)) {
+        error(
+            "Errable is not allowed as a Map key type in Krystal models. "
+                + "Field '%s' has type Map<Errable<...>, ...>.".formatted(method.getSimpleName()),
+            method);
+      }
       if (isOptional(valueType)) {
         error(
             "Optional is not allowed as a Map value type in Krystal models. "
                 + "Field '%s' has type Map<..., Optional<...>>.".formatted(method.getSimpleName()),
             method);
+      }
+      if (isErrable(valueType)) {
+        TypeMirror unwrappedValueType = getErrableInnerType(valueType);
+        if (isErrable(unwrappedValueType) || isOptional(unwrappedValueType)) {
+          error(
+              "Nested Errable/Optional (Map<..., Errable<Errable<..>>> or Map<..., Errable<Optional<..>>>) is not supported by Krystal Modelling framework. "
+                  + "Field '%s'.".formatted(method.getSimpleName()),
+              method);
+        }
+        valueType = unwrappedValueType;
       }
       if (isMapType(keyType)) {
         error(
@@ -528,6 +578,19 @@ public class CodeGenUtility {
     return isRawAssignable(returnType, Errable.class);
   }
 
+  /**
+   * Returns true if the given type is a List/Map whose element/value type is itself
+   * Errable-wrapped, e.g. {@code List<Errable<T>>} or {@code Map<K, Errable<V>>} (optionally
+   * wrapped once in an outer {@code Optional<>}/{@code Errable<>}).
+   */
+  public boolean isContentErrable(TypeMirror type) {
+    TypeMirror unwrapped =
+        isOptional(type)
+            ? getOptionalInnerType(type)
+            : isErrable(type) ? getErrableInnerType(type) : type;
+    return (isListType(unwrapped) || isMapType(unwrapped)) && isErrable(getContentType(unwrapped));
+  }
+
   public TypeMirror getErrableInnerType(TypeMirror typeMirror) {
     if (!isErrable(typeMirror)) {
       return typeMirror;
@@ -551,6 +614,9 @@ public class CodeGenUtility {
   }
 
   public TypeMirror getContentType(TypeMirror typeMirror) {
+    if (isErrable(typeMirror)) {
+      typeMirror = getErrableInnerType(typeMirror);
+    }
     if (isListType(typeMirror) || isRangeType(typeMirror)) {
       if (typeMirror instanceof DeclaredType declaredType
           && !declaredType.getTypeArguments().isEmpty()) {
@@ -1179,9 +1245,14 @@ public class CodeGenUtility {
     boolean isNullable = isAnyNullable(specifiedType, method);
     TypeMirror inferredType = specifiedType;
     boolean isOptional = isOptional(inferredType);
+    // Whole-field Errable<T>/Errable<List<T>>/Errable<Map<K,V>> - unwrap once, mirroring
+    // getVariableType. Mutually exclusive with isOptional at the top level.
+    boolean isErrable = !isOptional && isErrable(inferredType);
     if (isOptional) {
       // For Optional<T>, use T as the parameter type
       inferredType = getOptionalInnerType(inferredType);
+    } else if (isErrable) {
+      inferredType = getErrableInnerType(inferredType);
     }
     if (isBuilder && inferredType instanceof PrimitiveType primitiveType) {
       inferredType = typeUtils.boxedClass(primitiveType).asType();
@@ -1194,9 +1265,13 @@ public class CodeGenUtility {
     } else {
       contentType = inferredType;
     }
+    // Content type may itself be Errable-wrapped, e.g. List<Errable<T>>/Map<K, Errable<T>>.
+    boolean isContentErrable = (isList || isMap) && isErrable(contentType);
+    if (isContentErrable) {
+      contentType = getErrableInnerType(contentType);
+    }
     TypeName typeName = contentType.accept(new TypeNameVisitor(), null);
 
-    boolean isErrable = isErrable(inferredType);
     if (!isList && !isMap) {
       // Add @Nullable annotation for Optional types or methods with @Nullable annotation.
       // Errable fields are excluded: they store Errable<T> directly, initialized to Errable.nil().
@@ -1208,15 +1283,32 @@ public class CodeGenUtility {
         }
       }
     }
-    TypeName finalTypeName;
     TypeName elementType = typeName;
     Optional<ModelRootInfo> fieldModelRootInfo = asModelRoot(inferredType, method);
     ContainerType containerType = getContainerType(inferredType);
+    // The per-element/value type used when falling back to a plain List/Map: this happens for
+    // non-Model content, enum-Model content, or content-level-Errable-wrapped Model content
+    // (List<Errable<Model>>/Map<K, Errable<Model>>), since ModelsListBuilder/ModelsMapBuilder
+    // require M extends Model and so cannot represent an Errable-wrapped element. Like the plain
+    // (non-Errable) Model-list/map case, the element type stays the raw Model interface (not
+    // Immut) - both Builder and Immut instances implement the Model interface, and Errable<> is
+    // invariant, so a getter returning Errable<List<Model>> can only be backed by a field of the
+    // exact same type, not Errable<List<Immut>>.
+    TypeName wrappedContentTypeName =
+        isContentErrable
+            ? ParameterizedTypeName.get(ClassName.get(Errable.class), typeName)
+            : typeName;
 
-    finalTypeName =
+    TypeName finalTypeName =
         switch (containerType) {
           case NO_CONTAINER -> {
-            if (fieldModelRootInfo.isPresent()
+            // For whole-field Errable<Model>, the field must stay typed as the raw model
+            // interface (matching getVariableType/the setter param type) since Errable<> is
+            // invariant: it can't be narrowed to Errable<Immut> (isBuilder=false) nor widened to
+            // Errable<Object> (isBuilder=true) without breaking assignment-compatibility with the
+            // Errable<Model>-typed getter/setter.
+            if (!isErrable
+                && fieldModelRootInfo.isPresent()
                 && !isEnumModel(fieldModelRootInfo.get().element())) {
               if (isBuilder) {
                 if (!fieldModelRootInfo.get().annotation().builderExtendsModelRoot()) {
@@ -1230,9 +1322,19 @@ public class CodeGenUtility {
           }
           case RANGE -> typeName;
           case LIST -> {
+            // ModelsListBuilder<M, ...> (builder side) and the ImmutableList narrowing (immut
+            // side) both require the field's own declared type to be exactly List<Model> - which
+            // isn't the case when there's any Errable-wrapping (isErrable wraps the whole
+            // List<Model> itself in Errable<>, which can't covariantly narrow to/from
+            // ModelsListBuilder/ImmutableList since Errable<> is invariant in its type parameter;
+            // isContentErrable means the elements are Errable<Model>, which ModelsListBuilder
+            // can't represent since it requires M extends Model). Fall back to a plain List in
+            // both cases; see getModelFieldType javadoc / design note on Errable<T> support.
+            boolean noLiveContainer = isContentErrable || isErrable;
             if (isBuilder) {
               if (fieldModelRootInfo.isPresent()
-                  && !isEnumModel(fieldModelRootInfo.get().element())) {
+                  && !isEnumModel(fieldModelRootInfo.get().element())
+                  && !noLiveContainer) {
                 ClassName immutType =
                     getImmutClassName(fieldModelRootInfo.get().element(), modelProtocol);
                 yield ParameterizedTypeName.get(
@@ -1241,39 +1343,51 @@ public class CodeGenUtility {
                     immutType,
                     immutType.nestedClass("Builder"));
               } else {
-                yield ParameterizedTypeName.get(
-                    ClassName.get(List.class), TypeName.get(contentType));
+                yield ParameterizedTypeName.get(ClassName.get(List.class), wrappedContentTypeName);
               }
+            } else if (noLiveContainer) {
+              yield ParameterizedTypeName.get(ClassName.get(List.class), wrappedContentTypeName);
             } else {
               yield ParameterizedTypeName.get(
-                  ClassName.get(ImmutableList.class), TypeName.get(contentType));
+                  ClassName.get(ImmutableList.class), wrappedContentTypeName);
             }
           }
           case MAP -> {
             TypeName mapKeyTypeName =
                 getMapKeyType(inferredType).accept(new TypeNameVisitor(), null);
-            TypeName mapValueTypeName = typeName;
+            // See LIST branch above for why any Errable-wrapping (whole-field or content-level)
+            // falls back to a plain Map instead of ModelsMapBuilder/ImmutableMap.
+            boolean noLiveContainer = isContentErrable || isErrable;
             if (isBuilder) {
               if (fieldModelRootInfo.isPresent()
-                  && !isEnumModel(fieldModelRootInfo.get().element())) {
+                  && !isEnumModel(fieldModelRootInfo.get().element())
+                  && !noLiveContainer) {
                 ClassName immutType =
                     getImmutClassName(fieldModelRootInfo.get().element(), modelProtocol);
                 yield ParameterizedTypeName.get(
                     ClassName.get(ModelsMapBuilder.class),
                     mapKeyTypeName,
-                    mapValueTypeName,
+                    typeName,
                     immutType,
                     immutType.nestedClass("Builder"));
               } else {
                 yield ParameterizedTypeName.get(
-                    ClassName.get(Map.class), mapKeyTypeName, TypeName.get(contentType));
+                    ClassName.get(Map.class), mapKeyTypeName, wrappedContentTypeName);
               }
+            } else if (noLiveContainer) {
+              yield ParameterizedTypeName.get(
+                  ClassName.get(Map.class), mapKeyTypeName, wrappedContentTypeName);
             } else {
               yield ParameterizedTypeName.get(
-                  ClassName.get(ImmutableMap.class), mapKeyTypeName, TypeName.get(contentType));
+                  ClassName.get(ImmutableMap.class), mapKeyTypeName, wrappedContentTypeName);
             }
           }
         };
+    if (isErrable) {
+      // Whole-container Errable<T>/Errable<List<T>>/Errable<Map<K,V>>: wrap the computed type in
+      // Errable<> at the very end, mirroring getVariableType.
+      finalTypeName = ParameterizedTypeName.get(ClassName.get(Errable.class), finalTypeName);
+    }
     return new ModelFieldTypeInfo(finalTypeName, containerType, elementType);
   }
 
@@ -1296,36 +1410,44 @@ public class CodeGenUtility {
       // For Optional<T>, use T as the parameter type
       inferredType = getOptionalInnerType(specifiedType);
     } else if (isErrable) {
-      if (isBuilder) {
-        // Builder's standard setter takes @Nullable T (the convenience overload).
-        // The Errable<T> overload is generated separately in generateBuilderInterfaceMethods.
-        inferredType = getErrableInnerType(specifiedType);
-      } else {
-        // Non-builder (e.g. all-arg constructor) takes Errable<T> directly so that
-        // the full errable state (including Failure) is preserved.
-        return specifiedType.accept(new TypeNameVisitor(), null);
-      }
+      inferredType = getErrableInnerType(specifiedType);
     }
     if (isBuilder && inferredType instanceof PrimitiveType primitiveType) {
       inferredType = typeUtils.boxedClass(primitiveType).asType();
     }
-
     TypeName typeName;
     Optional<ModelRootInfo> modelRootInfo = asModelRoot(inferredType, method);
     if (modelRootInfo.isPresent()
         && modelRootInfo.get().containerType().isContainer()
         && !isEnumModel(modelRootInfo.get().element())) {
-      typeName =
-          replaceTypeWith(
-              inferredType,
-              WildcardTypeName.subtypeOf(
-                  getContentType(inferredType).accept(new TypeNameVisitor(), null)));
+      TypeMirror contentType = getContentType(inferredType);
+      boolean isContentErrable = isErrable(contentType);
+      if (isContentErrable) {
+        contentType = getErrableInnerType(contentType);
+      }
+      // Errable<T>'s own type parameter is invariant, so List<Errable<? extends T>> is NOT
+      // assignable to/from List<Errable<T>> (unlike a bare List<? extends T>, where the wildcard
+      // is on the List's own type argument). Keep content-Errable element types exact; likewise,
+      // if the whole container is itself Errable-wrapped (isErrable), a wildcarded content type
+      // would produce Errable<List<? extends T>>, which - for the same invariance reason -
+      // doesn't match the exact Errable<List<T>> declared on the model interface method.
+      TypeName plainContentTypeName = contentType.accept(new TypeNameVisitor(), null);
+      TypeName replacementContentType =
+          isContentErrable
+              ? ParameterizedTypeName.get(ClassName.get(Errable.class), plainContentTypeName)
+              : isErrable ? plainContentTypeName : WildcardTypeName.subtypeOf(plainContentTypeName);
+      typeName = replaceContentTypeWith(inferredType, replacementContentType);
     } else {
       typeName = inferredType.accept(new TypeNameVisitor(), null);
     }
 
+    // For Errable<T> fields, wrap in Errable<> first, then apply @Nullable to the resulting
+    // Errable<T> type (not to the inner T) so the field type reads as `@Nullable Errable<T>`.
+    if (isErrable) {
+      typeName = ParameterizedTypeName.get(ClassName.get(Errable.class), typeName);
+    }
     // Add @Nullable annotation for Optional/Errable-builder types or methods with @Nullable.
-    if (isOptional || (isErrable && isBuilder) || isNullable || isBuilder) {
+    if (isOptional || isNullable || isBuilder) {
       if (!hasNullableAnnotation(typeName)) {
         // Add @Nullable as a type annotation
         typeName =
@@ -1569,10 +1691,21 @@ public class CodeGenUtility {
   }
 
   public ContainerType getContainerType(TypeMirror javaModelType, Element... elements) {
-    javaModelType = getOptionalInnerType(javaModelType);
+    boolean wasErrable = isErrable(javaModelType);
+    javaModelType =
+        wasErrable ? getErrableInnerType(javaModelType) : getOptionalInnerType(javaModelType);
     if (isOptional(javaModelType)) {
       error(
-          "Optional of Optional (Optional<Optional<..>>) is not supported by Krystal Modelling framework",
+          wasErrable
+              ? "Errable of Optional (Errable<Optional<..>>) is not supported by Krystal Modelling framework"
+              : "Optional of Optional (Optional<Optional<..>>) is not supported by Krystal Modelling framework",
+          elements);
+    }
+    if (isErrable(javaModelType)) {
+      error(
+          wasErrable
+              ? "Errable of Errable (Errable<Errable<..>>) is not supported by Krystal Modelling framework"
+              : "Optional of Errable (Optional<Errable<..>>) is not supported by Krystal Modelling framework",
           elements);
     }
     if (isListType(javaModelType)) {
@@ -1596,7 +1729,17 @@ public class CodeGenUtility {
   }
 
   public Optional<ModelRootInfo> asModelRoot(TypeMirror javaModelType, Element... elements) {
-    TypeMirror contentType = getContentType(getOptionalInnerType(javaModelType));
+    TypeMirror outerUnwrapped =
+        isErrable(javaModelType)
+            ? getErrableInnerType(javaModelType)
+            : getOptionalInnerType(javaModelType);
+    TypeMirror contentType = getContentType(outerUnwrapped);
+    if (isErrable(contentType)) {
+      // Content type itself may be wrapped in Errable, e.g. List<Errable<Model>>,
+      // Map<K, Errable<Model>>, or a scalar Errable<Model> (already unwrapped above, but harmless
+      // to check again for the NO_CONTAINER case where content == outerUnwrapped).
+      contentType = getErrableInnerType(contentType);
+    }
     if (!isRawAssignable(contentType, Model.class)) {
       return Optional.empty();
     }

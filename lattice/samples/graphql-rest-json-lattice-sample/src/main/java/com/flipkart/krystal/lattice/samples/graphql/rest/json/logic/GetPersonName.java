@@ -1,5 +1,6 @@
 package com.flipkart.krystal.lattice.samples.graphql.rest.json.logic;
 
+import static com.flipkart.krystal.data.Errable.withValue;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.logic.name.Name_Id;
@@ -20,7 +21,7 @@ public abstract class GetPersonName extends ComputeVajramDef<Name_Id> {
   @Output
   static Name_Id outputLogic(Person_Id id) {
     return Name_Id_ImmutGQlResp._builder()
-        .firstName(id.id() + "-FirstName")
+        .firstName(withValue(id.id() + "-FirstName"))
         .lastName(id.id() + "-LastName")
         ._build();
   }

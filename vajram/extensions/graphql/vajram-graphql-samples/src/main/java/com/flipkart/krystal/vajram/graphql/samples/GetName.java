@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.graphql.samples;
 
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
@@ -11,6 +12,9 @@ public abstract class GetName extends ComputeVajramDef<Name_Id> {
 
   @Output
   static Name_Id getName() {
-    return Name_Id_ImmutGQlResp._builder().value("value").string("string")._build();
+    return Name_Id_ImmutGQlResp._builder()
+        .value(Errable.withValue("value"))
+        .string(Errable.withValue("string"))
+        ._build();
   }
 }

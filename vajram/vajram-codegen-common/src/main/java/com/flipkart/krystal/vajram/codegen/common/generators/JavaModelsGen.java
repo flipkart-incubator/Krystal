@@ -908,7 +908,10 @@ public final class JavaModelsGen implements CodeGenerator {
       if (fieldModelRootInfo.isPresent()
           && !fieldModelRootInfo.get().annotation().builderExtendsModelRoot()
           && !util.isEnumModel(fieldModelRootInfo.get().element())
-          && NO_CONTAINER.equals(fieldModelRootInfo.get().containerType())) {
+          && NO_CONTAINER.equals(fieldModelRootInfo.get().containerType())
+          // Whole-field Errable<Model> only gets the single Errable-accepting setter (see
+          // builderGettersAndSetters) - no separate raw-Model-builder-accepting overload.
+          && !util.isErrable(method.getReturnType())) {
         MethodSpec.Builder methodBuilder =
             MethodSpec.methodBuilder(methodName)
                 .addJavadoc("@see $T#$L", codeGenContext.modelRootType(), methodName)
@@ -922,20 +925,6 @@ public final class JavaModelsGen implements CodeGenerator {
           methodBuilder.addAnnotation(Override.class);
         }
         methods.add(methodBuilder.build());
-      }
-      // For Errable<T> fields: add an additional setter that accepts Errable<T> directly,
-      // allowing callers to propagate Failure state from upstream sources.
-      if (util.isErrable(method.getReturnType())) {
-        MethodSpec.Builder errableSetter =
-            MethodSpec.methodBuilder(methodName)
-                .addJavadoc("\n@see $T#$L", codeGenContext.modelRootType(), methodName)
-                .addModifiers(PUBLIC, ABSTRACT)
-                .addParameter(TypeName.get(method.getReturnType()), methodName)
-                .returns(builderType);
-        if (hasParentModelRoot) {
-          errableSetter.addAnnotation(Override.class);
-        }
-        methods.add(errableSetter.build());
       }
       if (fieldModelRootInfo.isPresent()
           && !util.isEnumModel(fieldModelRootInfo.get().element())
@@ -1085,21 +1074,44 @@ public final class JavaModelsGen implements CodeGenerator {
 
     for (ExecutableElement method : modelMethods) {
       String fieldName = method.getSimpleName().toString();
+      TypeMirror returnType = method.getReturnType();
 
       constructorBuilder.addParameter(
           ParameterSpec.builder(util.getVariableType(method, false), fieldName).build());
-      ContainerType containerType = util.getContainerType(method.getReturnType());
-      Optional<ModelRootInfo> modelRootInfo = util.asModelRoot(method.getReturnType(), method);
+      ContainerType containerType = util.getContainerType(returnType);
+      Optional<ModelRootInfo> modelRootInfo = util.asModelRoot(returnType, method);
+      boolean isModel =
+          modelRootInfo.isPresent() && !util.isEnumModel(modelRootInfo.get().element());
+      // Whole-field Errable<T>/Errable<List<T>>/Errable<Map<K,V>>.
+      boolean isWholeErrable = util.isErrable(returnType);
+      // List<Errable<T>>/Map<K, Errable<T>> - Errable wraps each element/value, not the container.
+      boolean isContentErrable = util.isContentErrable(returnType);
+      // The container/scalar source expression to build from: for whole-Errable fields, this is
+      // the (possibly-null) value inside the Errable; otherwise it's the parameter itself.
+      String src = isWholeErrable ? fieldName + ".value()" : fieldName;
       switch (containerType) {
         case NO_CONTAINER -> {
-          if (modelRootInfo.isPresent()) {
-            constructorBuilder.addStatement(
-                "this.$L = $L == null ? null : ($T)$L._build()",
-                fieldName,
-                fieldName,
-                util.getModelFieldType(method, false, null).fieldType(),
-                fieldName);
-          } else if (util.isErrable(method.getReturnType())) {
+          if (isModel) {
+            ClassName immutType = util.getImmutInterfaceName(modelRootInfo.get().element());
+            if (isWholeErrable) {
+              constructorBuilder.addStatement(
+                  "this.$L = $L == null || $L == null ? $T.nil() : $T.withValue(($T) $L._build())",
+                  fieldName,
+                  fieldName,
+                  src,
+                  Errable.class,
+                  Errable.class,
+                  immutType,
+                  src);
+            } else {
+              constructorBuilder.addStatement(
+                  "this.$L = $L == null ? null : ($T)$L._build()",
+                  fieldName,
+                  fieldName,
+                  immutType,
+                  fieldName);
+            }
+          } else if (isWholeErrable) {
             // Errable<T> constructor parameter: null → Errable.nil()
             constructorBuilder.addStatement(
                 "this.$L = $L == null ? $T.nil() : $L",
@@ -1113,56 +1125,73 @@ public final class JavaModelsGen implements CodeGenerator {
         }
         case RANGE -> constructorBuilder.addStatement("this.$L = $L", fieldName, fieldName);
         case LIST -> {
-          if (modelRootInfo.isPresent()) {
-            constructorBuilder.addStatement(
-"""
-    this.$L = $L == null
-        ? null
-        : $T.copyOf(
-            $T.transform($L, _e -> ($T) _e._build()))
-""",
-                fieldName,
-                fieldName,
-                ImmutableList.class,
-                Lists.class,
-                fieldName,
-                util.getModelFieldType(method, false, null).elementType());
-          } else {
-            constructorBuilder.addStatement(
-                "this.$L = $L == null ? null : $T.copyOf($L)",
-                fieldName,
-                fieldName,
-                ImmutableList.class,
-                fieldName);
-          }
+          CodeBlock collectionExpr =
+              listOrMapCollectionExpr(true, src, isModel, isContentErrable, modelRootInfo, util);
+          constructorBuilder.addStatement(
+              isWholeErrable
+                  ? "this.$L = $L == null || $L == null ? $T.nil() : $T.withValue($L)"
+                  : "this.$L = $L == null ? null : $L",
+              isWholeErrable
+                  ? new Object[] {
+                    fieldName, fieldName, src, Errable.class, Errable.class, collectionExpr
+                  }
+                  : new Object[] {fieldName, fieldName, collectionExpr});
         }
         case MAP -> {
-          if (modelRootInfo.isPresent()) {
-            constructorBuilder.addStatement(
-"""
-this.$L = $L == null
-    ? null
-    : $T.copyOf(
-        $T.transformValues($L, _e -> ($T) _e._build()))
-""",
-                fieldName,
-                fieldName,
-                ImmutableMap.class,
-                Maps.class,
-                fieldName,
-                util.getModelFieldType(method, false, null).elementType());
-          } else {
-            constructorBuilder.addStatement(
-                "this.$L = $L == null ? null :$T.copyOf($L)",
-                fieldName,
-                fieldName,
-                ImmutableMap.class,
-                fieldName);
-          }
+          CodeBlock collectionExpr =
+              listOrMapCollectionExpr(false, src, isModel, isContentErrable, modelRootInfo, util);
+          constructorBuilder.addStatement(
+              isWholeErrable
+                  ? "this.$L = $L == null || $L == null ? $T.nil() : $T.withValue($L)"
+                  : "this.$L = $L == null ? null : $L",
+              isWholeErrable
+                  ? new Object[] {
+                    fieldName, fieldName, src, Errable.class, Errable.class, collectionExpr
+                  }
+                  : new Object[] {fieldName, fieldName, collectionExpr});
         }
       }
     }
     return constructorBuilder;
+  }
+
+  /**
+   * Builds the (non-null-guarded) expression that copies a List/Map source expression {@code src}
+   * into an {@link ImmutableList}/{@link ImmutableMap}, converting Model elements/values to their
+   * Immut form, and re-wrapping per-element Errable values if {@code isContentErrable}.
+   */
+  private static CodeBlock listOrMapCollectionExpr(
+      boolean isList,
+      String src,
+      boolean isModel,
+      boolean isContentErrable,
+      Optional<ModelRootInfo> modelRootInfo,
+      CodeGenUtility util) {
+    if (!isModel) {
+      return CodeBlock.of("$T.copyOf($L)", isList ? ImmutableList.class : ImmutableMap.class, src);
+    }
+    ClassName immutType = util.getImmutInterfaceName(modelRootInfo.get().element());
+    CodeBlock elementConversion =
+        isContentErrable
+            ? CodeBlock.of(
+                "_e -> _e == null || _e.value() == null ? $T.nil() : $T.withValue(($T) _e.value()._build())",
+                Errable.class,
+                Errable.class,
+                immutType)
+            : CodeBlock.of("_e -> ($T) _e._build()", immutType);
+    return isList
+        ? CodeBlock.of(
+            "$T.copyOf($T.transform($L, $L))",
+            ImmutableList.class,
+            Lists.class,
+            src,
+            elementConversion)
+        : CodeBlock.of(
+            "$T.copyOf($T.transformValues($L, $L))",
+            ImmutableMap.class,
+            Maps.class,
+            src,
+            elementConversion);
   }
 
   public static MethodSpec copyCtor(TypeElement modelRootType, CodeGenUtility util) {
@@ -1209,10 +1238,17 @@ this.$L = $L == null
     ModelFieldTypeInfo modelFieldType = util.getModelFieldType(method, true, null);
     Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(specifiedReturnType, method);
     String fieldName = method.getSimpleName().toString();
+    boolean isContentErrable = util.isContentErrable(specifiedReturnType);
     TypeName actualReturnType =
         isBuilder
                 && fieldModelRootInfo.isPresent()
                 && !util.isEnumModel(fieldModelRootInfo.get().element())
+                && !isContentErrable
+                // Errable<List<Model>>/Errable<Map<K,Model>> (whole-field wrapping) can't
+                // covariantly narrow to UnmodifiableModelsList/Map either, since Errable<> is
+                // invariant in its type parameter - see BaseProtoModelsGen#getterMethod for the
+                // analogous note.
+                && !util.isErrable(specifiedReturnType)
             ? switch (modelFieldType.containerType()) {
               case NO_CONTAINER, RANGE -> TypeName.get(specifiedReturnType);
               case LIST ->
@@ -1260,6 +1296,7 @@ this.$L = $L == null
               fieldName,
               fieldModelRootInfo.isPresent()
                       && !util.isEnumModel(fieldModelRootInfo.get().element())
+                      && !isContentErrable
                       && LIST.equals(fieldModelRootInfo.get().containerType())
                   ? CodeBlock.of(
                       "$T.<$T, $T>empty().asModelsView()",
@@ -1268,6 +1305,7 @@ this.$L = $L == null
                       util.getImmutTypeName(fieldModelRootInfo.get().type(), modelProtocol))
                   : fieldModelRootInfo.isPresent()
                           && !util.isEnumModel(fieldModelRootInfo.get().element())
+                          && !isContentErrable
                           && MAP.equals(fieldModelRootInfo.get().containerType())
                       ? CodeBlock.of(
                           "$T.<$T, $T, $T>empty().asModelsView()",
@@ -1331,13 +1369,22 @@ this.$L = $L == null
     Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(returnType, method);
     if (isBuilder
         && fieldModelRootInfo.isPresent()
-        && !util.isEnumModel(fieldModelRootInfo.get().element())) {
+        && !util.isEnumModel(fieldModelRootInfo.get().element())
+        && !util.isContentErrable(returnType)
+        // Whole-field Errable<Model>/Errable<List<Model>>/Errable<Map<K,Model>> fields keep the
+        // field typed exactly as Errable<Model> (see getModelFieldType) - it can only ever hold
+        // an already-built Model, never a Builder (Builder doesn't implement the raw Model
+        // interface), so the field can be returned/copied as-is with no Builder/Immut check.
+        && !util.isErrable(returnType)) {
+      ClassName fieldBuilderClass =
+          util.getImmutInterfaceName(fieldModelRootInfo.get().element()).nestedClass("Builder");
+      ClassName fieldImmutClass = util.getImmutInterfaceName(fieldModelRootInfo.get().element());
       fieldAccessorCode =
           switch (fieldModelRootInfo.get().containerType()) {
             case NO_CONTAINER ->
                 // If field builder extends model root, we can return the builder as is.
-                // If field builder does not extend model root, we have to convert it into the model
-                // root by calling build.
+                // Otherwise, we have to convert the (possibly builder-typed) field into the immut
+                // model root by calling build.
                 fieldModelRootInfo.get().annotation().builderExtendsModelRoot()
                     ? CodeBlock.of("$L", fieldName)
                     : CodeBlock.of(
@@ -1347,10 +1394,9 @@ this.$L = $L == null
                           : $L instanceof $T _immutModel ? _immutModel : null
                         """,
                         fieldName,
-                        util.getImmutInterfaceName(fieldModelRootInfo.get().element())
-                            .nestedClass("Builder"),
+                        fieldBuilderClass,
                         fieldName,
-                        util.getImmutInterfaceName(fieldModelRootInfo.get().element()));
+                        fieldImmutClass);
             case LIST, MAP -> CodeBlock.of("$L.unmodifiableModelsView()", fieldName);
             case RANGE -> CodeBlock.of("$L", fieldName);
           };
@@ -1388,7 +1434,8 @@ this.$L = $L == null
         // Errable builder fields default to Errable.nil() (never null).
         fieldBuilder.initializer("$T.nil()", Errable.class);
       } else if (fieldModelRootInfo.isPresent()
-          && !util.isEnumModel(fieldModelRootInfo.get().element())) {
+          && !util.isEnumModel(fieldModelRootInfo.get().element())
+          && !util.isContentErrable(methodReturnType)) {
         if (LIST.equals(containerType)) {
           fieldBuilder.initializer("$T.empty()", ModelsListBuilder.class);
         } else if (MAP.equals(fieldModelRootInfo.get().containerType())) {
@@ -1515,6 +1562,7 @@ this.$L = $L == null
       if (fieldModelRootInfo.isPresent()
           && !fieldModelRootInfo.get().annotation().builderExtendsModelRoot()
           && !util.isEnumModel(fieldModelRootInfo.get().element())
+          && !util.isErrable(method.getReturnType())
           && NO_CONTAINER.equals(fieldModelRootInfo.get().containerType())) {
         builderCopyMethodBuilder.addCode(
 """
@@ -1531,8 +1579,11 @@ this.$L = $L == null
             util.getImmutInterfaceName(fieldModelRootInfo.get().element()),
             fieldName);
       } else {
+        // getFieldAccessorExpression() already produces a complete expression referencing the
+        // field (a bare field name for the simple case, or a larger expression built around it
+        // for e.g. whole-Errable model fields) - it must not be wrapped in `this.(...)`.
         builderCopyMethodBuilder.addStatement(
-            "_copy.$L(this.$L)",
+            "_copy.$L($L)",
             fieldName,
             getFieldAccessorExpression(true, fieldName, method.getReturnType(), method, util));
       }
@@ -1555,34 +1606,38 @@ this.$L = $L == null
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType(), method);
       CodeBlock standardSetterBody;
       if (util.isErrable(method.getReturnType())) {
-        // Standard setter takes @Nullable T and wraps it in Errable.withValue().
+        // Setter parameter is already Errable<T> (per util.getVariableType); null -> Errable.nil().
         standardSetterBody =
-            CodeBlock.of("this.$L = $T.withValue($L);", methodName, Errable.class, methodName);
+            CodeBlock.of(
+                "this.$L = $L == null ? $T.nil() : $L;",
+                methodName,
+                methodName,
+                Errable.class,
+                methodName);
       } else {
-        standardSetterBody =
+        boolean useModelsBuilderCollection =
             fieldModelRootInfo
-                .filter(info -> !util.isEnumModel(info.element()))
-                .map(ModelRootInfo::containerType)
-                .map(
-                    containerType ->
-                        switch (containerType) {
-                          case NO_CONTAINER, RANGE -> null;
-                          case LIST, MAP ->
-                              CodeBlock.of(
-                                  """
-                                      this.$L.clear();
-                                      if ($L == null) {
-                                          return this;
-                                      }
-                                      this.$L.$LAllModels($L);
-                                  """,
-                                  methodName,
-                                  methodName,
-                                  methodName,
-                                  LIST.equals(containerType) ? "add" : "put",
-                                  methodName);
-                        })
-                .orElse(CodeBlock.of("this.$L = $L;", methodName, methodName));
+                    .filter(info -> !util.isEnumModel(info.element()))
+                    .map(ModelRootInfo::containerType)
+                    .map(ContainerType::isContainer)
+                    .orElse(false)
+                && !util.isContentErrable(method.getReturnType());
+        standardSetterBody =
+            useModelsBuilderCollection
+                ? CodeBlock.of(
+                    """
+                        this.$L.clear();
+                        if ($L == null) {
+                            return this;
+                        }
+                        this.$L.$LAllModels($L);
+                    """,
+                    methodName,
+                    methodName,
+                    methodName,
+                    LIST.equals(fieldModelRootInfo.get().containerType()) ? "add" : "put",
+                    methodName)
+                : CodeBlock.of("this.$L = $L;", methodName, methodName);
       }
       dataAccessMethods.add(
           MethodSpec.methodBuilder(methodName)
@@ -1599,7 +1654,11 @@ this.$L = $L == null
       if (fieldModelRoot.isPresent()
           && !fieldModelRoot.get().annotation().builderExtendsModelRoot()
           && !util.isEnumModel(fieldModelRoot.get().element())
-          && NO_CONTAINER.equals(fieldModelRoot.get().containerType())) {
+          && NO_CONTAINER.equals(fieldModelRoot.get().containerType())
+          // Whole-field Errable<Model> fields only get the single Errable-accepting setter above
+          // (matching the field's Errable<Model>-typed representation - a raw Model-builder value
+          // can't be stored in it since Builder doesn't implement the raw Model interface).
+          && !util.isErrable(method.getReturnType())) {
         ClassName fieldBuilderType =
             util.getImmutInterfaceName(fieldModelRoot.get().element()).nestedClass("Builder");
         dataAccessMethods.add(
@@ -1612,26 +1671,6 @@ this.$L = $L == null
                 .addStatement("return this")
                 .build());
       }
-      // For Errable<T> fields: add the Errable<T> setter (stores the errable directly,
-      // including Failure state). This is the "additional" setter from the builder interface.
-      if (util.isErrable(method.getReturnType())) {
-        dataAccessMethods.add(
-            MethodSpec.methodBuilder(methodName)
-                .addJavadoc("@see $T#$L", codeGenContext.modelRootType(), methodName)
-                .addModifiers(PUBLIC)
-                .addParameter(TypeName.get(method.getReturnType()), methodName)
-                .addAnnotation(Override.class)
-                .returns(builderType)
-                .addStatement(
-                    "this.$L = $L == null ? $T.nil() : $L",
-                    methodName,
-                    methodName,
-                    Errable.class,
-                    methodName)
-                .addStatement("return this")
-                .build());
-      }
-
       if (modelRoot.builderExtendsModelRoot()
           || (fieldModelRoot.isPresent()
               && !util.isEnumModel(fieldModelRoot.get().element())

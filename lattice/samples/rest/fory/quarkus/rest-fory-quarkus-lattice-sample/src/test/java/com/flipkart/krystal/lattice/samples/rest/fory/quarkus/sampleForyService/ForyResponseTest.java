@@ -140,7 +140,7 @@ class ForyResponseTest {
         ForyResponse_ImmutFory._builder()
             .message("errable-test")
             .mandatoryInt(1)
-            .errableNote("hello fory errable")
+            .errableNote(Errable.withValue("hello fory errable"))
             ._build();
 
     assertThat(original.errableNote()).isEqualTo(Errable.withValue("hello fory errable"));
@@ -207,7 +207,7 @@ class ForyResponseTest {
         ForyResponse_ImmutPojo._builder()
             .message("pojo-errable")
             .mandatoryInt(6)
-            .errableNote("pojo value")
+            .errableNote(Errable.withValue("pojo value"))
             ._build();
 
     assertThat(built.errableNote()).isEqualTo(Errable.withValue("pojo value"));
@@ -221,5 +221,79 @@ class ForyResponseTest {
 
     assertThat(built.errableNote()).isEqualTo(Errable.nil());
     assertThat(built).isEqualTo(built._newCopy()._build());
+  }
+
+  @Test
+  void errableModelField_withValue_serdeAndNewCopy() throws Exception {
+    ForyResponse_ImmutFory original =
+        ForyResponse_ImmutFory._builder()
+            .message("errable-model")
+            .mandatoryInt(8)
+            .errableInnerData(
+                Errable.withValue(
+                    ForyInnerData_ImmutFory._builder().value("inner").count(1)._build()))
+            ._build();
+
+    assertThat(original.errableInnerData().value().value()).isEqualTo("inner");
+    assertThat(original._newCopy()._build().errableInnerData())
+        .isEqualTo(original.errableInnerData());
+
+    byte[] bytes = original._serialize().readAllBytes();
+    ForyResponse_ImmutFory deserialized = new ForyResponse_ImmutFory(bytes);
+    assertThat(deserialized.errableInnerData().value().value()).isEqualTo("inner");
+    assertThat(deserialized.errableInnerData().value().count()).isEqualTo(1);
+  }
+
+  @Test
+  void errableModelField_nil_serdeAndNewCopy() throws Exception {
+    ForyResponse_ImmutFory original =
+        ForyResponse_ImmutFory._builder().message("errable-model-nil").mandatoryInt(9)._build();
+
+    assertThat(original.errableInnerData()).isEqualTo(Errable.nil());
+    assertThat(original._newCopy()._build().errableInnerData()).isEqualTo(Errable.nil());
+
+    byte[] bytes = original._serialize().readAllBytes();
+    ForyResponse_ImmutFory deserialized = new ForyResponse_ImmutFory(bytes);
+    assertThat(deserialized.errableInnerData()).isEqualTo(Errable.nil());
+  }
+
+  @Test
+  void errableListOfErrableModel_withValues_serdeAndNewCopy() throws Exception {
+    ForyResponse_ImmutFory original =
+        ForyResponse_ImmutFory._builder()
+            .message("errable-list")
+            .mandatoryInt(10)
+            .nestedDataErrableList(
+                Errable.withValue(
+                    List.of(
+                        Errable.withValue(
+                            ForyInnerData_ImmutFory._builder().value("A").count(1)._build()),
+                        Errable.nil())))
+            ._build();
+
+    assertThat(original.nestedDataErrableList().value()).hasSize(2);
+    assertThat(original.nestedDataErrableList().value().get(0).value().value()).isEqualTo("A");
+    assertThat(original.nestedDataErrableList().value().get(1)).isEqualTo(Errable.nil());
+    assertThat(original._newCopy()._build().nestedDataErrableList())
+        .isEqualTo(original.nestedDataErrableList());
+
+    byte[] bytes = original._serialize().readAllBytes();
+    ForyResponse_ImmutFory deserialized = new ForyResponse_ImmutFory(bytes);
+    assertThat(deserialized.nestedDataErrableList().value().get(0).value().count()).isEqualTo(1);
+  }
+
+  @Test
+  void errablePojoModelField_withValue_newCopyRoundTrip() {
+    ForyResponse_ImmutPojo built =
+        ForyResponse_ImmutPojo._builder()
+            .message("errable-model-pojo")
+            .mandatoryInt(11)
+            .errableInnerData(
+                Errable.withValue(
+                    ForyInnerData_ImmutPojo._builder().value("inner").count(2)._build()))
+            ._build();
+
+    assertThat(built).isEqualTo(built._newCopy()._build());
+    assertThat(built.errableInnerData().value().count()).isEqualTo(2);
   }
 }
