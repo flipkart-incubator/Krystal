@@ -108,8 +108,8 @@ public class GraphQLUtils {
   }
 
   /**
-   * Returns true if any of the given field names are queried (by response key/alias OR by actual
-   * field name), allowing correct detection even when a field is requested under an alias.
+   * Returns true if any of the given field names are queried (by actual field name), allowing
+   * correct detection even when a field is requested under an alias.
    */
   public static boolean isAnyFieldQueried(
       Set<String> fieldNames, ExecutionStrategyParameters params) {

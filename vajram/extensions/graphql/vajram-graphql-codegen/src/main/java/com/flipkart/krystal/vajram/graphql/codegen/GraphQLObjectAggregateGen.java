@@ -656,13 +656,15 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                   for (int _i = 0; _i < _$fieldName:L_aliases.size(); _i++) {
                     $string:T _alias = _$fieldName:L_aliases.get(_i);
                     $errable:T<$idListType:T> _idsErrable = $idFetcherFacet:L.requestResponsePairs().get(_i).response();
-                    if (_idsErrable.valueOpt().isPresent()) {
-                      int _count = _idsErrable.valueOpt().get().size();
+                    if (_idsErrable.value() == null) {
+                      _builder.addField(_alias, new $listValue:T(_idsErrable, true));
+                    } else {
+                      int _count = _ids.valueOpt().get().size();
                       $list:T<$singleValue:T> _items = new $arrayList:T<>();
                       for (int _j = _$fieldName:L_offset; _j < _$fieldName:L_offset + _count; _j++) {
-                        $fieldName:L.requestResponsePairs().get(_j).response().handle(
-                            _f -> _items.add(new $objectValue:T(_f.cast(), true)),
-                            _v -> _items.add(new $objectValue:T(_v, true)));
+                        _items.add(
+                            new $objectValue:T(
+                                $fieldName:L.requestResponsePairs().get(_j).response(), true));
                       }
                       _builder.addField(_alias, new $listValue:T(_items, true));
                       _$fieldName:L_offset += _count;
@@ -685,11 +687,10 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
               builder.addNamedCode(
                   """
                   $list:T<$string:T> _$fieldName:L_aliases = _fieldNameToAliases.getOrDefault($fieldName:S, $list:T.of());
-                  for (int _i = 0; _i < _$fieldName:L_aliases.size() && _i < $fieldName:L.requestResponsePairs().size(); _i++) {
-                    $string:T _alias = _$fieldName:L_aliases.get(_i);
-                    $fieldName:L.requestResponsePairs().get(_i).response().handle(
-                        _failure -> _builder.addField(_alias, new $objectValue:T(_failure.cast(), true)),
-                        _val -> _builder.addField(_alias, new $objectValue:T(_val, true)));
+                  for (int _i = 0; _i < _$fieldName:L_aliases.size(); _i++) {
+                    _builder.addField(
+                        _$fieldName:L_aliases.get(_i),
+                        new $objectValue:T($fieldName:L.requestResponsePairs().get(_i).response(), true));
                   }
                   """,
                   Map.ofEntries(

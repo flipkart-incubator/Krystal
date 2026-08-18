@@ -2,7 +2,7 @@ package com.flipkart.krystal.krystex.caching;
 
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.core.VajramID.vajramID;
-import static com.flipkart.krystal.data.Errable.computeErrableFrom;
+import static com.flipkart.krystal.data.Errable.errableFrom;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy.BATCH;
@@ -205,8 +205,7 @@ class RequestLevelCacheTest {
                     .forEach(
                         executionItem ->
                             linkFutures(
-                                computeErrableFrom(logic)
-                                    .apply(executionItem.facetValues())
+                                errableFrom(() -> logic.apply(executionItem.facetValues()))
                                     .toFuture(),
                                 executionItem.response())),
             emptyTags());

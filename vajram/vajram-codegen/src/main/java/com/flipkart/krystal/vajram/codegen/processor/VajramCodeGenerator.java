@@ -68,6 +68,7 @@ import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FacetValuesBuilder;
 import com.flipkart.krystal.data.FacetValuesContainer;
+import com.flipkart.krystal.data.Failure;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
@@ -1967,14 +1968,12 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                 "Resolver method that returns a request builder object must resolve multiple dependency inputs. Otherwise this can lead to unnecessary creation of request builder objects.",
                 resolverMethod);
           }
+          methodCodeBuilder.add("$L.ifPresent(_r -> {", RESOLVER_RESULT);
           for (String depInputName : resolvedDepInputNames) {
             methodCodeBuilder.addStatement(
-                "$L.ifPresent(_r -> $L.$L(_r.$L()))",
-                RESOLVER_RESULT,
-                RESOLVER_REQUEST,
-                depInputName,
-                depInputName);
+                "$L.$L(_r.$L())", RESOLVER_REQUEST, depInputName, depInputName);
           }
+          methodCodeBuilder.add("});");
         } else {
           if (resolvedDepInputNames.size() != 1) {
             util.error(
@@ -2000,7 +1999,9 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
         methodCodeBuilder.addStatement(
             "var $L = new $T()",
             RESOLVER_REQUESTS,
-            ParameterizedTypeName.get(ClassName.get(ArrayList.class), requestBuilderType));
+            ParameterizedTypeName.get(
+                ClassName.get(ArrayList.class),
+                ParameterizedTypeName.get(ClassName.get(Errable.class), requestBuilderType)));
         if (util.isRawAssignable(actualReturnType, ImmutableRequest.Builder.class)) {
           if (declaredDepInputNames.length == 1) {
             util.error(
@@ -2013,17 +2014,31 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
               resolverMethod);
         }
         methodCodeBuilder.beginControlFlow(
-            "for($T $L: $L.values())", actualReturnType, RESOLVER_RESULT, RESOLVER_RESULTS);
+            "for(var $L: $L.errables())", RESOLVER_RESULT, RESOLVER_RESULTS);
+        methodCodeBuilder.add(
+"""
+            if($L instanceof $T _failure){
+              $L.add(_failure);
+              continue;
+            }
+""",
+            RESOLVER_RESULT,
+            Failure.class,
+            RESOLVER_REQUESTS);
         if (util.isRawAssignable(actualReturnType, ImmutableRequest.Builder.class)) {
           /*
            * TODO: Add validation that this vajram request is of the same type as the
            *      request of the dependency Vajram
            */
-          methodCodeBuilder.add("$L.add($L._newCopy()", RESOLVER_REQUESTS, RESOLVER_REQUEST);
+          methodCodeBuilder.add(
+              "$L.add($T.withValue($L._newCopy()",
+              RESOLVER_REQUESTS,
+              Errable.class,
+              RESOLVER_REQUEST);
           for (String depFacetName : resolvedDepInputNames) {
             methodCodeBuilder.add(".$L($L.$L())", depFacetName, RESOLVER_RESULT, depFacetName);
           }
-          methodCodeBuilder.add(");");
+          methodCodeBuilder.add("));");
         } else {
           // TODO : Add validation for the type parameter of the MultiExecute to match the
           //        type of the input being resolved
@@ -2080,16 +2095,8 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
       methodCodeBuilder.endControlFlow();
     }
 
-    if (fanoutResolver) {
-      methodCodeBuilder.addStatement(
-          "return $T.executeWithRequests($T.copyOf($L))",
-          ResolverCommand.class,
-          ImmutableList.class,
-          RESOLVER_REQUESTS);
-    } else {
-      methodCodeBuilder.addStatement(
-          "return $T.executeWithRequests($L)", ResolverCommand.class, RESOLVER_REQUESTS);
-    }
+    methodCodeBuilder.addStatement(
+        "return $T.executeWithRequests($L)", ResolverCommand.class, RESOLVER_REQUESTS);
     if (resolverReturnedDepCommand) {
       // close the else block of "if($L.shouldSkip())"
       methodCodeBuilder.endControlFlow();
