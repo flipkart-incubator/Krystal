@@ -6,6 +6,7 @@ import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.FlushCommand;
+import com.flipkart.krystal.krystex.decoration.FlushableDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyInvocation;
@@ -109,17 +110,19 @@ abstract sealed class AbstractKryon<
     Iterable<OutputLogicDecorator> reverseSortedDecorators =
         getSortedOutputLogicDecorators(dependentChain)::descendingIterator;
     for (OutputLogicDecorator decorator : reverseSortedDecorators) {
-      try {
-        decorator.executeCommand(new FlushCommand(dependentChain));
-      } catch (Throwable e) {
-        log.error(
-            """
-                Error while flushing decorator: {}. \
-                This is most probably a bug since decorator methods are not supposed to throw exceptions. \
-                This can cause unpredictable behaviour in the krystal graph execution. \
-                Please fix!""",
-            decorator,
-            e);
+      if (decorator instanceof FlushableDecorator flushableDecorator) {
+        try {
+          flushableDecorator.flushDecorator(new FlushCommand(dependentChain));
+        } catch (Throwable e) {
+          log.error(
+              """
+                  Error while flushing decorator: {}. \
+                  This is most probably a bug since decorator methods are not supposed to throw exceptions. \
+                  This can cause unpredictable behaviour in the krystal graph execution. \
+                  Please fix!""",
+              decorator,
+              e);
+        }
       }
     }
   }

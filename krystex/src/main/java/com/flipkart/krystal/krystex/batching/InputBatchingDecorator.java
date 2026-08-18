@@ -9,8 +9,9 @@ import com.flipkart.krystal.core.OutputLogicExecutionInput;
 import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
-import com.flipkart.krystal.krystex.decoration.DecoratorCommand;
 import com.flipkart.krystal.krystex.decoration.FlushCommand;
+import com.flipkart.krystal.krystex.decoration.FlushableDecorator;
+import com.flipkart.krystal.krystex.decoration.InitiableWithActiveDepChains;
 import com.flipkart.krystal.krystex.decoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
@@ -25,7 +26,8 @@ import java.util.Set;
 import java.util.function.Predicate;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
-public final class InputBatchingDecorator implements OutputLogicDecorator {
+public final class InputBatchingDecorator
+    implements OutputLogicDecorator, FlushableDecorator, InitiableWithActiveDepChains {
 
   public static final String DECORATOR_TYPE = InputBatchingDecorator.class.getName();
 
@@ -75,9 +77,17 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
   }
 
   @Override
-  public void executeCommand(DecoratorCommand logicDecoratorCommand) {
-    if (activeDependantChains == null
-        && logicDecoratorCommand instanceof InitiateActiveDepChains initiateActiveDepChains) {
+  public void flushDecorator(FlushCommand flushCommand) {
+    dependantChainsToFlush.remove(flushCommand.dependantsChain());
+    if (dependantChainsToFlush.isEmpty()) {
+      inputBatcher.batch();
+      dependantChainsToFlush.addAll(activeDependantChains());
+    }
+  }
+
+  @Override
+  public void initiateActiveDepChains(InitiateActiveDepChains initiateActiveDepChains) {
+    if (activeDependantChains == null) {
       Set<DependentChain> allActiveDepChains = initiateActiveDepChains.dependentChains();
       Set<DependentChain> builder = new LinkedHashSet<>(allActiveDepChains.size());
       // Retain only the ones which are applicable for this input batching decorator
@@ -88,12 +98,6 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
       }
       this.activeDependantChains = unmodifiableSet(builder);
       this.dependantChainsToFlush.addAll(this.activeDependantChains);
-    } else if (logicDecoratorCommand instanceof FlushCommand flushCommand) {
-      dependantChainsToFlush.remove(flushCommand.dependantsChain());
-      if (dependantChainsToFlush.isEmpty()) {
-        inputBatcher.batch();
-        dependantChainsToFlush.addAll(activeDependantChains());
-      }
     }
   }
 

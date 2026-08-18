@@ -41,6 +41,7 @@ import com.flipkart.krystal.krystex.commands.ForwardReceiveBatch;
 import com.flipkart.krystal.krystex.commands.ForwardSendBatch;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.commands.ServerSideCommand;
+import com.flipkart.krystal.krystex.decoration.InitiableWithActiveDepChains;
 import com.flipkart.krystal.krystex.decoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecoratorConfig;
@@ -64,10 +65,10 @@ import com.flipkart.krystal.traits.StaticDispatchPolicy;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -160,8 +161,7 @@ public final class VajramKryonExecutor implements KrystalExecutor {
    */
   private final Set<VajramID> directlyInvokedVajrams = new LinkedHashSet<>();
 
-  private final Map<VajramID, ImmutableSet<DependentChain>> dependentChainsPerKryon =
-      new LinkedHashMap<>();
+  private final Map<VajramID, Set<DependentChain>> dependentChainsPerKryon = new LinkedHashMap<>();
   private final RequestIdGenerator preferredReqGenerator;
   @Getter private final KrystalExecutorExecutionInfo executionInfo;
 
@@ -221,8 +221,13 @@ public final class VajramKryonExecutor implements KrystalExecutor {
                                   .apply(
                                       new OutputLogicDecoratorContext(
                                           instanceId, logicExecutionContext));
-                          logicDecorator.executeCommand(
-                              new InitiateActiveDepChains(vajramID, getDependentChains(vajramID)));
+                          if (logicDecorator
+                              instanceof
+                              InitiableWithActiveDepChains initiableWithActiveDepChains) {
+                            initiableWithActiveDepChains.initiateActiveDepChains(
+                                new InitiateActiveDepChains(
+                                    vajramID, getDependentChains(vajramID)));
+                          }
                           return logicDecorator;
                         });
             decorators.add(outputLogicDecorator);
@@ -231,35 +236,33 @@ public final class VajramKryonExecutor implements KrystalExecutor {
     return decorators;
   }
 
-  private ImmutableSet<DependentChain> getDependentChains(VajramID vajramID) {
+  private Set<DependentChain> getDependentChains(VajramID vajramID) {
     return dependentChainsPerKryon.computeIfAbsent(
         vajramID,
         _v -> {
           Set<@NonNull DependentChain> depChainsForVajram =
               krystexGraph.dependentChainsByVajram().getOrDefault(vajramID, Set.of());
-          return ImmutableSet.copyOf(
-              Sets.filter(
-                  depChainsForVajram,
-                  depChain -> {
-                    VajramID firstVajram = depChain.getFirstVajram();
-                    if (firstVajram == null) {
-                      // This means that `depChain` is a DependentChainStart
-                      // which means `vajramId` has been configured so that it can be invoked
-                      // directly - so we should consider vajramId itself as the first vajram
-                      firstVajram = vajramID;
-                    }
-                    if (!directlyInvokedVajrams.contains(firstVajram)) {
-                      // Only consider those dependent chains which start with an vajram invoked
-                      // directly
-                      return false;
-                    }
-                    for (DependentChain disabledDepChain : disabledDependentChainsForExecutor()) {
-                      if (depChain.startsWith(disabledDepChain)) {
-                        return false;
-                      }
-                    }
-                    return true;
-                  }));
+          Set<DependentChain> filtered = new HashSet<>();
+          for (DependentChain depChain : depChainsForVajram) {
+            VajramID firstVajram = depChain.getFirstVajram();
+            if (firstVajram == null) {
+              // This means that `depChain` is a DependentChainStart
+              // which means `vajramId` has been configured so that it can be invoked
+              // directly - so we should consider vajramId itself as the first vajram
+              firstVajram = vajramID;
+            }
+            if (!directlyInvokedVajrams.contains(firstVajram)) {
+              // Only consider those dependent chains which start with a vajram invoked directly
+              continue;
+            }
+            for (DependentChain disabledDepChain : disabledDependentChainsForExecutor()) {
+              if (depChain.startsWith(disabledDepChain)) {
+                continue;
+              }
+            }
+            filtered.add(depChain);
+          }
+          return unmodifiableSet(filtered);
         });
   }
 
