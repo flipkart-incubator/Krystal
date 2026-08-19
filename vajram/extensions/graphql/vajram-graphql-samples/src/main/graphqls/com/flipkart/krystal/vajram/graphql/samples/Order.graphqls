@@ -13,7 +13,8 @@ type Order @subPackage(name: "order"){
     orderItemsCount: Long! @dataFetcher(vajramId: "GetOrderSummary", subPackage: "order", multiField: true)
     orderAcceptDate: Date @dataFetcher(vajramId: "GetOrderSummary", subPackage: "order", multiField: true)
     dummy(name: String): Dummy @idFetcher(vajramId: "GetDummyIdForOrder", subPackage: "order")
-    dummies(filter: Boolean, preferredType: String, count: Int): [Dummy!]! @idFetcher(vajramId: "GetDummyIds", subPackage: "order")
+    dummies(filter: Boolean, preferredType: String, count: Int): [Dummy!]! @idFetcher(vajramId: "GetDummyIdsWithArgs", subPackage: "order")
+    noArgDummies: [Dummy!]! @idFetcher(vajramId: "GetDummyIds", subPackage: "order")
     hello: Hello @inferIdFromParent
     deprecatedHello: Hello @inferIdFromParent
     recommendedOrders: [Order]

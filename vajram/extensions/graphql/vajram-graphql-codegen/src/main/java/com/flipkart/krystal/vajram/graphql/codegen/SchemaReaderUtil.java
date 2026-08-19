@@ -519,6 +519,8 @@ public class SchemaReaderUtil {
       Map<GraphQlFieldSpec, Fetcher> fieldToFetcherMap = new HashMap<>();
       /* This is storing field to reference type aggregator map */
       Map<GraphQlFieldSpec, ClassName> fieldToTypeAggregator = new HashMap<>();
+      /* Two fields cannot use the same idFetcher vajramId within the same GraphQL type */
+      Map<ClassName, FieldDefinition> idFetcherClassNameToField = new HashMap<>();
 
       for (FieldDefinition fieldDefinition : objectTypeDefinition.getFieldDefinitions()) {
         Type<?> fieldDefinitionType = fieldDefinition.getType();
@@ -541,11 +543,23 @@ public class SchemaReaderUtil {
                   multiField ? MULTI_FIELD_DATA_FETCHER : SINGLE_FIELD_DATA_FETCHER));
         } else if (fieldDefinition.hasDirective(Directives.ID_FETCHER)
             && hasObjectId(typeDefinitionRegistry, fieldTypeDefinition)) {
+          ClassName idFetcherClassName = getIdFetcherClassName(fieldDefinition, rootPackageName);
+          FieldDefinition existingField =
+              idFetcherClassNameToField.putIfAbsent(idFetcherClassName, fieldDefinition);
+          if (existingField != null) {
+            throw new IllegalStateException(
+                "GraphQL type '%s' has fields '%s' and '%s' both using the same @%s vajramId '%s'. "
+                        .formatted(
+                            parentType.value(),
+                            existingField.getName(),
+                            fieldDefinition.getName(),
+                            Directives.ID_FETCHER,
+                            idFetcherClassName.simpleName())
+                    + "A given idFetcher vajramId can only be used by one field per type.");
+          }
           fieldToFetcherMap.put(
               fieldSpecFromField(fieldDefinition, "", parentType),
-              new VajramFetcher(
-                  getIdFetcherClassName(fieldDefinition, rootPackageName),
-                  GraphQlFetcherType.ID_FETCHER));
+              new VajramFetcher(idFetcherClassName, GraphQlFetcherType.ID_FETCHER));
           addAggregator(
               fieldDefinition,
               fieldTypeDefinition,

@@ -3,6 +3,8 @@ package com.flipkart.krystal.vajram.graphql.api.model;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.requireNonNull;
 
+import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.Failure;
 import com.flipkart.krystal.vajram.graphql.api.errors.DefaultGraphQLErrorInfo;
 import com.flipkart.krystal.vajram.graphql.api.errors.ErrorCollector;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlValue.ListValue;
@@ -78,17 +80,21 @@ public sealed class GraphQlObjectImpl implements GraphQlObject permits GraphQlOp
             .ifPresent(graphQlObjectMap -> graphQlObjectMap._collectErrors(errorCollector, path));
       }
     } else if (graphQlValue instanceof ListValue listValue) {
-      listValue
-          .errable()
-          .valueOpt()
-          .ifPresent(
-              singleValues -> {
-                for (int i = 0; i < singleValues.size(); i++) {
-                  List<Object> newPathWithIndex = new ArrayList<>(path);
-                  newPathWithIndex.add(i);
-                  _collectErrors(singleValues.get(i), errorCollector, newPathWithIndex);
-                }
-              });
+      Errable<List<SingleValue>> listErrable = listValue.errable();
+      if (listErrable instanceof Failure failure) {
+        errorCollector.addError(new DefaultGraphQLErrorInfo(path, failure.error()));
+      } else {
+        listErrable
+            .valueOpt()
+            .ifPresent(
+                singleValues -> {
+                  for (int i = 0; i < singleValues.size(); i++) {
+                    List<Object> newPathWithIndex = new ArrayList<>(path);
+                    newPathWithIndex.add(i);
+                    _collectErrors(singleValues.get(i), errorCollector, newPathWithIndex);
+                  }
+                });
+      }
     }
   }
 

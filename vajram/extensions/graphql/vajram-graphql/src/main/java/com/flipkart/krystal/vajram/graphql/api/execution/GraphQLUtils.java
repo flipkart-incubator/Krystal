@@ -123,7 +123,10 @@ public class GraphQLUtils {
     return false;
   }
 
-  /** Returns the merged field for a GraphQL field name, irrespective of its response-key alias. */
+  /**
+   * Returns the merged field for a GraphQL field name, irrespective of its response-key alias. Use
+   * this only when the exact alias and the args past to the field with that alias does not matter.
+   */
   public static @Nullable MergedField getSubFieldByName(
       String fieldName, ExecutionStrategyParameters params) {
     for (MergedField subField : params.getFields().getSubFields().values()) {

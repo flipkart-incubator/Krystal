@@ -11,10 +11,16 @@ import com.flipkart.krystal.vajram.graphql.samples.dummy.Dummy_Id_ImmutGQlResp;
 import java.util.List;
 
 @Vajram
-public abstract class GetDummyIds extends ComputeVajramDef<List<Dummy_Id>> {
+public abstract class GetDummyIdsWithArgs extends ComputeVajramDef<List<Dummy_Id>> {
   interface _Inputs {
     @IfAbsent(FAIL)
     Order_Id id();
+
+    boolean filter();
+
+    String preferredType();
+
+    int count();
   }
 
   @Output

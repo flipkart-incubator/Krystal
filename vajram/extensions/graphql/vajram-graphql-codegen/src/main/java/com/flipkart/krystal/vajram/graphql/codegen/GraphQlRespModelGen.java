@@ -470,7 +470,7 @@ final class GraphQlRespModelGen implements CodeGenerator {
             util.getImmutInterfaceName(fieldModelRoot.get().element()));
       } else {
         // Call the getter method (fieldName()) rather than the field (fieldName) to get the
-        // declared return type (exact), not the wildcarded field type.
+        // declared return type (exact), not the wildcard field type.
         asBuilderMethodBuilder.addCode(".$L($L())", fieldName, fieldName);
       }
     }
@@ -487,13 +487,11 @@ final class GraphQlRespModelGen implements CodeGenerator {
               .addModifiers(PUBLIC)
               .returns(TypeName.get(method.getReturnType()));
 
-      if (methodName.startsWith(RESERVED_GRAPHQL_FIELDS_PREFIX)) {
-        classBuilder.addMethod(getter.addStatement("return $L", methodName).build());
-        continue;
-      }
-
-      // Extract actual values from Errable fields (fields are always non-null and final)
       TypeMirror methodReturnType = method.getReturnType();
+      if (methodName.startsWith(RESERVED_GRAPHQL_FIELDS_PREFIX)) {
+        getter.addStatement("return $L", methodName);
+      } else
+      // Extract actual values from Errable fields (fields are always non-null and final)
       if (util.isErrable(methodReturnType)) {
         // Method declares Errable<T>: the stored field IS Errable<? extends T>, return it directly.
         getter
@@ -502,10 +500,7 @@ final class GraphQlRespModelGen implements CodeGenerator {
                     .addMember("value", "$S", "unchecked")
                     .build())
             .addStatement("return ($T) $L", TypeName.get(methodReturnType), methodName);
-        classBuilder.addMethod(getter.build());
-        continue;
-      }
-      if (util.isListType(methodReturnType)) {
+      } else if (util.isListType(methodReturnType)) {
         // For lists with nested Errable, unwrap both levels using for loop
         // Field is Errable<List<Errable<T_Immut>>>, getter returns List<T> or List<Errable<T>>
         TypeMirror elementType = requireNonNull(getListElementType(methodReturnType));
@@ -517,26 +512,7 @@ final class GraphQlRespModelGen implements CodeGenerator {
         TypeName elementTypeName = TypeName.get(elementType); // declared type (result list element)
 
         // Determine the actual type stored in the field (with _Immut for custom models)
-        TypeName fieldElementTypeName;
-        if (util.isModelRoot(effectiveElementType, method)
-            && !isEntityIdType(effectiveElementType, util)) {
-          // For custom model types (but NOT entity IDs), field uses _Immut suffix
-          TypeElement elementTypeElement =
-              (TypeElement)
-                  requireNonNull(
-                      util.processingEnv().getTypeUtils().asElement(effectiveElementType));
-          String packageName =
-              util.processingEnv()
-                  .getElementUtils()
-                  .getPackageOf(elementTypeElement)
-                  .getQualifiedName()
-                  .toString();
-          String simpleName = elementTypeElement.getSimpleName() + "_Immut";
-          fieldElementTypeName = ClassName.get(packageName, simpleName);
-        } else {
-          // For standard types, entity IDs, use effectiveElementType (not the declared Errable<T>)
-          fieldElementTypeName = TypeName.get(effectiveElementType);
-        }
+        TypeName fieldElementTypeName = TypeName.get(effectiveElementType);
 
         getter.addStatement(
             "$T<? extends $T> listOpt = $L.valueOpt().orElse(null)",
@@ -546,27 +522,7 @@ final class GraphQlRespModelGen implements CodeGenerator {
             methodName);
         // Three branches: model root (needs _Immut cast), Errable elements (keep as Errable),
         // standard scalars (unwrap via valueOpt)
-        if (util.isModelRoot(effectiveElementType, method)
-            && !isEntityIdType(effectiveElementType, util)) {
-          getter.addCode(
-              """
-              if (listOpt != null) {
-                $T<$T> result = new $T<>(listOpt.size());
-                for ($T e : listOpt) {
-                  result.add(($T) e.valueOpt().orElse(null));
-                }
-                return result;
-              }
-              return $T.of();
-              """,
-              List.class,
-              elementTypeName,
-              ArrayList.class,
-              ParameterizedTypeName.get(
-                  ClassName.get(Errable.class), WildcardTypeName.subtypeOf(fieldElementTypeName)),
-              elementTypeName,
-              List.class);
-        } else if (elementIsErrable) {
+        if (elementIsErrable) {
           // Declared element type is Errable<T>: stored as Errable<? extends T>, cast directly.
           getter
               .addAnnotation(
@@ -592,6 +548,26 @@ final class GraphQlRespModelGen implements CodeGenerator {
                       WildcardTypeName.subtypeOf(fieldElementTypeName)),
                   elementTypeName,
                   List.class);
+        } else if (util.isModelRoot(effectiveElementType, method)
+            && !isEntityIdType(effectiveElementType, util)) {
+          getter.addCode(
+              """
+              if (listOpt != null) {
+                $T<$T> result = new $T<>(listOpt.size());
+                for ($T e : listOpt) {
+                  result.add(($T) e.valueOpt().orElse(null));
+                }
+                return result;
+              }
+              return $T.of();
+              """,
+              List.class,
+              elementTypeName,
+              ArrayList.class,
+              ParameterizedTypeName.get(
+                  ClassName.get(Errable.class), WildcardTypeName.subtypeOf(fieldElementTypeName)),
+              elementTypeName,
+              List.class);
         } else {
           getter.addCode(
               """
@@ -617,11 +593,9 @@ final class GraphQlRespModelGen implements CodeGenerator {
             "return $L.valueOpt().orElse($L)",
             methodName,
             getPrimitiveDefault(method.getReturnType()));
-      } else {
-        // For reference types, return null if no value
+      } else { // For reference types, return null if no value
         getter.addStatement("return $L.valueOpt().orElse(null)", methodName);
       }
-
       classBuilder.addMethod(getter.build());
     }
   }

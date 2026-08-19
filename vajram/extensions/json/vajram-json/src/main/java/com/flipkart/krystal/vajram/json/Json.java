@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.json;
 
+import static com.fasterxml.jackson.annotation.JsonInclude.Value.ALL_NON_ABSENT;
 import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
 import static com.fasterxml.jackson.databind.SerializationFeature.FAIL_ON_EMPTY_BEANS;
 import static com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS;
@@ -44,7 +45,7 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
 
   private static final JsonMapper OBJECT_MAPPER =
       JsonMapper.builder()
-          .defaultPropertyInclusion(Value.ALL_NON_ABSENT)
+          .defaultPropertyInclusion(ALL_NON_ABSENT)
           .disable(FAIL_ON_UNKNOWN_PROPERTIES)
           .disable(FAIL_ON_EMPTY_BEANS)
           .disable(WRITE_DATES_AS_TIMESTAMPS)

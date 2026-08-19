@@ -11,6 +11,7 @@ import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.INH
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlFetcherType.INHERIT_ID_FROM_PARENT;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static java.util.Map.entry;
+import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
@@ -647,8 +648,10 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
             if (isGraphQlList(fieldSpec)) {
               // Arg-bearing list: match each alias positionally to its response slice,
               // using the corresponding ID fetcher to determine the slice size per alias.
-              String idFetcherFacet = argListFieldToIdFetcherFacet.get(fieldName);
-              TypeName idListType = argListIdFetcherToResponseType.get(idFetcherFacet);
+              String idFetcherFacet = requireNonNull(argListFieldToIdFetcherFacet.get(fieldName));
+              TypeName idListType =
+                  requireNonNull(
+                      argListIdFetcherToResponseType.get(idFetcherFacet), idFetcherFacet);
               builder.addNamedCode(
                   """
                   $list:T<$string:T> _$fieldName:L_aliases = _fieldNameToAliases.getOrDefault($fieldName:S, $list:T.of());

@@ -17,7 +17,6 @@ import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.batching.InputBatcher;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
-import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.Collection;
