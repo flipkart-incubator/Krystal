@@ -39,7 +39,9 @@ public final class Resilience4JCircuitBreaker implements OutputLogicDecorator {
 
   @Override
   public OutputLogic<Object> decorateLogic(
-      OutputLogic<Object> logicToDecorate, OutputLogicDefinition<Object> originalLogicDefinition) {
+      OutputLogic<Object> logicToDecorate,
+      OutputLogicDefinition<Object> originalLogicDefinition,
+      LogicExecutionContext context) {
     CircuitBreaker circuitBreaker = this.circuitBreaker;
     if (circuitBreaker != null) {
       return input ->

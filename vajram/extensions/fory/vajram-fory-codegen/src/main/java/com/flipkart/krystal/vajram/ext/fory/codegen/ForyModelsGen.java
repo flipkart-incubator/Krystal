@@ -20,6 +20,7 @@ import com.flipkart.krystal.codegen.common.models.CodeGenUtility.ModelRootInfo;
 import com.flipkart.krystal.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.list.ModelsListBuilder;
@@ -255,88 +256,88 @@ final class ForyModelsGen implements CodeGenerator {
   private CodeBlock setterCode(ExecutableElement method) {
     String fieldName = method.getSimpleName().toString();
     Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType(), method);
+    boolean isModel =
+        fieldModelRootInfo.isPresent() && !util.isEnumModel(fieldModelRootInfo.get().element());
+    // Whole-field Errable<T>/Errable<List<T>>/Errable<Map<K,V>>: convert the (possibly-null)
+    // value inside the Errable, then re-wrap the result in Errable at the end.
+    boolean isErrable = util.isErrable(method.getReturnType());
+    // List<Errable<Model>>/Map<K, Errable<Model>>: each element/value is itself Errable-wrapped.
+    boolean isContentErrable = util.isContentErrable(method.getReturnType());
+    String src = isErrable ? fieldName + ".value()" : fieldName;
+    ClassName immutForyClassName =
+        isModel ? util.getImmutClassName(fieldModelRootInfo.get().element(), FORY) : null;
 
-    return switch (util.getContainerType(method.getReturnType())) {
-      case NO_CONTAINER -> {
-        if (fieldModelRootInfo.isPresent()
-            && !util.isEnumModel(fieldModelRootInfo.get().element())) {
-          yield CodeBlock.of(
-              "this.$L = $L;",
-              fieldName,
-              convertToImmutFory(
-                  fieldName,
-                  fieldModelRootInfo,
-                  util.getImmutClassName(fieldModelRootInfo.get().element(), FORY)));
-        } else {
-          yield CodeBlock.of("this.$L = $L;", fieldName, fieldName);
-        }
-      }
-      case RANGE -> CodeBlock.of("this.$L = $L;", fieldName, fieldName);
-      case LIST -> {
-        if (fieldModelRootInfo.isPresent()
-            && !util.isEnumModel(fieldModelRootInfo.get().element())) {
-          yield CodeBlock.of(
-              """
-              this.$L = $L == null
-                ? null
-                : $T.copyOf(
-                    $T.transform($L, _e -> $L));
-              """,
-              fieldName,
-              fieldName,
-              ImmutableList.class,
-              Lists.class,
-              fieldName,
-              convertToImmutFory(
-                  "_e",
-                  fieldModelRootInfo,
-                  util.getImmutClassName(fieldModelRootInfo.get().element(), FORY)));
-        } else {
-          yield CodeBlock.of(
-              """
-              this.$L = $L == null
-                ? null
-                : $T.copyOf($L);
-              """,
-              fieldName,
-              fieldName,
-              ImmutableList.class,
-              fieldName);
-        }
-      }
-      case MAP -> {
-        if (fieldModelRootInfo.isPresent()
-            && !util.isEnumModel(fieldModelRootInfo.get().element())) {
-          yield CodeBlock.of(
-              """
-              this.$L = $L == null
-                  ? null
-                  : $T.copyOf(
-                      $T.transformValues($L, _e -> $L));
-              """,
-              fieldName,
-              fieldName,
-              ImmutableMap.class,
-              Maps.class,
-              fieldName,
-              convertToImmutFory(
-                  "_e",
-                  fieldModelRootInfo,
-                  util.getImmutClassName(fieldModelRootInfo.get().element(), FORY)));
-        } else {
-          yield CodeBlock.of(
-              """
-              this.$L = $L == null
-                ? null
-                : $T.copyOf($L);
-              """,
-              fieldName,
-              fieldName,
-              ImmutableMap.class,
-              fieldName);
-        }
-      }
-    };
+    CodeBlock containerAssignment =
+        switch (util.getContainerType(method.getReturnType())) {
+          case NO_CONTAINER ->
+              isModel
+                  ? convertToImmutFory(src, fieldModelRootInfo, immutForyClassName)
+                  : CodeBlock.of("$L", src);
+          case RANGE -> CodeBlock.of("$L", src);
+          case LIST -> {
+            if (isModel) {
+              CodeBlock elementExpr =
+                  isContentErrable
+                      ? CodeBlock.of(
+                          "_e.value() == null ? $T.nil() : $T.withValue($L)",
+                          Errable.class,
+                          Errable.class,
+                          convertToImmutFory("_e.value()", fieldModelRootInfo, immutForyClassName))
+                      : convertToImmutFory("_e", fieldModelRootInfo, immutForyClassName);
+              yield CodeBlock.of(
+                  """
+                  $L == null
+                    ? null
+                    : $T.copyOf(
+                        $T.transform($L, _e -> $L))""",
+                  src,
+                  ImmutableList.class,
+                  Lists.class,
+                  src,
+                  elementExpr);
+            } else {
+              yield CodeBlock.of(
+                  "$L == null ? null : $T.copyOf($L)", src, ImmutableList.class, src);
+            }
+          }
+          case MAP -> {
+            if (isModel) {
+              CodeBlock elementExpr =
+                  isContentErrable
+                      ? CodeBlock.of(
+                          "_e.value() == null ? $T.nil() : $T.withValue($L)",
+                          Errable.class,
+                          Errable.class,
+                          convertToImmutFory("_e.value()", fieldModelRootInfo, immutForyClassName))
+                      : convertToImmutFory("_e", fieldModelRootInfo, immutForyClassName);
+              yield CodeBlock.of(
+                  """
+                  $L == null
+                      ? null
+                      : $T.copyOf(
+                          $T.transformValues($L, _e -> $L))""",
+                  src,
+                  ImmutableMap.class,
+                  Maps.class,
+                  src,
+                  elementExpr);
+            } else {
+              yield CodeBlock.of("$L == null ? null : $T.copyOf($L)", src, ImmutableMap.class, src);
+            }
+          }
+        };
+
+    CodeBlock finalAssignment =
+        isErrable
+            ? CodeBlock.of(
+                "$L == null || $L.value() == null ? $T.nil() : $T.withValue($L)",
+                fieldName,
+                fieldName,
+                Errable.class,
+                Errable.class,
+                containerAssignment)
+            : containerAssignment;
+    return CodeBlock.of("this.$L = $L;", fieldName, finalAssignment);
   }
 
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
@@ -377,7 +378,10 @@ final class ForyModelsGen implements CodeGenerator {
       FieldSpec.Builder fieldBuilder =
           FieldSpec.builder(fieldType, method.getSimpleName().toString(), PRIVATE);
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType(), method);
-      if (isBuilder
+      if (isBuilder && util.isErrable(method.getReturnType())) {
+        // Errable builder fields default to Errable.nil() (never null).
+        fieldBuilder.initializer("$T.nil()", Errable.class);
+      } else if (isBuilder
           && fieldModelRootInfo.isPresent()
           && !util.isEnumModel(fieldModelRootInfo.get().element())) {
         switch (fieldModelRootInfo.get().containerType()) {

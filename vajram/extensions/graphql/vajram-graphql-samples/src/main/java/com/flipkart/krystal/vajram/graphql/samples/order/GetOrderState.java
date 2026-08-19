@@ -12,7 +12,7 @@ import com.flipkart.krystal.vajram.graphql.samples.state.State;
 public abstract class GetOrderState extends ComputeVajramDef<State> {
   interface _Inputs {
     @IfAbsent(FAIL)
-    OrderId id();
+    Order_Id id();
   }
 
   @Output

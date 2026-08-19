@@ -81,7 +81,7 @@ public class RequestLevelCacheInvalidator {
       log.error("", e);
       throw e;
     }
-    Iterator<ImmutableFacetValues> iterator = cacheContainer.getKeys(target.vajramId()).iterator();
+    Iterator<ImmutableFacetValues> iterator = cacheContainer.getKeys(target.vajramId());
     iterator.forEachRemaining(
         facetValues -> {
           boolean shouldInvalidate;

@@ -49,6 +49,7 @@ import com.flipkart.krystal.krystex.resolution.Resolver;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Sets.SetView;
 import java.util.ArrayList;
@@ -58,7 +59,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
@@ -121,7 +121,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
   BatchKryon(
       VajramKryonDefinition kryonDefinition,
       VajramKryonExecutor kryonExecutor,
-      Function<LogicExecutionContext, NavigableSet<OutputLogicDecorator>>
+      Function<LogicExecutionContext, List<OutputLogicDecorator>>
           sortedOutputLogicDecoratorSupplier,
       Function<DependencyExecutionContext, ImmutableMap<String, DependencyDecorator>>
           depDecoratorSuppliers,
@@ -538,12 +538,20 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
       OutputLogicDefinition<Object> outputLogicDefinition,
       Map<InvocationId, ExecutionItem> inputs,
       DependentChain dependentChain) {
-    NavigableSet<OutputLogicDecorator> sortedDecorators =
-        getSortedOutputLogicDecorators(dependentChain);
     OutputLogic<Object> logic = outputLogicDefinition.logic();
 
-    for (OutputLogicDecorator outputLogicDecorator : sortedDecorators) {
-      logic = outputLogicDecorator.decorateLogic(logic, outputLogicDefinition);
+    LogicExecutionContext logicExecutionContext =
+        new LogicExecutionContext(
+            vajramID,
+            outputLogicDefinition.tags(),
+            dependentChain,
+            kryonDefinition.kryonDefinitionRegistry());
+    for (OutputLogicDecorator outputLogicDecorator :
+        // Iterate in reverse so that decorators at the end of the list are applied first and thus
+        // receive command last
+        Lists.reverse(getSortedOutputLogicDecorators(dependentChain))) {
+      logic =
+          outputLogicDecorator.decorateLogic(logic, outputLogicDefinition, logicExecutionContext);
     }
     OutputLogic<Object> finalLogic = logic;
     Map<InvocationId, CompletableFuture<@Nullable Object>> resultsByRequest =

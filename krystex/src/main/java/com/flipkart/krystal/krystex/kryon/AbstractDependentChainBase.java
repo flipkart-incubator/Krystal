@@ -102,8 +102,8 @@ abstract sealed class AbstractDependentChainBase<T extends DependentChainBase>
   public String toString() {
     if (toString == null) {
       toString =
-          (this instanceof DependentChain ? "[Start]>" : "")
-              + Arrays.stream(array).map(Object::toString).collect(Collectors.joining(":"));
+          (this instanceof DependentChain ? "[Start]->" : "")
+              + Arrays.stream(array).map(Object::toString).collect(Collectors.joining("->"));
     }
     return toString;
   }

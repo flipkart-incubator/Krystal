@@ -23,8 +23,8 @@ import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import java.util.List;
-import java.util.NavigableSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
@@ -33,7 +33,7 @@ public final class DirectKryon extends AbstractKryon<MultiRequestDirectCommand, 
   DirectKryon(
       VajramKryonDefinition definition,
       VajramKryonExecutor kryonExecutor,
-      Function<LogicExecutionContext, NavigableSet<OutputLogicDecorator>>
+      Function<LogicExecutionContext, List<OutputLogicDecorator>>
           sortedOutputLogicDecoratorsSupplier,
       Function<DependencyExecutionContext, ImmutableMap<String, DependencyDecorator>>
           depDecoratorSuppliers,
@@ -127,9 +127,18 @@ public final class DirectKryon extends AbstractKryon<MultiRequestDirectCommand, 
       DependentChain dependentChain) {
     OutputLogic<Object> logic = outputLogicDefinition.logic();
 
+    LogicExecutionContext logicExecutionContext =
+        new LogicExecutionContext(
+            vajramID,
+            outputLogicDefinition.tags(),
+            dependentChain,
+            kryonDefinition.kryonDefinitionRegistry());
     for (OutputLogicDecorator outputLogicDecorator :
-        getSortedOutputLogicDecorators(dependentChain)) {
-      logic = outputLogicDecorator.decorateLogic(logic, outputLogicDefinition);
+        // Iterate in reverse so that decorators at the end of the list are applied first and thus
+        // receive command last
+        Lists.reverse(getSortedOutputLogicDecorators(dependentChain))) {
+      logic =
+          outputLogicDecorator.decorateLogic(logic, outputLogicDefinition, logicExecutionContext);
     }
     OutputLogic<Object> finalLogic = logic;
     try {

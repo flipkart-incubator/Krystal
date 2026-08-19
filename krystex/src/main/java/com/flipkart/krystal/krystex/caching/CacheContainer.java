@@ -1,27 +1,45 @@
 package com.flipkart.krystal.krystex.caching;
 
 import com.flipkart.krystal.core.VajramID;
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.ImmutableFacetValues;
-import java.util.Collection;
+import com.google.common.collect.Iterators;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 class CacheContainer {
+  // To be used as OutputLogicDecorator
   private final Map<VajramID, Map<ImmutableFacetValues, CompletableFuture<@Nullable Object>>>
-      cache = new HashMap<>();
+      futureCache = new LinkedHashMap<>();
 
-  void put(ImmutableFacetValues key, CompletableFuture<@Nullable Object> value) {
-    cache.computeIfAbsent(key._vajramID(), k -> new HashMap<>()).put(key, value);
+  // To be used as KryonLogicDecorator
+  private final Map<VajramID, Map<ImmutableFacetValues, Errable<Object>>> valueCache =
+      new LinkedHashMap<>();
+
+  void putFuture(ImmutableFacetValues key, CompletableFuture<@Nullable Object> value) {
+    futureCache.computeIfAbsent(key._vajramID(), k -> new HashMap<>()).put(key, value);
   }
 
-  @Nullable CompletableFuture<@Nullable Object> get(ImmutableFacetValues key) {
-    return cache.getOrDefault(key._vajramID(), Map.of()).get(key);
+  void putValue(ImmutableFacetValues key, Errable<Object> value) {
+    valueCache.computeIfAbsent(key._vajramID(), k -> new HashMap<>()).put(key, value);
+  }
+
+  @Nullable CompletableFuture<@Nullable Object> getFuture(ImmutableFacetValues key) {
+    return futureCache.getOrDefault(key._vajramID(), Map.of()).get(key);
+  }
+
+  @Nullable Errable<Object> getValue(ImmutableFacetValues key) {
+    return valueCache.getOrDefault(key._vajramID(), Map.of()).get(key);
   }
 
   @SuppressWarnings("return")
-  Collection<ImmutableFacetValues> getKeys(VajramID vajramID) {
-    return cache.getOrDefault(vajramID, Map.of()).keySet();
+  Iterator<ImmutableFacetValues> getKeys(VajramID vajramID) {
+    return Iterators.concat(
+        futureCache.getOrDefault(vajramID, Map.of()).keySet().iterator(),
+        valueCache.getOrDefault(vajramID, Map.of()).keySet().iterator());
   }
 }

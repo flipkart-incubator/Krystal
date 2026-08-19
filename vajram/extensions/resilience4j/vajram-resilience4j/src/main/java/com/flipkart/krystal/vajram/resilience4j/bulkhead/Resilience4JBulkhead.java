@@ -52,7 +52,9 @@ public final class Resilience4JBulkhead implements OutputLogicDecorator {
 
   @Override
   public OutputLogic<Object> decorateLogic(
-      OutputLogic<Object> logicToDecorate, OutputLogicDefinition<Object> originalLogicDefinition) {
+      OutputLogic<Object> logicToDecorate,
+      OutputLogicDefinition<Object> originalLogicDefinition,
+      LogicExecutionContext context) {
     BulkheadAdapter bulkhead = this.adaptedBulkhead;
     if (bulkhead != null) {
       return input -> bulkhead.decorate(logicToDecorate, input);

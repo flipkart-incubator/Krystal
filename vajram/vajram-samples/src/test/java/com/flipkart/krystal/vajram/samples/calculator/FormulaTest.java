@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
-import static com.flipkart.krystal.krystex.batching.DepChainBatcherConfig.simple;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy.DIRECT;
 import static com.flipkart.krystal.krystex.testharness.VajramTestHarness.prepareForTest;
 import static com.flipkart.krystal.vajram.samples.Util.TEST_TIMEOUT;
@@ -34,6 +33,7 @@ import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.batching.InputBatcherConfig;
 import com.flipkart.krystal.krystex.batching.InputBatcherStrategy.CustomBatcherStrategy;
+import com.flipkart.krystal.krystex.batching.InputBatchingDecorator;
 import com.flipkart.krystal.krystex.caching.TestRequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
 import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
@@ -50,10 +50,10 @@ import com.flipkart.krystal.vajram.samples.Util;
 import com.flipkart.krystal.vajram.samples.calculator.add.Add;
 import com.flipkart.krystal.vajram.samples.calculator.add.Add_FacImmutPojo;
 import com.flipkart.krystal.vajram.samples.calculator.divide.Divide_FacImmutPojo;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.LongAdder;
@@ -629,6 +629,7 @@ class FormulaTest {
   public static InputBatcherConfig simpleInputBatcher(
       VajramID vajramID, Supplier<InputBatcher> inputBatcherSupplier) {
     return new InputBatcherConfig(
-        ImmutableMap.of(vajramID, ImmutableList.of(simple(inputBatcherSupplier))));
+        ImmutableMap.of(vajramID, new InputBatchingDecorator(inputBatcherSupplier, List.of()))
+            ::get);
   }
 }

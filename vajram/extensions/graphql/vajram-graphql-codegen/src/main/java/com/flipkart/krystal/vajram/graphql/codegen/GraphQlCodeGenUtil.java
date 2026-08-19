@@ -5,21 +5,26 @@ import static com.flipkart.krystal.vajram.graphql.api.Constants.GRAPHQL_SCHEMA_F
 import static com.flipkart.krystal.vajram.graphql.codegen.CodeGenConstants.GRAPHQL_SRC_DIR;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
-import com.squareup.javapoet.AnnotationSpec;
+import com.flipkart.krystal.data.Errable;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
+import graphql.language.ObjectTypeDefinition;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import javax.tools.StandardLocation;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
 public final class GraphQlCodeGenUtil {
+
+  public static final String INPUTS_CLASS_NAME = "_Inputs";
+  static final String GRAPHQL_FIELDS_SUFFIX = "_Fields";
+  static final String GRAPHQL_ID_SUFFIX = "_Id";
 
   @Getter private final SchemaReaderUtil schemaReaderUtil;
 
@@ -76,26 +81,70 @@ public final class GraphQlCodeGenUtil {
 
   TypeName toTypeNameForField(
       GraphQlTypeDecorator graphQlTypeDecorator, GraphQlFieldSpec fieldSpec) {
+    ClassName errable = ClassName.get(Errable.class);
     if (graphQlTypeDecorator instanceof PlainType plainType) {
-      return getTypeNameForField(plainType, fieldSpec)
-          .annotated(AnnotationSpec.builder(Nullable.class).build());
+      // T → Errable<T>
+      return ParameterizedTypeName.get(errable, getTypeNameForField(plainType, fieldSpec));
     } else if (graphQlTypeDecorator instanceof WrappedType wrappedType) {
-      return getTypeNameForField(wrappedType, fieldSpec);
+      return switch (wrappedType.wrapperType()) {
+        // T! → T  (or [T]! → List<resolve(inner)>)
+        case NONNULL -> toNonNullTypeName(wrappedType.innerType(), fieldSpec);
+        // [T] → Errable<List<resolve(inner)>>
+        case LIST ->
+            ParameterizedTypeName.get(
+                errable,
+                ParameterizedTypeName.get(
+                    ClassName.get(List.class),
+                    toTypeNameForField(wrappedType.innerType(), fieldSpec)));
+      };
     }
     throw new IllegalArgumentException("Unknown fieldType: " + graphQlTypeDecorator);
   }
 
-  TypeName getTypeNameForField(WrappedType fieldType, GraphQlFieldSpec fieldSpec) {
-    GraphQlTypeDecorator innerGraphQlTypeDecorator = fieldType.innerType();
-    return switch (fieldType.wrapperType()) {
-      case NONNULL ->
-          innerGraphQlTypeDecorator instanceof PlainType plainType
-              ? getTypeNameForField(plainType, fieldSpec)
-              : toTypeNameForField(innerGraphQlTypeDecorator, fieldSpec);
-      case LIST ->
-          ParameterizedTypeName.get(
-              ClassName.get(List.class), toTypeNameForField(innerGraphQlTypeDecorator, fieldSpec));
-    };
+  /**
+   * Returns the raw Java type for a GraphQL field type, ignoring all nullability. Used for facet
+   * declarations where {@code Errable} is implicit and must not appear in the type signature.
+   *
+   * <ul>
+   *   <li>{@code T} / {@code T!} → {@code T}
+   *   <li>{@code [T]} / {@code [T]!} / {@code [T!]} / {@code [T!]!} → {@code List<T>}
+   * </ul>
+   */
+  TypeName toFacetTypeName(GraphQlTypeDecorator type, GraphQlFieldSpec fieldSpec) {
+    if (type instanceof PlainType plainType) {
+      return getTypeNameForField(plainType, fieldSpec);
+    } else if (type instanceof WrappedType wrappedType) {
+      return switch (wrappedType.wrapperType()) {
+        case NONNULL -> toFacetTypeName(wrappedType.innerType(), fieldSpec);
+        case LIST ->
+            ParameterizedTypeName.get(
+                ClassName.get(List.class), toFacetTypeName(wrappedType.innerType(), fieldSpec));
+      };
+    }
+    throw new IllegalArgumentException("Unknown type: " + type);
+  }
+
+  /**
+   * Resolves a type that is known to be non-null (inside a {@code !} wrapper).
+   *
+   * <ul>
+   *   <li>{@code T!} → {@code T}
+   *   <li>{@code [T]!} → {@code List<resolve(T)>}
+   *   <li>{@code [T!]!} → {@code List<T>}
+   * </ul>
+   */
+  private TypeName toNonNullTypeName(GraphQlTypeDecorator type, GraphQlFieldSpec fieldSpec) {
+    if (type instanceof PlainType plainType) {
+      return getTypeNameForField(plainType, fieldSpec);
+    } else if (type instanceof WrappedType wrappedType) {
+      return switch (wrappedType.wrapperType()) {
+        case NONNULL -> toNonNullTypeName(wrappedType.innerType(), fieldSpec); // flatten !!
+        case LIST -> // [inner]! → List<resolve(inner)>
+            ParameterizedTypeName.get(
+                ClassName.get(List.class), toTypeNameForField(wrappedType.innerType(), fieldSpec));
+      };
+    }
+    throw new IllegalArgumentException("Unknown type: " + type);
   }
 
   ClassName getTypeNameForField(PlainType fieldType, GraphQlFieldSpec fieldSpec) {
@@ -107,19 +156,25 @@ public final class GraphQlCodeGenUtil {
     }
 
     return switch (graphQlTypeName) {
-      case "String" -> ClassName.get(String.class);
+      case "String", "ID" -> ClassName.get(String.class);
       case "Int" -> ClassName.get(Integer.class);
       case "Boolean" -> ClassName.get(Boolean.class);
-      case "Float" -> ClassName.get(Float.class);
-      case "ID" -> {
-        GraphQLTypeName enclosingType = fieldSpec.enclosingType();
-        yield enclosingType != null
-            ? schemaReaderUtil.entityIdClassName(enclosingType)
-            : ClassName.get(Object.class);
-      }
+
+      // GraphqlJava handles graphql Floats using java Doubles
+      // https://graphql-java.com/documentation/data-mapping/#scalars
+      case "Float" -> ClassName.get(Double.class);
+
       default -> {
         GraphQLTypeName typeName = new GraphQLTypeName(graphQlTypeName);
-        yield ClassName.get(schemaReaderUtil.getPackageNameForType(typeName), typeName.value());
+        Optional<ObjectTypeDefinition> objectType =
+            schemaReaderUtil
+                .typeDefinitionRegistry()
+                .getType(graphQlTypeName)
+                .filter(ObjectTypeDefinition.class::isInstance)
+                .map(ObjectTypeDefinition.class::cast);
+        yield objectType.filter(schemaReaderUtil::hasObjectId).isPresent()
+            ? schemaReaderUtil.entityIdClassName(typeName)
+            : ClassName.get(schemaReaderUtil.getPackageNameForType(typeName), typeName.value());
       }
     };
   }

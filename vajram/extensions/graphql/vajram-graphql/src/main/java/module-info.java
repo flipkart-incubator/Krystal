@@ -20,4 +20,5 @@ module krystal.vajram.extensions.graphql {
   requires jakarta.inject;
   requires org.reflections;
   requires org.slf4j;
+  requires org.jspecify;
 }

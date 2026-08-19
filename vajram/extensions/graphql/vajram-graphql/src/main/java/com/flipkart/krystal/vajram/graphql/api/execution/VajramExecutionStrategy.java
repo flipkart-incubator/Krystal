@@ -9,7 +9,7 @@ import static java.util.Objects.requireNonNullElseGet;
 import com.flipkart.krystal.core.VajramInvocation;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponseFuture;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationObject;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperation;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate_Req;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate_ReqImmutPojo;
@@ -70,13 +70,13 @@ public final class VajramExecutionStrategy extends ExecutionStrategy {
       throws NonNullableFieldWasNullException {
     GraphQLContext graphQLContext = executionContext.getGraphQLContext();
     Operation operation = executionContext.getOperationDefinition().getOperation();
-    GraphQlOperationAggregate_Req<GraphQlOperationObject> graphQlOperationObjectBuilder =
+    GraphQlOperationAggregate_Req<GraphQlOperation> graphQlOperationObjectBuilder =
         requireNonNullElseGet(
             graphQLContext.get(GRAPHQL_OP_AGGREGATE_REQUEST),
             () ->
                 GraphQlOperationAggregate_ReqImmutPojo._builder()
                     .executionInput(executionContext.getExecutionInput()));
-    GraphQlOperationAggregate_Req<GraphQlOperationObject> request =
+    GraphQlOperationAggregate_Req<GraphQlOperation> request =
         graphQlOperationObjectBuilder
             ._asBuilder()
             .operationType(operation)
@@ -84,11 +84,11 @@ public final class VajramExecutionStrategy extends ExecutionStrategy {
             .graphql_executionStrategy(this)
             .graphql_executionStrategyParams(parameters);
 
-    VajramInvocation<GraphQlOperationObject> vajramInvocation =
+    VajramInvocation<GraphQlOperation> vajramInvocation =
         requireNonNull(
             graphQLContext.get(VAJRAM_INVOCATION_CTX_KEY), "VajramInvocation cannot be null");
-    RequestResponseFuture<Request<GraphQlOperationObject>, GraphQlOperationObject>
-        requestResponseFuture = forRequest(request);
+    RequestResponseFuture<Request<GraphQlOperation>, GraphQlOperation> requestResponseFuture =
+        forRequest(request);
     vajramInvocation.executeVajram(requestResponseFuture);
     return requestResponseFuture
         .response()
