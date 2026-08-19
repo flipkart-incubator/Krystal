@@ -230,7 +230,9 @@ public final class VajramKryonExecutor implements KrystalExecutor {
                           }
                           return logicDecorator;
                         });
-            decorators.add(outputLogicDecorator);
+            if (outputLogicDecorator != null) {
+              decorators.add(outputLogicDecorator);
+            }
           }
         });
     return decorators;

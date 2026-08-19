@@ -12,18 +12,18 @@ import com.flipkart.krystal.krystex.KrystexGraph;
 import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.VajramGraph.VajramGraphBuilder;
-import com.flipkart.krystal.krystex.batching.DepChainBatcherConfig;
 import com.flipkart.krystal.krystex.batching.InputBatcherConfig;
 import com.flipkart.krystal.krystex.batching.InputBatcherStrategy.CustomBatcherStrategy;
+import com.flipkart.krystal.krystex.batching.InputBatchingDecorator;
 import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.samples.calculator.add.Add;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -67,9 +67,9 @@ class AddZeroTest {
         new CustomBatcherStrategy(
             new InputBatcherConfig(
                 ImmutableMap.of(
-                    vajramID,
-                    ImmutableList.of(
-                        DepChainBatcherConfig.simple(() -> new InputBatcherImpl(100)))))));
+                        vajramID,
+                        new InputBatchingDecorator(() -> new InputBatcherImpl(100), List.of()))
+                    ::get)));
     try (VajramKryonExecutor krystexVajramExecutor =
         kGraph
             .build()

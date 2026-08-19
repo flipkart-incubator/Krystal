@@ -1,8 +1,7 @@
 package com.flipkart.krystal.krystex;
 
-import static com.flipkart.krystal.krystex.batching.DepChainBatcherConfig.computeSharedBatcherConfig;
+import static com.flipkart.krystal.krystex.batching.InputBatcherConfig.computeSharedBatcherConfig;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
 import static java.util.Objects.requireNonNullElseGet;
 
@@ -10,7 +9,6 @@ import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
-import com.flipkart.krystal.krystex.batching.DepChainBatcherConfig;
 import com.flipkart.krystal.krystex.batching.InputBatcherConfig;
 import com.flipkart.krystal.krystex.batching.InputBatcherStrategy;
 import com.flipkart.krystal.krystex.batching.InputBatcherStrategy.CustomBatcherStrategy;
@@ -26,7 +24,6 @@ import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.kryondecoration.KryonExecutionContext;
-import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.traits.DefaultTraitDispatcher;
 import com.flipkart.krystal.traits.StaticDispatchPolicy;
@@ -34,7 +31,6 @@ import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
@@ -44,8 +40,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NonNull;
@@ -202,59 +196,20 @@ public final class KrystexGraph {
     } else {
       throw new AssertionError("Not possible");
     }
-    ConcurrentHashMap<DependentChain, DepChainBatcherConfig> batcherConfigByDepChain =
-        new ConcurrentHashMap<>();
-
-    Function<LogicExecutionContext, DepChainBatcherConfig> inputBatcherForLogicExecContext =
-        logicExecutionContext ->
-            batcherConfigByDepChain.computeIfAbsent(
-                logicExecutionContext.dependents(),
-                d -> {
-                  VajramID vajramID = logicExecutionContext.vajramID();
-                  VajramDefinition vajramDefinition = vajramGraph.vajramDefinitions().get(vajramID);
-                  if (vajramDefinition == null) {
-                    log.error(
-                        "Unable to find vajram with id {}. Something is wrong. Skipping InputBatchingDecorator application.",
-                        vajramID);
-                    return DepChainBatcherConfig.NO_BATCHING;
-                  }
-                  if (vajramDefinition.isTrait()) {
-                    log.error(
-                        "Cannot register input Batchers for vajramId {} since it is a Trait. Skipping InputBatchingDecorator application.",
-                        vajramID.id());
-                    return DepChainBatcherConfig.NO_BATCHING;
-                  }
-                  for (DepChainBatcherConfig depChainBatcherConfig :
-                      inputBatcherConfig
-                          .depChainBatcherConfigs()
-                          .getOrDefault(vajramID, ImmutableList.of())) {
-                    boolean shouldDecorate =
-                        vajramDefinition.metadata().isBatched()
-                            && depChainBatcherConfig.shouldBatch().test(logicExecutionContext);
-                    if (shouldDecorate) {
-                      return depChainBatcherConfig;
-                    }
-                  }
-                  return DepChainBatcherConfig.NO_BATCHING;
-                });
-
     String decoratorType = InputBatchingDecorator.DECORATOR_TYPE;
     OutputLogicDecoratorConfig batchingDecoratorConfig =
         new OutputLogicDecoratorConfig(
             decoratorType,
-            logicExecutionContext ->
-                !DepChainBatcherConfig.NO_BATCHING.equals(
-                    inputBatcherForLogicExecContext.apply(logicExecutionContext)),
-            logicExecutionContext ->
-                requireNonNull(inputBatcherForLogicExecContext.apply(logicExecutionContext))
-                    .instanceIdGenerator()
-                    .apply(logicExecutionContext),
+            logicExecutionContext -> {
+              VajramDefinition vajramDefinition =
+                  vajramGraph.vajramDefinitions().get(logicExecutionContext.vajramID());
+              return vajramDefinition != null && vajramDefinition.metadata().isBatched();
+            },
+            logicExecutionContext -> logicExecutionContext.vajramID().id(),
             decoratorContext ->
-                requireNonNull(
-                        inputBatcherForLogicExecContext.apply(
-                            decoratorContext.logicExecutionContext()))
+                inputBatcherConfig
                     .decoratorFactory()
-                    .apply(decoratorContext));
+                    .apply(decoratorContext.logicExecutionContext().vajramID()));
     return configBuilder -> {
       if (configBuilder.hasOutputLogicDecorator(decoratorType)) {
         // The decorator set in the executor config has higher precedence

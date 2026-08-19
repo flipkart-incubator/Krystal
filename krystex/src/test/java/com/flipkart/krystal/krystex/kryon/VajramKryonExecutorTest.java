@@ -17,6 +17,7 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.except.KrystalCompletionException;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
@@ -25,7 +26,6 @@ import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.TestRequestContext;
 import com.flipkart.krystal.krystex.VajramGraph.VajramGraphBuilder;
-import com.flipkart.krystal.krystex.batching.DepChainBatcherConfig;
 import com.flipkart.krystal.krystex.batching.InputBatcherConfig;
 import com.flipkart.krystal.krystex.batching.InputBatcherStrategy.CustomBatcherStrategy;
 import com.flipkart.krystal.krystex.batching.InputBatcherStrategy.DefaultBatcherStrategy;
@@ -36,6 +36,7 @@ import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import com.flipkart.krystal.krystex.decoration.FlushableDecorator;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy;
+import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.test_vajrams.friendsservice.FriendsService;
 import com.flipkart.krystal.krystex.test_vajrams.hello.Hello;
@@ -63,7 +64,6 @@ import com.flipkart.krystal.vajram.resilience4j.curcuitbreaker.Resilience4JCircu
 import com.flipkart.krystal.visualization.executiongraph.DefaultKryonExecutionReport;
 import com.flipkart.krystal.visualization.executiongraph.KryonExecutionReport;
 import com.flipkart.krystal.visualization.executiongraph.MainLogicExecReporter;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.time.Clock;
@@ -578,12 +578,11 @@ class VajramKryonExecutorTest {
         new CustomBatcherStrategy(
             new InputBatcherConfig(
                 ImmutableMap.of(
-                    vGraph.getVajramIdByVajramDefType(TestUserService.class),
-                        ImmutableList.of(
-                            DepChainBatcherConfig.simple(() -> new InputBatcherImpl(100))),
-                    vGraph.getVajramIdByVajramDefType(FriendsService.class),
-                        ImmutableList.of(
-                            DepChainBatcherConfig.simple(() -> new InputBatcherImpl(100)))))));
+                        vGraph.getVajramIdByVajramDefType(TestUserService.class),
+                        new InputBatchingDecorator(() -> new InputBatcherImpl(100), List.of()),
+                        vGraph.getVajramIdByVajramDefType(FriendsService.class),
+                        new InputBatchingDecorator(() -> new InputBatcherImpl(100), List.of()))
+                    ::get)));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (VajramKryonExecutor krystexVajramExecutor =
@@ -671,20 +670,11 @@ class VajramKryonExecutorTest {
         new CustomBatcherStrategy(
             new InputBatcherConfig(
                 ImmutableMap.of(
-                    vGraph.getVajramIdByVajramDefType(FriendsService.class),
-                    ImmutableList.of(
-                        new DepChainBatcherConfig(
-                            _x -> true,
-                            logicExecutionContext -> "",
-                            batcherContext ->
-                                new FlushableDecoratorImpl(friendServiceFlushCommand))),
-                    vGraph.getVajramIdByVajramDefType(TestUserService.class),
-                    ImmutableList.of(
-                        new DepChainBatcherConfig(
-                            _x -> true,
-                            logicExecutionContext1 -> "1",
-                            batcherContext ->
-                                new FlushableDecoratorImpl(userServiceFlushCommand)))))));
+                        vGraph.getVajramIdByVajramDefType(FriendsService.class),
+                        new FlushableDecoratorImpl(friendServiceFlushCommand),
+                        vGraph.getVajramIdByVajramDefType(TestUserService.class),
+                        new FlushableDecoratorImpl(userServiceFlushCommand))
+                    ::get)));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (VajramKryonExecutor krystexVajramExecutor =
@@ -749,10 +739,12 @@ class VajramKryonExecutorTest {
 
   private InputBatcherConfig singleBatcherConfig(
       Class<? extends VajramDefRoot<?>> vajramType, Supplier<InputBatcher> inputBatcherSupplier) {
+    VajramID vajramId = vGraph.getVajramIdByVajramDefType(vajramType);
     return new InputBatcherConfig(
-        ImmutableMap.of(
-            vGraph.getVajramIdByVajramDefType(vajramType),
-            ImmutableList.of(DepChainBatcherConfig.simple(inputBatcherSupplier))));
+        _v ->
+            vajramId.equals(_v)
+                ? new InputBatchingDecorator(inputBatcherSupplier, List.of())
+                : null);
   }
 
   private static class FlushableDecoratorImpl implements OutputLogicDecorator, FlushableDecorator {
@@ -766,7 +758,8 @@ class VajramKryonExecutorTest {
     @Override
     public OutputLogic<Object> decorateLogic(
         OutputLogic<Object> logicToDecorate,
-        OutputLogicDefinition<Object> originalLogicDefinition) {
+        OutputLogicDefinition<Object> originalLogicDefinition,
+        LogicExecutionContext context) {
       return logicToDecorate;
     }
 
