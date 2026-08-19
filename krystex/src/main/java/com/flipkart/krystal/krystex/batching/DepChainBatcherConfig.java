@@ -12,11 +12,12 @@ public record DepChainBatcherConfig(
     Set<DependentChain> dependentChains,
     Function<LogicExecutionContext, String> instanceIdGenerator) {
 
-  static DepChainBatcherConfig sharedBatcher(String instanceId, DependentChain... dependentChains) {
+  public static DepChainBatcherConfig sharedBatcher(
+      String instanceId, DependentChain... dependentChains) {
     return sharedBatcher(instanceId, ImmutableSet.copyOf(dependentChains));
   }
 
-  static DepChainBatcherConfig sharedBatcher(
+  public static DepChainBatcherConfig sharedBatcher(
       String instanceId, ImmutableSet<DependentChain> dependentChains) {
     return new DepChainBatcherConfig(dependentChains, logicExecutionContext -> instanceId);
   }

@@ -65,7 +65,6 @@ import com.flipkart.krystal.visualization.executiongraph.DefaultKryonExecutionRe
 import com.flipkart.krystal.visualization.executiongraph.KryonExecutionReport;
 import com.flipkart.krystal.visualization.executiongraph.MainLogicExecReporter;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -118,11 +117,13 @@ class VajramKryonExecutorTest {
   void setUp() throws LeaseUnavailableException {
     executorLease = EXEC_POOL.lease();
     decorationOrdering =
-        new DecorationOrdering(
-            ImmutableSet.of(
+        DecorationOrdering.builder()
+            .outputLogicDecoratorOrdering(
+                InputBatchingDecorator.DECORATOR_TYPE,
                 Resilience4JCircuitBreaker.DECORATOR_TYPE,
-                Resilience4JBulkhead.DECORATOR_TYPE,
-                InputBatchingDecorator.DECORATOR_TYPE));
+                Resilience4JBulkhead.DECORATOR_TYPE)
+            .build();
+
     requestContext = new TestRequestContext(Optional.of("user_id_1"), 2);
     objectMapper =
         JsonMapper.builder()
@@ -522,7 +523,7 @@ class VajramKryonExecutorTest {
             .decorationOrdering(decorationOrdering);
 
     krystalExecutorConfigBuilder
-        .configureWith(new RequestLevelCache(vGraph).defaultKryonExecutorConfigurator())
+        .configureWith(new RequestLevelCache(vGraph).defaultDecorationStrategy())
         .configureWith(Resilience4JBulkhead.onePerIOVajram())
         .configureWith(Resilience4JCircuitBreaker.onePerIOVajram());
 

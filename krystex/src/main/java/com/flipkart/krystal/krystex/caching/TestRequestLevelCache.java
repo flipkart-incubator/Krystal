@@ -2,6 +2,7 @@ package com.flipkart.krystal.krystex.caching;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
@@ -55,12 +56,21 @@ public final class TestRequestLevelCache extends RequestLevelCache {
   }
 
   @Override
-  @Nullable CompletableFuture<@Nullable Object> getCachedValue(ImmutableFacetValues cacheKey) {
+  @Nullable CompletableFuture<@Nullable Object> getCachedFuture(ImmutableFacetValues cacheKey) {
+    CompletableFuture<@Nullable Object> futureStub = getFuture(cacheKey);
+    if (futureStub.getNow(null) == NO_VALUE) {
+      return super.getCachedFuture(cacheKey);
+    }
+    return futureStub;
+  }
+
+  @Override
+  @Nullable Errable<Object> getCachedValue(ImmutableFacetValues cacheKey) {
     CompletableFuture<@Nullable Object> futureStub = getFuture(cacheKey);
     if (futureStub.getNow(null) == NO_VALUE) {
       return super.getCachedValue(cacheKey);
     }
-    return futureStub;
+    return futureStub.handle(Errable::errableFrom).getNow(null);
   }
 
   /**

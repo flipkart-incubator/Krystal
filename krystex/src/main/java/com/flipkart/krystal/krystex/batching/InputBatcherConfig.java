@@ -17,7 +17,6 @@ import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.batching.InputBatcher;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
-import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -271,11 +270,11 @@ public record InputBatcherConfig(
           if (isBatchingNeededForIoVajram(graph, vajramId)) {
             List<DepChainBatcherConfig> inputModulatorConfigs = new ArrayList<>(ioNodeMap.size());
             for (Entry<Integer, Set<DependentChain>> entry : ioNodeMap.entrySet()) {
-              int depth = entry.getKey();
+              int epoch = entry.getKey();
               Set<DependentChain> depChains = entry.getValue();
               inputModulatorConfigs.add(
                   sharedBatcher(
-                      vajramId.id() + ":depth(" + depth + ")",
+                      vajramId.id() + ":epoch(" + epoch + ")",
                       depChains.toArray(DependentChain[]::new)));
             }
             depChainBatcherConfigs.put(vajramId, ImmutableList.copyOf(inputModulatorConfigs));
