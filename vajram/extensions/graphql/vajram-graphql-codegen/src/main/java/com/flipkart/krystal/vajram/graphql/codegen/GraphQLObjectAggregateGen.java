@@ -717,20 +717,27 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                   for (int _i = 0; _i < _$fieldName:L_aliases.size(); _i++) {
                     $string:T _alias = _$fieldName:L_aliases.get(_i);
                     $errable:T<$idListType:T> _idsErrable = $idFetcherFacet:L.requestResponsePairs().get(_i).response();
-                    if (_idsErrable.valueOpt().isPresent()) {
-                      int _count = _idsErrable.valueOpt().get().size();
-                      $list:T<$singleValue:T> _items = new $arrayList:T<>();
-                      for (int _j = _$fieldName:L_offset; _j < _$fieldName:L_offset + _count; _j++) {
-                        $fieldName:L.requestResponsePairs().get(_j).response().handle(
-                            _f -> _items.add(new $objectValue:T(_f.cast(), true)),
-                            _v -> _items.add(new $objectValue:T(_v, true)));
-                      }
-                      _builder.addField(_alias, new $listValue:T(_items, true));
-                      _$fieldName:L_offset += _count;
+                    if (_idsErrable instanceof $failure:T<?> _failure) {
+                      // Failure: surface the error for this alias. No type-aggregator requests
+                      // were made for it, so the running offset is left untouched.
+                      _builder.addField(_alias, new $listValue:T(_failure.cast(), true));
                     } else {
-                      $errable:T<$list:T<$singleValue:T>> _$fieldName:L_errorItems =
-                          _idsErrable.map(_ids -> $list:T.<$singleValue:T>of());
-                      _builder.addField(_alias, new $listValue:T(_$fieldName:L_errorItems, true));
+                      $idListType:T _ids = _idsErrable.value();
+                      if (_ids != null) {
+                        // NonNil (including a legitimately empty id list): consume exactly as
+                        // many type-aggregator responses as ids were returned for this alias.
+                        int _count = _ids.size();
+                        $list:T<$singleValue:T> _items = new $arrayList:T<>();
+                        for (int _j = 0; _j < _count; _j++) {
+                          $fieldName:L.requestResponsePairs().get(_j + _$fieldName:L_offset).response().handle(
+                              _f -> _items.add(new $objectValue:T(_f.cast(), true)),
+                              _v -> _items.add(new $objectValue:T(_v, true)));
+                        }
+                        _builder.addField(_alias, new $listValue:T(_items, true));
+                        _$fieldName:L_offset += _count;
+                      }
+                      // Nil (id-fetcher legitimately returned null for this alias): no value is
+                      // set for this alias.
                     }
                   }
                   """,
@@ -739,6 +746,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                       entry("string", String.class),
                       entry("list", List.class),
                       entry("errable", Errable.class),
+                      entry("failure", Failure.class),
                       entry("idListType", idListType),
                       entry("idFetcherFacet", idFetcherFacet),
                       entry("singleValue", SingleValue.class),
@@ -759,16 +767,19 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                   for (int _i = 0; _i < _$fieldName:L_aliases.size(); _i++) {
                     $string:T _alias = _$fieldName:L_aliases.get(_i);
                     $errable:T<$idType:T> _idErrable = $idFetcherFacet:L.requestResponsePairs().get(_i).response();
-                    if (_idErrable.valueOpt().isPresent()) {
+                    if (_idErrable instanceof $failure:T<?> _failure) {
+                      // Failure: surface the error for this alias. No type-aggregator request
+                      // was made for it, so the running offset is left untouched.
+                      _builder.addField(_alias, new $objectValue:T(_failure.cast(), true));
+                    } else if (_idErrable.value() != null) {
+                      // NonNil: exactly one type-aggregator request was made for this alias.
                       $fieldName:L.requestResponsePairs().get(_$fieldName:L_offset).response().handle(
                           _f -> _builder.addField(_alias, new $objectValue:T(_f.cast(), true)),
                           _v -> _builder.addField(_alias, new $objectValue:T(_v, true)));
                       _$fieldName:L_offset++;
-                    } else {
-                      $errable:T<$gqlObjectMap:T> _$fieldName:L_errorValue =
-                          _idErrable.map(_id -> ($gqlObjectMap:T) null);
-                      _builder.addField(_alias, new $objectValue:T(_$fieldName:L_errorValue, true));
                     }
+                    // Nil (id-fetcher legitimately returned null for this alias): no value is
+                    // set for this alias.
                   }
                   """,
                   Map.ofEntries(
@@ -776,9 +787,9 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                       entry("string", String.class),
                       entry("list", List.class),
                       entry("errable", Errable.class),
+                      entry("failure", Failure.class),
                       entry("idType", idType),
                       entry("idFetcherFacet", idFetcherFacet),
-                      entry("gqlObjectMap", GraphQlObject.class),
                       entry("objectValue", GraphQlValue.ObjectValue.class)));
             } else {
               // Arg-bearing non-list NOT backed by a separate @idFetcher (e.g. @inferIdFromArgs
@@ -812,22 +823,29 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                   requireNonNull(idFetcherFacetToResponseType.get(idFetcherFacet), fieldName);
               builder.addNamedCode(
                   """
-                  $errable:T<$idListType:T> _$fieldName:L_idsErrable = $idFetcherFacet:L;
-                  if (_$fieldName:L_idsErrable.valueOpt().isPresent()) {
-                    $list:T<$singleValue:T> _$fieldName:L_items = new $arrayList:T<>();
-                    for ($errable:T<$gqlObjectMap:T> _e : $fieldName:L.responses()) {
-                      _$fieldName:L_items.add(new $objectValue:T(_e, true));
-                    }
-                    for ($string:T _alias : _fieldNameToAliases.getOrDefault($fieldName:S, $list:T.of())) {
-                      _builder.addField(_alias, new $listValue:T(_$fieldName:L_items, true));
-                    }
-                  } else {
-                    $errable:T<$list:T<$singleValue:T>> _$fieldName:L_errorItems =
-                        _$fieldName:L_idsErrable.map(_ids -> $list:T.<$singleValue:T>of());
-                    for ($string:T _alias : _fieldNameToAliases.getOrDefault($fieldName:S, $list:T.of())) {
-                      _builder.addField(_alias, new $listValue:T(_$fieldName:L_errorItems, true));
-                    }
-                  }
+                  $idFetcherFacet:L.handle(
+                      _failure -> {
+                        // Failure: surface the same error for every alias.
+                        $errable:T<$list:T<$singleValue:T>> _$fieldName:L_errorItems = _failure.cast();
+                        for ($string:T _alias : _fieldNameToAliases.getOrDefault($fieldName:S, $list:T.of())) {
+                          _builder.addField(_alias, new $listValue:T(_$fieldName:L_errorItems, true));
+                        }
+                      },
+                      () -> {
+                        // Nil (id-fetcher legitimately returned null, not an empty list): no
+                        // aliases of this field are set at all.
+                      },
+                      _ids -> {
+                        // NonNil (including a legitimately empty id list): build items once from
+                        // the type aggregator's responses, shared by all aliases.
+                        $list:T<$singleValue:T> _$fieldName:L_items = new $arrayList:T<>();
+                        for ($errable:T<$gqlObjectMap:T> _e : $fieldName:L.responses()) {
+                          _$fieldName:L_items.add(new $objectValue:T(_e, true));
+                        }
+                        for ($string:T _alias : _fieldNameToAliases.getOrDefault($fieldName:S, $list:T.of())) {
+                          _builder.addField(_alias, new $listValue:T(_$fieldName:L_items, true));
+                        }
+                      });
                   """,
                   Map.ofEntries(
                       entry("fieldName", fieldName),
