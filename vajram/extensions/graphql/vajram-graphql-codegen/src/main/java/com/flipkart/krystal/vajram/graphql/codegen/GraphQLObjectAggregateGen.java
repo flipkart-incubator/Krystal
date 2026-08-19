@@ -388,36 +388,35 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                   getFacetName(vajramFetcher, fields));
             });
 
-    // Collect arg-bearing list ID fetcher parameters (for slice sizes)
-    Map<String, String> argListFieldToIdFetcherFacet = new LinkedHashMap<>();
-    Map<String, TypeName> argListIdFetcherToResponseType = new LinkedHashMap<>();
+    // Add id-fetcher parameters for every idFetcher-typeAggregator pair (list or non-list,
+    // arg-bearing or arg-less). The output method needs the id-fetcher's own response, per
+    // alias, so it can tell whether the id-fetcher call itself failed (and therefore no
+    // corresponding type-aggregator request/response exists) instead of assuming every alias
+    // produced a type-aggregator response.
+    Map<String, String> fieldToIdFetcherFacet = new LinkedHashMap<>();
+    Map<String, TypeName> idFetcherFacetToResponseType = new LinkedHashMap<>();
     schemaReaderUtil
         .typeToFetcherToFields()
         .getOrDefault(objectTypeName, Map.of())
         .forEach(
             (fetcher, fields) -> {
               if (!(fetcher instanceof VajramFetcher vajramFetcher)
-                  || !vajramFetcher.type().equals(GraphQlFetcherType.ID_FETCHER)) {
+                  || !vajramFetcher.type().equals(GraphQlFetcherType.ID_FETCHER)
+                  || fields.isEmpty()) {
                 return;
               }
-              if (fields.isEmpty()) {
-                return;
-              }
-              boolean hasArgs =
-                  !fields.get(0).fieldDefinition().getInputValueDefinitions().isEmpty();
-              boolean isList = isGraphQlList(fields.get(0));
-              if (hasArgs && isList) {
-                String facetName = getFacetName(vajramFetcher, fields);
-                TypeName responseType = getFetcherResponseType(vajramFetcher, fields);
-                builder.addParameter(
-                    ParameterizedTypeName.get(
-                        ClassName.get(FanoutDepResponses.class),
-                        getRequestClassName(vajramFetcher.vajramClassName()),
-                        responseType),
-                    facetName);
-                argListFieldToIdFetcherFacet.put(fields.get(0).fieldName(), facetName);
-                argListIdFetcherToResponseType.put(facetName, responseType);
-              }
+              String facetName = getFacetName(vajramFetcher, fields);
+              TypeName responseType = getFetcherResponseType(vajramFetcher, fields);
+              builder.addParameter(
+                  canFanout(vajramFetcher, fields)
+                      ? ParameterizedTypeName.get(
+                          ClassName.get(FanoutDepResponses.class),
+                          getRequestClassName(vajramFetcher.vajramClassName()),
+                          responseType)
+                      : ParameterizedTypeName.get(ClassName.get(Errable.class), responseType),
+                  facetName);
+              fieldToIdFetcherFacet.put(fields.get(0).fieldName(), facetName);
+              idFetcherFacetToResponseType.put(facetName, responseType);
             });
 
     // Add type aggregator parameters
@@ -702,14 +701,15 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
         (fieldSpec, aggregatorClassName) -> {
           boolean hasArgs = !fieldSpec.fieldDefinition().getInputValueDefinitions().isEmpty();
           String fieldName = fieldSpec.fieldName();
+          @Nullable String idFetcherFacet = fieldToIdFetcherFacet.get(fieldName);
           if (hasArgs) {
             if (isGraphQlList(fieldSpec)) {
-              // Arg-bearing list: match each alias positionally to its response slice,
-              // using the corresponding ID fetcher to determine the slice size per alias.
-              String idFetcherFacet = requireNonNull(argListFieldToIdFetcherFacet.get(fieldName));
+              // Arg-bearing list backed by an @idFetcher: match each alias positionally to its
+              // response slice, using the id-fetcher's own per-alias response both to determine
+              // the slice size, and to detect (and surface) an id-fetcher failure for that alias
+              // instead of silently dropping the alias from the response.
               TypeName idListType =
-                  requireNonNull(
-                      argListIdFetcherToResponseType.get(idFetcherFacet), idFetcherFacet);
+                  requireNonNull(idFetcherFacetToResponseType.get(idFetcherFacet), fieldName);
               builder.addNamedCode(
                   """
                   $list:T<$string:T> _$fieldName:L_aliases = _fieldNameToAliases.getOrDefault($fieldName:S, $list:T.of());
@@ -727,6 +727,10 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                       }
                       _builder.addField(_alias, new $listValue:T(_items, true));
                       _$fieldName:L_offset += _count;
+                    } else {
+                      $errable:T<$list:T<$singleValue:T>> _$fieldName:L_errorItems =
+                          _idsErrable.map(_ids -> $list:T.<$singleValue:T>of());
+                      _builder.addField(_alias, new $listValue:T(_$fieldName:L_errorItems, true));
                     }
                   }
                   """,
@@ -741,8 +745,46 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                       entry("arrayList", ArrayList.class),
                       entry("objectValue", GraphQlValue.ObjectValue.class),
                       entry("listValue", ListValue.class)));
+            } else if (idFetcherFacet != null) {
+              // Arg-bearing non-list backed by an @idFetcher (e.g. `dummy(name): Dummy`): the
+              // same idea as the list case above, except each alias contributes at most one
+              // type-aggregator request/response (0 if the id-fetcher call for that alias
+              // failed or returned no id, 1 otherwise).
+              TypeName idType =
+                  requireNonNull(idFetcherFacetToResponseType.get(idFetcherFacet), fieldName);
+              builder.addNamedCode(
+                  """
+                  $list:T<$string:T> _$fieldName:L_aliases = _fieldNameToAliases.getOrDefault($fieldName:S, $list:T.of());
+                  int _$fieldName:L_offset = 0;
+                  for (int _i = 0; _i < _$fieldName:L_aliases.size(); _i++) {
+                    $string:T _alias = _$fieldName:L_aliases.get(_i);
+                    $errable:T<$idType:T> _idErrable = $idFetcherFacet:L.requestResponsePairs().get(_i).response();
+                    if (_idErrable.valueOpt().isPresent()) {
+                      $fieldName:L.requestResponsePairs().get(_$fieldName:L_offset).response().handle(
+                          _f -> _builder.addField(_alias, new $objectValue:T(_f.cast(), true)),
+                          _v -> _builder.addField(_alias, new $objectValue:T(_v, true)));
+                      _$fieldName:L_offset++;
+                    } else {
+                      $errable:T<$gqlObjectMap:T> _$fieldName:L_errorValue =
+                          _idErrable.map(_id -> ($gqlObjectMap:T) null);
+                      _builder.addField(_alias, new $objectValue:T(_$fieldName:L_errorValue, true));
+                    }
+                  }
+                  """,
+                  Map.ofEntries(
+                      entry("fieldName", fieldName),
+                      entry("string", String.class),
+                      entry("list", List.class),
+                      entry("errable", Errable.class),
+                      entry("idType", idType),
+                      entry("idFetcherFacet", idFetcherFacet),
+                      entry("gqlObjectMap", GraphQlObject.class),
+                      entry("objectValue", GraphQlValue.ObjectValue.class)));
             } else {
-              // Arg-bearing non-list: match each alias positionally to its response
+              // Arg-bearing non-list NOT backed by a separate @idFetcher (e.g. @inferIdFromArgs
+              // fields like `order(id): Order`): the resolver always creates exactly one
+              // type-aggregator request per alias unconditionally, so positional indexing
+              // without an id-fetcher failure check is safe as-is.
               builder.addNamedCode(
                   """
                   $list:T<$string:T> _$fieldName:L_aliases = _fieldNameToAliases.getOrDefault($fieldName:S, $list:T.of());
@@ -761,27 +803,67 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                       entry("objectValue", GraphQlValue.ObjectValue.class)));
             }
           } else if (isGraphQlList(fieldSpec)) {
-            // Arg-less list: build items once, assign same value to all aliases
-            builder.addNamedCode(
-                """
-                $list:T<$singleValue:T> _$fieldName:L_items = new $arrayList:T<>();
-                for ($errable:T<$gqlObjectMap:T> _e : $fieldName:L.responses()) {
-                  _$fieldName:L_items.add(new $objectValue:T(_e, true));
-                }
-                for ($string:T _alias : _fieldNameToAliases.getOrDefault($fieldName:S, $list:T.of())) {
-                  _builder.addField(_alias, new $listValue:T(_$fieldName:L_items, true));
-                }
-                """,
-                Map.ofEntries(
-                    entry("fieldName", fieldName),
-                    entry("string", String.class),
-                    entry("list", List.class),
-                    entry("singleValue", SingleValue.class),
-                    entry("arrayList", ArrayList.class),
-                    entry("errable", Errable.class),
-                    entry("gqlObjectMap", GraphQlObject.class),
-                    entry("objectValue", GraphQlValue.ObjectValue.class),
-                    entry("listValue", ListValue.class)));
+            if (idFetcherFacet != null) {
+              // Arg-less list backed by an @idFetcher (e.g. `noArgDummies`): with no arguments
+              // to fan out on, the id-fetcher is called exactly once for all aliases of this
+              // field, so a failure (or legitimate null) there is shared identically by every
+              // alias - it must not be reported per-alias like the arg-bearing case above.
+              TypeName idListType =
+                  requireNonNull(idFetcherFacetToResponseType.get(idFetcherFacet), fieldName);
+              builder.addNamedCode(
+                  """
+                  $errable:T<$idListType:T> _$fieldName:L_idsErrable = $idFetcherFacet:L;
+                  if (_$fieldName:L_idsErrable.valueOpt().isPresent()) {
+                    $list:T<$singleValue:T> _$fieldName:L_items = new $arrayList:T<>();
+                    for ($errable:T<$gqlObjectMap:T> _e : $fieldName:L.responses()) {
+                      _$fieldName:L_items.add(new $objectValue:T(_e, true));
+                    }
+                    for ($string:T _alias : _fieldNameToAliases.getOrDefault($fieldName:S, $list:T.of())) {
+                      _builder.addField(_alias, new $listValue:T(_$fieldName:L_items, true));
+                    }
+                  } else {
+                    $errable:T<$list:T<$singleValue:T>> _$fieldName:L_errorItems =
+                        _$fieldName:L_idsErrable.map(_ids -> $list:T.<$singleValue:T>of());
+                    for ($string:T _alias : _fieldNameToAliases.getOrDefault($fieldName:S, $list:T.of())) {
+                      _builder.addField(_alias, new $listValue:T(_$fieldName:L_errorItems, true));
+                    }
+                  }
+                  """,
+                  Map.ofEntries(
+                      entry("fieldName", fieldName),
+                      entry("string", String.class),
+                      entry("list", List.class),
+                      entry("singleValue", SingleValue.class),
+                      entry("arrayList", ArrayList.class),
+                      entry("errable", Errable.class),
+                      entry("idListType", idListType),
+                      entry("idFetcherFacet", idFetcherFacet),
+                      entry("gqlObjectMap", GraphQlObject.class),
+                      entry("objectValue", GraphQlValue.ObjectValue.class),
+                      entry("listValue", ListValue.class)));
+            } else {
+              // Arg-less list: build items once, assign same value to all aliases
+              builder.addNamedCode(
+                  """
+                  $list:T<$singleValue:T> _$fieldName:L_items = new $arrayList:T<>();
+                  for ($errable:T<$gqlObjectMap:T> _e : $fieldName:L.responses()) {
+                    _$fieldName:L_items.add(new $objectValue:T(_e, true));
+                  }
+                  for ($string:T _alias : _fieldNameToAliases.getOrDefault($fieldName:S, $list:T.of())) {
+                    _builder.addField(_alias, new $listValue:T(_$fieldName:L_items, true));
+                  }
+                  """,
+                  Map.ofEntries(
+                      entry("fieldName", fieldName),
+                      entry("string", String.class),
+                      entry("list", List.class),
+                      entry("singleValue", SingleValue.class),
+                      entry("arrayList", ArrayList.class),
+                      entry("errable", Errable.class),
+                      entry("gqlObjectMap", GraphQlObject.class),
+                      entry("objectValue", GraphQlValue.ObjectValue.class),
+                      entry("listValue", ListValue.class)));
+            }
           } else {
             // Arg-less non-list: same value for all aliases
             builder.addNamedCode(

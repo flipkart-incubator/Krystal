@@ -8,6 +8,7 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.graphql.samples.dummy.Dummy_Id;
 import com.flipkart.krystal.vajram.graphql.samples.dummy.Dummy_Id_ImmutGQlResp;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Vajram
 public abstract class GetDummyIdForOrder extends ComputeVajramDef<Dummy_Id> {
@@ -19,7 +20,10 @@ public abstract class GetDummyIdForOrder extends ComputeVajramDef<Dummy_Id> {
   }
 
   @Output
-  static Dummy_Id dummyIds(Order_Id id) {
+  static Dummy_Id dummyIds(Order_Id id, @Nullable String name) {
+    if ("boom".equals(name)) {
+      throw new RuntimeException("GetDummyIdForOrder failed for name=boom");
+    }
     return Dummy_Id_ImmutGQlResp._builder().dummyId(id.id() + "_dummy_1")._build();
   }
 }

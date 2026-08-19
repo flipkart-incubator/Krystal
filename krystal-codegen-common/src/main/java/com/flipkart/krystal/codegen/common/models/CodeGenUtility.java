@@ -674,9 +674,9 @@ public class CodeGenUtility {
 
     ByteArrayOutputStream formattedCodeOutput = new ByteArrayOutputStream();
     byte[] codeBytes = code.getBytes(UTF_8);
-    int exitCode;
-
+    String formattingErrorMessage = null;
     try {
+      int exitCode;
       exitCode =
           codeFormatter.run(
               new ByteArrayInputStream(codeBytes),
@@ -685,12 +685,21 @@ public class CodeGenUtility {
               // "-" arg means format input from input stream provided above. See
               // com.google.googlejavaformat.java.CommandLineOptions for reference
               "-");
+      if (exitCode != 0) {
+        formattingErrorMessage = "GoogleJavaFormatTool returned non-zero exit code: " + exitCode;
+      }
     } catch (Throwable e) {
-      log.warn("Encountered exception while formatting generated code.", e);
-      exitCode = -1;
+      formattingErrorMessage =
+          "Encountered exception while formatting generated code. " + e.getMessage();
+      log.error("Encountered exception while formatting generated code.", e);
     }
-    if (exitCode != 0) {
-      note("Could not format code for class " + canonicalClassName, originatingElement);
+    if (formattingErrorMessage != null) {
+      note(
+          "Could not format code for class "
+              + canonicalClassName
+              + " due to error: "
+              + formattingErrorMessage,
+          originatingElement);
       formattedCodeOutput = new ByteArrayOutputStream(codeBytes.length);
       formattedCodeOutput.writeBytes(codeBytes);
     }
