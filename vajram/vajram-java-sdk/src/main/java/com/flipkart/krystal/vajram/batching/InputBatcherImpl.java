@@ -2,7 +2,6 @@ package com.flipkart.krystal.vajram.batching;
 
 import static java.util.Collections.unmodifiableList;
 
-import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
 import com.google.common.collect.ImmutableList;
@@ -15,13 +14,15 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class InputBatcherImpl implements InputBatcher {
 
-  private static final int DEFAULT_BATCH_SIZE = 1;
+  private static final int DEFAULT_BATCH_SIZE = 10;
   private @Nullable Consumer<List<BatchedFacets>> batchingListener;
   private final Map<ImmutableFacetValuesContainer, List<ExecutionItem>> unBatchedRequests =
       new HashMap<>();
-  private int minBatchSize = DEFAULT_BATCH_SIZE;
+  private final int minBatchSize;
 
-  public InputBatcherImpl() {}
+  public InputBatcherImpl() {
+    this(DEFAULT_BATCH_SIZE);
+  }
 
   public InputBatcherImpl(int minBatchSize) {
     this.minBatchSize = minBatchSize;
@@ -68,11 +69,5 @@ public final class InputBatcherImpl implements InputBatcher {
   @Override
   public void onBatching(Consumer<List<BatchedFacets>> listener) {
     batchingListener = listener;
-  }
-
-  @Override
-  public void onConfigUpdate(ConfigProvider configProvider) {
-    this.minBatchSize =
-        configProvider.<Integer>getConfig("min_batch_size").orElse(DEFAULT_BATCH_SIZE);
   }
 }

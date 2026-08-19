@@ -34,6 +34,7 @@ import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorationInput;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorator;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
+import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.request.InvocationId;
@@ -436,7 +437,9 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
     private final OutputLogicDefinition<Object> outputLogicDefinition;
 
     private CachingDecoratedLogic(
-        OutputLogic<Object> logicToDecorate, OutputLogicDefinition<Object> outputLogicDefinition) {
+        OutputLogic<Object> logicToDecorate,
+        OutputLogicDefinition<Object> outputLogicDefinition,
+        LogicExecutionContext logicExecutionContext) {
       this.logicToDecorate = logicToDecorate;
       this.outputLogicDefinition = outputLogicDefinition;
     }

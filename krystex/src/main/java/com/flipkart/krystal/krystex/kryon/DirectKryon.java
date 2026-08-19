@@ -127,9 +127,16 @@ public final class DirectKryon extends AbstractKryon<MultiRequestDirectCommand, 
       DependentChain dependentChain) {
     OutputLogic<Object> logic = outputLogicDefinition.logic();
 
+    LogicExecutionContext logicExecutionContext =
+        new LogicExecutionContext(
+            vajramID,
+            outputLogicDefinition.tags(),
+            dependentChain,
+            kryonDefinition.kryonDefinitionRegistry());
     for (OutputLogicDecorator outputLogicDecorator :
         getSortedOutputLogicDecorators(dependentChain)) {
-      logic = outputLogicDecorator.decorateLogic(logic, outputLogicDefinition);
+      logic =
+          outputLogicDecorator.decorateLogic(logic, outputLogicDefinition, logicExecutionContext);
     }
     OutputLogic<Object> finalLogic = logic;
     try {

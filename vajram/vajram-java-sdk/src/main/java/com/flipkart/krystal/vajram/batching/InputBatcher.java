@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.batching;
 
-import com.flipkart.krystal.config.ConfigListener;
 import com.flipkart.krystal.data.ExecutionItem;
 import java.util.List;
 import java.util.function.Consumer;
@@ -15,7 +14,7 @@ import java.util.function.Consumer;
  * by squashing/merging these when some condition is met. For example, {@link InputBatcherImpl}
  * keeps collecting inputs until a minimum batch size is reached.
  */
-public interface InputBatcher extends ConfigListener {
+public interface InputBatcher {
 
   List<BatchedFacets> add(ExecutionItem batchEnabledFacets);
 

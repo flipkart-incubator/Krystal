@@ -542,8 +542,15 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
         getSortedOutputLogicDecorators(dependentChain);
     OutputLogic<Object> logic = outputLogicDefinition.logic();
 
+    LogicExecutionContext logicExecutionContext =
+        new LogicExecutionContext(
+            vajramID,
+            outputLogicDefinition.tags(),
+            dependentChain,
+            kryonDefinition.kryonDefinitionRegistry());
     for (OutputLogicDecorator outputLogicDecorator : sortedDecorators) {
-      logic = outputLogicDecorator.decorateLogic(logic, outputLogicDefinition);
+      logic =
+          outputLogicDecorator.decorateLogic(logic, outputLogicDefinition, logicExecutionContext);
     }
     OutputLogic<Object> finalLogic = logic;
     Map<InvocationId, CompletableFuture<@Nullable Object>> resultsByRequest =

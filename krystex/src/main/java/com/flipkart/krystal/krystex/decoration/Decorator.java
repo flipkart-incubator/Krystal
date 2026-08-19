@@ -4,7 +4,12 @@ import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecorator;
 
-public sealed interface Decorator permits DependencyDecorator, KryonDecorator, LogicDecorator {
+public sealed interface Decorator
+    permits FlushableDecorator,
+        InitiableWithActiveDepChains,
+        DependencyDecorator,
+        KryonDecorator,
+        LogicDecorator {
 
   /**
    * The identifier for this object which is used to prevent duplicate decorators decorating the
@@ -19,6 +24,4 @@ public sealed interface Decorator permits DependencyDecorator, KryonDecorator, L
   default String decoratorType() {
     return this.getClass().getName();
   }
-
-  default void executeCommand(DecoratorCommand decoratorCommand) {}
 }
