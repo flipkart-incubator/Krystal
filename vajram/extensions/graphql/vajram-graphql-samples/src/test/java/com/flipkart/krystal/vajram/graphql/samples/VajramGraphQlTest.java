@@ -230,6 +230,176 @@ public class VajramGraphQlTest {
     assertThat(d2Data.get("dummyId")).isEqualTo("order1_dummy_1");
   }
 
+  @Test
+  void argBearingSingleFieldDataFetcherAliases_fansOutPerAlias() {
+    // orderItemAt (scalar) and orderItemNamesFrom (list) are single-field @dataFetcher fields
+    // with GraphQL arguments: each aliased invocation must fan out to its own vajram call and
+    // get back a distinct, argument-specific response - not a shared/one-to-one response.
+    CompletableFuture<ExecutionResult> result;
+    try (VajramKryonExecutor executor = createExecutor()) {
+      result =
+          new GraphQlExecutionFacade(GRAPHQL)
+              .executeGraphQl(
+                  executor,
+                  VajramExecutionConfig.builder().build(),
+                  new GraphQLQuery(
+                      """
+                      query {
+                        order(id: "order1") {
+                          i1: orderItemAt(index: 1)
+                          i2: orderItemAt(index: 2)
+                          f1: orderItemNamesFrom(offset: 10)
+                          f2: orderItemNamesFrom(offset: 20)
+                        }
+                      }
+                      """,
+                      Map.of()));
+    }
+    assertThat(result).succeedsWithin(TEST_TIMEOUT);
+    Map<String, Object> queryData = requireNonNull(result.join().getData());
+    @SuppressWarnings("unchecked")
+    Map<String, Object> orderData = requireNonNull((Map<String, Object>) queryData.get("order"));
+
+    assertThat(orderData.get("i1")).isEqualTo("order1_item_1");
+    assertThat(orderData.get("i2")).isEqualTo("order1_item_2");
+    assertThat(orderData.get("f1")).isEqualTo(List.of("order1_from_10_1", "order1_from_10_2"));
+    assertThat(orderData.get("f2")).isEqualTo(List.of("order1_from_20_1", "order1_from_20_2"));
+  }
+
+  @Test
+  void argBearingListIdFetcherAliases_withSomeAliasesFailing_surfacesErrorsWithoutDroppingFields() {
+    // `dummies` is an arg-bearing list @idFetcher field (GetDummyIdsWithArgs) whose id-fetcher
+    // fans out one call per alias. One alias's id-fetcher call succeeds returning n ids, while a
+    // sibling alias's id-fetcher call throws. A correct implementation must still surface a
+    // result (null + a GraphQL error) for the failing alias - it must not silently disappear from
+    // the response, and it must not corrupt data returned for the succeeding alias.
+    CompletableFuture<ExecutionResult> result;
+    try (VajramKryonExecutor executor = createExecutor()) {
+      result =
+          new GraphQlExecutionFacade(GRAPHQL)
+              .executeGraphQl(
+                  executor,
+                  VajramExecutionConfig.builder().build(),
+                  new GraphQLQuery(
+                      """
+                      query {
+                        order(id: "order1") {
+                          ok: dummies(filter: true, preferredType: "fine", count: 2) {
+                            dummyId
+                          }
+                          bad: dummies(filter: true, preferredType: "boom", count: 2) {
+                            dummyId
+                          }
+                        }
+                      }
+                      """,
+                      Map.of()));
+    }
+    assertThat(result).succeedsWithin(TEST_TIMEOUT);
+    ExecutionResult executionResult = result.join();
+    Map<String, Object> queryData = requireNonNull(executionResult.getData());
+    @SuppressWarnings("unchecked")
+    Map<String, Object> orderData = requireNonNull((Map<String, Object>) queryData.get("order"));
+
+    // The successful alias must retain its own 2 ids, unaffected by the sibling failure.
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> okData = (List<Map<String, Object>>) orderData.get("ok");
+    assertThat(okData).isNotNull();
+    assertThat(okData.stream().map(m -> m.get("dummyId")).toList())
+        .isEqualTo(List.of("order1_dummy_1", "order1_dummy_2"));
+
+    // The failing alias's key must still be present in the response (per GraphQL spec: a
+    // nullable field that errors resolves to `null` with an entry in `errors`), not vanish.
+    assertThat(orderData.containsKey("bad")).isTrue();
+    assertThat(orderData.get("bad")).isNull();
+    assertThat(executionResult.getErrors().isEmpty()).isFalse();
+  }
+
+  @Test
+  void argBearingNonListIdFetcherAliases_withOneAliasFailing_surfacesErrorWithoutDroppingField() {
+    // `dummy` is an arg-bearing non-list @idFetcher field (GetDummyIdForOrder) whose id-fetcher
+    // fans out one call per alias. One alias's id-fetcher call succeeds, a sibling alias's call
+    // throws. The failing alias must still show up as `null` + a GraphQL error, and the
+    // succeeding alias's data must be unaffected.
+    CompletableFuture<ExecutionResult> result;
+    try (VajramKryonExecutor executor = createExecutor()) {
+      result =
+          new GraphQlExecutionFacade(GRAPHQL)
+              .executeGraphQl(
+                  executor,
+                  VajramExecutionConfig.builder().build(),
+                  new GraphQLQuery(
+                      """
+                      query {
+                        order(id: "order1") {
+                          ok: dummy(name: "fine") {
+                            dummyId
+                          }
+                          bad: dummy(name: "boom") {
+                            dummyId
+                          }
+                        }
+                      }
+                      """,
+                      Map.of()));
+    }
+    assertThat(result).succeedsWithin(TEST_TIMEOUT);
+    ExecutionResult executionResult = result.join();
+    Map<String, Object> queryData = requireNonNull(executionResult.getData());
+    @SuppressWarnings("unchecked")
+    Map<String, Object> orderData = requireNonNull((Map<String, Object>) queryData.get("order"));
+
+    @SuppressWarnings("unchecked")
+    Map<String, Object> okData = (Map<String, Object>) orderData.get("ok");
+    assertThat(okData).isNotNull();
+    assertThat(okData.get("dummyId")).isEqualTo("order1_dummy_1");
+
+    assertThat(orderData.containsKey("bad")).isTrue();
+    assertThat(orderData.get("bad")).isNull();
+    assertThat(executionResult.getErrors().isEmpty()).isFalse();
+  }
+
+  @Test
+  void argLessListIdFetcherAliases_whenIdFetcherFails_surfacesSameErrorForAllAliases() {
+    // `noArgDummies` is an arg-less list @idFetcher field (GetDummyIds). With no arguments,
+    // the id-fetcher is called exactly once for the whole field (no per-alias fanout is
+    // possible) - so if it fails, every alias of `noArgDummies` must see the same null + error,
+    // not silently disappear.
+    CompletableFuture<ExecutionResult> result;
+    try (VajramKryonExecutor executor = createExecutor()) {
+      result =
+          new GraphQlExecutionFacade(GRAPHQL)
+              .executeGraphQl(
+                  executor,
+                  VajramExecutionConfig.builder().build(),
+                  new GraphQLQuery(
+                      """
+                      query {
+                        order(id: "orderBadDummies") {
+                          a1: noArgDummies {
+                            dummyId
+                          }
+                          a2: noArgDummies {
+                            dummyId
+                          }
+                        }
+                      }
+                      """,
+                      Map.of()));
+    }
+    assertThat(result).succeedsWithin(TEST_TIMEOUT);
+    ExecutionResult executionResult = result.join();
+    Map<String, Object> queryData = requireNonNull(executionResult.getData());
+    @SuppressWarnings("unchecked")
+    Map<String, Object> orderData = requireNonNull((Map<String, Object>) queryData.get("order"));
+
+    assertThat(orderData.containsKey("a1")).isTrue();
+    assertThat(orderData.get("a1")).isNull();
+    assertThat(orderData.containsKey("a2")).isTrue();
+    assertThat(orderData.get("a2")).isNull();
+    assertThat(executionResult.getErrors().isEmpty()).isFalse();
+  }
+
   private VajramKryonExecutor createExecutor() {
     return kGraph
         .build()

@@ -15,16 +15,13 @@ public abstract class GetDummyIds extends ComputeVajramDef<List<Dummy_Id>> {
   interface _Inputs {
     @IfAbsent(FAIL)
     Order_Id id();
-
-    boolean filter();
-
-    String preferredType();
-
-    int count();
   }
 
   @Output
   static List<Dummy_Id> dummyIds(Order_Id id) {
+    if ("orderBadDummies".equals(id.id())) {
+      throw new RuntimeException("GetDummyIds failed for id=orderBadDummies");
+    }
     return List.of(Dummy_Id_ImmutGQlResp._builder().dummyId(id.id() + "_dummy_1")._build());
   }
 }

@@ -114,4 +114,23 @@ final class ErrableModule extends SimpleModule {
       return this;
     }
   }
+
+  public static final class ErrableFilter {
+
+    /**
+     * Return true if object is to be excluded. So return true for nulls and empty
+     *
+     * @param obj the reference object with which to compare.
+     */
+    @Override
+    public boolean equals(Object obj) {
+      if (obj == null) {
+        return true;
+      }
+      if (obj instanceof Errable<?> errable) {
+        return errable.value() == null;
+      }
+      return false;
+    }
+  }
 }

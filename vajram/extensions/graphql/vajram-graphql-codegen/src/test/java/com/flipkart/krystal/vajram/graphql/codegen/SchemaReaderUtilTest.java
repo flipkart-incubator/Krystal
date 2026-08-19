@@ -65,6 +65,44 @@ class SchemaReaderUtilTest {
     assertTrue(exception.getMessage().contains("cannot be a list"));
   }
 
+  @Test
+  void rejectsDuplicateIdFetcherVajramIdOnSameType() {
+    IllegalStateException exception =
+        assertThrows(
+            IllegalStateException.class,
+            () ->
+                schemaReader(
+                    """
+                    schema @rootPackage(name: "test.schema") { query: Query }
+                    type Query @operation(type: QUERY) { value: String }
+                    type Widget { id: ID! @idField name: String }
+                    type Item {
+                      id: ID! @idField
+                      primaryWidget: Widget @idFetcher(vajramId: "GetWidget", subPackage: "w")
+                      secondaryWidget: Widget @idFetcher(vajramId: "GetWidget", subPackage: "w")
+                    }
+                    """));
+
+    assertTrue(exception.getMessage().contains("can only be used by one field per type"));
+  }
+
+  @Test
+  void allowsDifferentIdFetcherVajramIdsOnSameType() {
+    assertDoesNotThrow(
+        () ->
+            schemaReader(
+                """
+                schema @rootPackage(name: "test.schema") { query: Query }
+                type Query @operation(type: QUERY) { value: String }
+                type Widget { id: ID! @idField name: String }
+                type Item {
+                  id: ID! @idField
+                  primaryWidget: Widget @idFetcher(vajramId: "GetWidget", subPackage: "w")
+                  secondaryWidget: Widget @idFetcher(vajramId: "GetAnotherWidget", subPackage: "w")
+                }
+                """));
+  }
+
   private SchemaReaderUtil schemaReader(String schema) throws IOException {
     Path schemaFile = tempDir.resolve("Schema.graphqls");
     Files.writeString(schemaFile, schema);
