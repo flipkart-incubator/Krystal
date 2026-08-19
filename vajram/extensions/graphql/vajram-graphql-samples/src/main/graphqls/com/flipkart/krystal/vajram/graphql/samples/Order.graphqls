@@ -20,6 +20,14 @@ type Order @subPackage(name: "order"){
     recommendedOrders: [Order]
     state: State @dataFetcher(vajramId: "GetOrderState", subPackage: "order")
     stateDuplicate: State @dataFetcher(vajramId: "GetOrderState", subPackage: "order")
+    """
+    Single-field, arg-bearing scalar data fetcher: fans out one request per alias.
+    """
+    orderItemAt(index: Int!): String @dataFetcher(vajramId: "GetOrderItemAt", subPackage: "order")
+    """
+    Single-field, arg-bearing list data fetcher: fans out one request per alias.
+    """
+    orderItemNamesFrom(offset: Int!): [String] @dataFetcher(vajramId: "GetOrderItemNamesFrom", subPackage: "order")
     name: Name #@dataFetcher(vajramId: "GetName")
 }
 

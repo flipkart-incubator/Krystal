@@ -615,7 +615,7 @@ this.$L = $L == null
       TypeMirror returnType = method.getReturnType();
       if (util.isOptional(returnType)) {
         returnType = util.getOptionalInnerType(returnType);
-      } else if(util.isErrable(returnType)){
+      } else if (util.isErrable(returnType)) {
         returnType = util.getErrableInnerType(returnType);
       }
       if (util.isMapType(returnType)) {

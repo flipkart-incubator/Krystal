@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.NonNil;
 import java.io.IOException;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -112,6 +113,25 @@ final class ErrableModule extends SimpleModule {
         return new ErrableDeserializer(inner);
       }
       return this;
+    }
+  }
+
+  public static final class ErrableFilter {
+
+    /**
+     * Return true if object is to be excluded. So return true for nulls and empty
+     *
+     * @param obj the reference object with which to compare.
+     */
+    @Override
+    public boolean equals(Object obj) {
+      if (obj == null) {
+        return true;
+      }
+      if (obj instanceof Errable<?> errable) {
+        return errable.value() == null;
+      }
+      return false;
     }
   }
 }

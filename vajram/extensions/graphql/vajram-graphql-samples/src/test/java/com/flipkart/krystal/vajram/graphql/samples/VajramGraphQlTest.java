@@ -230,6 +230,42 @@ public class VajramGraphQlTest {
     assertThat(d2Data.get("dummyId")).isEqualTo("order1_dummy_1");
   }
 
+  @Test
+  void argBearingSingleFieldDataFetcherAliases_fansOutPerAlias() {
+    // orderItemAt (scalar) and orderItemNamesFrom (list) are single-field @dataFetcher fields
+    // with GraphQL arguments: each aliased invocation must fan out to its own vajram call and
+    // get back a distinct, argument-specific response - not a shared/one-to-one response.
+    CompletableFuture<ExecutionResult> result;
+    try (VajramKryonExecutor executor = createExecutor()) {
+      result =
+          new GraphQlExecutionFacade(GRAPHQL)
+              .executeGraphQl(
+                  executor,
+                  VajramExecutionConfig.builder().build(),
+                  new GraphQLQuery(
+                      """
+                      query {
+                        order(id: "order1") {
+                          i1: orderItemAt(index: 1)
+                          i2: orderItemAt(index: 2)
+                          f1: orderItemNamesFrom(offset: 10)
+                          f2: orderItemNamesFrom(offset: 20)
+                        }
+                      }
+                      """,
+                      Map.of()));
+    }
+    assertThat(result).succeedsWithin(TEST_TIMEOUT);
+    Map<String, Object> queryData = requireNonNull(result.join().getData());
+    @SuppressWarnings("unchecked")
+    Map<String, Object> orderData = requireNonNull((Map<String, Object>) queryData.get("order"));
+
+    assertThat(orderData.get("i1")).isEqualTo("order1_item_1");
+    assertThat(orderData.get("i2")).isEqualTo("order1_item_2");
+    assertThat(orderData.get("f1")).isEqualTo(List.of("order1_from_10_1", "order1_from_10_2"));
+    assertThat(orderData.get("f2")).isEqualTo(List.of("order1_from_20_1", "order1_from_20_2"));
+  }
+
   private VajramKryonExecutor createExecutor() {
     return kGraph
         .build()

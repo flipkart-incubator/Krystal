@@ -6,6 +6,8 @@ import static com.fasterxml.jackson.databind.SerializationFeature.FAIL_ON_EMPTY_
 import static com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS;
 import static java.util.Objects.requireNonNullElse;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonInclude.Value;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectReader;
@@ -16,11 +18,13 @@ import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.array.ByteArray;
 import com.flipkart.krystal.model.array.FloatArray;
 import com.flipkart.krystal.model.array.SimpleFloatArray;
 import com.flipkart.krystal.serial.SerdeProtocol;
+import com.flipkart.krystal.vajram.json.ErrableModule.ErrableFilter;
 import com.flipkart.krystal.vajram.json.JsonConfig.Creator;
 import com.flipkart.krystal.vajram.json.array.ByteArrays.ByteArrayDeserializer;
 import com.flipkart.krystal.vajram.json.array.ByteArrays.ByteArraySerializer;
@@ -45,6 +49,15 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
 
   private static final JsonMapper OBJECT_MAPPER =
       JsonMapper.builder()
+          .withConfigOverride(
+              Errable.class,
+              mutableConfigOverride ->
+                  mutableConfigOverride.setInclude(
+                      Value.construct(
+                          Include.NON_ABSENT,
+                          Include.NON_ABSENT,
+                          ErrableFilter.class,
+                          ErrableFilter.class)))
           .defaultPropertyInclusion(ALL_NON_ABSENT)
           .disable(FAIL_ON_UNKNOWN_PROPERTIES)
           .disable(FAIL_ON_EMPTY_BEANS)

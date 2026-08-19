@@ -206,13 +206,10 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
     for (Entry<Fetcher, List<GraphQlFieldSpec>> entry : fetcherToFields.entrySet()) {
       if (entry.getKey() instanceof VajramFetcher fetcher) {
         List<GraphQlFieldSpec> fields = entry.getValue();
-        boolean hasArgs =
-            !fields.isEmpty()
-                && !fields.get(0).fieldDefinition().getInputValueDefinitions().isEmpty();
         AnnotationSpec.Builder fetcherDepAnnotation =
             AnnotationSpec.builder(Dependency.class)
                 .addMember("onVajram", "$T.class", fetcher.vajramClassName());
-        if (hasArgs) {
+        if (canFanout(fetcher, fields)) {
           fetcherDepAnnotation.addMember("canFanout", "true");
         }
         internalFacets.addMethod(
@@ -283,6 +280,17 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
       currentType = currentType.innerType();
     }
     return currentType.isList();
+  }
+
+  /**
+   * A {@link VajramFetcher} dependency fans out (one request per alias) when its field carries
+   * arguments, unless it is a {@link GraphQlFetcherType#MULTI_FIELD_DATA_FETCHER} - those always
+   * remain a single one-to-one call regardless of arguments.
+   */
+  private static boolean canFanout(VajramFetcher fetcher, List<GraphQlFieldSpec> fields) {
+    boolean hasArgs =
+        !fields.isEmpty() && !fields.get(0).fieldDefinition().getInputValueDefinitions().isEmpty();
+    return hasArgs && fetcher.type() != GraphQlFetcherType.MULTI_FIELD_DATA_FETCHER;
   }
 
   private static String getFacetName(VajramFetcher fetcher, List<GraphQlFieldSpec> fields) {
@@ -369,9 +377,14 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                   || vajramFetcher.type().equals(GraphQlFetcherType.ID_FETCHER)) {
                 return;
               }
+              TypeName responseType = getFetcherResponseType(vajramFetcher, fields);
               builder.addParameter(
-                  ParameterizedTypeName.get(
-                      ClassName.get(Errable.class), getFetcherResponseType(vajramFetcher, fields)),
+                  canFanout(vajramFetcher, fields)
+                      ? ParameterizedTypeName.get(
+                          ClassName.get(FanoutDepResponses.class),
+                          getRequestClassName(vajramFetcher.vajramClassName()),
+                          responseType)
+                      : ParameterizedTypeName.get(ClassName.get(Errable.class), responseType),
                   getFacetName(vajramFetcher, fields));
             });
 
@@ -513,6 +526,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
               String facetName = getFacetName(vajramFetcher, fields);
               boolean isMultiField =
                   vajramFetcher.type() == GraphQlFetcherType.MULTI_FIELD_DATA_FETCHER;
+              boolean fanout = canFanout(vajramFetcher, fields);
               for (GraphQlFieldSpec fieldSpec : fields) {
                 String fieldName = fieldSpec.fieldName();
                 boolean isListField = isGraphQlList(fieldSpec);
@@ -571,6 +585,35 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                             entry("listAccess", listAccess),
                             entry("elemVar", elemVar),
                             entry("elemVal", elemVal)));
+                  } else if (fanout) {
+                    // Arg-bearing single-field list: one request/response per alias, matched
+                    // positionally.
+                    builder.addNamedCode(
+                        """
+                        $list:T<$string:T> _$fieldName:L_aliases = _fieldNameToAliases.getOrDefault($fieldName:S, $list:T.of());
+                        for (int _i = 0; _i < _$fieldName:L_aliases.size() && _i < $facetName:L.requestResponsePairs().size(); _i++) {
+                          $string:T _alias = _$fieldName:L_aliases.get(_i);
+                          $errable:T<$list:T<$singleValue:T>> _$fieldName:L_items =
+                              $facetName:L.requestResponsePairs().get(_i).response().map(_list -> {
+                                $list:T<$singleValue:T> _items = new $arrayList:T<>();
+                                for (Object _s : _list) {
+                                  _items.add(new $scalarValue:T(_s, true));
+                                }
+                                return _items;
+                              });
+                          _builder.addField(_alias, new $listValue:T(_$fieldName:L_items, true));
+                        }
+                        """,
+                        Map.ofEntries(
+                            entry("fieldName", fieldName),
+                            entry("errable", Errable.class),
+                            entry("list", List.class),
+                            entry("singleValue", SingleValue.class),
+                            entry("arrayList", ArrayList.class),
+                            entry("scalarValue", ScalarValue.class),
+                            entry("listValue", ListValue.class),
+                            entry("facetName", facetName),
+                            entry("string", String.class)));
                   } else {
                     builder.addNamedCode(
                         """
@@ -598,43 +641,58 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                             entry("failure", Failure.class),
                             entry("string", String.class)));
                   }
-                } else {
-                  if (isMultiField) {
-                    // Nullable scalar model methods return Errable<T>; unwrap to get T (or null).
-                    // Non-null model methods return T directly.
-                    boolean scalarNullable = !fieldSpec.fieldType().isNonNull();
-                    CodeBlock scalarAccess =
-                        scalarNullable
-                            ? CodeBlock.of("_v.$L().valueOpt().orElse(null)", fieldName)
-                            : CodeBlock.of("_v.$L()", fieldName);
-                    builder.addNamedCode(
-                        """
+                } else if (isMultiField) {
+                  // Nullable scalar model methods return Errable<T>; unwrap to get T (or null).
+                  // Non-null model methods return T directly.
+                  boolean scalarNullable = !fieldSpec.fieldType().isNonNull();
+                  CodeBlock scalarAccess =
+                      scalarNullable
+                          ? CodeBlock.of("_v.$L().valueOpt().orElse(null)", fieldName)
+                          : CodeBlock.of("_v.$L()", fieldName);
+                  builder.addNamedCode(
+                      """
                         for ($string:T _alias : _fieldNameToAliases.getOrDefault($fieldName:S, $list:T.of())) {
                           _builder.addField(_alias, new $scalarValue:T($facetName:L.map(_v -> $scalarAccess:L), true));
                         }
                         """,
-                        Map.ofEntries(
-                            entry("fieldName", fieldName),
-                            entry("scalarValue", ScalarValue.class),
-                            entry("facetName", facetName),
-                            entry("failure", Failure.class),
-                            entry("list", List.class),
-                            entry("string", String.class),
-                            entry("scalarAccess", scalarAccess)));
-                  } else {
-                    builder.addNamedCode(
-                        """
+                      Map.ofEntries(
+                          entry("fieldName", fieldName),
+                          entry("scalarValue", ScalarValue.class),
+                          entry("facetName", facetName),
+                          entry("failure", Failure.class),
+                          entry("list", List.class),
+                          entry("string", String.class),
+                          entry("scalarAccess", scalarAccess)));
+                } else if (fanout) {
+                  // Arg-bearing single-field scalar: one request/response per alias, matched
+                  // positionally.
+                  builder.addNamedCode(
+                      """
+                        $list:T<$string:T> _$fieldName:L_aliases = _fieldNameToAliases.getOrDefault($fieldName:S, $list:T.of());
+                        for (int _i = 0; _i < _$fieldName:L_aliases.size() && _i < $facetName:L.requestResponsePairs().size(); _i++) {
+                          $string:T _alias = _$fieldName:L_aliases.get(_i);
+                          _builder.addField(_alias, new $scalarValue:T($facetName:L.requestResponsePairs().get(_i).response(), true));
+                        }
+                        """,
+                      Map.ofEntries(
+                          entry("fieldName", fieldName),
+                          entry("scalarValue", ScalarValue.class),
+                          entry("facetName", facetName),
+                          entry("list", List.class),
+                          entry("string", String.class)));
+                } else {
+                  builder.addNamedCode(
+                      """
                         for ($string:T _alias : _fieldNameToAliases.getOrDefault($fieldName:S, $list:T.of())) {
                           _builder.addField(_alias, new $scalarValue:T($facetName:L, true));
                         }
                         """,
-                        Map.ofEntries(
-                            entry("fieldName", fieldName),
-                            entry("scalarValue", ScalarValue.class),
-                            entry("facetName", facetName),
-                            entry("list", List.class),
-                            entry("string", String.class)));
-                  }
+                      Map.ofEntries(
+                          entry("fieldName", fieldName),
+                          entry("scalarValue", ScalarValue.class),
+                          entry("facetName", facetName),
+                          entry("list", List.class),
+                          entry("string", String.class)));
                 }
               }
             });
@@ -789,11 +847,9 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
     boolean parentTypeHasEntityId = schemaReaderUtil.hasObjectId(parentTypeDef);
 
     String facetName = getFacetName(fetcher, fields);
-    boolean hasArgs =
-        !fields.isEmpty() && !fields.get(0).fieldDefinition().getInputValueDefinitions().isEmpty();
     String fieldName = !fields.isEmpty() ? fields.get(0).fieldName() : facetName;
 
-    if (hasArgs && fetcher.type() != GraphQlFetcherType.MULTI_FIELD_DATA_FETCHER) {
+    if (canFanout(fetcher, fields)) {
       // Arg-bearing fields use alias-based fanout: one request per alias
       List<CodeBlock> depInputSetterCode = new ArrayList<>();
       if (parentTypeHasEntityId) {
