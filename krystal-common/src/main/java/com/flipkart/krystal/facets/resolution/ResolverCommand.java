@@ -1,15 +1,13 @@
 package com.flipkart.krystal.facets.resolution;
 
-import static java.util.Collections.unmodifiableList;
-
-import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.google.common.collect.ImmutableList;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @SuppressWarnings("ClassReferencesSubclass")
-public sealed interface ResolverCommand {
+@FunctionalInterface
+public interface ResolverCommand {
 
   List<? extends ImmutableRequest.Builder<?>> getRequests();
 
@@ -22,11 +20,7 @@ public sealed interface ResolverCommand {
   }
 
   static ExecuteDependency executeWithRequests(List<? extends ImmutableRequest.Builder<?>> inputs) {
-    return new ExecuteDependency(unmodifiableList(inputs));
-  }
-
-  static ExecuteDependency executeWithErrables(List<? extends Errable<? extends ImmutableRequest.Builder<?>>> inputs) {
-    return new ExecuteDependency(unmodifiableList(inputs));
+    return new ExecuteDependency(inputs);
   }
 
   record SkipDependency(String reason, @Nullable Throwable cause) implements ResolverCommand {

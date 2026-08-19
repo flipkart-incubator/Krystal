@@ -7,6 +7,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public sealed interface Errable<T> permits Success, Failure {
@@ -45,6 +46,8 @@ public sealed interface Errable<T> permits Success, Failure {
   Optional<T> valueOptOrThrow();
 
   /**
+   *
+   *
    * <ul>
    *   <li>NonNil: returns the non-null value
    *   <li>Nil: throws {@link NilValueException}
@@ -87,6 +90,11 @@ public sealed interface Errable<T> permits Success, Failure {
     } catch (Throwable e) {
       return withError(e);
     }
+  }
+
+  static <S, T> Function<S, Errable<@NonNull T>> computeErrableFrom(
+      Function<S, @Nullable T> valueComputer) {
+    return s -> errableFrom(() -> valueComputer.apply(s));
   }
 
   @SuppressWarnings("unchecked")

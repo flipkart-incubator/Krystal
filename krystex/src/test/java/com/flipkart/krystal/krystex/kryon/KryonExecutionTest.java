@@ -2,6 +2,7 @@ package com.flipkart.krystal.krystex.kryon;
 
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.core.VajramID.vajramID;
+import static com.flipkart.krystal.data.Errable.computeErrableFrom;
 import static com.flipkart.krystal.data.Errable.errableFrom;
 import static com.flipkart.krystal.data.Errable.withValue;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.BREADTH;
@@ -722,7 +723,8 @@ class KryonExecutionTest {
                     .forEach(
                         executionItem ->
                             linkFutures(
-                                errableFrom(() -> logic.apply(executionItem.facetValues()))
+                                computeErrableFrom(logic)
+                                    .apply(executionItem.facetValues())
                                     .toFuture(),
                                 executionItem.response())),
             emptyTags());
