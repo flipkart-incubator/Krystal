@@ -59,9 +59,7 @@ public class VajramTestHarness {
 
     vajramIdMockData.forEach(
         (vajramID, vajramRequestErrableMap) ->
-            vajramRequestErrableMap.forEach(
-                (objectVajramRequest, objectErrable) ->
-                    requestLevelCache.primeCache(objectVajramRequest, objectErrable.toFuture())));
+            vajramRequestErrableMap.forEach(requestLevelCache::primeCache));
     krystalExecutorConfigBuilder.kryonDecoratorConfig(
         new KryonDecoratorConfig(
             KRYON_DECORATOR_TYPE,
