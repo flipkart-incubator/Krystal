@@ -21,6 +21,7 @@ import com.flipkart.krystal.except.KrystalCompletionException;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.VajramGraph;
+import com.flipkart.krystal.krystex.batching.InputBatchingDecorator;
 import com.flipkart.krystal.krystex.commands.DirectForwardCommand;
 import com.flipkart.krystal.krystex.commands.DirectForwardReceive;
 import com.flipkart.krystal.krystex.commands.ForwardReceiveBatch;
@@ -51,6 +52,28 @@ import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+/**
+ * A RequestLevel Cache instance is designed to cache the outputs of vajrams and/or their output
+ * logic so that duplicate computation and IO calls can be avoided. To achieve this, a
+ * RequestLevelCache instance provides {@link KryonExecutorConfigurator}s that decorate eligible
+ * Kryons of Compute Vajrams and OutputLogics of IO Vajrams.
+ *
+ * <p>It is important to note that using RequestLevelCache changes the way the graph executes and
+ * can have significant consequences for the way the graph executes. This includes potential
+ * deadlocks or lost data if the RequestLevelCache or the Vajrams in the graph are not configured or
+ * annotated correctly.
+ *
+ * <p>For example, any caching decorator applied before decorators like {@link
+ * InputBatchingDecorator}, must not cache {@link CompletableFuture}s - doing so can cause deadlocks
+ * because {@link InputBatchingDecorator} groups dependentChains by epoch where each depChain in
+ * epoch(n+1) is blocked on the response from at least one depChain from epoch(n) - at the same
+ * time, some dependentChain in epoch(n) could end up getting a future from the cache which itself
+ * was inserted by a depChain from epoch(n+1). Because of this, the {@link KryonDecorator} provided
+ * by this class only caches completed values, and not futures. Also, the {@link
+ * OutputLogicDecorator} provided by this class caches futures (which is needed to avoid duplicate
+ * IO calls due to concurrent requests with same inputs), and this MUST be applied AFTER decorators
+ * like {@link InputBatchingDecorator}.
+ */
 @Slf4j
 public sealed class RequestLevelCache permits TestRequestLevelCache {
 
@@ -228,7 +251,7 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
         var cacheKey = newCacheKey(facetValues);
         if (cacheKey == null) {
           // Since the cache key could not be generated, we skip caching for this request
-          log.error(
+          log.warn(
               "Skipping DirectForwardReceive caching for request {} since cache key is null",
               facetValues);
           cacheMisses.add(executionItem);
@@ -281,7 +304,7 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
             ImmutableFacetValues cacheKey = newCacheKey(facets);
             if (cacheKey == null) {
               // Since the cache key could not be generated, we skip caching for this request
-              log.error(
+              log.warn(
                   "Skipping forwardBatch caching for request {} since cache key is null", facets);
               cacheMisses.put(requestId, facets);
               return;
@@ -453,7 +476,7 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
     try {
       immut = facetValues._build();
     } catch (Exception e) {
-      log.error(
+      log.warn(
           "Unable to generate cache key by 'building' facet values to create an Immutable instance as an exception was encountered while building.",
           e);
       return null;
@@ -469,8 +492,9 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
     return cache.getValue(cacheKey);
   }
 
-  void primeCache(FacetValues facetValues, CompletableFuture<@Nullable Object> data) {
-    cache.putFuture(facetValues._build(), data);
+  void primeCache(FacetValues facetValues, Errable<Object> data) {
+    cache.putFuture(facetValues._build(), data.toFuture());
+    cache.putValue(facetValues._build(), data);
   }
 
   private class CachingDecoratedLogic implements OutputLogic<Object> {
