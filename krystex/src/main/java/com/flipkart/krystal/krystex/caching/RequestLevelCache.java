@@ -251,7 +251,7 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
         var cacheKey = newCacheKey(facetValues);
         if (cacheKey == null) {
           // Since the cache key could not be generated, we skip caching for this request
-          log.error(
+          log.warn(
               "Skipping DirectForwardReceive caching for request {} since cache key is null",
               facetValues);
           cacheMisses.add(executionItem);
@@ -304,7 +304,7 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
             ImmutableFacetValues cacheKey = newCacheKey(facets);
             if (cacheKey == null) {
               // Since the cache key could not be generated, we skip caching for this request
-              log.error(
+              log.warn(
                   "Skipping forwardBatch caching for request {} since cache key is null", facets);
               cacheMisses.put(requestId, facets);
               return;
@@ -476,7 +476,7 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
     try {
       immut = facetValues._build();
     } catch (Exception e) {
-      log.error(
+      log.warn(
           "Unable to generate cache key by 'building' facet values to create an Immutable instance as an exception was encountered while building.",
           e);
       return null;
@@ -493,7 +493,7 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
   }
 
   void primeCache(FacetValues facetValues, Errable<Object> data) {
-    cache.putFuture(facetValues._build(), CompletableFuture.completedFuture(data));
+    cache.putFuture(facetValues._build(), data.toFuture());
     cache.putValue(facetValues._build(), data);
   }
 

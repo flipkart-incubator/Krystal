@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -22,6 +23,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * objects while counting pending batch size, then we would end up create much smaller effective
  * batches because a subsequent CachingDecorator would dedupe most of them.
  */
+@Slf4j
 public final class InputBatcherImpl implements InputBatcher {
 
   private static final int DEFAULT_BATCH_SIZE = 10;
@@ -92,7 +94,27 @@ public final class InputBatcherImpl implements InputBatcher {
 
     public void add(ExecutionItem executionItem) {
       allExecutionItems.add(executionItem);
-      uniqueFacetValues.add(executionItem.facetValues()._build());
+      ImmutableFacetValues immut = getImmutableFacetValues(executionItem);
+      if (immut != null) {
+        // If immut is null, it means we are unable to build the instance as it might have some
+        // missing mandatory fields for example. We don't have to add it to unique objects list
+        // since that request will anyway fail and not contribute to the actual batch call
+        uniqueFacetValues.add(immut);
+      }
+    }
+
+    private static @Nullable ImmutableFacetValues getImmutableFacetValues(
+        ExecutionItem executionItem) {
+      ImmutableFacetValues immut;
+      try {
+        immut = executionItem.facetValues()._build();
+      } catch (Exception e) {
+        log.warn(
+            "Unable to generate immutable value by 'building' facet values as an exception was encountered while building.",
+            e);
+        return null;
+      }
+      return immut;
     }
 
     public int uniqueCount() {
