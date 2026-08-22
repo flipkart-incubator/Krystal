@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
-import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy.DIRECT;
 import static com.flipkart.krystal.krystex.testharness.VajramTestHarness.prepareForTest;
 import static com.flipkart.krystal.vajram.samples.Util.TEST_TIMEOUT;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
@@ -304,8 +303,7 @@ class FormulaTest {
                       kGraph.createExecutor(
                           KrystalExecutorConfig.builder()
                               .executorId("formulaTest")
-                              .executorService(executor)
-                              .kryonExecStrategy(DIRECT))) {
+                              .executorService(executor))) {
                     timeToCreateExecutors.add(System.nanoTime() - iterationStartTime);
                     metrics[currentLoopCount] = krystexVajramExecutor.getKryonMetrics();
                     long enqueueStart = System.nanoTime();
@@ -376,8 +374,7 @@ class FormulaTest {
           kGraph.createExecutor(
               KrystalExecutorConfig.builder()
                   .executorId("formulaTest")
-                  .executorService(executor)
-                  .kryonExecStrategy(DIRECT))) {
+                  .executorService(executor))) {
         timeToCreateExecutors += System.nanoTime() - iterationStartTime;
         metrics[outer_i] = krystexVajramExecutor.getKryonMetrics();
         for (int inner_i = 0; inner_i < innerLoopCount; inner_i++) {
@@ -555,7 +552,6 @@ class FormulaTest {
         KrystalExecutorConfig.builder()
             .executorId(REQUEST_ID)
             .executorService(executorLease.get())
-            .kryonExecStrategy(KryonExecStrategy.BATCH)
             .graphTraversalStrategy(GraphTraversalStrategy.DEPTH);
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, REQUEST_ID);
     try (VajramKryonExecutor krystexVajramExecutor =

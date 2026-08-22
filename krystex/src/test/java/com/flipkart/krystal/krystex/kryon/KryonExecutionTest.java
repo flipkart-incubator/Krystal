@@ -755,8 +755,11 @@ class KryonExecutionTest {
             .executorService(executorLease.get())
             .kryonExecStrategy(kryonExecStrategy)
             .graphTraversalStrategy(graphTraversalStrategy)
-            .configureWith(requestLevelCache.defaultDecorationStrategy())
             .executorId("test");
+    if (kryonExecStrategy == DIRECT) {
+      // RequestLevelCache only supports DIRECT
+      configBuilder.configureWith(requestLevelCache.defaultDecorationStrategy());
+    }
     return new VajramKryonExecutor(krystexGraph, configBuilder);
   }
 
