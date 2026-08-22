@@ -245,8 +245,11 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
     private CompletableFuture<KryonCommandResponse> readFromCache(
         Kryon<KryonCommand<?>, KryonCommandResponse> kryon, DirectForwardReceive command) {
       List<ExecutionItem> cacheMisses = new ArrayList<>();
-      for (ExecutionItem executionItem :
-          command.executionItems(getKryonDefinition().kryonDefinitionRegistry())) {
+      List<ExecutionItem> executionItems =
+          command.executionItems(getKryonDefinition().kryonDefinitionRegistry());
+      Map<ImmutableFacetValues, CompletableFuture<@Nullable Object>> localCache =
+          new LinkedHashMap<>();
+      for (ExecutionItem executionItem : executionItems) {
         FacetValues facetValues = executionItem.facetValues();
         var cacheKey = newCacheKey(facetValues);
         if (cacheKey == null) {
@@ -255,6 +258,12 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
               "Skipping DirectForwardReceive caching for request {} since cache key is null",
               facetValues);
           cacheMisses.add(executionItem);
+          continue;
+        }
+        CompletableFuture<@Nullable Object> existingFuture =
+            localCache.putIfAbsent(cacheKey, executionItem.response());
+        if (existingFuture != null) {
+          propagateCompletion(existingFuture, executionItem.response());
           continue;
         }
         // We are in a KryonDecorator. If we get cached Future which is potentially not complete,
@@ -532,9 +541,9 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
         if (cachedFuture == null) {
           cache.putFuture(cacheKey, executionItem.response());
           cacheMisses.add(executionItem);
-          continue;
+        } else {
+          propagateCompletion(cachedFuture, executionItem.response());
         }
-        propagateCompletion(cachedFuture, executionItem.response());
       }
       logicToDecorate.execute(input.withExecutionItems(cacheMisses));
     }
