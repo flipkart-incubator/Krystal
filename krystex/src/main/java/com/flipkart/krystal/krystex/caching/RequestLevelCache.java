@@ -1,11 +1,8 @@
 package com.flipkart.krystal.krystex.caching;
 
-import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.concurrent.Futures.propagateCompletion;
 import static com.flipkart.krystal.data.DataAccess.AccessPattern.MUTATION;
 import static com.flipkart.krystal.data.DataAccess.AccessPattern.QUERY;
-import static com.flipkart.krystal.except.KrystalCompletionException.wrapAsCompletionException;
-import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import com.flipkart.krystal.annos.ComputeDelegationMode;
@@ -26,7 +23,6 @@ import com.flipkart.krystal.krystex.commands.DirectForwardCommand;
 import com.flipkart.krystal.krystex.commands.DirectForwardReceive;
 import com.flipkart.krystal.krystex.commands.ForwardReceiveBatch;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
-import com.flipkart.krystal.krystex.kryon.BatchResponse;
 import com.flipkart.krystal.krystex.kryon.Kryon;
 import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
@@ -38,12 +34,10 @@ import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
-import com.flipkart.krystal.krystex.request.InvocationId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -231,8 +225,8 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
     @Override
     public CompletableFuture<KryonCommandResponse> executeCommand(KryonCommand<?> kryonCommand) {
       if (getKryonCachingMetadata(kryonCommand.vajramID()).isEligibleForCaching()) {
-        if (kryonCommand instanceof ForwardReceiveBatch forwardBatch) {
-          return readFromCache(kryon, forwardBatch);
+        if (kryonCommand instanceof ForwardReceiveBatch) {
+          throw new UnsupportedOperationException();
         } else if (kryonCommand instanceof DirectForwardReceive directForwardReceive) {
           return readFromCache(kryon, directForwardReceive);
         }
@@ -298,88 +292,6 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
       return kryon.executeCommand(
           DirectForwardCommand.ofExecutionItems(
               command.vajramID(), cacheMisses, command.dependentChain()));
-    }
-
-    @SuppressWarnings("FutureReturnValueIgnored")
-    private CompletableFuture<KryonCommandResponse> readFromCache(
-        Kryon<KryonCommand<?>, KryonCommandResponse> kryon, ForwardReceiveBatch forwardBatch) {
-      var executableRequests = forwardBatch.executableInvocations();
-      Map<InvocationId, FacetValues> cacheMisses = new LinkedHashMap<>();
-      Map<InvocationId, Errable<@Nullable Object>> cacheHits = new LinkedHashMap<>();
-      Map<InvocationId, CompletableFuture<@Nullable Object>> newCacheEntries =
-          new LinkedHashMap<>();
-      executableRequests.forEach(
-          (requestId, facets) -> {
-            ImmutableFacetValues cacheKey = newCacheKey(facets);
-            if (cacheKey == null) {
-              // Since the cache key could not be generated, we skip caching for this request
-              log.warn(
-                  "Skipping forwardBatch caching for request {} since cache key is null", facets);
-              cacheMisses.put(requestId, facets);
-              return;
-            }
-            var cachedValue = getCachedValue(cacheKey);
-            if (cachedValue == null) {
-              var placeHolderFuture = new CompletableFuture<@Nullable Object>();
-              newCacheEntries.put(requestId, placeHolderFuture);
-              placeHolderFuture
-                  .handle(Errable::errableFrom)
-                  .thenAccept(value -> cache.putValue(cacheKey, value));
-              cacheMisses.put(requestId, cacheKey);
-            } else {
-              cacheHits.put(requestId, cachedValue);
-            }
-          });
-      CompletableFuture<KryonCommandResponse> cacheMissesResponse =
-          kryon.executeCommand(
-              new ForwardReceiveBatch(
-                  forwardBatch.vajramID(), cacheMisses, forwardBatch.dependentChain()));
-
-      cacheMissesResponse.whenComplete(
-          (kryonResponse, throwable) -> {
-            if (kryonResponse instanceof BatchResponse batchResponse) {
-              Map<InvocationId, Errable<Object>> responses = batchResponse.responses();
-              responses.forEach(
-                  (requestId, response) -> {
-                    CompletableFuture<? extends @Nullable Object> future = response.toFuture();
-                    CompletableFuture<@Nullable Object> destinationFuture =
-                        newCacheEntries.computeIfAbsent(
-                            requestId, _r -> new CompletableFuture<@Nullable Object>());
-                    linkFutures(future, destinationFuture);
-                  });
-            } else if (throwable != null) {
-              cacheMisses.forEach(
-                  (requestId, response) ->
-                      newCacheEntries
-                          .computeIfAbsent(
-                              requestId, _r -> new CompletableFuture<@Nullable Object>())
-                          .completeExceptionally(wrapAsCompletionException(throwable)));
-            } else {
-              RuntimeException e =
-                  new RuntimeException("Expecting BatchResponse. Found " + kryonResponse);
-              log.error("", e);
-              throw e;
-            }
-          });
-      CompletableFuture<KryonCommandResponse> finalResponse = new CompletableFuture<>();
-      Set<Entry<InvocationId, CompletableFuture<@Nullable Object>>> allFutures =
-          newCacheEntries.entrySet();
-      var allFuturesArray = new CompletableFuture[allFutures.size()];
-      int i = 0;
-      for (Entry<InvocationId, CompletableFuture<@Nullable Object>> e : allFutures) {
-        allFuturesArray[i++] = e.getValue();
-      }
-      allOf(allFuturesArray)
-          .whenComplete(
-              (unused, throwable) -> {
-                for (Entry<InvocationId, CompletableFuture<@Nullable Object>> entry : allFutures) {
-                  cacheHits.put(
-                      entry.getKey(),
-                      entry.getValue().handle(Errable::errableFrom).getNow(UNKNOWN_ERROR));
-                }
-                finalResponse.complete(new BatchResponse(cacheHits));
-              });
-      return finalResponse;
     }
   }
 
