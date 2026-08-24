@@ -61,8 +61,7 @@ public final class MainLogicExecReporter implements OutputLogicDecorator {
         configBuilder.outputLogicDecoratorConfig(
             new OutputLogicDecoratorConfig(
                 decoratorType(),
-                logicExecutionContext -> true, // apply to all vajrams
-                logicExecutionContext -> decoratorType(), // Only one instance across the graph
+                decorationContext -> true, // apply to all vajrams
                 decoratorContext -> this // Reuse this one instance across the graph,
                 ));
   }

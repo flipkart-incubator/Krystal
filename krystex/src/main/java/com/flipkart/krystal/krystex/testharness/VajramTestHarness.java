@@ -64,13 +64,11 @@ public class VajramTestHarness {
         new KryonDecoratorConfig(
             KRYON_DECORATOR_TYPE,
             executionContext -> vajramIdMockData.containsKey(executionContext.vajramID()),
-            executionContext -> KRYON_DECORATOR_TYPE,
             kryonExecutionContext -> requestLevelCache.kryonDecorator()));
     krystalExecutorConfigBuilder.outputLogicDecoratorConfig(
         new OutputLogicDecoratorConfig(
             OUTPUT_LOGIC_DECORATOR_TYPE,
-            executionContext -> vajramIdMockData.containsKey(executionContext.vajramID()),
-            executionContext -> OUTPUT_LOGIC_DECORATOR_TYPE,
+            decorationContext -> vajramIdMockData.containsKey(decorationContext.vajramID()),
             kryonExecutionContext -> requestLevelCache.outputLogicDecorator()));
     return krystalExecutorConfigBuilder;
   }

@@ -152,14 +152,12 @@ public record KrystalExecutorConfig(
           new DependencyDecoratorConfig(
               decoratorType,
               dependencyExecutionContext -> {
-                Dependency dependency =
-                    dependencyExecutionContext.dependentChain().latestDependency();
+                Dependency dependency = dependencyExecutionContext.dependency();
                 if (dependency == null) {
                   return false;
                 }
                 return dependency.tags().getAnnotationByType(TraitDependency.class).isPresent();
               },
-              d -> decoratorType,
               c -> traitDispatchDecorator));
       this.traitDispatchDecorator = traitDispatchDecorator;
       return this;

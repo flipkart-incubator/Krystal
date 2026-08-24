@@ -160,8 +160,7 @@ public final class KrystexGraph {
               decoratorType,
               /* shouldDecorate= */ executionContext ->
                   isInjectionNeeded(executionContext, vajramGraph),
-              /* instanceIdGenerator= */ executionContext -> decoratorType,
-              /* factory= */ decoratorContext ->
+              /* instanceIdGenerator= *//* factory= */ decoratorContext ->
                   new KryonInputInjector(vajramGraph, injectionProvider)));
     };
   }
@@ -200,16 +199,13 @@ public final class KrystexGraph {
     OutputLogicDecoratorConfig batchingDecoratorConfig =
         new OutputLogicDecoratorConfig(
             decoratorType,
-            logicExecutionContext -> {
+            decorationContext -> {
               VajramDefinition vajramDefinition =
-                  vajramGraph.vajramDefinitions().get(logicExecutionContext.vajramID());
+                  vajramGraph.vajramDefinitions().get(decorationContext.vajramID());
               return vajramDefinition != null && vajramDefinition.metadata().isBatched();
             },
-            logicExecutionContext -> logicExecutionContext.vajramID().id(),
             decoratorContext ->
-                inputBatcherConfig
-                    .decoratorFactory()
-                    .apply(decoratorContext.logicExecutionContext().vajramID()));
+                inputBatcherConfig.decoratorFactory().apply(decoratorContext.vajramID()));
     return configBuilder -> {
       if (configBuilder.hasOutputLogicDecorator(decoratorType)) {
         // The decorator set in the executor config has higher precedence

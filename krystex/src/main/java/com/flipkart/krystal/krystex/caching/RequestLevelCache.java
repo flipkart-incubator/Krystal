@@ -124,7 +124,7 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
                   return kryonCachingMetadata.isComputeVajram()
                       && kryonCachingMetadata.isEligibleForCaching();
                 }, // Apply kryon level cache to only compute vajrams
-                _c -> KRYON_DECORATOR_TYPE, // Only one RequestLevelCache across the vajram graph
+                // Only one RequestLevelCache across the vajram graph
                 _c -> kryonDecorator() // Reuse this instance across the graph
                 ));
   }
@@ -140,13 +140,13 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
         configBuilder.outputLogicDecoratorConfig(
             new OutputLogicDecoratorConfig(
                 OUTPUT_LOGIC_DECORATOR_TYPE,
-                executionContext -> {
+                decorationContext -> {
                   KryonCachingMetadata kryonCachingMetadata =
-                      getKryonCachingMetadata(executionContext.vajramID());
+                      getKryonCachingMetadata(decorationContext.vajramID());
                   return !kryonCachingMetadata.isComputeVajram()
                       && kryonCachingMetadata.isEligibleForCaching();
                 }, // Apply output logic level cache only for IO vajrams
-                _c -> OUTPUT_LOGIC_DECORATOR_TYPE, // Only one RequestLevelCache across the vajram
+                // Only one RequestLevelCache across the vajram
                 // graph
                 _c -> outputLogicDecorator() // Reuse this instance across the graph
                 ));
