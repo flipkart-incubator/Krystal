@@ -14,7 +14,6 @@ import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValues;
-import com.flipkart.krystal.except.KrystalCompletionException;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.VajramGraph;
@@ -76,10 +75,9 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
   public static final String OUTPUT_LOGIC_DECORATOR_TYPE =
       RequestLevelCache.class.getName() + "_OutputLogicDecorator";
 
-  private static final Errable<Object> UNKNOWN_ERROR =
-      Errable.withError(new KrystalCompletionException("Unknown error in request cache"));
-
   private final CacheContainer cache = new CacheContainer();
+
+  @Getter private final RequestLevelCacheStats stats = new RequestLevelCacheStats();
 
   @Getter private final VajramGraph vajramGraph;
   private @MonotonicNonNull KryonDecorator kryonDecorator;
@@ -257,9 +255,11 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
         CompletableFuture<@Nullable Object> existingFuture =
             localCache.putIfAbsent(cacheKey, executionItem.response());
         if (existingFuture != null) {
+          stats.localCacheHit();
           propagateCompletion(existingFuture, executionItem.response());
           continue;
         }
+        stats.localCacheMiss();
         // We are in a KryonDecorator. If we get cached Future which is potentially not complete,
         // and use that as the cached response hoping that it would complete later, we can introduce
         // a deadlock during graph execution.
@@ -278,16 +278,18 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
         // in the caching OutputLogicDecorator (which treats incomplete futures as cache hits). The
         // output logic decorator MUST be configured to decorate AFTER the input batching decorator
         // (else the same deadlock will happen there as well).
-        var cachedValue = getCachedValue(cacheKey);
-        if (cachedValue == null) {
-          executionItem
-              .response()
-              .handle(Errable::errableFrom)
-              .thenAccept(value -> cache.putValue(cacheKey, value));
+        var cachedFuture = getCachedFuture(cacheKey);
+        if (cachedFuture == null) {
+          stats.globalCacheNoFuture();
+          cache.putFuture(cacheKey, executionItem.response());
           cacheMisses.add(executionItem);
-          continue;
+        } else if (cachedFuture.isDone()) {
+          stats.globalCacheHit();
+          propagateCompletion(cachedFuture, executionItem.response());
+        } else {
+          stats.globalCacheNoFutureIncompleteFuture();
+          cacheMisses.add(executionItem);
         }
-        cachedValue.completeFuture(executionItem.response());
       }
       return kryon.executeCommand(
           DirectForwardCommand.ofExecutionItems(
@@ -409,13 +411,8 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
     return cache.getFuture(cacheKey);
   }
 
-  @Nullable Errable<Object> getCachedValue(ImmutableFacetValues cacheKey) {
-    return cache.getValue(cacheKey);
-  }
-
   void primeCache(FacetValues facetValues, Errable<Object> data) {
     cache.putFuture(facetValues._build(), data.toFuture());
-    cache.putValue(facetValues._build(), data);
   }
 
   private class CachingDecoratedLogic implements OutputLogic<Object> {
