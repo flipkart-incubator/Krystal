@@ -246,6 +246,7 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
         var cacheKey = newCacheKey(facetValues);
         if (cacheKey == null) {
           // Since the cache key could not be generated, we skip caching for this request
+          stats.kryonStats().noCacheKey();
           log.warn(
               "Skipping DirectForwardReceive caching for request {} since cache key is null",
               facetValues);
@@ -255,11 +256,11 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
         CompletableFuture<@Nullable Object> existingFuture =
             localCache.putIfAbsent(cacheKey, executionItem.response());
         if (existingFuture != null) {
-          stats.localCacheHit();
+          stats.kryonStats().localCacheHit();
           propagateCompletion(existingFuture, executionItem.response());
           continue;
         }
-        stats.localCacheMiss();
+        stats.kryonStats().localCacheMiss();
         // We are in a KryonDecorator. If we get cached Future which is potentially not complete,
         // and use that as the cached response hoping that it would complete later, we can introduce
         // a deadlock during graph execution.
@@ -280,14 +281,14 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
         // (else the same deadlock will happen there as well).
         var cachedFuture = getCachedFuture(cacheKey);
         if (cachedFuture == null) {
-          stats.globalCacheNoFuture();
+          stats.kryonStats().globalCacheNoFuture();
           cache.putFuture(cacheKey, executionItem.response());
           cacheMisses.add(executionItem);
         } else if (cachedFuture.isDone()) {
-          stats.globalCacheHit();
+          stats.kryonStats().globalCacheCompletedFuture();
           propagateCompletion(cachedFuture, executionItem.response());
         } else {
-          stats.globalCacheNoFutureIncompleteFuture();
+          stats.kryonStats().globalCacheIncompleteFuture();
           cacheMisses.add(executionItem);
         }
       }
@@ -441,6 +442,7 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
         var cacheKey = newCacheKey(facetValues);
         if (cacheKey == null) {
           // Since the cache key could not be generated, we skip caching for this request
+          stats.outputLogicStats().noCacheKey();
           log.warn(
               "Skipping Output Logic caching for request {} since cache key is null", facetValues);
           cacheMisses.add(executionItem);
@@ -448,9 +450,11 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
         }
         var cachedFuture = getCachedFuture(cacheKey);
         if (cachedFuture == null) {
+          stats.outputLogicStats().cacheMiss();
           cache.putFuture(cacheKey, executionItem.response());
           cacheMisses.add(executionItem);
         } else {
+          stats.outputLogicStats().cacheHit();
           propagateCompletion(cachedFuture, executionItem.response());
         }
       }
