@@ -5,6 +5,7 @@ import static com.flipkart.krystal.vajram.resilience4j.R4JUtils.decorateAsyncExe
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
+import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationContext;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
@@ -33,7 +34,7 @@ public final class Resilience4JCircuitBreaker implements OutputLogicDecorator {
   }
 
   public static Resilience4JCircuitBreakerConfigurator onePerInstanceId(
-      Function<LogicExecutionContext, String> instanceIdGenerator) {
+      Function<LogicDecorationContext, String> instanceIdGenerator) {
     return new Resilience4JCircuitBreakerConfigurator(instanceIdGenerator);
   }
 

@@ -19,10 +19,10 @@ import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyInvocation;
+import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationContext;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -33,10 +33,9 @@ public final class DirectKryon extends AbstractKryon<MultiRequestDirectCommand, 
   DirectKryon(
       VajramKryonDefinition definition,
       VajramKryonExecutor kryonExecutor,
-      Function<LogicExecutionContext, List<OutputLogicDecorator>>
+      Function<LogicDecorationContext, List<OutputLogicDecorator>>
           sortedOutputLogicDecoratorsSupplier,
-      Function<DependencyExecutionContext, ImmutableMap<String, DependencyDecorator>>
-          depDecoratorSuppliers,
+      Function<DependencyExecutionContext, List<DependencyDecorator>> depDecoratorSuppliers,
       DecorationOrdering decorationOrdering) {
     super(
         definition,
@@ -67,10 +66,7 @@ public final class DirectKryon extends AbstractKryon<MultiRequestDirectCommand, 
                       requestResponseFutureList) {
                 DependentChain extendedDependentChain = dependentChain.extend(vajramID, dependency);
                 DependencyInvocation<DirectResponse> kryonResponseDependencyInvocation =
-                    decorateVajramInvocation(
-                        extendedDependentChain,
-                        dependency.onVajramID(),
-                        kryonExecutor::executeCommand);
+                    decorateVajramInvocation(dependency, kryonExecutor::executeCommand);
                 kryonResponseDependencyInvocation.invokeDependency(
                     new DirectForwardCommand(
                         dependency.onVajramID(),
@@ -136,7 +132,7 @@ public final class DirectKryon extends AbstractKryon<MultiRequestDirectCommand, 
     for (OutputLogicDecorator outputLogicDecorator :
         // Iterate in reverse so that decorators at the end of the list are applied first and thus
         // receive command last
-        Lists.reverse(getSortedOutputLogicDecorators(dependentChain))) {
+        Lists.reverse(getSortedOutputLogicDecorators())) {
       logic =
           outputLogicDecorator.decorateLogic(logic, outputLogicDefinition, logicExecutionContext);
     }

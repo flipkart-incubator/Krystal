@@ -153,11 +153,11 @@ public final class GraphQlOperationExecutor implements DependencyDecorator {
                 DECORATOR_TYPE,
                 dependencyExecutionContext -> {
                   Optional<Class<? extends Request<?>>> depVajramReq =
-                      graph.getVajramReqByVajramId(dependencyExecutionContext.depVajramId());
+                      graph.getVajramReqByVajramId(
+                          dependencyExecutionContext.dependency().onVajramID());
                   return depVajramReq.isPresent()
                       && GraphQlOperationAggregate_Req.class.isAssignableFrom(depVajramReq.get());
                 },
-                _c -> DECORATOR_TYPE,
                 _c -> this));
   }
 }

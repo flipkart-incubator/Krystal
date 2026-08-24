@@ -1,9 +1,7 @@
 package com.flipkart.krystal.krystex.kryon;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Value.ALL_NON_NULL;
-import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.DEPTH;
-import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy.BATCH;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy.DIRECT;
 import static java.time.Duration.ofSeconds;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -734,8 +732,7 @@ class VajramKryonExecutorTest {
   }
 
   public static Stream<Arguments> executorConfigsToTest() {
-    return Stream.of(
-        Arguments.of(BATCH, DEPTH), Arguments.of(BATCH, BREADTH), Arguments.of(DIRECT, DEPTH));
+    return Stream.of(Arguments.of(DIRECT, DEPTH));
   }
 
   private InputBatcherConfig singleBatcherConfig(
