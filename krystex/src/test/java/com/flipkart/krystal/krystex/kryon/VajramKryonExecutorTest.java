@@ -32,6 +32,7 @@ import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import com.flipkart.krystal.krystex.decoration.FlushableDecorator;
+import com.flipkart.krystal.krystex.epochs.VajramEpochGroups;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
@@ -578,9 +579,13 @@ class VajramKryonExecutorTest {
             new InputBatcherConfig(
                 ImmutableMap.of(
                         vGraph.getVajramIdByVajramDefType(TestUserService.class),
-                        new InputBatchingDecorator(() -> new InputBatcherImpl(100), List.of()),
+                        new InputBatchingDecorator(
+                            () -> new InputBatcherImpl(100),
+                            new VajramEpochGroups(ImmutableMap.of())),
                         vGraph.getVajramIdByVajramDefType(FriendsService.class),
-                        new InputBatchingDecorator(() -> new InputBatcherImpl(100), List.of()))
+                        new InputBatchingDecorator(
+                            () -> new InputBatcherImpl(100),
+                            new VajramEpochGroups(ImmutableMap.of())))
                     ::get)));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
@@ -741,7 +746,8 @@ class VajramKryonExecutorTest {
     return new InputBatcherConfig(
         _v ->
             vajramId.equals(_v)
-                ? new InputBatchingDecorator(inputBatcherSupplier, List.of())
+                ? new InputBatchingDecorator(
+                    inputBatcherSupplier, new VajramEpochGroups(ImmutableMap.of()))
                 : null);
   }
 

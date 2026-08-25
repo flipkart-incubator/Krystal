@@ -1,6 +1,6 @@
 package com.flipkart.krystal.krystex;
 
-import static com.flipkart.krystal.krystex.batching.InputBatcherConfig.computeSharedBatcherConfig;
+import static com.flipkart.krystal.krystex.batching.InputBatcherConfig.computeDefaultBatcherConfig;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNullElse;
 import static java.util.Objects.requireNonNullElseGet;
@@ -186,7 +186,7 @@ public final class KrystexGraph {
       inputBatcherConfig = customStrategy.customBatcherConfig();
     } else if (inputBatcherStrategy instanceof DefaultBatcherStrategy defaultStrategy) {
       inputBatcherConfig =
-          computeSharedBatcherConfig(
+          computeDefaultBatcherConfig(
               vajramGraph,
               defaultStrategy.batchSizeSupplier(),
               traitDispatchPolicies,

@@ -7,6 +7,7 @@ import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
 import com.flipkart.krystal.krystex.VajramGraph;
+import com.flipkart.krystal.krystex.caching.CacheContainer.CacheValue;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -55,12 +56,12 @@ public final class TestRequestLevelCache extends RequestLevelCache {
   }
 
   @Override
-  @Nullable CompletableFuture<@Nullable Object> getCachedFuture(ImmutableFacetValues cacheKey) {
+  CacheValue getCachedFuture(ImmutableFacetValues cacheKey) {
     CompletableFuture<@Nullable Object> futureStub = getFuture(cacheKey);
     if (futureStub.getNow(null) == NO_VALUE) {
       return super.getCachedFuture(cacheKey);
     }
-    return futureStub;
+    return new CacheValue(futureStub, 0);
   }
 
   /**

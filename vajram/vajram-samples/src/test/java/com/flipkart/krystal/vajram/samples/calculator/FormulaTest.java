@@ -32,8 +32,10 @@ import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.batching.InputBatcherConfig;
 import com.flipkart.krystal.krystex.batching.InputBatcherStrategy.CustomBatcherStrategy;
+import com.flipkart.krystal.krystex.batching.InputBatcherStrategy.DefaultBatcherStrategy;
 import com.flipkart.krystal.krystex.batching.InputBatchingDecorator;
 import com.flipkart.krystal.krystex.caching.TestRequestLevelCache;
+import com.flipkart.krystal.krystex.epochs.VajramEpochGroups;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
 import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
@@ -52,7 +54,6 @@ import com.flipkart.krystal.vajram.samples.calculator.divide.Divide_FacImmutPojo
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.LongAdder;
@@ -111,11 +112,7 @@ class FormulaTest {
         KrystexGraph.builder()
             .vajramGraph(graph)
             .externallyInvocableVajramIds(ImmutableSet.of(Formula_Req._VAJRAM_ID))
-            .inputBatcherStrategy(
-                new CustomBatcherStrategy(
-                    simpleInputBatcher(
-                        graph.getVajramIdByVajramDefType(Add.class),
-                        () -> new InputBatcherImpl(100))));
+            .inputBatcherStrategy(new DefaultBatcherStrategy(vajramId -> 3));
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, REQUEST_ID);
     try (VajramKryonExecutor krystexVajramExecutor =
         kGraph
@@ -625,7 +622,10 @@ class FormulaTest {
   public static InputBatcherConfig simpleInputBatcher(
       VajramID vajramID, Supplier<InputBatcher> inputBatcherSupplier) {
     return new InputBatcherConfig(
-        ImmutableMap.of(vajramID, new InputBatchingDecorator(inputBatcherSupplier, List.of()))
+        ImmutableMap.of(
+                vajramID,
+                new InputBatchingDecorator(
+                    inputBatcherSupplier, new VajramEpochGroups(ImmutableMap.of())))
             ::get);
   }
 }

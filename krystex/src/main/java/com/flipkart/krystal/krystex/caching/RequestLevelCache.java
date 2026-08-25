@@ -18,10 +18,13 @@ import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.batching.InputBatchingDecorator;
+import com.flipkart.krystal.krystex.caching.CacheContainer.CacheValue;
 import com.flipkart.krystal.krystex.commands.DirectForwardCommand;
 import com.flipkart.krystal.krystex.commands.DirectForwardReceive;
 import com.flipkart.krystal.krystex.commands.ForwardReceiveBatch;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
+import com.flipkart.krystal.krystex.epochs.EpochGroups;
+import com.flipkart.krystal.krystex.epochs.VajramEpochGroups;
 import com.flipkart.krystal.krystex.kryon.Kryon;
 import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
@@ -33,6 +36,7 @@ import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
+import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -78,8 +82,9 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
   private final CacheContainer cache = new CacheContainer();
 
   @Getter private final RequestLevelCacheStats stats = new RequestLevelCacheStats();
-
   @Getter private final VajramGraph vajramGraph;
+
+  private final EpochGroups epochGroups;
   private @MonotonicNonNull KryonDecorator kryonDecorator;
   private @MonotonicNonNull OutputLogicDecorator outputLogicDecorator;
 
@@ -91,7 +96,12 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
    *     request level cache
    */
   public RequestLevelCache(VajramGraph vajramGraph) {
+    this(vajramGraph, new EpochGroups(ImmutableMap.of()));
+  }
+
+  public RequestLevelCache(VajramGraph vajramGraph, EpochGroups epochGroups) {
     this.vajramGraph = vajramGraph;
+    this.epochGroups = epochGroups;
   }
 
   /**
@@ -279,14 +289,15 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
         // in the caching OutputLogicDecorator (which treats incomplete futures as cache hits). The
         // output logic decorator MUST be configured to decorate AFTER the input batching decorator
         // (else the same deadlock will happen there as well).
-        var cachedFuture = getCachedFuture(cacheKey);
-        if (cachedFuture == null) {
+        var cachedValue = getCachedFuture(cacheKey);
+        if (cachedValue == null) {
           stats.kryonStats().globalCacheNoFuture();
           cache.putFuture(cacheKey, executionItem.response());
           cacheMisses.add(executionItem);
-        } else if (cachedFuture.isDone()) {
+        } else if (cachedValue.future().isDone()
+            || getCurrentEpoch(command) >= cachedValue.epoch()) {
           stats.kryonStats().globalCacheCompletedFuture();
-          propagateCompletion(cachedFuture, executionItem.response());
+          propagateCompletion(cachedValue.future(), executionItem.response());
         } else {
           stats.kryonStats().globalCacheIncompleteFuture();
           cacheMisses.add(executionItem);
@@ -295,6 +306,14 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
       return kryon.executeCommand(
           DirectForwardCommand.ofExecutionItems(
               command.vajramID(), cacheMisses, command.dependentChain()));
+    }
+
+    private int getCurrentEpoch(DirectForwardReceive command) {
+      return epochGroups
+          .vajramEpochGroups()
+          .getOrDefault(command.vajramID(), new VajramEpochGroups(ImmutableMap.of()))
+          .epochByDepChains()
+          .getOrDefault(command.dependentChain(), 0);
     }
   }
 
@@ -408,7 +427,7 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
     return immut;
   }
 
-  @Nullable CompletableFuture<@Nullable Object> getCachedFuture(ImmutableFacetValues cacheKey) {
+  CacheValue getCachedFuture(ImmutableFacetValues cacheKey) {
     return cache.getFuture(cacheKey);
   }
 
@@ -448,14 +467,14 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
           cacheMisses.add(executionItem);
           continue;
         }
-        var cachedFuture = getCachedFuture(cacheKey);
-        if (cachedFuture == null) {
+        var cachedValue = getCachedFuture(cacheKey);
+        if (cachedValue == null) {
           stats.outputLogicStats().cacheMiss();
           cache.putFuture(cacheKey, executionItem.response());
           cacheMisses.add(executionItem);
         } else {
           stats.outputLogicStats().cacheHit();
-          propagateCompletion(cachedFuture, executionItem.response());
+          propagateCompletion(cachedValue.future(), executionItem.response());
         }
       }
       logicToDecorate.execute(input.withExecutionItems(cacheMisses));
