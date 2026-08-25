@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex.batching;
+package com.flipkart.krystal.krystex.epochs;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.Dependency;

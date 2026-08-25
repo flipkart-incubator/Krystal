@@ -166,7 +166,6 @@ class StaticCallGraphTest {
       GraphGenerationResult result = generateStaticCallGraphContent(kGraph.build(), null);
 
       String htmlContent = result.html();
-      System.out.println(htmlContent);
 
       // Check that all expected Vajrams are present
       assertThat(htmlContent).as("Complete graph should contain A2MinusB2").contains("A2MinusB2");

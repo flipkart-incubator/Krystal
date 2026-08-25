@@ -11,6 +11,7 @@ module flipkart.krystal.krystex {
   exports com.flipkart.krystal.krystex.resolution;
   exports com.flipkart.krystal.krystex.traits;
   exports com.flipkart.krystal.krystex;
+  exports com.flipkart.krystal.krystex.epochs;
 
   requires com.google.common;
   requires flipkart.krystal.common;
