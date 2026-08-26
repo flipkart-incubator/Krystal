@@ -296,10 +296,14 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
           cacheMisses.add(executionItem);
         } else if (cachedValue.future().isDone()
             || getCurrentEpoch(command) >= cachedValue.epoch()) {
-          stats.kryonStats().globalCacheCompletedFuture();
+          if (cachedValue.future().isDone()) {
+            stats.kryonStats().globalCacheHitsCompletedFuture();
+          } else {
+            stats.kryonStats().globalCacheHitsIncompleteFuture();
+          }
           propagateCompletion(cachedValue.future(), executionItem.response());
         } else {
-          stats.kryonStats().globalCacheIncompleteFuture();
+          stats.kryonStats().globalCacheMissIncompleteFuture();
           cacheMisses.add(executionItem);
         }
       }
