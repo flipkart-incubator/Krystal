@@ -1,6 +1,7 @@
 package com.flipkart.krystal.krystex;
 
 import static com.flipkart.krystal.krystex.batching.InputBatcherConfig.computeDefaultBatcherConfig;
+import static com.flipkart.krystal.krystex.epochs.EpochGroups.computeEpochGroups;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNullElse;
 import static java.util.Objects.requireNonNullElseGet;
@@ -15,6 +16,7 @@ import com.flipkart.krystal.krystex.batching.InputBatcherStrategy.CustomBatcherS
 import com.flipkart.krystal.krystex.batching.InputBatcherStrategy.DefaultBatcherStrategy;
 import com.flipkart.krystal.krystex.batching.InputBatchingDecorator;
 import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
+import com.flipkart.krystal.krystex.epochs.EpochGroups;
 import com.flipkart.krystal.krystex.inputinjection.KryonInputInjector;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
@@ -74,6 +76,7 @@ public final class KrystexGraph {
   @Getter private final ImmutableSet<VajramID> externallyInvocableVajramIds;
 
   @Getter private final DependentChainDisabler dependentChainDisabler;
+  @Getter private final EpochGroups epochGroups;
 
   /**
    * @param vajramGraph
@@ -110,13 +113,13 @@ public final class KrystexGraph {
                                 .isPresent())
                     .map(VajramDefinition::vajramId)
                     .collect(toImmutableSet()));
-    this.inputBatchingConfig =
-        create(
-            inputBatcherStrategy,
+    this.epochGroups =
+        computeEpochGroups(
             this.vajramGraph,
-            this.externallyInvocableVajramIds,
             this.traitDispatchPolicies,
-            this.dependentChainDisabler);
+            this.dependentChainDisabler,
+            this.externallyInvocableVajramIds);
+    this.inputBatchingConfig = create(inputBatcherStrategy, this.epochGroups, this.vajramGraph);
     this.dependentChainsByVajram =
         computeIncomingDependentChains(
             this.vajramGraph,
@@ -175,10 +178,8 @@ public final class KrystexGraph {
 
   private static KryonExecutorConfigurator create(
       @Nullable InputBatcherStrategy inputBatcherStrategy,
-      VajramGraph vajramGraph,
-      ImmutableSet<VajramID> externallyInvocableVajramIds,
-      TraitDispatchPolicies traitDispatchPolicies,
-      DependentChainDisabler dependentChainDisabler) {
+      EpochGroups epochGroups,
+      VajramGraph vajramGraph) {
     InputBatcherConfig inputBatcherConfig;
     if (inputBatcherStrategy == null) {
       return KryonExecutorConfigurator.NO_OP;
@@ -186,12 +187,7 @@ public final class KrystexGraph {
       inputBatcherConfig = customStrategy.customBatcherConfig();
     } else if (inputBatcherStrategy instanceof DefaultBatcherStrategy defaultStrategy) {
       inputBatcherConfig =
-          computeDefaultBatcherConfig(
-              vajramGraph,
-              defaultStrategy.batchSizeSupplier(),
-              traitDispatchPolicies,
-              dependentChainDisabler,
-              externallyInvocableVajramIds);
+          computeDefaultBatcherConfig(epochGroups, defaultStrategy.batchSizeSupplier());
     } else {
       throw new AssertionError("Not possible");
     }
