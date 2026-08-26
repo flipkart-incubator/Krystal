@@ -292,7 +292,7 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
         var cachedValue = getCachedFuture(cacheKey);
         if (cachedValue == null) {
           stats.kryonStats().globalCacheNoFuture();
-          cache.putFuture(cacheKey, executionItem.response());
+          cache.putFuture(cacheKey, executionItem.response(), getCurrentEpoch(command));
           cacheMisses.add(executionItem);
         } else if (cachedValue.future().isDone()
             || getCurrentEpoch(command) >= cachedValue.epoch()) {
