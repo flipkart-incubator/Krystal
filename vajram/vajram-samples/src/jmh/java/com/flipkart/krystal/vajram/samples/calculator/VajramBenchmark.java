@@ -1,10 +1,8 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
-import static com.flipkart.krystal.krystex.epochs.EpochGroups.computeEpochGroups;
 import static com.flipkart.krystal.vajram.samples.calculator.add.ChainAdd_Fac.chainSum_s;
 import static com.flipkart.krystal.vajram.samples.calculator.add.SplitAdd_Fac.splitSum1_s;
 import static com.flipkart.krystal.vajram.samples.calculator.add.SplitAdd_Fac.splitSum2_s;
-import static java.util.Objects.requireNonNullElse;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
@@ -18,7 +16,6 @@ import com.flipkart.krystal.krystex.SimpleDependentChainDisabler;
 import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.batching.InputBatcherStrategy.DefaultBatcherStrategy;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
-import com.flipkart.krystal.krystex.epochs.EpochGroups;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
@@ -487,18 +484,12 @@ public class VajramBenchmark {
       @Nullable TraitDispatchPolicies traitDispatchPolicies,
       int times) {
     CompletableFuture<Integer>[] results = new CompletableFuture[times];
-    EpochGroups epochGroups =
-        computeEpochGroups(
-            graph.vajramGraph(),
-            requireNonNullElse(traitDispatchPolicies, new TraitDispatchPolicies()),
-            new SimpleDependentChainDisabler(disabledDependantChains),
-            List.of(request._vajramID()));
     try (VajramKryonExecutor executor =
         graph.createExecutor(
             KrystalExecutorConfig.builder()
                 .executorService(executorLease.get())
                 .configureWith(
-                    new RequestLevelCache(graph.vajramGraph(), epochGroups)
+                    new RequestLevelCache(graph.vajramGraph(), graph.epochGroups())
                         .defaultDecorationStrategy())
                 .disabledDependentChains(disabledDependantChains))) {
       for (int i = 0; i < results.length; i++) {

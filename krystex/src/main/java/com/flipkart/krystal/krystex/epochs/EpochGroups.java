@@ -8,6 +8,7 @@ import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.epochs.LogicSet.DepResolvers;
 import com.flipkart.krystal.krystex.epochs.LogicSet.OutputLogics;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
+import com.flipkart.krystal.traits.StaticDispatchPolicy;
 import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
 import com.flipkart.krystal.vajram.IOVajramDef;
@@ -22,6 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
@@ -33,12 +35,15 @@ public record EpochGroups(ImmutableMap<VajramID, VajramEpochGroups> vajramEpochG
       DependentChainDisabler dependentChainDisabler,
       Collection<VajramID> externallyInvocableVajramIds) {
     List<VajramDefinition> externallyInvocableVajrams =
-        externallyInvocableVajramIds.stream().map(graph::getVajramDefinition).toList();
+        externallyInvocableVajramIds.stream()
+            .map(graph::tryGetVajramDefinition)
+            .filter(Objects::nonNull)
+            .toList();
     Map<VajramID, Map<Integer, Set<DependentChain>>> vajramToOrdinalChains = new HashMap<>();
     Map<VajramID, Integer> vajramsToOutgoingOrdinals = new HashMap<>();
     for (VajramDefinition vajramDefinition : externallyInvocableVajrams) {
       Collection<VajramID> dispatchTargets =
-          getDispatchTargets(vajramDefinition.vajramId(), graph, traitDispatchPolicies);
+          getDispatchTargets(vajramDefinition.vajramId(), graph, traitDispatchPolicies, null);
       for (VajramID dispatchTargetID : dispatchTargets) {
         collateDepChainOrdinals(
             vajramToOrdinalChains,
@@ -55,7 +60,10 @@ public record EpochGroups(ImmutableMap<VajramID, VajramEpochGroups> vajramEpochG
   }
 
   static Collection<VajramID> getDispatchTargets(
-      VajramID depVajramID, VajramGraph graph, TraitDispatchPolicies traitDispatchPolicies) {
+      VajramID depVajramID,
+      VajramGraph graph,
+      TraitDispatchPolicies traitDispatchPolicies,
+      Dependency dependency) {
     VajramDefinition depVajramDef = graph.getVajramDefinition(depVajramID);
     Collection<VajramID> depVajramIDs = new ArrayList<>();
     if (depVajramDef.isTrait()) {
@@ -66,8 +74,14 @@ public record EpochGroups(ImmutableMap<VajramID, VajramEpochGroups> vajramEpochG
                 + depVajramID
                 + " does not have a trait dispatch policy defined. Cannot auto-compute batcher config.");
       }
-      for (VajramID vajramID : traitDispatchPolicy.dispatchTargetIDs()) {
-        depVajramIDs.addAll(getDispatchTargets(vajramID, graph, traitDispatchPolicies));
+      if (dependency != null
+          && traitDispatchPolicy instanceof StaticDispatchPolicy staticDispatchPolicy) {
+        depVajramIDs.add(staticDispatchPolicy.getDispatchTargetID(dependency));
+      } else {
+        for (VajramID vajramID : traitDispatchPolicy.dispatchTargetIDs()) {
+          depVajramIDs.addAll(
+              getDispatchTargets(vajramID, graph, traitDispatchPolicies, dependency));
+        }
       }
     } else {
       depVajramIDs = List.of(depVajramID);
@@ -123,7 +137,8 @@ public record EpochGroups(ImmutableMap<VajramID, VajramEpochGroups> vajramEpochG
                 dependentChainDisabler,
                 traitDispatchPolicies);
         for (VajramID sourceDispatchTarget :
-            getDispatchTargets(sourceDependency.onVajramID(), graph, traitDispatchPolicies)) {
+            getDispatchTargets(
+                sourceDependency.onVajramID(), graph, traitDispatchPolicies, sourceDependency)) {
           sourceOrdinal =
               Math.max(
                   sourceOrdinal,
@@ -220,7 +235,7 @@ public record EpochGroups(ImmutableMap<VajramID, VajramEpochGroups> vajramEpochG
       DependentChain outgoingDepChain =
           incomingDepChain.extend(vajramBeingInvoked.vajramId(), dependency);
       for (VajramID depVajramID :
-          getDispatchTargets(dependency.onVajramID(), graph, traitDispatchPolicies)) {
+          getDispatchTargets(dependency.onVajramID(), graph, traitDispatchPolicies, dependency)) {
         collateDepChainOrdinals(
             vajramsToOrdinalChains,
             vajramsToResponseOrdinals,

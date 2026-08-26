@@ -22,6 +22,7 @@ import com.flipkart.krystal.krystex.SimpleDependentChainDisabler;
 import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.kryon.DependentChainBase;
 import com.flipkart.krystal.krystex.kryon.DependentChainSlice;
+import com.flipkart.krystal.traits.PredicateDispatchPolicy;
 import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.vajram.guice.traitbinding.GuiceyStaticDispatchPolicy;
 import com.flipkart.krystal.vajram.guice.traitbinding.TraitBinder;
@@ -65,6 +66,7 @@ class StaticCallGraphTest {
     KrystexGraph kGraph =
         KrystexGraph.builder()
             .vajramGraph(vajramGraph)
+            .traitDispatchPolicies(new TraitDispatchPolicies(getCalculatorPolicy(vajramGraph)))
             .dependentChainDisabler(
                 new SimpleDependentChainDisabler(ImmutableSet.of(), getDisabledSlices()))
             .build();
@@ -122,78 +124,83 @@ class StaticCallGraphTest {
             .vajramGraph(graph)
             .dependentChainDisabler(
                 new SimpleDependentChainDisabler(ImmutableSet.of(), getDisabledSlices()));
-    {
-      TraitBinder traitBinder = new TraitBinder();
-      traitBinder
-          .bindTrait(MultiAdd_Req.class)
-          .annotatedWith(AdditionMethod.Creator.create(SIMPLE))
-          .to(SimpleAdd_Req.class);
-      traitBinder
-          .bindTrait(MultiAdd_Req.class)
-          .annotatedWith(AdditionMethod.Creator.create(CHAIN))
-          .to(ChainAdd_Req.class);
-      traitBinder
-          .bindTrait(MultiAdd_Req.class)
-          .annotatedWith(AdditionMethod.Creator.create(SPLIT))
-          .to(SplitAdd_Req.class);
-      kGraph.traitDispatchPolicies(
-          new TraitDispatchPolicies(
-              new GuiceyStaticDispatchPolicy(
-                  graph, graph.getVajramIdByVajramDefType(MultiAdd.class), traitBinder),
-              dispatchTrait(CustomerServiceAgent_Req.class, graph)
-                  .conditionally(
-                      when(agentType_s, equalsEnum(L1))
-                          .and(initialCommunication_s, isInstanceOf(Call.class))
-                          .to(L1CallAgent_Req.class),
-                      when(agentType_s, equalsEnum(L1))
-                          .and(initialCommunication_s, isInstanceOf(Email.class))
-                          .to(L1EmailAgent_Req.class),
-                      when(agentType_s, equalsEnum(L2))
-                          .and(initialCommunication_s, isInstanceOf(Call.class))
-                          .to(L2CallAgent_Req.class),
-                      when(agentType_s, equalsEnum(L3))
-                          .and(initialCommunication_s, isInstanceOf(Email.class))
-                          .to(L3EmailAgent_Req.class),
-                      when(initialCommunication_s, isInstanceOf(Call.class))
-                          .to(DefaultCallAgent_Req.class),
-                      when(initialCommunication_s, isInstanceOf(Email.class))
-                          .to(DefaultEmailAgent_Req.class),
-                      // Default fallback
-                      when(agentType_s, isAnyValue())
-                          .and(initialCommunication_s, isAnyValue())
-                          .to(DefaultCustomerServiceAgent_Req.class))));
-      // Generate complete static call graph (no specific Vajram filter)
-      GraphGenerationResult result = generateStaticCallGraphContent(kGraph.build(), null);
+    TraitDispatchPolicies traitDispatchPolicies =
+        new TraitDispatchPolicies(getCalculatorPolicy(graph), getCustomerServicePolicy(graph));
+    kGraph.traitDispatchPolicies(traitDispatchPolicies);
+    // Generate complete static call graph (no specific Vajram filter)
+    GraphGenerationResult result = generateStaticCallGraphContent(kGraph.build(), null);
 
-      String htmlContent = result.html();
+    String htmlContent = result.html();
 
-      // Check that all expected Vajrams are present
-      assertThat(htmlContent).as("Complete graph should contain A2MinusB2").contains("A2MinusB2");
+    // Check that all expected Vajrams are present
+    assertThat(htmlContent).as("Complete graph should contain A2MinusB2").contains("A2MinusB2");
 
-      assertThat(htmlContent).as("Complete graph should contain Add2And3").contains("Add2And3");
+    assertThat(htmlContent).as("Complete graph should contain Add2And3").contains("Add2And3");
 
-      assertThat(htmlContent).as("Complete graph should contain AddZero").contains("AddZero");
+    assertThat(htmlContent).as("Complete graph should contain AddZero").contains("AddZero");
 
-      assertThat(htmlContent).as("Complete graph should contain ChainAdd").contains("ChainAdd");
+    assertThat(htmlContent).as("Complete graph should contain ChainAdd").contains("ChainAdd");
 
-      // Check for UI functionality in the HTML
-      assertThat(htmlContent)
-          .as("HTML should contain interaction handling")
-          .contains("interactionHandler");
+    // Check for UI functionality in the HTML
+    assertThat(htmlContent)
+        .as("HTML should contain interaction handling")
+        .contains("interactionHandler");
 
-      assertThat(htmlContent)
-          .as("HTML should contain node controller functionality")
-          .contains("nodeController");
+    assertThat(htmlContent)
+        .as("HTML should contain node controller functionality")
+        .contains("nodeController");
 
-      assertThat(htmlContent)
-          .as("HTML should contain search controller functionality")
-          .contains("searchController");
+    assertThat(htmlContent)
+        .as("HTML should contain search controller functionality")
+        .contains("searchController");
 
-      // Check for information display
-      assertThat(htmlContent)
-          .as("HTML should contain tooltip functionality for node details")
-          .contains("tooltip");
-    }
+    // Check for information display
+    assertThat(htmlContent)
+        .as("HTML should contain tooltip functionality for node details")
+        .contains("tooltip");
+  }
+
+  private static GuiceyStaticDispatchPolicy getCalculatorPolicy(VajramGraph graph) {
+    TraitBinder traitBinder = new TraitBinder();
+    traitBinder
+        .bindTrait(MultiAdd_Req.class)
+        .annotatedWith(AdditionMethod.Creator.create(SIMPLE))
+        .to(SimpleAdd_Req.class);
+    traitBinder
+        .bindTrait(MultiAdd_Req.class)
+        .annotatedWith(AdditionMethod.Creator.create(CHAIN))
+        .to(ChainAdd_Req.class);
+    traitBinder
+        .bindTrait(MultiAdd_Req.class)
+        .annotatedWith(AdditionMethod.Creator.create(SPLIT))
+        .to(SplitAdd_Req.class);
+    GuiceyStaticDispatchPolicy calculatorTDP =
+        new GuiceyStaticDispatchPolicy(
+            graph, graph.getVajramIdByVajramDefType(MultiAdd.class), traitBinder);
+    return calculatorTDP;
+  }
+
+  private static @NonNull PredicateDispatchPolicy getCustomerServicePolicy(VajramGraph graph) {
+    return dispatchTrait(CustomerServiceAgent_Req.class, graph)
+        .conditionally(
+            when(agentType_s, equalsEnum(L1))
+                .and(initialCommunication_s, isInstanceOf(Call.class))
+                .to(L1CallAgent_Req.class),
+            when(agentType_s, equalsEnum(L1))
+                .and(initialCommunication_s, isInstanceOf(Email.class))
+                .to(L1EmailAgent_Req.class),
+            when(agentType_s, equalsEnum(L2))
+                .and(initialCommunication_s, isInstanceOf(Call.class))
+                .to(L2CallAgent_Req.class),
+            when(agentType_s, equalsEnum(L3))
+                .and(initialCommunication_s, isInstanceOf(Email.class))
+                .to(L3EmailAgent_Req.class),
+            when(initialCommunication_s, isInstanceOf(Call.class)).to(DefaultCallAgent_Req.class),
+            when(initialCommunication_s, isInstanceOf(Email.class)).to(DefaultEmailAgent_Req.class),
+            // Default fallback
+            when(agentType_s, isAnyValue())
+                .and(initialCommunication_s, isAnyValue())
+                .to(DefaultCustomerServiceAgent_Req.class));
   }
 
   @Test
@@ -211,25 +218,9 @@ class StaticCallGraphTest {
     KrystexGraphBuilder kGraph =
         KrystexGraph.builder()
             .vajramGraph(graph)
+            .traitDispatchPolicies(new TraitDispatchPolicies(getCalculatorPolicy(graph)))
             .dependentChainDisabler(
                 new SimpleDependentChainDisabler(ImmutableSet.of(), getDisabledSlices()));
-    TraitBinder traitBinder = new TraitBinder();
-    traitBinder
-        .bindTrait(MultiAdd_Req.class)
-        .annotatedWith(AdditionMethod.Creator.create(SIMPLE))
-        .to(SimpleAdd_Req.class);
-    traitBinder
-        .bindTrait(MultiAdd_Req.class)
-        .annotatedWith(AdditionMethod.Creator.create(CHAIN))
-        .to(ChainAdd_Req.class);
-    traitBinder
-        .bindTrait(MultiAdd_Req.class)
-        .annotatedWith(AdditionMethod.Creator.create(SPLIT))
-        .to(SplitAdd_Req.class);
-    kGraph.traitDispatchPolicies(
-        new TraitDispatchPolicies(
-            new GuiceyStaticDispatchPolicy(
-                graph, graph.getVajramIdByVajramDefType(MultiAdd.class), traitBinder)));
     // Generate complete static call graph (no specific Vajram filter)
     GraphGenerationResult result = generateStaticCallGraphContent(kGraph.build(), null);
 
