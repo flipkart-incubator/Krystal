@@ -69,6 +69,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -1172,7 +1173,13 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
           canFanout,
           fieldName);
     }
-    if (hasArgs && fetcherType == INHERIT_ID_FROM_ARGS) {
+    if (fetcherType == INHERIT_ID_FROM_ARGS) {
+      // Only idFields with a matching arg (by name) are mapped; an optional idField with no
+      // matching arg is simply left unset (defaults to absent) on the identity being built.
+      Set<String> argNames =
+          fieldSpec.fieldDefinition().getInputValueDefinitions().stream()
+              .map(InputValueDefinition::getName)
+              .collect(Collectors.toSet());
       return createInheritIdFromArgsAliasResolver(
           parentTypeName,
           typeAggregatorClass,
@@ -1180,7 +1187,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
           schemaReaderUtil.entityIdClassName(fieldTypeName),
           fieldTypeDef.getFieldDefinitions().stream()
               .filter(idField -> idField.hasDirective(Directives.ID_FIELD))
-              .filter(idField -> idField.getType() instanceof NonNullType)
+              .filter(idField -> argNames.contains(idField.getName()))
               .toList(),
           fieldTypeName);
     }
@@ -1191,14 +1198,6 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
               canFanout
                   ? CodeBlock.of("$L.valueOpt().get()", entityIdFacetName)
                   : CodeBlock.of("_nonNil");
-          case INHERIT_ID_FROM_ARGS ->
-              CodeBlock.of(
-                  "$T._builder().$L(($T) $L.getExecutionStepInfo().getArgument($S))._build()",
-                  graphQlResponseImplementation(schemaReaderUtil.entityIdClassName(fieldTypeName)),
-                  schemaReaderUtil.getEntityIdFieldName(fieldTypeDef),
-                  String.class,
-                  Facets.EXECUTION_STRATEGY_PARAMS + "_new",
-                  schemaReaderUtil.getEntityIdFieldName(fieldTypeDef));
           case INHERIT_ID_FROM_PARENT -> CodeBlock.of(Facets.GQL_OBJECT_ID);
           default -> null;
         };
@@ -1367,15 +1366,26 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
     CodeBlock idSetters =
         idFields.stream()
             .map(
-                idField ->
-                    CodeBlock.of(
-                        ".$L(($T) graphql_executionStrategyParams_new.getExecutionStepInfo().getArgument($S))",
-                        idField.getName(),
-                        graphQlCodeGenUtil.toFacetTypeName(
-                            SchemaReaderUtil.fieldSpecFromField(idField, "", entityTypeName)
-                                .fieldType(),
-                            SchemaReaderUtil.fieldSpecFromField(idField, "", entityTypeName)),
-                        idField.getName()))
+                idField -> {
+                  CodeBlock argValue =
+                      CodeBlock.of(
+                          "($T) graphql_executionStrategyParams_new.getExecutionStepInfo().getArgument($S)",
+                          graphQlCodeGenUtil.toFacetTypeName(
+                              SchemaReaderUtil.fieldSpecFromField(idField, "", entityTypeName)
+                                  .fieldType(),
+                              SchemaReaderUtil.fieldSpecFromField(idField, "", entityTypeName)),
+                          idField.getName());
+                  // Mandatory (non-null) @idField facets are declared as the raw type on the id
+                  // builder, whereas optional @idField facets are declared as Errable<T> (since
+                  // the value itself may legitimately be absent/null).
+                  boolean idFieldMandatory = idField.getType() instanceof NonNullType;
+                  return CodeBlock.of(
+                      ".$L($L)",
+                      idField.getName(),
+                      idFieldMandatory
+                          ? argValue
+                          : CodeBlock.of("$T.withValue($L)", Errable.class, argValue));
+                })
             .collect(CodeBlock.joining("\n"));
 
     return MethodSpec.methodBuilder(fieldName)
