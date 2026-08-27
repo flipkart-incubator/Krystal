@@ -61,15 +61,23 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * annotated correctly.
  *
  * <p>For example, any caching decorator applied before decorators like {@link
- * InputBatchingDecorator}, must not cache {@link CompletableFuture}s - doing so can cause deadlocks
- * because {@link InputBatchingDecorator} groups dependentChains by epoch where each depChain in
- * epoch(n+1) is blocked on the response from at least one depChain from epoch(n) - at the same
- * time, some dependentChain in epoch(n) could end up getting a future from the cache which itself
- * was inserted by a depChain from epoch(n+1). Because of this, the {@link KryonDecorator} provided
- * by this class only caches completed values, and not futures. Also, the {@link
- * OutputLogicDecorator} provided by this class caches futures (which is needed to avoid duplicate
- * IO calls due to concurrent requests with same inputs), and this MUST be applied AFTER decorators
- * like {@link InputBatchingDecorator}.
+ * InputBatchingDecorator}, must not blindly treat incomplete futures {@link CompletableFuture}s in
+ * the cache as cache hits - doing so can cause deadlocks because {@link InputBatchingDecorator}
+ * groups dependentChains by epoch where each depChain in epoch(n+1) is blocked on the response from
+ * at least one depChain from epoch(n) - at the same time, some dependentChain in epoch(n) could end
+ * up getting a future from the cache which itself was inserted by a depChain from epoch(n+1).
+ * Because of this, the {@link KryonDecorator} provided by this class compares the epochs of the
+ * current request and the cached future to decide which incomplete futures can safely be considered
+ * cache hits. Also, the {@link OutputLogicDecorator} provided by this class caches futures (which
+ * is needed to avoid duplicate IO calls due to concurrent requests with same inputs), and this MUST
+ * be applied AFTER decorators like {@link InputBatchingDecorator}.
+ *
+ * <p>Request level caching also affects correctness of graphs in which some data is being read and
+ * written by different vajrams. Let's say in a given request, vajram Vr reads an entity E1 from a
+ * database, then Vw updates the same entity, and then Vr is called again - this class will end up
+ * returning the original value because it was already cached. But this would be a functional error.
+ * To prevent these kind of errors, {@link RequestLevelCacheInvalidator} can be used Vw to
+ * invalidate cache keys of Vr. See @{@link DataAccess} as well for more details.
  */
 @Slf4j
 public sealed class RequestLevelCache permits TestRequestLevelCache {
@@ -271,24 +279,33 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
           continue;
         }
         stats.kryonStats().localCacheMiss();
-        // We are in a KryonDecorator. If we get cached Future which is potentially not complete,
+        // We are in a KryonDecorator. If we get consider any incomplete future present in the cache
         // and use that as the cached response hoping that it would complete later, we can introduce
         // a deadlock during graph execution.
         // This can happen if, for example, KryonDecorator for Vajram V1 is invoked with inputs I1,
         // and its response F1 is cached. That F1 might be blocked on InputBatchingDecorator being
-        // flushed for all dependentChains which are part of a particular epoch lets Say E1. Later
-        // Vajram V1 gets invoked with same I1, and we return F1 as is. But if this second call to
-        // V1 happened via a dependentChain which is part of Epoch E0 and if some dependency chain
-        // in E1 is waiting for all dependentChains of E0 to return, that would never happen in this
-        // scenario because E0 is waiting for F1 and F1 is waiting for E1 to flush and some
+        // flushed for all dependentChains including the one whose parent chaing's F1 was cache
+        // earlier - which are part of a particular epoch lets Say E1. Later
+        // Vajram V1 gets invoked again with same I1, and we return F1 as is. But if this second
+        // call to V1 happened via a dependentChain which is part of Epoch E0 and if some dependency
+        // chain in E1 is waiting for all dependentChains of E0 to return, that would never happen
+        // in this scenario because E0 is waiting for F1 and F1 is waiting for E1 to flush and some
         // dependentChain in E1 is waiting for some E0 to complete - this will cause a deadlock (We
-        // encountered this in one of the applications). To prevent this deadlock, KryonDecorators,
-        // or any other decorators which get invoked before the batching decorator, must never treat
-        // an incomplete future as a cache hit. That why we check if an actual value is available
-        // here, else we treat it as a cache miss. THe actual cache hit in this scenario will happen
-        // in the caching OutputLogicDecorator (which treats incomplete futures as cache hits). The
-        // output logic decorator MUST be configured to decorate AFTER the input batching decorator
-        // (else the same deadlock will happen there as well).
+        // encountered this in an applications). To prevent this deadlock, KryonDecorators,
+        // or any other decorators which get invoked before the batching decorator, must not blindly
+        // treat an incomplete future as a cache hit. That's why we compare the epoch of the cached
+        // value with the current epoch, and we consider an incomplete future as a cache hit only if
+        // it safe to do so - and that is if the future was cached by a depChain in the current or
+        // previous epoch. In the rare case that this future was cached by a depChain whose epoch is
+        // greater than the current epoch, we treat it as a cache miss (rare because we have
+        // measured it to happen 0.2% of the time in one application and 0% of the time in other
+        // applications). This means that this KryonLogicDecorator cannot guarantee one-time
+        // execution of a compute vajram for a set of inputs. So business logic in compute vajrams
+        // and resolvers of compute and IO vajrams MUST be idempotent,
+        // In the cases where an incomplete future has to be treated as a cache miss, the actual
+        // caching will happen in the caching OutputLogicDecorator (which treats incomplete futures
+        // as cache hits always). The output logic decorator MUST be configured to decorate AFTER
+        // the input batching decorator (else the same deadlock will happen there as well).
         var cachedValue = getCachedFuture(cacheKey);
         if (cachedValue == null) {
           stats.kryonStats().globalCacheNoFuture();
@@ -296,10 +313,14 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
           cacheMisses.add(executionItem);
         } else if (cachedValue.future().isDone()
             || getCurrentEpoch(command) >= cachedValue.epoch()) {
-          stats.kryonStats().globalCacheCompletedFuture();
+          if (cachedValue.future().isDone()) {
+            stats.kryonStats().globalCacheHitsCompletedFuture();
+          } else {
+            stats.kryonStats().globalCacheHitsIncompleteFuture();
+          }
           propagateCompletion(cachedValue.future(), executionItem.response());
         } else {
-          stats.kryonStats().globalCacheIncompleteFuture();
+          stats.kryonStats().globalCacheMissIncompleteFuture();
           cacheMisses.add(executionItem);
         }
       }
