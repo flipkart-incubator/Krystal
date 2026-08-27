@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
@@ -64,7 +65,10 @@ public record EpochGroups(ImmutableMap<VajramID, VajramEpochGroups> vajramEpochG
       VajramGraph graph,
       TraitDispatchPolicies traitDispatchPolicies,
       Dependency dependency) {
-    VajramDefinition depVajramDef = graph.getVajramDefinition(depVajramID);
+    VajramDefinition depVajramDef = graph.tryGetVajramDefinition(depVajramID);
+    if (depVajramDef == null) {
+      return List.of();
+    }
     Collection<VajramID> depVajramIDs = new ArrayList<>();
     if (depVajramDef.isTrait()) {
       TraitDispatchPolicy traitDispatchPolicy = traitDispatchPolicies.get(depVajramID);
@@ -190,7 +194,10 @@ public record EpochGroups(ImmutableMap<VajramID, VajramEpochGroups> vajramEpochG
               graph,
               dependentChainDisabler,
               traitDispatchPolicies);
-      if (graph.getVajramDefinition(vajramBeingInvokedID).def() instanceof IOVajramDef<?>) {
+      if (Optional.ofNullable(graph.tryGetVajramDefinition(vajramBeingInvokedID))
+              .map(VajramDefinition::def)
+              .orElse(null)
+          instanceof IOVajramDef<?>) {
         responseOrdinal++;
       }
       vajramsToResponseOrdinals.put(vajramBeingInvokedID, responseOrdinal);
@@ -224,7 +231,10 @@ public record EpochGroups(ImmutableMap<VajramID, VajramEpochGroups> vajramEpochG
     if (dependentChainDisabler.isDisabled(incomingDepChain)) {
       return;
     }
-    VajramDefinition vajramBeingInvoked = graph.getVajramDefinition(vajramIDBeingInvoked);
+    VajramDefinition vajramBeingInvoked = graph.tryGetVajramDefinition(vajramIDBeingInvoked);
+    if (vajramBeingInvoked == null) {
+      return;
+    }
     if (vajramBeingInvoked.isTrait()) {
       throw new AssertionError(
           "collateDepChainOrdinals cannot be called for traits. First resolve dispatch targets before calling this method.");
