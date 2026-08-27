@@ -27,7 +27,10 @@ sealed interface LogicSet {
 
     @Override
     public Set<Facet> sources(VajramGraph graph) {
-      VajramDefinition vajramDef = graph.getVajramDefinition(dependency.ofVajramID());
+      VajramDefinition vajramDef = graph.tryGetVajramDefinition(dependency.ofVajramID());
+      if (vajramDef == null) {
+        return Set.of();
+      }
       List<ResolverDefinition> resolvers =
           vajramDef.inputResolvers().keySet().stream()
               .filter(r -> r.target().dependency().equals(dependency))
@@ -50,7 +53,11 @@ sealed interface LogicSet {
 
     @Override
     public Set<FacetSpec> sources(VajramGraph graph) {
-      return graph.getVajramDefinition(vajramID()).outputLogicSources();
+      VajramDefinition vajramDefinition = graph.tryGetVajramDefinition(vajramID());
+      if (vajramDefinition == null) {
+        return Set.of();
+      }
+      return vajramDefinition.outputLogicSources();
     }
   }
 }
