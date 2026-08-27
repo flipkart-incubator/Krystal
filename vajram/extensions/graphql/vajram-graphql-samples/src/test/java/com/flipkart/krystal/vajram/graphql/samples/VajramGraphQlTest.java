@@ -147,6 +147,71 @@ public class VajramGraphQlTest {
   }
 
   @Test
+  void inferIdFromArgs_withOnlyNullableIdFields_buildsIdentityFromArgs() {
+    // `name` returns a `Name` type whose 2 @idField fields (`value`, `string`) are both nullable.
+    // @inferIdFromArgs must map every idField from the matching args, not just non-null ones.
+    CompletableFuture<ExecutionResult> result;
+    try (VajramKryonExecutor executor = createExecutor()) {
+      result =
+          new GraphQlExecutionFacade(GRAPHQL)
+              .executeGraphQl(
+                  executor,
+                  VajramExecutionConfig.builder().build(),
+                  new GraphQLQuery(
+                      """
+                      query {
+                        name(value: "v1", string: "s1") {
+                          value
+                          string
+                        }
+                      }
+                      """,
+                      Map.of()));
+    }
+    assertThat(result).succeedsWithin(TEST_TIMEOUT);
+    ExecutionResult executionResult = result.join();
+    @SuppressWarnings("unchecked")
+    Map<String, Object> queryData = requireNonNull(executionResult.getData());
+    @SuppressWarnings("unchecked")
+    Map<String, Object> nameData = requireNonNull((Map<String, Object>) queryData.get("name"));
+    assertThat(nameData.get("value")).isEqualTo("v1");
+    assertThat(nameData.get("string")).isEqualTo("s1");
+  }
+
+  @Test
+  void inferIdFromArgs_withOptionalIdFieldHavingNoArgAtAll_leavesItUnset() {
+    // `nameByString` doesn't declare a `value` arg at all; Name's optional `value` @idField must
+    // simply be left absent, not cause a build-time or run-time failure.
+    CompletableFuture<ExecutionResult> result;
+    try (VajramKryonExecutor executor = createExecutor()) {
+      result =
+          new GraphQlExecutionFacade(GRAPHQL)
+              .executeGraphQl(
+                  executor,
+                  VajramExecutionConfig.builder().build(),
+                  new GraphQLQuery(
+                      """
+                      query {
+                        nameByString(string: "s1") {
+                          value
+                          string
+                        }
+                      }
+                      """,
+                      Map.of()));
+    }
+    assertThat(result).succeedsWithin(TEST_TIMEOUT);
+    ExecutionResult executionResult = result.join();
+    @SuppressWarnings("unchecked")
+    Map<String, Object> queryData = requireNonNull((Map<String, Object>) executionResult.getData());
+    @SuppressWarnings("unchecked")
+    Map<String, Object> nameData =
+        requireNonNull((Map<String, Object>) queryData.get("nameByString"));
+    assertThat(nameData.get("value")).isNull();
+    assertThat(nameData.get("string")).isEqualTo("s1");
+  }
+
+  @Test
   void graphqlQueryWithQueryLevelAliases_succeeds() throws JsonProcessingException {
     // Two aliases for the same arg-bearing `order` field at query level, each with a different id
     CompletableFuture<ExecutionResult> result;

@@ -3,4 +3,8 @@ type Query @operation(type: QUERY) {
     order(id: ID!): Order @inferIdFromArgs
     dummy(dummyId: ID!): Dummy @inferIdFromArgs
     mostRecentOrder(userId: String!): Order @idFetcher(vajramId: "GetMostRecentOrder", subPackage: "order")
+    """Name has 2 nullable @idField fields; both are mapped from args, one optional and one mandatory"""
+    name(value: String, string: String!): Name @inferIdFromArgs
+    """Name's optional `value` @idField has no corresponding arg here at all - it's left unset"""
+    nameByString(string: String!): Name @inferIdFromArgs
 }

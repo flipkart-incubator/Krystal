@@ -44,12 +44,15 @@ directive @idFetcher(vajramId : String!, subPackage: String) on FIELD_DEFINITION
 
 """
 This means the identity used for type aggregation should be taken from the arguments passed to the field
-by matching the argument name with the idField name. If any of the non-null idFields of the type doesn't have a
-corresponding field argument with matching name and type, then a build-time error is thrown
+by matching the argument name with the idField name. A mandatory (non-null) idField must have a
+corresponding field argument with matching name and type, and that argument must also be mandatory,
+or a build-time error is thrown. An optional (nullable) idField may be left unmapped, or matched by an
+argument of the same name and type that is either optional or mandatory.
 
 Invariants:
 Only valid on fields of root operation types.
-Every non-null idField of the type must have a corresponding field argument here with matching name and type
+Every mandatory idField of the type must have a corresponding mandatory field argument here with matching name and type.
+An optional idField may be missing a corresponding argument, or matched by an optional or mandatory argument with matching name and type.
 """
 directive @inferIdFromArgs on FIELD_DEFINITION
 

@@ -103,6 +103,103 @@ class SchemaReaderUtilTest {
                 """));
   }
 
+  @Test
+  void inferIdFromArgsAllowsOptionalArgForOptionalIdFieldAndMandatoryArgForMandatoryIdField() {
+    assertDoesNotThrow(
+        () ->
+            schemaReader(
+                """
+                schema @rootPackage(name: "test.schema") { query: Query }
+                type Query @operation(type: QUERY) {
+                  item(id: ID!, label: String): Item @inferIdFromArgs
+                }
+                type Item { id: ID! @idField label: String @idField }
+                """));
+  }
+
+  @Test
+  void inferIdFromArgsAllowsMandatoryArgForOptionalIdField() {
+    assertDoesNotThrow(
+        () ->
+            schemaReader(
+                """
+                schema @rootPackage(name: "test.schema") { query: Query }
+                type Query @operation(type: QUERY) {
+                  item(id: ID!, label: String!): Item @inferIdFromArgs
+                }
+                type Item { id: ID! @idField label: String @idField }
+                """));
+  }
+
+  @Test
+  void inferIdFromArgsRejectsOptionalArgForMandatoryIdField() {
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                schemaReader(
+                    """
+                    schema @rootPackage(name: "test.schema") { query: Query }
+                    type Query @operation(type: QUERY) {
+                      item(id: ID): Item @inferIdFromArgs
+                    }
+                    type Item { id: ID! @idField }
+                    """));
+
+    assertTrue(exception.getMessage().contains("mandatory"));
+  }
+
+  @Test
+  void inferIdFromArgsAllowsMissingArgForOptionalIdField() {
+    // `label` is an optional @idField with no corresponding arg at all - it's simply left unset.
+    assertDoesNotThrow(
+        () ->
+            schemaReader(
+                """
+                schema @rootPackage(name: "test.schema") { query: Query }
+                type Query @operation(type: QUERY) {
+                  item(id: ID!): Item @inferIdFromArgs
+                }
+                type Item { id: ID! @idField label: String @idField }
+                """));
+  }
+
+  @Test
+  void inferIdFromArgsRejectsMissingArgForMandatoryIdField() {
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                schemaReader(
+                    """
+                    schema @rootPackage(name: "test.schema") { query: Query }
+                    type Query @operation(type: QUERY) {
+                      item(label: String): Item @inferIdFromArgs
+                    }
+                    type Item { id: ID! @idField label: String @idField }
+                    """));
+
+    assertTrue(exception.getMessage().contains("id"));
+  }
+
+  @Test
+  void inferIdFromArgsRejectsTypeMismatch() {
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                schemaReader(
+                    """
+                    schema @rootPackage(name: "test.schema") { query: Query }
+                    type Query @operation(type: QUERY) {
+                      item(id: Int!): Item @inferIdFromArgs
+                    }
+                    type Item { id: ID! @idField }
+                    """));
+
+    assertTrue(exception.getMessage().contains("requires an argument"));
+  }
+
   private SchemaReaderUtil schemaReader(String schema) throws IOException {
     Path schemaFile = tempDir.resolve("Schema.graphqls");
     Files.writeString(schemaFile, schema);

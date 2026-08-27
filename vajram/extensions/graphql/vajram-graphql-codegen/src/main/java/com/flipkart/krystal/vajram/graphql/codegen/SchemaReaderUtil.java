@@ -222,15 +222,42 @@ public class SchemaReaderUtil {
     Map<String, InputValueDefinition> argsByName =
         field.getInputValueDefinitions().stream()
             .collect(Collectors.toMap(InputValueDefinition::getName, input -> input));
-    for (FieldDefinition idField : nonNullIdFields(objectType)) {
+    for (FieldDefinition idField : idFields(objectType)) {
+      boolean idFieldMandatory = idField.getType() instanceof NonNullType;
       InputValueDefinition arg = argsByName.get(idField.getName());
-      if (arg == null || !arg.getType().toString().equals(idField.getType().toString())) {
+      if (arg == null) {
+        // An optional @idField can be left unmapped; a mandatory one cannot.
+        if (idFieldMandatory) {
+          throw invalid(
+              "@inferIdFromArgs '%s.%s' requires an argument '%s' with type '%s' for @idField '%s.%s'",
+              parentType.value(),
+              field.getName(),
+              idField.getName(),
+              idField.getType(),
+              objectType.getName(),
+              idField.getName());
+        }
+        continue;
+      }
+      if (!unwrapNonNull(arg.getType())
+          .toString()
+          .equals(unwrapNonNull(idField.getType()).toString())) {
         throw invalid(
             "@inferIdFromArgs '%s.%s' requires an argument '%s' with type '%s' for @idField '%s.%s'",
             parentType.value(),
             field.getName(),
             idField.getName(),
             idField.getType(),
+            objectType.getName(),
+            idField.getName());
+      }
+      boolean argMandatory = arg.getType() instanceof NonNullType;
+      if (idFieldMandatory && !argMandatory) {
+        throw invalid(
+            "@inferIdFromArgs '%s.%s' requires argument '%s' to be mandatory, since @idField '%s.%s' is mandatory",
+            parentType.value(),
+            field.getName(),
+            idField.getName(),
             objectType.getName(),
             idField.getName());
       }
@@ -384,11 +411,14 @@ public class SchemaReaderUtil {
         .orElseThrow(() -> invalid("Could not find type for field '%s'", field));
   }
 
-  private static List<FieldDefinition> nonNullIdFields(ObjectTypeDefinition type) {
+  private static List<FieldDefinition> idFields(ObjectTypeDefinition type) {
     return type.getFieldDefinitions().stream()
         .filter(field -> field.hasDirective(Directives.ID_FIELD))
-        .filter(field -> field.getType() instanceof NonNullType)
         .toList();
+  }
+
+  private static Type<?> unwrapNonNull(Type<?> type) {
+    return type instanceof NonNullType nonNullType ? nonNullType.getType() : type;
   }
 
   private static boolean isList(Type<?> type) {
@@ -800,22 +830,6 @@ public class SchemaReaderUtil {
       subPackage = "." + subPackage;
     }
     return rootPackageName + subPackage;
-  }
-
-  public String getEntityIdFieldName(TypeDefinition fieldTypeDef) {
-    if (!(fieldTypeDef instanceof ObjectTypeDefinition objectTypeDefinition)) {
-      throw new IllegalArgumentException("Only object types can have identity fields");
-    }
-    List<FieldDefinition> idFields =
-        objectTypeDefinition.getFieldDefinitions().stream()
-            .filter(field -> field.hasDirective(Directives.ID_FIELD))
-            .toList();
-    if (idFields.size() != 1) {
-      throw new IllegalArgumentException(
-          "Type '%s' must declare exactly one @idField when its identity is used"
-              .formatted(objectTypeDefinition.getName()));
-    }
-    return idFields.get(0).getName();
   }
 
   public Optional<GraphQLTypeName> getRootIdentityType(ObjectTypeDefinition typeDefinition) {
