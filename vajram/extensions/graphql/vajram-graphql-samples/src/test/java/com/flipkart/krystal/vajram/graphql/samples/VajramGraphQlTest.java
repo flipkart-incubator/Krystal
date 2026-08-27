@@ -400,6 +400,146 @@ public class VajramGraphQlTest {
     assertThat(executionResult.getErrors().isEmpty()).isFalse();
   }
 
+  @Test
+  void graphqlQueryWithNamedFragment_noAliases_succeeds() {
+    // A named fragment spread on `Order`, with no aliases anywhere in the query.
+    CompletableFuture<ExecutionResult> result;
+    try (VajramKryonExecutor executor = createExecutor()) {
+      result =
+          new GraphQlExecutionFacade(GRAPHQL)
+              .executeGraphQl(
+                  executor,
+                  VajramExecutionConfig.builder().build(),
+                  new GraphQLQuery(
+                      """
+                      query {\
+                        order(id: "order1") {\
+                          ...orderFields\
+                        }
+                      }
+                      fragment orderFields on Order {
+                        state
+                        orderItemNames
+                      }
+                      """,
+                      Map.of()));
+    }
+    assertThat(result).succeedsWithin(TEST_TIMEOUT);
+    Map<String, Object> queryData = requireNonNull(result.join().getData());
+    @SuppressWarnings("unchecked")
+    Map<String, Object> orderData = requireNonNull((Map<String, Object>) queryData.get("order"));
+
+    assertThat(orderData.get("state")).isEqualTo(State.COMPLETED);
+    assertThat(orderData.get("orderItemNames")).isEqualTo(List.of("order1_1", "order1_2"));
+  }
+
+  @Test
+  void graphqlQueryWithNamedFragment_underQueryLevelAliases_succeeds() {
+    // The same named fragment is spread under two differently-aliased `order` selections. Each
+    // alias must resolve the fragment's fields against its own argument-specific order.
+    CompletableFuture<ExecutionResult> result;
+    try (VajramKryonExecutor executor = createExecutor()) {
+      result =
+          new GraphQlExecutionFacade(GRAPHQL)
+              .executeGraphQl(
+                  executor,
+                  VajramExecutionConfig.builder().build(),
+                  new GraphQLQuery(
+                      """
+                      query {
+                        o1: order(id: "order1") {
+                          ...orderFields
+                        }
+                        o2: order(id: "order2") {
+                          ...orderFields
+                        }
+                      }
+                      fragment orderFields on Order {
+                        state
+                        orderItemNames
+                      }
+                      """,
+                      Map.of()));
+    }
+    assertThat(result).succeedsWithin(TEST_TIMEOUT);
+    Map<String, Object> queryData = requireNonNull(result.join().getData());
+    @SuppressWarnings("unchecked")
+    Map<String, Object> o1Data = requireNonNull((Map<String, Object>) queryData.get("o1"));
+    @SuppressWarnings("unchecked")
+    Map<String, Object> o2Data = requireNonNull((Map<String, Object>) queryData.get("o2"));
+
+    assertThat(o1Data.get("state")).isEqualTo(State.COMPLETED);
+    assertThat(o1Data.get("orderItemNames")).isEqualTo(List.of("order1_1", "order1_2"));
+    assertThat(o2Data.get("state")).isEqualTo(State.COMPLETED);
+    assertThat(o2Data.get("orderItemNames")).isEqualTo(List.of("order2_1", "order2_2"));
+  }
+
+  @Test
+  void graphqlQueryWithNamedFragment_havingFieldAliasesInsideFragment_succeeds() {
+    // Fields aliased *inside* the fragment definition itself (not at the spread site) must
+    // resolve under their aliased response keys.
+    CompletableFuture<ExecutionResult> result;
+    try (VajramKryonExecutor executor = createExecutor()) {
+      result =
+          new GraphQlExecutionFacade(GRAPHQL)
+              .executeGraphQl(
+                  executor,
+                  VajramExecutionConfig.builder().build(),
+                  new GraphQLQuery(
+                      """
+                      query {
+                        order(id: "order1") {
+                          ...orderFields
+                        }
+                      }
+                      fragment orderFields on Order {
+                        s: state
+                        names: orderItemNames
+                      }
+                      """,
+                      Map.of()));
+    }
+    assertThat(result).succeedsWithin(TEST_TIMEOUT);
+    Map<String, Object> queryData = requireNonNull(result.join().getData());
+    @SuppressWarnings("unchecked")
+    Map<String, Object> orderData = requireNonNull((Map<String, Object>) queryData.get("order"));
+
+    assertThat(orderData.get("s")).isEqualTo(State.COMPLETED);
+    assertThat(orderData.get("names")).isEqualTo(List.of("order1_1", "order1_2"));
+  }
+
+  @Test
+  void graphqlQueryWithInlineFragment_succeeds() {
+    // An inline fragment (`... on Order { ... }`), with no named fragment and no aliases.
+    CompletableFuture<ExecutionResult> result;
+    try (VajramKryonExecutor executor = createExecutor()) {
+      result =
+          new GraphQlExecutionFacade(GRAPHQL)
+              .executeGraphQl(
+                  executor,
+                  VajramExecutionConfig.builder().build(),
+                  new GraphQLQuery(
+                      """
+                      query {
+                        order(id: "order1") {
+                          ... on Order {
+                            state
+                            orderItemNames
+                          }
+                        }
+                      }
+                      """,
+                      Map.of()));
+    }
+    assertThat(result).succeedsWithin(TEST_TIMEOUT);
+    Map<String, Object> queryData = requireNonNull(result.join().getData());
+    @SuppressWarnings("unchecked")
+    Map<String, Object> orderData = requireNonNull((Map<String, Object>) queryData.get("order"));
+
+    assertThat(orderData.get("state")).isEqualTo(State.COMPLETED);
+    assertThat(orderData.get("orderItemNames")).isEqualTo(List.of("order1_1", "order1_2"));
+  }
+
   private VajramKryonExecutor createExecutor() {
     return kGraph
         .build()
