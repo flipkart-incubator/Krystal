@@ -200,6 +200,52 @@ class SchemaReaderUtilTest {
     assertTrue(exception.getMessage().contains("requires an argument"));
   }
 
+  @Test
+  void rejectsTypeWithOnlyNullableIdFields() {
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                schemaReader(
+                    """
+                    schema @rootPackage(name: "test.schema") { query: Query }
+                    type Query @operation(type: QUERY) { value: String }
+                    type Item { label: String @idField }
+                    """));
+
+    assertTrue(exception.getMessage().contains("Item"));
+    assertTrue(exception.getMessage().contains("non-null @idField"));
+  }
+
+  @Test
+  void rejectsTypeWithNoIdFieldAtAll() {
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () ->
+                schemaReader(
+                    """
+                    schema @rootPackage(name: "test.schema") { query: Query }
+                    type Query @operation(type: QUERY) { value: String }
+                    type Item { name: String }
+                    """));
+
+    assertTrue(exception.getMessage().contains("Item"));
+  }
+
+  @Test
+  void allowsComposedOnlyAndOperationTypesWithoutNonNullIdField() {
+    assertDoesNotThrow(
+        () ->
+            schemaReader(
+                """
+                schema @rootPackage(name: "test.schema") { query: Query }
+                type Query @operation(type: QUERY) { item(id: ID!): Item @inferIdFromArgs }
+                type Item { id: ID! @idField details: Details }
+                type Details @composedOnly(inRootType: "Item") { value: String }
+                """));
+  }
+
   private SchemaReaderUtil schemaReader(String schema) throws IOException {
     Path schemaFile = tempDir.resolve("Schema.graphqls");
     Files.writeString(schemaFile, schema);

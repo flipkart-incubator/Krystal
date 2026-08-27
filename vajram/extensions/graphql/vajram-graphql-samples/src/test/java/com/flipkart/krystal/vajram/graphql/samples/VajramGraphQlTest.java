@@ -147,9 +147,10 @@ public class VajramGraphQlTest {
   }
 
   @Test
-  void inferIdFromArgs_withOnlyNullableIdFields_buildsIdentityFromArgs() {
-    // `name` returns a `Name` type whose 2 @idField fields (`value`, `string`) are both nullable.
-    // @inferIdFromArgs must map every idField from the matching args, not just non-null ones.
+  void inferIdFromArgs_withOptionalIdField_buildsIdentityFromArgs() {
+    // `name` returns a `Name` type with an optional (`value`) and a mandatory (`string`)
+    // @idField. @inferIdFromArgs must map every idField from the matching args, not just
+    // non-null ones.
     CompletableFuture<ExecutionResult> result;
     try (VajramKryonExecutor executor = createExecutor()) {
       result =

@@ -18,6 +18,8 @@ Marks a field as part of the id of its containing GraphQL type.
 Invariants:
 Id fields cannot accept arguments
 Id fields have to be scalars - cannot be graphql objects
+Every type, except types annotated with @composedOnly (and root operation types, which have no
+identity of their own), must declare at least one non-null @idField
 """
 directive @idField on FIELD_DEFINITION
 

@@ -194,6 +194,16 @@ public class SchemaReaderUtil {
                   typeDefinitionRegistry, typeName, typeDefinition, field, fieldType);
             }
           }
+          // @composedOnly types reuse their root type's identity, and root operation types
+          // (Query/Mutation/Subscription) have no identity of their own - every other type must
+          // declare at least one non-null @idField to be unambiguously identifiable.
+          if (!typeDefinition.hasDirective(Directives.COMPOSED_ONLY)
+              && !isOperationType(typeDefinitionRegistry, typeName)
+              && idFields(typeDefinition).stream()
+                  .noneMatch(idField -> idField.getType() instanceof NonNullType)) {
+            throw invalid(
+                "Type '%s' must declare at least one non-null @idField", typeName.value());
+          }
         });
     validateOperationTypes(typeDefinitionRegistry, graphQLObjectTypes);
     validateComposedOnlyReferences(typeDefinitionRegistry, graphQLObjectTypes, composedOnlyTypes);
