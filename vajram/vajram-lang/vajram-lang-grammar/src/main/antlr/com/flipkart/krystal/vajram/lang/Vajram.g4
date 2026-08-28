@@ -8,7 +8,7 @@ program
     : vajram_def EOF
     ;
 
-vajram_def: package_decl imports_decl* vajram_visibility? type ERRABLE? ID inputs_decl injection_decl? permits? '{' (dependency)* annotated_delegatable_logic_block?'}' ;
+vajram_def: package_decl imports_decl* visibility? 'vajram' ID inputs_decl output_decl permits? injection_decl? '{' (dependency)* output_block'}' ;
 
 package_decl: annotation* PACKAGE qualifiedName ';';
 
@@ -16,54 +16,61 @@ imports_decl: IMPORT qualifiedName ('.' '*')? ';';
 
 qualifiedName: ID ('.' ID)*;
 
-dependency: annotation* type FANOUT? ID EQ FANOUT? ID '(' (dep_input_resolver SEMI)* dep_input_resolver? ')' (ERRABLE func_call)? annotated_logic_block* SEMI ;
+dependency: annotation* type FANOUT? ID EQ dependency_invocation ;
+
+dependency_invocation : FANOUT? ID '(' (dep_input_resolver SEMI)* dep_input_resolver? ')' (ERRABLE func_call)? annotated_logic_block* SEMI ;
 
 annotated_delegatable_logic_block: annotation* completion_time logic_block;
 
 annotated_logic_block: annotation*  logic_block;
 
-logic_block: '{' statement* return_statement? '}';
+logic_block: '{' statement* yield_statement? '}';
 
-lambda_block: (var_use (COMMA var_use)* '->' )? annotation* completion_time '{' statement* return_statement '}';
+lambda_block: (var_use (COMMA var_use)* '->' )? annotation* completion_time '{' statement* yield_statement '}';
 
 var_use: ID ERRABLE?;
 
 completion_time: (SOON | LATER)?;
 
-vajram_visibility: PUBLIC | PRIVATE;
+visibility: PUBLIC | PRIVATE;
 
-inputs_decl: 'input'? '(' inputs_list? ')';
+inputs_decl: IN ? '(' inputs_list? ')';
 
 inputs_list : ( grouper? annotation* input_id_declaration COMMA)* ( grouper? annotation* input_id_declaration) ;
 
 injection_decl: 'inject' '(' injections_list?')';
 
+output_decl: OUT (errableType);
+
 injections_list : ( annotation* injection_id_declaration COMMA)* ( annotation* injection_id_declaration) ;
 
 grouper: SPECIAL ID;
 
-annotation: '@' ID param_list?;
+annotation: '`' ID param_list?;
 
 permits: PERMITS ID (COMMA ID)*;
 
-input_id_declaration: type ERRABLE? ID;
+input_id_declaration: errableType ID;
 
-injection_id_declaration: type ERRABLE? ID;
+injection_id_declaration: errableType ID;
+
+errableType : type ERRABLE? ;
 
 dep_input_resolver: dep_input_resolver_stat | dep_input_resolver_func;
 
 dep_input_resolver_stat: (ID COMMA)* ID EQ FANOUT? (expr COMMA)* expr;
-dep_input_resolver_func: (ID COMMA)* ID EQ FANOUT? '{' statement* return_statement '}';
+dep_input_resolver_func: (ID COMMA)* ID EQ FANOUT? '{' statement* yield_statement '}';
 
-return_statement: (RETURN (expr COMMA)* expr SEMI | (expr COMMA)* expr);
+yield_statement: (YIELD (expr COMMA)* expr SEMI | (expr COMMA)* expr);
+
+output_block: OUT? annotated_delegatable_logic_block | OUT dependency_invocation;
 
 type:
     | non_param_type ('<' ((type COMMA)* type COMMA?)? '>')? ERRABLE? SOON?;
 
 non_param_type: ID
-              | INT
-              | bool
               | STRING
+              | VOID
               | grouper
               ;
 
@@ -75,7 +82,7 @@ assign_stat: input_id_declaration EQ expr SEMI;
 
 expr: var_use
     | STRING_LITERAL
-    | INT
+    | INT_LITERAL
     | bool
     | NOT expr
     | expr PLUS expr
@@ -112,8 +119,10 @@ RCURLY : '}' ;
 SPECIAL : '#' ;
 
 NEW : 'new' ;
-RETURN : 'return' ;
+IN: 'in';
+OUT: 'out';
 THROW: 'throw';
+YIELD: 'yield';
 
 PUBLIC: 'public';
 PRIVATE: 'private';
@@ -127,10 +136,11 @@ SOON : '~';
 LATER : '~~';
 DOT: '.';
 
-INT : [0-9]+ ;
+INT_LITERAL : [0-9]+ ;
 TRUE : 'true' ;
 FALSE : 'false' ;
 STRING: 'string' ;
+VOID: 'void' ;
 STRING_LITERAL:     '"' (~["\\\r\n])* '"';
 ID: [a-zA-Z_][a-zA-Z_0-9]* ;
 WS: [ \t\n\r\f]+ -> skip ;

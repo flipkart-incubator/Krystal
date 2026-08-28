@@ -1,10 +1,11 @@
-package com.flipkart.krystal.vajram.lang.samples.products;
+package com.flipkart.krystal.vajram_lang.samples.products;
 
-bool? isProductAvailable(
-  string productId,
-  @inject AvailabilityDB availabilityDB){
+vajram isProductAvailable
+  in (string productId)
+  out bool?
+  inject (AvailabilityDB availabilityDB) {
 
-  ~{
+  out ~{
     availabilityDB.isAvailable(productId)
   }
 }

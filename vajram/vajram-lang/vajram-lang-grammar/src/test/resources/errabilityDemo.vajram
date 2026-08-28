@@ -1,11 +1,11 @@
-package com.flipkart.krystal.vajram.lang.samples;
+package com.flipkart.krystal.vajram_lang.samples;
 
-void errabilityDemo() {
+vajram errabilityDemo() out void {
 
   // this dependency might fail
   string? errableFacet = tryGetString();
 
-  {
+  out {
     //returns "" of errableFacet.valuePresent() is false
     errableFacet?default("");
 

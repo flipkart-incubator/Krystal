@@ -1,6 +1,7 @@
-package com.flipkart.krystal.vajram.lang.samples.products;
+package com.flipkart.krystal.vajram_lang.samples.products;
 
-double? computeAveragePrice(ProductCollection collection){
+vajram computeAveragePrice in (ProductCollection collection) out double?{
+
   ProductDetails?* productDetails =* getProductDetails(
       productId =* collection.productIds();
   );

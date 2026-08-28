@@ -1,6 +1,6 @@
-@stream int publishNumbers(int request){
+vajram publishNumbers(int request) out #stream int{
 
-  @stream @Schedule(1, SECONDS){
+  out #stream `Schedule(1, SECONDS){
 
   }
 }

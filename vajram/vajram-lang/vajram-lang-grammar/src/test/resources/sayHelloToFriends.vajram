@@ -1,20 +1,22 @@
-package com.flipkart.krystal.vajram.lang.samples.friends;
+package com.flipkart.krystal.vajram_lang.samples.friends;
 
-string sayHelloToFriends(
-    string userId,
-    int? numberOfFriends){
+ vajram sayHelloToFriends
+      (
+      string userId,
+      int? numberOfFriends)
+    out string{
 
-  @dep UserInfo userInfo = getUserInfo(userId = userId);
+  UserInfo userInfo = getUserInfo(userId = userId);
 
-  @dep UserInfo* friendsInfos = getUserInfo(
+  UserInfo* friendsInfos = getUserInfo(
       userId =*
           IntStream
               .range(0, numberOfFriends?default(2))
               .mapToObj(i, getFriendId(i))
   );
 
-  @output {
-    return "Hello Friends of %s ! %s"
+  out {
+    yield "Hello Friends of %s ! %s"
         .formatted(
           userInfo.name(),
           friendInfos.responses()

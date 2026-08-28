@@ -1,14 +1,13 @@
-package com.flipkart.krystal.vajram.lang.samples.products;
+package com.flipkart.krystal.vajram_lang.samples.products;
 
-ProductDetails getAvailableProductDetails(
-    string productId){
-  bool? isAvailable =
-      isProductAvailable(productId = productId);
+vajram getAvailableProductDetails
+    in (string productId)
+    out ProductDetails? {
 
-  @output
-  ProductDetails productDetails =
-      getProductDetails(productId = productId)
+  bool? isAvailable = isProductAvailable(productId = productId);
+
+  out getProductDetails(productId = productId)
         ?default{ new ProductDetails(productId) }
-      @skipIf("Product is not available.")
+      `skipIf("Product is not available.")
       { isAvailable? == false };
 }
