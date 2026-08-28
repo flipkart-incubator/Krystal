@@ -1,6 +1,10 @@
-type Query {
+type Query @operation(type: QUERY) {
     """will return order using id, using OrderGraphQLAggregator"""
-    order(id: ID): Order @inferIdFromArgs
-    dummy(dummyId: ID): Dummy @inferIdFromArgs
+    order(id: ID!): Order @inferIdFromArgs
+    dummy(dummyId: ID!): Dummy @inferIdFromArgs
     mostRecentOrder(userId: String!): Order @idFetcher(vajramId: "GetMostRecentOrder", subPackage: "order")
+    """Name has an optional `value` @idField and a mandatory `string` @idField; both are mapped from args"""
+    name(value: String, string: String!): Name @inferIdFromArgs
+    """Name's optional `value` @idField has no corresponding arg here at all - it's left unset"""
+    nameByString(string: String!): Name @inferIdFromArgs
 }

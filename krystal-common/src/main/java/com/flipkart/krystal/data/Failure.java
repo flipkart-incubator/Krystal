@@ -19,6 +19,11 @@ public record Failure<T>(Throwable error) implements Errable<T> {
   }
 
   @Override
+  public void completeFuture(CompletableFuture<T> future) {
+    future.completeExceptionally(error);
+  }
+
+  @Override
   public @Nullable T value() {
     return null;
   }

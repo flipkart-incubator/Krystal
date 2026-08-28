@@ -2,7 +2,6 @@ package com.flipkart.krystal.krystex.kryon;
 
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.core.VajramID.vajramID;
-import static com.flipkart.krystal.data.Errable.computeErrableFrom;
 import static com.flipkart.krystal.data.Errable.errableFrom;
 import static com.flipkart.krystal.data.Errable.withValue;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.BREADTH;
@@ -24,7 +23,6 @@ import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.core.VajramID;
-import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.Request;
@@ -357,8 +355,7 @@ class KryonExecutionTest {
                         ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
                             ._set(
                                 l2DependsOnL1.name(),
-                                new RequestResponse(
-                                    l1Req, Errable.errableFrom(result, throwable)))));
+                                new RequestResponse(l1Req, errableFrom(result, throwable)))));
           }
           CompletableFuture.allOf(list.toArray(CompletableFuture[]::new))
               .whenComplete(
@@ -396,8 +393,7 @@ class KryonExecutionTest {
                     (o, throwable) ->
                         ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
                             ._set(
-                                "facet1",
-                                new RequestResponse(l2Req, Errable.errableFrom(o, throwable)))));
+                                "facet1", new RequestResponse(l2Req, errableFrom(o, throwable)))));
           }
           CompletableFuture.allOf(list.toArray(CompletableFuture[]::new))
               .whenComplete(
@@ -722,11 +718,8 @@ class KryonExecutionTest {
                     .executionItems()
                     .forEach(
                         executionItem ->
-                            linkFutures(
-                                computeErrableFrom(logic)
-                                    .apply(executionItem.facetValues())
-                                    .toFuture(),
-                                executionItem.response())),
+                            errableFrom(() -> logic.apply(executionItem.facetValues()))
+                                .completeFuture((CompletableFuture<T>) executionItem.response())),
             emptyTags());
 
     logicDefinitionRegistry.addOutputLogic(def);
@@ -762,8 +755,11 @@ class KryonExecutionTest {
             .executorService(executorLease.get())
             .kryonExecStrategy(kryonExecStrategy)
             .graphTraversalStrategy(graphTraversalStrategy)
-            .configureWith(requestLevelCache.defaultKryonExecutorConfigurator())
             .executorId("test");
+    if (kryonExecStrategy == DIRECT) {
+      // RequestLevelCache only supports DIRECT
+      configBuilder.configureWith(requestLevelCache.defaultDecorationStrategy());
+    }
     return new VajramKryonExecutor(krystexGraph, configBuilder);
   }
 

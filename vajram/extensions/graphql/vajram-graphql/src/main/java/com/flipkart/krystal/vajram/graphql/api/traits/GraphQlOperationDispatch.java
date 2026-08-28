@@ -3,9 +3,6 @@ package com.flipkart.krystal.vajram.graphql.api.traits;
 import static com.flipkart.krystal.core.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.graphql.api.Constants.GRAPHQL_AGGREGATOR_SUFFIX;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static graphql.language.OperationDefinition.Operation.MUTATION;
-import static graphql.language.OperationDefinition.Operation.QUERY;
-import static graphql.language.OperationDefinition.Operation.SUBSCRIPTION;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Request;
@@ -13,7 +10,6 @@ import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.traits.ComputeDispatchPolicy;
 import com.google.common.collect.ImmutableSet;
-import graphql.ExecutionInput;
 import graphql.language.OperationDefinition.Operation;
 import graphql.language.OperationTypeDefinition;
 import graphql.language.SchemaDefinition;
@@ -72,13 +68,6 @@ public final class GraphQlOperationDispatch extends ComputeDispatchPolicy {
   public @Nullable VajramID getDispatchTargetID(
       @Nullable Dependency dependency, Request<?> request) {
     if (request instanceof GraphQlOperationAggregate_Req<?> operationAggregateReq) {
-      ExecutionInput executionInput = operationAggregateReq.executionInput();
-      if (executionInput == null) {
-        log.error(
-            "Execution input is null - cannot compute dispatch target for {}. Forwarding as is.",
-            operationAggregateReq);
-        return null;
-      }
       Optional<SchemaDefinition> schemaDefinition = typeDefinitionRegistry.schemaDefinition();
       if (schemaDefinition.isEmpty()) {
         log.error(
@@ -92,49 +81,30 @@ public final class GraphQlOperationDispatch extends ComputeDispatchPolicy {
       Map<String, OperationTypeDefinition> operationTypesByOpName =
           schemaDefinition.get().getOperationTypeDefinitions().stream()
               .collect(Collectors.toMap(OperationTypeDefinition::getName, op -> op));
-      String requestedOperationType = executionInput.getOperationName();
       String resolvedOperationTypeName;
-      if (requestedOperationType == null || requestedOperationType.isBlank()) {
-        Operation operationType = operationAggregateReq.operationType();
-        if (operationType == null) {
-          log.error(
-              "Operation type is null - cannot compute dispatch target for {}. Forwarding as is.",
-              operationAggregateReq);
-          return null;
-        }
-        if (QUERY.equals(operationType)) {
-          OperationTypeDefinition queryOperationDef = operationTypesByOpName.get("query");
-          if (queryOperationDef == null) {
-            log.error(
-                "Default query operation has not been configured in schema {} - cannot compute dispatch target for {}. Forwarding as is.",
-                operationAggregateReq);
-            return null;
-          }
-          resolvedOperationTypeName = queryOperationDef.getTypeName().getName();
-        } else if (MUTATION.equals(operationType)) {
-          OperationTypeDefinition mutationOperationDef = operationTypesByOpName.get("mutation");
-          if (mutationOperationDef == null) {
-            log.error(
-                "Default mutation operation has not been configured in schema {} - cannot compute dispatch target for {}. Forwarding as is.",
-                schemaDefinition);
-            return null;
-          }
-          resolvedOperationTypeName = mutationOperationDef.getTypeName().getName();
-        } else if (SUBSCRIPTION.equals(operationType)) {
-          OperationTypeDefinition subscriptionOperationDef =
-              operationTypesByOpName.get("subscription");
-          if (subscriptionOperationDef == null) {
-            log.error(
-                "Default subscription operation has not been configured in schema {} - cannot compute dispatch target for {}. Forwarding as is.",
-                schemaDefinition);
-            return null;
-          }
-          resolvedOperationTypeName = subscriptionOperationDef.getTypeName().getName();
-        } else {
-          throw new UnsupportedOperationException("Unrecognized operation type: " + operationType);
-        }
+      Operation operationType = operationAggregateReq.operationType();
+      if (operationType == null) {
+        log.error(
+            "Operation type is null - cannot compute dispatch target for {}. Forwarding as is.",
+            operationAggregateReq);
+        return null;
+      }
+      String operationName =
+          switch (operationType) {
+            case QUERY -> "query";
+            case MUTATION -> "mutation";
+            case SUBSCRIPTION -> "subscription";
+          };
+      OperationTypeDefinition operationDefinition = operationTypesByOpName.get(operationName);
+      if (operationDefinition == null) {
+        log.error(
+            "{} operation has not been configured in schema {} - cannot compute dispatch target for {}. Forwarding as is.",
+            operationName,
+            schemaDefinition,
+            operationAggregateReq);
+        return null;
       } else {
-        resolvedOperationTypeName = requestedOperationType;
+        resolvedOperationTypeName = operationDefinition.getTypeName().getName();
       }
       return vajramID(resolvedOperationTypeName + GRAPHQL_AGGREGATOR_SUFFIX);
     }

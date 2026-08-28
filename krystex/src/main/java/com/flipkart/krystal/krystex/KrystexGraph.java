@@ -1,8 +1,8 @@
 package com.flipkart.krystal.krystex;
 
-import static com.flipkart.krystal.krystex.batching.DepChainBatcherConfig.computeSharedBatcherConfig;
+import static com.flipkart.krystal.krystex.batching.InputBatcherConfig.computeDefaultBatcherConfig;
+import static com.flipkart.krystal.krystex.epochs.EpochGroups.computeEpochGroups;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
 import static java.util.Objects.requireNonNullElseGet;
 
@@ -10,13 +10,13 @@ import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
-import com.flipkart.krystal.krystex.batching.DepChainBatcherConfig;
 import com.flipkart.krystal.krystex.batching.InputBatcherConfig;
 import com.flipkart.krystal.krystex.batching.InputBatcherStrategy;
 import com.flipkart.krystal.krystex.batching.InputBatcherStrategy.CustomBatcherStrategy;
 import com.flipkart.krystal.krystex.batching.InputBatcherStrategy.DefaultBatcherStrategy;
 import com.flipkart.krystal.krystex.batching.InputBatchingDecorator;
 import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
+import com.flipkart.krystal.krystex.epochs.EpochGroups;
 import com.flipkart.krystal.krystex.inputinjection.KryonInputInjector;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
@@ -26,7 +26,6 @@ import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.kryondecoration.KryonExecutionContext;
-import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.traits.DefaultTraitDispatcher;
 import com.flipkart.krystal.traits.StaticDispatchPolicy;
@@ -34,7 +33,6 @@ import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
@@ -44,8 +42,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NonNull;
@@ -80,6 +76,7 @@ public final class KrystexGraph {
   @Getter private final ImmutableSet<VajramID> externallyInvocableVajramIds;
 
   @Getter private final DependentChainDisabler dependentChainDisabler;
+  @Getter private final EpochGroups epochGroups;
 
   /**
    * @param vajramGraph
@@ -116,13 +113,13 @@ public final class KrystexGraph {
                                 .isPresent())
                     .map(VajramDefinition::vajramId)
                     .collect(toImmutableSet()));
-    this.inputBatchingConfig =
-        create(
-            inputBatcherStrategy,
+    this.epochGroups =
+        computeEpochGroups(
             this.vajramGraph,
-            this.externallyInvocableVajramIds,
             this.traitDispatchPolicies,
-            this.dependentChainDisabler);
+            this.dependentChainDisabler,
+            this.externallyInvocableVajramIds);
+    this.inputBatchingConfig = create(inputBatcherStrategy, this.epochGroups, this.vajramGraph);
     this.dependentChainsByVajram =
         computeIncomingDependentChains(
             this.vajramGraph,
@@ -166,8 +163,7 @@ public final class KrystexGraph {
               decoratorType,
               /* shouldDecorate= */ executionContext ->
                   isInjectionNeeded(executionContext, vajramGraph),
-              /* instanceIdGenerator= */ executionContext -> decoratorType,
-              /* factory= */ decoratorContext ->
+              /* instanceIdGenerator= *//* factory= */ decoratorContext ->
                   new KryonInputInjector(vajramGraph, injectionProvider)));
     };
   }
@@ -182,10 +178,8 @@ public final class KrystexGraph {
 
   private static KryonExecutorConfigurator create(
       @Nullable InputBatcherStrategy inputBatcherStrategy,
-      VajramGraph vajramGraph,
-      ImmutableSet<VajramID> externallyInvocableVajramIds,
-      TraitDispatchPolicies traitDispatchPolicies,
-      DependentChainDisabler dependentChainDisabler) {
+      EpochGroups epochGroups,
+      VajramGraph vajramGraph) {
     InputBatcherConfig inputBatcherConfig;
     if (inputBatcherStrategy == null) {
       return KryonExecutorConfigurator.NO_OP;
@@ -193,68 +187,21 @@ public final class KrystexGraph {
       inputBatcherConfig = customStrategy.customBatcherConfig();
     } else if (inputBatcherStrategy instanceof DefaultBatcherStrategy defaultStrategy) {
       inputBatcherConfig =
-          computeSharedBatcherConfig(
-              vajramGraph,
-              defaultStrategy.batchSizeSupplier(),
-              traitDispatchPolicies,
-              dependentChainDisabler,
-              externallyInvocableVajramIds);
+          computeDefaultBatcherConfig(epochGroups, defaultStrategy.batchSizeSupplier());
     } else {
       throw new AssertionError("Not possible");
     }
-    ConcurrentHashMap<DependentChain, DepChainBatcherConfig> batcherConfigByDepChain =
-        new ConcurrentHashMap<>();
-
-    Function<LogicExecutionContext, DepChainBatcherConfig> inputBatcherForLogicExecContext =
-        logicExecutionContext ->
-            batcherConfigByDepChain.computeIfAbsent(
-                logicExecutionContext.dependents(),
-                d -> {
-                  VajramID vajramID = logicExecutionContext.vajramID();
-                  VajramDefinition vajramDefinition = vajramGraph.vajramDefinitions().get(vajramID);
-                  if (vajramDefinition == null) {
-                    log.error(
-                        "Unable to find vajram with id {}. Something is wrong. Skipping InputBatchingDecorator application.",
-                        vajramID);
-                    return DepChainBatcherConfig.NO_BATCHING;
-                  }
-                  if (vajramDefinition.isTrait()) {
-                    log.error(
-                        "Cannot register input Batchers for vajramId {} since it is a Trait. Skipping InputBatchingDecorator application.",
-                        vajramID.id());
-                    return DepChainBatcherConfig.NO_BATCHING;
-                  }
-                  for (DepChainBatcherConfig depChainBatcherConfig :
-                      inputBatcherConfig
-                          .depChainBatcherConfigs()
-                          .getOrDefault(vajramID, ImmutableList.of())) {
-                    boolean shouldDecorate =
-                        vajramDefinition.metadata().isBatched()
-                            && depChainBatcherConfig.shouldBatch().test(logicExecutionContext);
-                    if (shouldDecorate) {
-                      return depChainBatcherConfig;
-                    }
-                  }
-                  return DepChainBatcherConfig.NO_BATCHING;
-                });
-
     String decoratorType = InputBatchingDecorator.DECORATOR_TYPE;
     OutputLogicDecoratorConfig batchingDecoratorConfig =
         new OutputLogicDecoratorConfig(
             decoratorType,
-            logicExecutionContext ->
-                !DepChainBatcherConfig.NO_BATCHING.equals(
-                    inputBatcherForLogicExecContext.apply(logicExecutionContext)),
-            logicExecutionContext ->
-                requireNonNull(inputBatcherForLogicExecContext.apply(logicExecutionContext))
-                    .instanceIdGenerator()
-                    .apply(logicExecutionContext),
+            decorationContext -> {
+              VajramDefinition vajramDefinition =
+                  vajramGraph.vajramDefinitions().get(decorationContext.vajramID());
+              return vajramDefinition != null && vajramDefinition.metadata().isBatched();
+            },
             decoratorContext ->
-                requireNonNull(
-                        inputBatcherForLogicExecContext.apply(
-                            decoratorContext.logicExecutionContext()))
-                    .decoratorFactory()
-                    .apply(decoratorContext));
+                inputBatcherConfig.decoratorFactory().apply(decoratorContext.vajramID()));
     return configBuilder -> {
       if (configBuilder.hasOutputLogicDecorator(decoratorType)) {
         // The decorator set in the executor config has higher precedence

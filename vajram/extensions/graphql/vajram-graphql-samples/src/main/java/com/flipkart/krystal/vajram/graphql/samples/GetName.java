@@ -1,19 +1,20 @@
 package com.flipkart.krystal.vajram.graphql.samples;
 
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.graphql.samples.name.Name;
-import com.flipkart.krystal.vajram.graphql.samples.name.Name_ImmutGQlResp;
+import com.flipkart.krystal.vajram.graphql.samples.name.Name_Id;
+import com.flipkart.krystal.vajram.graphql.samples.name.Name_Id_ImmutGQlResp;
 
 @Vajram
-public abstract class GetName extends ComputeVajramDef<Name> {
-  interface _Inputs {
-    boolean allCaps();
-  }
+public abstract class GetName extends ComputeVajramDef<Name_Id> {
 
   @Output
-  static Name getName() {
-    return Name_ImmutGQlResp._builder().value("Veerendra Vikramadeva");
+  static Name_Id getName() {
+    return Name_Id_ImmutGQlResp._builder()
+        .value(Errable.withValue("value"))
+        .string(Errable.withValue("string"))
+        ._build();
   }
 }

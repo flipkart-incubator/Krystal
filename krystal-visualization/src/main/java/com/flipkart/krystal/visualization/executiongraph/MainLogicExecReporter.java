@@ -21,6 +21,7 @@ import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
+import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import java.io.FileWriter;
@@ -60,8 +61,7 @@ public final class MainLogicExecReporter implements OutputLogicDecorator {
         configBuilder.outputLogicDecoratorConfig(
             new OutputLogicDecoratorConfig(
                 decoratorType(),
-                logicExecutionContext -> true, // apply to all vajrams
-                logicExecutionContext -> decoratorType(), // Only one instance across the graph
+                decorationContext -> true, // apply to all vajrams
                 decoratorContext -> this // Reuse this one instance across the graph,
                 ));
   }
@@ -69,7 +69,9 @@ public final class MainLogicExecReporter implements OutputLogicDecorator {
   @Override
   @SuppressWarnings("FutureReturnValueIgnored")
   public OutputLogic<Object> decorateLogic(
-      OutputLogic<Object> logicToDecorate, OutputLogicDefinition<Object> originalLogicDefinition) {
+      OutputLogic<Object> logicToDecorate,
+      OutputLogicDefinition<Object> originalLogicDefinition,
+      LogicExecutionContext context) {
     return input -> {
       VajramID vajramID = originalLogicDefinition.kryonLogicId().vajramID();
       KryonLogicId kryonLogicId = originalLogicDefinition.kryonLogicId();

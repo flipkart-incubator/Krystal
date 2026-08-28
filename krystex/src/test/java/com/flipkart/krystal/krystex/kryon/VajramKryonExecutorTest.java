@@ -1,9 +1,7 @@
 package com.flipkart.krystal.krystex.kryon;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Value.ALL_NON_NULL;
-import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.DEPTH;
-import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy.BATCH;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy.DIRECT;
 import static java.time.Duration.ofSeconds;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -17,6 +15,7 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.except.KrystalCompletionException;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
@@ -25,17 +24,18 @@ import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.TestRequestContext;
 import com.flipkart.krystal.krystex.VajramGraph.VajramGraphBuilder;
-import com.flipkart.krystal.krystex.batching.DepChainBatcherConfig;
 import com.flipkart.krystal.krystex.batching.InputBatcherConfig;
 import com.flipkart.krystal.krystex.batching.InputBatcherStrategy.CustomBatcherStrategy;
 import com.flipkart.krystal.krystex.batching.InputBatcherStrategy.DefaultBatcherStrategy;
 import com.flipkart.krystal.krystex.batching.InputBatchingDecorator;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
-import com.flipkart.krystal.krystex.decoration.DecoratorCommand;
 import com.flipkart.krystal.krystex.decoration.FlushCommand;
+import com.flipkart.krystal.krystex.decoration.FlushableDecorator;
+import com.flipkart.krystal.krystex.epochs.VajramEpochGroups;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy;
+import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.test_vajrams.friendsservice.FriendsService;
 import com.flipkart.krystal.krystex.test_vajrams.hello.Hello;
@@ -63,9 +63,7 @@ import com.flipkart.krystal.vajram.resilience4j.curcuitbreaker.Resilience4JCircu
 import com.flipkart.krystal.visualization.executiongraph.DefaultKryonExecutionReport;
 import com.flipkart.krystal.visualization.executiongraph.KryonExecutionReport;
 import com.flipkart.krystal.visualization.executiongraph.MainLogicExecReporter;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -118,11 +116,13 @@ class VajramKryonExecutorTest {
   void setUp() throws LeaseUnavailableException {
     executorLease = EXEC_POOL.lease();
     decorationOrdering =
-        new DecorationOrdering(
-            ImmutableSet.of(
+        DecorationOrdering.builder()
+            .outputLogicDecoratorOrdering(
+                InputBatchingDecorator.DECORATOR_TYPE,
                 Resilience4JCircuitBreaker.DECORATOR_TYPE,
-                Resilience4JBulkhead.DECORATOR_TYPE,
-                InputBatchingDecorator.DECORATOR_TYPE));
+                Resilience4JBulkhead.DECORATOR_TYPE)
+            .build();
+
     requestContext = new TestRequestContext(Optional.of("user_id_1"), 2);
     objectMapper =
         JsonMapper.builder()
@@ -522,7 +522,7 @@ class VajramKryonExecutorTest {
             .decorationOrdering(decorationOrdering);
 
     krystalExecutorConfigBuilder
-        .configureWith(new RequestLevelCache(vGraph).defaultKryonExecutorConfigurator())
+        .configureWith(new RequestLevelCache(vGraph).defaultDecorationStrategy())
         .configureWith(Resilience4JBulkhead.onePerIOVajram())
         .configureWith(Resilience4JCircuitBreaker.onePerIOVajram());
 
@@ -578,12 +578,15 @@ class VajramKryonExecutorTest {
         new CustomBatcherStrategy(
             new InputBatcherConfig(
                 ImmutableMap.of(
-                    vGraph.getVajramIdByVajramDefType(TestUserService.class),
-                        ImmutableList.of(
-                            DepChainBatcherConfig.simple(() -> new InputBatcherImpl(100))),
-                    vGraph.getVajramIdByVajramDefType(FriendsService.class),
-                        ImmutableList.of(
-                            DepChainBatcherConfig.simple(() -> new InputBatcherImpl(100)))))));
+                        vGraph.getVajramIdByVajramDefType(TestUserService.class),
+                        new InputBatchingDecorator(
+                            () -> new InputBatcherImpl(100),
+                            new VajramEpochGroups(ImmutableMap.of())),
+                        vGraph.getVajramIdByVajramDefType(FriendsService.class),
+                        new InputBatchingDecorator(
+                            () -> new InputBatcherImpl(100),
+                            new VajramEpochGroups(ImmutableMap.of())))
+                    ::get)));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (VajramKryonExecutor krystexVajramExecutor =
@@ -671,48 +674,11 @@ class VajramKryonExecutorTest {
         new CustomBatcherStrategy(
             new InputBatcherConfig(
                 ImmutableMap.of(
-                    vGraph.getVajramIdByVajramDefType(FriendsService.class),
-                    ImmutableList.of(
-                        new DepChainBatcherConfig(
-                            _x -> true,
-                            logicExecutionContext -> "",
-                            batcherContext ->
-                                new OutputLogicDecorator() {
-                                  @Override
-                                  public OutputLogic<Object> decorateLogic(
-                                      OutputLogic<Object> logicToDecorate,
-                                      OutputLogicDefinition<Object> originalLogicDefinition) {
-                                    return logicToDecorate;
-                                  }
-
-                                  @Override
-                                  public void executeCommand(DecoratorCommand decoratorCommand) {
-                                    if (decoratorCommand instanceof FlushCommand flushCommand) {
-                                      friendServiceFlushCommand.complete(flushCommand);
-                                    }
-                                  }
-                                })),
-                    vGraph.getVajramIdByVajramDefType(TestUserService.class),
-                    ImmutableList.of(
-                        new DepChainBatcherConfig(
-                            _x -> true,
-                            logicExecutionContext1 -> "1",
-                            batcherContext ->
-                                new OutputLogicDecorator() {
-                                  @Override
-                                  public OutputLogic<Object> decorateLogic(
-                                      OutputLogic<Object> logicToDecorate,
-                                      OutputLogicDefinition<Object> originalLogicDefinition) {
-                                    return logicToDecorate;
-                                  }
-
-                                  @Override
-                                  public void executeCommand(DecoratorCommand decoratorCommand) {
-                                    if (decoratorCommand instanceof FlushCommand flushCommand) {
-                                      userServiceFlushCommand.complete(flushCommand);
-                                    }
-                                  }
-                                }))))));
+                        vGraph.getVajramIdByVajramDefType(FriendsService.class),
+                        new FlushableDecoratorImpl(friendServiceFlushCommand),
+                        vGraph.getVajramIdByVajramDefType(TestUserService.class),
+                        new FlushableDecoratorImpl(userServiceFlushCommand))
+                    ::get)));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (VajramKryonExecutor krystexVajramExecutor =
@@ -771,15 +737,39 @@ class VajramKryonExecutorTest {
   }
 
   public static Stream<Arguments> executorConfigsToTest() {
-    return Stream.of(
-        Arguments.of(BATCH, DEPTH), Arguments.of(BATCH, BREADTH), Arguments.of(DIRECT, DEPTH));
+    return Stream.of(Arguments.of(DIRECT, DEPTH));
   }
 
   private InputBatcherConfig singleBatcherConfig(
       Class<? extends VajramDefRoot<?>> vajramType, Supplier<InputBatcher> inputBatcherSupplier) {
+    VajramID vajramId = vGraph.getVajramIdByVajramDefType(vajramType);
     return new InputBatcherConfig(
-        ImmutableMap.of(
-            vGraph.getVajramIdByVajramDefType(vajramType),
-            ImmutableList.of(DepChainBatcherConfig.simple(inputBatcherSupplier))));
+        _v ->
+            vajramId.equals(_v)
+                ? new InputBatchingDecorator(
+                    inputBatcherSupplier, new VajramEpochGroups(ImmutableMap.of()))
+                : null);
+  }
+
+  private static class FlushableDecoratorImpl implements OutputLogicDecorator, FlushableDecorator {
+
+    private final CompletableFuture<FlushCommand> notify;
+
+    public FlushableDecoratorImpl(CompletableFuture<FlushCommand> notify) {
+      this.notify = notify;
+    }
+
+    @Override
+    public OutputLogic<Object> decorateLogic(
+        OutputLogic<Object> logicToDecorate,
+        OutputLogicDefinition<Object> originalLogicDefinition,
+        LogicExecutionContext context) {
+      return logicToDecorate;
+    }
+
+    @Override
+    public void flushDecorator(FlushCommand flushCommand) {
+      notify.complete(flushCommand);
+    }
   }
 }

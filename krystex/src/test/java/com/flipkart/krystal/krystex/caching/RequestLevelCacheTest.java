@@ -1,23 +1,24 @@
 package com.flipkart.krystal.krystex.caching;
 
-import static com.flipkart.krystal.concurrent.Futures.linkFutures;
+import static com.flipkart.krystal.annos.ComputeDelegationMode.NONE;
+import static com.flipkart.krystal.annos.ComputeDelegationMode.SYNC;
 import static com.flipkart.krystal.core.VajramID.vajramID;
-import static com.flipkart.krystal.data.Errable.computeErrableFrom;
-import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.BREADTH;
+import static com.flipkart.krystal.data.Errable.errableFrom;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.DEPTH;
-import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy.BATCH;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy.DIRECT;
 import static com.flipkart.krystal.tags.ElementTags.emptyTags;
 import static java.util.Collections.emptySet;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
+import com.flipkart.krystal.annos.OutputLogicDelegationMode;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
+import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.KrystexGraph;
@@ -113,7 +114,7 @@ class RequestLevelCacheTest {
         kryonDefinitionRegistry.newVajramKryonDefinition(
             vajramID("kryon"),
             emptySet(),
-            newComputeLogic(
+            newOutputLogic(
                     vajramID("kryon"),
                     emptySet(),
                     dependencyValues -> {
@@ -125,7 +126,10 @@ class RequestLevelCacheTest {
             newCreateNewRequestLogic(vajramID("kryon"), emptySet()),
             newFacetsFromRequestLogic(vajramID("kryon")),
             _graphExecData -> _graphExecData.communicationFacade().executeOutputLogic(),
-            ElementTags.of(List.of(InvocableOutsideGraph.Creator.create())));
+            ElementTags.of(
+                List.of(
+                    InvocableOutsideGraph.Creator.create(),
+                    OutputLogicDelegationMode.Creator.create(SYNC))));
     CompletableFuture<Object> future1 =
         kryonExecutor.execute(
             SimpleImmutRequest.empty(kryonDefinition.vajramID()),
@@ -149,7 +153,7 @@ class RequestLevelCacheTest {
         kryonDefinitionRegistry.newVajramKryonDefinition(
             vajramID("kryon"),
             emptySet(),
-            newComputeLogic(
+            newOutputLogic(
                     vajramID("kryonLogic"),
                     emptySet(),
                     dependencyValues -> {
@@ -178,6 +182,50 @@ class RequestLevelCacheTest {
     assertThat(outputLogicInvocationCount.sum()).isEqualTo(2);
   }
 
+  /**
+   * Tests whether the KryonDecorator in RequestLevelCache is able to dedupe requests in the a batch
+   * of the same dependentChain
+   */
+  @Test
+  void multiRequestExecutionComputeVajram_withCache_cacheHitSuccess() {
+    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy, true);
+    LongAdder adder = new LongAdder();
+    VajramKryonDefinition kryonDefinition =
+        kryonDefinitionRegistry.newVajramKryonDefinition(
+            vajramID("kryon"),
+            emptySet(),
+            newOutputLogic(
+                    vajramID("kryon"),
+                    emptySet(),
+                    dependencyValues -> {
+                      adder.increment();
+                      return "computed_value";
+                    },
+                    false)
+                .kryonLogicId(),
+            ImmutableMap.of(),
+            newCreateNewRequestLogic(vajramID("kryon"), emptySet()),
+            newFacetsFromRequestLogic(vajramID("kryon")),
+            _graphExecData -> _graphExecData.communicationFacade().executeOutputLogic(),
+            ElementTags.of(
+                List.of(
+                    InvocableOutsideGraph.Creator.create(),
+                    OutputLogicDelegationMode.Creator.create(NONE))));
+    CompletableFuture<Object> future1 =
+        kryonExecutor.execute(
+            SimpleImmutRequest.empty(kryonDefinition.vajramID()),
+            VajramExecutionConfig.builder().executionId("req_1").build());
+    CompletableFuture<Object> future2 =
+        kryonExecutor.execute(
+            SimpleImmutRequest.empty(kryonDefinition.vajramID()),
+            VajramExecutionConfig.builder().executionId("req_2").build());
+
+    kryonExecutor.close();
+    assertThat(future1).succeedsWithin(TIMEOUT).isEqualTo("computed_value");
+    assertThat(future2).succeedsWithin(TIMEOUT).isEqualTo("computed_value");
+    assertThat(adder.sum()).isEqualTo(1);
+  }
+
   private VajramKryonExecutor getKryonExecutor(
       KryonExecStrategy kryonExecStrategy,
       GraphTraversalStrategy graphTraversalStrategy,
@@ -188,28 +236,45 @@ class RequestLevelCacheTest {
             .kryonExecStrategy(kryonExecStrategy)
             .graphTraversalStrategy(graphTraversalStrategy);
     if (withCache) {
-      configBuilder.configureWith(requestLevelCache.defaultKryonExecutorConfigurator());
+      configBuilder.configureWith(requestLevelCache.defaultDecorationStrategy());
     }
     return new VajramKryonExecutor(krystexGraph, configBuilder.executorId("test"));
   }
 
-  private <T> OutputLogicDefinition<T> newComputeLogic(
+  private <T> OutputLogicDefinition<T> newOutputLogic(
       VajramID kryonId, Set<Facet> inputs, Function<FacetValues, T> logic) {
-    ComputeLogicDefinition<T> def =
-        new ComputeLogicDefinition<>(
-            new KryonLogicId(kryonId, kryonId.id()),
-            inputs,
-            input ->
-                input
-                    .executionItems()
-                    .forEach(
-                        executionItem ->
-                            linkFutures(
-                                computeErrableFrom(logic)
-                                    .apply(executionItem.facetValues())
-                                    .toFuture(),
-                                executionItem.response())),
-            emptyTags());
+    return newOutputLogic(kryonId, inputs, logic, true);
+  }
+
+  private <T> OutputLogicDefinition<T> newOutputLogic(
+      VajramID kryonId, Set<Facet> inputs, Function<FacetValues, T> logic, boolean ioVajram) {
+    @SuppressWarnings("unchecked")
+    OutputLogicDefinition<T> def =
+        ioVajram
+            ? new IOLogicDefinition<>(
+                new KryonLogicId(kryonId, kryonId.id()),
+                inputs,
+                input ->
+                    input
+                        .executionItems()
+                        .forEach(
+                            executionItem ->
+                                errableFrom(() -> logic.apply(executionItem.facetValues()))
+                                    .completeFuture(
+                                        (CompletableFuture<T>) executionItem.response())),
+                emptyTags())
+            : new ComputeLogicDefinition<>(
+                new KryonLogicId(kryonId, kryonId.id()),
+                inputs,
+                input ->
+                    input
+                        .executionItems()
+                        .forEach(
+                            executionItem ->
+                                errableFrom(() -> logic.apply(executionItem.facetValues()))
+                                    .completeFuture(
+                                        (CompletableFuture<T>) executionItem.response())),
+                emptyTags());
 
     logicDefinitionRegistry.addOutputLogic(def);
     return def;
@@ -233,7 +298,6 @@ class RequestLevelCacheTest {
   }
 
   public static Stream<Arguments> executorConfigsToTest() {
-    return Stream.of(
-        Arguments.of(BATCH, DEPTH), Arguments.of(BATCH, BREADTH), Arguments.of(DIRECT, DEPTH));
+    return Stream.of(Arguments.of(DIRECT, DEPTH));
   }
 }

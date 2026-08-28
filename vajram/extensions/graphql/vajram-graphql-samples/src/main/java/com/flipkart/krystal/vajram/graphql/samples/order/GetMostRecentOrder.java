@@ -8,14 +8,14 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
 
 @Vajram
-public abstract class GetMostRecentOrder extends ComputeVajramDef<OrderId> {
+public abstract class GetMostRecentOrder extends ComputeVajramDef<Order_Id> {
   interface _Inputs {
     @IfAbsent(FAIL)
     String userId();
   }
 
   @Output
-  static OrderId mostRecentOrder(String userId) {
-    return new OrderId("MostRecentOrderOf_" + userId);
+  static Order_Id mostRecentOrder(String userId) {
+    return Order_Id_ImmutGQlResp._builder().id("MostRecentOrderOf_" + userId)._build();
   }
 }

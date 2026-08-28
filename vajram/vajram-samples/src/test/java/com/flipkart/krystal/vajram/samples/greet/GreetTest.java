@@ -38,7 +38,6 @@ import com.flipkart.krystal.vajram.guice.injection.VajramGuiceInputInjector;
 import com.flipkart.krystal.visualization.executiongraph.DefaultKryonExecutionReport;
 import com.flipkart.krystal.visualization.executiongraph.KryonExecutionReport;
 import com.flipkart.krystal.visualization.executiongraph.MainLogicExecReporter;
-import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
@@ -89,14 +88,11 @@ class GreetTest {
     this.executorLease = EXEC_POOL.lease();
     this.injector = createInjector(new GuiceModule());
     this.decorationOrdering =
-        new DecorationOrdering(
-            ImmutableSet.<String>builder()
-                // Output logic decorators
-                .add(MainLogicExecReporter.DECORATOR_TYPE)
-                // KryonDecorators
-                .add(RequestLevelCache.KRYON_DECORATOR_TYPE)
-                .add(KryonInputInjector.DECORATOR_TYPE)
-                .build());
+        DecorationOrdering.builder()
+            .outputLogicDecoratorOrdering(MainLogicExecReporter.DECORATOR_TYPE)
+            .kryonDecoratorOrdering(
+                RequestLevelCache.KRYON_DECORATOR_TYPE, KryonInputInjector.DECORATOR_TYPE)
+            .build();
     this.graph = VajramGraph.builder().loadFromPackage(PACKAGE_PATH).build();
     this.requestLevelCache = new TestRequestLevelCache(graph);
 

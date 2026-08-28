@@ -4,38 +4,29 @@ import static com.flipkart.krystal.vajram.graphql.api.errors.ErrorCollector.defa
 import static graphql.ErrorType.DataFetchingException;
 
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.model.ModelClusterRoot;
 import com.flipkart.krystal.vajram.graphql.api.errors.ErrorCollector;
-import com.flipkart.krystal.vajram.json.Json;
 import graphql.ExecutionResult;
+import graphql.ExecutionResult.Builder;
 import graphql.GraphQLError;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-@ModelClusterRoot(
-    immutableRoot = GraphQlOperationObject_Immut.class,
-    builderRoot = GraphQlOperationObject_Immut.Builder.class)
-public interface GraphQlOperationObject extends GraphQlObject {
+public sealed interface GraphQlOperation extends GraphQlObject
+    permits GraphQlOperationImpl, GraphQlOperationError {
 
-  @Nullable Map<Object, Object> _extensions();
-
-  @Override
-  GraphQlOperationObject_Immut _build();
-
-  @Override
-  GraphQlOperationObject_Immut.Builder _asBuilder();
+  default @Nullable Map<Object, Object> graphql_extensions() {
+    return null;
+  }
 
   @Nullable
-  default List<GraphQLError> _errors() {
-    ErrorCollector errorCollector = defaultCollector();
+  default List<GraphQLError> graphql_errors(ErrorCollector errorCollector) {
     _collectErrors(errorCollector, new ArrayList<>());
     return errorCollector.getErrors();
   }
 
-  static ExecutionResult _asExecutionResult(Errable<GraphQlOperationObject> errable) {
+  static ExecutionResult _asExecutionResult(Errable<GraphQlOperation> errable) {
     return errable.mapToValue(
         /* ifFailure= */ failure -> {
           Throwable error = failure.error();
@@ -51,31 +42,25 @@ public interface GraphQlOperationObject extends GraphQlObject {
               .build();
         },
         /* ifNil= */ () -> ExecutionResult.newExecutionResult().build(),
-        /* ifNonNil= */ GraphQlOperationObject::_asExecutionResult);
+        /* ifNonNil= */ GraphQlOperation::_asExecutionResult);
   }
 
   default ExecutionResult _asExecutionResult() {
     if (this instanceof GraphQlOperationError operationError) {
       return operationError.executionResult();
     }
-    ExecutionResult.Builder<?> builder = ExecutionResult.newExecutionResult().data(this._build());
-    List<GraphQLError> errors = _errors();
+    Builder<?> builder = ExecutionResult.newExecutionResult().data(graphql_data());
+
+    List<GraphQLError> errors = graphql_errors(defaultCollector());
     if (errors != null) {
       builder.errors(errors);
     }
-    Map<Object, Object> extensions = _extensions();
+
+    Map<Object, Object> extensions = graphql_extensions();
     if (extensions != null) {
       builder.extensions(extensions);
     }
-    return builder.build();
-  }
 
-  // TODO: Delete
-  default byte[] _serialize() throws Exception {
-    Map<String, @Nullable Object> map = new HashMap<>(3);
-    map.put("data", this);
-    map.put("errors", _errors());
-    map.put("extensions", _extensions());
-    return Json.OBJECT_WRITER.writeValueAsBytes(map);
+    return builder.build();
   }
 }

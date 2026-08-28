@@ -1,11 +1,8 @@
 package com.flipkart.krystal.krystex.caching;
 
-import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.concurrent.Futures.propagateCompletion;
 import static com.flipkart.krystal.data.DataAccess.AccessPattern.MUTATION;
 import static com.flipkart.krystal.data.DataAccess.AccessPattern.QUERY;
-import static com.flipkart.krystal.except.KrystalCompletionException.wrapAsCompletionException;
-import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
 import com.flipkart.krystal.annos.ComputeDelegationMode;
@@ -17,15 +14,17 @@ import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValues;
-import com.flipkart.krystal.except.KrystalCompletionException;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.VajramGraph;
+import com.flipkart.krystal.krystex.batching.InputBatchingDecorator;
+import com.flipkart.krystal.krystex.caching.CacheContainer.CacheValue;
 import com.flipkart.krystal.krystex.commands.DirectForwardCommand;
 import com.flipkart.krystal.krystex.commands.DirectForwardReceive;
 import com.flipkart.krystal.krystex.commands.ForwardReceiveBatch;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
-import com.flipkart.krystal.krystex.kryon.BatchResponse;
+import com.flipkart.krystal.krystex.epochs.EpochGroups;
+import com.flipkart.krystal.krystex.epochs.VajramEpochGroups;
 import com.flipkart.krystal.krystex.kryon.Kryon;
 import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
@@ -34,15 +33,14 @@ import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorationInput;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorator;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
+import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
-import com.flipkart.krystal.krystex.request.InvocationId;
-import com.google.common.collect.Iterables;
+import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -51,6 +49,36 @@ import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+/**
+ * A RequestLevel Cache instance is designed to cache the outputs of vajrams and/or their output
+ * logic so that duplicate computation and IO calls can be avoided. To achieve this, a
+ * RequestLevelCache instance provides {@link KryonExecutorConfigurator}s that decorate eligible
+ * Kryons of Compute Vajrams and OutputLogics of IO Vajrams.
+ *
+ * <p>It is important to note that using RequestLevelCache changes the way the graph executes and
+ * can have significant consequences for the way the graph executes. This includes potential
+ * deadlocks or lost data if the RequestLevelCache or the Vajrams in the graph are not configured or
+ * annotated correctly.
+ *
+ * <p>For example, any caching decorator applied before decorators like {@link
+ * InputBatchingDecorator}, must not blindly treat incomplete futures {@link CompletableFuture}s in
+ * the cache as cache hits - doing so can cause deadlocks because {@link InputBatchingDecorator}
+ * groups dependentChains by epoch where each depChain in epoch(n+1) is blocked on the response from
+ * at least one depChain from epoch(n) - at the same time, some dependentChain in epoch(n) could end
+ * up getting a future from the cache which itself was inserted by a depChain from epoch(n+1).
+ * Because of this, the {@link KryonDecorator} provided by this class compares the epochs of the
+ * current request and the cached future to decide which incomplete futures can safely be considered
+ * cache hits. Also, the {@link OutputLogicDecorator} provided by this class caches futures (which
+ * is needed to avoid duplicate IO calls due to concurrent requests with same inputs), and this MUST
+ * be applied AFTER decorators like {@link InputBatchingDecorator}.
+ *
+ * <p>Request level caching also affects correctness of graphs in which some data is being read and
+ * written by different vajrams. Let's say in a given request, vajram Vr reads an entity E1 from a
+ * database, then Vw updates the same entity, and then Vr is called again - this class will end up
+ * returning the original value because it was already cached. But this would be a functional error.
+ * To prevent these kind of errors, {@link RequestLevelCacheInvalidator} can be used Vw to
+ * invalidate cache keys of Vr. See @{@link DataAccess} as well for more details.
+ */
 @Slf4j
 public sealed class RequestLevelCache permits TestRequestLevelCache {
 
@@ -59,12 +87,12 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
   public static final String OUTPUT_LOGIC_DECORATOR_TYPE =
       RequestLevelCache.class.getName() + "_OutputLogicDecorator";
 
-  private static final Errable<Object> UNKNOWN_ERROR =
-      Errable.withError(new KrystalCompletionException("Unknown error in request cache"));
-
   private final CacheContainer cache = new CacheContainer();
 
+  @Getter private final RequestLevelCacheStats stats = new RequestLevelCacheStats();
   @Getter private final VajramGraph vajramGraph;
+
+  private final EpochGroups epochGroups;
   private @MonotonicNonNull KryonDecorator kryonDecorator;
   private @MonotonicNonNull OutputLogicDecorator outputLogicDecorator;
 
@@ -76,7 +104,12 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
    *     request level cache
    */
   public RequestLevelCache(VajramGraph vajramGraph) {
+    this(vajramGraph, new EpochGroups(ImmutableMap.of()));
+  }
+
+  public RequestLevelCache(VajramGraph vajramGraph, EpochGroups epochGroups) {
     this.vajramGraph = vajramGraph;
+    this.epochGroups = epochGroups;
   }
 
   /**
@@ -91,34 +124,50 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
    * the kryon directly or indirectly reads queries an entity which is mutated by another vajram. In
    * such cases, the output logic decorator is more robust.
    */
-  public KryonExecutorConfigurator defaultKryonExecutorConfigurator() {
-    return configBuilder -> {
-      configBuilder.kryonDecoratorConfig(
-          new KryonDecoratorConfig(
-              KRYON_DECORATOR_TYPE,
-              executionContext -> {
-                KryonCachingMetadata kryonCachingMetadata =
-                    getKryonCachingMetadata(executionContext.vajramID());
-                return kryonCachingMetadata.isComputeVajram()
-                    && kryonCachingMetadata.isEligibleForCaching();
-              }, // Apply kryon level cache to only compute vajrams
-              _c -> KRYON_DECORATOR_TYPE, // Only one RequestLevelCache across the vajram graph
-              _c -> kryonDecorator() // Reuse this instance across the graph
-              ));
-      configBuilder.outputLogicDecoratorConfig(
-          new OutputLogicDecoratorConfig(
-              OUTPUT_LOGIC_DECORATOR_TYPE,
-              executionContext -> {
-                KryonCachingMetadata kryonCachingMetadata =
-                    getKryonCachingMetadata(executionContext.vajramID());
-                return !kryonCachingMetadata.isComputeVajram()
-                    && kryonCachingMetadata.isEligibleForCaching();
-              }, // Apply output logic level cache only for IO vajrams
-              _c ->
-                  OUTPUT_LOGIC_DECORATOR_TYPE, // Only one RequestLevelCache across the vajram graph
-              _c -> outputLogicDecorator() // Reuse this instance across the graph
-              ));
-    };
+  public KryonExecutorConfigurator defaultDecorationStrategy() {
+    return configBuilder ->
+        configBuilder
+            .configureWith(kryonDecorationForComputeVajrams())
+            .configureWith(outputLogicDecorationForIOVajrams());
+  }
+
+  public KryonExecutorConfigurator kryonDecorationForComputeVajrams() {
+    return configBuilder ->
+        configBuilder.kryonDecoratorConfig(
+            new KryonDecoratorConfig(
+                KRYON_DECORATOR_TYPE,
+                executionContext -> {
+                  KryonCachingMetadata kryonCachingMetadata =
+                      getKryonCachingMetadata(executionContext.vajramID());
+                  return kryonCachingMetadata.isComputeVajram()
+                      && kryonCachingMetadata.isEligibleForCaching();
+                }, // Apply kryon level cache to only compute vajrams
+                // Only one RequestLevelCache across the vajram graph
+                _c -> kryonDecorator() // Reuse this instance across the graph
+                ));
+  }
+
+  /**
+   * IMPORTANT: If you are using an Input Batching Decorator, or any such decorator which group
+   * dependent Chains and block one dependentChain for another, this decorator should have a higher
+   * decoration index (i.e. must decorate AFTER) such a decorator, else we can end up with deadlocks
+   * in graph execution.
+   */
+  public KryonExecutorConfigurator outputLogicDecorationForIOVajrams() {
+    return configBuilder ->
+        configBuilder.outputLogicDecoratorConfig(
+            new OutputLogicDecoratorConfig(
+                OUTPUT_LOGIC_DECORATOR_TYPE,
+                decorationContext -> {
+                  KryonCachingMetadata kryonCachingMetadata =
+                      getKryonCachingMetadata(decorationContext.vajramID());
+                  return !kryonCachingMetadata.isComputeVajram()
+                      && kryonCachingMetadata.isEligibleForCaching();
+                }, // Apply output logic level cache only for IO vajrams
+                // Only one RequestLevelCache across the vajram
+                // graph
+                _c -> outputLogicDecorator() // Reuse this instance across the graph
+                ));
   }
 
   public KryonDecorator kryonDecorator() {
@@ -192,8 +241,8 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
     @Override
     public CompletableFuture<KryonCommandResponse> executeCommand(KryonCommand<?> kryonCommand) {
       if (getKryonCachingMetadata(kryonCommand.vajramID()).isEligibleForCaching()) {
-        if (kryonCommand instanceof ForwardReceiveBatch forwardBatch) {
-          return readFromCache(kryon, forwardBatch);
+        if (kryonCommand instanceof ForwardReceiveBatch) {
+          throw new UnsupportedOperationException();
         } else if (kryonCommand instanceof DirectForwardReceive directForwardReceive) {
           return readFromCache(kryon, directForwardReceive);
         }
@@ -206,109 +255,86 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
     private CompletableFuture<KryonCommandResponse> readFromCache(
         Kryon<KryonCommand<?>, KryonCommandResponse> kryon, DirectForwardReceive command) {
       List<ExecutionItem> cacheMisses = new ArrayList<>();
-      for (ExecutionItem executionItem :
-          command.executionItems(getKryonDefinition().kryonDefinitionRegistry())) {
+      List<ExecutionItem> executionItems =
+          command.executionItems(getKryonDefinition().kryonDefinitionRegistry());
+      Map<ImmutableFacetValues, CompletableFuture<@Nullable Object>> localCache =
+          new LinkedHashMap<>();
+      for (ExecutionItem executionItem : executionItems) {
         FacetValues facetValues = executionItem.facetValues();
         var cacheKey = newCacheKey(facetValues);
         if (cacheKey == null) {
           // Since the cache key could not be generated, we skip caching for this request
-          log.error(
+          stats.kryonStats().noCacheKey();
+          log.warn(
               "Skipping DirectForwardReceive caching for request {} since cache key is null",
               facetValues);
           cacheMisses.add(executionItem);
           continue;
         }
-        var cachedFuture = getCachedValue(cacheKey);
-        if (cachedFuture == null) {
-          cache.put(cacheKey, executionItem.response());
-          cacheMisses.add(executionItem);
+        CompletableFuture<@Nullable Object> existingFuture =
+            localCache.putIfAbsent(cacheKey, executionItem.response());
+        if (existingFuture != null) {
+          stats.kryonStats().localCacheHit();
+          propagateCompletion(existingFuture, executionItem.response());
           continue;
         }
-        propagateCompletion(cachedFuture, executionItem.response());
+        stats.kryonStats().localCacheMiss();
+        // We are in a KryonDecorator. If we get consider any incomplete future present in the cache
+        // and use that as the cached response hoping that it would complete later, we can introduce
+        // a deadlock during graph execution.
+        // This can happen if, for example, KryonDecorator for Vajram V1 is invoked with inputs I1,
+        // and its response F1 is cached. That F1 might be blocked on InputBatchingDecorator being
+        // flushed for all dependentChains including the one whose parent chaing's F1 was cache
+        // earlier - which are part of a particular epoch lets Say E1. Later
+        // Vajram V1 gets invoked again with same I1, and we return F1 as is. But if this second
+        // call to V1 happened via a dependentChain which is part of Epoch E0 and if some dependency
+        // chain in E1 is waiting for all dependentChains of E0 to return, that would never happen
+        // in this scenario because E0 is waiting for F1 and F1 is waiting for E1 to flush and some
+        // dependentChain in E1 is waiting for some E0 to complete - this will cause a deadlock (We
+        // encountered this in an applications). To prevent this deadlock, KryonDecorators,
+        // or any other decorators which get invoked before the batching decorator, must not blindly
+        // treat an incomplete future as a cache hit. That's why we compare the epoch of the cached
+        // value with the current epoch, and we consider an incomplete future as a cache hit only if
+        // it safe to do so - and that is if the future was cached by a depChain in the current or
+        // previous epoch. In the rare case that this future was cached by a depChain whose epoch is
+        // greater than the current epoch, we treat it as a cache miss (rare because we have
+        // measured it to happen 0.2% of the time in one application and 0% of the time in other
+        // applications). This means that this KryonLogicDecorator cannot guarantee one-time
+        // execution of a compute vajram for a set of inputs. So business logic in compute vajrams
+        // and resolvers of compute and IO vajrams MUST be idempotent,
+        // In the cases where an incomplete future has to be treated as a cache miss, the actual
+        // caching will happen in the caching OutputLogicDecorator (which treats incomplete futures
+        // as cache hits always). The output logic decorator MUST be configured to decorate AFTER
+        // the input batching decorator (else the same deadlock will happen there as well).
+        var cachedValue = getCachedFuture(cacheKey);
+        if (cachedValue == null) {
+          stats.kryonStats().globalCacheNoFuture();
+          cache.putFuture(cacheKey, executionItem.response(), getCurrentEpoch(command));
+          cacheMisses.add(executionItem);
+        } else if (cachedValue.future().isDone()
+            || getCurrentEpoch(command) >= cachedValue.epoch()) {
+          if (cachedValue.future().isDone()) {
+            stats.kryonStats().globalCacheHitsCompletedFuture();
+          } else {
+            stats.kryonStats().globalCacheHitsIncompleteFuture();
+          }
+          propagateCompletion(cachedValue.future(), executionItem.response());
+        } else {
+          stats.kryonStats().globalCacheMissIncompleteFuture();
+          cacheMisses.add(executionItem);
+        }
       }
       return kryon.executeCommand(
           DirectForwardCommand.ofExecutionItems(
               command.vajramID(), cacheMisses, command.dependentChain()));
     }
 
-    @SuppressWarnings("FutureReturnValueIgnored")
-    private CompletableFuture<KryonCommandResponse> readFromCache(
-        Kryon<KryonCommand<?>, KryonCommandResponse> kryon, ForwardReceiveBatch forwardBatch) {
-      var executableRequests = forwardBatch.executableInvocations();
-      Map<InvocationId, FacetValues> cacheMisses = new LinkedHashMap<>();
-      Map<InvocationId, CompletableFuture<@Nullable Object>> cacheHits = new LinkedHashMap<>();
-      Map<InvocationId, CompletableFuture<@Nullable Object>> newCacheEntries =
-          new LinkedHashMap<>();
-      executableRequests.forEach(
-          (requestId, facets) -> {
-            ImmutableFacetValues cacheKey = newCacheKey(facets);
-            if (cacheKey == null) {
-              // Since the cache key could not be generated, we skip caching for this request
-              log.error(
-                  "Skipping forwardBatch caching for request {} since cache key is null", facets);
-              cacheMisses.put(requestId, facets);
-              return;
-            }
-            var cachedFuture = getCachedValue(cacheKey);
-            if (cachedFuture == null) {
-              var placeHolderFuture = new CompletableFuture<@Nullable Object>();
-              newCacheEntries.put(requestId, placeHolderFuture);
-              cache.put(cacheKey, placeHolderFuture);
-              cacheMisses.put(requestId, cacheKey);
-            } else {
-              cacheHits.put(requestId, cachedFuture);
-            }
-          });
-      CompletableFuture<KryonCommandResponse> cacheMissesResponse =
-          kryon.executeCommand(
-              new ForwardReceiveBatch(
-                  forwardBatch.vajramID(), cacheMisses, forwardBatch.dependentChain()));
-
-      cacheMissesResponse.whenComplete(
-          (kryonResponse, throwable) -> {
-            if (kryonResponse instanceof BatchResponse batchResponse) {
-              Map<InvocationId, Errable<Object>> responses = batchResponse.responses();
-              responses.forEach(
-                  (requestId, response) -> {
-                    CompletableFuture<? extends @Nullable Object> future = response.toFuture();
-                    CompletableFuture<@Nullable Object> destinationFuture =
-                        newCacheEntries.computeIfAbsent(
-                            requestId, _r -> new CompletableFuture<@Nullable Object>());
-                    linkFutures(future, destinationFuture);
-                  });
-            } else if (throwable != null) {
-              cacheMisses.forEach(
-                  (requestId, response) ->
-                      newCacheEntries
-                          .computeIfAbsent(
-                              requestId, _r -> new CompletableFuture<@Nullable Object>())
-                          .completeExceptionally(wrapAsCompletionException(throwable)));
-            } else {
-              RuntimeException e =
-                  new RuntimeException("Expecting BatchResponse. Found " + kryonResponse);
-              log.error("", e);
-              throw e;
-            }
-          });
-      CompletableFuture<KryonCommandResponse> finalResponse = new CompletableFuture<>();
-      Iterable<Entry<InvocationId, CompletableFuture<@Nullable Object>>> allFutures =
-          Iterables.concat(cacheHits.entrySet(), newCacheEntries.entrySet());
-      var allFuturesArray = new CompletableFuture[cacheHits.size() + newCacheEntries.size()];
-      int i = 0;
-      for (Entry<InvocationId, CompletableFuture<@Nullable Object>> e : allFutures) {
-        allFuturesArray[i++] = e.getValue();
-      }
-      allOf(allFuturesArray)
-          .whenComplete(
-              (unused, throwable) -> {
-                Map<InvocationId, Errable<Object>> responses = new LinkedHashMap<>();
-                for (Entry<InvocationId, CompletableFuture<@Nullable Object>> e : allFutures) {
-                  responses.put(
-                      e.getKey(), e.getValue().handle(Errable::errableFrom).getNow(UNKNOWN_ERROR));
-                }
-                finalResponse.complete(new BatchResponse(responses));
-              });
-      return finalResponse;
+    private int getCurrentEpoch(DirectForwardReceive command) {
+      return epochGroups
+          .vajramEpochGroups()
+          .getOrDefault(command.vajramID(), new VajramEpochGroups(ImmutableMap.of()))
+          .epochByDepChains()
+          .getOrDefault(command.dependentChain(), 0);
     }
   }
 
@@ -414,7 +440,7 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
     try {
       immut = facetValues._build();
     } catch (Exception e) {
-      log.error(
+      log.warn(
           "Unable to generate cache key by 'building' facet values to create an Immutable instance as an exception was encountered while building.",
           e);
       return null;
@@ -422,12 +448,12 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
     return immut;
   }
 
-  @Nullable CompletableFuture<@Nullable Object> getCachedValue(ImmutableFacetValues cacheKey) {
-    return cache.get(cacheKey);
+  CacheValue getCachedFuture(ImmutableFacetValues cacheKey) {
+    return cache.getFuture(cacheKey);
   }
 
-  void primeCache(FacetValues facetValues, CompletableFuture<@Nullable Object> data) {
-    cache.put(facetValues._build(), data);
+  void primeCache(FacetValues facetValues, Errable<Object> data) {
+    cache.putFuture(facetValues._build(), data.toFuture());
   }
 
   private class CachingDecoratedLogic implements OutputLogic<Object> {
@@ -436,7 +462,9 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
     private final OutputLogicDefinition<Object> outputLogicDefinition;
 
     private CachingDecoratedLogic(
-        OutputLogic<Object> logicToDecorate, OutputLogicDefinition<Object> outputLogicDefinition) {
+        OutputLogic<Object> logicToDecorate,
+        OutputLogicDefinition<Object> outputLogicDefinition,
+        LogicExecutionContext logicExecutionContext) {
       this.logicToDecorate = logicToDecorate;
       this.outputLogicDefinition = outputLogicDefinition;
     }
@@ -454,18 +482,21 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
         var cacheKey = newCacheKey(facetValues);
         if (cacheKey == null) {
           // Since the cache key could not be generated, we skip caching for this request
-          log.error(
+          stats.outputLogicStats().noCacheKey();
+          log.warn(
               "Skipping Output Logic caching for request {} since cache key is null", facetValues);
           cacheMisses.add(executionItem);
           continue;
         }
-        var cachedFuture = getCachedValue(cacheKey);
-        if (cachedFuture == null) {
-          cache.put(cacheKey, executionItem.response());
+        var cachedValue = getCachedFuture(cacheKey);
+        if (cachedValue == null) {
+          stats.outputLogicStats().cacheMiss();
+          cache.putFuture(cacheKey, executionItem.response());
           cacheMisses.add(executionItem);
-          continue;
+        } else {
+          stats.outputLogicStats().cacheHit();
+          propagateCompletion(cachedValue.future(), executionItem.response());
         }
-        propagateCompletion(cachedFuture, executionItem.response());
       }
       logicToDecorate.execute(input.withExecutionItems(cacheMisses));
     }

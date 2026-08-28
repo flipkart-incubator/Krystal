@@ -1,13 +1,13 @@
 package com.flipkart.krystal.krystex.batching;
 
 import com.flipkart.krystal.krystex.KrystexGraph;
-import com.flipkart.krystal.krystex.batching.DepChainBatcherConfig.BatchSizeSupplier;
+import com.flipkart.krystal.krystex.epochs.EpochGroup;
 
 public sealed interface InputBatcherStrategy {
 
   /**
    * This indicates that the {@link KrystexGraph} should use the default shared batcher config
-   * computated by {@link DepChainBatcherConfig}.
+   * computed by {@link EpochGroup}.
    *
    * @param batchSizeSupplier the batch size supplier to use to determine batch size for vajrams
    */

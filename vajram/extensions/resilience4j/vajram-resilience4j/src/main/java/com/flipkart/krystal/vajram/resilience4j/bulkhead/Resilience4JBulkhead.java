@@ -8,6 +8,7 @@ import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.core.OutputLogicExecutionInput;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
+import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationContext;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import io.github.resilience4j.bulkhead.Bulkhead;
@@ -46,13 +47,15 @@ public final class Resilience4JBulkhead implements OutputLogicDecorator {
   }
 
   public static Resilience4JBulkheadConfigurator onePerInstanceId(
-      Function<LogicExecutionContext, String> instanceIdGenerator) {
+      Function<LogicDecorationContext, String> instanceIdGenerator) {
     return new Resilience4JBulkheadConfigurator(instanceIdGenerator);
   }
 
   @Override
   public OutputLogic<Object> decorateLogic(
-      OutputLogic<Object> logicToDecorate, OutputLogicDefinition<Object> originalLogicDefinition) {
+      OutputLogic<Object> logicToDecorate,
+      OutputLogicDefinition<Object> originalLogicDefinition,
+      LogicExecutionContext context) {
     BulkheadAdapter bulkhead = this.adaptedBulkhead;
     if (bulkhead != null) {
       return input -> bulkhead.decorate(logicToDecorate, input);

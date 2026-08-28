@@ -6,19 +6,24 @@ import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.graphql.samples.dummy.DummyId;
+import com.flipkart.krystal.vajram.graphql.samples.dummy.Dummy_Id;
+import com.flipkart.krystal.vajram.graphql.samples.dummy.Dummy_Id_ImmutGQlResp;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Vajram
-public abstract class GetDummyIdForOrder extends ComputeVajramDef<DummyId> {
+public abstract class GetDummyIdForOrder extends ComputeVajramDef<Dummy_Id> {
   interface _Inputs {
     @IfAbsent(FAIL)
-    OrderId id();
+    Order_Id id();
 
     String name();
   }
 
   @Output
-  static DummyId dummyIds(OrderId id) {
-    return new DummyId(id.value() + "_dummy_1");
+  static Dummy_Id dummyIds(Order_Id id, @Nullable String name) {
+    if ("boom".equals(name)) {
+      throw new RuntimeException("GetDummyIdForOrder failed for name=boom");
+    }
+    return Dummy_Id_ImmutGQlResp._builder().dummyId(id.id() + "_dummy_1")._build();
   }
 }

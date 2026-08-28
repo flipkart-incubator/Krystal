@@ -515,8 +515,12 @@ public final class VajramGraph {
   private record InputResolverCreationResult(
       ImmutableMap<ResolverDefinition, Resolver> resolversByDefinition) {}
 
+  public @Nullable VajramDefinition tryGetVajramDefinition(VajramID vajramId) {
+    return vajramDefinitions.get(vajramId);
+  }
+
   public VajramDefinition getVajramDefinition(VajramID vajramId) {
-    VajramDefinition vajramDefinition = vajramDefinitions.get(vajramId);
+    VajramDefinition vajramDefinition = tryGetVajramDefinition(vajramId);
     if (vajramDefinition == null) {
       throw new IllegalArgumentException(
           "Could not find vajram definition for id %s".formatted(vajramId));

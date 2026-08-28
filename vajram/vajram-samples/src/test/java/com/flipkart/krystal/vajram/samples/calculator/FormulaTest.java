@@ -1,7 +1,5 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
-import static com.flipkart.krystal.krystex.batching.DepChainBatcherConfig.simple;
-import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy.DIRECT;
 import static com.flipkart.krystal.krystex.testharness.VajramTestHarness.prepareForTest;
 import static com.flipkart.krystal.vajram.samples.Util.TEST_TIMEOUT;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
@@ -34,7 +32,10 @@ import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.batching.InputBatcherConfig;
 import com.flipkart.krystal.krystex.batching.InputBatcherStrategy.CustomBatcherStrategy;
+import com.flipkart.krystal.krystex.batching.InputBatcherStrategy.DefaultBatcherStrategy;
+import com.flipkart.krystal.krystex.batching.InputBatchingDecorator;
 import com.flipkart.krystal.krystex.caching.TestRequestLevelCache;
+import com.flipkart.krystal.krystex.epochs.VajramEpochGroups;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
 import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
@@ -50,7 +51,6 @@ import com.flipkart.krystal.vajram.samples.Util;
 import com.flipkart.krystal.vajram.samples.calculator.add.Add;
 import com.flipkart.krystal.vajram.samples.calculator.add.Add_FacImmutPojo;
 import com.flipkart.krystal.vajram.samples.calculator.divide.Divide_FacImmutPojo;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
@@ -112,11 +112,7 @@ class FormulaTest {
         KrystexGraph.builder()
             .vajramGraph(graph)
             .externallyInvocableVajramIds(ImmutableSet.of(Formula_Req._VAJRAM_ID))
-            .inputBatcherStrategy(
-                new CustomBatcherStrategy(
-                    simpleInputBatcher(
-                        graph.getVajramIdByVajramDefType(Add.class),
-                        () -> new InputBatcherImpl(100))));
+            .inputBatcherStrategy(new DefaultBatcherStrategy(vajramId -> 3));
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, REQUEST_ID);
     try (VajramKryonExecutor krystexVajramExecutor =
         kGraph
@@ -304,8 +300,7 @@ class FormulaTest {
                       kGraph.createExecutor(
                           KrystalExecutorConfig.builder()
                               .executorId("formulaTest")
-                              .executorService(executor)
-                              .kryonExecStrategy(DIRECT))) {
+                              .executorService(executor))) {
                     timeToCreateExecutors.add(System.nanoTime() - iterationStartTime);
                     metrics[currentLoopCount] = krystexVajramExecutor.getKryonMetrics();
                     long enqueueStart = System.nanoTime();
@@ -376,8 +371,7 @@ class FormulaTest {
           kGraph.createExecutor(
               KrystalExecutorConfig.builder()
                   .executorId("formulaTest")
-                  .executorService(executor)
-                  .kryonExecStrategy(DIRECT))) {
+                  .executorService(executor))) {
         timeToCreateExecutors += System.nanoTime() - iterationStartTime;
         metrics[outer_i] = krystexVajramExecutor.getKryonMetrics();
         for (int inner_i = 0; inner_i < innerLoopCount; inner_i++) {
@@ -555,7 +549,6 @@ class FormulaTest {
         KrystalExecutorConfig.builder()
             .executorId(REQUEST_ID)
             .executorService(executorLease.get())
-            .kryonExecStrategy(KryonExecStrategy.BATCH)
             .graphTraversalStrategy(GraphTraversalStrategy.DEPTH);
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, REQUEST_ID);
     try (VajramKryonExecutor krystexVajramExecutor =
@@ -629,6 +622,10 @@ class FormulaTest {
   public static InputBatcherConfig simpleInputBatcher(
       VajramID vajramID, Supplier<InputBatcher> inputBatcherSupplier) {
     return new InputBatcherConfig(
-        ImmutableMap.of(vajramID, ImmutableList.of(simple(inputBatcherSupplier))));
+        ImmutableMap.of(
+                vajramID,
+                new InputBatchingDecorator(
+                    inputBatcherSupplier, new VajramEpochGroups(ImmutableMap.of())))
+            ::get);
   }
 }

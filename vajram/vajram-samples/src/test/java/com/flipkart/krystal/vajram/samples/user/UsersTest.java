@@ -174,7 +174,7 @@ class UsersTest {
                 KrystalExecutorConfig.builder()
                     .executorId("all-correct-inputs-test")
                     .executorService(executorLease.get())
-                    .configureWith(requestLevelCache.defaultKryonExecutorConfigurator())
+                    .configureWith(requestLevelCache.defaultDecorationStrategy())
                     .executorInfo(executionInfo))) {
 
       future1 =
@@ -220,7 +220,7 @@ class UsersTest {
                 KrystalExecutorConfig.builder()
                     .executorId("all-correct-inputs-test")
                     .executorService(executorLease.get())
-                    .configureWith(requestLevelCache.defaultKryonExecutorConfigurator())
+                    .configureWith(requestLevelCache.defaultDecorationStrategy())
                     .executorInfo(executionInfo))) {
 
       future1 =
@@ -266,7 +266,7 @@ class UsersTest {
                 KrystalExecutorConfig.builder()
                     .executorId("all-correct-inputs-test")
                     .executorService(executorLease.get())
-                    .configureWith(requestLevelCache.defaultKryonExecutorConfigurator())
+                    .configureWith(requestLevelCache.defaultDecorationStrategy())
                     .executorInfo(executionInfo))) {
 
       future1 = executor.execute(RunUserWorkflow_Req._builder().userId("UserId_1")._build());
@@ -313,7 +313,7 @@ class UsersTest {
                 KrystalExecutorConfig.builder()
                     .executorId("all-correct-inputs-test")
                     .executorService(executorLease.get())
-                    .configureWith(requestLevelCache.defaultKryonExecutorConfigurator())
+                    .configureWith(requestLevelCache.defaultDecorationStrategy())
                     .executorInfo(executionInfo))) {
 
       future1 =

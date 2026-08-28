@@ -26,12 +26,15 @@ import com.flipkart.krystal.codegen.common.models.CodeGenUtility.ModelRootInfo;
 import com.flipkart.krystal.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.list.ModelsListBuilder;
 import com.flipkart.krystal.model.map.ModelsMapBuilder;
 import com.flipkart.krystal.vajram.codegen.common.generators.SerdeModelValidator;
 import com.flipkart.krystal.vajram.json.Json;
+import com.flipkart.krystal.vajram.json.JsonModelHint;
+import com.flipkart.krystal.vajram.json.ModelErrableDeserializer;
 import com.flipkart.krystal.vajram.json.SerializableJsonModel;
 import com.flipkart.krystal.vajram.json.serialized.BytesJson;
 import com.flipkart.krystal.vajram.json.serialized.JsonRepresentation;
@@ -198,24 +201,55 @@ final class JsonModelsGen implements CodeGenerator {
               .addCode(pojoGetterMethod.code)
               .addAnnotation(JsonProperty.class);
       if (fieldModelRootInfo.isPresent() && !util.isEnumModel(fieldModelRootInfo.get().element())) {
-        getterBuilder.addAnnotation(
-            AnnotationSpec.builder(JsonDeserialize.class)
-                .addMember(
-                    switch (fieldModelRootInfo.get().containerType()) {
-                      case LIST, MAP -> "contentAs";
-                      default -> "as";
-                    },
-                    "$T.class",
-                    util.getImmutClassName(fieldModelRootInfo.get().element(), JSON))
-                .build());
+        ClassName modelImmutClass =
+            util.getImmutClassName(fieldModelRootInfo.get().element(), JSON);
+        boolean isWholeErrable = util.isErrable(method.getReturnType());
+        boolean isContentErrable = util.isContentErrable(method.getReturnType());
+        if (isWholeErrable || isContentErrable) {
+          // Errable<Model>/Errable<List<Model>>/Errable<Map<K,Model>>/List<Errable<Model>>/
+          // Map<K,Errable<Model>> (and combinations thereof): contentAs/as can't narrow
+          // Errable<Model> (or its content) to ImmutJson since ImmutJson isn't an Errable
+          // subtype - use a hint-driven custom deserializer instead. `using` targets the whole
+          // Errable-wrapped getter type (resolves any nested List/Map/Errable structure at
+          // runtime via generics); `contentUsing` targets each List/Map element directly when
+          // only the content - not the whole field - is Errable-wrapped.
+          getterBuilder
+              .addAnnotation(
+                  AnnotationSpec.builder(JsonDeserialize.class)
+                      .addMember(
+                          isWholeErrable ? "using" : "contentUsing",
+                          "$T.class",
+                          ModelErrableDeserializer.class)
+                      .build())
+              .addAnnotation(
+                  AnnotationSpec.builder(JsonModelHint.class)
+                      .addMember("value", "$T.class", modelImmutClass)
+                      .build());
+        } else {
+          getterBuilder.addAnnotation(
+              AnnotationSpec.builder(JsonDeserialize.class)
+                  .addMember(
+                      switch (fieldModelRootInfo.get().containerType()) {
+                        case LIST, MAP -> "contentAs";
+                        default -> "as";
+                      },
+                      "$T.class",
+                      modelImmutClass)
+                  .build());
+        }
       }
       methods.add(getterBuilder.build());
 
       String fieldName = method.getSimpleName().toString();
+      // @JsonSetter for Errable<T> fields uses Errable<T> as parameter type.
+      // Jackson uses ErrableDeserializer (registered via ErrableModule) to produce an Errable<T>
+      // from the JSON value, so the setter must accept Errable<T>.
+      // All other field types use the standard non-builder type.
+      TypeName setterParamType = util.getVariableType(method, false);
       MethodSpec.Builder setter =
           MethodSpec.methodBuilder(fieldName)
               .addModifiers(PRIVATE)
-              .addParameter(util.getVariableType(method, false), fieldName)
+              .addParameter(setterParamType, fieldName)
               .addAnnotation(JsonSetter.class);
       setter.addCode(setterCode(method));
       methods.add(setter.build());
@@ -292,9 +326,19 @@ final class JsonModelsGen implements CodeGenerator {
 
     for (ExecutableElement method : modelMethods) {
       String fieldName = method.getSimpleName().toString();
+      // @JsonCreator receives Errable<T> directly (provided by ErrableDeserializer), so use
+      // the non-builder param type which preserves the full Errable<T>.
       constructorBuilder.addParameter(
           ParameterSpec.builder(util.getVariableType(method, false), fieldName).build());
-      constructorBuilder.addStatement("this.$L($L)", fieldName, fieldName);
+      if (util.isErrable(method.getReturnType())) {
+        // Bypass the @JsonSetter (which takes @Nullable T) and set the Errable<T>/Errable<List<T>>/
+        // Errable<Map<K,V>> field directly. Null-safety: if Jackson passes null (absent field),
+        // convert to Errable.nil().
+        constructorBuilder.addStatement(
+            "this.$L = $L == null ? $T.nil() : $L", fieldName, fieldName, Errable.class, fieldName);
+      } else {
+        constructorBuilder.addStatement("this.$L($L)", fieldName, fieldName);
+      }
     }
     return constructorBuilder
         .addAnnotation(JsonCreator.class)
@@ -304,6 +348,14 @@ final class JsonModelsGen implements CodeGenerator {
   private CodeBlock setterCode(ExecutableElement method) {
     String fieldName = method.getSimpleName().toString();
     Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType(), method);
+
+    // Errable<T>: @JsonSetter accepts Errable<T> (provided by ErrableDeserializer).
+    // Jackson calls getNullValue() → Errable.nil() for absent fields, so null-guard here
+    // is just extra safety per the contract that Errable fields must never be null.
+    if (util.isErrable(method.getReturnType())) {
+      return CodeBlock.of(
+          "this.$L = $L == null ? $T.nil() : $L;", fieldName, fieldName, Errable.class, fieldName);
+    }
 
     return switch (util.getContainerType(method.getReturnType())) {
       case NO_CONTAINER -> {
@@ -322,8 +374,26 @@ final class JsonModelsGen implements CodeGenerator {
       }
       case RANGE -> CodeBlock.of("this.$L = $L;", fieldName, fieldName);
       case LIST -> {
+        boolean isContentErrable = util.isContentErrable(method.getReturnType());
         if (fieldModelRootInfo.isPresent()
             && !util.isEnumModel(fieldModelRootInfo.get().element())) {
+          // Each element's conversion target: for content-Errable fields, unwrap _e.value()
+          // before converting to the Immut type, then re-wrap - the field keeps the raw Model
+          // interface element type (Errable<> is invariant), so no Immut cast is needed on it.
+          CodeBlock elementExpr =
+              isContentErrable
+                  ? CodeBlock.of(
+                      "_e == null || _e.value() == null ? $T.nil() : $T.withValue($L)",
+                      Errable.class,
+                      Errable.class,
+                      convertToImmutJson(
+                          "_e.value()",
+                          fieldModelRootInfo,
+                          util.getImmutClassName(fieldModelRootInfo.get().element(), JSON)))
+                  : convertToImmutJson(
+                      "_e",
+                      fieldModelRootInfo,
+                      util.getImmutClassName(fieldModelRootInfo.get().element(), JSON));
           yield CodeBlock.of(
               """
               this.$L = $L == null
@@ -336,10 +406,7 @@ final class JsonModelsGen implements CodeGenerator {
               ImmutableList.class,
               Lists.class,
               fieldName,
-              convertToImmutJson(
-                  "_e",
-                  fieldModelRootInfo,
-                  util.getImmutClassName(fieldModelRootInfo.get().element(), JSON)));
+              elementExpr);
         } else {
           yield CodeBlock.of(
               "this.$L = $L == null ? null :$T.copyOf($L);",
@@ -350,8 +417,23 @@ final class JsonModelsGen implements CodeGenerator {
         }
       }
       case MAP -> {
+        boolean isContentErrable = util.isContentErrable(method.getReturnType());
         if (fieldModelRootInfo.isPresent()
             && !util.isEnumModel(fieldModelRootInfo.get().element())) {
+          CodeBlock valueExpr =
+              isContentErrable
+                  ? CodeBlock.of(
+                      "_e == null || _e.value() == null ? $T.nil() : $T.withValue($L)",
+                      Errable.class,
+                      Errable.class,
+                      convertToImmutJson(
+                          "_e.value()",
+                          fieldModelRootInfo,
+                          util.getImmutClassName(fieldModelRootInfo.get().element(), JSON)))
+                  : convertToImmutJson(
+                      "_e",
+                      fieldModelRootInfo,
+                      util.getImmutClassName(fieldModelRootInfo.get().element(), JSON));
           yield CodeBlock.of(
 """
 this.$L = $L == null
@@ -364,10 +446,7 @@ this.$L = $L == null
               ImmutableMap.class,
               Maps.class,
               fieldName,
-              convertToImmutJson(
-                  "_e",
-                  fieldModelRootInfo,
-                  util.getImmutClassName(fieldModelRootInfo.get().element(), JSON)));
+              valueExpr);
         } else {
           yield CodeBlock.of(
               "this.$L = $L == null ? null : $T.copyOf($L);",
@@ -419,9 +498,13 @@ this.$L = $L == null
       FieldSpec.Builder fieldBuilder =
           FieldSpec.builder(fieldType, method.getSimpleName().toString(), PRIVATE);
       Optional<ModelRootInfo> fieldModelRootInfo = util.asModelRoot(method.getReturnType(), method);
-      if (isBuilder
+      if (util.isErrable(method.getReturnType())) {
+        // Initialize to Errable.nil() so absent JSON fields deserialize as Nil rather than null
+        fieldBuilder.initializer("$T.nil()", Errable.class);
+      } else if (isBuilder
           && fieldModelRootInfo.isPresent()
-          && !util.isEnumModel(fieldModelRootInfo.get().element())) {
+          && !util.isEnumModel(fieldModelRootInfo.get().element())
+          && !util.isContentErrable(method.getReturnType())) {
         switch (fieldModelRootInfo.get().containerType()) {
           case LIST -> fieldBuilder.initializer("$T.empty()", ModelsListBuilder.class);
           case MAP -> fieldBuilder.initializer("$T.empty()", ModelsMapBuilder.class);
@@ -532,6 +615,8 @@ this.$L = $L == null
       TypeMirror returnType = method.getReturnType();
       if (util.isOptional(returnType)) {
         returnType = util.getOptionalInnerType(returnType);
+      } else if (util.isErrable(returnType)) {
+        returnType = util.getErrableInnerType(returnType);
       }
       if (util.isMapType(returnType)) {
         TypeMirror keyType = util.getMapKeyType(returnType);
