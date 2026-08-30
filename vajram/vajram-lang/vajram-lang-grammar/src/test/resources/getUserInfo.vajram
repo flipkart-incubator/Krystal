@@ -1,24 +1,12 @@
 package com.flipkart.krystal.vajram_lang.samples.friends;
 
-import com.flipkart.userservice.models.UserServiceClient;
+import vajram UserServiceClient from com.flipkart.user_service.models;
 
-private vajram getUserInfo
-    (#batch string userId)
+vajram getUserInfo
+    in (#batch string userId)
     out UserInfo
-    permits sayHelloToFriends
-    inject (UserServiceClient svcClient) {
+    inject (UserServiceClient svcClient)
+    permit callers sayHelloToFriends {
 
-  out ~{
-    svcClient.getUserInfos(
-        UserServiceClient.makeUserInfoRequest(
-            #mod().stream()
-                .map(_.userId())
-                .toSet()))
-      ~?.userInfos()
-      ~?.stream()
-      ~? default(Stream.of())
-      ~ .toMap {
-          new #mod(_.userId()), _
-        }
-  }
+  out ~ { userId }
 }

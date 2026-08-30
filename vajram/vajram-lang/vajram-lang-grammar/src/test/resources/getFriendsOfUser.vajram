@@ -1,12 +1,13 @@
 package com.flipkart.krystal.vajram_lang.samples.friends;
 
-import java.lang.Set;
-import com.flipkart.krystal.vajram_lang.samples.friendsservice.FriendServiceClient;
+import vajram Set from java.lang;
+import vajram FriendServiceClient from com.flipkart.krystal.vajram_lang.samples.friendsservice;
 
-public vajram getFriendsOfUser
+vajram getFriendsOfUser
     (string userId)
     out Set<string>
-    inject (FriendServiceClient svcClient){
+    inject (FriendServiceClient svcClient)
+    permit callers public {
 
   out ~{
     svcClient.getFriendsIds(

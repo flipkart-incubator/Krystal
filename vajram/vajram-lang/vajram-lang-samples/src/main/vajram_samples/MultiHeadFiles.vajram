@@ -1,0 +1,25 @@
+package vajram_samples.hello;
+
+import vajram headFile from vajram_samples;
+import vajram concatStrings from lang.Strings;
+
+vajram multiHeadFiles(string separator, string filePath)
+    out string
+    permit callers `outsideProcess public {
+  string* files = [filePath, filePath];
+
+  string* filesContent = *headFile(numChars = 100; filePath =* files);
+
+  out concatStrings(strings = filesContent; separator = separator);
+}
+
+vajram twoHeadFiles(string separator, string filePath1, string filePath2)
+    out string
+    permit callers `outsideProcess public {
+  string filesContent1 = headFile(numChars = 100; filePath = filePath1);
+  string filesContent2 = headFile(numChars = 100; filePath = filePath2);
+
+  out concatStrings(
+      strings =* [filesContent1, filesContent2];
+      separator = separator);
+}

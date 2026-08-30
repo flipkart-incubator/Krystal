@@ -2,7 +2,7 @@
 
 * Generated code or code in application execution paths (hot paths) should **NEVER** use reflection.
   That is against the philosophy of Krystal. If you encounter a scenario where reflection seems
-  mandatory, raise an issue, or ask for feedback before going ahead an implementing the change.
+  mandatory, raise an issue, or ask for feedback before going ahead and implementing the change.
 
 ## Java Style Invariants
 

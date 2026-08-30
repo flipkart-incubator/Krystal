@@ -1,12 +1,13 @@
 package com.flipkart.krystal.vajram_lang.samples.friends;
 
-import java.lang.Set;
-import com.flipkart.krystal.vajram_lang.samples.friends.getFriendIdsOfUser;
-import com.flipkart.krystal.vajram_lang.samples.friends.getUserInfo;
+import vajram Set from java.lang;
+import vajram getFriendIdsOfUser from com.flipkart.krystal.vajram_lang.samples.friends;
+import vajram getUserInfo from com.flipkart.krystal.vajram_lang.samples.friends;
 
-public vajram sayHelloToFriendsV2
+vajram sayHelloToFriendsV2
     (string userId)
-    out string{
+    out string
+    permit callers public {
 
   UserInfo userInfo = getUserInfo(userId = userId);
 

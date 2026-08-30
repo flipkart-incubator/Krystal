@@ -5,16 +5,22 @@ package com.flipkart.krystal.vajram.lang;
 }
 
 program
-    : vajram_def EOF
+    : vajram_file
     ;
 
-vajram_def: package_decl imports_decl* visibility? 'vajram' ID inputs_decl output_decl permits? injection_decl? '{' (dependency)* output_block'}' ;
+vajram_file: package_decl imports_decl* vajram_def+ ;
 
-package_decl: annotation* PACKAGE qualifiedName ';';
+vajram_def : VAJRAM ID inputs_decl output_decl injection_decl? permissions? '{' (computed_facet)* output_block'}' ;
 
-imports_decl: IMPORT qualifiedName ('.' '*')? ';';
+package_decl: annotation* PACKAGE qualifiedName SEMI;
+
+imports_decl: IMPORT VAJRAM ID FROM qualifiedName ('.' '*')? SEMI;
 
 qualifiedName: ID ('.' ID)*;
+
+computed_facet : dependency | field;
+
+field : annotation* type FANOUT? ID EQ expr SEMI;
 
 dependency: annotation* type FANOUT? ID EQ dependency_invocation ;
 
@@ -48,7 +54,9 @@ grouper: SPECIAL ID;
 
 annotation: '`' ID param_list?;
 
-permits: PERMITS ID (COMMA ID)*;
+permissions: PERMIT callers?;
+
+callers: CALLERS (annotation* ID (COMMA annotation* ID)* | (annotation* PUBLIC));
 
 input_id_declaration: errableType ID;
 
@@ -94,9 +102,12 @@ expr: var_use
     | SPECIAL? func_call_in_output_logic
     | NEW SPECIAL? func_call_in_output_logic
     | grouper
+    | array_expr
     ;
 
-accessor: (SOON | ERRABLE | DOT | SOON DOT | ERRABLE DOT | SOON ERRABLE DOT | SOON ERRABLE);
+array_expr: '[' (expr COMMA)* expr? ']';
+
+accessor : (SOON | ERRABLE | DOT | SOON DOT | ERRABLE DOT | SOON ERRABLE DOT | SOON ERRABLE);
 
 func_chain: (func_call_in_output_logic accessor)* func_call_in_output_logic;
 
@@ -118,15 +129,18 @@ LCURLY : '{' ;
 RCURLY : '}' ;
 SPECIAL : '#' ;
 
+VAJRAM : 'vajram' ;
 NEW : 'new' ;
 IN: 'in';
 OUT: 'out';
 THROW: 'throw';
 YIELD: 'yield';
+FROM: 'from';
 
 PUBLIC: 'public';
 PRIVATE: 'private';
-PERMITS: 'permits' ;
+PERMIT: 'permit';
+CALLERS: 'callers' ;
 PACKAGE: 'package';
 IMPORT: 'import';
 
@@ -143,4 +157,5 @@ STRING: 'string' ;
 VOID: 'void' ;
 STRING_LITERAL:     '"' (~["\\\r\n])* '"';
 ID: [a-zA-Z_][a-zA-Z_0-9]* ;
+LINE_COMMENT: '//' ~[\r\n]* -> skip;
 WS: [ \t\n\r\f]+ -> skip ;
