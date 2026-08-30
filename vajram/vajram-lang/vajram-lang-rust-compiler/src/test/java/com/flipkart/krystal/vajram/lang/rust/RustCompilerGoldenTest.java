@@ -141,8 +141,8 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("first.vajram"),
         """
         package external;
-        vajram first() out string permit callers `outsideProcess public {
-          { "first" }
+        vajram first(string input) out string permit callers `outsideProcess public {
+          { input }
         }
         """);
     Files.writeString(
@@ -157,10 +157,13 @@ class RustCompilerGoldenTest {
     assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
     String main = Files.readString(outDir.resolve("main.rs"));
     assertThat(main).contains("match vajram.as_str()");
+    assertThat(main).contains("usage: <program> <vajram-name> [--input value]...");
+    assertThat(main).contains(".strip_prefix(\"--\")");
+    assertThat(main).contains(".get(\"input\")");
     assertThat(main).contains("\"first\" =>");
     assertThat(main).contains("\"second\" =>");
-    assertThat(main)
-        .contains("external::first::first::call(external::first::first::FirstInputs {})");
+    assertThat(main).contains("external::first::first::call(");
+    assertThat(main).contains("FirstInputs {");
     assertThat(main)
         .contains("external::second::second::call(external::second::second::SecondInputs {})");
   }

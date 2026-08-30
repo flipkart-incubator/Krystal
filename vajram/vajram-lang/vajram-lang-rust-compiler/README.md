@@ -52,7 +52,7 @@ vajram hello() out string permit callers `outsideProcess public {
 }
 ```
 
-It writes `main.rs`, which accepts a Vajram name as its first argument, dispatches to a matching public annotated Vajram, and prints the output. External-process dispatch accepts positional `string` and `int` inputs after the Vajram name. It blocks at the process boundary with a current-thread runtime while awaiting a soon or later Vajram; Vajram execution itself remains non-blocking.
+It writes `main.rs`, which accepts a Vajram name as its first argument, dispatches to a matching public annotated Vajram, and prints the output. External-process dispatch accepts `string` and `int` inputs as named flags after the Vajram name, such as `hello --name Alice --count 3`. It blocks at the process boundary with a current-thread runtime while awaiting a soon or later Vajram; Vajram execution itself remains non-blocking.
 
 ## System Vajrams
 

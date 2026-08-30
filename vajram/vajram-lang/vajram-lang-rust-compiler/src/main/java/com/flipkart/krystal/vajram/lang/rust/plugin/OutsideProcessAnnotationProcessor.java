@@ -70,10 +70,27 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
         .forEach(module -> source.append("pub mod ").append(module).append(";\n"));
     source.append("\nfn main() {\n");
     source.append("    let vajram = std::env::args().nth(1).unwrap_or_else(|| {\n");
-    source.append("        eprintln!(\"usage: <program> <vajram-name>\");\n");
+    source.append("        eprintln!(\"usage: <program> <vajram-name> [--input value]...\");\n");
     source.append("        std::process::exit(2);\n");
     source.append("    });\n");
-    source.append("    let arguments: Vec<String> = std::env::args().skip(2).collect();\n");
+    source.append("    let mut arguments = std::env::args().skip(2);\n");
+    source.append("    let mut inputs = std::collections::HashMap::new();\n");
+    source.append("    while let Some(flag) = arguments.next() {\n");
+    source.append(
+        "        let input = flag.strip_prefix(\"--\").filter(|input| !input.is_empty()).unwrap_or_else(|| {\n");
+    source.append(
+        "            eprintln!(\"expected input flag in the form --input value, got {}\", flag);\n");
+    source.append("            std::process::exit(2);\n");
+    source.append("        });\n");
+    source.append("        let value = arguments.next().unwrap_or_else(|| {\n");
+    source.append("            eprintln!(\"missing value for input {}\", input);\n");
+    source.append("            std::process::exit(2);\n");
+    source.append("        });\n");
+    source.append("        if inputs.insert(input.to_owned(), value).is_some() {\n");
+    source.append("            eprintln!(\"input {} was specified more than once\", input);\n");
+    source.append("            std::process::exit(2);\n");
+    source.append("        }\n");
+    source.append("    }\n");
     source.append("    match vajram.as_str() {\n");
     for (VajramFile target : targets) {
       emitCase(source, target, context.symbolTable().completionOf(target));
@@ -108,7 +125,7 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
       inputFields
           .append(input.name())
           .append(": ")
-          .append(cliInputValue(input, i, target.vajram().name()));
+          .append(cliInputValue(input, target.vajram().name()));
     }
     String inputs =
         module
@@ -118,6 +135,22 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
             + inputFields
             + " }";
     source.append("        \"").append(target.vajram().name()).append("\" => {\n");
+    source.append("            for input in inputs.keys() {\n");
+    source.append("                if ![");
+    for (int i = 0; i < target.vajram().inputs().size(); i++) {
+      if (i > 0) {
+        source.append(", ");
+      }
+      source.append("\"").append(target.vajram().inputs().get(i).name()).append("\"");
+    }
+    source.append("].contains(&input.as_str()) {\n");
+    source
+        .append("                    eprintln!(\"unknown input {} for ")
+        .append(target.vajram().name())
+        .append("\", input);\n");
+    source.append("                    std::process::exit(2);\n");
+    source.append("                }\n");
+    source.append("            }\n");
     if (completion == Completion.NOW) {
       source
           .append("            let output = ")
@@ -148,11 +181,11 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
         && ("string".equals(input.type().name()) || "int".equals(input.type().name()));
   }
 
-  private static String cliInputValue(InputDecl input, int index, String vajramName) {
+  private static String cliInputValue(InputDecl input, String vajramName) {
     String argument =
-        "arguments.get("
-            + index
-            + ").unwrap_or_else(|| { eprintln!(\"missing input "
+        "inputs.get(\""
+            + input.name()
+            + "\").unwrap_or_else(|| { eprintln!(\"missing input "
             + input.name()
             + " for "
             + vajramName

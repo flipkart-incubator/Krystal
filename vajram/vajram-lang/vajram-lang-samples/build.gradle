@@ -40,7 +40,7 @@ tasks.register('prepareRustSample', Copy) {
 
 tasks.register('runVajram', Exec) {
     group = 'application'
-    description = 'Compiles Vajrams and runs -Pvajram=<Vajram name> with optional -PvajramArgs="...".'
+    description = 'Compiles Vajrams and runs -Pvajram=<Vajram name> with optional named -PvajramArgs="--input value".'
     dependsOn tasks.named('prepareRustSample')
     workingDir generatedRustDir
     def command = ['cargo', 'run', '--', selectedVajram.get()]

@@ -4,7 +4,7 @@ import vajram readFileAsString from lang.FileSystem;
 
 // Run:
 // ./gradlew :vajram:vajram-lang:vajram-lang-samples:runVajram -Pvajram=headFile
-//    -PvajramArgs="5 /path/to/file"
+//    -PvajramArgs="--numChars 5 --filePath /path/to/file"
 vajram headFile(int numChars, string filePath)
     out string~
     permit callers `outsideProcess public{
