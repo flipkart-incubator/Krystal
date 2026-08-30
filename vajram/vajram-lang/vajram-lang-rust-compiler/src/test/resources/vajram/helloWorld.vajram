@@ -1,8 +1,0 @@
-package com.flipkart.krystal.vajram_lang.samples.helloWorld;
-
-vajram helloWorld() out void
-    inject (ConsoleWriter writer){
- {
-   writer.println("Hello! World.")
- }
-}
