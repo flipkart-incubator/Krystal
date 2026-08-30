@@ -214,6 +214,42 @@ class RustCompilerGoldenTest {
   }
 
   @Test
+  void rejectsScalarFanoutFieldsAndMismatchedDependencyCardinality(@TempDir Path tempDir)
+      throws IOException {
+    Path scalarSource = tempDir.resolve("scalar");
+    Files.createDirectories(scalarSource);
+    Files.writeString(
+        scalarSource.resolve("scalar.vajram"),
+        """
+        package fanout;
+        vajram scalar() out void {
+          string* values = "not a collection";
+          { }
+        }
+        """);
+    assertThat(RustCompilerMain.compile(scalarSource, tempDir.resolve("scalar-out"))).isFalse();
+
+    Path mismatchSource = tempDir.resolve("mismatch");
+    Files.createDirectories(mismatchSource);
+    Files.writeString(
+        mismatchSource.resolve("leaf.vajram"),
+        """
+        package fanout;
+        vajram leaf() out string { { "leaf" } }
+        """);
+    Files.writeString(
+        mismatchSource.resolve("parent.vajram"),
+        """
+        package fanout;
+        vajram parent() out void {
+          string* values = leaf();
+          { }
+        }
+        """);
+    assertThat(RustCompilerMain.compile(mismatchSource, tempDir.resolve("mismatch-out"))).isFalse();
+  }
+
+  @Test
   void lowersReadFileAsStringToTokioUtf8Io(@TempDir Path tempDir) throws IOException {
     Path sourceDir = tempDir.resolve("vajram");
     Path outDir = tempDir.resolve("out");

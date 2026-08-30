@@ -136,7 +136,7 @@ public final class RustEmitter {
           .append(String.join(" ", block.annotations()))
           .append("` clause - not modeled by this compiler yet\n");
     }
-    String call = emitInvocationCall(invocation, hasDeps, completion, exprs);
+    String call = emitInvocationCall(invocation, false, hasDeps, completion, exprs);
     if (invocation.errableFallback() != null) {
       call = call + "." + exprs.emit(invocation.errableFallback());
     }
@@ -156,13 +156,15 @@ public final class RustEmitter {
           + "let "
           + name
           + " = crate::vajram_rt::spawn_local_shared(async move { "
-          + emitInvocationCall(dependency.invocation(), hasDeps, completion, taskExprs)
+          + emitInvocationCall(
+              dependency.invocation(), dependency.fanout(), hasDeps, completion, taskExprs)
           + " });\n";
     }
     return "let "
         + dependency.name()
         + " = "
-        + emitInvocationCall(dependency.invocation(), hasDeps, completion, exprs)
+        + emitInvocationCall(
+            dependency.invocation(), dependency.fanout(), hasDeps, completion, exprs)
         + ";";
   }
 
@@ -185,6 +187,7 @@ public final class RustEmitter {
 
   private String emitInvocationCall(
       DependencyInvocation invocation,
+      boolean declaredFanout,
       boolean hasDeps,
       Completion callerCompletion,
       ExprEmitter exprs) {
@@ -202,7 +205,7 @@ public final class RustEmitter {
       };
     }
 
-    DepInputResolver fannedResolver = findFanned(invocation);
+    DepInputResolver fannedResolver = findFanned(invocation, declaredFanout);
     if (fannedResolver == null) {
       List<String> fieldList = new ArrayList<>();
       for (DepInputResolver resolver : invocation.resolvers()) {
@@ -332,13 +335,14 @@ public final class RustEmitter {
         + ".as_str()))";
   }
 
-  private @Nullable DepInputResolver findFanned(DependencyInvocation invocation) {
+  private @Nullable DepInputResolver findFanned(
+      DependencyInvocation invocation, boolean declaredFanout) {
     for (DepInputResolver resolver : invocation.resolvers()) {
       if (resolver.fanout()) {
         return resolver;
       }
     }
-    return invocation.fanout() && !invocation.resolvers().isEmpty()
+    return (declaredFanout || invocation.fanout()) && !invocation.resolvers().isEmpty()
         ? invocation.resolvers().get(0)
         : null;
   }
