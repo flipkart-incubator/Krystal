@@ -69,8 +69,6 @@ annotation provided they have been imported in the file.
 
 ### Vajram inputs
 
-### Vajram output
-
 ### Vajram injections
 
 ### Vajram permissions
@@ -103,5 +101,23 @@ The output block in enclosed in a set of `{}` with the prefixed with the keyword
 `out` and can have arbitrary logic which computes the output of the vajram. It can refer to any facet of the vajram including its inputs, injections and dependencies. The output block is the only code in a vajram which is allowed to exit the current execution thread - only in a non-blocking way (remember - no code in vajram lang can ever block). This act of exiting the current thread and returning a placeholder value is called "delegation" (This is analogous to the "CompletableFuture" in Java, and "Promise" in javascript). If the delegated computation is designed to finish within the current application lifetime, it is called a "soon" output depicted by a single
 `~` - this is called "sync delegation". If the delegated computation is designed to finish at a much later time and the computation could resume from them in a different applcation, it is called a "later" output depicated by two
 `~~` - this is called "async delegation". The output logic cannot invoke another vajram from inside the code block.
+
+### Output Logic Delegation mode
+
+The [output logic](#vajram-output) of a vajram can have exactly one of three delegation modes - NONE, SYNC, ASYNC.
+`out {}` implies NONE i.e the logic returns a now value,
+`out ~{}` implies SYNC i.e. the logic returns a soon value,
+`out ~~{}` implies ASYNC i.e. the logic returns a later value.
+
+### Vajram Call Graph Delegation Mode
+
+The vajram itself can have one of three delegation modes. This is declared by the vajram in this way:
+`` `callGraphDelegationMode("NONE") `` which means this vajram and all of its immediate and transitive dependencies have [output logic delegation mode](#output-logic-delegation-mode) "NONE".
+`` `callGraphDelegationMode("SYNC") `` which means this vajram and all of its immediate and transitive dependencies either have [output logic delegation mode](#output-logic-delegation-mode) as "NONE" or "SYNC".
+`` `callGraphDelegationMode("ASYNC") `` which means this vajram and all of its immediate and transitive dependencies either have [output logic delegation mode](#output-logic-delegation-mode) as "NONE", "SYNC" or "ASYNC".
+
+This implies that a vajram with callGraphDelegationMode "NONE" cannot directly or transitively depend on a vajram with callGraphDelegationMode "SYNC" or "ASYNC". Similarly and vajram with callGraphDelegationMode "SYNC" cannot directly or transitively depend on a vajram with callGraphDelegationMode "ASYNC".
+
+If the vajram does not specify this annotation, then the value is auto-computed from the vajram's definition and its dependency graph.
 
 
