@@ -1,0 +1,43 @@
+package com.flipkart.krystal.vajram_lang.samples.simd;
+
+vajram computeValue(float a, float b) out float {{
+    a*a + b*b * (-1.0)
+}}
+
+vajram computeForArray([float] a, [float] b) out [float]{
+  out computeValue(a,b =* {
+    loop (_(float v, int i) : a.withIndices()){
+      yield v, b[i]
+    }
+  }).values();
+}
+
+vajram computeValue(float a, float b) out float{
+  out a*a + b*b * (-1.0);
+}
+
+// Invoked by the language runtime when two numbers are multiplied
+vajram binaryMultiply<T>(#batch T operand1, #batch T operand2) out T {
+  {
+    list<#batch> = #batch.batches();
+    // language native implementation of
+    // a SIMD-optimized multiplication logic
+  }
+}
+
+vajram streamNumbers() out #stream int {{ [1,2,3,4,5,6,7,8] }}
+
+vajram addOne(int input) out int{{ input+1 }}
+
+vajram printNumbers out void inject (ConsoleWriter writer){
+  #stream int? number = streamNumbers();
+  #stream int? plusOne = addOne(number);
+
+  out {
+    switch(plusOne){
+      _ -> writer.Out.println(_);
+      err _ -> writer.Err.println("Ouch!");
+      nil -> writer.Out.println("Done!");
+    }
+  }
+}

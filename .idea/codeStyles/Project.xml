@@ -61,6 +61,9 @@
         </value>
       </option>
     </JavaCodeStyleSettings>
+    <Markdown>
+      <option name="WRAP_TEXT_IF_LONG" value="false" />
+    </Markdown>
     <Objective-C>
       <option name="INDENT_NAMESPACE_MEMBERS" value="0" />
       <option name="INDENT_C_STRUCT_MEMBERS" value="2" />

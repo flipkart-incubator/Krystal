@@ -1,0 +1,69 @@
+plugins {
+    id 'java-library'
+}
+
+description = 'Runnable vajram-lang samples compiled to Rust'
+
+dependencies {
+    implementation project(':vajram:vajram-lang:vajram-lang-rust-compiler')
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:6.0.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:6.0.1'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:6.0.1'
+}
+
+def vajramSourceDir = layout.projectDirectory.dir('src/main/vajram_samples')
+def generatedRustDir = layout.buildDirectory.dir('generated-rust')
+def selectedVajram = providers.gradleProperty('vajram').orElse('helloWorld')
+def selectedVajramArgs = providers.gradleProperty('vajramArgs').map { it.split('\\s+') as List }.orElse([])
+
+tasks.register('compileVajram', JavaExec) {
+    group = 'build'
+    description = 'Compiles src/main/vajram_samples into build/generated-rust/src.'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.flipkart.krystal.vajram.lang.rust.cli.RustCompilerMain'
+    args '--src', vajramSourceDir.asFile.absolutePath, '--out', generatedRustDir.get().dir('src').asFile.absolutePath
+    inputs.dir(vajramSourceDir)
+    outputs.dir(generatedRustDir)
+    doFirst {
+        delete generatedRustDir
+    }
+}
+
+tasks.register('prepareRustSample', Copy) {
+    group = 'build'
+    description = 'Adds the Cargo manifest and integration tests to generated Rust sources.'
+    dependsOn tasks.named('compileVajram')
+    from 'src/main/rust'
+    from 'src/test/rust'
+    into generatedRustDir
+}
+
+tasks.register('runVajram', Exec) {
+    group = 'application'
+    description = 'Compiles Vajrams and runs -Pvajram=<Vajram name> with optional -PvajramArgs="...".'
+    dependsOn tasks.named('prepareRustSample')
+    workingDir generatedRustDir
+    def command = ['cargo', 'run', '--', selectedVajram.get()]
+    command.addAll(selectedVajramArgs.get())
+    commandLine command
+    doFirst {
+        def version = new ProcessBuilder('rustc', '--version').redirectErrorStream(true).start().inputStream.text
+        def matcher = version =~ /rustc 1\.(\d+)\./
+        if (!matcher.find() || matcher.group(1).toInteger() < 85) {
+            throw new GradleException('Rust 1.85 or newer is required for the Rust 2024 edition.')
+        }
+    }
+}
+
+tasks.register('testVajramCli', Exec) {
+    group = 'verification'
+    description = 'Runs Cargo integration tests against the generated outsideProcess CLI.'
+    dependsOn tasks.named('prepareRustSample')
+    workingDir generatedRustDir
+    commandLine 'cargo', 'test'
+}
+
+tasks.named('test') {
+    dependsOn tasks.named('prepareRustSample')
+    useJUnitPlatform()
+}

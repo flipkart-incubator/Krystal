@@ -1,0 +1,27 @@
+package com.flipkart.krystal.vajram_lang.samples.friends;
+
+import vajram Set from java.lang;
+import vajram getFriendIdsOfUser from com.flipkart.krystal.vajram_lang.samples.friends;
+import vajram getUserInfo from com.flipkart.krystal.vajram_lang.samples.friends;
+
+vajram sayHelloToFriendsV2
+    (string userId)
+    out string
+    permit callers public {
+
+  UserInfo userInfo = getUserInfo(userId = userId);
+
+  Set<string> friendIds = getFriendIdsOfUser(userId = userId);
+
+  UserInfo* friendInfos = getUserInfo(userId =* friendIds);
+
+  out {
+    yield "Hello Friends of %s ! %s"
+       .formatted(
+           userInfo.name(),
+           friendInfos.stream()
+               .filter(_.isPresent())
+               .map(_.userName())
+               .collect(joining(", ")));
+  }
+}

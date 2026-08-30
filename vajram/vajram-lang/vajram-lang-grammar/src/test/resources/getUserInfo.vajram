@@ -1,0 +1,12 @@
+package com.flipkart.krystal.vajram_lang.samples.friends;
+
+import vajram UserServiceClient from com.flipkart.user_service.models;
+
+vajram getUserInfo
+    in (#batch string userId)
+    out UserInfo
+    inject (UserServiceClient svcClient)
+    permit callers sayHelloToFriends {
+
+  out ~ { userId }
+}

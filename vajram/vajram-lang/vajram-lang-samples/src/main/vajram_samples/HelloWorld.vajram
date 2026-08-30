@@ -1,0 +1,9 @@
+package vajram_samples.hello;
+
+// Run:
+// ./gradlew :vajram:vajram-lang:vajram-lang-samples:runVajram -Pvajram=helloWorld
+vajram helloWorld() out string
+    permit callers `outsideProcess public{
+
+  { "Hello from vajram-lang!" }
+}
