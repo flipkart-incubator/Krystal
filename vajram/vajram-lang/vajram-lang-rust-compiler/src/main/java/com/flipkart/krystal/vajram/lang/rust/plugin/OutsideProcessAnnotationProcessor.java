@@ -93,7 +93,12 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
             .map(Naming::toSnakeCase)
             .reduce((a, b) -> a + "::" + b)
             .orElse("");
-    String module = modulePath + "::" + Naming.toSnakeCase(target.vajram().name());
+    String module =
+        modulePath
+            + "::"
+            + Naming.sourceModuleName(target.sourcePath())
+            + "::"
+            + Naming.toSnakeCase(target.vajram().name());
     StringBuilder inputFields = new StringBuilder();
     for (int i = 0; i < target.vajram().inputs().size(); i++) {
       if (i > 0) {

@@ -3,18 +3,22 @@
 use crate::vajram_rt::{Errable, VajramError};
 use std::rc::Rc;
 
-#[derive(Debug, Clone)]
-pub struct IsProductAvailableInputs {
-    pub productId: Rc<String>,
-}
+pub mod is_product_available {
+    use super::*;
 
-pub struct IsProductAvailableDeps {
-    pub availabilityDB: Rc<AvailabilityDB>,
-}
+    #[derive(Debug, Clone)]
+    pub struct IsProductAvailableInputs {
+        pub productId: Rc<String>,
+    }
 
-pub async fn call(
-    inputs: IsProductAvailableInputs,
-    deps: Rc<IsProductAvailableDeps>,
-) -> Result<Rc<bool>, VajramError> {
-    Rc::new(deps.availabilityDB.isAvailable(inputs.productId))
+    pub struct IsProductAvailableDeps {
+        pub availabilityDB: Rc<AvailabilityDB>,
+    }
+
+    pub async fn call(
+        inputs: IsProductAvailableInputs,
+        deps: Rc<IsProductAvailableDeps>,
+    ) -> Result<Rc<bool>, VajramError> {
+        Rc::new(deps.availabilityDB.isAvailable(inputs.productId))
+    }
 }

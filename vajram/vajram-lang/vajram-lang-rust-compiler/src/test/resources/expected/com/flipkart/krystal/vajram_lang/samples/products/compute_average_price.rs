@@ -3,25 +3,29 @@
 use crate::vajram_rt::{Errable, VajramError};
 use std::rc::Rc;
 
-#[derive(Debug, Clone)]
-pub struct ComputeAveragePriceInputs {
-    pub collection: Rc<ProductCollection>,
-}
+pub mod compute_average_price {
+    use super::*;
 
-pub async fn call(inputs: ComputeAveragePriceInputs) -> Result<Rc<f64>, VajramError> {
-    let _productDetails_inputs = inputs.clone();
-    let productDetails = crate::vajram_rt::spawn_local_shared(async move {
-        futures::future::try_join_all(_productDetails_inputs.collection.productIds().into_iter().map(|it| async move { crate::com::flipkart::krystal::vajram_lang::samples::products::get_product_details::call(crate::com::flipkart::krystal::vajram_lang::samples::products::get_product_details::GetProductDetailsInputs { productId: Rc::new(it) }).await })).await?
-    });
-    Rc::new(
-        productDetails
-            .clone()
-            .await
-            .values()
-            .stream()
-            .filter(it.valuePresent())
-            .map(it.price())
-            .mapToDouble()
-            .average(),
-    )
+    #[derive(Debug, Clone)]
+    pub struct ComputeAveragePriceInputs {
+        pub collection: Rc<ProductCollection>,
+    }
+
+    pub async fn call(inputs: ComputeAveragePriceInputs) -> Result<Rc<f64>, VajramError> {
+        let _productDetails_inputs = inputs.clone();
+        let productDetails = crate::vajram_rt::spawn_local_shared(async move {
+            futures::future::try_join_all(_productDetails_inputs.collection.productIds().into_iter().map(|it| async move { crate::com::flipkart::krystal::vajram_lang::samples::products::get_product_details::get_product_details::call(crate::com::flipkart::krystal::vajram_lang::samples::products::get_product_details::get_product_details::GetProductDetailsInputs { productId: Rc::new(it) }).await })).await?
+        });
+        Rc::new(
+            productDetails
+                .clone()
+                .await
+                .values()
+                .stream()
+                .filter(it.valuePresent())
+                .map(it.price())
+                .mapToDouble()
+                .average(),
+        )
+    }
 }

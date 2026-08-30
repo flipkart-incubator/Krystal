@@ -1,6 +1,6 @@
 # Vajram-Lang Rust Compiler
 
-This module compiles `.vajram` sources into Rust modules. It is intentionally a structural compiler: it validates Vajram references and caller access, and translates Vajram-specific operators, while application method calls and application types remain Rust API contracts.
+This module compiles `.vajram` sources into Rust modules, producing one `.rs` file per source file. It is intentionally a structural compiler: it validates Vajram references and caller access, and translates Vajram-specific operators, while application method calls and application types remain Rust API contracts.
 
 ## Completion And Blocking
 

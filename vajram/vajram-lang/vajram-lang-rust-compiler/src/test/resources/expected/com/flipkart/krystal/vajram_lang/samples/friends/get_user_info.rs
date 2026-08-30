@@ -3,15 +3,19 @@
 use crate::vajram_rt::{Errable, VajramError};
 use std::rc::Rc;
 
-#[derive(Debug, Clone)]
-pub struct GetUserInfoInputs {
-    pub userId: Rc<String>,
-}
+pub mod get_user_info {
+    use super::*;
 
-pub struct GetUserInfoDeps {
-    pub svcClient: Rc<UserServiceClient>,
-}
+    #[derive(Debug, Clone)]
+    pub struct GetUserInfoInputs {
+        pub userId: Rc<String>,
+    }
 
-pub async fn call(inputs: GetUserInfoInputs, deps: Rc<GetUserInfoDeps>) -> Rc<UserInfo> {
-    Rc::clone(&inputs.userId)
+    pub struct GetUserInfoDeps {
+        pub svcClient: Rc<UserServiceClient>,
+    }
+
+    pub async fn call(inputs: GetUserInfoInputs, deps: Rc<GetUserInfoDeps>) -> Rc<UserInfo> {
+        Rc::clone(&inputs.userId)
+    }
 }

@@ -3,31 +3,35 @@
 use crate::vajram_rt::{Errable, VajramError};
 use std::rc::Rc;
 
-#[derive(Debug, Clone)]
-pub struct GetFriendsOfUserInputs {
-    pub userId: Rc<String>,
-}
+pub mod get_friends_of_user {
+    use super::*;
 
-pub struct GetFriendsOfUserDeps {
-    pub svcClient: Rc<FriendServiceClient>,
-}
+    #[derive(Debug, Clone)]
+    pub struct GetFriendsOfUserInputs {
+        pub userId: Rc<String>,
+    }
 
-pub async fn call(
-    inputs: GetFriendsOfUserInputs,
-    deps: Rc<GetFriendsOfUserDeps>,
-) -> Rc<std::collections::HashSet<String>> {
-    Rc::new(
-        deps.svcClient
-            .getFriendsIds(FriendServiceRequest::new(
-                ModKey::new().stream().map(|it| it.userId()).toSet(),
-            ))
-            .await
-            .results()
-            .await
-            .default(List.of())
-            .await
-            .stream()
-            .await
-            .toMap(|it| (ModKey::new(it.userId()), it.friendIds())),
-    )
+    pub struct GetFriendsOfUserDeps {
+        pub svcClient: Rc<FriendServiceClient>,
+    }
+
+    pub async fn call(
+        inputs: GetFriendsOfUserInputs,
+        deps: Rc<GetFriendsOfUserDeps>,
+    ) -> Rc<std::collections::HashSet<String>> {
+        Rc::new(
+            deps.svcClient
+                .getFriendsIds(FriendServiceRequest::new(
+                    ModKey::new().stream().map(|it| it.userId()).toSet(),
+                ))
+                .await
+                .results()
+                .await
+                .default(List.of())
+                .await
+                .stream()
+                .await
+                .toMap(|it| (ModKey::new(it.userId()), it.friendIds())),
+        )
+    }
 }

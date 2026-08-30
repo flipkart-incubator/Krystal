@@ -125,7 +125,7 @@ class RustCompilerGoldenTest {
         """);
     Path outDir = tempDir.resolve("out");
     assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
-    String caller = Files.readString(outDir.resolve("lifecycle/now_caller.rs"));
+    String caller = Files.readString(outDir.resolve("lifecycle/caller.rs"));
     assertThat(caller).contains("pub async fn call");
     assertThat(caller).contains("crate::vajram_rt::spawn_local_shared(async move");
     assertThat(caller).contains("value.clone().await");
@@ -159,8 +159,10 @@ class RustCompilerGoldenTest {
     assertThat(main).contains("match vajram.as_str()");
     assertThat(main).contains("\"first\" =>");
     assertThat(main).contains("\"second\" =>");
-    assertThat(main).contains("external::first::call(external::first::FirstInputs {})");
-    assertThat(main).contains("external::second::call(external::second::SecondInputs {})");
+    assertThat(main)
+        .contains("external::first::first::call(external::first::first::FirstInputs {})");
+    assertThat(main)
+        .contains("external::second::second::call(external::second::second::SecondInputs {})");
   }
 
   @Test
@@ -293,7 +295,7 @@ class RustCompilerGoldenTest {
         """);
 
     assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
-    String parent = Files.readString(outDir.resolve("graph/parent.rs"));
+    String parent = Files.readString(outDir.resolve("graph/graph.rs"));
     assertThat(parent).contains("let first = crate::vajram_rt::spawn_local_shared");
     assertThat(parent).contains("let second = crate::vajram_rt::spawn_local_shared");
     assertThat(parent).contains("let firstValue = crate::vajram_rt::spawn_local_shared");
@@ -327,7 +329,7 @@ class RustCompilerGoldenTest {
   }
 
   @Test
-  void compilesMultipleVajramsFromOneSourceFile(@TempDir Path tempDir) throws IOException {
+  void emitsOneRustFileForMultipleVajramsInOneSourceFile(@TempDir Path tempDir) throws IOException {
     Path sourceDir = tempDir.resolve("vajram");
     Path outDir = tempDir.resolve("out");
     Files.createDirectories(sourceDir);
@@ -344,11 +346,14 @@ class RustCompilerGoldenTest {
         """);
 
     assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
-    assertThat(Files.readString(outDir.resolve("combined/mod.rs")))
-        .contains("pub mod leaf;")
-        .contains("pub mod caller;");
-    assertThat(Files.readString(outDir.resolve("combined/caller.rs")))
-        .contains("crate::combined::leaf::call(crate::combined::leaf::LeafInputs {})");
+    assertThat(Files.readString(outDir.resolve("combined/mod.rs"))).contains("pub mod combined;");
+    assertThat(Files.exists(outDir.resolve("combined/leaf.rs"))).isFalse();
+    assertThat(Files.exists(outDir.resolve("combined/caller.rs"))).isFalse();
+    assertThat(Files.readString(outDir.resolve("combined/combined.rs")))
+        .contains("pub struct LeafInputs")
+        .contains("pub struct CallerInputs")
+        .contains(
+            "crate::combined::combined::leaf::call(crate::combined::combined::leaf::LeafInputs {})");
   }
 
   private static boolean commandAvailable(String command) {

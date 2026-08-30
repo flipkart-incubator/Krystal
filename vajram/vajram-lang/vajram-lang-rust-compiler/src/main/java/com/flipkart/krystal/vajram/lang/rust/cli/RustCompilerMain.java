@@ -17,6 +17,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -67,12 +68,17 @@ public final class RustCompilerMain {
     Files.createDirectories(outDir);
     RustEmitter emitter = new RustEmitter(symbolTable);
     ModuleTree moduleTree = new ModuleTree();
+    Map<Path, List<VajramFile>> filesBySource = new LinkedHashMap<>();
     for (VajramFile file : files) {
-      List<String> dir = file.packageSegments().stream().map(Naming::toSnakeCase).toList();
-      String moduleName = Naming.toSnakeCase(file.vajram().name());
+      filesBySource.computeIfAbsent(file.sourcePath(), unused -> new ArrayList<>()).add(file);
+    }
+    for (List<VajramFile> sourceFiles : filesBySource.values()) {
+      VajramFile firstFile = sourceFiles.get(0);
+      List<String> dir = firstFile.packageSegments().stream().map(Naming::toSnakeCase).toList();
+      String moduleName = Naming.sourceModuleName(firstFile.sourcePath());
       moduleTree.register(dir, moduleName);
       Path modulePath = outDir.resolve(joinPath(dir)).resolve(moduleName + ".rs");
-      writeFile(modulePath, emitter.emit(file));
+      writeFile(modulePath, emitter.emit(sourceFiles));
     }
     moduleTree.writeModDeclarations(outDir);
     copyPrelude(outDir);

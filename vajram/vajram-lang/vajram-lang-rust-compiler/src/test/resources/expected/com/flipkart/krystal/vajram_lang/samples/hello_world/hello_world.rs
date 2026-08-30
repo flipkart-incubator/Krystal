@@ -3,13 +3,17 @@
 use crate::vajram_rt::{Errable, VajramError};
 use std::rc::Rc;
 
-#[derive(Debug, Clone)]
-pub struct HelloWorldInputs {}
+pub mod hello_world {
+    use super::*;
 
-pub struct HelloWorldDeps {
-    pub writer: Rc<ConsoleWriter>,
-}
+    #[derive(Debug, Clone)]
+    pub struct HelloWorldInputs {}
 
-pub fn call(inputs: HelloWorldInputs, deps: Rc<HelloWorldDeps>) -> Rc<()> {
-    Rc::new(deps.writer.println("Hello! World.".to_string()))
+    pub struct HelloWorldDeps {
+        pub writer: Rc<ConsoleWriter>,
+    }
+
+    pub fn call(inputs: HelloWorldInputs, deps: Rc<HelloWorldDeps>) -> Rc<()> {
+        Rc::new(deps.writer.println("Hello! World.".to_string()))
+    }
 }

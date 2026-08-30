@@ -3,26 +3,30 @@
 use crate::vajram_rt::{Errable, VajramError};
 use std::rc::Rc;
 
-#[derive(Debug, Clone)]
-pub struct GetProductDetailsInputs {
-    pub productId: Rc<String>,
-}
+pub mod get_product_details {
+    use super::*;
 
-pub struct GetProductDetailsDeps {
-    pub productDB: Rc<ProductDB>,
-}
+    #[derive(Debug, Clone)]
+    pub struct GetProductDetailsInputs {
+        pub productId: Rc<String>,
+    }
 
-pub async fn call(
-    inputs: GetProductDetailsInputs,
-    deps: Rc<GetProductDetailsDeps>,
-) -> Result<Rc<ProductDetails>, VajramError> {
-    let productIds = batch_key.batches().map(|it| it.productId()).toList();
-    let productDetails = deps
-        .productDB
-        .getProductDetails(productIds)
-        .await
-        .stream()
-        .await
-        .toMap(BatchKey::new(it.productId()), it);
-    Rc::clone(&productDetails)
+    pub struct GetProductDetailsDeps {
+        pub productDB: Rc<ProductDB>,
+    }
+
+    pub async fn call(
+        inputs: GetProductDetailsInputs,
+        deps: Rc<GetProductDetailsDeps>,
+    ) -> Result<Rc<ProductDetails>, VajramError> {
+        let productIds = batch_key.batches().map(|it| it.productId()).toList();
+        let productDetails = deps
+            .productDB
+            .getProductDetails(productIds)
+            .await
+            .stream()
+            .await
+            .toMap(BatchKey::new(it.productId()), it);
+        Rc::clone(&productDetails)
+    }
 }
