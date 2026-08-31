@@ -2,9 +2,9 @@
 
 ## Goal
 
-Provide a localhost web playground in which a user can author one or more `.vajram` files,
-compile them to Rust/WebAssembly using a locally cloned Krystal repository, and execute the
-resulting public Vajrams entirely in a browser WebAssembly sandbox.
+Provide a self-contained, downloadable localhost web playground in which a user can author one or
+more `.vajram` files, compile them to Rust/WebAssembly, and execute the resulting public Vajrams
+entirely in a browser WebAssembly sandbox.
 
 The compiler service creates artifacts only. It must never execute user-authored Vajrams. The
 browser loads the returned WebAssembly and executes only generated public dispatch APIs.
@@ -12,11 +12,15 @@ browser loads the returned WebAssembly and executes only generated public dispat
 ## Initial Scope And Assumptions
 
 - The playground web application and compiler service run on `localhost`.
-- The user already has a local clone of this repository checked out.
-- The sandbox UI accepts an absolute Krystal repository location. The service validates that it
-  is a Krystal checkout and uses its Gradle/compiler tooling as the compiler workspace.
+- Users download a versioned ZIP distribution containing the local server, browser application,
+  compiler, browser SDK, language specification, samples, generated Cargo templates, and startup
+  scripts. A Krystal repository checkout is not required to run the playground.
+- The ZIP distribution declares and validates its required local prerequisites, including a Java
+  runtime, Rust/Cargo toolchain, the `wasm32-unknown-unknown` target, and `wasm-bindgen` tooling.
+- The startup script starts the local server and prints the localhost browser URL. It does not
+  download source code or depend on Gradle at playground startup.
 - Editor sources are sent to the service as an explicit virtual file set. The service does not
-  compile arbitrary source files discovered below the configured repository path.
+  compile arbitrary local source files.
 - The browser HTTP capability may access any endpoint permitted by normal browser CORS and
   mixed-content rules. A future hosted deployment must add an explicit endpoint policy.
 - Native compilation remains the default. WebAssembly compilation is an explicit target.
@@ -25,9 +29,9 @@ browser loads the returned WebAssembly and executes only generated public dispat
 
 The root UI has four sections in the left-most navigation pane:
 
-- **Home**: explains the playground, browser execution model, repository-location requirement,
-  and supported capabilities.
-- **Language Spec**: renders `VAJRAM_LANGUAGE_SPEC.md` from the selected repository checkout.
+- **Home**: explains installation, starting the local server, the browser execution model, and
+  supported capabilities.
+- **Language Spec**: renders the version of `VAJRAM_LANGUAGE_SPEC.md` bundled in the distribution.
 - **Playground**: provides authoring, compilation, execution, diagnostics, and output.
 - **Samples**: provides categorized, pre-written Vajram examples.
 
@@ -35,8 +39,6 @@ The root UI has four sections in the left-most navigation pane:
 
 The Playground section contains:
 
-- A repository-location setting. It is required before compilation and the UI displays service
-  validation failures without exposing host filesystem details beyond the selected path.
 - A multi-file tabbed code editor. Users can create, rename, select, and close editable `.vajram`
   files. Compilation always submits the complete open file set.
 - A target selector that initially exposes `wasm`; native remains available for compiler
@@ -133,9 +135,9 @@ Add an allowlisted HTTP web-client system Vajram and browser SDK request/respons
 
 ## Compiler, Build, And Delivery Pipeline
 
-1. The browser sends the virtual `.vajram` file set, selected target, and configured repository
-   location to the localhost compiler service.
-2. The service validates the checkout and invokes the existing Java compiler with `--target wasm`.
+1. The browser sends the virtual `.vajram` file set and selected target to the localhost compiler
+   service bundled in the ZIP distribution.
+2. The service invokes the bundled Java compiler with `--target wasm`.
 3. The compiler parses, resolves, performs target capability validation, emits Rust, and returns
    structured source diagnostics on failure.
 4. For successful WASM compilation, an isolated Cargo build compiles the generated crate for
@@ -174,12 +176,16 @@ paths, or host imports.
 9. Add WASM Cargo templates and a dedicated sample fixture/module. Keep native CLI sample tests
    separate from WASM tests.
 10. Add a localhost compiler-service module with structured compile responses, artifact caching,
-    disposable build workspaces, resource limits, and repository-workspace validation.
+    disposable build workspaces, and resource limits.
 11. Add a browser frontend module using the repository's existing static-web conventions where
     practical. Implement the four sections, multi-file editor, read-only sample viewer, inline
     diagnostics, compiler-service client, artifact loader, input form, and bottom output pane.
 12. Package sample metadata and source independently from editable files so the UI can present
     categories and copyable read-only examples.
+13. Add a versioned ZIP distribution task that packages the server, frontend assets, compiler,
+    runtime and SDK artifacts, language specification, samples, Cargo templates, startup scripts,
+    and an installation/readiness check. The packaged server must run without a repository clone
+    or Gradle installation.
 
 ## Verification
 
@@ -199,6 +205,9 @@ paths, or host imports.
   invoke synchronous, asynchronous, fanout, file-picker, and HTTP Vajrams, and display outputs.
 - Run UI tests for section navigation, language-spec rendering, multi-file tabs, sample read-only
   viewers, copying samples, inline diagnostics, and bottom-pane output.
+- Verify a clean machine can unpack the ZIP, pass the prerequisite/readiness check, start the
+  local server, open the printed localhost URL, compile, and execute a browser WASM sample
+  without a Krystal repository checkout.
 - After implementation, follow the repository verification sequence: publish locally with
   `upgradeVersionLocal.macOS.sh`, run `./gradlew test --rerun -PunsafeCompile=true`, then run
   `./gradlew build -PunsafeCompile=true`.
