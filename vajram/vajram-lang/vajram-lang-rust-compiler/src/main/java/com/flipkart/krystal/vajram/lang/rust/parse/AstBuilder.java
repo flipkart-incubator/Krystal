@@ -355,6 +355,9 @@ public final class AstBuilder {
     if (ctx.assign_stat() != null) {
       var stat = ctx.assign_stat();
       Input_id_declarationContext decl = stat.input_id_declaration();
+      if (decl == null) {
+        return new Statement.Expression(toExpr(stat.expr()));
+      }
       return new Statement.Assign(
           InputDecl.of(toErrableType(decl.errableType()), decl.ID().getText()),
           toExpr(stat.expr()));
@@ -440,8 +443,8 @@ public final class AstBuilder {
       if (ctx.STRING_LITERAL() != null) {
         return new Expr.StringLiteral(ctx.STRING_LITERAL().getText());
       }
-      if (ctx.INT_LITERAL() != null) {
-        return new Expr.IntLiteral(ctx.INT_LITERAL().getText());
+      if (ctx.NUM_LITERAL() != null) {
+        return new Expr.IntLiteral(ctx.NUM_LITERAL().getText());
       }
       if (ctx.bool() != null) {
         return new Expr.BoolLiteral(ctx.bool().TRUE() != null);

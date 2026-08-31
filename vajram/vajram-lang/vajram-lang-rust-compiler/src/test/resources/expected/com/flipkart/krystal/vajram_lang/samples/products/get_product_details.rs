@@ -16,6 +16,18 @@ pub mod get_product_details {
     }
 
     pub async fn call(
+        inputs: Vec<GetProductDetailsInputs>,
+        deps: Rc<GetProductDetailsDeps>,
+    ) -> Result<Vec<Rc<ProductDetails>>, VajramError> {
+        futures::future::try_join_all(
+            inputs
+                .into_iter()
+                .map(|inputs| call_one(inputs, Rc::clone(&deps))),
+        )
+        .await?
+    }
+
+    async fn call_one(
         inputs: GetProductDetailsInputs,
         deps: Rc<GetProductDetailsDeps>,
     ) -> Result<Rc<ProductDetails>, VajramError> {

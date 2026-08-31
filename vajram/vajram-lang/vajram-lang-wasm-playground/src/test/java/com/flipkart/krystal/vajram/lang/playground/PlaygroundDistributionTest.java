@@ -17,14 +17,18 @@ class PlaygroundDistributionTest {
             "web/app.js",
             "web/app.css",
             "VAJRAM_LANGUAGE_SPEC.md",
-            "samples/basic-dependency.vajram",
-            "samples/fanout.vajram",
-            "samples/async.vajram",
-            "samples/file-picker.vajram",
-            "samples/http-client.vajram")) {
+            "samples/index.txt")) {
       try (InputStream input = getClass().getClassLoader().getResourceAsStream(resource)) {
         assertThat(input).as(resource).isNotNull();
         assertThat(new String(input.readAllBytes(), StandardCharsets.UTF_8)).isNotBlank();
+      }
+    }
+    try (InputStream index = getClass().getClassLoader().getResourceAsStream("samples/index.txt")) {
+      for (String sample :
+          new String(index.readAllBytes(), StandardCharsets.UTF_8).lines().toList()) {
+        assertThat(getClass().getClassLoader().getResource("samples/" + sample))
+            .as(sample)
+            .isNotNull();
       }
     }
   }

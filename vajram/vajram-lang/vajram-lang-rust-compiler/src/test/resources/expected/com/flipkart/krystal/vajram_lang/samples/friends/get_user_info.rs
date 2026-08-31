@@ -15,7 +15,19 @@ pub mod get_user_info {
         pub svcClient: Rc<UserServiceClient>,
     }
 
-    pub async fn call(inputs: GetUserInfoInputs, deps: Rc<GetUserInfoDeps>) -> Rc<UserInfo> {
+    pub async fn call(
+        inputs: Vec<GetUserInfoInputs>,
+        deps: Rc<GetUserInfoDeps>,
+    ) -> Vec<Rc<UserInfo>> {
+        futures::future::join_all(
+            inputs
+                .into_iter()
+                .map(|inputs| call_one(inputs, Rc::clone(&deps))),
+        )
+        .await
+    }
+
+    async fn call_one(inputs: GetUserInfoInputs, deps: Rc<GetUserInfoDeps>) -> Rc<UserInfo> {
         Rc::clone(&inputs.userId)
     }
 }

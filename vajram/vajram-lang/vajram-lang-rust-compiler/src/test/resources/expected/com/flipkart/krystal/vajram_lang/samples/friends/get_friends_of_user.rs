@@ -16,6 +16,18 @@ pub mod get_friends_of_user {
     }
 
     pub async fn call(
+        inputs: Vec<GetFriendsOfUserInputs>,
+        deps: Rc<GetFriendsOfUserDeps>,
+    ) -> Vec<Rc<std::collections::HashSet<String>>> {
+        futures::future::join_all(
+            inputs
+                .into_iter()
+                .map(|inputs| call_one(inputs, Rc::clone(&deps))),
+        )
+        .await
+    }
+
+    async fn call_one(
         inputs: GetFriendsOfUserInputs,
         deps: Rc<GetFriendsOfUserDeps>,
     ) -> Rc<std::collections::HashSet<String>> {

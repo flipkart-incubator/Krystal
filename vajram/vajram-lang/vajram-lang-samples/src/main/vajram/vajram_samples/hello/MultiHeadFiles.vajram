@@ -8,12 +8,18 @@ import vajram concatStrings from lang.Strings;
 //    -Pvajram=multiHeadFiles -PvajramArgs="--separator | --filePath /path/to/file"
 vajram multiHeadFiles(string separator, string filePath)
     out string
+    inject (ConsoleWriter console)
     permit callers `outsideProcess public {
   string* files = [filePath, filePath];
 
   string* filesContent = *headFile(numChars = 100; filePath =* files);
 
-  out concatStrings(strings = filesContent; separator = separator);
+  string concatStrings = concatStrings(strings = filesContent; separator = separator);
+
+  {
+    console.println("Returning concatenated string");
+    concatStrings
+  }
 }
 
 // Run:

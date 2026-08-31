@@ -162,10 +162,11 @@ class RustCompilerGoldenTest {
     assertThat(main).contains(".get(\"input\")");
     assertThat(main).contains("\"first\" =>");
     assertThat(main).contains("\"second\" =>");
-    assertThat(main).contains("external::first::first::call(");
+    assertThat(main).contains("external::first::first::call(vec![");
     assertThat(main).contains("FirstInputs {");
     assertThat(main)
-        .contains("external::second::second::call(external::second::second::SecondInputs {})");
+        .contains(
+            "external::second::second::call(vec![external::second::second::SecondInputs {}])");
   }
 
   @Test
@@ -247,6 +248,25 @@ class RustCompilerGoldenTest {
         (com.flipkart.krystal.vajram.lang.rust.ast.Field) file.vajram().computedFacets().get(0);
     assertThat(field.value())
         .isInstanceOf(com.flipkart.krystal.vajram.lang.rust.ast.Expr.Array.class);
+  }
+
+  @Test
+  void emitsBareExpressionStatementsInLogicBlocks(@TempDir Path tempDir) throws IOException {
+    Path sourceDir = tempDir.resolve("vajram");
+    Path outDir = tempDir.resolve("out");
+    Files.createDirectories(sourceDir);
+    Files.writeString(
+        sourceDir.resolve("logger.vajram"),
+        """
+        package test;
+        vajram logger(string message) out void {
+          { Console.log(message); }
+        }
+        """);
+
+    assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
+    assertThat(Files.readString(outDir.resolve("test/logger.rs")))
+        .contains("Console.log(inputs.message);");
   }
 
   @Test
@@ -345,7 +365,8 @@ class RustCompilerGoldenTest {
     assertThat(Files.readString(outDir.resolve("wasm_dispatch.rs")))
         .contains("pub async fn outside_process_greet(name: String) -> String")
         .contains("::call(")
-        .contains(".await;");
+        .contains(".await")
+        .contains(".into_iter()");
   }
 
   @Test
@@ -489,8 +510,38 @@ class RustCompilerGoldenTest {
     assertThat(Files.readString(outDir.resolve("combined/combined.rs")))
         .contains("pub struct LeafInputs")
         .contains("pub struct CallerInputs")
-        .contains(
-            "crate::combined::combined::leaf::call(crate::combined::combined::leaf::LeafInputs {})");
+        .contains("crate::combined::combined::leaf::call(vec![")
+        .contains("crate::combined::combined::leaf::LeafInputs {}")
+        .contains("single-item Vajram batch");
+  }
+
+  @Test
+  void batchesFanoutDependencyInputsIntoOneCalleeInvocation(@TempDir Path tempDir)
+      throws IOException {
+    Path sourceDir = tempDir.resolve("vajram");
+    Path outDir = tempDir.resolve("out");
+    Files.createDirectories(sourceDir);
+    Files.writeString(
+        sourceDir.resolve("fanout.vajram"),
+        """
+        package fanout;
+        vajram leaf(string value) out string { { value } }
+        vajram parent() out List<string> {
+          string* values = ["one", "two"];
+          string* results = leaf(value =* values);
+          { results }
+        }
+        """);
+
+    assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
+    String generated = Files.readString(outDir.resolve("fanout/fanout.rs"));
+    assertThat(generated)
+        .contains("leaf::call(")
+        .contains("values")
+        .contains(".into_iter()")
+        .contains(".map(|it|")
+        .contains("LeafInputs { value: Rc::new(it) }")
+        .doesNotContain("futures::future::join_all");
   }
 
   private static boolean commandAvailable(String command) {

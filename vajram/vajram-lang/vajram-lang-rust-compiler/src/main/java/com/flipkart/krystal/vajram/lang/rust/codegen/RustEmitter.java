@@ -23,9 +23,8 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Emits one Rust source module per Vajram source file. Each Vajram has an inputs struct, an
- * optional deps (injections) struct, and a {@code pub async fn call(...)} entry point. Dependency
- * invocations become calls to other generated modules' {@code call} fns; fanout invocations become
- * {@code futures::future::join_all}/{@code try_join_all}.
+ * optional deps (injections) struct, and a {@code pub async fn call(Vec<...>)} entry point.
+ * Dependency invocations always call other generated modules with a batch of input objects.
  */
 public final class RustEmitter {
 
@@ -96,16 +95,58 @@ public final class RustEmitter {
                   .collect(Collectors.toSet()));
     }
     String returnType = TypeMapper.toRustReturnType(vajram.outputType());
+    String batchReturnType =
+        vajram.outputType().errable()
+            ? "Result<Vec<"
+                + TypeMapper.toRustReturnType(
+                    new com.flipkart.krystal.vajram.lang.rust.ast.TypeRef(
+                        vajram.outputType().name(),
+                        vajram.outputType().typeArgs(),
+                        vajram.outputType().grouperType(),
+                        false,
+                        vajram.outputType().soon()))
+                + ">, VajramError>"
+            : "Vec<" + returnType + ">";
     String signature =
         "pub "
             + (completion.isAsync() ? "async " : "")
-            + "fn call(inputs: "
+            + "fn call(inputs: Vec<"
+            + typeName
+            + "Inputs"
+            + ">"
+            + (hasDeps ? ", deps: Rc<" + typeName + "Deps>" : "")
+            + ") -> "
+            + batchReturnType;
+    w.openBlock(signature);
+    String perInputCall = "call_one(inputs" + (hasDeps ? ", Rc::clone(&deps)" : "") + ")";
+    if (completion.isAsync()) {
+      String joiner = vajram.outputType().errable() ? "try_join_all" : "join_all";
+      w.line(
+          "futures::future::"
+              + joiner
+              + "(inputs.into_iter().map(|inputs| "
+              + perInputCall
+              + ")).await"
+              + (vajram.outputType().errable() ? "?" : ""));
+    } else {
+      w.line(
+          "inputs.into_iter().map(|inputs| "
+              + perInputCall
+              + ").collect"
+              + (vajram.outputType().errable() ? "::<Result<Vec<_>, _>>()" : "()"));
+    }
+    w.closeBlock();
+    w.blank();
+    String singleSignature =
+        ""
+            + (completion.isAsync() ? "async " : "")
+            + "fn call_one(inputs: "
             + typeName
             + "Inputs"
             + (hasDeps ? ", deps: Rc<" + typeName + "Deps>" : "")
             + ") -> "
             + returnType;
-    w.openBlock(signature);
+    w.openBlock(singleSignature);
     for (ComputedFacet facet : vajram.computedFacets()) {
       if (facet instanceof Field field) {
         w.append(emitField(field, exprs, completion, hasDeps));
@@ -233,15 +274,16 @@ public final class RustEmitter {
       String call =
           calleeModule
               + "::call("
+              + "vec!["
               + calleeModule
               + "::"
               + calleeType
               + "Inputs { "
               + fields
-              + " }"
+              + " }]"
               + depsArg
               + ")";
-      return asyncInvocation(call, invocation.vajramName(), calleeErrable);
+      return singleBatchResult(asyncInvocation(call, invocation.vajramName(), calleeErrable));
     }
 
     String fannedField =
@@ -261,10 +303,11 @@ public final class RustEmitter {
       }
     }
     String restFields = otherFields.isEmpty() ? "" : ", " + String.join(", ", otherFields);
-    String joiner = calleeErrable ? "try_join_all" : "join_all";
     String fanoutCall =
         calleeModule
             + "::call("
+            + fannedExpr
+            + ".into_iter().map(|it| "
             + calleeModule
             + "::"
             + calleeType
@@ -272,22 +315,10 @@ public final class RustEmitter {
             + fannedField
             + ": Rc::new(it)"
             + restFields
-            + " }"
+            + " }).collect()"
             + depsArg
             + ")";
-    if (callee != null && symbolTable.completionOf(callee).isAsync()) {
-      fanoutCall += ".await";
-    }
-    String call =
-        "futures::future::"
-            + joiner
-            + "("
-            + fannedExpr
-            + ".into_iter().map(|it| async move { "
-            + fanoutCall
-            + " })).await"
-            + (calleeErrable ? "?" : "");
-    return call;
+    return asyncInvocation(fanoutCall, invocation.vajramName(), calleeErrable);
   }
 
   private static String calleeModule(@Nullable VajramFile callee, String vajramName) {
@@ -311,6 +342,10 @@ public final class RustEmitter {
       return call + (calleeErrable ? "?" : "");
     }
     return call + ".await";
+  }
+
+  private static String singleBatchResult(String call) {
+    return "(" + call + ").into_iter().next().expect(\"single-item Vajram batch\")";
   }
 
   private String emitReadFileAsString(DependencyInvocation invocation, ExprEmitter exprs) {

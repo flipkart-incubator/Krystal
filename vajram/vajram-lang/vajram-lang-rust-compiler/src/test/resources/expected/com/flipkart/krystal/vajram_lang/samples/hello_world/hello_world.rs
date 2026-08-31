@@ -13,7 +13,14 @@ pub mod hello_world {
         pub writer: Rc<ConsoleWriter>,
     }
 
-    pub fn call(inputs: HelloWorldInputs, deps: Rc<HelloWorldDeps>) -> Rc<()> {
+    pub fn call(inputs: Vec<HelloWorldInputs>, deps: Rc<HelloWorldDeps>) -> Vec<Rc<()>> {
+        inputs
+            .into_iter()
+            .map(|inputs| call_one(inputs, Rc::clone(&deps)))
+            .collect()
+    }
+
+    fn call_one(inputs: HelloWorldInputs, deps: Rc<HelloWorldDeps>) -> Rc<()> {
         Rc::new(deps.writer.println("Hello! World.".to_string()))
     }
 }

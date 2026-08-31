@@ -120,6 +120,83 @@ This implies that a vajram with callGraphDelegationMode "NONE" cannot directly o
 
 If the vajram does not specify this annotation, then the value is auto-computed from the vajram's definition and its dependency graph.
 
+### Injection
+
+Injection is a first class construct in vajram-lang. A vajram can declare the values that it needs in the
+`inject ()` clause just after the [out clause](#vajram-output). But who computes the values of these injections? The answer is other vajrams. These vajrams which compute injectable values are called "providers". A vajram can provide a value in one of two ways:
+
+1. By annotating itself with the `` `provider `` annotation.
+2. By declaring an `inject {} ` clause in the a dependency declaration.
+
+#### Provider vajrams
+
+A provider vajram is a vajram dedicated to computing a value that can be injected in other vajrams.
+
+Example:
+
+```vajram
+   `provider vajram getDatabaseInstance() 
+      out `selector1`selector2 Database 
+      inject () {{
+      //Compute a return a database instance
+   }}  
+```
+
+A provider vajram MUST satisfy these conditions
+
+* The vajram must have the `` `provider `` annotation.
+* The [vajram graph delegation mode](#vajram-call-graph-delegation-mode) of the vajram must explicitly be set to none "NONE" (Ex:
+  `` `graphDelegationMode(NONE) vajram getValue()  ``). This means the vajram can only depend on other vajrams which also have NONE as their graph delegation mode.
+* The vajram must accept no inputs.
+* The vajram can have zero or more injections of its own.
+* The response type of the vajram can be annotated. Annotations which themselves are meta-annotated with
+  `` `injectionSelector `` can be used by vajrams which need these values - they can annotate their injection declarations with the same set of annotation(s) to get that specific value.
+* Two provider vajrams in the module path of the application cannot provide the same type with the same set of injection selectors.
+* The provider dependency graph cannot have loops.
+
+#### Provider resolvers
+
+Another way a value can be provided for injection is inside a vajram. A vajram can chose to provide values to its immediate and transitive dependencies at the point of dependency declaration. For example:
+
+```vajram
+vajram computeValue(int seed) out Result {
+  
+  Result initialResult = computeInitialResult(input = seed; `provider {
+    `selector1 Strategy initialStrategy = new ConservativeStrategy();
+    yield initialStrategy //You can yeild more than one value here
+  });
+  
+  Result finalResult = computeFinakResult(input = seed; `provider {
+    `selector2 Strategy finalStrategy = new AggressiveStrategy();
+    yield finalStrategy
+  });
+  
+  out {
+    //compute and yield final output
+  }
+}
+```
+
+#### Provider scopes
+
+Providers can declare a scope parameter in the
+provider annotation. Example: `` `provider(forScope=<SCOPE>) ``. The common scopes are
+
+* `PROCESS` - The values is unique for the lifetime of the process
+* `REQUEST`
+  The value is unique per execution of one call graph emanating from one or more vajrams. Examples include a HTTP Request. A
+  `` `fork `` dependency spawning a new vajram graph, etc.
+* `VAJRAM`
+  The value is unique for each vajram within a REQUEST irrespective of how many times the vajram is invoked in that request.
+* `EPOCH`
+  This value is unique for each group of concurrent CALL_PATHs (i.e. non of the CALL_PATHs have a serial dependency on any other in the group) to a vajram within a request. (More details coming soon...)
+* `CALL_PATH`
+  within a request, the value is unique for each unique call path from a first invoked vajram to the vajram needing injections. So if the call paths to a vajram are
+  `V1 -f1-> V2 -f2-> V`, `V3 -f3-> V2 -f2-> V` and
+  `V3 -f3-> V2 -f4-> V`, then three unique instances are created - one for each CALL_PATH irrespective of how many times its called.
+* `DEFAULT`
+  this means a new instance is created for every vajram invocation. If no scope is provided, this is the inferred scope.
+
 ### Keywords
 
 ```

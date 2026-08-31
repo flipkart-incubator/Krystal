@@ -35,17 +35,23 @@
       <section id="spec" class="section"><article class="markdown" id="specification">Loading language specification...</article></section>
       <section id="samples" class="section">
         <p class="eyebrow">COPYABLE EXAMPLES</p><h2>Start from a graph shape.</h2>
-        <div id="sample-list" class="sample-list"></div>
+        <div class="samples-layout">
+          <aside id="sample-list" class="sample-list" aria-label="Vajram samples"></aside>
+          <section class="sample-preview">
+            <header class="sample-preview-header"><div><p class="eyebrow" id="sample-category">SELECT A SAMPLE</p><h3 id="sample-title">Sample preview</h3></div><button id="open-sample" disabled>Open in playground</button></header>
+            <div id="sample-editor" class="editor-shell sample-editor" aria-label="Read-only sample source"></div>
+          </section>
+        </div>
       </section>
       <section id="playground" class="section">
         <header class="play-header"><div><p class="eyebrow">WASM TARGET</p><h2>Playground</h2></div><button id="compile">Compile</button></header>
-        <div class="editor-toolbar"><button id="new-file">+ File</button><button id="copy-file">Copy</button><span id="tabs" class="tabs"></span></div>
+        <div class="editor-toolbar"><span id="tabs" class="tabs"></span><span class="toolbar-actions"><button id="new-file">+ File</button><button id="copy-file">Copy</button></span></div>
         <div id="editor" class="editor-shell" aria-label="Vajram source editor"></div>
         <section class="diagnostics" id="diagnostics" aria-live="polite"></section>
         <section class="output-pane">
           <div class="output-heading"><h3>Execution</h3><span id="state">Ready</span><button id="run" disabled>Run</button></div>
           <label>Public Vajram <select id="vajram-select" disabled><option>Compile source first</option></select></label>
-          <label>Inputs (JSON object)<textarea id="inputs" spellcheck="false">{}</textarea></label>
+          <div id="input-form" class="input-form"></div>
           <pre id="output">Compile an `outsideProcess public` Vajram to run it in the browser.</pre>
         </section>
       </section>
@@ -53,6 +59,7 @@
   </main>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/simple.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
   <script type="module" src="/app.js"></script>
 </body>
 </html>

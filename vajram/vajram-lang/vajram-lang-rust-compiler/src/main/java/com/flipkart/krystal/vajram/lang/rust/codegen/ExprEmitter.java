@@ -298,6 +298,8 @@ public final class ExprEmitter {
   private String emitStatement(Statement statement) {
     if (statement instanceof Statement.Assign a) {
       return "let " + identifier(a.decl().name()) + " = " + emit(a.value()) + ";";
+    } else if (statement instanceof Statement.Expression e) {
+      return emit(e.value()) + ";";
     } else if (statement instanceof Statement.Throw t) {
       return "return Err(VajramError::from(" + emit(t.value()) + "));";
     }

@@ -12,14 +12,18 @@ pub mod say_hello_to_friends {
         pub numberOfFriends: Rc<Result<i64, VajramError>>,
     }
 
-    pub async fn call(inputs: SayHelloToFriendsInputs) -> Rc<String> {
+    pub async fn call(inputs: Vec<SayHelloToFriendsInputs>) -> Vec<Rc<String>> {
+        futures::future::join_all(inputs.into_iter().map(|inputs| call_one(inputs))).await
+    }
+
+    async fn call_one(inputs: SayHelloToFriendsInputs) -> Rc<String> {
         let _userInfo_inputs = inputs.clone();
         let userInfo = crate::vajram_rt::spawn_local_shared(async move {
-            crate::com::flipkart::krystal::vajram_lang::samples::friends::get_user_info::get_user_info::call(crate::com::flipkart::krystal::vajram_lang::samples::friends::get_user_info::get_user_info::GetUserInfoInputs { userId: Rc::clone(&_userInfo_inputs.userId) }).await
+            (crate::com::flipkart::krystal::vajram_lang::samples::friends::get_user_info::get_user_info::call(vec![crate::com::flipkart::krystal::vajram_lang::samples::friends::get_user_info::get_user_info::GetUserInfoInputs { userId: Rc::clone(&_userInfo_inputs.userId) }]).await).into_iter().next().expect("single-item Vajram batch")
         });
         let _friendsInfos_inputs = inputs.clone();
         let friendsInfos = crate::vajram_rt::spawn_local_shared(async move {
-            futures::future::join_all(IntStream.range(0, _friendsInfos_inputs.numberOfFriends.default(2)).mapToObj(i, getFriendId(i)).into_iter().map(|it| async move { crate::com::flipkart::krystal::vajram_lang::samples::friends::get_user_info::get_user_info::call(crate::com::flipkart::krystal::vajram_lang::samples::friends::get_user_info::get_user_info::GetUserInfoInputs { userId: Rc::new(it) }).await })).await
+            crate::com::flipkart::krystal::vajram_lang::samples::friends::get_user_info::get_user_info::call(IntStream.range(0, _friendsInfos_inputs.numberOfFriends.default(2)).mapToObj(i, getFriendId(i)).into_iter().map(|it| crate::com::flipkart::krystal::vajram_lang::samples::friends::get_user_info::get_user_info::GetUserInfoInputs { userId: Rc::new(it) }).collect()).await
         });
         Rc::new(
             "Hello Friends of %s ! %s".to_string().formatted(

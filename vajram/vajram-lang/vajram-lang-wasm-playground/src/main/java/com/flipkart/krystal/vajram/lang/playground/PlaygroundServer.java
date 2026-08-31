@@ -270,8 +270,13 @@ public final class PlaygroundServer {
 
   private void samples(HttpExchange exchange) throws IOException {
     Map<String, Object> all = new LinkedHashMap<>();
-    for (String name : List.of("basic-dependency", "fanout", "file-picker", "http-client")) {
-      all.put(name, resource("samples/" + name + ".vajram"));
+    for (String samplePath :
+        resource("samples/index.txt").lines().filter(path -> !path.isBlank()).toList()) {
+      if (!samplePath.matches("[A-Za-z0-9_./-]+\\.vajram") || samplePath.contains("..")) {
+        throw new IOException("Invalid bundled sample path: " + samplePath);
+      }
+      String sampleName = samplePath.substring(0, samplePath.length() - ".vajram".length());
+      all.put(sampleName, resource("samples/" + samplePath));
     }
     json(exchange, 200, all);
   }

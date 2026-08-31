@@ -170,15 +170,15 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
     source
         .append("    let output = ")
         .append(module)
-        .append("::call(")
+        .append("::call(vec![")
         .append(module)
         .append("::")
         .append(Naming.capitalize(target.vajram().name()))
         .append("Inputs { ")
         .append(fields)
-        .append(" })")
+        .append(" }])")
         .append(completion.isAsync() ? ".await" : "")
-        .append(";\n");
+        .append(".into_iter().next().expect(\"outside-process Vajram result\");\n");
     switch (target.vajram().outputType().name()) {
       case "string" -> source.append("    (*output).clone()\n");
       case "int" -> source.append("    output.to_string()\n");
@@ -217,7 +217,7 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
             + Naming.capitalize(target.vajram().name())
             + "Inputs { "
             + inputFields
-            + " }";
+            + " }]";
     source.append("        \"").append(target.vajram().name()).append("\" => {\n");
     source.append("            for input in inputs.keys() {\n");
     source.append("                if ![");
@@ -239,9 +239,9 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
       source
           .append("            let output = ")
           .append(module)
-          .append("::call(")
+          .append("::call(vec![")
           .append(inputs)
-          .append(");\n");
+          .append(").into_iter().next().expect(\"outside-process Vajram result\");\n");
       source.append("            println!(\"{}\", output);\n");
     } else {
       source.append(
@@ -251,9 +251,9 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
       source
           .append("                let output = ")
           .append(module)
-          .append("::call(")
+          .append("::call(vec![")
           .append(inputs)
-          .append(").await;\n");
+          .append(").await.into_iter().next().expect(\"outside-process Vajram result\");\n");
       source.append("                println!(\"{}\", output);\n");
       source.append("            });\n");
     }

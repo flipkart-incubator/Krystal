@@ -16,6 +16,18 @@ pub mod is_product_available {
     }
 
     pub async fn call(
+        inputs: Vec<IsProductAvailableInputs>,
+        deps: Rc<IsProductAvailableDeps>,
+    ) -> Result<Vec<Rc<bool>>, VajramError> {
+        futures::future::try_join_all(
+            inputs
+                .into_iter()
+                .map(|inputs| call_one(inputs, Rc::clone(&deps))),
+        )
+        .await?
+    }
+
+    async fn call_one(
         inputs: IsProductAvailableInputs,
         deps: Rc<IsProductAvailableDeps>,
     ) -> Result<Rc<bool>, VajramError> {

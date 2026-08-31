@@ -86,11 +86,11 @@ bool: TRUE | FALSE;
 statement: assign_stat|throw_stat;
 
 throw_stat: THROW expr SEMI;
-assign_stat: input_id_declaration EQ expr SEMI;
+assign_stat: (input_id_declaration EQ)? expr SEMI;
 
 expr: var_use
     | STRING_LITERAL
-    | INT_LITERAL
+    | NUM_LITERAL
     | bool
     | NOT expr
     | expr PLUS expr
@@ -150,7 +150,7 @@ SOON : '~';
 LATER : '~~';
 DOT: '.';
 
-INT_LITERAL : [0-9]+ ;
+NUM_LITERAL : [0-9]+ ;
 TRUE : 'true' ;
 FALSE : 'false' ;
 STRING: 'string' ;

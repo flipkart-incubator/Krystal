@@ -1,7 +1,0 @@
-package playground.samples;
-
-// Async dependencies preserve eager facet execution in the browser runtime.
-vajram asyncGreeting(name string) out string
-    permit callers `outsideProcess public{
-  { "Async Vajram sample: " + name }
-}
