@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
+import com.flipkart.krystal.concurrent.Continuation;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.core.VajramID;
@@ -283,19 +284,21 @@ class KryonExecutionTest {
             _graphExecData -> {
               List<CompletableFuture<Object>> list = new ArrayList<>();
               for (ExecutionItem executionItem : _graphExecData.executionItems()) {
-                CompletableFuture<Object> n1Result = new CompletableFuture<>();
+                Continuation<Object> n1Result = new Continuation<>();
                 SimpleRequestBuilder<Object> n1Req = new SimpleRequestBuilder<>(Set.of(), n1ID);
                 _graphExecData
                     .communicationFacade()
                     .triggerDependency(
                         n1DependsOnN1, List.of(new RequestResponseFuture<>(n1Req, n1Result)));
                 list.add(
-                    n1Result.whenComplete(
-                        (o, throwable) ->
-                            ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
-                                ._set(
-                                    n1DependsOnN1.name(),
-                                    new RequestResponse(n1Req, errableFrom(o, throwable)))));
+                    n1Result
+                        .toCompletableFuture()
+                        .whenComplete(
+                            (o, throwable) ->
+                                ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
+                                    ._set(
+                                        n1DependsOnN1.name(),
+                                        new RequestResponse(n1Req, errableFrom(o, throwable)))));
               }
               CompletableFuture.allOf(list.toArray(CompletableFuture[]::new))
                   .whenComplete(
@@ -343,19 +346,21 @@ class KryonExecutionTest {
         _graphExecData -> {
           List<CompletableFuture<Object>> list = new ArrayList<>();
           for (ExecutionItem executionItem : _graphExecData.executionItems()) {
-            CompletableFuture<Object> l1Result = new CompletableFuture<>();
+            Continuation<Object> l1Result = new Continuation<>();
             SimpleRequestBuilder<Object> l1Req = new SimpleRequestBuilder<>(Set.of(), l1Dep);
             _graphExecData
                 .communicationFacade()
                 .triggerDependency(
                     l2DependsOnL1, List.of(new RequestResponseFuture<>(l1Req, l1Result)));
             list.add(
-                l1Result.whenComplete(
-                    (result, throwable) ->
-                        ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
-                            ._set(
-                                l2DependsOnL1.name(),
-                                new RequestResponse(l1Req, errableFrom(result, throwable)))));
+                l1Result
+                    .toCompletableFuture()
+                    .whenComplete(
+                        (result, throwable) ->
+                            ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
+                                ._set(
+                                    l2DependsOnL1.name(),
+                                    new RequestResponse(l1Req, errableFrom(result, throwable)))));
           }
           CompletableFuture.allOf(list.toArray(CompletableFuture[]::new))
               .whenComplete(
@@ -382,18 +387,21 @@ class KryonExecutionTest {
         _graphExecData -> {
           List<CompletableFuture<Object>> list = new ArrayList<>();
           for (ExecutionItem executionItem : _graphExecData.executionItems()) {
-            CompletableFuture<Object> l2Result = new CompletableFuture<>();
+            Continuation<Object> l2Result = new Continuation<>();
             SimpleRequestBuilder<Object> l2Req = new SimpleRequestBuilder<>(Set.of(), l2Dep);
             _graphExecData
                 .communicationFacade()
                 .triggerDependency(
                     l3DependsOnL2, List.of(new RequestResponseFuture<>(l2Req, l2Result)));
             list.add(
-                l2Result.whenComplete(
-                    (o, throwable) ->
-                        ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
-                            ._set(
-                                "facet1", new RequestResponse(l2Req, errableFrom(o, throwable)))));
+                l2Result
+                    .toCompletableFuture()
+                    .whenComplete(
+                        (o, throwable) ->
+                            ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
+                                ._set(
+                                    "facet1",
+                                    new RequestResponse(l2Req, errableFrom(o, throwable)))));
           }
           CompletableFuture.allOf(list.toArray(CompletableFuture[]::new))
               .whenComplete(
@@ -419,19 +427,21 @@ class KryonExecutionTest {
         _graphExecData -> {
           List<CompletableFuture<Object>> list = new ArrayList<>();
           for (ExecutionItem executionItem : _graphExecData.executionItems()) {
-            CompletableFuture<Object> l3Result = new CompletableFuture<>();
+            Continuation<Object> l3Result = new Continuation<>();
             SimpleRequestBuilder<Object> l3Req = new SimpleRequestBuilder<>(Set.of(), l3Dep);
             _graphExecData
                 .communicationFacade()
                 .triggerDependency(
                     l4DepOnL3, List.of(new RequestResponseFuture<>(l3Req, l3Result)));
             list.add(
-                l3Result.whenComplete(
-                    (o, throwable) ->
-                        ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
-                            ._set(
-                                l4DepOnL3.name(),
-                                new RequestResponse(l3Req, errableFrom(o, throwable)))));
+                l3Result
+                    .toCompletableFuture()
+                    .whenComplete(
+                        (o, throwable) ->
+                            ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
+                                ._set(
+                                    l4DepOnL3.name(),
+                                    new RequestResponse(l3Req, errableFrom(o, throwable)))));
           }
           CompletableFuture.allOf(list.toArray(CompletableFuture[]::new))
               .whenComplete(
@@ -458,19 +468,21 @@ class KryonExecutionTest {
         _graphExecData -> {
           List<CompletableFuture<Object>> list = new ArrayList<>();
           for (ExecutionItem executionItem : _graphExecData.executionItems()) {
-            CompletableFuture<Object> l4Result = new CompletableFuture<>();
+            Continuation<Object> l4Result = new Continuation<>();
             SimpleRequestBuilder<Object> l4Req = new SimpleRequestBuilder<>(Set.of(), l4Dep);
             _graphExecData
                 .communicationFacade()
                 .triggerDependency(
                     finalDepOnL4, List.of(new RequestResponseFuture<>(l4Req, l4Result)));
             list.add(
-                l4Result.whenComplete(
-                    (o, throwable) ->
-                        ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
-                            ._set(
-                                finalDepOnL4.name(),
-                                new RequestResponse(l4Req, errableFrom(o, throwable)))));
+                l4Result
+                    .toCompletableFuture()
+                    .whenComplete(
+                        (o, throwable) ->
+                            ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
+                                ._set(
+                                    finalDepOnL4.name(),
+                                    new RequestResponse(l4Req, errableFrom(o, throwable)))));
           }
           CompletableFuture.allOf(list.toArray(CompletableFuture[]::new))
               .whenComplete(
@@ -563,8 +575,8 @@ class KryonExecutionTest {
                 _graphExecData -> {
                   List<CompletableFuture<?>> list = new ArrayList<>();
                   for (ExecutionItem executionItem : _graphExecData.executionItems()) {
-                    CompletableFuture<@Nullable Object> dep1Future = new CompletableFuture<>();
-                    CompletableFuture<@Nullable Object> dep2Future = new CompletableFuture<>();
+                    Continuation<@Nullable Object> dep1Future = new Continuation<>();
+                    Continuation<@Nullable Object> dep2Future = new Continuation<>();
                     SimpleRequestBuilder<Object> dep1Req =
                         new SimpleRequestBuilder<>(Set.of(), dep1ID);
                     SimpleRequestBuilder<Object> dep2Req =
@@ -596,7 +608,8 @@ class KryonExecutionTest {
                                 new RequestResponseFuture<Request<Object>, Object>(
                                     dep2Req, dep2Future)));
                     list.add(
-                        CompletableFuture.allOf(dep1Future, dep2Future)
+                        CompletableFuture.allOf(
+                                dep1Future.toCompletableFuture(), dep2Future.toCompletableFuture())
                             .whenComplete(
                                 (unused, throwable) -> {
                                   FacetValuesMapBuilder f =
@@ -605,11 +618,15 @@ class KryonExecutionTest {
                                   f._set(
                                       dep1.name(),
                                       new RequestResponse(
-                                          dep1Req, errableFrom(dep1Future.join(), throwable)));
+                                          dep1Req,
+                                          errableFrom(
+                                              dep1Future.toCompletableFuture().join(), throwable)));
                                   f._set(
                                       dep2.name(),
                                       new RequestResponse(
-                                          dep2Req, errableFrom(dep2Future.join(), throwable)));
+                                          dep2Req,
+                                          errableFrom(
+                                              dep2Future.toCompletableFuture().join(), throwable)));
                                 }));
                   }
                   CompletableFuture.allOf(list.toArray(new CompletableFuture<?>[0]))
@@ -719,7 +736,9 @@ class KryonExecutionTest {
                     .forEach(
                         executionItem ->
                             errableFrom(() -> logic.apply(executionItem.facetValues()))
-                                .completeFuture((CompletableFuture<T>) executionItem.response())),
+                                .completeFuture(
+                                    (CompletableFuture<T>)
+                                        executionItem.response().toCompletableFuture())),
             emptyTags());
 
     logicDefinitionRegistry.addOutputLogic(def);

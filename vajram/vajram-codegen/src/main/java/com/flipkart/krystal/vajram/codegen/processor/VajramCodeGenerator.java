@@ -940,7 +940,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
 } else {
   $reqRespFuture:T<$reqBuilder:T, $depType:T> _rrf = $reqRespFuture:T.forRequestBuilder(_$facetName:L_requestBuilder);
   if(_rrf != null){
-    var _$facetName:L_future = _rrf.response();
+    var _$facetName:L_future = _rrf.responseFuture();
     _$facetName:L_futures[i] =
         _$facetName:L_future.whenComplete(
             _contextEnricher.enrichContext(

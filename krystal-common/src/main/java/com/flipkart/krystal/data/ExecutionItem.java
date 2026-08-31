@@ -1,6 +1,6 @@
 package com.flipkart.krystal.data;
 
-import java.util.concurrent.CompletableFuture;
+import com.flipkart.krystal.concurrent.Continuation;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -10,4 +10,4 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @param response
  */
 public record ExecutionItem(
-    FacetValuesBuilder facetValues, CompletableFuture<@Nullable Object> response) {}
+    FacetValuesBuilder facetValues, Continuation<@Nullable Object> response) {}

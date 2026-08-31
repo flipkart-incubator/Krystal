@@ -2,6 +2,7 @@ package com.flipkart.krystal.data;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
+import com.flipkart.krystal.concurrent.Continuation;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -27,6 +28,11 @@ public final class Nil<T> implements Success<T> {
   @Override
   public void completeFuture(CompletableFuture<T> future) {
     future.complete(null);
+  }
+
+  @Override
+  public void completeContinuation(Continuation<T> continuation) {
+    continuation.complete(null);
   }
 
   @Override

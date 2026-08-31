@@ -52,12 +52,14 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
+import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+@Slf4j
 class Resilience4JBulkheadTest {
 
   private static final Duration TIMEOUT = ofSeconds(1);
@@ -185,6 +187,12 @@ class Resilience4JBulkheadTest {
     executor2.close();
     executor3.close();
 
+    call1BeforeBulkheadExhaustion.handle(
+        (_ign, e) -> {
+          System.out.println(e);
+          System.out.println(_ign);
+          return null;
+        });
     assertThat(callAfterBulkheadExhaustion)
         .failsWithin(TIMEOUT)
         .withThrowableOfType(Exception.class)

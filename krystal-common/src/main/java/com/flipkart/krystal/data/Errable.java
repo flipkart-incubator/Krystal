@@ -1,5 +1,6 @@
 package com.flipkart.krystal.data;
 
+import com.flipkart.krystal.concurrent.Continuation;
 import com.flipkart.krystal.except.KrystalCompletionException;
 import com.flipkart.krystal.except.ThrowingCallable;
 import java.util.Optional;
@@ -20,6 +21,9 @@ public sealed interface Errable<T> permits Success, Failure {
 
   /** Completes the future with the state of this errable */
   void completeFuture(CompletableFuture<T> future);
+
+  /** Completes the continuation with the state of this errable */
+  void completeContinuation(Continuation<T> continuation);
 
   @Nullable T value();
 

@@ -1,6 +1,5 @@
 package com.flipkart.krystal.krystex.kryon;
 
-import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.concurrent.Futures.propagateCancellation;
 import static com.flipkart.krystal.config.PropertyNames.RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME;
 import static com.flipkart.krystal.data.RequestResponseFuture.forRequest;
@@ -23,6 +22,7 @@ import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.groupingBy;
 import static lombok.AccessLevel.PACKAGE;
 
+import com.flipkart.krystal.concurrent.Continuation;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
@@ -308,7 +308,7 @@ public final class VajramKryonExecutor implements KrystalExecutor {
       ImmutableRequest<T> request, VajramExecutionConfig executionConfig) {
     RequestResponseFuture<Request<T>, T> requestResponseFuture = forRequest(request);
     execute(requestResponseFuture, executionConfig);
-    return requestResponseFuture.response();
+    return requestResponseFuture.responseFuture();
   }
 
   @Override
@@ -489,8 +489,8 @@ public final class VajramKryonExecutor implements KrystalExecutor {
           for (RequestResponseFuture<? extends Request<?>, ?> executableRequest :
               forwardSend.executableRequests()) {
             @SuppressWarnings("unchecked")
-            CompletableFuture<@Nullable Object> response =
-                (CompletableFuture<@Nullable Object>) executableRequest.response();
+            Continuation<@Nullable Object> response =
+                (Continuation<@Nullable Object>) executableRequest.response();
             list.add(
                 new ExecutionItem(
                     vajramKryonDefinition
@@ -683,22 +683,27 @@ public final class VajramKryonExecutor implements KrystalExecutor {
                     for (KryonExecution<?> kryonExecution : kryonExecutions) {
                       if (throwable != null) {
                         kryonExecution
-                            .requestResponseFuture()
                             .response()
                             .completeExceptionally(wrapAsCompletionException(throwable));
                       } else {
-                        linkFutures(
-                            responses
-                                .getOrDefault(kryonExecution.instanceExecutionId(), Errable.nil())
-                                .toFuture(),
-                            kryonExecution.response());
+                        Errable<@Nullable Object> errable =
+                            responses.getOrDefault(
+                                kryonExecution.instanceExecutionId(), Errable.nil());
+                        errable
+                            .errorOpt()
+                            .ifPresentOrElse(
+                                e -> kryonExecution.response().completeExceptionally(e),
+                                () ->
+                                    kryonExecution
+                                        .response()
+                                        .complete(errable.valueOpt().orElse(null)));
                       }
                     }
                   });
           propagateCancellation(
               allOf(
                   kryonExecutions.stream()
-                      .map(KryonExecution::response)
+                      .map(ke -> ke.response().toCompletableFuture())
                       .toArray(CompletableFuture[]::new)),
               batchResponseFuture);
         });
@@ -734,7 +739,7 @@ public final class VajramKryonExecutor implements KrystalExecutor {
           CompletableFuture[] responseFutures = new CompletableFuture[executions.size()];
           int i = 0;
           for (KryonExecution<?> kryonExecution : executions) {
-            responseFutures[i++] = kryonExecution.response();
+            responseFutures[i++] = kryonExecution.response().toCompletableFuture();
           }
           return allOf(responseFutures)
               .whenComplete(
@@ -802,8 +807,8 @@ public final class VajramKryonExecutor implements KrystalExecutor {
       RequestResponseFuture<? extends Request<T>, T> requestResponseFuture,
       VajramExecutionConfig executionConfig) {
 
-    private CompletableFuture<@Nullable Object> response() {
-      return (CompletableFuture<@Nullable Object>) requestResponseFuture().response();
+    private Continuation<@Nullable Object> response() {
+      return (Continuation<@Nullable Object>) requestResponseFuture().response();
     }
 
     private Request<Object> request() {

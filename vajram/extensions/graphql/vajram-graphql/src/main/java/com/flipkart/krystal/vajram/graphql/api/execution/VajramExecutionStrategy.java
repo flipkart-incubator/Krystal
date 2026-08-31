@@ -91,7 +91,7 @@ public final class VajramExecutionStrategy extends ExecutionStrategy {
         forRequest(request);
     vajramInvocation.executeVajram(requestResponseFuture);
     return requestResponseFuture
-        .response()
+        .responseFuture()
         // Wrap the response in GraphQlObjectResult so that it can be extracted and converted to a
         // proper complete ExecutionResult if and when needed
         .handle((r, e) -> newExecutionResult().data(new GraphQlObjectResult(r, e)).build());

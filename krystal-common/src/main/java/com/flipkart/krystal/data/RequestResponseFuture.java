@@ -1,5 +1,6 @@
 package com.flipkart.krystal.data;
 
+import com.flipkart.krystal.concurrent.Continuation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -9,11 +10,16 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 /** Represents the request and a response placeholder for a vajram invocation. */
 @Slf4j
 public record RequestResponseFuture<R extends Request<T>, T>(
-    R request, CompletableFuture<@Nullable T> response) {
+    R request, Continuation<@Nullable T> response) {
+
+  /** Returns a {@link CompletableFuture} bridge for external callers. */
+  public CompletableFuture<@Nullable T> responseFuture() {
+    return response.toCompletableFuture();
+  }
 
   @SuppressWarnings("Convert2Diamond") // Needed to prevent null-checker errors
   public static <R extends Request<T>, T> RequestResponseFuture<R, T> forRequest(R request) {
-    return new RequestResponseFuture<R, T>(request, new CompletableFuture<@Nullable T>());
+    return new RequestResponseFuture<R, T>(request, new Continuation<@Nullable T>());
   }
 
   @SuppressWarnings("unchecked")
@@ -41,7 +47,7 @@ public record RequestResponseFuture<R extends Request<T>, T>(
   @SuppressWarnings({"unchecked", "type.argument"})
   public static <R extends Request<@Nullable T>, B extends R, T>
       RequestResponseFuture<B, T> forRequestBuilder(B builder) {
-    return new RequestResponseFuture<>(builder, new CompletableFuture<@Nullable T>());
+    return new RequestResponseFuture<>(builder, new Continuation<@Nullable T>());
   }
 
   public static <R extends Request<T>, T> CompletableFuture<@Nullable T>[] getFutures(
@@ -50,7 +56,7 @@ public record RequestResponseFuture<R extends Request<T>, T>(
     CompletableFuture<@Nullable T>[] array =
         (CompletableFuture<@Nullable T>[]) new CompletableFuture[requestResponseFutures.size()];
     for (int i = 0; i < requestResponseFutures.size(); i++) {
-      array[i] = requestResponseFutures.get(i).response();
+      array[i] = requestResponseFutures.get(i).responseFuture();
     }
     return array;
   }

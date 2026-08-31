@@ -2,6 +2,7 @@ package com.flipkart.krystal.data;
 
 import static java.util.concurrent.CompletableFuture.failedFuture;
 
+import com.flipkart.krystal.concurrent.Continuation;
 import com.flipkart.krystal.except.KrystalCompletionException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -21,6 +22,11 @@ public record Failure<T>(Throwable error) implements Errable<T> {
   @Override
   public void completeFuture(CompletableFuture<T> future) {
     future.completeExceptionally(error);
+  }
+
+  @Override
+  public void completeContinuation(Continuation<T> continuation) {
+    continuation.completeExceptionally(error);
   }
 
   @Override

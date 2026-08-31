@@ -260,8 +260,9 @@ class RequestLevelCacheTest {
                         .forEach(
                             executionItem ->
                                 errableFrom(() -> logic.apply(executionItem.facetValues()))
-                                    .completeFuture(
-                                        (CompletableFuture<T>) executionItem.response())),
+                                    .completeContinuation(
+                                        (com.flipkart.krystal.concurrent.Continuation<T>)
+                                            executionItem.response())),
                 emptyTags())
             : new ComputeLogicDefinition<>(
                 new KryonLogicId(kryonId, kryonId.id()),
@@ -272,8 +273,9 @@ class RequestLevelCacheTest {
                         .forEach(
                             executionItem ->
                                 errableFrom(() -> logic.apply(executionItem.facetValues()))
-                                    .completeFuture(
-                                        (CompletableFuture<T>) executionItem.response())),
+                                    .completeContinuation(
+                                        (com.flipkart.krystal.concurrent.Continuation<T>)
+                                            executionItem.response())),
                 emptyTags());
 
     logicDefinitionRegistry.addOutputLogic(def);

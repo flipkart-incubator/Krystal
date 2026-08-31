@@ -7,6 +7,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.flipkart.krystal.concurrent.Continuation;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.FacetValues;
@@ -25,7 +26,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -55,14 +55,14 @@ class DefaultKryonExecutionReportTest {
                         allInputs, ImmutableMap.of("facet1", withValue("v1")), vajramID),
                     allInputs,
                     vajramID),
-                new CompletableFuture<>()),
+                new Continuation<>()),
             new ExecutionItem(
                 new FacetValuesMapBuilder(
                     new SimpleRequestBuilder<>(
                         allInputs, ImmutableMap.of("facet1", withValue("v2")), vajramID),
                     allInputs,
                     vajramID),
-                new CompletableFuture<>()));
+                new Continuation<>()));
 
     clock.setInstant(START_TIME);
     kryonExecutionReport.reportMainLogicStart(vajramID, kryonLogicId, facetValuesList);
@@ -136,7 +136,7 @@ class DefaultKryonExecutionReportTest {
                         vajramID),
                     Set.of(input("facet1")),
                     vajramID),
-                new CompletableFuture<>()),
+                new Continuation<>()),
             new ExecutionItem(
                 new FacetValuesMapBuilder(
                     new SimpleRequestBuilder<>(
@@ -145,7 +145,7 @@ class DefaultKryonExecutionReportTest {
                         vajramID),
                     Set.of(input("facet2")),
                     vajramID),
-                new CompletableFuture<>()));
+                new Continuation<>()));
 
     clock.setInstant(START_TIME);
     kryonExecutionReport.reportMainLogicStart(vajramID, kryonLogicId, facetValuesList);
@@ -175,7 +175,7 @@ class DefaultKryonExecutionReportTest {
                         vajramID),
                     Set.of(input("facet1")),
                     vajramID),
-                new CompletableFuture<>()),
+                new Continuation<>()),
             new ExecutionItem(
                 new FacetValuesMapBuilder(
                     new SimpleRequestBuilder<>(
@@ -184,7 +184,7 @@ class DefaultKryonExecutionReportTest {
                         vajramID),
                     Set.of(input("facet2")),
                     vajramID),
-                new CompletableFuture<>()));
+                new Continuation<>()));
 
     clock.setInstant(START_TIME);
     kryonExecutionReport.reportMainLogicStart(vajramID, kryonLogicId, facetValuesList);

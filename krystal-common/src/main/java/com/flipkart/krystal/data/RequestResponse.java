@@ -16,7 +16,7 @@ public record RequestResponse<R extends Request<T>, T>(R request, Errable<T> res
           R r = requireNonNull(rrf).request();
           @SuppressWarnings("RedundantCast") // For checker-framework
           Errable<T> now =
-              (Errable<T>) rrf.response().handle(Errable::errableFrom).getNow(Errable.nil());
+              (Errable<T>) rrf.responseFuture().handle(Errable::errableFrom).getNow(Errable.nil());
           return new RequestResponse<>(r, now);
         };
     @SuppressWarnings("type.argument")

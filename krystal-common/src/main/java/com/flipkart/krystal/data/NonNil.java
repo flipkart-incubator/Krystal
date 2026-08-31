@@ -2,6 +2,7 @@ package com.flipkart.krystal.data;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
+import com.flipkart.krystal.concurrent.Continuation;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -20,6 +21,11 @@ public record NonNil<T>(@NonNull T value) implements Success<T> {
   @Override
   public void completeFuture(CompletableFuture<T> future) {
     future.complete(value);
+  }
+
+  @Override
+  public void completeContinuation(Continuation<T> continuation) {
+    continuation.complete(value);
   }
 
   @Override

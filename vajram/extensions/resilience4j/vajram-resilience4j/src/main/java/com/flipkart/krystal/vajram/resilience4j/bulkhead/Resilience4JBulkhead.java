@@ -4,8 +4,10 @@ import static com.flipkart.krystal.except.KrystalCompletionException.wrapAsCompl
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.concurrent.CompletableFuture.allOf;
 
+import com.flipkart.krystal.concurrent.Continuation;
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.core.OutputLogicExecutionInput;
+import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationContext;
@@ -17,7 +19,6 @@ import io.github.resilience4j.bulkhead.ThreadPoolBulkhead;
 import io.github.resilience4j.bulkhead.ThreadPoolBulkheadConfig;
 import io.github.resilience4j.decorators.Decorators;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -174,8 +175,15 @@ public final class Resilience4JBulkhead implements OutputLogicDecorator {
             .get()
             .whenComplete(
                 (unused, throwable) -> {
-                  for (CompletableFuture completableFuture : input.responseFutures()) {
-                    completableFuture.completeExceptionally(wrapAsCompletionException(throwable));
+                  if (throwable != null) {
+                    for (ExecutionItem executionItem : input.executionItems()) {
+                      @SuppressWarnings("unchecked")
+                      Continuation<@Nullable Object> response =
+                          (Continuation<@Nullable Object>) executionItem.response();
+                      if (!response.isDone()) {
+                        response.completeExceptionally(wrapAsCompletionException(throwable));
+                      }
+                    }
                   }
                 });
 

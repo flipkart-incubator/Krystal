@@ -4,6 +4,7 @@ import static com.flipkart.krystal.except.KrystalCompletionException.wrapAsCompl
 import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
 
+import com.flipkart.krystal.concurrent.Continuation;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.Request;
@@ -15,7 +16,6 @@ import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import lombok.ToString;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -80,7 +80,7 @@ public final class DirectForwardCommand implements DirectForwardSend, DirectForw
       for (var executableRequest : executableRequests) {
         @SuppressWarnings("unchecked")
         var response =
-            (CompletableFuture<@Nullable Object>) requireNonNull(executableRequest).response();
+            (Continuation<@Nullable Object>) requireNonNull(executableRequest).response();
         items.add(
             new ExecutionItem(
                 vajramKryonDefinition

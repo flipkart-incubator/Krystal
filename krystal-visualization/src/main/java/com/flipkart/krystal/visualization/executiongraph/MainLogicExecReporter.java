@@ -100,7 +100,10 @@ public final class MainLogicExecReporter implements OutputLogicDecorator {
                                   e ->
                                       new LogicExecResponse(
                                           e.facetValues(),
-                                          e.response().handle(Errable::errableFrom).getNow(nil())))
+                                          e.response()
+                                              .toCompletableFuture()
+                                              .handle(Errable::errableFrom)
+                                              .getNow(nil())))
                               .collect(toImmutableList()))));
     };
   }

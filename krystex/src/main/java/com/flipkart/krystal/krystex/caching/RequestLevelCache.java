@@ -264,7 +264,7 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
           continue;
         }
         CompletableFuture<@Nullable Object> existingFuture =
-            localCache.putIfAbsent(cacheKey, executionItem.response());
+            localCache.putIfAbsent(cacheKey, executionItem.response().toCompletableFuture());
         if (existingFuture != null) {
           stats.kryonStats().localCacheHit();
           propagateCompletion(existingFuture, executionItem.response());
@@ -292,7 +292,7 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
         var cachedValue = getCachedFuture(cacheKey);
         if (cachedValue == null) {
           stats.kryonStats().globalCacheNoFuture();
-          cache.putFuture(cacheKey, executionItem.response());
+          cache.putFuture(cacheKey, executionItem.response().toCompletableFuture());
           cacheMisses.add(executionItem);
         } else if (cachedValue.future().isDone()
             || getCurrentEpoch(command) >= cachedValue.epoch()) {
@@ -470,7 +470,7 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
         var cachedValue = getCachedFuture(cacheKey);
         if (cachedValue == null) {
           stats.outputLogicStats().cacheMiss();
-          cache.putFuture(cacheKey, executionItem.response());
+          cache.putFuture(cacheKey, executionItem.response().toCompletableFuture());
           cacheMisses.add(executionItem);
         } else {
           stats.outputLogicStats().cacheHit();

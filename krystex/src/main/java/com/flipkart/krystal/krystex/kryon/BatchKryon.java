@@ -13,6 +13,7 @@ import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
+import com.flipkart.krystal.concurrent.Continuation;
 import com.flipkart.krystal.core.OutputLogicExecutionInput;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.DepResponse;
@@ -559,7 +560,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
           } catch (Throwable e) {
             outputLogicFacets.response().completeExceptionally(wrapAsCompletionException(e));
           }
-          resultsByRequest.put(invocationId, outputLogicFacets.response());
+          resultsByRequest.put(invocationId, outputLogicFacets.response().toCompletableFuture());
         });
     return resultsByRequest;
   }
@@ -582,7 +583,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
                         .executableInvocations()
                         .getOrDefault(invocationId, emptyFacets())
                         ._asBuilder()),
-        new CompletableFuture<>());
+        new Continuation<>());
   }
 
   private Set<Dependency> collectInputValues(ForwardReceiveBatch forwardBatch) {

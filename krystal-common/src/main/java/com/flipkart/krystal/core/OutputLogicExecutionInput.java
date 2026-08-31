@@ -37,7 +37,7 @@ public final class OutputLogicExecutionInput {
     if (responseFutures == null) {
       CompletableFuture[] responseFutures = new CompletableFuture[executionItems.size()];
       for (int i = 0; i < executionItems.size(); i++) {
-        responseFutures[i] = executionItems.get(i).response();
+        responseFutures[i] = executionItems.get(i).response().toCompletableFuture();
       }
       this.responseFutures = responseFutures;
       return responseFutures;
