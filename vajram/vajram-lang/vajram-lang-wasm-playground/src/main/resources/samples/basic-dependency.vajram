@@ -1,0 +1,13 @@
+package playground.samples;
+
+vajram greeting(string name) out string {
+  { "Hello, " + name }
+}
+
+vajram basicDependency(string name) out string
+    permit callers `outsideProcess public{
+
+  string greeting = greeting(name=name);
+
+  { greeting }
+}

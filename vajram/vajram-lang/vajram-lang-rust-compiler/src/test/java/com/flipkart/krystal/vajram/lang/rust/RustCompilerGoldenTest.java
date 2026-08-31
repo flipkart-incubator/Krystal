@@ -169,6 +169,37 @@ class RustCompilerGoldenTest {
   }
 
   @Test
+  void wasmTargetGeneratesTypedOutsideProcessDispatchers(@TempDir Path tempDir) throws IOException {
+    Path sourceDir = tempDir.resolve("vajram");
+    Path outDir = tempDir.resolve("out");
+    Files.createDirectories(sourceDir);
+    Files.writeString(
+        sourceDir.resolve("dispatch.vajram"),
+        """
+        package external;
+        vajram greet(string name, int count) out string permit callers `outsideProcess public {
+          { name }
+        }
+        """);
+
+    assertThat(RustCompilerMain.compile(sourceDir, outDir, RustCompilerMain.Target.WASM)).isTrue();
+    assertThat(Files.exists(outDir.resolve("main.rs"))).isFalse();
+    assertThat(Files.readString(outDir.resolve("lib.rs"))).contains("pub mod wasm_dispatch;");
+    assertThat(Files.readString(outDir.resolve("wasm_dispatch.rs")))
+        .contains("use wasm_bindgen::prelude::*;")
+        .contains("#[wasm_bindgen]")
+        .contains("pub fn outside_process_greet(name: String, count: i64) -> String")
+        .contains("name: Rc::new(name)")
+        .contains("count: Rc::new(count)");
+    assertThat(Files.readString(outDir.resolve("vajram_rt/mod.rs")))
+        .contains("WASM prelude")
+        .contains("wasm_bindgen_futures::spawn_local")
+        .contains("future.shared()")
+        .doesNotContain("tokio::")
+        .doesNotContain("every generated crate's");
+  }
+
+  @Test
   void preservesAnnotationsForEachNamedCaller() {
     var diagnostics = new com.flipkart.krystal.vajram.lang.rust.diag.Diagnostics();
     var parsed =
@@ -277,6 +308,47 @@ class RustCompilerGoldenTest {
   }
 
   @Test
+  void rejectsReadFileAsStringForWasmWithoutEmittingTokioFilesystemIo(@TempDir Path tempDir)
+      throws IOException {
+    Path sourceDir = tempDir.resolve("vajram");
+    Path outDir = tempDir.resolve("out");
+    Files.createDirectories(sourceDir);
+    Files.writeString(
+        sourceDir.resolve("reader.vajram"),
+        """
+        package system;
+        import vajram readFileAsString from lang.FileSystem;
+        vajram reader(string filePath) out string {
+          out readFileAsString(path = filePath);
+        }
+        """);
+
+    assertThat(RustCompilerMain.compile(sourceDir, outDir, RustCompilerMain.Target.WASM)).isFalse();
+    assertThat(Files.exists(outDir.resolve("system/reader.rs"))).isFalse();
+  }
+
+  @Test
+  void wasmTargetGeneratesAsyncDispatcherForAsyncGraphs(@TempDir Path tempDir) throws IOException {
+    Path sourceDir = tempDir.resolve("vajram");
+    Path outDir = tempDir.resolve("out");
+    Files.createDirectories(sourceDir);
+    Files.writeString(
+        sourceDir.resolve("dispatch.vajram"),
+        """
+        package external;
+        vajram greet(string name) out string permit callers `outsideProcess public {
+          ~ { name }
+        }
+        """);
+
+    assertThat(RustCompilerMain.compile(sourceDir, outDir, RustCompilerMain.Target.WASM)).isTrue();
+    assertThat(Files.readString(outDir.resolve("wasm_dispatch.rs")))
+        .contains("pub async fn outside_process_greet(name: String) -> String")
+        .contains("::call(")
+        .contains(".await;");
+  }
+
+  @Test
   void startsIndependentFacetsBeforeTheirComputedFieldTasks(@TempDir Path tempDir)
       throws IOException {
     Path sourceDir = tempDir.resolve("vajram");
@@ -301,9 +373,71 @@ class RustCompilerGoldenTest {
     String parent = Files.readString(outDir.resolve("graph/graph.rs"));
     assertThat(parent).contains("let first = crate::vajram_rt::spawn_local_shared");
     assertThat(parent).contains("let second = crate::vajram_rt::spawn_local_shared");
-    assertThat(parent).contains("let firstValue = crate::vajram_rt::spawn_local_shared");
-    assertThat(parent).contains("let secondValue = crate::vajram_rt::spawn_local_shared");
+    assertThat(parent)
+        .contains("let firstValue =")
+        .contains("let secondValue =")
+        .contains("crate::vajram_rt::spawn_local_shared");
     assertThat(parent.indexOf("let second =")).isLessThan(parent.indexOf("first.clone().await"));
+  }
+
+  @Test
+  void lowersStringConcatenationWithStringInputsToRustStringSlices(@TempDir Path tempDir)
+      throws IOException {
+    Path sourceDir = tempDir.resolve("vajram");
+    Path outDir = tempDir.resolve("out");
+    Files.createDirectories(sourceDir);
+    Files.writeString(
+        sourceDir.resolve("hello.vajram"),
+        """
+        package hello;
+        vajram greet(string name) out string {
+          { "Hello, " + name }
+        }
+        """);
+
+    assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
+    assertThat(Files.readString(outDir.resolve("hello/hello.rs")))
+        .contains("\"Hello, \".to_string() + inputs.name.as_str()");
+  }
+
+  @Test
+  void lowersChainedStringConcatenationWithTrailingStringLiterals(@TempDir Path tempDir)
+      throws IOException {
+    Path sourceDir = tempDir.resolve("vajram");
+    Path outDir = tempDir.resolve("out");
+    Files.createDirectories(sourceDir);
+    Files.writeString(
+        sourceDir.resolve("hello.vajram"),
+        """
+        package hello;
+        vajram greet(string name) out string {
+          { "Hello, " + name + "!" }
+        }
+        """);
+
+    assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
+    assertThat(Files.readString(outDir.resolve("hello/hello.rs")))
+        .contains("\"Hello, \".to_string() + inputs.name.as_str() + \"!\"");
+  }
+
+  @Test
+  void lowersNumericPrimitiveAdditionWithDereferencedBoundaryValues(@TempDir Path tempDir)
+      throws IOException {
+    Path sourceDir = tempDir.resolve("vajram");
+    Path outDir = tempDir.resolve("out");
+    Files.createDirectories(sourceDir);
+    Files.writeString(
+        sourceDir.resolve("math.vajram"),
+        """
+        package math;
+        vajram sumInts(int left, int right) out int { { left + right } }
+        vajram sumFloats(float left, float right) out float { { left + right } }
+        vajram sumDoubles(double left, double right) out double { { left + right } }
+        """);
+
+    assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
+    String generated = Files.readString(outDir.resolve("math/math.rs"));
+    assertThat(generated).contains("Rc::new(*inputs.left + *inputs.right)");
   }
 
   @Test

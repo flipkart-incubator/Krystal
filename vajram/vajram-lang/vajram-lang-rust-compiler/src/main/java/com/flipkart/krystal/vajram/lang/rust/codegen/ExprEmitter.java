@@ -5,6 +5,7 @@ import com.flipkart.krystal.vajram.lang.rust.ast.Expr;
 import com.flipkart.krystal.vajram.lang.rust.ast.Statement;
 import com.flipkart.krystal.vajram.lang.rust.ast.YieldStatement;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
@@ -39,24 +40,31 @@ public final class ExprEmitter {
 
   private final Set<String> inputNames;
   private final Set<String> injectionNames;
+  private final Map<String, String> boundaryTypeNames;
   private final Set<String> fieldNames;
   private final Set<String> deferredFacetNames;
   private final String inputsRoot;
   private final String depsRoot;
 
-  public ExprEmitter(Set<String> inputNames, Set<String> injectionNames, Set<String> fieldNames) {
-    this(inputNames, injectionNames, fieldNames, Set.of(), "inputs", "deps");
+  public ExprEmitter(
+      Set<String> inputNames,
+      Set<String> injectionNames,
+      Map<String, String> boundaryTypeNames,
+      Set<String> fieldNames) {
+    this(inputNames, injectionNames, boundaryTypeNames, fieldNames, Set.of(), "inputs", "deps");
   }
 
   private ExprEmitter(
       Set<String> inputNames,
       Set<String> injectionNames,
+      Map<String, String> boundaryTypeNames,
       Set<String> fieldNames,
       Set<String> deferredFacetNames,
       String inputsRoot,
       String depsRoot) {
     this.inputNames = inputNames;
     this.injectionNames = injectionNames;
+    this.boundaryTypeNames = boundaryTypeNames;
     this.fieldNames = fieldNames;
     this.deferredFacetNames = deferredFacetNames;
     this.inputsRoot = inputsRoot;
@@ -64,12 +72,19 @@ public final class ExprEmitter {
   }
 
   public ExprEmitter withDeferredFacets(Set<String> names) {
-    return new ExprEmitter(inputNames, injectionNames, fieldNames, names, inputsRoot, depsRoot);
+    return new ExprEmitter(
+        inputNames, injectionNames, boundaryTypeNames, fieldNames, names, inputsRoot, depsRoot);
   }
 
   public ExprEmitter inTaskScope(String taskInputs, String taskDeps) {
     return new ExprEmitter(
-        inputNames, injectionNames, fieldNames, deferredFacetNames, taskInputs, taskDeps);
+        inputNames,
+        injectionNames,
+        boundaryTypeNames,
+        fieldNames,
+        deferredFacetNames,
+        taskInputs,
+        taskDeps);
   }
 
   public String depsRoot() {
@@ -108,6 +123,9 @@ public final class ExprEmitter {
     } else if (expr instanceof Expr.Not n) {
       return "!(" + emit(n.operand()) + ")";
     } else if (expr instanceof Expr.BinaryOp b) {
+      if ("+".equals(b.operator())) {
+        return emitAdditionOperand(b.left(), true) + " + " + emitAdditionOperand(b.right(), false);
+      }
       return emit(b.left()) + " " + b.operator() + " " + emit(b.right());
     } else if (expr instanceof Expr.MethodRef m) {
       return emit(m.target()) + "::" + m.member();
@@ -139,6 +157,24 @@ public final class ExprEmitter {
       return "(*" + emitVarUse(varUse) + ").clone()";
     }
     return emit(element);
+  }
+
+  private String emitAdditionOperand(Expr operand, boolean left) {
+    if (!left && operand instanceof Expr.StringLiteral stringLiteral) {
+      return stringLiteral.javaText();
+    }
+    if (!(operand instanceof Expr.VarUse varUse)) {
+      return emit(operand);
+    }
+    String type = boundaryTypeNames.get(varUse.name());
+    if (type == null) {
+      return emit(operand);
+    }
+    String value = emit(varUse);
+    if ("string".equals(type)) {
+      return left ? "(*" + value + ").clone()" : value + ".as_str()";
+    }
+    return "*" + value;
   }
 
   private String emitVarUse(Expr.VarUse v) {

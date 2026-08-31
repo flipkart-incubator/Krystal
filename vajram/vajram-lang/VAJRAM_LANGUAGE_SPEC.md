@@ -120,4 +120,47 @@ This implies that a vajram with callGraphDelegationMode "NONE" cannot directly o
 
 If the vajram does not specify this annotation, then the value is auto-computed from the vajram's definition and its dependency graph.
 
+### Keywords
+
+```
+callers
+dependers
+else
+err
+false
+for
+from
+if
+import
+in
+inject
+loop
+new
+nil
+out
+package
+permit
+public
+skip
+switch
+this
+throw
+true
+vajram
+void
+yield
+bool
+float32
+float64
+int128
+int32
+int64
+string
+uint128
+uint32
+uint64
+~
+*
+```
+
 

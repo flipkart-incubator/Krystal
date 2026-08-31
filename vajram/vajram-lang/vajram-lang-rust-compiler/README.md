@@ -14,7 +14,7 @@ Dependency invocation is eager but dependency consumption is deferred. When a de
 
 The compiler must lower computed facets as a dependency graph, not as a linear sequence of blocking statements. Every facet task captures and awaits only the source facets it uses. This lets independent work progress concurrently: if `c1` consumes `d1` and `c2` consumes `d2`, both `d1` and `d2` start immediately, and either `c1` or `c2` may complete first. Source declaration order must not cause `c2` to wait for `d1` merely because `c1` appears first.
 
-Generated crates using deferred facets execute tasks inside a Tokio `LocalSet`; `Rc` values are deliberately single-threaded and cannot be sent to a multi-thread worker.
+Native generated crates using deferred facets execute tasks inside a Tokio `LocalSet`. WASM generated crates schedule eager task work with `wasm_bindgen_futures::spawn_local` and share results through `futures::future::Shared`; `Rc` values are deliberately single-threaded and cannot be sent to a multi-thread worker.
 
 ## Ownership And Resolver Lifetimes
 
@@ -38,7 +38,7 @@ Async dependency continuations own only `Rc` handles. Resolver-local values are 
 - `?` errable method syntax is served by the bundled `Errable` trait.
 - Method chains and lambda bodies are structurally transliterated; unsupported Java-library idioms are intentionally left for Rust type checking to diagnose.
 
-The compiler copies `vajram_rt` into the generated crate. Add Tokio with the `rt` feature when generated code contains async Vajrams.
+The compiler copies `vajram_rt` into the generated crate. Native crates with async Vajrams need Tokio with the `rt` feature. WASM crates with async Vajrams need `futures`, `wasm-bindgen`, and `wasm-bindgen-futures`; Tokio is not used by the WASM prelude.
 
 ## Annotation Processors
 
@@ -56,6 +56,6 @@ It writes `main.rs`, which accepts a Vajram name as its first argument, dispatch
 
 ## System Vajrams
 
-`readFileAsString(path = filePath)` is a built-in soon Vajram. It is available without a source definition, reads the supplied path asynchronously with Tokio, decodes UTF-8, and returns a `string`. File I/O failures terminate the non-errable invocation with an error. Generated Cargo crates using it require Tokio's `fs` feature.
+`readFileAsString(path = filePath)` is a built-in soon Vajram for the native target. It is available without a source definition, reads the supplied path asynchronously with Tokio, decodes UTF-8, and returns a `string`. File I/O failures terminate the non-errable invocation with an error. Generated Cargo crates using it require Tokio's `fs` feature. WASM compilation rejects it with a source-positioned diagnostic until the browser File Picker SDK capability is bundled; it never lowers to Tokio filesystem I/O on WASM.
 
 `concatStrings(strings = values, separator = separator)` is a built-in now Vajram imported from `lang.Strings`. It joins an ordered array of strings into one `string`, inserting `separator` between adjacent values.

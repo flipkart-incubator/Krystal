@@ -14,7 +14,9 @@ import com.flipkart.krystal.vajram.lang.rust.ast.VajramFile;
 import com.flipkart.krystal.vajram.lang.rust.resolve.SymbolTable;
 import com.flipkart.krystal.vajram.lang.rust.system.SystemVajram;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
@@ -61,6 +63,11 @@ public final class RustEmitter {
         vajram.inputs().stream().map(InputDecl::name).collect(Collectors.toSet());
     Set<String> injectionNames =
         vajram.injections().stream().map(InjectionDecl::name).collect(Collectors.toSet());
+    Map<String, String> boundaryTypeNames = new HashMap<>();
+    vajram.inputs().forEach(input -> boundaryTypeNames.put(input.name(), input.type().name()));
+    vajram
+        .injections()
+        .forEach(injection -> boundaryTypeNames.put(injection.name(), injection.type().name()));
     Set<String> fieldNames =
         vajram.computedFacets().stream()
             .filter(Field.class::isInstance)
@@ -73,7 +80,7 @@ public final class RustEmitter {
             .map(Dependency.class::cast)
             .map(Dependency::name)
             .collect(Collectors.toSet());
-    ExprEmitter exprs = new ExprEmitter(inputNames, injectionNames, fieldNames);
+    ExprEmitter exprs = new ExprEmitter(inputNames, injectionNames, boundaryTypeNames, fieldNames);
 
     emitInputsStruct(w, vajram, typeName);
     boolean hasDeps = !vajram.injections().isEmpty();

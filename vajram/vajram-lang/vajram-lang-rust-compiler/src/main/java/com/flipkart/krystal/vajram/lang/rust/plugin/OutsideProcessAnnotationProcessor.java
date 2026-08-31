@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajram.lang.rust.plugin;
 import com.flipkart.krystal.vajram.lang.rust.ast.Completion;
 import com.flipkart.krystal.vajram.lang.rust.ast.InputDecl;
 import com.flipkart.krystal.vajram.lang.rust.ast.VajramFile;
+import com.flipkart.krystal.vajram.lang.rust.cli.RustCompilerMain.Target;
 import com.flipkart.krystal.vajram.lang.rust.codegen.Naming;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -59,6 +60,11 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
       return;
     }
 
+    if (context.target() == Target.WASM) {
+      emitWasmDispatcher(context, targets);
+      return;
+    }
+
     StringBuilder source = new StringBuilder();
     source.append("mod vajram_rt;\n");
     context.compilationVajrams().stream()
@@ -102,6 +108,84 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
     source.append("    }\n");
     source.append("}\n");
     context.writeFile(Path.of("main.rs"), source.toString());
+  }
+
+  private static void emitWasmDispatcher(
+      AnnotationProcessorContext context, List<VajramFile> targets) throws IOException {
+    List<VajramFile> wasmTargets =
+        targets.stream()
+            .filter(
+                file -> {
+                  if (isWasmOutput(file)) {
+                    return true;
+                  }
+                  context.error(
+                      file.vajram().location(),
+                      "WASM `outsideProcess` supports string, int, or void outputs");
+                  return false;
+                })
+            .toList();
+    if (wasmTargets.isEmpty()) {
+      return;
+    }
+
+    StringBuilder source = new StringBuilder();
+    source.append("use wasm_bindgen::prelude::*;\n");
+    source.append("use std::rc::Rc;\n");
+    for (VajramFile target : wasmTargets) {
+      emitWasmCase(source, target, context.symbolTable().completionOf(target));
+    }
+    context.writeFile(Path.of("wasm_dispatch.rs"), source.toString());
+  }
+
+  private static void emitWasmCase(StringBuilder source, VajramFile target, Completion completion) {
+    String module =
+        target.packageSegments().stream()
+                .map(Naming::toSnakeCase)
+                .reduce((a, b) -> a + "::" + b)
+                .map(path -> "crate::" + path)
+                .orElse("crate")
+            + "::"
+            + Naming.sourceModuleName(target.sourcePath())
+            + "::"
+            + Naming.toSnakeCase(target.vajram().name());
+    String functionName = "outside_process_" + Naming.toSnakeCase(target.vajram().name());
+    String parameters =
+        target.vajram().inputs().stream()
+            .map(input -> input.name() + ": " + wasmInputType(input))
+            .collect(java.util.stream.Collectors.joining(", "));
+    String fields =
+        target.vajram().inputs().stream()
+            .map(input -> input.name() + ": Rc::new(" + input.name() + ")")
+            .collect(java.util.stream.Collectors.joining(", "));
+    source.append("\n#[wasm_bindgen]\n");
+    source
+        .append("pub ")
+        .append(completion.isAsync() ? "async " : "")
+        .append("fn ")
+        .append(functionName)
+        .append("(")
+        .append(parameters)
+        .append(") -> String {\n");
+    source
+        .append("    let output = ")
+        .append(module)
+        .append("::call(")
+        .append(module)
+        .append("::")
+        .append(Naming.capitalize(target.vajram().name()))
+        .append("Inputs { ")
+        .append(fields)
+        .append(" })")
+        .append(completion.isAsync() ? ".await" : "")
+        .append(";\n");
+    switch (target.vajram().outputType().name()) {
+      case "string" -> source.append("    (*output).clone()\n");
+      case "int" -> source.append("    output.to_string()\n");
+      case "void" -> source.append("    String::new()\n");
+      default -> throw new IllegalStateException("Validated unsupported WASM output");
+    }
+    source.append("}\n");
   }
 
   private static void emitCase(StringBuilder source, VajramFile target, Completion completion) {
@@ -179,6 +263,17 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
   private static boolean isCliInput(InputDecl input) {
     return !input.type().errable()
         && ("string".equals(input.type().name()) || "int".equals(input.type().name()));
+  }
+
+  private static boolean isWasmOutput(VajramFile file) {
+    return !file.vajram().outputType().errable()
+        && ("string".equals(file.vajram().outputType().name())
+            || "int".equals(file.vajram().outputType().name())
+            || "void".equals(file.vajram().outputType().name()));
+  }
+
+  private static String wasmInputType(InputDecl input) {
+    return "string".equals(input.type().name()) ? "String" : "i64";
   }
 
   private static String cliInputValue(InputDecl input, String vajramName) {

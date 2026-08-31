@@ -1,0 +1,39 @@
+plugins {
+    id 'application'
+}
+
+description = 'Self-contained localhost WebAssembly playground for vajram-lang'
+
+dependencies {
+    implementation project(':vajram:vajram-lang:vajram-lang-rust-compiler')
+}
+
+application {
+    mainClass = 'com.flipkart.krystal.vajram.lang.playground.PlaygroundServer'
+}
+
+java {
+    modularity.inferModulePath = false
+}
+
+extraJavaModuleInfo {
+    failOnMissingModuleInfo = false
+}
+
+tasks.named('processResources') {
+    from(layout.projectDirectory.file('../VAJRAM_LANGUAGE_SPEC.md'))
+}
+
+tasks.register('playgroundZip', Zip) {
+    group = 'distribution'
+    description = 'Packages the standalone localhost playground distribution.'
+    dependsOn tasks.named('installDist')
+    archiveBaseName = 'vajram-lang-wasm-playground'
+    archiveVersion = project.version
+    from(layout.buildDirectory.dir("install/${project.name}"))
+    into(project.name)
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

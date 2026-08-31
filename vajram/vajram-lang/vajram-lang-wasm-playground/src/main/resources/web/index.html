@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vajram WASM Playground</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <main class="shell">
+    <aside class="nav">
+      <p class="eyebrow">KRYSTAL / LOCAL</p>
+      <h1>Vajram<br>WASM Lab</h1>
+      <nav aria-label="Playground sections">
+        <button class="nav-item active" data-section="home">Home</button>
+        <button class="nav-item" data-section="spec">Language Spec</button>
+        <button class="nav-item" data-section="playground">Playground</button>
+        <button class="nav-item" data-section="samples">Samples</button>
+      </nav>
+      <p class="server-status" id="server-status">Checking local compiler...</p>
+    </aside>
+    <section class="content">
+      <section id="home" class="section active">
+        <p class="eyebrow">BROWSER EXECUTION</p>
+        <h2>Compile locally.<br>Run in the browser.</h2>
+        <p class="lede">This local server only creates WebAssembly artifacts. Your Vajram executes in this browser, with no server-side graph execution.</p>
+        <div class="cards">
+          <article><strong>1</strong><h3>Author</h3><p>Work across multiple `.vajram` files in the tabbed editor.</p></article>
+          <article><strong>2</strong><h3>Compile</h3><p>Cargo creates a `wasm32-unknown-unknown` module in a disposable local workspace.</p></article>
+          <article><strong>3</strong><h3>Invoke</h3><p>The generated public dispatcher is imported and invoked by this page.</p></article>
+        </div>
+        <p class="note">Requires Rust, the <code>wasm32-unknown-unknown</code> target, and <code>wasm-bindgen</code>.</p>
+      </section>
+      <section id="spec" class="section"><article class="markdown" id="specification">Loading language specification...</article></section>
+      <section id="samples" class="section">
+        <p class="eyebrow">COPYABLE EXAMPLES</p><h2>Start from a graph shape.</h2>
+        <div id="sample-list" class="sample-list"></div>
+      </section>
+      <section id="playground" class="section">
+        <header class="play-header"><div><p class="eyebrow">WASM TARGET</p><h2>Playground</h2></div><button id="compile">Compile</button></header>
+        <div class="editor-toolbar"><button id="new-file">+ File</button><button id="copy-file">Copy</button><span id="tabs" class="tabs"></span></div>
+        <div id="editor" class="editor-shell" aria-label="Vajram source editor"></div>
+        <section class="diagnostics" id="diagnostics" aria-live="polite"></section>
+        <section class="output-pane">
+          <div class="output-heading"><h3>Execution</h3><span id="state">Ready</span><button id="run" disabled>Run</button></div>
+          <label>Public Vajram <select id="vajram-select" disabled><option>Compile source first</option></select></label>
+          <label>Inputs (JSON object)<textarea id="inputs" spellcheck="false">{}</textarea></label>
+          <pre id="output">Compile an `outsideProcess public` Vajram to run it in the browser.</pre>
+        </section>
+      </section>
+    </section>
+  </main>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/simple.min.js"></script>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

@@ -26,7 +26,7 @@ class VajramSamplesTest {
 
   @Test
   void helloWorld2() throws Exception {
-    assertEquals("Hello again from vajram-lang!", runVajram("helloWorld2"));
+    assertEquals("Hello again from vajram-lang, Mister!", runVajram("helloWorld2", "--name", "Mister"));
   }
 
   @Test
