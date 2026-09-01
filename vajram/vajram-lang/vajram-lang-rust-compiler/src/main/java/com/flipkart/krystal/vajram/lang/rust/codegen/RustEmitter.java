@@ -82,8 +82,8 @@ public final class RustEmitter {
     ExprEmitter exprs = new ExprEmitter(inputNames, injectionNames, boundaryTypeNames, fieldNames);
 
     emitInputsStruct(w, vajram, typeName);
-    boolean hasDeps = !vajram.injections().isEmpty();
-    if (hasDeps) {
+    boolean hasInjections = !vajram.injections().isEmpty();
+    if (hasInjections) {
       emitDepsStruct(w, vajram, typeName);
     }
 
@@ -110,15 +110,22 @@ public final class RustEmitter {
     String signature =
         "pub "
             + (completion.isAsync() ? "async " : "")
-            + "fn call(inputs: Vec<"
+            + "fn call<I: crate::vajram_rt::Injector + 'static>(inputs: Vec<"
             + typeName
             + "Inputs"
             + ">"
-            + (hasDeps ? ", deps: Rc<" + typeName + "Deps>" : "")
+            + ", context: Rc<crate::vajram_rt::AppContext<I>>"
             + ") -> "
             + batchReturnType;
     w.openBlock(signature);
-    String perInputCall = "call_one(inputs" + (hasDeps ? ", Rc::clone(&deps)" : "") + ")";
+    if (hasInjections) {
+      w.line("let deps = " + typeName + "_Injections::instance(Rc::clone(&context));");
+    }
+    String perInputCall =
+        "call_one(inputs"
+            + (hasInjections ? ", Rc::clone(&deps)" : "")
+            + ", Rc::clone(&context)"
+            + ")";
     if (completion.isAsync()) {
       String joiner = vajram.outputType().errable() ? "try_join_all" : "join_all";
       w.line(
@@ -140,21 +147,22 @@ public final class RustEmitter {
     String singleSignature =
         ""
             + (completion.isAsync() ? "async " : "")
-            + "fn call_one(inputs: "
+            + "fn call_one<I: crate::vajram_rt::Injector + 'static>(inputs: "
             + typeName
             + "Inputs"
-            + (hasDeps ? ", deps: Rc<" + typeName + "Deps>" : "")
+            + (hasInjections ? ", deps: Rc<" + typeName + "_Injections>" : "")
+            + ", context: Rc<crate::vajram_rt::AppContext<I>>"
             + ") -> "
             + returnType;
     w.openBlock(singleSignature);
     for (ComputedFacet facet : vajram.computedFacets()) {
       if (facet instanceof Field field) {
-        w.append(emitField(field, exprs, completion, hasDeps));
+        w.append(emitField(field, exprs, completion, hasInjections));
       } else if (facet instanceof Dependency dependency) {
-        w.append(emitDependency(dependency, hasDeps, completion, exprs));
+        w.append(emitDependency(dependency, hasInjections, completion, exprs));
       }
     }
-    w.append(emitOutputBlock(vajram.outputBlock(), hasDeps, completion, exprs));
+    w.append(emitOutputBlock(vajram.outputBlock(), hasInjections, completion, exprs));
     w.closeBlock();
   }
 
@@ -168,12 +176,61 @@ public final class RustEmitter {
   }
 
   private void emitDepsStruct(RustWriter w, VajramDef vajram, String typeName) {
-    w.openBlock("pub struct " + typeName + "Deps");
+    String injectionsType = typeName + "_Injections";
+    w.openBlock("pub struct " + injectionsType);
     for (InjectionDecl injection : vajram.injections()) {
-      w.line("pub " + injection.name() + ": " + TypeMapper.toRustOwnedType(injection.type()) + ",");
+      w.line(
+          "pub "
+              + injection.name()
+              + ": Rc<dyn crate::vajram_rt::Provider<"
+              + TypeMapper.toRustValueType(injection.type())
+              + ">>,");
     }
     w.closeBlock();
+    w.openBlock("impl " + injectionsType);
+    w.openBlock(
+        "fn new<I: crate::vajram_rt::Injector + 'static>(context: Rc<crate::vajram_rt::AppContext<I>>) -> Rc<Self>");
+    w.line("Rc::new(Self {");
+    for (InjectionDecl injection : vajram.injections()) {
+      w.line(
+          injection.name()
+              + ": context.injector()."
+              + "get_provider"
+              + "(crate::vajram_rt::InjectionKey::new(\""
+              + fullyQualifiedInjectionTypeName(injection)
+              + "\", &["
+              + injection.annotations().stream()
+                  .map(annotation -> "\"" + annotation + "\"")
+                  .collect(Collectors.joining(", "))
+              + "]), Rc::clone(&context)),");
+    }
+    w.line("})");
+    w.closeBlock();
+    w.openBlock(
+        "fn instance<I: crate::vajram_rt::Injector + 'static>(context: Rc<crate::vajram_rt::AppContext<I>>) -> Rc<Self>");
+    w.line(
+        "context.injection_instance(\""
+            + injectionsType
+            + "\", || Self::new(Rc::clone(&context)))");
+    w.closeBlock();
+    w.closeBlock();
     w.blank();
+  }
+
+  private String fullyQualifiedInjectionTypeName(InjectionDecl injection) {
+    String typeName = injection.type().name();
+    if (TypeMapper.isPrimitive(typeName)) {
+      return typeName;
+    }
+    return currentFile.imports().stream()
+        .filter(imported -> imported.vajramName().equals(typeName))
+        .map(imported -> String.join(".", imported.sourceSegments()) + "." + typeName)
+        .findFirst()
+        .orElseGet(
+            () ->
+                "ConsoleWriter".equals(typeName)
+                    ? "lang.process.ConsoleWriter"
+                    : String.join(".", currentFile.packageSegments()) + "." + typeName);
   }
 
   private String emitOutputBlock(
@@ -195,7 +252,7 @@ public final class RustEmitter {
           .append(String.join(" ", block.annotations()))
           .append("` clause - not modeled by this compiler yet\n");
     }
-    String call = emitInvocationCall(invocation, false, hasDeps, completion, exprs);
+    String call = emitInvocationCall(invocation, false, completion, exprs);
     if (invocation.errableFallback() != null) {
       call = call + "." + exprs.emit(invocation.errableFallback());
     }
@@ -207,30 +264,33 @@ public final class RustEmitter {
       Dependency dependency, boolean hasDeps, Completion completion, ExprEmitter exprs) {
     if (completion.isAsync()) {
       String name = dependency.name();
-      ExprEmitter taskExprs = exprs.inTaskScope("_" + name + "_inputs", "_" + name + "_deps");
+      ExprEmitter taskExprs =
+          exprs.inTaskScope("_" + name + "_inputs", "_" + name + "_deps", "_" + name + "_context");
       return "let _"
           + name
           + "_inputs = inputs.clone();\n"
           + (hasDeps ? "let _" + name + "_deps = Rc::clone(&deps);\n" : "")
+          + "let _"
+          + name
+          + "_context = Rc::clone(&context);\n"
           + "let "
           + name
           + " = crate::vajram_rt::spawn_local_shared(async move { "
-          + emitInvocationCall(
-              dependency.invocation(), dependency.fanout(), hasDeps, completion, taskExprs)
+          + emitInvocationCall(dependency.invocation(), dependency.fanout(), completion, taskExprs)
           + " });\n";
     }
     return "let "
         + dependency.name()
         + " = "
-        + emitInvocationCall(
-            dependency.invocation(), dependency.fanout(), hasDeps, completion, exprs)
+        + emitInvocationCall(dependency.invocation(), dependency.fanout(), completion, exprs)
         + ";";
   }
 
   private String emitField(Field field, ExprEmitter exprs, Completion completion, boolean hasDeps) {
     if (completion.isAsync()) {
       String name = field.name();
-      ExprEmitter taskExprs = exprs.inTaskScope("_" + name + "_inputs", "_" + name + "_deps");
+      ExprEmitter taskExprs =
+          exprs.inTaskScope("_" + name + "_inputs", "_" + name + "_deps", "_" + name + "_context");
       return "let _"
           + name
           + "_inputs = inputs.clone();\n"
@@ -247,14 +307,13 @@ public final class RustEmitter {
   private String emitInvocationCall(
       DependencyInvocation invocation,
       boolean declaredFanout,
-      boolean hasDeps,
       Completion callerCompletion,
       ExprEmitter exprs) {
     VajramFile callee = symbolTable.lookup(invocation.vajramName());
     String calleeModule = calleeModule(callee, invocation.vajramName());
     String calleeType = Naming.capitalize(invocation.vajramName());
     boolean calleeErrable = isCalleeErrable(invocation.vajramName());
-    String depsArg = hasDeps ? ", Rc::clone(&" + exprs.depsRoot() + ")" : "";
+    String contextArg = ", Rc::clone(&" + exprs.contextRoot() + ")";
 
     var systemVajram = SystemVajram.lookup(invocation.vajramName(), currentFile.imports());
     if (systemVajram.isPresent()) {
@@ -281,7 +340,7 @@ public final class RustEmitter {
               + "Inputs { "
               + fields
               + " }]"
-              + depsArg
+              + contextArg
               + ")";
       return singleBatchResult(asyncInvocation(call, invocation.vajramName(), calleeErrable));
     }
@@ -316,7 +375,7 @@ public final class RustEmitter {
             + ": Rc::new(it)"
             + restFields
             + " }).collect()"
-            + depsArg
+            + contextArg
             + ")";
     return asyncInvocation(fanoutCall, invocation.vajramName(), calleeErrable);
   }
@@ -443,5 +502,66 @@ public final class RustEmitter {
   private boolean isCalleeErrable(String vajramName) {
     VajramFile callee = symbolTable.lookup(vajramName);
     return callee != null && callee.vajram().outputType().errable();
+  }
+
+  private List<VajramFile> diRequirements(VajramFile file) {
+    return filesRequiringDi(file, new java.util.LinkedHashSet<>()).stream().toList();
+  }
+
+  private Set<VajramFile> filesRequiringDi(VajramFile file, Set<VajramFile> visited) {
+    if (!visited.add(file)) {
+      return Set.of();
+    }
+    Set<VajramFile> requirements = new java.util.LinkedHashSet<>();
+    if (!file.vajram().injections().isEmpty()) {
+      requirements.add(file);
+    }
+    for (ComputedFacet facet : file.vajram().computedFacets()) {
+      if (facet instanceof Dependency dependency) {
+        addInvocationRequirements(dependency.invocation(), requirements, visited);
+      }
+    }
+    if (file.vajram().outputBlock() instanceof OutputBlock.Delegate delegate) {
+      addInvocationRequirements(delegate.invocation(), requirements, visited);
+    }
+    return requirements;
+  }
+
+  private void addInvocationRequirements(
+      DependencyInvocation invocation, Set<VajramFile> requirements, Set<VajramFile> visited) {
+    VajramFile callee = symbolTable.lookup(invocation.vajramName());
+    if (callee != null) {
+      requirements.addAll(filesRequiringDi(callee, visited));
+    }
+  }
+
+  private boolean requiresDi(@Nullable VajramFile file) {
+    return file != null && !diRequirements(file).isEmpty();
+  }
+
+  private String diGeneric(List<VajramFile> requirements) {
+    if (requirements.isEmpty()) {
+      return "";
+    }
+    String bounds = requirements.stream().map(this::diTrait).collect(Collectors.joining(" + "));
+    return "<DI: " + bounds + " + 'static>";
+  }
+
+  private String diParameter(List<VajramFile> requirements) {
+    return requirements.isEmpty() ? "" : ", di: Rc<DI>";
+  }
+
+  private String diTrait(VajramFile file) {
+    String traitName = Naming.capitalize(file.vajram().name()) + "Di";
+    if (file == currentFile) {
+      return traitName;
+    }
+    return calleeModule(file, file.vajram().name()) + "::" + traitName;
+  }
+
+  private static boolean hasDefaultDi(List<VajramFile> requirements) {
+    return requirements.stream()
+        .flatMap(file -> file.vajram().injections().stream())
+        .allMatch(injection -> "ConsoleWriter".equals(injection.type().name()));
   }
 }

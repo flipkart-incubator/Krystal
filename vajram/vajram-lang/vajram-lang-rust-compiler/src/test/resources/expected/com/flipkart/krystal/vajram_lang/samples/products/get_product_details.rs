@@ -11,29 +11,54 @@ pub mod get_product_details {
         pub productId: Rc<String>,
     }
 
-    pub struct GetProductDetailsDeps {
-        pub productDB: Rc<ProductDB>,
+    pub struct GetProductDetails_Injections {
+        pub productDB: Rc<dyn crate::vajram_rt::Provider<ProductDB>>,
+    }
+    impl GetProductDetails_Injections {
+        fn new<I: crate::vajram_rt::Injector + 'static>(
+            context: Rc<crate::vajram_rt::AppContext<I>>,
+        ) -> Rc<Self> {
+            Rc::new(Self {
+                productDB: context.injector().get_provider(
+                    crate::vajram_rt::InjectionKey::new(
+                        "com.flipkart.krystal.vajram_lang.samples.products.ProductDB",
+                        &[],
+                    ),
+                    Rc::clone(&context),
+                ),
+            })
+        }
+        fn instance<I: crate::vajram_rt::Injector + 'static>(
+            context: Rc<crate::vajram_rt::AppContext<I>>,
+        ) -> Rc<Self> {
+            context.injection_instance("GetProductDetails_Injections", || {
+                Self::new(Rc::clone(&context))
+            })
+        }
     }
 
-    pub async fn call(
+    pub async fn call<I: crate::vajram_rt::Injector + 'static>(
         inputs: Vec<GetProductDetailsInputs>,
-        deps: Rc<GetProductDetailsDeps>,
+        context: Rc<crate::vajram_rt::AppContext<I>>,
     ) -> Result<Vec<Rc<ProductDetails>>, VajramError> {
+        let deps = GetProductDetails_Injections::instance(Rc::clone(&context));
         futures::future::try_join_all(
             inputs
                 .into_iter()
-                .map(|inputs| call_one(inputs, Rc::clone(&deps))),
+                .map(|inputs| call_one(inputs, Rc::clone(&deps), Rc::clone(&context))),
         )
         .await?
     }
 
-    async fn call_one(
+    async fn call_one<I: crate::vajram_rt::Injector + 'static>(
         inputs: GetProductDetailsInputs,
-        deps: Rc<GetProductDetailsDeps>,
+        deps: Rc<GetProductDetails_Injections>,
+        context: Rc<crate::vajram_rt::AppContext<I>>,
     ) -> Result<Rc<ProductDetails>, VajramError> {
         let productIds = batch_key.batches().map(|it| it.productId()).toList();
         let productDetails = deps
             .productDB
+            .get()
             .getProductDetails(productIds)
             .await
             .stream()

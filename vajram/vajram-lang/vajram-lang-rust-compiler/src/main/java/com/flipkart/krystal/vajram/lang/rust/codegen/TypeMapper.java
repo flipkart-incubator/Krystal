@@ -13,19 +13,30 @@ import java.util.Map;
 public final class TypeMapper {
 
   private static final Map<String, String> PRIMITIVES =
-      Map.of(
-          "string", "String",
-          "int", "i64",
-          "float", "f32",
-          "double", "f64",
-          "bool", "bool",
-          "void", "()");
+      Map.ofEntries(
+          Map.entry("string", "String"),
+          Map.entry("bool", "bool"),
+          Map.entry("void", "()"),
+          Map.entry("int", "i64"),
+          Map.entry("int32", "i32"),
+          Map.entry("int64", "i64"),
+          Map.entry("int128", "i128"),
+          Map.entry("uint32", "u32"),
+          Map.entry("uint64", "u64"),
+          Map.entry("uint128", "u128"),
+          Map.entry("float", "f32"),
+          Map.entry("float32", "f32"),
+          Map.entry("float64", "f64"),
+          Map.entry("double", "f64"));
 
   private static final Map<String, String> COLLECTIONS =
       Map.of(
           "Set", "std::collections::HashSet",
           "List", "Vec",
           "Map", "std::collections::HashMap");
+
+  private static final Map<String, String> RUNTIME_TYPES =
+      Map.of("ConsoleWriter", "dyn crate::vajram_rt::ConsoleWriter");
 
   private TypeMapper() {}
 
@@ -58,6 +69,10 @@ public final class TypeMapper {
     return type.errable() ? "Result<" + ownedValue + ", VajramError>" : ownedValue;
   }
 
+  public static boolean isPrimitive(String name) {
+    return PRIMITIVES.containsKey(name);
+  }
+
   private static String baseName(TypeRef type) {
     if (type.grouperType()) {
       // `#mod`/`#batch` used as a type refers to the facet-group key type; the compiler doesn't
@@ -69,7 +84,11 @@ public final class TypeMapper {
       return primitive;
     }
     String collection = COLLECTIONS.get(type.name());
-    return collection != null ? collection : type.name();
+    if (collection != null) {
+      return collection;
+    }
+    String runtimeType = RUNTIME_TYPES.get(type.name());
+    return runtimeType != null ? runtimeType : type.name();
   }
 
   private static String capitalize(String s) {

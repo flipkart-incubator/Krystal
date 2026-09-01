@@ -12,18 +12,31 @@ pub mod say_hello_to_friends {
         pub numberOfFriends: Rc<Result<i64, VajramError>>,
     }
 
-    pub async fn call(inputs: Vec<SayHelloToFriendsInputs>) -> Vec<Rc<String>> {
-        futures::future::join_all(inputs.into_iter().map(|inputs| call_one(inputs))).await
+    pub async fn call<I: crate::vajram_rt::Injector + 'static>(
+        inputs: Vec<SayHelloToFriendsInputs>,
+        context: Rc<crate::vajram_rt::AppContext<I>>,
+    ) -> Vec<Rc<String>> {
+        futures::future::join_all(
+            inputs
+                .into_iter()
+                .map(|inputs| call_one(inputs, Rc::clone(&context))),
+        )
+        .await
     }
 
-    async fn call_one(inputs: SayHelloToFriendsInputs) -> Rc<String> {
+    async fn call_one<I: crate::vajram_rt::Injector + 'static>(
+        inputs: SayHelloToFriendsInputs,
+        context: Rc<crate::vajram_rt::AppContext<I>>,
+    ) -> Rc<String> {
         let _userInfo_inputs = inputs.clone();
+        let _userInfo_context = Rc::clone(&context);
         let userInfo = crate::vajram_rt::spawn_local_shared(async move {
-            (crate::com::flipkart::krystal::vajram_lang::samples::friends::get_user_info::get_user_info::call(vec![crate::com::flipkart::krystal::vajram_lang::samples::friends::get_user_info::get_user_info::GetUserInfoInputs { userId: Rc::clone(&_userInfo_inputs.userId) }]).await).into_iter().next().expect("single-item Vajram batch")
+            (crate::com::flipkart::krystal::vajram_lang::samples::friends::get_user_info::get_user_info::call(vec![crate::com::flipkart::krystal::vajram_lang::samples::friends::get_user_info::get_user_info::GetUserInfoInputs { userId: Rc::clone(&_userInfo_inputs.userId) }], Rc::clone(&_userInfo_context)).await).into_iter().next().expect("single-item Vajram batch")
         });
         let _friendsInfos_inputs = inputs.clone();
+        let _friendsInfos_context = Rc::clone(&context);
         let friendsInfos = crate::vajram_rt::spawn_local_shared(async move {
-            crate::com::flipkart::krystal::vajram_lang::samples::friends::get_user_info::get_user_info::call(IntStream.range(0, _friendsInfos_inputs.numberOfFriends.default(2)).mapToObj(i, getFriendId(i)).into_iter().map(|it| crate::com::flipkart::krystal::vajram_lang::samples::friends::get_user_info::get_user_info::GetUserInfoInputs { userId: Rc::new(it) }).collect()).await
+            crate::com::flipkart::krystal::vajram_lang::samples::friends::get_user_info::get_user_info::call(IntStream.range(0, _friendsInfos_inputs.numberOfFriends.default(2)).mapToObj(i, getFriendId(i)).into_iter().map(|it| crate::com::flipkart::krystal::vajram_lang::samples::friends::get_user_info::get_user_info::GetUserInfoInputs { userId: Rc::new(it) }).collect(), Rc::clone(&_friendsInfos_context)).await
         });
         Rc::new(
             "Hello Friends of %s ! %s".to_string().formatted(

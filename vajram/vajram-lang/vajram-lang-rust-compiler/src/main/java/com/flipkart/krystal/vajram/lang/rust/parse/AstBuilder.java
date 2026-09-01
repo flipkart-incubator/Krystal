@@ -46,6 +46,7 @@ import com.flipkart.krystal.vajram.lang.rust.ast.OutputBlock;
 import com.flipkart.krystal.vajram.lang.rust.ast.SourceLocation;
 import com.flipkart.krystal.vajram.lang.rust.ast.Statement;
 import com.flipkart.krystal.vajram.lang.rust.ast.TypeRef;
+import com.flipkart.krystal.vajram.lang.rust.ast.VajramAnnotation;
 import com.flipkart.krystal.vajram.lang.rust.ast.VajramDef;
 import com.flipkart.krystal.vajram.lang.rust.ast.VajramFile;
 import com.flipkart.krystal.vajram.lang.rust.diag.Diagnostics;
@@ -150,6 +151,7 @@ public final class AstBuilder {
         ctx.computed_facet().stream().map(this::toComputedFacet).toList();
     return new VajramDef(
         ctx.ID().getText(),
+        ctx.annotation().stream().map(this::toVajramAnnotation).toList(),
         inputs,
         outputType,
         callers,
@@ -157,6 +159,19 @@ public final class AstBuilder {
         computedFacets,
         toOutputBlock(ctx.output_block()),
         loc(ctx));
+  }
+
+  private VajramAnnotation toVajramAnnotation(AnnotationContext ctx) {
+    if (ctx.annotation_param_list() == null) {
+      return new VajramAnnotation(ctx.ID().getText(), List.of());
+    }
+    return new VajramAnnotation(
+        ctx.ID().getText(),
+        ctx.annotation_param_list().annotation_arg().stream()
+            .map(
+                argument ->
+                    new VajramAnnotation.Argument(argument.ID().getText(), toExpr(argument.expr())))
+            .toList());
   }
 
   private ComputedFacet toComputedFacet(Computed_facetContext ctx) {

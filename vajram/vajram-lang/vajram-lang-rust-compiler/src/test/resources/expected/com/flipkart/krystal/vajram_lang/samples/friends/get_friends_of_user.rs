@@ -11,28 +11,47 @@ pub mod get_friends_of_user {
         pub userId: Rc<String>,
     }
 
-    pub struct GetFriendsOfUserDeps {
-        pub svcClient: Rc<FriendServiceClient>,
+    pub struct GetFriendsOfUser_Injections {
+        pub svcClient: Rc<dyn crate::vajram_rt::Provider<FriendServiceClient>>,
+    }
+    impl GetFriendsOfUser_Injections {
+        fn new<I: crate::vajram_rt::Injector + 'static>(
+            context: Rc<crate::vajram_rt::AppContext<I>>,
+        ) -> Rc<Self> {
+            Rc::new(Self {
+            svcClient: context.injector().get_provider(crate::vajram_rt::InjectionKey::new("com.flipkart.krystal.vajram_lang.samples.friendsservice.FriendServiceClient", &[]), Rc::clone(&context)),
+            })
+        }
+        fn instance<I: crate::vajram_rt::Injector + 'static>(
+            context: Rc<crate::vajram_rt::AppContext<I>>,
+        ) -> Rc<Self> {
+            context.injection_instance("GetFriendsOfUser_Injections", || {
+                Self::new(Rc::clone(&context))
+            })
+        }
     }
 
-    pub async fn call(
+    pub async fn call<I: crate::vajram_rt::Injector + 'static>(
         inputs: Vec<GetFriendsOfUserInputs>,
-        deps: Rc<GetFriendsOfUserDeps>,
+        context: Rc<crate::vajram_rt::AppContext<I>>,
     ) -> Vec<Rc<std::collections::HashSet<String>>> {
+        let deps = GetFriendsOfUser_Injections::instance(Rc::clone(&context));
         futures::future::join_all(
             inputs
                 .into_iter()
-                .map(|inputs| call_one(inputs, Rc::clone(&deps))),
+                .map(|inputs| call_one(inputs, Rc::clone(&deps), Rc::clone(&context))),
         )
         .await
     }
 
-    async fn call_one(
+    async fn call_one<I: crate::vajram_rt::Injector + 'static>(
         inputs: GetFriendsOfUserInputs,
-        deps: Rc<GetFriendsOfUserDeps>,
+        deps: Rc<GetFriendsOfUser_Injections>,
+        context: Rc<crate::vajram_rt::AppContext<I>>,
     ) -> Rc<std::collections::HashSet<String>> {
         Rc::new(
             deps.svcClient
+                .get()
                 .getFriendsIds(FriendServiceRequest::new(
                     ModKey::new().stream().map(|it| it.userId()).toSet(),
                 ))

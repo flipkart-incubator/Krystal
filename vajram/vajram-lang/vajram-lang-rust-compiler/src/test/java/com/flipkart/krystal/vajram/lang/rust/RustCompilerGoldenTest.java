@@ -80,8 +80,8 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("hello.vajram"),
         """
         package smoke;
-        vajram hello() out string {
-          { "hello" }
+        vajram hello(int32 count) out string inject (ConsoleWriter console) {
+          { console.println("hello"); "hello" }
         }
         """);
 
@@ -162,11 +162,10 @@ class RustCompilerGoldenTest {
     assertThat(main).contains(".get(\"input\")");
     assertThat(main).contains("\"first\" =>");
     assertThat(main).contains("\"second\" =>");
-    assertThat(main).contains("external::first::first::call(vec![");
+    assertThat(main).contains("external::first::first::call(");
     assertThat(main).contains("FirstInputs {");
-    assertThat(main)
-        .contains(
-            "external::second::second::call(vec![external::second::second::SecondInputs {}])");
+    assertThat(main).contains("AppContext::new");
+    assertThat(main).contains("external::second::second::call(").contains("SecondInputs {}");
   }
 
   @Test
@@ -225,6 +224,32 @@ class RustCompilerGoldenTest {
   }
 
   @Test
+  void preservesProviderAnnotationOnVajram() {
+    var diagnostics = new com.flipkart.krystal.vajram.lang.rust.diag.Diagnostics();
+    var parsed =
+        new com.flipkart.krystal.vajram.lang.rust.parse.AstBuilder(diagnostics)
+            .build(
+                Path.of("provider.vajram"),
+                """
+                package test;
+                `provider(forScope = REQUEST) vajram database() out Database { { new Database() } }
+                """);
+
+    assertThat(diagnostics.hasErrors()).as(diagnostics.all().toString()).isFalse();
+    var annotation = parsed.orElseThrow().vajram().annotations().get(0);
+    assertThat(annotation.name()).isEqualTo("provider");
+    assertThat(annotation.arguments())
+        .singleElement()
+        .satisfies(
+            argument -> {
+              assertThat(argument.name()).isEqualTo("forScope");
+              assertThat(argument.value())
+                  .isEqualTo(
+                      new com.flipkart.krystal.vajram.lang.rust.ast.Expr.VarUse("REQUEST", false));
+            });
+  }
+
+  @Test
   void parsesOrderedFieldsAndArrayExpressions() {
     var diagnostics = new com.flipkart.krystal.vajram.lang.rust.diag.Diagnostics();
     var parsed =
@@ -248,6 +273,58 @@ class RustCompilerGoldenTest {
         (com.flipkart.krystal.vajram.lang.rust.ast.Field) file.vajram().computedFacets().get(0);
     assertThat(field.value())
         .isInstanceOf(com.flipkart.krystal.vajram.lang.rust.ast.Expr.Array.class);
+  }
+
+  @Test
+  void createsSingletonProvidersAndPropagatesContextForInjections(@TempDir Path tempDir)
+      throws IOException {
+    Path sourceDir = tempDir.resolve("vajram");
+    Path outDir = tempDir.resolve("out");
+    Files.createDirectories(sourceDir);
+    Files.writeString(
+        sourceDir.resolve("injected.vajram"),
+        """
+        package injections;
+        vajram leaf() out string inject (string prefix) {
+          { prefix }
+        }
+        vajram parent() out string {
+          string value = leaf();
+          { value }
+        }
+        """);
+
+    assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
+    String generated = Files.readString(outDir.resolve("injections/injected.rs"));
+    assertThat(generated)
+        .contains("pub struct Leaf_Injections")
+        .contains("prefix: Rc<dyn crate::vajram_rt::Provider<String>>")
+        .contains("InjectionKey::new(\"string\", &[])")
+        .contains("fn instance<I: crate::vajram_rt::Injector + 'static>")
+        .contains("let deps = Leaf_Injections::instance(Rc::clone(&context));")
+        .contains("::leaf::call(")
+        .contains("Rc::clone(&context)")
+        .contains("deps.prefix.get()");
+  }
+
+  @Test
+  void usesFullyQualifiedImportedTypeForInjectionKeys(@TempDir Path tempDir) throws IOException {
+    Path sourceDir = tempDir.resolve("vajram");
+    Path outDir = tempDir.resolve("out");
+    Files.createDirectories(sourceDir);
+    Files.writeString(
+        sourceDir.resolve("injected.vajram"),
+        """
+        package injections;
+        import type ConsoleWriter from lang.process;
+        vajram logger() out void inject (ConsoleWriter writer) {
+          { writer.println("hello") }
+        }
+        """);
+
+    assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
+    assertThat(Files.readString(outDir.resolve("injections/injected.rs")))
+        .contains("InjectionKey::new(\"lang.process.ConsoleWriter\", &[])");
   }
 
   @Test
@@ -314,7 +391,7 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("reader.vajram"),
         """
         package system;
-        import vajram readFileAsString from lang.FileSystem;
+        import vajram readFileAsString from lang.fileSystem;
         vajram reader(string filePath) out string~ permit callers public {
           string content = readFileAsString(path = filePath);
           out ~ { content }
@@ -337,7 +414,7 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("reader.vajram"),
         """
         package system;
-        import vajram readFileAsString from lang.FileSystem;
+        import vajram readFileAsString from lang.fileSystem;
         vajram reader(string filePath) out string {
           out readFileAsString(path = filePath);
         }
@@ -470,7 +547,7 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("join.vajram"),
         """
         package system;
-        import vajram concatStrings from lang.Strings;
+        import vajram concatStrings from lang.strings;
         vajram join(string separator) out string {
           string values = ["one", "two"];
           out concatStrings(strings = values; separator = separator);
@@ -510,7 +587,7 @@ class RustCompilerGoldenTest {
     assertThat(Files.readString(outDir.resolve("combined/combined.rs")))
         .contains("pub struct LeafInputs")
         .contains("pub struct CallerInputs")
-        .contains("crate::combined::combined::leaf::call(vec![")
+        .contains("crate::combined::combined::leaf::call(")
         .contains("crate::combined::combined::leaf::LeafInputs {}")
         .contains("single-item Vajram batch");
   }

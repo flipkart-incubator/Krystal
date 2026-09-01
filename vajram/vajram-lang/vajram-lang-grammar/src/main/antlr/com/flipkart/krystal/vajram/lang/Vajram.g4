@@ -10,11 +10,11 @@ program
 
 vajram_file: package_decl imports_decl* vajram_def+ ;
 
-vajram_def : VAJRAM ID inputs_decl output_decl injection_decl? permissions? '{' (computed_facet)* output_block'}' ;
+vajram_def : annotation* VAJRAM ID inputs_decl output_decl injection_decl? permissions? '{' (computed_facet)* output_block'}' ;
 
 package_decl: annotation* PACKAGE qualifiedName SEMI;
 
-imports_decl: IMPORT VAJRAM ID FROM qualifiedName ('.' '*')? SEMI;
+imports_decl: IMPORT (VAJRAM | TYPE) ID FROM qualifiedName ('.' '*')? SEMI;
 
 qualifiedName: ID ('.' ID)*;
 
@@ -52,7 +52,11 @@ injections_list : ( annotation* injection_id_declaration COMMA)* ( annotation* i
 
 grouper: SPECIAL ID;
 
-annotation: '`' ID param_list?;
+annotation: '`' ID annotation_param_list?;
+
+annotation_param_list : '(' ((annotation_arg COMMA)* annotation_arg COMMA?)? ')' ;
+
+annotation_arg: ID EQ expr;
 
 permissions: PERMIT callers?;
 
@@ -96,8 +100,8 @@ expr: var_use
     | expr PLUS expr
     | expr IS_EQ expr
     | func_chain
-    | expr accessor ID
     | expr accessor func_chain
+    | expr accessor ID
     | expr '::' ID
     | SPECIAL? func_call_in_output_logic
     | NEW SPECIAL? func_call_in_output_logic
@@ -130,6 +134,7 @@ RCURLY : '}' ;
 SPECIAL : '#' ;
 
 VAJRAM : 'vajram' ;
+TYPE : 'type' ;
 NEW : 'new' ;
 IN: 'in';
 OUT: 'out';

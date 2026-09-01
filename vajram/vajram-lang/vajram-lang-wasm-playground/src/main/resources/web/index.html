@@ -13,10 +13,10 @@
       <p class="eyebrow">KRYSTAL / LOCAL</p>
       <h1>Vajram<br>WASM Lab</h1>
       <nav aria-label="Playground sections">
-        <button class="nav-item active" data-section="home">Home</button>
-        <button class="nav-item" data-section="spec">Language Spec</button>
-        <button class="nav-item" data-section="playground">Playground</button>
-        <button class="nav-item" data-section="samples">Samples</button>
+        <button class="nav-item active" data-section="home" title="Alt+Shift+H" aria-keyshortcuts="Alt+Shift+H">Home</button>
+        <button class="nav-item" data-section="spec" title="Alt+Shift+L" aria-keyshortcuts="Alt+Shift+L">Language Spec</button>
+        <button class="nav-item" data-section="playground" title="Alt+Shift+P" aria-keyshortcuts="Alt+Shift+P">Playground</button>
+        <button class="nav-item" data-section="samples" title="Alt+Shift+S" aria-keyshortcuts="Alt+Shift+S">Samples</button>
       </nav>
       <p class="server-status" id="server-status">Checking local compiler...</p>
     </aside>
@@ -44,12 +44,12 @@
         </div>
       </section>
       <section id="playground" class="section">
-        <header class="play-header"><div><p class="eyebrow">WASM TARGET</p><h2>Playground</h2></div><button id="compile">Compile</button></header>
+        <header class="play-header"><div><p class="eyebrow">WASM TARGET</p><h2>Playground</h2></div><button id="compile" title="Alt+Shift+C" aria-keyshortcuts="Alt+Shift+C">Compile</button></header>
         <div class="editor-toolbar"><span id="tabs" class="tabs"></span><span class="toolbar-actions"><button id="new-file">+ File</button><button id="copy-file">Copy</button></span></div>
         <div id="editor" class="editor-shell" aria-label="Vajram source editor"></div>
         <section class="diagnostics" id="diagnostics" aria-live="polite"></section>
         <section class="output-pane">
-          <div class="output-heading"><h3>Execution</h3><span id="state">Ready</span><button id="run" disabled>Run</button></div>
+          <div class="output-heading"><h3>Execution</h3><span id="state">Ready</span><button id="run" disabled title="Alt+Shift+R" aria-keyshortcuts="Alt+Shift+R">Run</button></div>
           <label>Public Vajram <select id="vajram-select" disabled><option>Compile source first</option></select></label>
           <div id="input-form" class="input-form"></div>
           <pre id="output">Compile an `outsideProcess public` Vajram to run it in the browser.</pre>
@@ -57,6 +57,19 @@
       </section>
     </section>
   </main>
+  <button id="help" class="help-button" title="Alt+Shift+?" aria-keyshortcuts="Alt+Shift+?">Help: Alt+Shift+?</button>
+  <dialog id="shortcut-help" class="shortcut-help" aria-labelledby="shortcut-help-title">
+    <header><h2 id="shortcut-help-title">Keyboard shortcuts</h2><button id="close-help" aria-label="Close keyboard shortcuts">Close</button></header>
+    <dl>
+      <dt>Alt+Shift+H</dt><dd>Go to Home</dd>
+      <dt>Alt+Shift+L</dt><dd>Go to Language Spec</dd>
+      <dt>Alt+Shift+P</dt><dd>Go to Playground</dd>
+      <dt>Alt+Shift+S</dt><dd>Go to Samples</dd>
+      <dt>Alt+Shift+C</dt><dd>Compile in Playground</dd>
+      <dt>Alt+Shift+R</dt><dd>Run in Playground</dd>
+      <dt>Alt+Shift+?</dt><dd>Show this help</dd>
+    </dl>
+  </dialog>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/simple.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>

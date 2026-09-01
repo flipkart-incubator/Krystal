@@ -9,18 +9,43 @@ pub mod hello_world {
     #[derive(Debug, Clone)]
     pub struct HelloWorldInputs {}
 
-    pub struct HelloWorldDeps {
-        pub writer: Rc<ConsoleWriter>,
+    pub struct HelloWorld_Injections {
+        pub writer: Rc<dyn crate::vajram_rt::Provider<dyn crate::vajram_rt::ConsoleWriter>>,
+    }
+    impl HelloWorld_Injections {
+        fn new<I: crate::vajram_rt::Injector + 'static>(
+            context: Rc<crate::vajram_rt::AppContext<I>>,
+        ) -> Rc<Self> {
+            Rc::new(Self {
+                writer: context.injector().get_provider(
+                    crate::vajram_rt::InjectionKey::new("lang.process.ConsoleWriter", &[]),
+                    Rc::clone(&context),
+                ),
+            })
+        }
+        fn instance<I: crate::vajram_rt::Injector + 'static>(
+            context: Rc<crate::vajram_rt::AppContext<I>>,
+        ) -> Rc<Self> {
+            context.injection_instance("HelloWorld_Injections", || Self::new(Rc::clone(&context)))
+        }
     }
 
-    pub fn call(inputs: Vec<HelloWorldInputs>, deps: Rc<HelloWorldDeps>) -> Vec<Rc<()>> {
+    pub fn call<I: crate::vajram_rt::Injector + 'static>(
+        inputs: Vec<HelloWorldInputs>,
+        context: Rc<crate::vajram_rt::AppContext<I>>,
+    ) -> Vec<Rc<()>> {
+        let deps = HelloWorld_Injections::instance(Rc::clone(&context));
         inputs
             .into_iter()
-            .map(|inputs| call_one(inputs, Rc::clone(&deps)))
+            .map(|inputs| call_one(inputs, Rc::clone(&deps), Rc::clone(&context)))
             .collect()
     }
 
-    fn call_one(inputs: HelloWorldInputs, deps: Rc<HelloWorldDeps>) -> Rc<()> {
-        Rc::new(deps.writer.println("Hello! World.".to_string()))
+    fn call_one<I: crate::vajram_rt::Injector + 'static>(
+        inputs: HelloWorldInputs,
+        deps: Rc<HelloWorld_Injections>,
+        context: Rc<crate::vajram_rt::AppContext<I>>,
+    ) -> Rc<()> {
+        Rc::new(deps.writer.get().println("Hello! World.".to_string()))
     }
 }

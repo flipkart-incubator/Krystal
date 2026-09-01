@@ -82,7 +82,7 @@ class VajramSamplesTest {
     command[0] = "target/debug/vajram-lang-samples";
     command[1] = vajram;
     System.arraycopy(arguments, 0, command, 2, arguments.length);
-    return run(command).trim();
+    return run(command).trim().lines().reduce((ignored, last) -> last).orElse("");
   }
 
   private static String run(String... command) throws Exception {

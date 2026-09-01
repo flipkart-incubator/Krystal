@@ -11,7 +11,7 @@ let publicVajrams = [];
 let selectedSample;
 let playgroundOpened = false;
 const $ = (selector) => document.querySelector(selector);
-const KEYWORDS = 'callers dependers else err false for from if import in inject loop new nil out package permit public skip switch this throw true vajram void yield';
+const KEYWORDS = 'callers dependers else err false for from if import in inject loop new nil out package permit public skip switch this throw true vajram void yield type';
 const DATATYPES = 'bool true false float32 float64 int128 int32 int64 string uint128 uint32 uint64';
 CodeMirror.defineSimpleMode('vajram', {
   start: [
@@ -92,6 +92,7 @@ function diagnostics(items) {
   }));
 }
 function setState(text) { $('#state').textContent = text; }
+function showShortcutHelp() { $('#shortcut-help').showModal(); }
 function selectVajram() {
   const select = $('#vajram-select');
   select.disabled = publicVajrams.length === 0;
@@ -153,6 +154,9 @@ async function compile() {
 }
 async function run() {
   if (!artifact) { return; }
+  const output = [];
+  const previousOutputEmitter = globalThis.emit_vajram_output;
+  globalThis.emit_vajram_output = (message) => { output.push(String(message)); };
   try {
     setState('Running in browser...');
     const selected = publicVajrams.find((item) => item.function === $('#vajram-select').value);
@@ -161,9 +165,17 @@ async function run() {
     await module.default();
     const values = selected.inputs.map((input) => input.type === 'i64' ? BigInt(valuesByName[input.name]) : String(valuesByName[input.name] ?? ''));
     const result = await module[selected.function](...values);
-    $('#output').textContent = typeof result === 'bigint' ? result.toString() : result;
+    output.push(typeof result === 'bigint' ? result.toString() : result);
+    $('#output').textContent = output.join('\n');
     setState('Browser execution complete');
   } catch (error) { $('#output').textContent = error.stack || error.message; setState('Runtime error'); }
+  finally {
+    if (previousOutputEmitter === undefined) {
+      delete globalThis.emit_vajram_output;
+    } else {
+      globalThis.emit_vajram_output = previousOutputEmitter;
+    }
+  }
 }
 
 document.querySelectorAll('.nav-item').forEach((button) => button.onclick = async () => {
@@ -175,6 +187,37 @@ $('#copy-file').onclick = async () => { await navigator.clipboard.writeText(edit
 $('#compile').onclick = compile;
 $('#run').onclick = run;
 $('#vajram-select').onchange = renderInputs;
+$('#help').onclick = showShortcutHelp;
+$('#close-help').onclick = () => $('#shortcut-help').close();
+document.addEventListener('keydown', (event) => {
+  if (!event.altKey || !event.shiftKey || event.ctrlKey || event.metaKey) { return; }
+  if (event.code === 'Slash') {
+    event.preventDefault();
+    if (!$('#shortcut-help').open) { showShortcutHelp(); }
+    return;
+  }
+  const sectionByCode = {KeyH: 'home', KeyL: 'spec', KeyP: 'playground', KeyS: 'samples'};
+  const section = sectionByCode[event.code];
+  if (section) {
+    event.preventDefault();
+    activateSection(section);
+    if (section === 'spec' && !$('#specification').dataset.loaded) {
+      fetch('/api/spec').then((response) => response.text()).then((source) => {
+        $('#specification').innerHTML = marked.parse(source);
+        $('#specification').dataset.loaded = 'true';
+      });
+    }
+    return;
+  }
+  if (!$('#playground').classList.contains('active')) { return; }
+  if (event.code === 'KeyC') {
+    event.preventDefault();
+    compile();
+  } else if (event.code === 'KeyR' && !$('#run').disabled) {
+    event.preventDefault();
+    run();
+  }
+});
 editor.on('change', () => { if (!updatingEditor) { invalidateCompilation(); } });
 renderTabs();
 fetch('/api/health').then((response) => { $('#server-status').textContent = response.ok ? 'Local compiler ready' : 'Local compiler unavailable'; }).catch(() => { $('#server-status').textContent = 'Local compiler unavailable'; });

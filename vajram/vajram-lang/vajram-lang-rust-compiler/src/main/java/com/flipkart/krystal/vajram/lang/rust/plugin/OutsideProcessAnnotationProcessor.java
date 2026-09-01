@@ -1,7 +1,9 @@
 package com.flipkart.krystal.vajram.lang.rust.plugin;
 
 import com.flipkart.krystal.vajram.lang.rust.ast.Completion;
+import com.flipkart.krystal.vajram.lang.rust.ast.Dependency;
 import com.flipkart.krystal.vajram.lang.rust.ast.InputDecl;
+import com.flipkart.krystal.vajram.lang.rust.ast.OutputBlock;
 import com.flipkart.krystal.vajram.lang.rust.ast.VajramFile;
 import com.flipkart.krystal.vajram.lang.rust.cli.RustCompilerMain.Target;
 import com.flipkart.krystal.vajram.lang.rust.codegen.Naming;
@@ -44,14 +46,14 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
                 })
             .filter(
                 file -> {
-                  if (file.vajram().injections().isEmpty()
+                  if (supportsOutsideProcessDi(file, context)
                       && file.vajram().inputs().stream()
                           .allMatch(OutsideProcessAnnotationProcessor::isCliInput)) {
                     return true;
                   }
                   context.error(
                       file.vajram().location(),
-                      "`outsideProcess supports string and int inputs but no injections or errable inputs");
+                      "`outsideProcess supports string and int inputs plus ConsoleWriter injections or errable inputs");
                   return false;
                 })
             .sorted(java.util.Comparator.comparing(file -> file.vajram().name()))
@@ -99,7 +101,7 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
     source.append("    }\n");
     source.append("    match vajram.as_str() {\n");
     for (VajramFile target : targets) {
-      emitCase(source, target, context.symbolTable().completionOf(target));
+      emitCase(source, target, context.symbolTable().completionOf(target), context);
     }
     source.append("        _ => {\n");
     source.append("            eprintln!(\"unknown outside-process Vajram: {}\", vajram);\n");
@@ -133,12 +135,16 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
     source.append("use wasm_bindgen::prelude::*;\n");
     source.append("use std::rc::Rc;\n");
     for (VajramFile target : wasmTargets) {
-      emitWasmCase(source, target, context.symbolTable().completionOf(target));
+      emitWasmCase(source, target, context.symbolTable().completionOf(target), context);
     }
     context.writeFile(Path.of("wasm_dispatch.rs"), source.toString());
   }
 
-  private static void emitWasmCase(StringBuilder source, VajramFile target, Completion completion) {
+  private static void emitWasmCase(
+      StringBuilder source,
+      VajramFile target,
+      Completion completion,
+      AnnotationProcessorContext context) {
     String module =
         target.packageSegments().stream()
                 .map(Naming::toSnakeCase)
@@ -176,7 +182,9 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
         .append(Naming.capitalize(target.vajram().name()))
         .append("Inputs { ")
         .append(fields)
-        .append(" }])")
+        .append(" }]")
+        .append(defaultDiArgument(target, module, context))
+        .append(")")
         .append(completion.isAsync() ? ".await" : "")
         .append(".into_iter().next().expect(\"outside-process Vajram result\");\n");
     switch (target.vajram().outputType().name()) {
@@ -188,7 +196,11 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
     source.append("}\n");
   }
 
-  private static void emitCase(StringBuilder source, VajramFile target, Completion completion) {
+  private static void emitCase(
+      StringBuilder source,
+      VajramFile target,
+      Completion completion,
+      AnnotationProcessorContext context) {
     String modulePath =
         target.packageSegments().stream()
             .map(Naming::toSnakeCase)
@@ -241,6 +253,7 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
           .append(module)
           .append("::call(vec![")
           .append(inputs)
+          .append(defaultDiArgument(target, module, context))
           .append(").into_iter().next().expect(\"outside-process Vajram result\");\n");
       source.append("            println!(\"{}\", output);\n");
     } else {
@@ -253,6 +266,7 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
           .append(module)
           .append("::call(vec![")
           .append(inputs)
+          .append(defaultDiArgument(target, module, context))
           .append(").await.into_iter().next().expect(\"outside-process Vajram result\");\n");
       source.append("                println!(\"{}\", output);\n");
       source.append("            });\n");
@@ -262,7 +276,47 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
 
   private static boolean isCliInput(InputDecl input) {
     return !input.type().errable()
-        && ("string".equals(input.type().name()) || "int".equals(input.type().name()));
+        && ("string".equals(input.type().name()) || rustNumericType(input.type().name()) != null);
+  }
+
+  private static boolean supportsOutsideProcessDi(
+      VajramFile file, AnnotationProcessorContext context) {
+    return requiredInjections(file, context, new java.util.HashSet<>()).stream()
+        .allMatch(injection -> "ConsoleWriter".equals(injection.type().name()));
+  }
+
+  private static List<com.flipkart.krystal.vajram.lang.rust.ast.InjectionDecl> requiredInjections(
+      VajramFile file, AnnotationProcessorContext context, Set<VajramFile> visited) {
+    if (!visited.add(file)) {
+      return List.of();
+    }
+    List<com.flipkart.krystal.vajram.lang.rust.ast.InjectionDecl> injections =
+        new java.util.ArrayList<>(file.vajram().injections());
+    for (var facet : file.vajram().computedFacets()) {
+      if (facet instanceof Dependency dependency) {
+        addInjections(dependency.invocation().vajramName(), context, visited, injections);
+      }
+    }
+    if (file.vajram().outputBlock() instanceof OutputBlock.Delegate delegate) {
+      addInjections(delegate.invocation().vajramName(), context, visited, injections);
+    }
+    return injections;
+  }
+
+  private static void addInjections(
+      String vajramName,
+      AnnotationProcessorContext context,
+      Set<VajramFile> visited,
+      List<com.flipkart.krystal.vajram.lang.rust.ast.InjectionDecl> injections) {
+    VajramFile callee = context.symbolTable().lookup(vajramName);
+    if (callee != null) {
+      injections.addAll(requiredInjections(callee, context, visited));
+    }
+  }
+
+  private static String defaultDiArgument(
+      VajramFile target, String module, AnnotationProcessorContext context) {
+    return ", std::rc::Rc::new(crate::vajram_rt::AppContext::new(std::rc::Rc::new(crate::vajram_rt::DefaultInjector::default())))";
   }
 
   private static boolean isWasmOutput(VajramFile file) {
@@ -288,12 +342,30 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
     if ("string".equals(input.type().name())) {
       return "std::rc::Rc::new(" + argument + ".to_owned())";
     }
+    String numericType = rustNumericType(input.type().name());
     return "std::rc::Rc::new("
         + argument
-        + ".parse::<i64>().unwrap_or_else(|_| { eprintln!(\"invalid int input "
+        + ".parse::<"
+        + numericType
+        + ">().unwrap_or_else(|_| { eprintln!(\"invalid numeric input "
         + input.name()
         + " for "
         + vajramName
         + "\"); std::process::exit(2) }))";
+  }
+
+  private static String rustNumericType(String type) {
+    return switch (type) {
+      case "int" -> "i64";
+      case "int32" -> "i32";
+      case "int64" -> "i64";
+      case "int128" -> "i128";
+      case "uint32" -> "u32";
+      case "uint64" -> "u64";
+      case "uint128" -> "u128";
+      case "float", "float32" -> "f32";
+      case "float64", "double" -> "f64";
+      default -> null;
+    };
   }
 }

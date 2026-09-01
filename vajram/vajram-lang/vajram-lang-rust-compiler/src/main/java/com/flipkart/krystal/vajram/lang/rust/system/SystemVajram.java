@@ -8,8 +8,8 @@ import java.util.Optional;
 
 /** Built-in Vajrams supplied by the runtime rather than by a source file. */
 public enum SystemVajram {
-  READ_FILE_AS_STRING("readFileAsString", List.of("lang", "FileSystem"), Completion.SOON),
-  CONCAT_STRINGS("concatStrings", List.of("lang", "Strings"), Completion.NOW);
+  READ_FILE_AS_STRING("readFileAsString", List.of("lang", "fileSystem"), Completion.SOON),
+  CONCAT_STRINGS("concatStrings", List.of("lang", "strings"), Completion.NOW);
 
   private final String name;
   private final List<String> sourceSegments;

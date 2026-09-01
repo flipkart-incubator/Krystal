@@ -11,14 +11,26 @@ pub mod compute_average_price {
         pub collection: Rc<ProductCollection>,
     }
 
-    pub async fn call(inputs: Vec<ComputeAveragePriceInputs>) -> Result<Vec<Rc<f64>>, VajramError> {
-        futures::future::try_join_all(inputs.into_iter().map(|inputs| call_one(inputs))).await?
+    pub async fn call<I: crate::vajram_rt::Injector + 'static>(
+        inputs: Vec<ComputeAveragePriceInputs>,
+        context: Rc<crate::vajram_rt::AppContext<I>>,
+    ) -> Result<Vec<Rc<f64>>, VajramError> {
+        futures::future::try_join_all(
+            inputs
+                .into_iter()
+                .map(|inputs| call_one(inputs, Rc::clone(&context))),
+        )
+        .await?
     }
 
-    async fn call_one(inputs: ComputeAveragePriceInputs) -> Result<Rc<f64>, VajramError> {
+    async fn call_one<I: crate::vajram_rt::Injector + 'static>(
+        inputs: ComputeAveragePriceInputs,
+        context: Rc<crate::vajram_rt::AppContext<I>>,
+    ) -> Result<Rc<f64>, VajramError> {
         let _productDetails_inputs = inputs.clone();
+        let _productDetails_context = Rc::clone(&context);
         let productDetails = crate::vajram_rt::spawn_local_shared(async move {
-            crate::com::flipkart::krystal::vajram_lang::samples::products::get_product_details::get_product_details::call(_productDetails_inputs.collection.productIds().into_iter().map(|it| crate::com::flipkart::krystal::vajram_lang::samples::products::get_product_details::get_product_details::GetProductDetailsInputs { productId: Rc::new(it) }).collect()).await
+            crate::com::flipkart::krystal::vajram_lang::samples::products::get_product_details::get_product_details::call(_productDetails_inputs.collection.productIds().into_iter().map(|it| crate::com::flipkart::krystal::vajram_lang::samples::products::get_product_details::get_product_details::GetProductDetailsInputs { productId: Rc::new(it) }).collect(), Rc::clone(&_productDetails_context)).await
         });
         Rc::new(
             productDetails
