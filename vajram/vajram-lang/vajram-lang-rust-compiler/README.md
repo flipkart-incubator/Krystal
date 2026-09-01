@@ -1,6 +1,6 @@
 # Vajram-Lang Rust Compiler
 
-This module compiles `.vajram` sources into Rust modules. It is intentionally a structural compiler: it validates Vajram references and caller access, and translates Vajram-specific operators, while application method calls and application types remain Rust API contracts.
+This module compiles `.vajram` sources into Rust modules, producing one `.rs` file per source file. It is intentionally a structural compiler: it validates Vajram references and caller access, and translates Vajram-specific operators, while application method calls and application types remain Rust API contracts.
 
 ## Completion And Blocking
 
@@ -14,7 +14,7 @@ Dependency invocation is eager but dependency consumption is deferred. When a de
 
 The compiler must lower computed facets as a dependency graph, not as a linear sequence of blocking statements. Every facet task captures and awaits only the source facets it uses. This lets independent work progress concurrently: if `c1` consumes `d1` and `c2` consumes `d2`, both `d1` and `d2` start immediately, and either `c1` or `c2` may complete first. Source declaration order must not cause `c2` to wait for `d1` merely because `c1` appears first.
 
-Generated crates using deferred facets execute tasks inside a Tokio `LocalSet`; `Rc` values are deliberately single-threaded and cannot be sent to a multi-thread worker.
+Native generated crates using deferred facets execute tasks inside a Tokio `LocalSet`. WASM generated crates schedule eager task work with `wasm_bindgen_futures::spawn_local` and share results through `futures::future::Shared`; `Rc` values are deliberately single-threaded and cannot be sent to a multi-thread worker.
 
 ## Ownership And Resolver Lifetimes
 
@@ -38,7 +38,7 @@ Async dependency continuations own only `Rc` handles. Resolver-local values are 
 - `?` errable method syntax is served by the bundled `Errable` trait.
 - Method chains and lambda bodies are structurally transliterated; unsupported Java-library idioms are intentionally left for Rust type checking to diagnose.
 
-The compiler copies `vajram_rt` into the generated crate. Add Tokio with the `rt` feature when generated code contains async Vajrams.
+The compiler copies `vajram_rt` into the generated crate. Native crates with async Vajrams need Tokio with the `rt` feature. WASM crates with async Vajrams need `futures`, `wasm-bindgen`, and `wasm-bindgen-futures`; Tokio is not used by the WASM prelude.
 
 ## Annotation Processors
 
@@ -52,10 +52,21 @@ vajram hello() out string permit callers `outsideProcess public {
 }
 ```
 
-It writes `main.rs`, which accepts a Vajram name as its first argument, dispatches to a matching public annotated Vajram, and prints the output. External-process dispatch accepts positional `string` and `int` inputs after the Vajram name. It blocks at the process boundary with a current-thread runtime while awaiting a soon or later Vajram; Vajram execution itself remains non-blocking.
+It writes `main.rs`, which accepts a Vajram name as its first argument, dispatches to a matching public annotated Vajram, and prints the output. External-process dispatch accepts `string` and `int` inputs as named flags after the Vajram name, such as `hello --name Alice --count 3`. It blocks at the process boundary with a current-thread runtime while awaiting a soon or later Vajram; Vajram execution itself remains non-blocking.
 
 ## System Vajrams
 
-`readFileAsString(path = filePath)` is a built-in soon Vajram. It is available without a source definition, reads the supplied path asynchronously with Tokio, decodes UTF-8, and returns a `string`. File I/O failures terminate the non-errable invocation with an error. Generated Cargo crates using it require Tokio's `fs` feature.
+`readFileAsString(path = filePath)` is a built-in soon Vajram for the native target. It is available without a source definition, reads the supplied path asynchronously with Tokio, decodes UTF-8, and returns a `string`. File I/O failures terminate the non-errable invocation with an error. Generated Cargo crates using it require Tokio's `fs` feature. WASM compilation rejects it with a source-positioned diagnostic until the browser File Picker SDK capability is bundled; it never lowers to Tokio filesystem I/O on WASM.
 
 `concatStrings(strings = values, separator = separator)` is a built-in now Vajram imported from `lang.Strings`. It joins an ordered array of strings into one `string`, inserting `separator` between adjacent values.
+
+## Vajram Injection
+1. For every vajram which has injections defined, a struct called <Vajram>_Injections is generated where each injectable value has one corresponding field in the struct - the field type is `Provider<T>` where T is the type of the injection facet.
+2. All rust functions compiled from vajrams accept a Context object. This Context object has an "Injector" instance which can retrieved by calling `injector()` method on the Context object.
+3. The first time that a vajram is invoked, a single instance of the <Vajram>_Injections struct is created - the new function of the struct accepts the context.
+4. The constructor of the struct invokes the `getProvider(injectionKey, context)` method passing an injection key as parameter.
+5. The injection key is of the struct type `InjectionKey` which is a system type. It contains a type and a list of selector annotations. The `getProvider` method returns a `Provider` that returns the value of the instance. The `<Vajram>_Injections` instance is a singleton and stores this provider for the lifetime of the application and is used by the vajram for every invocation
+6. The Injector exposes a `getProvider(injectionKey, context)` method which returns a re-usable threadsafe `Provider<T>` instance on which vajrams call `get()` to get the injected instance. The Injector works in this way:
+   1. It has mappings from injector keys to a provider which invokes the `provider vajram corresponding to that injector key declared by the developer. This map is populated by code generated by the compiler which has discovered all providers at compile time.
+   2. When the `getProvider` method is called, the injector creates a new `Provider` that decorates the developer written provider - it creates a new instance of the appropriate scope from the Context and looks up a map if an instance already exists for that scope instance. If it does, it returns that, else it calls the developer written provider
+7. The vajram accesses the injection values by calling get() on the providers in the `_Injections` struct

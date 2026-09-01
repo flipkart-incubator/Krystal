@@ -1,0 +1,35 @@
+package vajram_samples.hello;
+
+import vajram headFile from vajram_samples.HeadFile;
+import vajram concatStrings from lang.strings;
+
+// Run:
+// ./gradlew :vajram:vajram-lang:vajram-lang-samples:runVajram
+//    -Pvajram=multiHeadFiles -PvajramArgs="--separator | --filePath /path/to/file"
+vajram multiHeadFiles(string separator, string filePath)
+    out string
+    permit callers `outsideProcess public {
+  string* files = [filePath, filePath];
+
+  string* filesContent = *headFile(numChars = 100; filePath =* files);
+
+  string concatStrings = concatStrings(strings = filesContent; separator = separator);
+
+  {
+    concatStrings
+  }
+}
+
+// Run:
+// ./gradlew :vajram:vajram-lang:vajram-lang-samples:runVajram -Pvajram=twoHeadFiles
+//    -PvajramArgs="--separator | --filePath1 /path/to/first --filePath2 /path/to/second"
+vajram twoHeadFiles(string separator, string filePath1, string filePath2)
+    out string
+    permit callers `outsideProcess public {
+  string filesContent1 = headFile(numChars = 100; filePath = filePath1);
+  string filesContent2 = headFile(numChars = 100; filePath = filePath2);
+
+  out concatStrings(
+      strings = [filesContent1, filesContent2];
+      separator = separator);
+}

@@ -34,6 +34,7 @@ include 'vajram:vajram-java-sdk'
 include 'vajram:vajram-lang:vajram-lang-grammar'
 include 'vajram:vajram-lang:vajram-lang-rust-compiler'
 include 'vajram:vajram-lang:vajram-lang-samples'
+include 'vajram:vajram-lang:vajram-lang-wasm-playground'
 
 /* ******** VAJRAM EXTENSIONS : START *********** */
 
@@ -115,4 +116,3 @@ include 'lattice:samples:mcp:quarkus:mcp-quarkus-lattice-sample'
 include 'lattice:samples:a2a:quarkus:a2a-quarkus-lattice-sample'
 include 'lattice:samples:rest:fory:quarkus:rest-fory-quarkus-lattice-sample'
 /* ******** SAMPLE PROJECTS : END *********** */
-

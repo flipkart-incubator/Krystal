@@ -21,10 +21,10 @@ Select another public `outsideProcess` Vajram with `-Pvajram`:
 ./gradlew :vajram:vajram-lang:vajram-lang-samples:runVajram -Pvajram=helloWorld2
 ```
 
-Pass positional Vajram inputs with `-PvajramArgs`:
+Pass named Vajram inputs with `-PvajramArgs`:
 
 ```bash
-./gradlew :vajram:vajram-lang:vajram-lang-samples:runVajram -Pvajram=headFile -PvajramArgs="5 /path/to/file"
+./gradlew :vajram:vajram-lang:vajram-lang-samples:runVajram -Pvajram=headFile -PvajramArgs="--numChars 5 --filePath /path/to/file"
 ```
 
 Cargo integration tests under `src/test/rust/tests` invoke every sample Vajram through the generated CLI. Run them with:

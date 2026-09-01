@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.lang.rust.plugin;
 
 import com.flipkart.krystal.vajram.lang.rust.ast.VajramFile;
+import com.flipkart.krystal.vajram.lang.rust.cli.RustCompilerMain.Target;
 import com.flipkart.krystal.vajram.lang.rust.diag.Diagnostics;
 import com.flipkart.krystal.vajram.lang.rust.resolve.SymbolTable;
 import java.io.IOException;
@@ -15,7 +16,11 @@ public final class AnnotationProcessorRunner {
   private AnnotationProcessorRunner() {}
 
   public static void process(
-      List<VajramFile> files, Path outputDir, SymbolTable symbolTable, Diagnostics diagnostics)
+      List<VajramFile> files,
+      Path outputDir,
+      SymbolTable symbolTable,
+      Diagnostics diagnostics,
+      Target target)
       throws IOException {
     List<VajramAnnotationProcessor> processors = new ArrayList<>();
     processors.add(new OutsideProcessAnnotationProcessor());
@@ -36,11 +41,12 @@ public final class AnnotationProcessorRunner {
         for (VajramFile file : matching) {
           processor.process(
               new AnnotationProcessorContext(
-                  List.of(file), files, outputDir, symbolTable, diagnostics));
+                  List.of(file), files, outputDir, symbolTable, diagnostics, target));
         }
       } else {
         processor.process(
-            new AnnotationProcessorContext(matching, files, outputDir, symbolTable, diagnostics));
+            new AnnotationProcessorContext(
+                matching, files, outputDir, symbolTable, diagnostics, target));
       }
     }
   }

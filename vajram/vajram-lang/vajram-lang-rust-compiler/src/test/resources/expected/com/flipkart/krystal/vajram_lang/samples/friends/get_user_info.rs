@@ -3,15 +3,56 @@
 use crate::vajram_rt::{Errable, VajramError};
 use std::rc::Rc;
 
-#[derive(Debug, Clone)]
-pub struct GetUserInfoInputs {
-    pub userId: Rc<String>,
-}
+pub mod get_user_info {
+    use super::*;
 
-pub struct GetUserInfoDeps {
-    pub svcClient: Rc<UserServiceClient>,
-}
+    #[derive(Debug, Clone)]
+    pub struct GetUserInfoInputs {
+        pub userId: Rc<String>,
+    }
 
-pub async fn call(inputs: GetUserInfoInputs, deps: Rc<GetUserInfoDeps>) -> Rc<UserInfo> {
-    Rc::clone(&inputs.userId)
+    pub struct GetUserInfo_Injections {
+        pub svcClient: Rc<dyn crate::vajram_rt::Provider<UserServiceClient>>,
+    }
+    impl GetUserInfo_Injections {
+        fn new<I: crate::vajram_rt::Injector + 'static>(
+            context: Rc<crate::vajram_rt::AppContext<I>>,
+        ) -> Rc<Self> {
+            Rc::new(Self {
+                svcClient: context.injector().get_provider(
+                    crate::vajram_rt::InjectionKey::new(
+                        "com.flipkart.userservice.models.UserServiceClient",
+                        &[],
+                    ),
+                    Rc::clone(&context),
+                ),
+            })
+        }
+        fn instance<I: crate::vajram_rt::Injector + 'static>(
+            context: Rc<crate::vajram_rt::AppContext<I>>,
+        ) -> Rc<Self> {
+            context.injection_instance("GetUserInfo_Injections", || Self::new(Rc::clone(&context)))
+        }
+    }
+
+    pub async fn call<I: crate::vajram_rt::Injector + 'static>(
+        inputs: Vec<GetUserInfoInputs>,
+        context: Rc<crate::vajram_rt::AppContext<I>>,
+    ) -> Vec<Rc<UserInfo>> {
+        let deps = GetUserInfo_Injections::instance(Rc::clone(&context));
+        futures::future::join_all(
+            inputs
+                .into_iter()
+                .map(|inputs| call_one(inputs, Rc::clone(&deps), Rc::clone(&context))),
+        )
+        .await
+    }
+
+    async fn call_one<I: crate::vajram_rt::Injector + 'static>(
+        inputs: GetUserInfoInputs,
+        deps: Rc<GetUserInfo_Injections>,
+        context: Rc<crate::vajram_rt::AppContext<I>>,
+    ) -> Rc<UserInfo> {
+        Rc::clone(&inputs.userId)
+    }
 }

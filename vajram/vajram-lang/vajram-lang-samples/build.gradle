@@ -11,14 +11,14 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:6.0.1'
 }
 
-def vajramSourceDir = layout.projectDirectory.dir('src/main/vajram_samples')
+def vajramSourceDir = layout.projectDirectory.dir('src/main/vajram')
 def generatedRustDir = layout.buildDirectory.dir('generated-rust')
 def selectedVajram = providers.gradleProperty('vajram').orElse('helloWorld')
 def selectedVajramArgs = providers.gradleProperty('vajramArgs').map { it.split('\\s+') as List }.orElse([])
 
 tasks.register('compileVajram', JavaExec) {
     group = 'build'
-    description = 'Compiles src/main/vajram_samples into build/generated-rust/src.'
+    description = 'Compiles src/main/vajram into build/generated-rust/src.'
     classpath = sourceSets.main.runtimeClasspath
     mainClass = 'com.flipkart.krystal.vajram.lang.rust.cli.RustCompilerMain'
     args '--src', vajramSourceDir.asFile.absolutePath, '--out', generatedRustDir.get().dir('src').asFile.absolutePath
@@ -40,7 +40,7 @@ tasks.register('prepareRustSample', Copy) {
 
 tasks.register('runVajram', Exec) {
     group = 'application'
-    description = 'Compiles Vajrams and runs -Pvajram=<Vajram name> with optional -PvajramArgs="...".'
+    description = 'Compiles Vajrams and runs -Pvajram=<Vajram name> with optional named -PvajramArgs="--input value".'
     dependsOn tasks.named('prepareRustSample')
     workingDir generatedRustDir
     def command = ['cargo', 'run', '--', selectedVajram.get()]

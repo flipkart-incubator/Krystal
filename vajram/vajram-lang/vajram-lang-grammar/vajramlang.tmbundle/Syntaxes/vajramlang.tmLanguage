@@ -1,0 +1,15 @@
+{ scopeName = 'source.vajramlang';
+  fileTypes = ();
+  patterns = (
+    { name = 'keyword.control.vajramlang';
+      match = '\b(callers|dependers|else|err|false|for|from|if|import|in|inject|loop|new|nil|out|package|permit|public|skip|switch|this|throw|true|vajram|void|yield)\b';
+    },
+    { name = 'constant.language.vajramlang';
+      match = '\b(bool|true|false|float32|float64|int128|int32|int64|string|uint128|uint32|uint64)\b';
+    },
+    { name = 'string.quoted.double.vajramlang';
+      begin = '\"';
+      end = '\"';
+    },
+  );
+}

@@ -6,7 +6,7 @@ fn runs_head_file() {
     std::fs::write(&path, "hello cafe").expect("test file should be written");
     support::assert_vajram_output(
         "headFile",
-        &["5", path.to_str().expect("temporary path must be UTF-8")],
+        &["--numChars", "5", "--filePath", path.to_str().expect("temporary path must be UTF-8")],
         "hello",
     );
     let _ = std::fs::remove_file(&path);

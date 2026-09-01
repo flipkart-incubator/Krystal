@@ -46,6 +46,7 @@ import com.flipkart.krystal.vajram.lang.rust.ast.OutputBlock;
 import com.flipkart.krystal.vajram.lang.rust.ast.SourceLocation;
 import com.flipkart.krystal.vajram.lang.rust.ast.Statement;
 import com.flipkart.krystal.vajram.lang.rust.ast.TypeRef;
+import com.flipkart.krystal.vajram.lang.rust.ast.VajramAnnotation;
 import com.flipkart.krystal.vajram.lang.rust.ast.VajramDef;
 import com.flipkart.krystal.vajram.lang.rust.ast.VajramFile;
 import com.flipkart.krystal.vajram.lang.rust.diag.Diagnostics;
@@ -150,6 +151,7 @@ public final class AstBuilder {
         ctx.computed_facet().stream().map(this::toComputedFacet).toList();
     return new VajramDef(
         ctx.ID().getText(),
+        ctx.annotation().stream().map(this::toVajramAnnotation).toList(),
         inputs,
         outputType,
         callers,
@@ -157,6 +159,19 @@ public final class AstBuilder {
         computedFacets,
         toOutputBlock(ctx.output_block()),
         loc(ctx));
+  }
+
+  private VajramAnnotation toVajramAnnotation(AnnotationContext ctx) {
+    if (ctx.annotation_param_list() == null) {
+      return new VajramAnnotation(ctx.ID().getText(), List.of());
+    }
+    return new VajramAnnotation(
+        ctx.ID().getText(),
+        ctx.annotation_param_list().annotation_arg().stream()
+            .map(
+                argument ->
+                    new VajramAnnotation.Argument(argument.ID().getText(), toExpr(argument.expr())))
+            .toList());
   }
 
   private ComputedFacet toComputedFacet(Computed_facetContext ctx) {
@@ -355,6 +370,9 @@ public final class AstBuilder {
     if (ctx.assign_stat() != null) {
       var stat = ctx.assign_stat();
       Input_id_declarationContext decl = stat.input_id_declaration();
+      if (decl == null) {
+        return new Statement.Expression(toExpr(stat.expr()));
+      }
       return new Statement.Assign(
           InputDecl.of(toErrableType(decl.errableType()), decl.ID().getText()),
           toExpr(stat.expr()));
@@ -440,8 +458,8 @@ public final class AstBuilder {
       if (ctx.STRING_LITERAL() != null) {
         return new Expr.StringLiteral(ctx.STRING_LITERAL().getText());
       }
-      if (ctx.INT_LITERAL() != null) {
-        return new Expr.IntLiteral(ctx.INT_LITERAL().getText());
+      if (ctx.NUM_LITERAL() != null) {
+        return new Expr.IntLiteral(ctx.NUM_LITERAL().getText());
       }
       if (ctx.bool() != null) {
         return new Expr.BoolLiteral(ctx.bool().TRUE() != null);

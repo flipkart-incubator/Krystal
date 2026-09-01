@@ -5,6 +5,7 @@ import com.flipkart.krystal.vajram.lang.rust.ast.Expr;
 import com.flipkart.krystal.vajram.lang.rust.ast.Statement;
 import com.flipkart.krystal.vajram.lang.rust.ast.YieldStatement;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
@@ -39,41 +40,78 @@ public final class ExprEmitter {
 
   private final Set<String> inputNames;
   private final Set<String> injectionNames;
+  private final Map<String, String> boundaryTypeNames;
   private final Set<String> fieldNames;
   private final Set<String> deferredFacetNames;
   private final String inputsRoot;
   private final String depsRoot;
+  private final String diRoot;
 
-  public ExprEmitter(Set<String> inputNames, Set<String> injectionNames, Set<String> fieldNames) {
-    this(inputNames, injectionNames, fieldNames, Set.of(), "inputs", "deps");
+  public ExprEmitter(
+      Set<String> inputNames,
+      Set<String> injectionNames,
+      Map<String, String> boundaryTypeNames,
+      Set<String> fieldNames) {
+    this(
+        inputNames,
+        injectionNames,
+        boundaryTypeNames,
+        fieldNames,
+        Set.of(),
+        "inputs",
+        "deps",
+        "di");
   }
 
   private ExprEmitter(
       Set<String> inputNames,
       Set<String> injectionNames,
+      Map<String, String> boundaryTypeNames,
       Set<String> fieldNames,
       Set<String> deferredFacetNames,
       String inputsRoot,
-      String depsRoot) {
+      String depsRoot,
+      String diRoot) {
     this.inputNames = inputNames;
     this.injectionNames = injectionNames;
+    this.boundaryTypeNames = boundaryTypeNames;
     this.fieldNames = fieldNames;
     this.deferredFacetNames = deferredFacetNames;
     this.inputsRoot = inputsRoot;
     this.depsRoot = depsRoot;
+    this.diRoot = diRoot;
   }
 
   public ExprEmitter withDeferredFacets(Set<String> names) {
-    return new ExprEmitter(inputNames, injectionNames, fieldNames, names, inputsRoot, depsRoot);
-  }
-
-  public ExprEmitter inTaskScope(String taskInputs, String taskDeps) {
     return new ExprEmitter(
-        inputNames, injectionNames, fieldNames, deferredFacetNames, taskInputs, taskDeps);
+        inputNames,
+        injectionNames,
+        boundaryTypeNames,
+        fieldNames,
+        names,
+        inputsRoot,
+        depsRoot,
+        diRoot);
   }
 
-  public String depsRoot() {
-    return depsRoot;
+  public ExprEmitter inTaskScope(String taskInputs, String taskDeps, String taskDi) {
+    return new ExprEmitter(
+        inputNames,
+        injectionNames,
+        boundaryTypeNames,
+        fieldNames,
+        deferredFacetNames,
+        taskInputs,
+        taskDeps,
+        taskDi);
+  }
+
+  public String diRoot() {
+    return diRoot;
+  }
+
+  public String contextRoot() {
+    return diRoot;
   }
 
   public boolean isDeferredFacetName(String name) {
@@ -108,6 +146,11 @@ public final class ExprEmitter {
     } else if (expr instanceof Expr.Not n) {
       return "!(" + emit(n.operand()) + ")";
     } else if (expr instanceof Expr.BinaryOp b) {
+      if ("+".equals(b.operator())) {
+        return emitAdditionOperand(b.left(), true, false)
+            + " + "
+            + emitAdditionOperand(b.right(), false, isStringExpression(b.left()));
+      }
       return emit(b.left()) + " " + b.operator() + " " + emit(b.right());
     } else if (expr instanceof Expr.MethodRef m) {
       return emit(m.target()) + "::" + m.member();
@@ -141,6 +184,37 @@ public final class ExprEmitter {
     return emit(element);
   }
 
+  private String emitAdditionOperand(Expr operand, boolean left, boolean stringifyNumeric) {
+    if (!left && operand instanceof Expr.StringLiteral stringLiteral) {
+      return stringLiteral.javaText();
+    }
+    if (!(operand instanceof Expr.VarUse varUse)) {
+      return emit(operand);
+    }
+    String type = boundaryTypeNames.get(varUse.name());
+    if (type == null) {
+      return emit(operand);
+    }
+    String value = emit(varUse);
+    if ("string".equals(type)) {
+      return left ? "(*" + value + ").clone()" : value + ".as_str()";
+    }
+    String numericValue = "*" + value;
+    return stringifyNumeric ? "&(" + numericValue + ").to_string()" : numericValue;
+  }
+
+  private boolean isStringExpression(Expr expr) {
+    if (expr instanceof Expr.StringLiteral) {
+      return true;
+    }
+    if (expr instanceof Expr.VarUse varUse) {
+      return "string".equals(boundaryTypeNames.get(varUse.name()));
+    }
+    return expr instanceof Expr.BinaryOp binaryOp
+        && "+".equals(binaryOp.operator())
+        && isStringExpression(binaryOp.left());
+  }
+
   private String emitVarUse(Expr.VarUse v) {
     if ("nil".equals(v.name())) {
       // vajram-lang's `nil` literal is just an identifier grammatically; Rust has no single
@@ -171,7 +245,7 @@ public final class ExprEmitter {
   private String resolve(String name) {
     String id = identifier(name);
     if (injectionNames.contains(name)) {
-      return depsRoot + "." + id;
+      return depsRoot + "." + id + ".get()";
     }
     if (inputNames.contains(name)) {
       return inputsRoot + "." + id;
@@ -262,6 +336,8 @@ public final class ExprEmitter {
   private String emitStatement(Statement statement) {
     if (statement instanceof Statement.Assign a) {
       return "let " + identifier(a.decl().name()) + " = " + emit(a.value()) + ";";
+    } else if (statement instanceof Statement.Expression e) {
+      return emit(e.value()) + ";";
     } else if (statement instanceof Statement.Throw t) {
       return "return Err(VajramError::from(" + emit(t.value()) + "));";
     }
