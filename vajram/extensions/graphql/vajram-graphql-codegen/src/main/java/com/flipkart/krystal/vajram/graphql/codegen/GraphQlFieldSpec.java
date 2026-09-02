@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajram.graphql.codegen;
 
+import com.flipkart.krystal.vajram.graphql.schema.GraphQLTypeName;
+import com.flipkart.krystal.vajram.graphql.schema.GraphQlTypeDecorator;
 import graphql.language.FieldDefinition;
 import lombok.Builder;
 import lombok.NonNull;

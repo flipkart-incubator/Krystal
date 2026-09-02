@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.flipkart.krystal.vajram.graphql.schema.GraphQLTypeName;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;

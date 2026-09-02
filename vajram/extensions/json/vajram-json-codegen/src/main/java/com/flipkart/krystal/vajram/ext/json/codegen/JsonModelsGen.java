@@ -160,7 +160,7 @@ final class JsonModelsGen implements CodeGenerator {
                 """
                 if (_deserializationPending) {
                   try{
-                    _serializedPayload.deserialize(_READER.get().withValueToUpdate(this));
+                    _serializedPayload._deserialize(_READER.get().withValueToUpdate(this));
                     this._deserializationPending = false;
                   } catch ($T e) {
                     throw new $T(e);

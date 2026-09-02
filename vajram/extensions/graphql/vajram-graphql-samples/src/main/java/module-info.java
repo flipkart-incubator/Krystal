@@ -10,6 +10,7 @@ module krystal.vajram.ext.graphql.samples {
   requires flipkart.krystal.krystex;
   requires java.compiler;
   requires krystal.vajram.extensions.graphql;
+  requires krystal.vajram.ext.graphql.client;
   requires org.checkerframework.checker.qual;
   requires org.slf4j;
   requires static lombok;

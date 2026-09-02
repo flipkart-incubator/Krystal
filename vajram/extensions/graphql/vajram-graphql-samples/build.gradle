@@ -12,6 +12,13 @@ dependencies {
     implementation 'com.flipkart.krystal:vajram-graphql'
     krystalModelsGenProcessor 'com.flipkart.krystal:vajram-codegen'
     krystalModelsGenProcessor 'com.flipkart.krystal:vajram-graphql-codegen'
+
+    // GraphQL client query-facade feature: main-source client models under
+    // src/main/java/.../client exercise <Op>QueryFacade generation against this module's
+    // existing Schema.graphqls (used from VajramGraphQlTest).
+    implementation 'com.flipkart.krystal:vajram-graphql-client'
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-graphql-client-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-json-codegen'
     implementation 'com.graphql-java:graphql-java:24.3'
     implementation 'com.graphql-java:graphql-java-extended-scalars:24.0'
 

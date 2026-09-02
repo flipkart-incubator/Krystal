@@ -21,7 +21,7 @@ public final class NodeJson extends AbstractJsonRepresentation {
   }
 
   @Override
-  public <T> T deserialize(ObjectReader reader) throws IOException {
+  public <T> T _deserialize(ObjectReader reader) throws IOException {
     return reader.readValue(jsonNode);
   }
 

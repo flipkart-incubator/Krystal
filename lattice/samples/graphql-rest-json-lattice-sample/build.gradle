@@ -18,6 +18,10 @@ dependencies {
     implementation 'com.flipkart.krystal:vajram-json'
     implementation 'com.flipkart.krystal:vajram-java-sdk'
     implementation 'com.flipkart.krystal:vajram-graphql'
+    // GraphQL client query-facade feature: main-source client models under
+    // src/main/java/.../client exercise <Op>QueryFacade generation against this module's
+    // existing Schema.graphqls (used from GraphQlEndpointsE2eTest).
+    implementation 'com.flipkart.krystal:vajram-graphql-client'
     implementation 'com.graphql-java:graphql-java:24.3'
     implementation 'com.graphql-java:graphql-java-extended-scalars:24.0'
     implementation 'io.quarkus:quarkus-smallrye-context-propagation'
@@ -31,6 +35,9 @@ dependencies {
     krystalModelsGenProcessor 'com.flipkart.krystal:lattice-quarkus-codegen'
     krystalModelsGenProcessor 'com.flipkart.krystal:vajram-graphql-codegen'
     krystalModelsGenProcessor 'com.flipkart.krystal:lattice-graphql-codegen'
+    // GraphQL client query-facade feature: generates <Op>QueryFacade classes for the main-source
+    // client models under src/main/java/.../client.
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-graphql-client-codegen'
 
 
     runtimeOnly 'jakarta.servlet:jakarta.servlet-api'
@@ -43,7 +50,6 @@ dependencies {
     testImplementation 'org.assertj:assertj-core'
 
     testImplementation 'io.quarkus:quarkus-junit5'
-
 }
 
 //Configure compilation tasks to read graphQl schemas

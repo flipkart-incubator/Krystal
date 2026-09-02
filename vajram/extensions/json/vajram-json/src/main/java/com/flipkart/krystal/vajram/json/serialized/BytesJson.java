@@ -29,17 +29,17 @@ public final class BytesJson extends AbstractJsonRepresentation {
   }
 
   @Override
-  public <T> T deserialize(ObjectReader reader) throws IOException {
+  public <T> T _deserialize(ObjectReader reader) throws IOException {
     return reader.readValue(data, start, length);
   }
 
   @Override
-  public InputStream newInputStream() {
+  public InputStream _serialize() {
     return new ByteArrayInputStream(data, start, length);
   }
 
   @Override
-  public String asString() {
+  public String _asString() {
     if (string == null) {
       string = new String(data, start, length, UTF_8);
     }

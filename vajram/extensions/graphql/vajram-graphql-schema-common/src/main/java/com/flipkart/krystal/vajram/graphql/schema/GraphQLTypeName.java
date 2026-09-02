@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.graphql.codegen;
+package com.flipkart.krystal.vajram.graphql.schema;
 
 import graphql.language.TypeDefinition;
 

@@ -12,6 +12,7 @@ import static lombok.AccessLevel.PACKAGE;
 import com.flipkart.krystal.vajram.graphql.api.Constants;
 import com.flipkart.krystal.vajram.graphql.api.Constants.DirectiveArgs;
 import com.flipkart.krystal.vajram.graphql.api.Constants.Directives;
+import com.flipkart.krystal.vajram.graphql.schema.GraphQLTypeName;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.squareup.javapoet.ClassName;
@@ -33,10 +34,8 @@ import graphql.language.StringValue;
 import graphql.language.Type;
 import graphql.language.TypeDefinition;
 import graphql.language.TypeName;
-import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import java.io.File;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -456,32 +455,7 @@ public class SchemaReaderUtil {
   }
 
   private static TypeDefinitionRegistry getTypeDefinitionRegistry(File schemaFile) {
-    SchemaParser schemaParser = new SchemaParser();
-    TypeDefinitionRegistry typeDefinitionRegistry = new TypeDefinitionRegistry();
-    List<File> files = new ArrayList<>();
-
-    typeDefinitionRegistry.merge(schemaParser.parse(schemaFile));
-
-    String rootPackageName = getRootPackageName(typeDefinitionRegistry);
-    String typesPath = rootPackageName.replace('.', File.separatorChar);
-
-    File graphqlsDir =
-        requireNonNull(schemaFile.getParentFile()).toPath().resolve(typesPath).toFile();
-
-    String[] graphqlSchemaFileNames =
-        graphqlsDir.list((dir, name) -> name.endsWith(GRAPHQL_SCHEMA_EXTENSION));
-    if (graphqlSchemaFileNames != null) {
-      for (String graphqlSchemaFileName : graphqlSchemaFileNames) {
-        File graphqlSchemaFile = new File(graphqlsDir, graphqlSchemaFileName);
-        log.info("Found graphql schema file {} ", graphqlSchemaFile);
-        if (!graphqlSchemaFile.exists()) {
-          break;
-        }
-        files.add(graphqlSchemaFile);
-      }
-    }
-    files.forEach(file -> typeDefinitionRegistry.merge(schemaParser.parse(file)));
-    return typeDefinitionRegistry;
+    return com.flipkart.krystal.vajram.graphql.schema.SchemaLoader.parse(schemaFile);
   }
 
   private static String getRootPackageName(TypeDefinitionRegistry typeDefinitionRegistry) {
