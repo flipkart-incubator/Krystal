@@ -46,7 +46,7 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
 
   public static final Json JSON = new Json();
 
-  private static final JsonMapper OBJECT_MAPPER =
+  public static final JsonMapper JSON_MAPPER =
       JsonMapper.builder()
           .withConfigOverride(
               Errable.class,
@@ -71,8 +71,8 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
               new ErrableModule())
           .build();
 
-  public static final ObjectReader OBJECT_READER = OBJECT_MAPPER.reader();
-  public static final ObjectWriter OBJECT_WRITER = OBJECT_MAPPER.writer();
+  public static final ObjectReader OBJECT_READER = JSON_MAPPER.reader();
+  public static final ObjectWriter OBJECT_WRITER = JSON_MAPPER.writer();
 
   @Override
   public String modelClassesSuffix() {
@@ -104,7 +104,7 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
                 : OBJECT_WRITER.writeValueAsBytes(transformed);
         case STRING ->
             transformed instanceof SerializableJsonModel jsonModel
-                ? jsonModel._serializedJson().asString()
+                ? jsonModel._serializedJson()._asString()
                 : OBJECT_WRITER.writeValueAsString(transformed);
       };
     } catch (Exception e) {
@@ -147,7 +147,7 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
       return null;
     }
     try {
-      return JsonRepresentation.of(payload).deserialize(reader);
+      return JsonRepresentation.of(payload)._deserialize(reader);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

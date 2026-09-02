@@ -1,0 +1,37 @@
+package com.flipkart.krystal.vajram.graphql.samples.client;
+
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
+import static com.flipkart.krystal.model.ModelRoot.ModelType.REQUEST;
+
+import com.flipkart.krystal.model.IfAbsent;
+import com.flipkart.krystal.model.Model;
+import com.flipkart.krystal.model.ModelRoot;
+import com.flipkart.krystal.model.SupportedModelProtocol;
+import com.flipkart.krystal.vajram.graphql.client.api.ForGraphQlOpReq;
+import com.flipkart.krystal.vajram.json.Json;
+
+@ForGraphQlOpReq(GetOrderDummiesFanoutOperation.class)
+@ModelRoot(type = REQUEST)
+@SupportedModelProtocol(Json.class)
+public interface GetOrderDummiesFanoutVariables extends Model {
+  @IfAbsent(FAIL)
+  String id();
+
+  @IfAbsent(FAIL)
+  Boolean okFilter();
+
+  @IfAbsent(FAIL)
+  String okPreferredType();
+
+  @IfAbsent(FAIL)
+  Integer okCount();
+
+  @IfAbsent(FAIL)
+  Boolean badFilter();
+
+  @IfAbsent(FAIL)
+  String badPreferredType();
+
+  @IfAbsent(FAIL)
+  Integer badCount();
+}

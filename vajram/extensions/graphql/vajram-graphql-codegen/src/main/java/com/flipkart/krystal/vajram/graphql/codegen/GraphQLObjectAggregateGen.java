@@ -43,6 +43,8 @@ import com.flipkart.krystal.vajram.graphql.api.model.GraphQlValue.ListValue;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlValue.ScalarValue;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlValue.SingleValue;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
+import com.flipkart.krystal.vajram.graphql.schema.GraphQLTypeName;
+import com.flipkart.krystal.vajram.graphql.schema.GraphQlTypeDecorator;
 import com.google.common.collect.ImmutableMap;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;

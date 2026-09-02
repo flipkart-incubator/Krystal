@@ -17,6 +17,7 @@ import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.vajram.graphql.api.Constants.Directives;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponse;
+import com.flipkart.krystal.vajram.graphql.schema.GraphQLTypeName;
 import com.squareup.javapoet.*;
 import com.squareup.javapoet.TypeSpec.Builder;
 import graphql.language.*;

@@ -20,7 +20,7 @@ public final class ByteArrayJson extends AbstractJsonRepresentation {
   }
 
   @Override
-  public <T> T deserialize(ObjectReader reader) throws IOException {
+  public <T> T _deserialize(ObjectReader reader) throws IOException {
     if (data instanceof JsonByteArray jsonByteArray) {
       return jsonByteArray.readFromJson(reader);
     } else {
@@ -29,7 +29,7 @@ public final class ByteArrayJson extends AbstractJsonRepresentation {
   }
 
   @Override
-  public InputStream newInputStream() {
+  public InputStream _serialize() {
     return data.newInputStream();
   }
 

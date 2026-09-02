@@ -23,7 +23,7 @@ public interface SerializableJsonModel extends SerializableModel {
 
   @Override
   default InputStream _serialize() throws JsonProcessingException {
-    return _serializedJson().newInputStream();
+    return _serializedJson()._serialize();
   }
 
   default JsonRepresentation _serializedJson() throws JsonProcessingException {

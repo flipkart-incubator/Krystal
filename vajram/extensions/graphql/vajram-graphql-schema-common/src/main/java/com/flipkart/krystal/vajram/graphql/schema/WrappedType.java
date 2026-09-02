@@ -1,7 +1,7 @@
-package com.flipkart.krystal.vajram.graphql.codegen;
+package com.flipkart.krystal.vajram.graphql.schema;
 
-import static com.flipkart.krystal.vajram.graphql.codegen.WrappedType.WrapperType.LIST;
-import static com.flipkart.krystal.vajram.graphql.codegen.WrappedType.WrapperType.NONNULL;
+import static com.flipkart.krystal.vajram.graphql.schema.WrappedType.WrapperType.LIST;
+import static com.flipkart.krystal.vajram.graphql.schema.WrappedType.WrapperType.NONNULL;
 
 import graphql.language.ListType;
 import graphql.language.NonNullType;

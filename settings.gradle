@@ -54,6 +54,9 @@ include 'vajram:extensions:resilience4j:vajram-resilience4j'
 
 include 'vajram:extensions:graphql:vajram-graphql'
 include 'vajram:extensions:graphql:vajram-graphql-codegen'
+include 'vajram:extensions:graphql:vajram-graphql-schema-common'
+include 'vajram:extensions:graphql:vajram-graphql-client'
+include 'vajram:extensions:graphql:vajram-graphql-client-codegen'
 
 include 'vajram:extensions:sql:vajram-sql'
 include 'vajram:extensions:sql:vajram-sql-codegen'

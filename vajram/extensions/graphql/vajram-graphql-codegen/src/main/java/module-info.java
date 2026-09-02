@@ -7,6 +7,7 @@ module krystal.vajram.ext.graphql.codegen {
   requires flipkart.krystal.codegen.common;
   requires flipkart.krystal.vajram;
   requires krystal.vajram.extensions.graphql;
+  requires krystal.vajram.ext.graphql.schema.common;
   requires flipkart.krystal.vajram.codegen.common;
   requires org.slf4j;
   requires com.google.auto.service;

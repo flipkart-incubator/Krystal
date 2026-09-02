@@ -4,6 +4,7 @@ dependencies {
     api project(':vajram:vajram-java-sdk')
 
     implementation project(':vajram:extensions:graphql:vajram-graphql')
+    implementation project(':vajram:extensions:graphql:vajram-graphql-schema-common')
     implementation project(':krystal-codegen-common')
     implementation project(':vajram:vajram-codegen-common')
     implementation project(':vajram:extensions:json:vajram-json')

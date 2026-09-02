@@ -7,15 +7,11 @@ import java.io.IOException;
 import java.io.InputStream;
 
 public sealed interface JsonRepresentation permits AbstractJsonRepresentation {
-  <T> T deserialize(ObjectReader reader) throws IOException;
+  <T> T _deserialize(ObjectReader reader) throws IOException;
 
-  InputStream newInputStream();
+  InputStream _serialize();
 
-  String asString();
-
-  default boolean isReusable() {
-    return true;
-  }
+  String _asString();
 
   static JsonRepresentation of(Object payload) throws IOException {
     JsonRepresentation jsonRepresentation;
