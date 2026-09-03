@@ -23,39 +23,39 @@ import com.flipkart.krystal.vajram.graphql.api.execution.GraphQlExecutionFacade;
 import com.flipkart.krystal.vajram.graphql.api.schema.GraphQlInitializer;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate_Req;
-import com.flipkart.krystal.vajram.graphql.client.GraphQlHttpRequest;
+import com.flipkart.krystal.vajram.graphql.client.GraphQlSpecRequest;
 import com.flipkart.krystal.vajram.graphql.samples.client.DummyIdOnly;
 import com.flipkart.krystal.vajram.graphql.samples.client.GetNameByStringOp;
-import com.flipkart.krystal.vajram.graphql.samples.client.GetNameByStringOp_HttpReq;
 import com.flipkart.krystal.vajram.graphql.samples.client.GetNameByStringOp_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetNameByStringOp_SpecReq;
 import com.flipkart.krystal.vajram.graphql.samples.client.GetNameByStringVariables_ImmutJson;
 import com.flipkart.krystal.vajram.graphql.samples.client.GetNameByValueOp;
-import com.flipkart.krystal.vajram.graphql.samples.client.GetNameByValueOp_HttpReq;
 import com.flipkart.krystal.vajram.graphql.samples.client.GetNameByValueOp_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetNameByValueOp_SpecReq;
 import com.flipkart.krystal.vajram.graphql.samples.client.GetNameByValueVariables_ImmutJson;
 import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderDummiesFanoutOp;
-import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderDummiesFanoutOp_HttpReq;
 import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderDummiesFanoutOp_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderDummiesFanoutOp_SpecReq;
 import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderDummiesFanoutVariables_ImmutJson;
 import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderDummyFanoutOp;
-import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderDummyFanoutOp_HttpReq;
 import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderDummyFanoutOp_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderDummyFanoutOp_SpecReq;
 import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderDummyFanoutVariables_ImmutJson;
 import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderItemFanoutOp;
-import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderItemFanoutOp_HttpReq;
 import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderItemFanoutOp_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderItemFanoutOp_SpecReq;
 import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderItemFanoutVariables_ImmutJson;
 import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderNoArgDummiesFanoutOp;
-import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderNoArgDummiesFanoutOp_HttpReq;
 import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderNoArgDummiesFanoutOp_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderNoArgDummiesFanoutOp_SpecReq;
 import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderNoArgDummiesFanoutVariables_ImmutJson;
 import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderWithDummiesOp;
-import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderWithDummiesOp_HttpReq;
 import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderWithDummiesOp_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderWithDummiesOp_SpecReq;
 import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderWithDummiesVariables_ImmutJson;
 import com.flipkart.krystal.vajram.graphql.samples.client.GetOrdersAliasedOp;
-import com.flipkart.krystal.vajram.graphql.samples.client.GetOrdersAliasedOp_HttpReq;
 import com.flipkart.krystal.vajram.graphql.samples.client.GetOrdersAliasedOp_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrdersAliasedOp_SpecReq;
 import com.flipkart.krystal.vajram.graphql.samples.client.GetOrdersAliasedVariables_ImmutJson;
 import com.flipkart.krystal.vajram.graphql.samples.query.Query_GQlAggr_Req;
 import com.flipkart.krystal.vajram.graphql.samples.state.State;
@@ -194,7 +194,7 @@ public class VajramGraphQlTest {
               .executeGraphQl(
                   executor,
                   VajramExecutionConfig.builder().build(),
-                  toGraphQLQuery(GetNameByValueOp_HttpReq.of(variables)));
+                  toGraphQLQuery(GetNameByValueOp_SpecReq.of(variables)));
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
     ExecutionResult executionResult = result.join();
@@ -221,7 +221,7 @@ public class VajramGraphQlTest {
               .executeGraphQl(
                   executor,
                   VajramExecutionConfig.builder().build(),
-                  toGraphQLQuery(GetNameByStringOp_HttpReq.of(variables)));
+                  toGraphQLQuery(GetNameByStringOp_SpecReq.of(variables)));
     }
     assertThat(future).succeedsWithin(TEST_TIMEOUT);
     ExecutionResult executionResult = future.join();
@@ -243,7 +243,7 @@ public class VajramGraphQlTest {
               .executeGraphQl(
                   executor,
                   VajramExecutionConfig.builder().build(),
-                  toGraphQLQuery(GetOrdersAliasedOp_HttpReq.of(variables)));
+                  toGraphQLQuery(GetOrdersAliasedOp_SpecReq.of(variables)));
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
     ExecutionResult executionResult = result.join();
@@ -278,7 +278,7 @@ public class VajramGraphQlTest {
               .executeGraphQl(
                   executor,
                   VajramExecutionConfig.builder().build(),
-                  toGraphQLQuery(GetOrderWithDummiesOp_HttpReq.of(variables)));
+                  toGraphQLQuery(GetOrderWithDummiesOp_SpecReq.of(variables)));
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
     ExecutionResult executionResult = result.join();
@@ -313,7 +313,7 @@ public class VajramGraphQlTest {
               .executeGraphQl(
                   executor,
                   VajramExecutionConfig.builder().build(),
-                  toGraphQLQuery(GetOrderItemFanoutOp_HttpReq.of(variables)));
+                  toGraphQLQuery(GetOrderItemFanoutOp_SpecReq.of(variables)));
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
     Map<String, Object> queryData = requireNonNull(result.join().getData());
@@ -352,7 +352,7 @@ public class VajramGraphQlTest {
               .executeGraphQl(
                   executor,
                   VajramExecutionConfig.builder().build(),
-                  toGraphQLQuery(GetOrderDummiesFanoutOp_HttpReq.of(variables)));
+                  toGraphQLQuery(GetOrderDummiesFanoutOp_SpecReq.of(variables)));
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
     ExecutionResult executionResult = result.join();
@@ -391,7 +391,7 @@ public class VajramGraphQlTest {
               .executeGraphQl(
                   executor,
                   VajramExecutionConfig.builder().build(),
-                  toGraphQLQuery(GetOrderDummyFanoutOp_HttpReq.of(variables)));
+                  toGraphQLQuery(GetOrderDummyFanoutOp_SpecReq.of(variables)));
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
     ExecutionResult executionResult = result.join();
@@ -422,7 +422,7 @@ public class VajramGraphQlTest {
               .executeGraphQl(
                   executor,
                   VajramExecutionConfig.builder().build(),
-                  toGraphQLQuery(GetOrderNoArgDummiesFanoutOp_HttpReq.of(variables)));
+                  toGraphQLQuery(GetOrderNoArgDummiesFanoutOp_SpecReq.of(variables)));
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
     ExecutionResult executionResult = result.join();
@@ -577,12 +577,12 @@ public class VajramGraphQlTest {
   }
 
   /**
-   * Converts a generated {@link GraphQlHttpRequest} into a {@link GraphQLQuery} for in-process
+   * Converts a generated {@link GraphQlSpecRequest} into a {@link GraphQLQuery} for in-process
    * execution via {@link GraphQlExecutionFacade}. {@code req.variables()} is the raw variables
    * model instance (not a Map); it's converted here since all client models in {@code client/}
    * declare {@code @SupportedModelProtocol(Json.class)}.
    */
-  private static GraphQLQuery toGraphQLQuery(GraphQlHttpRequest req)
+  private static GraphQLQuery toGraphQLQuery(GraphQlSpecRequest req)
       throws JsonProcessingException {
     @SuppressWarnings("unchecked")
     Map<String, Object> variables =

@@ -47,7 +47,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Generates GraphQL response model implementations (e.g., Order_ImmutGQlServerResp) for entities
- * annotated with @SupportedModelProtocol(GraphQlResponseJson.class).
+ * annotated with @SupportedModelProtocol(GraphQlServerResponse.class).
  *
  * <p>These models wrap field values in {@code Errable<T>} to support partial failures in GraphQL
  * responses, and include GraphQL execution context for proper query resolution.

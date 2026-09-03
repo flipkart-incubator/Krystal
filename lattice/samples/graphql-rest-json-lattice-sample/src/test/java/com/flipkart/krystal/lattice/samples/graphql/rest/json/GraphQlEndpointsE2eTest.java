@@ -6,16 +6,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.AccountAliased;
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountAliasedOp_GQlClientResp_ImmutJson;
-import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountAliasedOp_HttpReq;
+import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountAliasedOp_SpecReq;
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountAliasedVariables_ImmutJson;
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountNameOnlyOp_GQlClientResp_ImmutJson;
-import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountNameOnlyOp_HttpReq;
+import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountNameOnlyOp_SpecReq;
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountNameOnlyVariables_ImmutJson;
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountOwnerDetailsOp_GQlClientResp_ImmutJson;
-import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountOwnerDetailsOp_HttpReq;
+import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountOwnerDetailsOp_SpecReq;
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountOwnerDetailsVariables_ImmutJson;
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.PersonAliased;
-import com.flipkart.krystal.vajram.graphql.client.GraphQlHttpRequest;
+import com.flipkart.krystal.vajram.graphql.client.GraphQlSpecRequest;
 import com.flipkart.krystal.vajram.json.Json;
 import com.flipkart.krystal.vajram.json.serialized.StringJson;
 import io.quarkus.test.common.http.TestHTTPResource;
@@ -63,7 +63,7 @@ class GraphQlEndpointsE2eTest {
   }
 
   /**
-   * Same as {@link #postGraphQl(String)}, but for a generated {@link GraphQlHttpRequest} -
+   * Same as {@link #postGraphQl(String)}, but for a generated {@link GraphQlSpecRequest} -
    * serializes {@code req.query()}/{@code req.variables()} instead of a raw query string, and
    * deserializes the raw response body directly into {@code responseWrapperType} (the operation
    * root's generated {@code <Op>_GQlClientResp} class, whose {@code data} field already matches the
@@ -73,7 +73,7 @@ class GraphQlEndpointsE2eTest {
    * {@link Json#OBJECT_WRITER} since the variables models in {@code client/} declare
    * {@code @SupportedModelProtocol(Json.class)}.
    */
-  private StringJson postGraphQl(GraphQlHttpRequest req) throws Exception {
+  private StringJson postGraphQl(GraphQlSpecRequest req) throws Exception {
     HttpResponse<String> resp =
         httpClient.send(
             HttpRequest.newBuilder(baseUri.resolve("HttpPostGraphQl"))
@@ -95,7 +95,7 @@ class GraphQlEndpointsE2eTest {
         GetAccountOwnerDetailsVariables_ImmutJson._builder().id("ACC123")._build();
     var response =
         new GetAccountOwnerDetailsOp_GQlClientResp_ImmutJson(
-                postGraphQl(GetAccountOwnerDetailsOp_HttpReq.of(variables)))
+                postGraphQl(GetAccountOwnerDetailsOp_SpecReq.of(variables)))
             .data();
 
     // GetOwnerOfAccount: PersonId = "PRSN" + id  =>  "PRSNACC123"
@@ -112,7 +112,7 @@ class GraphQlEndpointsE2eTest {
         GetAccountNameOnlyVariables_ImmutJson._builder().id("XYZ")._build();
     var response =
         new GetAccountNameOnlyOp_GQlClientResp_ImmutJson(
-                postGraphQl(GetAccountNameOnlyOp_HttpReq.of(variables)))
+                postGraphQl(GetAccountNameOnlyOp_SpecReq.of(variables)))
             .data();
 
     assertThat(response.account().owner().name().firstName()).isEqualTo("PRSNXYZ-FirstName");
@@ -127,7 +127,7 @@ class GraphQlEndpointsE2eTest {
         GetAccountAliasedVariables_ImmutJson._builder().id("ACC123")._build();
     var response =
         new GetAccountAliasedOp_GQlClientResp_ImmutJson(
-                postGraphQl(GetAccountAliasedOp_HttpReq.of(variables)))
+                postGraphQl(GetAccountAliasedOp_SpecReq.of(variables)))
             .data();
 
     AccountAliased accountAlias = response.accountAlias();

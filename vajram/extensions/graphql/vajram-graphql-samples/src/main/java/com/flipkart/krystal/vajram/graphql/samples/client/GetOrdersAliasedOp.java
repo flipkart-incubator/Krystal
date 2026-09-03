@@ -8,15 +8,13 @@ import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.vajram.graphql.client.api.Field;
 import com.flipkart.krystal.vajram.graphql.client.api.FieldArg;
 import com.flipkart.krystal.vajram.graphql.client.api.GraphQlOpRequest;
-import com.flipkart.krystal.vajram.graphql.client.api.GraphQlSchema;
 import com.flipkart.krystal.vajram.json.Json;
 
 /**
  * Client-side operation root for {@code
  * VajramGraphQlTest#graphqlQueryWithQueryLevelAliases_succeeds}.
  */
-@GraphQlSchema(path = "src/main/graphqls/Schema.graphqls")
-@GraphQlOpRequest
+@GraphQlOpRequest(schemaFilePath = "src/main/graphqls/Schema.graphqls")
 @ModelRoot(type = RESPONSE)
 @SupportedModelProtocol(Json.class)
 public interface GetOrdersAliasedOp extends Model {

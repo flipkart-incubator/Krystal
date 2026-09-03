@@ -42,13 +42,11 @@ class FieldArgValidationTest {
         import com.flipkart.krystal.model.SupportedModelProtocol;
         import com.flipkart.krystal.vajram.graphql.client.api.FieldArg;
         import com.flipkart.krystal.vajram.graphql.client.api.GraphQlOpRequest;
-        import com.flipkart.krystal.vajram.graphql.client.api.GraphQlSchema;
         import com.flipkart.krystal.vajram.json.Json;
 
         import static com.flipkart.krystal.model.ModelRoot.ModelType.RESPONSE;
 
-        @GraphQlSchema(path = "Schema.graphqls")
-        @GraphQlOpRequest
+        @GraphQlOpRequest(schemaFilePath = "Schema.graphqls")
         @ModelRoot(type = RESPONSE)
         @SupportedModelProtocol(Json.class)
         public interface GetAccountOperation extends Model {
@@ -120,13 +118,11 @@ class FieldArgValidationTest {
         import com.flipkart.krystal.model.SupportedModelProtocol;
         import com.flipkart.krystal.vajram.graphql.client.api.Field;
         import com.flipkart.krystal.vajram.graphql.client.api.GraphQlOpRequest;
-        import com.flipkart.krystal.vajram.graphql.client.api.GraphQlSchema;
         import com.flipkart.krystal.vajram.json.Json;
 
         import static com.flipkart.krystal.model.ModelRoot.ModelType.RESPONSE;
 
-        @GraphQlSchema(path = "Schema.graphqls")
-        @GraphQlOpRequest
+        @GraphQlOpRequest(schemaFilePath = "Schema.graphqls")
         @ModelRoot(type = RESPONSE)
         @SupportedModelProtocol(Json.class)
         public interface GetAccountOperation extends Model {

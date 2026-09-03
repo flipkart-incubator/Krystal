@@ -7,7 +7,6 @@ import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.vajram.graphql.client.api.FieldArg;
 import com.flipkart.krystal.vajram.graphql.client.api.GraphQlOpRequest;
-import com.flipkart.krystal.vajram.graphql.client.api.GraphQlSchema;
 import com.flipkart.krystal.vajram.json.Json;
 
 /**
@@ -15,8 +14,7 @@ import com.flipkart.krystal.vajram.json.Json;
  * GraphQlEndpointsE2eTest#graphQlQuery_returnsOwnerNameAndEmail}, exercising the generated {@code
  * GetAccountOwnerDetailsOperationQueryFacade}.
  */
-@GraphQlSchema(path = "src/main/graphqls/Schema.graphqls")
-@GraphQlOpRequest
+@GraphQlOpRequest(schemaFilePath = "src/main/graphqls/Schema.graphqls")
 @ModelRoot(type = RESPONSE)
 @SupportedModelProtocol(Json.class)
 public interface GetAccountOwnerDetailsOp extends Model {

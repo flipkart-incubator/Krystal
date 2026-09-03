@@ -32,7 +32,7 @@ import javax.lang.model.util.ElementFilter;
 public class GraphQlFacadeProcessor extends AbstractKrystalAnnoProcessor {
 
   /** Memoizes parsed schemas per resolved schema-file path, across rounds. */
-  private final Map<String, GraphQlFacadeGen.SchemaContext> schemaCache = new HashMap<>();
+  private final Map<String, GraphQlSpecRequestGen.SchemaContext> schemaCache = new HashMap<>();
 
   @Override
   protected void processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -41,7 +41,7 @@ public class GraphQlFacadeProcessor extends AbstractKrystalAnnoProcessor {
       for (TypeElement variablesModel :
           ElementFilter.typesIn(roundEnv.getElementsAnnotatedWith(annotation))) {
         try {
-          new GraphQlFacadeGen(util, schemaCache).generate(variablesModel);
+          new GraphQlSpecRequestGen(util, schemaCache).generate(variablesModel);
         } catch (Exception e) {
           util.error(
               "[GraphQL Request Facade Codegen Exception] " + getStackTraceAsString(e),

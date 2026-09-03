@@ -9,5 +9,5 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * serializes it using whatever protocol/mechanism that model itself declares, before sending the
  * HTTP request.
  */
-public record GraphQlHttpRequest(
+public record GraphQlSpecRequest(
     String query, @Nullable String operationName, Object variables, Object extensions) {}
