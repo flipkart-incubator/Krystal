@@ -135,4 +135,40 @@ class TypenameMetaFieldTest {
                 .anyMatch(d -> d.getMessage(null).contains("__typename")))
         .isTrue();
   }
+
+  @Test
+  void nonStringTypenameAccessor_failsCompilation() throws IOException {
+    String orderWithNonStringTypename =
+        """
+        package com.example.typename;
+
+        import com.flipkart.krystal.model.Model;
+        import com.flipkart.krystal.model.ModelRoot;
+        import com.flipkart.krystal.model.SupportedModelProtocol;
+        import com.flipkart.krystal.vajram.graphql.client.api.Field;
+        import com.flipkart.krystal.vajram.graphql.client.api.GraphQlRequest;
+        import com.flipkart.krystal.vajram.json.Json;
+
+        import static com.flipkart.krystal.model.ModelRoot.ModelType.RESPONSE;
+
+        @GraphQlRequest
+        @ModelRoot(type = RESPONSE)
+        @SupportedModelProtocol(Json.class)
+        public interface OrderWithTypename extends Model {
+          String id();
+
+          @Field(name = "__typename")
+          Integer typename();
+        }
+        """;
+
+    List<Diagnostic<? extends JavaFileObject>> diagnostics =
+        CompileTestSupport.compile(SCHEMA, OPERATION_ROOT, orderWithNonStringTypename, VARIABLES);
+
+    assertThat(
+            diagnostics.stream()
+                .filter(d -> d.getKind() == Kind.ERROR)
+                .anyMatch(d -> d.getMessage(null).contains("__typename")))
+        .isTrue();
+  }
 }

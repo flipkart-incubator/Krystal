@@ -9,7 +9,7 @@ import com.flipkart.krystal.vajram.graphql.client.api.GraphQlFragment;
 import com.flipkart.krystal.vajram.graphql.client.api.GraphQlRequest;
 import com.flipkart.krystal.vajram.json.Json;
 
-/** {@code ownerAlias: owner { ...personFields }} */
+/** {@code ownerAlias: owner { ...PersonFieldsAliased }} */
 @GraphQlRequest
 @ModelRoot(type = RESPONSE)
 @SupportedModelProtocol(Json.class)

@@ -174,6 +174,147 @@ class GraphQlFragmentTest {
         .isTrue();
   }
 
+  @Test
+  void extendsPlainInterfaceWithoutGraphQlFragment_failsCompilation() throws IOException {
+    String plainInterface =
+        """
+        package com.example.orders;
+
+        public interface PlainMarker {
+        }
+        """;
+
+    List<Diagnostic<? extends JavaFileObject>> diagnostics =
+        CompileTestSupport.compile(
+            SCHEMA,
+            OPERATION_ROOT,
+            plainInterface,
+            orderWithFragment("extends Model, PlainMarker"),
+            VARIABLES);
+
+    assertThat(
+            diagnostics.stream()
+                .filter(d -> d.getKind() == Kind.ERROR)
+                .anyMatch(
+                    d ->
+                        d.getMessage(null).contains("PlainMarker")
+                            && d.getMessage(null).contains("@GraphQlFragment")))
+        .isTrue();
+  }
+
+  @Test
+  void invalidGraphQlFragmentName_failsCompilation() throws IOException {
+    String fragmentWithInvalidName =
+        FRAGMENT_DECLARATION.replace(
+            "@GraphQlFragment\n", "@GraphQlFragment(name = \"bad-name\")\n");
+
+    List<Diagnostic<? extends JavaFileObject>> diagnostics =
+        CompileTestSupport.compile(
+            SCHEMA,
+            OPERATION_ROOT,
+            fragmentWithInvalidName,
+            orderWithFragment("extends Model, @GraphQlFragment OrderFieldsFragment"),
+            VARIABLES);
+
+    assertThat(
+            diagnostics.stream()
+                .filter(d -> d.getKind() == Kind.ERROR)
+                .anyMatch(d -> d.getMessage(null).contains("bad-name")))
+        .isTrue();
+  }
+
+  @Test
+  void sameFragmentNameFromDifferentInterfaces_failsCompilation() throws IOException {
+    // Two distinct interfaces both explicitly named "OrderFieldsFragment" and both used against
+    // `Order` - same name and same type condition, but different declaring interfaces.
+    String secondFragmentDeclaration =
+        """
+        package com.example.orders;
+
+        import com.flipkart.krystal.model.Model;
+        import com.flipkart.krystal.model.ModelRoot;
+        import com.flipkart.krystal.model.SupportedModelProtocol;
+        import com.flipkart.krystal.vajram.graphql.client.api.GraphQlFragment;
+        import com.flipkart.krystal.vajram.graphql.client.api.GraphQlRequest;
+        import com.flipkart.krystal.vajram.json.Json;
+
+        import static com.flipkart.krystal.model.ModelRoot.ModelType.RESPONSE;
+
+        @GraphQlFragment(name = "OrderFieldsFragment")
+        @GraphQlRequest
+        @ModelRoot(type = RESPONSE)
+        @SupportedModelProtocol(Json.class)
+        public interface OtherOrderFieldsFragment extends Model {
+          String state();
+        }
+        """;
+
+    String twoFragmentsOperationRoot =
+        """
+        package com.example.orders;
+
+        import com.flipkart.krystal.model.Model;
+        import com.flipkart.krystal.model.ModelRoot;
+        import com.flipkart.krystal.model.SupportedModelProtocol;
+        import com.flipkart.krystal.vajram.graphql.client.api.FieldArg;
+        import com.flipkart.krystal.vajram.graphql.client.api.GraphQlOpRequest;
+        import com.flipkart.krystal.vajram.json.Json;
+
+        import static com.flipkart.krystal.model.ModelRoot.ModelType.RESPONSE;
+
+        @GraphQlOpRequest(schemaFilePath = "Schema.graphqls")
+        @ModelRoot(type = RESPONSE)
+        @SupportedModelProtocol(Json.class)
+        public interface GetOrderOp extends Model {
+          @FieldArg(name = "id", useVariable = "id")
+          OrderWithFragment order();
+
+          @com.flipkart.krystal.vajram.graphql.client.api.Field(name = "order")
+          @FieldArg(name = "id", useVariable = "id")
+          OrderWithOtherFragment order2();
+        }
+        """;
+
+    String orderWithOtherFragment =
+        """
+        package com.example.orders;
+
+        import com.flipkart.krystal.model.Model;
+        import com.flipkart.krystal.model.ModelRoot;
+        import com.flipkart.krystal.model.SupportedModelProtocol;
+        import com.flipkart.krystal.vajram.graphql.client.api.GraphQlFragment;
+        import com.flipkart.krystal.vajram.graphql.client.api.GraphQlRequest;
+        import com.flipkart.krystal.vajram.json.Json;
+
+        import static com.flipkart.krystal.model.ModelRoot.ModelType.RESPONSE;
+
+        @GraphQlRequest
+        @ModelRoot(type = RESPONSE)
+        @SupportedModelProtocol(Json.class)
+        public interface OrderWithOtherFragment
+            extends Model, @GraphQlFragment OtherOrderFieldsFragment {}
+        """;
+
+    List<Diagnostic<? extends JavaFileObject>> diagnostics =
+        CompileTestSupport.compile(
+            SCHEMA,
+            twoFragmentsOperationRoot,
+            FRAGMENT_DECLARATION,
+            secondFragmentDeclaration,
+            orderWithFragment("extends Model, @GraphQlFragment OrderFieldsFragment"),
+            orderWithOtherFragment,
+            VARIABLES);
+
+    assertThat(
+            diagnostics.stream()
+                .filter(d -> d.getKind() == Kind.ERROR)
+                .anyMatch(
+                    d ->
+                        d.getMessage(null).contains("OrderFieldsFragment")
+                            && d.getMessage(null).contains("declared by two different")))
+        .isTrue();
+  }
+
   private static String readGeneratedFacade(Path outputDir, String simpleName) throws IOException {
     Path file = outputDir.resolve("com/example/orders/" + simpleName + ".java");
     assertThat(Files.exists(file)).as("generated file %s should exist", file).isTrue();

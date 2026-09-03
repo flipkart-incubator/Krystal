@@ -149,4 +149,76 @@ class FieldArgValidationTest {
                 .anyMatch(d -> d.getMessage(null).contains("doesNotExistOnQuery")))
         .isTrue();
   }
+
+  @Test
+  void operationRootWithoutModelRootAnnotation_failsCompilationWithoutCrashing()
+      throws IOException {
+    // Regression test: the operation root is missing @ModelRoot - this must be reported as a
+    // clean diagnostic rather than crashing the annotation processor (e.g. a NullPointerException
+    // from response-wrapper generation reading the annotation's `pure()` member).
+    String operationRoot =
+        """
+        package com.example.accounts3;
+
+        import com.flipkart.krystal.model.Model;
+        import com.flipkart.krystal.vajram.graphql.client.api.FieldArg;
+        import com.flipkart.krystal.vajram.graphql.client.api.GraphQlOpRequest;
+
+        @GraphQlOpRequest(schemaFilePath = "Schema.graphqls")
+        public interface GetAccountOperation extends Model {
+          @FieldArg(name = "id", useVariable = "id")
+          Account account();
+        }
+        """;
+    String account =
+        """
+        package com.example.accounts3;
+
+        import com.flipkart.krystal.model.Model;
+        import com.flipkart.krystal.model.ModelRoot;
+        import com.flipkart.krystal.model.SupportedModelProtocol;
+        import com.flipkart.krystal.vajram.graphql.client.api.GraphQlRequest;
+        import com.flipkart.krystal.vajram.json.Json;
+
+        import static com.flipkart.krystal.model.ModelRoot.ModelType.RESPONSE;
+
+        @GraphQlRequest
+        @ModelRoot(type = RESPONSE)
+        @SupportedModelProtocol(Json.class)
+        public interface Account extends Model {
+          String id();
+        }
+        """;
+    String variables =
+        """
+        package com.example.accounts3;
+
+        import com.flipkart.krystal.model.IfAbsent;
+        import com.flipkart.krystal.model.Model;
+        import com.flipkart.krystal.model.ModelRoot;
+        import com.flipkart.krystal.model.SupportedModelProtocol;
+        import com.flipkart.krystal.vajram.graphql.client.api.ForGraphQlOpReq;
+        import com.flipkart.krystal.vajram.json.Json;
+
+        import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
+        import static com.flipkart.krystal.model.ModelRoot.ModelType.REQUEST;
+
+        @ForGraphQlOpReq(GetAccountOperation.class)
+        @ModelRoot(type = REQUEST)
+        @SupportedModelProtocol(Json.class)
+        public interface GetAccountVariables extends Model {
+          @IfAbsent(FAIL)
+          String id();
+        }
+        """;
+
+    List<Diagnostic<? extends JavaFileObject>> diagnostics =
+        CompileTestSupport.compile(SCHEMA, operationRoot, account, variables);
+
+    assertThat(
+            diagnostics.stream()
+                .filter(d -> d.getKind() == Kind.ERROR)
+                .anyMatch(d -> d.getMessage(null).contains("@ModelRoot")))
+        .isTrue();
+  }
 }

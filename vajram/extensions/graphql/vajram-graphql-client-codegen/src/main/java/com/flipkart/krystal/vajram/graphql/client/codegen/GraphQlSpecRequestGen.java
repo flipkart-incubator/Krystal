@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajram.graphql.client.codegen;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.graphql.client.codegen.ClientCodeGenConstants.QUERY_FACADE_SUFFIX;
 import static com.flipkart.krystal.vajram.graphql.client.codegen.ClientCodeGenConstants.RESPONSE_WRAPPER_SUFFIX;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.FINAL;
@@ -48,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Pattern;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
@@ -63,6 +65,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 final class GraphQlSpecRequestGen {
 
   private static final String TYPENAME_META_FIELD = "__typename";
+
+  // GraphQL `Name` grammar: https://spec.graphql.org/October2021/#sec-Names
+  private static final Pattern GRAPHQL_NAME_PATTERN = Pattern.compile("[_A-Za-z][_0-9A-Za-z]*");
 
   private final CodeGenUtility util;
   private final Map<String, SchemaContext> schemaCache;
@@ -102,7 +107,8 @@ final class GraphQlSpecRequestGen {
   }
 
   /** A top-level {@code fragment <name> on <typeCondition> { ... }} definition. */
-  private record Fragment(String name, String typeCondition, List<Selection> selections) {}
+  private record Fragment(
+      String name, String typeCondition, String declaringInterface, List<Selection> selections) {}
 
   void generate(TypeElement variablesModel) {
     ForGraphQlOpReq forGraphQlOpReq = variablesModel.getAnnotation(ForGraphQlOpReq.class);
@@ -116,6 +122,12 @@ final class GraphQlSpecRequestGen {
           "Operation root '%s' referenced by @ForGraphQlOpReq must be annotated with @GraphQlOpRequest"
               .formatted(operationRoot.getQualifiedName()),
           variablesModel);
+      return;
+    }
+    if (operationRoot.getAnnotation(ModelRoot.class) == null) {
+      util.error(
+          "Model root type %s does not have @ModelRoot annotation".formatted(operationRoot),
+          operationRoot);
       return;
     }
 
@@ -240,6 +252,21 @@ final class GraphQlSpecRequestGen {
         util.error(
             "@FieldArg is not supported on the '__typename' meta field (method '%s')"
                 .formatted(method.getSimpleName()),
+            method);
+        hasError.set(true);
+        return null;
+      }
+      TypeMirror typenameContent = method.getReturnType();
+      if (util.isOptional(typenameContent)) {
+        typenameContent = util.getOptionalInnerType(typenameContent);
+      }
+      if (util.isErrable(typenameContent)) {
+        typenameContent = util.getErrableInnerType(typenameContent);
+      }
+      if (!TypeName.get(typenameContent).equals(TypeName.get(String.class))) {
+        util.error(
+            "Method '%s' is bound to the '__typename' meta field, which resolves to a String, but its return type is '%s'"
+                .formatted(method.getSimpleName(), method.getReturnType()),
             method);
         hasError.set(true);
         return null;
@@ -404,7 +431,23 @@ final class GraphQlSpecRequestGen {
       // convenience method, so match the mirror by qualified name instead.
       boolean usedAsFragment = hasFragmentAnnotationMirror(iface);
       if (!declaredAsFragment && !usedAsFragment) {
-        // Plain marker/shared interface (e.g. `extends Model`) - no fragment involved.
+        if (ifaceElem.getQualifiedName().contentEquals(Model.class.getCanonicalName())) {
+          // The `Model` marker interface every model extends - no fragment involved.
+          continue;
+        }
+        util.error(
+            ("Interface '%s' extends '%s', which is not annotated with @GraphQlFragment. Only"
+                    + " the '%s' marker interface may be extended without declaring a fragment;"
+                    + " annotate '%s' (both its own declaration and this extends-clause"
+                    + " reference) with @GraphQlFragment if it's meant to be spread as a"
+                    + " fragment")
+                .formatted(
+                    typeElem.getQualifiedName(),
+                    ifaceElem.getQualifiedName(),
+                    Model.class.getCanonicalName(),
+                    ifaceElem.getQualifiedName()),
+            typeElem);
+        hasError.set(true);
         continue;
       }
       if (declaredAsFragment != usedAsFragment) {
@@ -418,17 +461,36 @@ final class GraphQlSpecRequestGen {
         continue;
       }
 
-      GraphQlFragment fragAnno = ifaceElem.getAnnotation(GraphQlFragment.class);
+      GraphQlFragment fragAnno = requireNonNull(ifaceElem.getAnnotation(GraphQlFragment.class));
       String fragmentName =
           fragAnno.name().isBlank() ? ifaceElem.getSimpleName().toString() : fragAnno.name();
+      if (!GRAPHQL_NAME_PATTERN.matcher(fragmentName).matches()) {
+        util.error(
+            ("@GraphQlFragment(name = \"%s\") on '%s' is not a valid GraphQL name - it must match"
+                    + " [_A-Za-z][_0-9A-Za-z]*")
+                .formatted(fragmentName, ifaceElem.getQualifiedName()),
+            typeElem);
+        hasError.set(true);
+        continue;
+      }
 
+      String declaringInterface = ifaceElem.getQualifiedName().toString();
       Fragment existing = fragments.get(fragmentName);
       if (existing == null) {
         List<Selection> fragSelections =
             buildOwnSelections(
                 ifaceElem, contextType, variablesModel, ctx, varDecls, hasError, fragments);
         fragments.put(
-            fragmentName, new Fragment(fragmentName, contextType.getName(), fragSelections));
+            fragmentName,
+            new Fragment(fragmentName, contextType.getName(), declaringInterface, fragSelections));
+      } else if (!existing.declaringInterface().equals(declaringInterface)) {
+        util.error(
+            ("Fragment name '%s' is declared by two different interfaces ('%s' and '%s') within"
+                    + " the same operation - fragment names must be unique per operation")
+                .formatted(fragmentName, existing.declaringInterface(), declaringInterface),
+            typeElem);
+        hasError.set(true);
+        continue;
       } else if (!existing.typeCondition().equals(contextType.getName())) {
         util.error(
             ("Fragment '%s' is used against conflicting GraphQL types '%s' and '%s' within the"
