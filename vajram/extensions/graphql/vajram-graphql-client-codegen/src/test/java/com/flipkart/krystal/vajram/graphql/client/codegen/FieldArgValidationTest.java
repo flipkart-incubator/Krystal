@@ -3,19 +3,10 @@ package com.flipkart.krystal.vajram.graphql.client.codegen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
-import java.io.StringWriter;
-import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import javax.tools.Diagnostic;
 import javax.tools.Diagnostic.Kind;
-import javax.tools.DiagnosticCollector;
-import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
-import javax.tools.SimpleJavaFileObject;
-import javax.tools.ToolProvider;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -98,7 +89,7 @@ class FieldArgValidationTest {
         """;
 
     List<Diagnostic<? extends JavaFileObject>> diagnostics =
-        compile(SCHEMA, operationRoot, account, variables);
+        CompileTestSupport.compile(SCHEMA, operationRoot, account, variables);
 
     assertThat(
             diagnostics.stream()
@@ -150,7 +141,7 @@ class FieldArgValidationTest {
         """;
 
     List<Diagnostic<? extends JavaFileObject>> diagnostics =
-        compile(SCHEMA, operationRoot, variables);
+        CompileTestSupport.compile(SCHEMA, operationRoot, variables);
 
     assertThat(
             diagnostics.stream()
@@ -159,70 +150,75 @@ class FieldArgValidationTest {
         .isTrue();
   }
 
-  private static List<Diagnostic<? extends JavaFileObject>> compile(
-      String schema, String... sources) throws IOException {
-    JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-    DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
+  @Test
+  void operationRootWithoutModelRootAnnotation_failsCompilationWithoutCrashing()
+      throws IOException {
+    // Regression test: the operation root is missing @ModelRoot - this must be reported as a
+    // clean diagnostic rather than crashing the annotation processor (e.g. a NullPointerException
+    // from response-wrapper generation reading the annotation's `pure()` member).
+    String operationRoot =
+        """
+        package com.example.accounts3;
 
-    Path moduleRoot = Files.createTempDirectory("graphql-facade-validation-test");
-    moduleRoot.toFile().deleteOnExit();
-    Files.writeString(moduleRoot.resolve("Schema.graphqls"), schema);
+        import com.flipkart.krystal.model.Model;
+        import com.flipkart.krystal.vajram.graphql.client.api.FieldArg;
+        import com.flipkart.krystal.vajram.graphql.client.api.GraphQlOpRequest;
 
-    List<JavaFileObject> sourceFiles = new ArrayList<>();
-    for (String source : sources) {
-      sourceFiles.add(new StringSourceFile(source));
-    }
+        @GraphQlOpRequest(schemaFilePath = "Schema.graphqls")
+        public interface GetAccountOperation extends Model {
+          @FieldArg(name = "id", useVariable = "id")
+          Account account();
+        }
+        """;
+    String account =
+        """
+        package com.example.accounts3;
 
-    Path outputDir = Files.createTempDirectory("graphql-facade-validation-test-out");
-    outputDir.toFile().deleteOnExit();
-    JavaCompiler.CompilationTask task =
-        compiler.getTask(
-            new StringWriter(),
-            null,
-            diagnostics,
-            List.of(
-                "-proc:only",
-                "-classpath",
-                System.getProperty("java.class.path"),
-                "-s",
-                outputDir.toString(),
-                "-Akrystal.codegen.phase=MODELS",
-                "-Akrystal.codegen.moduleRootPath=" + moduleRoot),
-            null,
-            sourceFiles);
-    task.setProcessors(List.of(new GraphQlFacadeProcessor()));
-    task.call();
-    return diagnostics.getDiagnostics();
-  }
+        import com.flipkart.krystal.model.Model;
+        import com.flipkart.krystal.model.ModelRoot;
+        import com.flipkart.krystal.model.SupportedModelProtocol;
+        import com.flipkart.krystal.vajram.graphql.client.api.GraphQlRequest;
+        import com.flipkart.krystal.vajram.json.Json;
 
-  private static final class StringSourceFile extends SimpleJavaFileObject {
-    private final String content;
+        import static com.flipkart.krystal.model.ModelRoot.ModelType.RESPONSE;
 
-    StringSourceFile(String content) {
-      super(
-          URI.create(
-              "string:///" + extractTypeName(content).replace('.', '/') + Kind.SOURCE.extension),
-          Kind.SOURCE);
-      this.content = content;
-    }
+        @GraphQlRequest
+        @ModelRoot(type = RESPONSE)
+        @SupportedModelProtocol(Json.class)
+        public interface Account extends Model {
+          String id();
+        }
+        """;
+    String variables =
+        """
+        package com.example.accounts3;
 
-    private static String extractTypeName(String content) {
-      String pkg =
-          content.lines().filter(l -> l.trim().startsWith("package ")).findFirst().orElse("");
-      String pkgName = pkg.replace("package", "").replace(";", "").trim();
-      String typeName =
-          content
-              .lines()
-              .filter(l -> l.trim().startsWith("public interface "))
-              .findFirst()
-              .map(l -> l.trim().split("\\s+")[2])
-              .orElse("Unknown");
-      return (pkgName.isEmpty() ? "" : pkgName + ".") + typeName;
-    }
+        import com.flipkart.krystal.model.IfAbsent;
+        import com.flipkart.krystal.model.Model;
+        import com.flipkart.krystal.model.ModelRoot;
+        import com.flipkart.krystal.model.SupportedModelProtocol;
+        import com.flipkart.krystal.vajram.graphql.client.api.ForGraphQlOpReq;
+        import com.flipkart.krystal.vajram.json.Json;
 
-    @Override
-    public CharSequence getCharContent(boolean ignoreEncodingErrors) {
-      return content;
-    }
+        import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
+        import static com.flipkart.krystal.model.ModelRoot.ModelType.REQUEST;
+
+        @ForGraphQlOpReq(GetAccountOperation.class)
+        @ModelRoot(type = REQUEST)
+        @SupportedModelProtocol(Json.class)
+        public interface GetAccountVariables extends Model {
+          @IfAbsent(FAIL)
+          String id();
+        }
+        """;
+
+    List<Diagnostic<? extends JavaFileObject>> diagnostics =
+        CompileTestSupport.compile(SCHEMA, operationRoot, account, variables);
+
+    assertThat(
+            diagnostics.stream()
+                .filter(d -> d.getKind() == Kind.ERROR)
+                .anyMatch(d -> d.getMessage(null).contains("@ModelRoot")))
+        .isTrue();
   }
 }

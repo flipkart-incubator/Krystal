@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajram.graphql.client.codegen;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.graphql.client.codegen.ClientCodeGenConstants.QUERY_FACADE_SUFFIX;
 import static com.flipkart.krystal.vajram.graphql.client.codegen.ClientCodeGenConstants.RESPONSE_WRAPPER_SUFFIX;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.FINAL;
@@ -19,6 +20,7 @@ import com.flipkart.krystal.vajram.graphql.client.GraphQlSpecRequest;
 import com.flipkart.krystal.vajram.graphql.client.api.Field;
 import com.flipkart.krystal.vajram.graphql.client.api.FieldArg;
 import com.flipkart.krystal.vajram.graphql.client.api.ForGraphQlOpReq;
+import com.flipkart.krystal.vajram.graphql.client.api.GraphQlFragment;
 import com.flipkart.krystal.vajram.graphql.client.api.GraphQlOpRequest;
 import com.flipkart.krystal.vajram.graphql.client.api.GraphQlRequest;
 import com.flipkart.krystal.vajram.graphql.schema.ArgTypeValidator;
@@ -47,17 +49,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Pattern;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Generates a {@code <OperationRoot>QueryFacade} class for a single {@code @ForGraphQlOpReq}
  * -annotated variables model - see {@link GraphQlFacadeProcessor}.
  */
 final class GraphQlSpecRequestGen {
+
+  private static final String TYPENAME_META_FIELD = "__typename";
+
+  // GraphQL `Name` grammar: https://spec.graphql.org/October2021/#sec-Names
+  private static final Pattern GRAPHQL_NAME_PATTERN = Pattern.compile("[_A-Za-z][_0-9A-Za-z]*");
 
   private final CodeGenUtility util;
   private final Map<String, SchemaContext> schemaCache;
@@ -74,8 +84,31 @@ final class GraphQlSpecRequestGen {
 
   private record ArgBinding(String argName, String varRef) {}
 
+  /**
+   * A single entry in a selection set - either a field selection ({@code alias}/{@code
+   * fieldName}/{@code args}/{@code nested} populated, {@code fragmentSpread} null) or a fragment
+   * spread ({@code fragmentSpread} populated, all other fields null/empty).
+   */
   private record Selection(
-      String alias, String fieldName, List<ArgBinding> args, List<Selection> nested) {}
+      @Nullable String alias,
+      @Nullable String fieldName,
+      List<ArgBinding> args,
+      List<Selection> nested,
+      @Nullable String fragmentSpread) {
+
+    static Selection field(
+        String alias, String fieldName, List<ArgBinding> args, List<Selection> nested) {
+      return new Selection(alias, fieldName, args, nested, null);
+    }
+
+    static Selection spread(String fragmentName) {
+      return new Selection(null, null, List.of(), List.of(), fragmentName);
+    }
+  }
+
+  /** A top-level {@code fragment <name> on <typeCondition> { ... }} definition. */
+  private record Fragment(
+      String name, String typeCondition, String declaringInterface, List<Selection> selections) {}
 
   void generate(TypeElement variablesModel) {
     ForGraphQlOpReq forGraphQlOpReq = variablesModel.getAnnotation(ForGraphQlOpReq.class);
@@ -89,6 +122,12 @@ final class GraphQlSpecRequestGen {
           "Operation root '%s' referenced by @ForGraphQlOpReq must be annotated with @GraphQlOpRequest"
               .formatted(operationRoot.getQualifiedName()),
           variablesModel);
+      return;
+    }
+    if (operationRoot.getAnnotation(ModelRoot.class) == null) {
+      util.error(
+          "Model root type %s does not have @ModelRoot annotation".formatted(operationRoot),
+          operationRoot);
       return;
     }
 
@@ -159,14 +198,10 @@ final class GraphQlSpecRequestGen {
 
     Map<String, String> varDecls = new LinkedHashMap<>();
     AtomicBoolean hasError = new AtomicBoolean(false);
-    List<Selection> rootSelections = new ArrayList<>();
-    for (ExecutableElement rootMethod : rootMethods) {
-      Selection selection =
-          buildSelection(rootMethod, rootType, variablesModel, ctx, varDecls, hasError);
-      if (selection != null) {
-        rootSelections.add(selection);
-      }
-    }
+    Map<String, Fragment> fragments = new LinkedHashMap<>();
+    List<Selection> rootSelections =
+        buildOwnSelections(
+            operationRoot, rootType, variablesModel, ctx, varDecls, hasError, fragments);
     if (hasError.get()) {
       return;
     }
@@ -178,15 +213,21 @@ final class GraphQlSpecRequestGen {
             .collect(joining(", "));
     String varDeclsParen = varDeclsStr.isEmpty() ? "" : "(" + varDeclsStr + ")";
 
+    String fragmentsCompact =
+        fragments.values().stream().map(this::renderFragmentCompact).collect(joining(" "));
     String compactSelections =
         rootSelections.stream().map(this::renderCompact).collect(joining(" "));
     String compactQuery =
-        "%s %s%s { %s }".formatted(opKeyword, opName, varDeclsParen, compactSelections);
+        (fragmentsCompact.isEmpty() ? "" : fragmentsCompact + " ")
+            + "%s %s%s { %s }".formatted(opKeyword, opName, varDeclsParen, compactSelections);
 
+    String fragmentsPretty =
+        fragments.values().stream().map(this::renderFragmentPretty).collect(joining("\n\n"));
     String prettySelections =
         rootSelections.stream().map(s -> renderPretty(s, 1)).collect(joining("\n"));
     String prettyQuery =
-        "%s %s%s {\n%s\n}".formatted(opKeyword, opName, varDeclsParen, prettySelections);
+        (fragmentsPretty.isEmpty() ? "" : fragmentsPretty + "\n\n")
+            + "%s %s%s {\n%s\n}".formatted(opKeyword, opName, varDeclsParen, prettySelections);
 
     emitFacade(operationRoot, variablesModel, opName, compactQuery, prettyQuery);
     emitResponseWrapper(operationRoot);
@@ -198,9 +239,41 @@ final class GraphQlSpecRequestGen {
       TypeElement variablesModel,
       SchemaContext ctx,
       Map<String, String> varDecls,
-      AtomicBoolean hasError) {
+      AtomicBoolean hasError,
+      Map<String, Fragment> fragments) {
     String fieldName = resolveFieldName(method);
     String alias = method.getSimpleName().toString();
+
+    if (TYPENAME_META_FIELD.equals(fieldName)) {
+      // `__typename` is a GraphQL introspection meta-field valid on any composite type - it has
+      // no `FieldDefinition` in the schema and takes no arguments, so it's handled directly
+      // instead of going through schema field-existence/arg validation below.
+      if (method.getAnnotationsByType(FieldArg.class).length > 0) {
+        util.error(
+            "@FieldArg is not supported on the '__typename' meta field (method '%s')"
+                .formatted(method.getSimpleName()),
+            method);
+        hasError.set(true);
+        return null;
+      }
+      TypeMirror typenameContent = method.getReturnType();
+      if (util.isOptional(typenameContent)) {
+        typenameContent = util.getOptionalInnerType(typenameContent);
+      }
+      if (util.isErrable(typenameContent)) {
+        typenameContent = util.getErrableInnerType(typenameContent);
+      }
+      if (!TypeName.get(typenameContent).equals(TypeName.get(String.class))) {
+        util.error(
+            "Method '%s' is bound to the '__typename' meta field, which resolves to a String, but its return type is '%s'"
+                .formatted(method.getSimpleName(), method.getReturnType()),
+            method);
+        hasError.set(true);
+        return null;
+      }
+      return Selection.field(alias, fieldName, List.of(), List.of());
+    }
+
     Optional<FieldDefinition> fieldDefOpt =
         parentType.getFieldDefinitions().stream()
             .filter(f -> f.getName().equals(fieldName))
@@ -287,20 +360,159 @@ final class GraphQlSpecRequestGen {
             method);
         hasError.set(true);
       } else {
-        List<Selection> built = new ArrayList<>();
-        for (ExecutableElement nestedMethod : util.getModelFieldsForCodegen(contentType)) {
-          Selection s =
-              buildSelection(
-                  nestedMethod, nestedGqlType.get(), variablesModel, ctx, varDecls, hasError);
-          if (s != null) {
-            built.add(s);
-          }
-        }
-        nested = built;
+        nested =
+            buildOwnSelections(
+                contentType,
+                nestedGqlType.get(),
+                variablesModel,
+                ctx,
+                varDecls,
+                hasError,
+                fragments);
       }
     }
 
-    return new Selection(alias, fieldName, argBindings, nested);
+    return Selection.field(alias, fieldName, argBindings, nested);
+  }
+
+  /**
+   * Builds the selection set for {@code typeElem} against {@code contextType} - fields declared
+   * directly on {@code typeElem} (inlined), plus a {@code ...FragmentName} spread for each
+   * supertype in {@code typeElem}'s {@code extends} clause that qualifies as a
+   * {@code @GraphQlFragment} (registering the fragment's own definition into {@code fragments} on
+   * first use). Used for the operation root, for nested {@code @GraphQlRequest} types, and
+   * recursively for fragment bodies themselves.
+   */
+  private List<Selection> buildOwnSelections(
+      TypeElement typeElem,
+      ObjectTypeDefinition contextType,
+      TypeElement variablesModel,
+      SchemaContext ctx,
+      Map<String, String> varDecls,
+      AtomicBoolean hasError,
+      Map<String, Fragment> fragments) {
+    List<Selection> selections = new ArrayList<>();
+    for (ExecutableElement ownMethod : util.getDeclaredModelFieldsForCodegen(typeElem)) {
+      Selection s =
+          buildSelection(
+              ownMethod, contextType, variablesModel, ctx, varDecls, hasError, fragments);
+      if (s != null) {
+        selections.add(s);
+      }
+    }
+    collectFragmentSelections(
+        typeElem, contextType, variablesModel, ctx, varDecls, hasError, fragments, selections);
+    return selections;
+  }
+
+  /**
+   * Walks {@code typeElem.getInterfaces()} looking for {@code @GraphQlFragment} supertypes,
+   * appending a {@code Selection.spread(name)} to {@code outSelections} for each one found, and
+   * registering its definition into {@code fragments} on first use.
+   */
+  private void collectFragmentSelections(
+      TypeElement typeElem,
+      ObjectTypeDefinition contextType,
+      TypeElement variablesModel,
+      SchemaContext ctx,
+      Map<String, String> varDecls,
+      AtomicBoolean hasError,
+      Map<String, Fragment> fragments,
+      List<Selection> outSelections) {
+    for (TypeMirror iface : typeElem.getInterfaces()) {
+      if (!(iface instanceof DeclaredType dt)
+          || !(dt.asElement() instanceof TypeElement ifaceElem)) {
+        continue;
+      }
+      boolean declaredAsFragment = ifaceElem.getAnnotation(GraphQlFragment.class) != null;
+      // `iface.getAnnotation(GraphQlFragment.class)` is unreliable for a TYPE_USE annotation on
+      // an `extends`-clause reference in some javac versions - it's present in
+      // `getAnnotationMirrors()` but not always surfaced by the `getAnnotation(Class)`
+      // convenience method, so match the mirror by qualified name instead.
+      boolean usedAsFragment = hasFragmentAnnotationMirror(iface);
+      if (!declaredAsFragment && !usedAsFragment) {
+        if (ifaceElem.getQualifiedName().contentEquals(Model.class.getCanonicalName())) {
+          // The `Model` marker interface every model extends - no fragment involved.
+          continue;
+        }
+        util.error(
+            ("Interface '%s' extends '%s', which is not annotated with @GraphQlFragment. Only"
+                    + " the '%s' marker interface may be extended without declaring a fragment;"
+                    + " annotate '%s' (both its own declaration and this extends-clause"
+                    + " reference) with @GraphQlFragment if it's meant to be spread as a"
+                    + " fragment")
+                .formatted(
+                    typeElem.getQualifiedName(),
+                    ifaceElem.getQualifiedName(),
+                    Model.class.getCanonicalName(),
+                    ifaceElem.getQualifiedName()),
+            typeElem);
+        hasError.set(true);
+        continue;
+      }
+      if (declaredAsFragment != usedAsFragment) {
+        util.error(
+            ("Interface '%s' extends '%s' as a fragment inconsistently: both the fragment's own"
+                    + " declaration and the extends-clause reference must be annotated with"
+                    + " @GraphQlFragment")
+                .formatted(typeElem.getQualifiedName(), ifaceElem.getQualifiedName()),
+            typeElem);
+        hasError.set(true);
+        continue;
+      }
+
+      GraphQlFragment fragAnno = requireNonNull(ifaceElem.getAnnotation(GraphQlFragment.class));
+      String fragmentName =
+          fragAnno.name().isBlank() ? ifaceElem.getSimpleName().toString() : fragAnno.name();
+      if (!GRAPHQL_NAME_PATTERN.matcher(fragmentName).matches()) {
+        util.error(
+            ("@GraphQlFragment(name = \"%s\") on '%s' is not a valid GraphQL name - it must match"
+                    + " [_A-Za-z][_0-9A-Za-z]*")
+                .formatted(fragmentName, ifaceElem.getQualifiedName()),
+            typeElem);
+        hasError.set(true);
+        continue;
+      }
+
+      String declaringInterface = ifaceElem.getQualifiedName().toString();
+      Fragment existing = fragments.get(fragmentName);
+      if (existing == null) {
+        List<Selection> fragSelections =
+            buildOwnSelections(
+                ifaceElem, contextType, variablesModel, ctx, varDecls, hasError, fragments);
+        fragments.put(
+            fragmentName,
+            new Fragment(fragmentName, contextType.getName(), declaringInterface, fragSelections));
+      } else if (!existing.declaringInterface().equals(declaringInterface)) {
+        util.error(
+            ("Fragment name '%s' is declared by two different interfaces ('%s' and '%s') within"
+                    + " the same operation - fragment names must be unique per operation")
+                .formatted(fragmentName, existing.declaringInterface(), declaringInterface),
+            typeElem);
+        hasError.set(true);
+        continue;
+      } else if (!existing.typeCondition().equals(contextType.getName())) {
+        util.error(
+            ("Fragment '%s' is used against conflicting GraphQL types '%s' and '%s' within the"
+                    + " same operation")
+                .formatted(fragmentName, existing.typeCondition(), contextType.getName()),
+            typeElem);
+        hasError.set(true);
+        continue;
+      }
+      outSelections.add(Selection.spread(fragmentName));
+    }
+  }
+
+  private static boolean hasFragmentAnnotationMirror(TypeMirror typeMirror) {
+    String fragmentAnnoName = GraphQlFragment.class.getCanonicalName();
+    for (AnnotationMirror mirror : typeMirror.getAnnotationMirrors()) {
+      if (mirror.getAnnotationType().asElement() instanceof TypeElement annoElem
+          && annoElem.getQualifiedName().contentEquals(fragmentAnnoName)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static String resolveFieldName(ExecutableElement method) {
@@ -342,6 +554,9 @@ final class GraphQlSpecRequestGen {
   }
 
   private String renderCompact(Selection s) {
+    if (s.fragmentSpread() != null) {
+      return "..." + s.fragmentSpread();
+    }
     String argsStr =
         s.args().isEmpty()
             ? ""
@@ -359,6 +574,9 @@ final class GraphQlSpecRequestGen {
 
   private String renderPretty(Selection s, int depth) {
     String indent = "  ".repeat(depth);
+    if (s.fragmentSpread() != null) {
+      return indent + "..." + s.fragmentSpread();
+    }
     String argsStr =
         s.args().isEmpty()
             ? ""
@@ -373,6 +591,16 @@ final class GraphQlSpecRequestGen {
     String nestedStr =
         s.nested().stream().map(n -> renderPretty(n, depth + 1)).collect(joining("\n"));
     return indent + prefix + argsStr + " {\n" + nestedStr + "\n" + indent + "}";
+  }
+
+  private String renderFragmentCompact(Fragment f) {
+    String body = f.selections().stream().map(this::renderCompact).collect(joining(" "));
+    return "fragment %s on %s { %s }".formatted(f.name(), f.typeCondition(), body);
+  }
+
+  private String renderFragmentPretty(Fragment f) {
+    String body = f.selections().stream().map(s -> renderPretty(s, 1)).collect(joining("\n"));
+    return "fragment %s on %s {\n%s\n}".formatted(f.name(), f.typeCondition(), body);
   }
 
   private void emitFacade(
@@ -432,6 +660,10 @@ final class GraphQlSpecRequestGen {
             .addAnnotation(
                 AnnotationSpec.builder(ModelRoot.class)
                     .addMember("type", "$T.$L", ModelRoot.ModelType.class, "RESPONSE")
+                    // Propagate `pure` from the operation root: since `data` is typed as the
+                    // operation root itself, the wrapper can only be pure if the root (and
+                    // everything it transitively references) is pure too.
+                    .addMember("pure", "$L", operationRoot.getAnnotation(ModelRoot.class).pure())
                     .build())
             .addJavadoc(
                 "Deserialization target for a GraphQL-over-HTTP response body whose {@code data}"
