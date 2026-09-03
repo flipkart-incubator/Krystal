@@ -3,19 +3,10 @@ package com.flipkart.krystal.vajram.graphql.client.codegen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
-import java.io.StringWriter;
-import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import javax.tools.Diagnostic;
 import javax.tools.Diagnostic.Kind;
-import javax.tools.DiagnosticCollector;
-import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
-import javax.tools.SimpleJavaFileObject;
-import javax.tools.ToolProvider;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -98,7 +89,7 @@ class FieldArgValidationTest {
         """;
 
     List<Diagnostic<? extends JavaFileObject>> diagnostics =
-        compile(SCHEMA, operationRoot, account, variables);
+        CompileTestSupport.compile(SCHEMA, operationRoot, account, variables);
 
     assertThat(
             diagnostics.stream()
@@ -150,79 +141,12 @@ class FieldArgValidationTest {
         """;
 
     List<Diagnostic<? extends JavaFileObject>> diagnostics =
-        compile(SCHEMA, operationRoot, variables);
+        CompileTestSupport.compile(SCHEMA, operationRoot, variables);
 
     assertThat(
             diagnostics.stream()
                 .filter(d -> d.getKind() == Kind.ERROR)
                 .anyMatch(d -> d.getMessage(null).contains("doesNotExistOnQuery")))
         .isTrue();
-  }
-
-  private static List<Diagnostic<? extends JavaFileObject>> compile(
-      String schema, String... sources) throws IOException {
-    JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-    DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
-
-    Path moduleRoot = Files.createTempDirectory("graphql-facade-validation-test");
-    moduleRoot.toFile().deleteOnExit();
-    Files.writeString(moduleRoot.resolve("Schema.graphqls"), schema);
-
-    List<JavaFileObject> sourceFiles = new ArrayList<>();
-    for (String source : sources) {
-      sourceFiles.add(new StringSourceFile(source));
-    }
-
-    Path outputDir = Files.createTempDirectory("graphql-facade-validation-test-out");
-    outputDir.toFile().deleteOnExit();
-    JavaCompiler.CompilationTask task =
-        compiler.getTask(
-            new StringWriter(),
-            null,
-            diagnostics,
-            List.of(
-                "-proc:only",
-                "-classpath",
-                System.getProperty("java.class.path"),
-                "-s",
-                outputDir.toString(),
-                "-Akrystal.codegen.phase=MODELS",
-                "-Akrystal.codegen.moduleRootPath=" + moduleRoot),
-            null,
-            sourceFiles);
-    task.setProcessors(List.of(new GraphQlFacadeProcessor()));
-    task.call();
-    return diagnostics.getDiagnostics();
-  }
-
-  private static final class StringSourceFile extends SimpleJavaFileObject {
-    private final String content;
-
-    StringSourceFile(String content) {
-      super(
-          URI.create(
-              "string:///" + extractTypeName(content).replace('.', '/') + Kind.SOURCE.extension),
-          Kind.SOURCE);
-      this.content = content;
-    }
-
-    private static String extractTypeName(String content) {
-      String pkg =
-          content.lines().filter(l -> l.trim().startsWith("package ")).findFirst().orElse("");
-      String pkgName = pkg.replace("package", "").replace(";", "").trim();
-      String typeName =
-          content
-              .lines()
-              .filter(l -> l.trim().startsWith("public interface "))
-              .findFirst()
-              .map(l -> l.trim().split("\\s+")[2])
-              .orElse("Unknown");
-      return (pkgName.isEmpty() ? "" : pkgName + ".") + typeName;
-    }
-
-    @Override
-    public CharSequence getCharContent(boolean ignoreEncodingErrors) {
-      return content;
-    }
   }
 }

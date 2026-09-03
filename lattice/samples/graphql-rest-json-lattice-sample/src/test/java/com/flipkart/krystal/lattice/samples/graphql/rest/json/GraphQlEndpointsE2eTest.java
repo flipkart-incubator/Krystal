@@ -14,6 +14,12 @@ import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountN
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountOwnerDetailsOp_GQlClientResp_ImmutJson;
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountOwnerDetailsOp_SpecReq;
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountOwnerDetailsVariables_ImmutJson;
+import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountOwnerFragmentAliasedOp_GQlClientResp_ImmutJson;
+import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountOwnerFragmentAliasedOp_SpecReq;
+import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountOwnerFragmentAliasedVariables_ImmutJson;
+import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountOwnerFragmentOp_GQlClientResp_ImmutJson;
+import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountOwnerFragmentOp_SpecReq;
+import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountOwnerFragmentVariables_ImmutJson;
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.PersonAliased;
 import com.flipkart.krystal.vajram.graphql.client.GraphQlSpecRequest;
 import com.flipkart.krystal.vajram.json.Json;
@@ -139,66 +145,36 @@ class GraphQlEndpointsE2eTest {
     assertThat(personAlias.imageAlias().thumbnailAlias()).isEqualTo("PRSNACC123-thumbnailUrl.png");
   }
 
-  // The two tests below specifically exercise named/inline GraphQL fragment syntax
-  // (`...personFields`). The generated facade always inlines nested selection sets rather than
-  // emitting named/inline fragments (fragments are a query-authoring convenience the facade
-  // doesn't need to model to be spec-compliant - see plan section 5a), so these two are
-  // intentionally left as handwritten raw queries rather than migrated to
-  // `<Op>QueryFacade.of(...)`.
+  // The two tests below specifically exercise named GraphQL fragment syntax (`...PersonFields`)
+  // via `@GraphQlFragment`-annotated client models, mirroring the other tests' `<Op>_SpecReq`
+  // pattern.
 
   @Test
   void graphQlQuery_namedFragment_noAliases_returnsOwnerNameAndEmail() throws Exception {
-    JsonNode data =
-        postGraphQl(
-            """
-            query {
-              account(id: "ACC123") {
-                owner {
-                  ...personFields
-                }
-              }
-            }
-            fragment personFields on Person {
-              name {
-                firstName
-                lastName
-              }
-              email
-            }
-            """);
+    GetAccountOwnerFragmentVariables_ImmutJson variables =
+        GetAccountOwnerFragmentVariables_ImmutJson._builder().id("ACC123")._build();
+    var response =
+        new GetAccountOwnerFragmentOp_GQlClientResp_ImmutJson(
+                postGraphQl(GetAccountOwnerFragmentOp_SpecReq.of(variables)))
+            .data();
 
-    JsonNode owner = data.path("account").path("owner");
-    assertThat(owner.path("name").path("firstName").asText()).isEqualTo("PRSNACC123-FirstName");
-    assertThat(owner.path("name").path("lastName").asText()).isEqualTo("PRSNACC123-LastName");
-    assertThat(owner.path("email").asText()).isEqualTo("PRSNACC123@PRSNACC123.com");
+    assertThat(response.account().owner().name().firstName()).isEqualTo("PRSNACC123-FirstName");
+    assertThat(response.account().owner().name().lastName()).isEqualTo("PRSNACC123-LastName");
+    assertThat(response.account().owner().email()).isEqualTo("PRSNACC123@PRSNACC123.com");
   }
 
   @Test
   void graphQlQuery_namedFragment_withAliasesAtSpreadSiteAndInsideFragment_succeeds()
       throws Exception {
-    JsonNode data =
-        postGraphQl(
-            """
-            query {
-              accountAlias: account(id: "ACC123") {
-                ownerAlias: owner {
-                  ...personFields
-                }
-              }
-            }
-            fragment personFields on Person {
-              n: name {
-                first: firstName
-              }
-              emailAlias: email
-            }
-            """);
+    GetAccountOwnerFragmentAliasedVariables_ImmutJson variables =
+        GetAccountOwnerFragmentAliasedVariables_ImmutJson._builder().id("ACC123")._build();
+    var response =
+        new GetAccountOwnerFragmentAliasedOp_GQlClientResp_ImmutJson(
+                postGraphQl(GetAccountOwnerFragmentAliasedOp_SpecReq.of(variables)))
+            .data();
 
-    JsonNode ownerAlias = data.path("accountAlias").path("ownerAlias");
-    assertThat(data.has("accountAlias")).isTrue();
-    assertThat(data.path("accountAlias").has("ownerAlias")).isTrue();
-    assertThat(ownerAlias.has("n")).isTrue();
-    assertThat(ownerAlias.path("n").path("first").asText()).isEqualTo("PRSNACC123-FirstName");
-    assertThat(ownerAlias.path("emailAlias").asText()).isEqualTo("PRSNACC123@PRSNACC123.com");
+    assertThat(response.accountAlias().ownerAlias().n().first()).isEqualTo("PRSNACC123-FirstName");
+    assertThat(response.accountAlias().ownerAlias().emailAlias())
+        .isEqualTo("PRSNACC123@PRSNACC123.com");
   }
 }
