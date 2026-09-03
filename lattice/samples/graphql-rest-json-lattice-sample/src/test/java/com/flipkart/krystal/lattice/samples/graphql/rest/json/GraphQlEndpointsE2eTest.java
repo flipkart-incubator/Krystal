@@ -5,14 +5,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.AccountAliased;
-import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountAliasedOperationQueryFacade;
-import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountAliasedOperation_GQlClientResp_ImmutJson;
+import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountAliasedOp_GQlClientResp_ImmutJson;
+import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountAliasedOp_HttpReq;
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountAliasedVariables_ImmutJson;
-import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountNameOnlyOperationQueryFacade;
-import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountNameOnlyOperation_GQlClientResp_ImmutJson;
+import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountNameOnlyOp_GQlClientResp_ImmutJson;
+import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountNameOnlyOp_HttpReq;
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountNameOnlyVariables_ImmutJson;
-import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountOwnerDetailsOperationQueryFacade;
-import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountOwnerDetailsOperation_GQlClientResp_ImmutJson;
+import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountOwnerDetailsOp_GQlClientResp_ImmutJson;
+import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountOwnerDetailsOp_HttpReq;
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountOwnerDetailsVariables_ImmutJson;
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.PersonAliased;
 import com.flipkart.krystal.vajram.graphql.client.GraphQlHttpRequest;
@@ -94,8 +94,8 @@ class GraphQlEndpointsE2eTest {
     GetAccountOwnerDetailsVariables_ImmutJson variables =
         GetAccountOwnerDetailsVariables_ImmutJson._builder().id("ACC123")._build();
     var response =
-        new GetAccountOwnerDetailsOperation_GQlClientResp_ImmutJson(
-                postGraphQl(GetAccountOwnerDetailsOperationQueryFacade.of(variables)))
+        new GetAccountOwnerDetailsOp_GQlClientResp_ImmutJson(
+                postGraphQl(GetAccountOwnerDetailsOp_HttpReq.of(variables)))
             .data();
 
     // GetOwnerOfAccount: PersonId = "PRSN" + id  =>  "PRSNACC123"
@@ -111,8 +111,8 @@ class GraphQlEndpointsE2eTest {
     GetAccountNameOnlyVariables_ImmutJson variables =
         GetAccountNameOnlyVariables_ImmutJson._builder().id("XYZ")._build();
     var response =
-        new GetAccountNameOnlyOperation_GQlClientResp_ImmutJson(
-                postGraphQl(GetAccountNameOnlyOperationQueryFacade.of(variables)))
+        new GetAccountNameOnlyOp_GQlClientResp_ImmutJson(
+                postGraphQl(GetAccountNameOnlyOp_HttpReq.of(variables)))
             .data();
 
     assertThat(response.account().owner().name().firstName()).isEqualTo("PRSNXYZ-FirstName");
@@ -126,8 +126,8 @@ class GraphQlEndpointsE2eTest {
     GetAccountAliasedVariables_ImmutJson variables =
         GetAccountAliasedVariables_ImmutJson._builder().id("ACC123")._build();
     var response =
-        new GetAccountAliasedOperation_GQlClientResp_ImmutJson(
-                postGraphQl(GetAccountAliasedOperationQueryFacade.of(variables)))
+        new GetAccountAliasedOp_GQlClientResp_ImmutJson(
+                postGraphQl(GetAccountAliasedOp_HttpReq.of(variables)))
             .data();
 
     AccountAliased accountAlias = response.accountAlias();

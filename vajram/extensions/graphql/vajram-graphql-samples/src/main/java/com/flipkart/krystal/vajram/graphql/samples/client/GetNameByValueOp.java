@@ -12,14 +12,15 @@ import com.flipkart.krystal.vajram.json.Json;
 
 /**
  * Client-side operation root for {@code
- * VajramGraphQlTest#inferIdFromArgs_withOptionalIdFieldHavingNoArgAtAll_leavesItUnset}.
+ * VajramGraphQlTest#inferIdFromArgs_withOptionalIdField_buildsIdentityFromArgs}.
  */
 @GraphQlSchema(path = "src/main/graphqls/Schema.graphqls")
 @GraphQlOpRequest
 @ModelRoot(type = RESPONSE)
 @SupportedModelProtocol(Json.class)
-public interface GetNameByStringOperation extends Model {
+public interface GetNameByValueOp extends Model {
 
+  @FieldArg(name = "value", useVariable = "value")
   @FieldArg(name = "string", useVariable = "string")
-  NameFields nameByString();
+  NameFields name();
 }

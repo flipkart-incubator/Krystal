@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.graphql.client;
 
-import java.util.Map;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -11,7 +10,4 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * HTTP request.
  */
 public record GraphQlHttpRequest(
-    String query,
-    @Nullable String operationName,
-    Object variables,
-    Map<String, Object> extensions) {}
+    String query, @Nullable String operationName, Object variables, Object extensions) {}

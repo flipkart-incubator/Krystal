@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.graphql.samples.client;
+package com.flipkart.krystal.lattice.samples.graphql.rest.json.client;
 
 import static com.flipkart.krystal.model.ModelRoot.ModelType.RESPONSE;
 
@@ -12,14 +12,16 @@ import com.flipkart.krystal.vajram.json.Json;
 
 /**
  * Client-side operation root for {@code
- * VajramGraphQlTest#graphqlQueryWithNestedArgBearingAliases_succeeds}.
+ * GraphQlEndpointsE2eTest#graphQlQuery_onlyNameRequested_returnsName} - a narrower selection (only
+ * {@code firstName}) than {@link GetAccountOwnerDetailsOp}, proving partial selection generates a
+ * correct, independently-valid facade.
  */
 @GraphQlSchema(path = "src/main/graphqls/Schema.graphqls")
 @GraphQlOpRequest
 @ModelRoot(type = RESPONSE)
 @SupportedModelProtocol(Json.class)
-public interface GetOrderWithDummiesOperation extends Model {
+public interface GetAccountNameOnlyOp extends Model {
 
   @FieldArg(name = "id", useVariable = "id")
-  OrderWithDummies order();
+  AccountNameOnly account();
 }

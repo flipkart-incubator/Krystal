@@ -12,14 +12,14 @@ import com.flipkart.krystal.vajram.json.Json;
 
 /**
  * Client-side operation root for {@code
- * VajramGraphQlTest#argBearingListIdFetcherAliases_withSomeAliasesFailing_surfacesErrorsWithoutDroppingFields}.
+ * VajramGraphQlTest#argLessListIdFetcherAliases_whenIdFetcherFails_surfacesSameErrorForAllAliases}.
  */
 @GraphQlSchema(path = "src/main/graphqls/Schema.graphqls")
 @GraphQlOpRequest
 @ModelRoot(type = RESPONSE)
 @SupportedModelProtocol(Json.class)
-public interface GetOrderDummiesFanoutOperation extends Model {
+public interface GetOrderNoArgDummiesFanoutOp extends Model {
 
   @FieldArg(name = "id", useVariable = "id")
-  OrderDummiesFanout order();
+  OrderNoArgDummiesFanout order();
 }

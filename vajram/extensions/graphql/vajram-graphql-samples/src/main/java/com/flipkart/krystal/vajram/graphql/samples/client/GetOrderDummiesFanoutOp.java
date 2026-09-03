@@ -1,4 +1,4 @@
-package com.flipkart.krystal.lattice.samples.graphql.rest.json.client;
+package com.flipkart.krystal.vajram.graphql.samples.client;
 
 import static com.flipkart.krystal.model.ModelRoot.ModelType.RESPONSE;
 
@@ -12,15 +12,14 @@ import com.flipkart.krystal.vajram.json.Json;
 
 /**
  * Client-side operation root for {@code
- * GraphQlEndpointsE2eTest#graphQlQuery_returnsOwnerNameAndEmail}, exercising the generated {@code
- * GetAccountOwnerDetailsOperationQueryFacade}.
+ * VajramGraphQlTest#argBearingListIdFetcherAliases_withSomeAliasesFailing_surfacesErrorsWithoutDroppingFields}.
  */
 @GraphQlSchema(path = "src/main/graphqls/Schema.graphqls")
 @GraphQlOpRequest
 @ModelRoot(type = RESPONSE)
 @SupportedModelProtocol(Json.class)
-public interface GetAccountOwnerDetailsOperation extends Model {
+public interface GetOrderDummiesFanoutOp extends Model {
 
   @FieldArg(name = "id", useVariable = "id")
-  AccountOwnerDetails account();
+  OrderDummiesFanout order();
 }

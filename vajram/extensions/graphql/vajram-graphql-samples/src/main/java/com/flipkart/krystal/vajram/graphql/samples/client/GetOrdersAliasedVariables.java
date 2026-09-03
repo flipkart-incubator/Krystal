@@ -10,7 +10,7 @@ import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.vajram.graphql.client.api.ForGraphQlOpReq;
 import com.flipkart.krystal.vajram.json.Json;
 
-@ForGraphQlOpReq(GetOrdersAliasedOperation.class)
+@ForGraphQlOpReq(GetOrdersAliasedOp.class)
 @ModelRoot(type = REQUEST)
 @SupportedModelProtocol(Json.class)
 public interface GetOrdersAliasedVariables extends Model {
