@@ -10,7 +10,7 @@ import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.vajram.graphql.client.api.ForGraphQlOpReq;
 import com.flipkart.krystal.vajram.json.Json;
 
-@ForGraphQlOpReq(GetOrderNoArgDummiesFanoutOperation.class)
+@ForGraphQlOpReq(GetOrderNoArgDummiesFanoutOp.class)
 @ModelRoot(type = REQUEST)
 @SupportedModelProtocol(Json.class)
 public interface GetOrderNoArgDummiesFanoutVariables extends Model {

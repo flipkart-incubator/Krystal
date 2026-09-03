@@ -15,12 +15,12 @@ import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.SupportedModelProtocol;
-import com.flipkart.krystal.vajram.graphql.client.GraphQlHttpRequest;
+import com.flipkart.krystal.vajram.graphql.client.GraphQlSpecRequest;
 import com.flipkart.krystal.vajram.graphql.client.api.Field;
 import com.flipkart.krystal.vajram.graphql.client.api.FieldArg;
 import com.flipkart.krystal.vajram.graphql.client.api.ForGraphQlOpReq;
+import com.flipkart.krystal.vajram.graphql.client.api.GraphQlOpRequest;
 import com.flipkart.krystal.vajram.graphql.client.api.GraphQlRequest;
-import com.flipkart.krystal.vajram.graphql.client.api.GraphQlSchema;
 import com.flipkart.krystal.vajram.graphql.schema.ArgTypeValidator;
 import com.flipkart.krystal.vajram.graphql.schema.SchemaLoader;
 import com.flipkart.krystal.vajram.graphql.schema.SchemaLocator;
@@ -57,12 +57,12 @@ import javax.lang.model.type.TypeMirror;
  * Generates a {@code <OperationRoot>QueryFacade} class for a single {@code @ForGraphQlOpReq}
  * -annotated variables model - see {@link GraphQlFacadeProcessor}.
  */
-final class GraphQlFacadeGen {
+final class GraphQlSpecRequestGen {
 
   private final CodeGenUtility util;
   private final Map<String, SchemaContext> schemaCache;
 
-  GraphQlFacadeGen(CodeGenUtility util, Map<String, SchemaContext> schemaCache) {
+  GraphQlSpecRequestGen(CodeGenUtility util, Map<String, SchemaContext> schemaCache) {
     this.util = util;
     this.schemaCache = schemaCache;
   }
@@ -83,20 +83,21 @@ final class GraphQlFacadeGen {
       return;
     }
     TypeElement operationRoot = util.getTypeElemFromAnnotationMember(forGraphQlOpReq::value);
-    GraphQlSchema graphQlSchema = operationRoot.getAnnotation(GraphQlSchema.class);
-    if (graphQlSchema == null) {
+    GraphQlOpRequest graphQlOpRequest = operationRoot.getAnnotation(GraphQlOpRequest.class);
+    if (graphQlOpRequest == null) {
       util.error(
-          "Operation root '%s' referenced by @ForGraphQlOpReq must be annotated with @GraphQlSchema"
+          "Operation root '%s' referenced by @ForGraphQlOpReq must be annotated with @GraphQlOpRequest"
               .formatted(operationRoot.getQualifiedName()),
           variablesModel);
       return;
     }
 
-    File schemaFile = SchemaLocator.locate(util, graphQlSchema.path()).toFile();
+    File schemaFile = SchemaLocator.locate(util, graphQlOpRequest.schemaFilePath()).toFile();
     if (!schemaFile.exists()) {
       util.error(
-          "GraphQL schema file not found: '%s' (resolved from @GraphQlSchema(path=\"%s\"))"
-              .formatted(schemaFile, graphQlSchema.path()),
+          "GraphQL schema file not found: '%s' (resolved from"
+              + " @GraphQlOpRequest(schemaFilePath=\"%s\"))"
+                  .formatted(schemaFile, graphQlOpRequest.schemaFilePath()),
           operationRoot);
       return;
     }
@@ -397,11 +398,11 @@ final class GraphQlFacadeGen {
     classBuilder.addMethod(
         MethodSpec.methodBuilder("of")
             .addModifiers(PUBLIC, STATIC)
-            .returns(ClassName.get(GraphQlHttpRequest.class))
+            .returns(ClassName.get(GraphQlSpecRequest.class))
             .addParameter(variablesClassName, "variables")
             .addStatement(
                 "return new $T(QUERY, $S, variables, $T.of())",
-                GraphQlHttpRequest.class,
+                GraphQlSpecRequest.class,
                 opName,
                 Map.class)
             .build());

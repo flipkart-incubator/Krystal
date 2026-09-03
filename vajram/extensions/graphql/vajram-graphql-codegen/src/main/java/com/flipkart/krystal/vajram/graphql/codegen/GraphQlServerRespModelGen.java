@@ -19,7 +19,7 @@ import com.flipkart.krystal.vajram.graphql.api.execution.GraphQLUtils;
 import com.flipkart.krystal.vajram.graphql.api.execution.VajramExecutionStrategy;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlObject;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperation;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponse;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlServerResponse;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
@@ -46,18 +46,18 @@ import javax.lang.model.type.TypeMirror;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * Generates GraphQL response model implementations (e.g., Order_ImmutGQlRespJson) for entities
- * annotated with @SupportedModelProtocol(GraphQlResponseJson.class).
+ * Generates GraphQL response model implementations (e.g., Order_ImmutGQlServerResp) for entities
+ * annotated with @SupportedModelProtocol(GraphQlServerResponse.class).
  *
  * <p>These models wrap field values in {@code Errable<T>} to support partial failures in GraphQL
  * responses, and include GraphQL execution context for proper query resolution.
  */
-final class GraphQlRespModelGen implements CodeGenerator {
+final class GraphQlServerRespModelGen implements CodeGenerator {
 
   private final ModelsCodeGenContext codeGenContext;
   private final CodeGenUtility util;
 
-  GraphQlRespModelGen(ModelsCodeGenContext codeGenContext) {
+  GraphQlServerRespModelGen(ModelsCodeGenContext codeGenContext) {
     this.codeGenContext = codeGenContext;
     this.util = codeGenContext.util();
   }
@@ -92,7 +92,7 @@ final class GraphQlRespModelGen implements CodeGenerator {
   private TypeSpec generateGQlRespJsonModel(
       TypeElement modelRootType, ClassName immutClassName, List<ExecutableElement> modelMethods) {
     ClassName gqlRespJsonClassName =
-        util.getImmutClassName(modelRootType, GraphQlResponse.INSTANCE);
+        util.getImmutClassName(modelRootType, GraphQlServerResponse.INSTANCE);
     boolean hasExecutionContext = hasExecutionContext(modelMethods);
 
     Builder classBuilder =
@@ -303,7 +303,8 @@ final class GraphQlRespModelGen implements CodeGenerator {
     MethodSpec.Builder constructor =
         MethodSpec.constructorBuilder()
             .addModifiers(PUBLIC)
-            .addParameter(util.getImmutClassName(modelRootType, GraphQlResponse.INSTANCE), "_from");
+            .addParameter(
+                util.getImmutClassName(modelRootType, GraphQlServerResponse.INSTANCE), "_from");
     // Add parameters for each field (Errable wrapped, except GraphQL context methods)
     constructor.addStatement(
         modelMethods.stream()
@@ -654,7 +655,7 @@ final class GraphQlRespModelGen implements CodeGenerator {
 
       TypeMirror returnType = method.getReturnType();
       TypeName fieldType =
-          util.getModelFieldType(method, true, GraphQlResponse.INSTANCE).fieldType();
+          util.getModelFieldType(method, true, GraphQlServerResponse.INSTANCE).fieldType();
 
       // For ALL lists, use nested Errable: Errable<List<Errable<Element>>>
       // Note: Builder uses non-_Immut types (e.g., Dummy not Dummy_Immut)
@@ -873,7 +874,8 @@ final class GraphQlRespModelGen implements CodeGenerator {
         // Standard scalar: simple wrap
         // For single entity setters, wrap in Errable.withValue()
         ClassName fieldGQlClassName =
-            this.util.getImmutClassName(fieldModelRoot.get().element(), GraphQlResponse.INSTANCE);
+            this.util.getImmutClassName(
+                fieldModelRoot.get().element(), GraphQlServerResponse.INSTANCE);
         directSetterBuilder
             .addParameter(fieldType, fieldName)
             .addCode(
@@ -1309,7 +1311,7 @@ final class GraphQlRespModelGen implements CodeGenerator {
 
     // Check if the type has @SupportedModelProtocol(GraphQlResponseJson.class)
     // This is a more reliable check than interface checking during code generation
-    if (util.typeExplicitlySupportsProtocol(typeElement, GraphQlResponse.class)) {
+    if (util.typeExplicitlySupportsProtocol(typeElement, GraphQlServerResponse.class)) {
       return true;
     }
 
@@ -1356,6 +1358,7 @@ final class GraphQlRespModelGen implements CodeGenerator {
 
     return codeGenContext
         .util()
-        .typeExplicitlySupportsProtocol(codeGenContext.modelRootType(), GraphQlResponse.class);
+        .typeExplicitlySupportsProtocol(
+            codeGenContext.modelRootType(), GraphQlServerResponse.class);
   }
 }

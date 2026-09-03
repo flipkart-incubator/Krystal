@@ -16,7 +16,7 @@ import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.vajram.graphql.api.Constants.Directives;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponse;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlServerResponse;
 import com.flipkart.krystal.vajram.graphql.schema.GraphQLTypeName;
 import com.squareup.javapoet.*;
 import com.squareup.javapoet.TypeSpec.Builder;
@@ -175,7 +175,7 @@ class GraphQLEntityGen implements CodeGenerator {
         .addAnnotation(modelRoot.build())
         .addAnnotation(
             AnnotationSpec.builder(ClassName.get(SupportedModelProtocol.class))
-                .addMember("value", "$T.class", ClassName.get(GraphQlResponse.class))
+                .addMember("value", "$T.class", ClassName.get(GraphQlServerResponse.class))
                 .build());
     util.generateSourceFile(
         className.canonicalName(),

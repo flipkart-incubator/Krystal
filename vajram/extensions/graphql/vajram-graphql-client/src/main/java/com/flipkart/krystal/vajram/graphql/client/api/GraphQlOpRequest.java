@@ -13,4 +13,8 @@ import java.lang.annotation.Target;
  */
 @Retention(CLASS)
 @Target(TYPE)
-public @interface GraphQlOpRequest {}
+public @interface GraphQlOpRequest {
+
+  /** Relative resource path of the GraphQL SDL schema file to validate this operation against. */
+  String schemaFilePath();
+}

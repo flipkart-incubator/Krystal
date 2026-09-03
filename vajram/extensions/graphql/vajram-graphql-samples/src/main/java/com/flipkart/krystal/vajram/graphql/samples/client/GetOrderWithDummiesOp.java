@@ -7,20 +7,17 @@ import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.vajram.graphql.client.api.FieldArg;
 import com.flipkart.krystal.vajram.graphql.client.api.GraphQlOpRequest;
-import com.flipkart.krystal.vajram.graphql.client.api.GraphQlSchema;
 import com.flipkart.krystal.vajram.json.Json;
 
 /**
  * Client-side operation root for {@code
- * VajramGraphQlTest#inferIdFromArgs_withOptionalIdField_buildsIdentityFromArgs}.
+ * VajramGraphQlTest#graphqlQueryWithNestedArgBearingAliases_succeeds}.
  */
-@GraphQlSchema(path = "src/main/graphqls/Schema.graphqls")
-@GraphQlOpRequest
+@GraphQlOpRequest(schemaFilePath = "src/main/graphqls/Schema.graphqls")
 @ModelRoot(type = RESPONSE)
 @SupportedModelProtocol(Json.class)
-public interface GetNameByValueOperation extends Model {
+public interface GetOrderWithDummiesOp extends Model {
 
-  @FieldArg(name = "value", useVariable = "value")
-  @FieldArg(name = "string", useVariable = "string")
-  NameFields name();
+  @FieldArg(name = "id", useVariable = "id")
+  OrderWithDummies order();
 }

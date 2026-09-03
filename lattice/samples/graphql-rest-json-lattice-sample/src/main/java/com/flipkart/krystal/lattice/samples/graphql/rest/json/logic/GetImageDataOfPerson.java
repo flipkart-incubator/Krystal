@@ -18,7 +18,7 @@ public abstract class GetImageDataOfPerson extends ComputeVajramDef<GetImageData
 
   @Output
   static GetImageDataOfPerson_Fields outputLogic(Person_Id id) {
-    return GetImageDataOfPerson_Fields_ImmutGQlResp._builder()
+    return GetImageDataOfPerson_Fields_ImmutGQlServerResp._builder()
         .mainUrl(Errable.withValue(id.id() + "-mainUrl.png"))
         .thumbnailUrl(Errable.withValue(id.id() + "-thumbnailUrl.png"))
         ._build();

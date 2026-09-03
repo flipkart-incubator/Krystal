@@ -7,19 +7,17 @@ import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.SupportedModelProtocol;
 import com.flipkart.krystal.vajram.graphql.client.api.FieldArg;
 import com.flipkart.krystal.vajram.graphql.client.api.GraphQlOpRequest;
-import com.flipkart.krystal.vajram.graphql.client.api.GraphQlSchema;
 import com.flipkart.krystal.vajram.json.Json;
 
 /**
  * Client-side operation root for {@code
- * VajramGraphQlTest#inferIdFromArgs_withOptionalIdFieldHavingNoArgAtAll_leavesItUnset}.
+ * VajramGraphQlTest#argBearingSingleFieldDataFetcherAliases_fansOutPerAlias}.
  */
-@GraphQlSchema(path = "src/main/graphqls/Schema.graphqls")
-@GraphQlOpRequest
+@GraphQlOpRequest(schemaFilePath = "src/main/graphqls/Schema.graphqls")
 @ModelRoot(type = RESPONSE)
 @SupportedModelProtocol(Json.class)
-public interface GetNameByStringOperation extends Model {
+public interface GetOrderItemFanoutOp extends Model {
 
-  @FieldArg(name = "string", useVariable = "string")
-  NameFields nameByString();
+  @FieldArg(name = "id", useVariable = "id")
+  OrderItemFanout order();
 }
