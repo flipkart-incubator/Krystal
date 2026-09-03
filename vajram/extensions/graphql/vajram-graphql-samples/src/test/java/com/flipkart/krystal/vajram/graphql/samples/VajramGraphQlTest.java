@@ -65,7 +65,6 @@ import graphql.GraphQL;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -228,8 +227,7 @@ public class VajramGraphQlTest {
     ExecutionResult executionResult = future.join();
     GetNameByStringOperation response =
         Json.JSON_MAPPER.convertValue(
-            Objects.<Map<String, Object>>requireNonNull(executionResult.getData()),
-            GetNameByStringOperation_ImmutJson.class);
+            executionResult.getData(), GetNameByStringOperation_ImmutJson.class);
     assertThat(response.nameByString().value()).isNull();
     assertThat(response.nameByString().string()).isEqualTo("s1");
   }

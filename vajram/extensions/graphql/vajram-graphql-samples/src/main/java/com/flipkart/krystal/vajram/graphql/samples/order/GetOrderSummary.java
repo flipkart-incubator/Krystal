@@ -28,7 +28,7 @@ public abstract class GetOrderSummary extends ComputeVajramDef<GetOrderSummary_F
 
   @Output
   static GetOrderSummary_Fields output() {
-    return GetOrderSummary_Fields_ImmutGQlResp._builder()
+    return GetOrderSummary_Fields_ImmutGQlServerResp._builder()
         .orderItemsCount(Errable.withValue(Long.MAX_VALUE))
         .orderPlacedAt(Errable.withValue(UNIX_EPOCH_DATE_TIME))
         .orderAcceptDate(Errable.withValue(UNIX_EPOCH_DATE))

@@ -3,7 +3,7 @@ package com.flipkart.krystal.lattice.graphql.rest.restapi;
 import static com.flipkart.krystal.lattice.graphql.rest.restapi.HttpPostGraphQl_Fac.queryResponse_n;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperation._asExecutionResult;
-import static com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponse.GRAPHQL_RESPONSE_JSON_CONTENT_TYPE;
+import static com.flipkart.krystal.vajram.graphql.api.model.GraphQlServerResponse.GRAPHQL_RESPONSE_JSON_CONTENT_TYPE;
 import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static java.util.Objects.requireNonNullElse;
 

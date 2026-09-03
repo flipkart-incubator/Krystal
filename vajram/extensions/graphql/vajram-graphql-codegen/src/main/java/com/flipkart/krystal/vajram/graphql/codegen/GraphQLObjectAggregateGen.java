@@ -38,6 +38,7 @@ import com.flipkart.krystal.vajram.graphql.api.model.GraphQlObject;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlObjectImpl.GraphQlObjectImplBuilder;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperation;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperationImpl.GraphQlOperationImplBuilder;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlServerResponse;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlValue;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlValue.ListValue;
 import com.flipkart.krystal.vajram.graphql.api.model.GraphQlValue.ScalarValue;
@@ -1456,7 +1457,9 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
   }
 
   private static ClassName graphQlResponseImplementation(ClassName modelClass) {
-    return ClassName.get(modelClass.packageName(), modelClass.simpleName() + "_ImmutGQlResp");
+    return ClassName.get(
+        modelClass.packageName(),
+        modelClass.simpleName() + "_Immut" + GraphQlServerResponse.INSTANCE.modelClassesSuffix());
   }
 
   /**
