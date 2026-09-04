@@ -30,8 +30,8 @@ dependencies {
     implementation 'org.slf4j:slf4j-api:2.0.13'
 
     implementation project(':vajram:extensions:json:vajram-json')
-    implementation 'com.fasterxml.jackson.core:jackson-annotations'
-    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation libs.jackson.annotations
+    implementation libs.jackson.databind
 
 
     testImplementation 'com.flipkart.krystal:krystex'

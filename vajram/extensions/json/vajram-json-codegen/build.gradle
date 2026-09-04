@@ -8,8 +8,8 @@ dependencies {
     implementation project(':vajram:extensions:json:vajram-json')
 
     implementation 'com.squareup:javapoet'
-    implementation 'com.fasterxml.jackson.core:jackson-annotations'
-    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation libs.jackson.annotations
+    implementation libs.jackson.databind
 }
 
 checkerFramework {

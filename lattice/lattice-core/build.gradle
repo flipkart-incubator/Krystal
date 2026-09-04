@@ -8,12 +8,10 @@ dependencies {
     api project(':krystex')
     implementation project(':krystal-common')
 
-    implementation 'com.fasterxml.jackson.core:jackson-annotations'
-    implementation 'com.fasterxml.jackson.core:jackson-databind'
-    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
-    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-guava'
-    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
-    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    implementation libs.jackson.annotations
+    implementation libs.jackson.databind
+    implementation libs.jackson.dataformat.yaml
+    implementation libs.jackson.datatype.guava
 
     implementation 'jakarta.enterprise:jakarta.enterprise.cdi-api'
     implementation 'commons-cli:commons-cli'

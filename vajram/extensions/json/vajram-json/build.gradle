@@ -3,10 +3,7 @@ description = 'Enables support for JSON in Krystal - models can be serialized an
 dependencies {
     implementation project(':krystal-common')
 
-    api 'com.fasterxml.jackson.core:jackson-annotations'
-    api 'com.fasterxml.jackson.core:jackson-databind'
-    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-guava'
-    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
-    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
-    implementation 'com.fasterxml.jackson.module:jackson-module-parameter-names'
+    api libs.jackson.annotations
+    api libs.jackson.databind
+    implementation libs.jackson.datatype.guava
 }

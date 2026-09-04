@@ -2,13 +2,13 @@ package com.flipkart.krystal.vajram.json.serialized;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.io.CharSource;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import tools.jackson.databind.ObjectReader;
 
 public final class StringJson extends AbstractJsonRepresentation {
 
@@ -26,7 +26,7 @@ public final class StringJson extends AbstractJsonRepresentation {
   }
 
   @Override
-  public <T> T _deserialize(ObjectReader reader) throws IOException {
+  public <T> T _deserialize(ObjectReader reader) {
     if (bytes != null) {
       return reader.readValue(bytes);
     }

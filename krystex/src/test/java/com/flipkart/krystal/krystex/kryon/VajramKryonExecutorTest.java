@@ -1,6 +1,5 @@
 package com.flipkart.krystal.krystex.kryon;
 
-import static com.fasterxml.jackson.annotation.JsonInclude.Value.ALL_NON_NULL;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy.DIRECT;
 import static java.time.Duration.ofSeconds;
@@ -8,11 +7,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.core.VajramID;
@@ -58,6 +52,7 @@ import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.VajramDefRoot;
 import com.flipkart.krystal.vajram.batching.InputBatcher;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
+import com.flipkart.krystal.vajram.json.Json;
 import com.flipkart.krystal.vajram.resilience4j.bulkhead.Resilience4JBulkhead;
 import com.flipkart.krystal.vajram.resilience4j.curcuitbreaker.Resilience4JCircuitBreaker;
 import com.flipkart.krystal.visualization.executiongraph.DefaultKryonExecutionReport;
@@ -98,7 +93,6 @@ class VajramKryonExecutorTest {
 
   private Lease<SingleThreadExecutor> executorLease;
   private TestRequestContext requestContext;
-  private ObjectMapper objectMapper;
   private com.flipkart.krystal.krystex.VajramGraph vGraph;
   private KrystexGraphBuilder kGraph;
   private DecorationOrdering decorationOrdering;
@@ -124,14 +118,6 @@ class VajramKryonExecutorTest {
             .build();
 
     requestContext = new TestRequestContext(Optional.of("user_id_1"), 2);
-    objectMapper =
-        JsonMapper.builder()
-            .addModules(new JavaTimeModule(), new Jdk8Module())
-            .defaultPropertyInclusion(ALL_NON_NULL)
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-            .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
-            .disable(SerializationFeature.FAIL_ON_SELF_REFERENCES)
-            .build();
   }
 
   @AfterEach
@@ -386,7 +372,7 @@ class VajramKryonExecutorTest {
   }
 
   @Test
-  void execute_multiResolverFanouts_permutesTheFanouts() throws Exception {
+  void execute_multiResolverFanouts_permutesTheFanouts() {
     kGraph =
         loadFromClasspath(
             "com.flipkart.krystal.krystex.test_vajrams.audit",
@@ -425,7 +411,7 @@ class VajramKryonExecutorTest {
             Hello Friends of Firstname Lastname (user_id_2)! Firstname Lastname (user_id_2:friend_1)
             Hello Friends of Firstname Lastname (user_id_2)! Firstname Lastname (user_id_2:friend_1), Firstname Lastname (user_id_2:friend_2)""");
     System.out.println(
-        objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(kryonExecutionReport));
+        Json.MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(kryonExecutionReport));
   }
 
   @Test
