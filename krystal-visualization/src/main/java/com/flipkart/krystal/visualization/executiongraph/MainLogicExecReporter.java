@@ -1,6 +1,5 @@
 package com.flipkart.krystal.visualization.executiongraph;
 
-import static com.fasterxml.jackson.annotation.JsonInclude.Value.ALL_NON_NULL;
 import static com.flipkart.krystal.data.Errable.nil;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -8,12 +7,6 @@ import static java.io.File.separator;
 import static java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 import static java.util.concurrent.CompletableFuture.allOf;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.ExecutionItem;
@@ -24,6 +17,7 @@ import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
+import com.flipkart.krystal.vajram.json.Json;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -42,18 +36,9 @@ public final class MainLogicExecReporter implements OutputLogicDecorator {
 
   private final KryonExecutionReport kryonExecutionReport;
   private static final String FILE_PATH = separator + "tmp" + separator + "krystal_exec_graph_";
-  private final ObjectMapper objectMapper;
 
   public MainLogicExecReporter(KryonExecutionReport kryonExecutionReport) {
     this.kryonExecutionReport = kryonExecutionReport;
-    objectMapper =
-        JsonMapper.builder()
-            .addModules(new JavaTimeModule(), new Jdk8Module())
-            .defaultPropertyInclusion(ALL_NON_NULL)
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-            .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
-            .disable(SerializationFeature.FAIL_ON_SELF_REFERENCES)
-            .build();
   }
 
   public KryonExecutorConfigurator defaultKryonExecutorConfigurator() {
@@ -141,9 +126,9 @@ public final class MainLogicExecReporter implements OutputLogicDecorator {
 
   private String generateGraph() {
     try {
-      String jsonString = objectMapper.writeValueAsString(kryonExecutionReport);
+      String jsonString = Json.MAPPER.writeValueAsString(kryonExecutionReport);
       return GenerateHtml.generateHtml(jsonString);
-    } catch (JsonProcessingException e) {
+    } catch (Exception e) {
       log.error("Error came while serializing kryonExecutionReport");
     }
     return "";

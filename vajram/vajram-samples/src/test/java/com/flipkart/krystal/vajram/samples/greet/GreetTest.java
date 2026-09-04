@@ -1,21 +1,11 @@
 package com.flipkart.krystal.vajram.samples.greet;
 
-import static com.fasterxml.jackson.annotation.JsonInclude.Value.ALL_NON_NULL;
 import static com.flipkart.krystal.data.Errable.withValue;
 import static com.google.inject.Guice.createInjector;
 import static java.lang.System.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.databind.ser.std.StdSerializer;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.data.Errable;
@@ -35,6 +25,7 @@ import com.flipkart.krystal.krystex.testharness.VajramTestHarness;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.guice.injection.VajramGuiceInputInjector;
+import com.flipkart.krystal.vajram.json.Json;
 import com.flipkart.krystal.visualization.executiongraph.DefaultKryonExecutionReport;
 import com.flipkart.krystal.visualization.executiongraph.KryonExecutionReport;
 import com.flipkart.krystal.visualization.executiongraph.MainLogicExecReporter;
@@ -66,7 +57,6 @@ class GreetTest {
   }
 
   private VajramGraph graph;
-  private ObjectMapper objectMapper;
   private static final String USER_ID = "user@123";
 
   @SuppressWarnings("SpellCheckingInspection")
@@ -95,25 +85,6 @@ class GreetTest {
             .build();
     this.graph = VajramGraph.builder().loadFromPackage(PACKAGE_PATH).build();
     this.requestLevelCache = new TestRequestLevelCache(graph);
-
-    this.objectMapper =
-        JsonMapper.builder()
-            .addModules(new JavaTimeModule(), new Jdk8Module())
-            .defaultPropertyInclusion(ALL_NON_NULL)
-            .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-            .addModule(
-                new SimpleModule()
-                    .addSerializer(
-                        new StdSerializer<>(Logger.class) {
-                          @Override
-                          public void serialize(
-                              Logger value, JsonGenerator gen, SerializerProvider serializers)
-                              throws IOException {
-                            gen.writeString(value.toString());
-                          }
-                        }))
-            .build();
   }
 
   @AfterEach
@@ -122,7 +93,7 @@ class GreetTest {
   }
 
   @Test
-  void greetingVajram_success() throws Exception {
+  void greetingVajram_success() {
     CompletableFuture<String> future;
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
     RequestContext requestContext = new RequestContext(REQUEST_ID, USER_ID);
@@ -147,7 +118,7 @@ class GreetTest {
         .isEqualTo("Hello Firstname Lastname (user@123)! Hope you are doing well!");
     assertThat(analyticsEventSink.events).hasSize(1);
     out.println(
-        objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(kryonExecutionReport));
+        Json.MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(kryonExecutionReport));
   }
 
   private class GuiceModule extends AbstractModule {

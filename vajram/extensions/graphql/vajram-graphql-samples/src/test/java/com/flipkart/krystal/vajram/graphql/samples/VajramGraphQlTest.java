@@ -5,7 +5,6 @@ import static com.flipkart.krystal.vajram.graphql.samples.order.GetOrderSummary.
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig;
@@ -133,7 +132,7 @@ public class VajramGraphQlTest {
   }
 
   @Test
-  void graphqlQueryExecution_succeeds() throws JsonProcessingException {
+  void graphqlQueryExecution_succeeds() {
     CompletableFuture<ExecutionResult> result;
     try (VajramKryonExecutor executor = createExecutor()) {
       GetOrderExecutionVariables_ImmutJson variables =
@@ -154,7 +153,7 @@ public class VajramGraphQlTest {
     @SuppressWarnings("unchecked")
     Map<String, Object> queryData = requireNonNull(executionResult.getData());
     GetOrderExecutionOp_ImmutJson result1 =
-        Json.JSON_MAPPER.convertValue(queryData, GetOrderExecutionOp_ImmutJson.class);
+        Json.MAPPER.convertValue(queryData, GetOrderExecutionOp_ImmutJson.class);
     GetOrderExecutionOp response = result1;
 
     assertThat(response.order().orderItemNames()).isEqualTo(List.of("order1_1", "order1_2"));
@@ -176,7 +175,7 @@ public class VajramGraphQlTest {
   }
 
   @Test
-  void inferIdFromArgs_withOptionalIdField_buildsIdentityFromArgs() throws JsonProcessingException {
+  void inferIdFromArgs_withOptionalIdField_buildsIdentityFromArgs() {
     // `name` returns a `Name` type with an optional (`value`) and a mandatory (`string`)
     // @idField. @inferIdFromArgs must map every idField from the matching args, not just
     // non-null ones.
@@ -196,15 +195,14 @@ public class VajramGraphQlTest {
     @SuppressWarnings("unchecked")
     Map<String, Object> queryData = requireNonNull(executionResult.getData());
     GetNameByValueOp_ImmutJson result1 =
-        Json.JSON_MAPPER.convertValue(queryData, GetNameByValueOp_ImmutJson.class);
+        Json.MAPPER.convertValue(queryData, GetNameByValueOp_ImmutJson.class);
     GetNameByValueOp response = result1;
     assertThat(response.name().value()).isEqualTo("v1");
     assertThat(response.name().string()).isEqualTo("s1");
   }
 
   @Test
-  void inferIdFromArgs_withOptionalIdFieldHavingNoArgAtAll_leavesItUnset()
-      throws JsonProcessingException {
+  void inferIdFromArgs_withOptionalIdFieldHavingNoArgAtAll_leavesItUnset() {
     // `nameByString` doesn't declare a `value` arg at all; Name's optional `value` @idField must
     // simply be left absent, not cause a build-time or run-time failure.
     CompletableFuture<ExecutionResult> future;
@@ -221,13 +219,13 @@ public class VajramGraphQlTest {
     assertThat(future).succeedsWithin(TEST_TIMEOUT);
     ExecutionResult executionResult = future.join();
     GetNameByStringOp response =
-        Json.JSON_MAPPER.convertValue(executionResult.getData(), GetNameByStringOp_ImmutJson.class);
+        Json.MAPPER.convertValue(executionResult.getData(), GetNameByStringOp_ImmutJson.class);
     assertThat(response.nameByString().value()).isNull();
     assertThat(response.nameByString().string()).isEqualTo("s1");
   }
 
   @Test
-  void graphqlQueryWithQueryLevelAliases_succeeds() throws JsonProcessingException {
+  void graphqlQueryWithQueryLevelAliases_succeeds() {
     // Two aliases for the same arg-bearing `order` field at query level, each with a different id
     CompletableFuture<ExecutionResult> result;
     try (VajramKryonExecutor executor = createExecutor()) {
@@ -245,7 +243,7 @@ public class VajramGraphQlTest {
     @SuppressWarnings("unchecked")
     Map<String, Object> queryData = requireNonNull(executionResult.getData());
     GetOrdersAliasedOp_ImmutJson result1 =
-        Json.JSON_MAPPER.convertValue(queryData, GetOrdersAliasedOp_ImmutJson.class);
+        Json.MAPPER.convertValue(queryData, GetOrdersAliasedOp_ImmutJson.class);
     GetOrdersAliasedOp response = result1;
 
     // `s: state` alias resolves the `state` field under a different response key
@@ -258,7 +256,7 @@ public class VajramGraphQlTest {
   }
 
   @Test
-  void graphqlQueryWithNestedArgBearingAliases_succeeds() throws JsonProcessingException {
+  void graphqlQueryWithNestedArgBearingAliases_succeeds() {
     // Two aliases for the same arg-bearing `dummy(name)` field nested inside order
     CompletableFuture<ExecutionResult> result;
     try (VajramKryonExecutor executor = createExecutor()) {
@@ -280,7 +278,7 @@ public class VajramGraphQlTest {
     @SuppressWarnings("unchecked")
     Map<String, Object> queryData = requireNonNull(executionResult.getData());
     GetOrderWithDummiesOp response =
-        Json.JSON_MAPPER.convertValue(queryData, GetOrderWithDummiesOp_ImmutJson.class);
+        Json.MAPPER.convertValue(queryData, GetOrderWithDummiesOp_ImmutJson.class);
 
     // GetDummyIdForOrder ignores `name` arg, always returns orderId_dummy_1; both aliases map to
     // separate Dummy responses keyed by alias.
@@ -289,7 +287,7 @@ public class VajramGraphQlTest {
   }
 
   @Test
-  void argBearingSingleFieldDataFetcherAliases_fansOutPerAlias() throws JsonProcessingException {
+  void argBearingSingleFieldDataFetcherAliases_fansOutPerAlias() {
     // orderItemAt (scalar) and orderItemNamesFrom (list) are single-field @dataFetcher fields
     // with GraphQL arguments: each aliased invocation must fan out to its own vajram call and
     // get back a distinct, argument-specific response - not a shared/one-to-one response.
@@ -313,7 +311,7 @@ public class VajramGraphQlTest {
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
     Map<String, Object> queryData = requireNonNull(result.join().getData());
     GetOrderItemFanoutOp result1 =
-        Json.JSON_MAPPER.convertValue(queryData, GetOrderItemFanoutOp_ImmutJson.class);
+        Json.MAPPER.convertValue(queryData, GetOrderItemFanoutOp_ImmutJson.class);
     GetOrderItemFanoutOp response = result1;
 
     assertThat(response.order().i1()).isEqualTo("order1_item_1");
@@ -323,8 +321,7 @@ public class VajramGraphQlTest {
   }
 
   @Test
-  void argBearingListIdFetcherAliases_withSomeAliasesFailing_surfacesErrorsWithoutDroppingFields()
-      throws JsonProcessingException {
+  void argBearingListIdFetcherAliases_withSomeAliasesFailing_surfacesErrorsWithoutDroppingFields() {
     // `dummies` is an arg-bearing list @idFetcher field (GetDummyIdsWithArgs) whose id-fetcher
     // fans out one call per alias. One alias's id-fetcher call succeeds returning n ids, while a
     // sibling alias's id-fetcher call throws. A correct implementation must still surface a
@@ -353,7 +350,7 @@ public class VajramGraphQlTest {
     ExecutionResult executionResult = result.join();
     Map<String, Object> queryData = requireNonNull(executionResult.getData());
     GetOrderDummiesFanoutOp response =
-        Json.JSON_MAPPER.convertValue(queryData, GetOrderDummiesFanoutOp_ImmutJson.class);
+        Json.MAPPER.convertValue(queryData, GetOrderDummiesFanoutOp_ImmutJson.class);
 
     // The successful alias must retain its own 2 ids, unaffected by the sibling failure.
     assertThat(response.order().ok()).isNotNull();
@@ -367,8 +364,7 @@ public class VajramGraphQlTest {
   }
 
   @Test
-  void argBearingNonListIdFetcherAliases_withOneAliasFailing_surfacesErrorWithoutDroppingField()
-      throws JsonProcessingException {
+  void argBearingNonListIdFetcherAliases_withOneAliasFailing_surfacesErrorWithoutDroppingField() {
     // `dummy` is an arg-bearing non-list @idFetcher field (GetDummyIdForOrder) whose id-fetcher
     // fans out one call per alias. One alias's id-fetcher call succeeds, a sibling alias's call
     // throws. The failing alias must still show up as `null` + a GraphQL error, and the
@@ -392,7 +388,7 @@ public class VajramGraphQlTest {
     ExecutionResult executionResult = result.join();
     Map<String, Object> queryData = requireNonNull(executionResult.getData());
     GetOrderDummyFanoutOp response =
-        Json.JSON_MAPPER.convertValue(queryData, GetOrderDummyFanoutOp_ImmutJson.class);
+        Json.MAPPER.convertValue(queryData, GetOrderDummyFanoutOp_ImmutJson.class);
 
     assertThat(response.order().ok()).isNotNull();
     assertThat(response.order().ok().dummyId()).isEqualTo("order1_dummy_1");
@@ -402,8 +398,7 @@ public class VajramGraphQlTest {
   }
 
   @Test
-  void argLessListIdFetcherAliases_whenIdFetcherFails_surfacesSameErrorForAllAliases()
-      throws JsonProcessingException {
+  void argLessListIdFetcherAliases_whenIdFetcherFails_surfacesSameErrorForAllAliases() {
     // `noArgDummies` is an arg-less list @idFetcher field (GetDummyIds). With no arguments,
     // the id-fetcher is called exactly once for the whole field (no per-alias fanout is
     // possible) - so if it fails, every alias of `noArgDummies` must see the same null + error,
@@ -423,7 +418,7 @@ public class VajramGraphQlTest {
     ExecutionResult executionResult = result.join();
     Map<String, Object> queryData = requireNonNull(executionResult.getData());
     GetOrderNoArgDummiesFanoutOp_ImmutJson result1 =
-        Json.JSON_MAPPER.convertValue(queryData, GetOrderNoArgDummiesFanoutOp_ImmutJson.class);
+        Json.MAPPER.convertValue(queryData, GetOrderNoArgDummiesFanoutOp_ImmutJson.class);
     GetOrderNoArgDummiesFanoutOp response = result1;
 
     assertThat(response.order().a1()).isNull();
@@ -432,7 +427,7 @@ public class VajramGraphQlTest {
   }
 
   @Test
-  void graphqlQueryWithNamedFragment_noAliases_succeeds() throws JsonProcessingException {
+  void graphqlQueryWithNamedFragment_noAliases_succeeds() {
     // A named fragment (`OrderFieldsFragment`, spread via `OrderWithFragment`), with no aliases
     // anywhere in the query.
     CompletableFuture<ExecutionResult> result;
@@ -449,7 +444,7 @@ public class VajramGraphQlTest {
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
     Map<String, Object> queryData = requireNonNull(result.join().getData());
     GetOrderWithFragmentOp response =
-        Json.JSON_MAPPER.convertValue(queryData, GetOrderWithFragmentOp_ImmutJson.class);
+        Json.MAPPER.convertValue(queryData, GetOrderWithFragmentOp_ImmutJson.class);
 
     assertThat(response.order().state())
         .isEqualTo(com.flipkart.krystal.vajram.graphql.samples.client.State.COMPLETED);
@@ -457,8 +452,7 @@ public class VajramGraphQlTest {
   }
 
   @Test
-  void graphqlQueryWithNamedFragment_underQueryLevelAliases_succeeds()
-      throws JsonProcessingException {
+  void graphqlQueryWithNamedFragment_underQueryLevelAliases_succeeds() {
     // The same named fragment is spread under two differently-aliased `order` selections. Each
     // alias must resolve the fragment's fields against its own argument-specific order.
     CompletableFuture<ExecutionResult> result;
@@ -478,7 +472,7 @@ public class VajramGraphQlTest {
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
     Map<String, Object> queryData = requireNonNull(result.join().getData());
     GetOrdersWithFragmentOp response =
-        Json.JSON_MAPPER.convertValue(queryData, GetOrdersWithFragmentOp_ImmutJson.class);
+        Json.MAPPER.convertValue(queryData, GetOrdersWithFragmentOp_ImmutJson.class);
 
     assertThat(response.o1().state())
         .isEqualTo(com.flipkart.krystal.vajram.graphql.samples.client.State.COMPLETED);
@@ -489,8 +483,7 @@ public class VajramGraphQlTest {
   }
 
   @Test
-  void graphqlQueryWithNamedFragment_havingFieldAliasesInsideFragment_succeeds()
-      throws JsonProcessingException {
+  void graphqlQueryWithNamedFragment_havingFieldAliasesInsideFragment_succeeds() {
     // Fields aliased *inside* the fragment definition itself (`OrderFieldsAliasedFragment`, not
     // at the spread site) must resolve under their aliased response keys.
     CompletableFuture<ExecutionResult> result;
@@ -507,7 +500,7 @@ public class VajramGraphQlTest {
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
     Map<String, Object> queryData = requireNonNull(result.join().getData());
     GetOrderWithAliasedFragmentOp response =
-        Json.JSON_MAPPER.convertValue(queryData, GetOrderWithAliasedFragmentOp_ImmutJson.class);
+        Json.MAPPER.convertValue(queryData, GetOrderWithAliasedFragmentOp_ImmutJson.class);
 
     assertThat(response.order().s())
         .isEqualTo(com.flipkart.krystal.vajram.graphql.samples.client.State.COMPLETED);
@@ -552,8 +545,7 @@ public class VajramGraphQlTest {
    * model instance (not a Map); it's converted here since all client models in {@code client/}
    * declare {@code @SupportedModelProtocol(Json.class)}.
    */
-  private static GraphQLQuery toGraphQLQuery(GraphQlSpecRequest req)
-      throws JsonProcessingException {
+  private static GraphQLQuery toGraphQLQuery(GraphQlSpecRequest req) {
     @SuppressWarnings("unchecked")
     Map<String, Object> variables =
         Json.OBJECT_READER

@@ -12,7 +12,7 @@ application {
 
 dependencies {
     implementation platform("com.flipkart.krystal:lattice-bom:${lattice_version}")
-    implementation platform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
+    implementation platform(libs.quarkus.bom)
     krystalModelsGenProcessor platform("com.flipkart.krystal:lattice-bom:${lattice_version}")
 
     implementation 'com.flipkart.krystal:lattice-core'
@@ -35,7 +35,7 @@ dependencies {
     implementation 'jakarta.ws.rs:jakarta.ws.rs-api'
     implementation 'io.quarkus:quarkus-rest'
 
-    compileOnly "org.projectlombok:lombok:$lombok_version"
+    compileOnly libs.lombok
     implementation 'org.slf4j:slf4j-api'
 }
 

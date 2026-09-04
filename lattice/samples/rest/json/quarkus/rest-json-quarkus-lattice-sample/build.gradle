@@ -14,7 +14,7 @@ dependencies {
     /** START: Lattice dependencies **/
 
     implementation platform("com.flipkart.krystal:lattice-bom:${lattice_version}")
-    implementation enforcedPlatform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
+    implementation enforcedPlatform(libs.quarkus.bom)
     krystalModelsGenProcessor platform("com.flipkart.krystal:lattice-bom:${lattice_version}")
 
     implementation 'com.flipkart.krystal:lattice-core'
@@ -40,7 +40,7 @@ dependencies {
 
     implementation 'jakarta.inject:jakarta.inject-api'
 
-    compileOnly "org.projectlombok:lombok:$lombok_version"
+    compileOnly libs.lombok
     compileOnly 'com.google.auto.value:auto-value-annotations:1.11.0'
     annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
 

@@ -184,7 +184,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
       value = "null";
     }
     String sha256 = hashValues(value);
-    dataMap.put(sha256, value);
+    dataMap.put(sha256, value.toString());
     return sha256;
   }
 

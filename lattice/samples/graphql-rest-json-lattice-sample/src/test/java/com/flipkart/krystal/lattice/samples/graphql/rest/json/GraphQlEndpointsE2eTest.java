@@ -2,8 +2,6 @@ package com.flipkart.krystal.lattice.samples.graphql.rest.json;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.AccountAliased;
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountAliasedOp_GQlClientResp_ImmutJson;
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.client.GetAccountAliasedOp_SpecReq;
@@ -37,6 +35,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
+import tools.jackson.databind.JsonNode;
 
 /**
  * End-to-end tests that boot the actual Quarkus GraphQL server once per suite (port 18083), send
@@ -46,37 +45,20 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
 @TestInstance(Lifecycle.PER_CLASS)
 class GraphQlEndpointsE2eTest {
 
-  private static final JsonMapper JSON_MAPPER = new JsonMapper();
-
   @TestHTTPResource private URI baseUri;
 
   private final HttpClient httpClient =
       HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
 
-  private JsonNode postGraphQl(String query) throws Exception {
-    HttpResponse<String> resp =
-        httpClient.send(
-            HttpRequest.newBuilder(baseUri.resolve("HttpPostGraphQl"))
-                .POST(
-                    BodyPublishers.ofString(
-                        "{\"query\": " + JSON_MAPPER.writeValueAsString(query) + "}"))
-                .header("Content-Type", "application/json")
-                .header("Accept", "application/json")
-                .build(),
-            BodyHandlers.ofString());
-    assertThat(resp.statusCode()).isEqualTo(200);
-    return JSON_MAPPER.readTree(resp.body()).path("data");
-  }
-
   /**
-   * Same as {@link #postGraphQl(String)}, but for a generated {@link GraphQlSpecRequest} -
-   * serializes {@code req.query()}/{@code req.variables()} instead of a raw query string, and
-   * deserializes the raw response body directly into {@code responseWrapperType} (the operation
-   * root's generated {@code <Op>_GQlClientResp} class, whose {@code data} field already matches the
-   * operation root's shape) in a single pass - no intermediate {@link JsonNode} tree parse. Any
-   * top-level fields the wrapper doesn't declare (e.g. {@code errors}) are ignored, since {@link
-   * Json} disables {@code FAIL_ON_UNKNOWN_PROPERTIES}. {@code req.variables()} is serialized via
-   * {@link Json#OBJECT_WRITER} since the variables models in {@code client/} declare
+   * For a generated {@link GraphQlSpecRequest} - serializes {@code req.query()}/{@code
+   * req.variables()} instead of a raw query string, and deserializes the raw response body directly
+   * into {@code responseWrapperType} (the operation root's generated {@code <Op>_GQlClientResp}
+   * class, whose {@code data} field already matches the operation root's shape) in a single pass -
+   * no intermediate {@link JsonNode} tree parse. Any top-level fields the wrapper doesn't declare
+   * (e.g. {@code errors}) are ignored, since {@link Json} disables {@code
+   * FAIL_ON_UNKNOWN_PROPERTIES}. {@code req.variables()} is serialized via {@link
+   * Json#OBJECT_WRITER} since the variables models in {@code client/} declare
    * {@code @SupportedModelProtocol(Json.class)}.
    */
   private StringJson postGraphQl(GraphQlSpecRequest req) throws Exception {
