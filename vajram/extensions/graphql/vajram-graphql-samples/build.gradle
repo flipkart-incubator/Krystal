@@ -24,8 +24,8 @@ dependencies {
 
     annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
 
-    compileOnly "org.projectlombok:lombok:$lombok_version"
-    annotationProcessor "org.projectlombok:lombok:$lombok_version"
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
 
     implementation 'org.slf4j:slf4j-api:2.0.13'
 

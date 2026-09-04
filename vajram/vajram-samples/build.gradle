@@ -25,7 +25,7 @@ dependencies {
     implementation 'jakarta.inject:jakarta.inject-api'
     implementation 'org.slf4j:slf4j-api'
 
-    compileOnly "org.projectlombok:lombok:$lombok_version"
+    compileOnly libs.lombok
     compileOnly 'com.google.auto.value:auto-value-annotations:1.11.0'
     annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
 
