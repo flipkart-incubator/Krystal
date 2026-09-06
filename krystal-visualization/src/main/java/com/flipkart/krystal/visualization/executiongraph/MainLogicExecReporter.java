@@ -125,12 +125,13 @@ public final class MainLogicExecReporter implements OutputLogicDecorator {
   }
 
   private String generateGraph() {
+    String jsonString;
     try {
-      String jsonString = Json.MAPPER.writeValueAsString(kryonExecutionReport);
-      return GenerateHtml.generateHtml(jsonString);
+      jsonString = Json.MAPPER.writeValueAsString(kryonExecutionReport);
     } catch (Exception e) {
+      jsonString = "{}";
       log.error("Error came while serializing kryonExecutionReport");
     }
-    return "";
+    return GenerateHtml.generateHtml(jsonString);
   }
 }
