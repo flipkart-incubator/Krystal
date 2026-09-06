@@ -3,6 +3,7 @@ package com.flipkart.krystal.model.array;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.Charset;
 
 public non-sealed interface ByteArray extends PrimitiveArray<Byte> {
   byte valueAt(int index);
@@ -18,6 +19,8 @@ public non-sealed interface ByteArray extends PrimitiveArray<Byte> {
   byte[] toArray();
 
   ByteArray subArray(int startIndexInclusive, int endIndexExclusive);
+
+  String asString(Charset charset);
 
   InputStream newInputStream();
 

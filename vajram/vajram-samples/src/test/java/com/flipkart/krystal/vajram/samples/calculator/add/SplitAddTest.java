@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ForkJoinTask;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -71,6 +72,7 @@ class SplitAddTest {
   void splitAdder_success() {
     CompletableFuture<Integer> future;
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
+    SingleThreadExecutor executorService = executorLease.get();
     try (VajramKryonExecutor krystexVajramExecutor =
         KrystexGraph.builder()
             .vajramGraph(graph)
@@ -80,7 +82,7 @@ class SplitAddTest {
             .createExecutor(
                 KrystalExecutorConfig.builder()
                     .executorId("chainAdderTest")
-                    .executorService(executorLease.get())
+                    .executorService(executorService)
                     .configureWith(
                         new MainLogicExecReporter(kryonExecutionReport)
                             .defaultKryonExecutorConfigurator())
@@ -89,6 +91,9 @@ class SplitAddTest {
       future = executeVajram(krystexVajramExecutor, 0);
     }
     assertThat(future).succeedsWithin(ofSeconds(1)).isEqualTo(55);
+    // Wait for all commands to be finished so that we don't get Concurrent
+    // Modification Exceptions in kryonExecutionReport
+    executorService.submit(() -> {}).join();
     System.out.println(
         Json.MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(kryonExecutionReport));
   }
