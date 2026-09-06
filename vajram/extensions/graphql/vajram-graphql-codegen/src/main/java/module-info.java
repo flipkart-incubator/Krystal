@@ -12,6 +12,5 @@ module krystal.vajram.ext.graphql.codegen {
   requires org.slf4j;
   requires com.google.auto.service;
   requires java.management;
-  requires com.fasterxml.jackson.databind;
   requires flipkart.krystal.vajram.ext.json;
 }

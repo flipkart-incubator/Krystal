@@ -1,15 +1,13 @@
 package com.flipkart.krystal.vajram.json;
 
-import com.fasterxml.jackson.databind.BeanProperty;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.deser.ContextualDeserializer;
-import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.flipkart.krystal.data.Errable;
-import java.io.IOException;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.BeanProperty;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.JavaType;
+import tools.jackson.databind.ValueDeserializer;
+import tools.jackson.databind.deser.std.StdDeserializer;
 
 /**
  * Deserializes {@code Errable<Model>}-shaped values, including when the {@code Model} is nested
@@ -24,23 +22,21 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * Errable<Model>} (or a {@code List}/{@code Map} thereof).
  */
 @SuppressWarnings("rawtypes")
-public final class ModelErrableDeserializer extends StdDeserializer<Errable>
-    implements ContextualDeserializer {
+public final class ModelErrableDeserializer extends StdDeserializer<Errable> {
 
-  private final @Nullable JsonDeserializer<Object> innerDeserializer;
+  private final @Nullable ValueDeserializer<Object> innerDeserializer;
 
   public ModelErrableDeserializer() {
     this(null);
   }
 
-  private ModelErrableDeserializer(@Nullable JsonDeserializer<Object> innerDeserializer) {
+  private ModelErrableDeserializer(@Nullable ValueDeserializer<Object> innerDeserializer) {
     super(Errable.class);
     this.innerDeserializer = innerDeserializer;
   }
 
   @Override
-  public Errable<?> deserialize(com.fasterxml.jackson.core.JsonParser p, DeserializationContext ctx)
-      throws IOException {
+  public Errable<?> deserialize(JsonParser p, DeserializationContext ctx) {
     if (innerDeserializer == null) {
       // Not contextualized (missing @JsonModelHint) - fall back to generic Object resolution.
       return Errable.withValue(p.readValueAs(Object.class));
@@ -54,8 +50,8 @@ public final class ModelErrableDeserializer extends StdDeserializer<Errable>
   }
 
   @Override
-  public JsonDeserializer<?> createContextual(
-      DeserializationContext ctx, @Nullable BeanProperty property) throws JsonMappingException {
+  public ValueDeserializer<?> createContextual(
+      DeserializationContext ctx, @Nullable BeanProperty property) {
     if (property == null) {
       return this;
     }
@@ -77,7 +73,7 @@ public final class ModelErrableDeserializer extends StdDeserializer<Errable>
     } else {
       targetInner = modelType;
     }
-    JsonDeserializer<Object> inner = ctx.findContextualValueDeserializer(targetInner, property);
+    ValueDeserializer<Object> inner = ctx.findContextualValueDeserializer(targetInner, property);
     return new ModelErrableDeserializer(inner);
   }
 

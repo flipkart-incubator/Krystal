@@ -37,7 +37,7 @@ dependencies {
 
 
     runtimeOnly 'jakarta.servlet:jakarta.servlet-api'
-    compileOnly "org.projectlombok:lombok:$lombok_version"
+    compileOnly libs.lombok
 
     implementation 'org.slf4j:slf4j-api'
     implementation 'com.google.inject.extensions:guice-servlet'

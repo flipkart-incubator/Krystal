@@ -1,13 +1,9 @@
 package com.flipkart.krystal.vajram.json.serialized;
 
-import static com.flipkart.krystal.except.KrystalCompletionException.wrapAsCompletionException;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectReader;
 import com.flipkart.krystal.vajram.json.Json;
-import java.io.IOException;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectReader;
 
 public final class NodeJson extends AbstractJsonRepresentation {
 
@@ -21,18 +17,14 @@ public final class NodeJson extends AbstractJsonRepresentation {
   }
 
   @Override
-  public <T> T _deserialize(ObjectReader reader) throws IOException {
+  public <T> T _deserialize(ObjectReader reader) {
     return reader.readValue(jsonNode);
   }
 
   @Override
   protected byte[] asBytes() {
     if (bytes == null) {
-      try {
-        bytes = Json.OBJECT_WRITER.writeValueAsBytes(jsonNode);
-      } catch (JsonProcessingException e) {
-        throw wrapAsCompletionException(e, "Unable to convert json node to byte array");
-      }
+      bytes = Json.OBJECT_WRITER.writeValueAsBytes(jsonNode);
     }
     return bytes;
   }

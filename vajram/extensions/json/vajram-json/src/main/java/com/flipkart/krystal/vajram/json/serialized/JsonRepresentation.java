@@ -1,13 +1,13 @@
 package com.flipkart.krystal.vajram.json.serialized;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectReader;
 import com.flipkart.krystal.model.array.ByteArray;
 import java.io.IOException;
 import java.io.InputStream;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectReader;
 
 public sealed interface JsonRepresentation permits AbstractJsonRepresentation {
-  <T> T _deserialize(ObjectReader reader) throws IOException;
+  <T> T _deserialize(ObjectReader reader);
 
   InputStream _serialize();
 

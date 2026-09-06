@@ -1,22 +1,12 @@
 package com.flipkart.krystal.vajram.json;
 
-import static com.fasterxml.jackson.annotation.JsonInclude.Value.ALL_NON_ABSENT;
-import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
-import static com.fasterxml.jackson.databind.SerializationFeature.FAIL_ON_EMPTY_BEANS;
-import static com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS;
 import static java.util.Objects.requireNonNullElse;
+import static tools.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
+import static tools.jackson.databind.SerializationFeature.FAIL_ON_EMPTY_BEANS;
+import static tools.jackson.databind.cfg.DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonInclude.Value;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectReader;
-import com.fasterxml.jackson.databind.ObjectWriter;
-import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.datatype.guava.GuavaModule;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.array.ByteArray;
@@ -41,12 +31,18 @@ import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.checker.nullness.qual.PolyNull;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectReader;
+import tools.jackson.databind.ObjectWriter;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.module.SimpleModule;
+import tools.jackson.datatype.guava.GuavaModule;
 
 public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonModel> {
 
   public static final Json JSON = new Json();
 
-  public static final JsonMapper JSON_MAPPER =
+  public static final JsonMapper MAPPER =
       JsonMapper.builder()
           .withConfigOverride(
               Errable.class,
@@ -57,22 +53,16 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
                           Include.NON_ABSENT,
                           ErrableFilter.class,
                           ErrableFilter.class)))
-          .defaultPropertyInclusion(ALL_NON_ABSENT)
+          .changeDefaultPropertyInclusion(inc -> inc.withValueInclusion(Include.NON_ABSENT))
           .disable(FAIL_ON_UNKNOWN_PROPERTIES)
           .disable(FAIL_ON_EMPTY_BEANS)
           .disable(WRITE_DATES_AS_TIMESTAMPS)
           .addModules(
-              new GuavaModule(),
-              new JavaTimeModule(),
-              new Jdk8Module(),
-              new ParameterNamesModule(),
-              primitiveArrayModule(),
-              new EnumModelModule(),
-              new ErrableModule())
+              new GuavaModule(), primitiveArrayModule(), new EnumModelModule(), new ErrableModule())
           .build();
 
-  public static final ObjectReader OBJECT_READER = JSON_MAPPER.reader();
-  public static final ObjectWriter OBJECT_WRITER = JSON_MAPPER.writer();
+  public static final ObjectReader OBJECT_READER = MAPPER.reader();
+  public static final ObjectWriter OBJECT_WRITER = MAPPER.writer();
 
   @Override
   public String modelClassesSuffix() {
@@ -134,7 +124,9 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
 
   public <T> @Nullable T deserialize(
       @Nullable Object payload, Type typeInfo, @Nullable JsonConfig customConfig) {
-    return deserialize(payload, OBJECT_READER.forType(typeInfo));
+    return deserialize(
+        payload,
+        OBJECT_READER.forType(OBJECT_READER.getConfig().getTypeFactory().constructType(typeInfo)));
   }
 
   public <T> @Nullable T deserialize(

@@ -3,13 +3,6 @@ package com.flipkart.krystal.lattice.core;
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 import static java.util.Objects.requireNonNull;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
-import com.fasterxml.jackson.datatype.guava.GuavaModule;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.lattice.core.di.DependencyInjectionFramework;
 import com.flipkart.krystal.lattice.core.di.InjectionValueProvider;
 import com.flipkart.krystal.lattice.core.doping.Dopant;
@@ -20,8 +13,7 @@ import com.flipkart.krystal.lattice.core.doping.DopantType;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
-import java.io.IOException;
-import java.net.URL;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -31,6 +23,12 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.cfg.DateTimeFeature;
+import tools.jackson.databind.jsontype.NamedType;
+import tools.jackson.dataformat.yaml.YAMLMapper;
+import tools.jackson.datatype.guava.GuavaModule;
 
 /**
  * A lattice application hosts a Krystal graph as a process. As part of the application setup, it
@@ -44,16 +42,7 @@ import org.apache.commons.cli.ParseException;
 @Slf4j
 public abstract class LatticeApplication {
 
-  private final ObjectMapper configMapper =
-      YAMLMapper.builder()
-          .build()
-          .registerModule(new GuavaModule())
-          .registerModule(new JavaTimeModule())
-          .registerModule(new Jdk8Module())
-          .setSerializationInclusion(NON_NULL)
-          .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-          .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
-          .disable(SerializationFeature.FAIL_ON_SELF_REFERENCES);
+  private @MonotonicNonNull YAMLMapper configMapper;
 
   private ImmutableList<String> args = ImmutableList.of();
 
@@ -84,12 +73,7 @@ public abstract class LatticeApplication {
   }
 
   public LatticeAppConfig loadConfig(LatticeAppBootstrap latticeAppBootstrap) {
-    configMapper.registerSubtypes(
-        getConfigTypesByDopantTypes(latticeAppBootstrap.configuredSpecs().values())
-            .entrySet()
-            .stream()
-            .map(e -> new NamedType(e.getValue(), e.getKey()))
-            .toArray(NamedType[]::new));
+    YAMLMapper yamlMapper = getYAMLMapper(latticeAppBootstrap);
     Option latticeConfigFileOption =
         new Option("l", "lattice_config_file", true, "Lattice app config file");
     CommandLine commandLine;
@@ -106,18 +90,34 @@ public abstract class LatticeApplication {
     if (latticeConfigFile == null) {
       latticeAppConfig = new LatticeAppConfig();
     } else {
-      URL configResource = classLoader.getResource(latticeConfigFile);
+      InputStream configResource = classLoader.getResourceAsStream(latticeConfigFile);
       if (configResource == null) {
         latticeAppConfig = new LatticeAppConfig();
       } else {
-        try {
-          latticeAppConfig = configMapper.readValue(configResource, LatticeAppConfig.class);
-        } catch (IOException e) {
-          throw new RuntimeException(e);
-        }
+        latticeAppConfig = yamlMapper.readValue(configResource, LatticeAppConfig.class);
       }
     }
     return latticeAppConfig;
+  }
+
+  private YAMLMapper getYAMLMapper(LatticeAppBootstrap latticeAppBootstrap) {
+    if (configMapper == null) {
+      configMapper =
+          YAMLMapper.builder()
+              .addModule(new GuavaModule())
+              .changeDefaultPropertyInclusion(incl -> incl.withValueInclusion(NON_NULL))
+              .disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)
+              .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
+              .disable(SerializationFeature.FAIL_ON_SELF_REFERENCES)
+              .registerSubtypes(
+                  getConfigTypesByDopantTypes(latticeAppBootstrap.configuredSpecs().values())
+                      .entrySet()
+                      .stream()
+                      .map(e -> new NamedType(e.getValue(), e.getKey()))
+                      .toArray(NamedType[]::new))
+              .build();
+    }
+    return configMapper;
   }
 
   private BiMap<String, Class<? extends DopantConfig>> getConfigTypesByDopantTypes(

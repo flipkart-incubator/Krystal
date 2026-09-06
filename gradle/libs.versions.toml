@@ -1,16 +1,39 @@
 [versions]
+assertj = '3.27.7'
+grpc = '1.83.1'
+guice = '7.0.0'
+jackson2 = '2.22'
+jackson3 = '3.1.6' #Latest LTS release
 lombok = '1.18.46'
+mockito = '5.23.0'
+protobuf = '4.36.0'
+resilience4j = '2.4.0'
+slf4j = '2.0.18'
 
-quarkus = '3.37.1'
+quarkus = '3.33.3.1' # Latest LTS release Note:3.33.3.2 needs to updated soon
 # This is the version of vertx compatible with the above version of quarkus. Upgrade only in sync with quarkus version
 # Source: https://github.com/quarkusio/quarkus-platform/blob/3.37/generated-platform-project/quarkus/bom/pom.xml
 # As can be seen in the above file, all vertx dependencies (<groupId>io.vertx</groupId>) have been pinned to the following version
-vertx = '4.5.28'
+vertx = '4.5.31'
 
 [libraries]
-lombok = { module = 'org.projectlombok:lombok', version.ref = 'lombok' }
 
-vertx-stack-depchain = { module = 'io.vertx:vertx-stack-depchain', version.ref = 'vertx' }
+# BOMs
+assertj-bom = { module = 'org.assertj:assertj-bom', version.ref = 'assertj' }
+grpc-bom = { module = 'io.grpc:grpc-bom', version.ref = 'grpc' }
+guice-bom = { module = 'com.google.inject:guice-bom', version.ref = 'guice' }
+jackson-bom = { module = 'tools.jackson:jackson-bom', version.ref = 'jackson3' }
+mockito-bom = { module = 'org.mockito:mockito-bom', version.ref = 'mockito' }
+protobuf-bom = { module = 'com.google.protobuf:protobuf-bom', version.ref = 'protobuf' }
 quarkus-bom = { module = 'io.quarkus.platform:quarkus-bom', version.ref = 'quarkus' }
+resilience4j-bom = { module = 'io.github.resilience4j:resilience4j-bom', version.ref = 'resilience4j' }
+slf4j-bom = { module = 'org.slf4j:slf4j-bom', version.ref = 'slf4j' }
+vertx-stack-depchain = { module = 'io.vertx:vertx-stack-depchain', version.ref = 'vertx' }
 
+# Libraries
+jackson-annotations = { module = 'com.fasterxml.jackson.core:jackson-annotations', version.ref = 'jackson2' }
+jackson-databind = { module = 'tools.jackson.core:jackson-databind', version.ref = 'jackson3' }
+jackson-dataformat-yaml = { module = 'tools.jackson.dataformat:jackson-dataformat-yaml', version.ref = 'jackson3' }
+jackson-datatype-guava = { module = 'tools.jackson.datatype:jackson-datatype-guava', version.ref = 'jackson3' }
+lombok = { module = 'org.projectlombok:lombok', version.ref = 'lombok' }
 scram-client = { module = 'com.ongres.scram:scram-client' }
