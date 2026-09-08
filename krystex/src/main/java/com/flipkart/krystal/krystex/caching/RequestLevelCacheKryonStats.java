@@ -14,6 +14,8 @@ public class RequestLevelCacheKryonStats {
   private int globalCacheMissesNoFuture;
   private int globalCacheMissesIncompleteFuture;
   private int noCacheKey;
+  private int globalCacheHitsCompletedFuture;
+  private int globalCacheHitsIncompleteFuture;
 
   void localCacheHit() {
     localCacheHits++;
@@ -24,7 +26,14 @@ public class RequestLevelCacheKryonStats {
     localCacheMisses++;
   }
 
-  void globalCacheCompletedFuture() {
+  void globalCacheHitsCompletedFuture() {
+    globalCacheHits++;
+    globalCacheHitsCompletedFuture++;
+    cacheHits++;
+  }
+
+  void globalCacheHitsIncompleteFuture() {
+    globalCacheHitsIncompleteFuture++;
     globalCacheHits++;
     cacheHits++;
   }
@@ -34,7 +43,7 @@ public class RequestLevelCacheKryonStats {
     cacheMisses++;
   }
 
-  void globalCacheIncompleteFuture() {
+  void globalCacheMissIncompleteFuture() {
     globalCacheMissesIncompleteFuture++;
     cacheMisses++;
   }

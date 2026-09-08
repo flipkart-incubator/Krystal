@@ -1,0 +1,12 @@
+[package]
+name = "vajram-lang-samples"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+default = ["tokio"]
+tokio = []
+
+[dependencies]
+futures = "0.3"
+tokio = { version = "1", features = ["rt", "fs"] }

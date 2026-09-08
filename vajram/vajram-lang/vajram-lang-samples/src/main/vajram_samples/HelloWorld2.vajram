@@ -1,0 +1,6 @@
+package vajram_samples.hello;
+
+// Run: ./gradlew :vajram:vajram-lang:vajram-lang-samples:runVajram -Pvajram=helloWorld2 -PunsafeCompile=true
+vajram helloWorld2() out string permit callers `outsideProcess public {
+  { "Hello again from vajram-lang!" }
+}

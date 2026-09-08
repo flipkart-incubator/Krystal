@@ -1,0 +1,11 @@
+description = "Compiles vajram-lang (.vajram) source files into idiomatic async Rust code"
+
+dependencies {
+    implementation project(':vajram:vajram-lang:vajram-lang-grammar')
+}
+
+tasks.withType(Test).configureEach {
+    if (project.hasProperty('updateRustGoldens')) {
+        systemProperty 'updateRustGoldens', 'true'
+    }
+}

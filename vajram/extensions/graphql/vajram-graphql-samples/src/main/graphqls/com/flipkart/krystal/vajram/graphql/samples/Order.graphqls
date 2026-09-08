@@ -55,7 +55,7 @@ type HelloDetails @composedOnly(inRootType: "Order") {
 
 type Name {
     value: String @idField
-    string: String @idField
+    string: String! @idField
 }
 
 #{
