@@ -1,25 +1,19 @@
 package com.flipkart.krystal.vajram.json;
 
-import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
-import static com.fasterxml.jackson.databind.SerializationFeature.FAIL_ON_EMPTY_BEANS;
-import static com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS;
 import static java.util.Objects.requireNonNullElse;
+import static tools.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
+import static tools.jackson.databind.SerializationFeature.FAIL_ON_EMPTY_BEANS;
+import static tools.jackson.databind.cfg.DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS;
 
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonInclude.Value;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectReader;
-import com.fasterxml.jackson.databind.ObjectWriter;
-import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.datatype.guava.GuavaModule;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.array.ByteArray;
 import com.flipkart.krystal.model.array.FloatArray;
 import com.flipkart.krystal.model.array.SimpleFloatArray;
 import com.flipkart.krystal.serial.SerdeProtocol;
+import com.flipkart.krystal.vajram.json.ErrableModule.ErrableFilter;
 import com.flipkart.krystal.vajram.json.JsonConfig.Creator;
 import com.flipkart.krystal.vajram.json.array.ByteArrays.ByteArrayDeserializer;
 import com.flipkart.krystal.vajram.json.array.ByteArrays.ByteArraySerializer;
@@ -33,32 +27,42 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Function;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.checker.nullness.qual.PolyNull;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectReader;
+import tools.jackson.databind.ObjectWriter;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.module.SimpleModule;
+import tools.jackson.datatype.guava.GuavaModule;
 
 public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonModel> {
 
   public static final Json JSON = new Json();
 
-  private static final JsonMapper OBJECT_MAPPER =
+  public static final JsonMapper MAPPER =
       JsonMapper.builder()
-          .defaultPropertyInclusion(Value.ALL_NON_ABSENT)
+          .withConfigOverride(
+              Errable.class,
+              mutableConfigOverride ->
+                  mutableConfigOverride.setInclude(
+                      Value.construct(
+                          Include.NON_ABSENT,
+                          Include.NON_ABSENT,
+                          ErrableFilter.class,
+                          ErrableFilter.class)))
+          .changeDefaultPropertyInclusion(inc -> inc.withValueInclusion(Include.NON_ABSENT))
           .disable(FAIL_ON_UNKNOWN_PROPERTIES)
           .disable(FAIL_ON_EMPTY_BEANS)
           .disable(WRITE_DATES_AS_TIMESTAMPS)
           .addModules(
-              new GuavaModule(),
-              new JavaTimeModule(),
-              new Jdk8Module(),
-              new ParameterNamesModule(),
-              primitiveArrayModule(),
-              new EnumModelModule())
+              new GuavaModule(), primitiveArrayModule(), new EnumModelModule(), new ErrableModule())
           .build();
 
-  public static final ObjectReader OBJECT_READER = OBJECT_MAPPER.reader();
-  public static final ObjectWriter OBJECT_WRITER = OBJECT_MAPPER.writer();
+  public static final ObjectReader OBJECT_READER = MAPPER.reader();
+  public static final ObjectWriter OBJECT_WRITER = MAPPER.writer();
 
   @Override
   public String modelClassesSuffix() {
@@ -90,7 +94,7 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
                 : OBJECT_WRITER.writeValueAsBytes(transformed);
         case STRING ->
             transformed instanceof SerializableJsonModel jsonModel
-                ? jsonModel._serializedJson().asString()
+                ? jsonModel._serializedJson()._asString()
                 : OBJECT_WRITER.writeValueAsString(transformed);
       };
     } catch (Exception e) {
@@ -101,9 +105,9 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
   @SuppressWarnings("unchecked")
   @Override
   public <T> @Nullable T deserialize(
-      @Nullable Object payload, Object typeInfo, @Nullable JsonConfig customConfig) {
+      Object payload, Object typeInfo, @Nullable JsonConfig customConfig) {
     if (typeInfo instanceof Class<?> clazz) {
-      return (T) deserialize(payload, clazz, customConfig);
+      return (@NonNull T) deserialize(payload, clazz, customConfig);
     } else if (typeInfo instanceof Type type) {
       return deserialize(payload, type, customConfig);
     } else if (typeInfo instanceof TypeReference<?> typeRef) {
@@ -120,7 +124,9 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
 
   public <T> @Nullable T deserialize(
       @Nullable Object payload, Type typeInfo, @Nullable JsonConfig customConfig) {
-    return deserialize(payload, OBJECT_READER.forType(typeInfo));
+    return deserialize(
+        payload,
+        OBJECT_READER.forType(OBJECT_READER.getConfig().getTypeFactory().constructType(typeInfo)));
   }
 
   public <T> @Nullable T deserialize(
@@ -132,13 +138,8 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
     if (payload == null) {
       return null;
     }
-    if (payload instanceof Optional<? extends @Nullable Object> optional) {
-      @SuppressWarnings("argument")
-      Object innerPayload = optional.orElse(null);
-      return deserialize(innerPayload, reader);
-    }
     try {
-      return JsonRepresentation.of(payload).deserialize(reader);
+      return JsonRepresentation.of(payload)._deserialize(reader);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -185,7 +186,8 @@ public final class Json implements SerdeProtocol<JsonConfig, SerializableJsonMod
     primitiveArrayModule
         .addAbstractTypeMapping(FloatArray.class, SimpleFloatArray.class)
         .addSerializer(FloatArray.class, new FloatArraySerializer())
-        .addDeserializer(SimpleFloatArray.class, new FloatArrayDeserializer());
+        .<@Nullable SimpleFloatArray>addDeserializer(
+            SimpleFloatArray.class, new FloatArrayDeserializer());
 
     return primitiveArrayModule;
   }

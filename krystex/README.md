@@ -1,3 +1,7 @@
+---
+title: "Krystex"
+---
+
 # Krystex
 
 Krystex (**Kryst**al **Ex**ecutor) is the runtime execution engine for synchronous workflows,

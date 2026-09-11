@@ -1,7 +1,7 @@
 description = "Code generator for generating Quarkus specific code for Quarkus backed Lattice Apps"
 
 dependencies {
-    api platform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
+    api platform(libs.quarkus.bom)
 
     implementation project(':lattice:extensions:cdi:lattice-cdi-codegen')
     implementation project(':lattice:lattice-codegen')

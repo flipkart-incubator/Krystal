@@ -1,0 +1,11 @@
+import org.checkerframework.checker.nullness.qual.Nullable;
+
+package com.google.inject;
+
+class Scopes {
+  boolean isCircularProxy(@Nullable Object object);
+}
+
+class Scope {
+  Provider<@Nullable T> scope(Key<T> key, Provider<T> unscoped);
+}

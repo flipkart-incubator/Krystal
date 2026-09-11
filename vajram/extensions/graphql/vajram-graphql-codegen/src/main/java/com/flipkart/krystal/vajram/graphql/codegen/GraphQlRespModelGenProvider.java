@@ -4,7 +4,7 @@ import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGeneratorProvider;
 import com.flipkart.krystal.model.ModelProtocol;
-import com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponse;
+import com.flipkart.krystal.vajram.graphql.api.model.GraphQlServerResponse;
 import com.google.auto.service.AutoService;
 import java.util.Set;
 
@@ -12,11 +12,11 @@ import java.util.Set;
 public class GraphQlRespModelGenProvider implements ModelsCodeGeneratorProvider {
   @Override
   public CodeGenerator create(ModelsCodeGenContext codeGenContext) {
-    return new GraphQlRespModelGen(codeGenContext);
+    return new GraphQlServerRespModelGen(codeGenContext);
   }
 
   @Override
   public Set<Class<? extends ModelProtocol>> getSupportedModelProtocols() {
-    return Set.of(GraphQlResponse.class);
+    return Set.of(GraphQlServerResponse.class);
   }
 }

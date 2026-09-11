@@ -1,3 +1,7 @@
+---
+title: "vajram-sql-vertx-codegen"
+---
+
 # vajram-sql-vertx-codegen
 
 Annotation processor that reads `@SQL @SELECT @Trait` and `@SQL @INSERT @Trait` interfaces and generates a complete Vert.x-backed Compute Vajram for each one. The generated vajram delegates SQL execution to [`ExecuteVertxSql`](../vajram-sql-vertx/src/main/java/com/flipkart/krystal/vajram/ext/sql/vertx/ExecuteVertxSql.java) (the IO Vajram), keeping IO isolated from business logic and enabling future batching support.

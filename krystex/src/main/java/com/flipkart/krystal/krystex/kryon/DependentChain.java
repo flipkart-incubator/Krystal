@@ -8,6 +8,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public sealed interface DependentChain extends DependentChainBase
     permits DependentChainStart, DependentChainImpl {
 
+  @Override
   DependentChain extend(VajramID vajramID, Dependency dependency);
 
   /** Returns true if this {@link DependentChain} starts with the given {@code dependentChain} */

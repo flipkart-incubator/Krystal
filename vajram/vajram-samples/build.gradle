@@ -25,11 +25,12 @@ dependencies {
     implementation 'jakarta.inject:jakarta.inject-api'
     implementation 'org.slf4j:slf4j-api'
 
-    compileOnly "org.projectlombok:lombok:$lombok_version"
+    compileOnly libs.lombok
     compileOnly 'com.google.auto.value:auto-value-annotations:1.11.0'
     annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
 
     /** START: Test dependencies **/
+    testImplementation 'com.flipkart.krystal:vajram-json'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
     testImplementation 'org.junit.jupiter:junit-jupiter-params'
@@ -48,10 +49,8 @@ dependencies {
     jmhImplementation 'com.google.guava:guava:33.0.0-jre'
     jmhAnnotationProcessor 'com.google.guava:failureaccess:1.0.2'
 
-    testImplementation 'com.fasterxml.jackson.core:jackson-annotations'
-    testImplementation 'com.fasterxml.jackson.core:jackson-databind'
-    testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
-    testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    testImplementation libs.jackson.annotations
+    testImplementation libs.jackson.databind
     /** END: Test dependencies **/
 }
 
@@ -67,6 +66,16 @@ test {
 
 checkerFramework {
     excludeTests = true
+}
+
+// If the project uses classes which are generated AFTER krystalModelsGen task finishes,
+// then we need to skipCheckerFramework so that krystalModelsGen doesn't fail.
+// This is needed because checkerFramework fails if any of the classes used have not yet been generated.
+// The java compiler itself doesn't have a problem with this
+tasks.named('krystalModelsGen', org.gradle.api.tasks.compile.JavaCompile).configure {
+    checkerFramework {
+        skipCheckerFramework = true
+    }
 }
 
 //Needed only if you want your project to be modularized using JPMS

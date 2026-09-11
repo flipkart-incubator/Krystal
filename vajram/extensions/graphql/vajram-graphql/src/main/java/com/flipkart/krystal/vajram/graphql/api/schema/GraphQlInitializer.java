@@ -35,15 +35,13 @@ import org.reflections.util.ConfigurationBuilder;
 @Singleton
 public final class GraphQlInitializer {
 
-  private final ConcurrentHashMap<String, PreparsedDocumentEntry> documentCache =
-      new ConcurrentHashMap<>();
   private final TypeDefinitionRegistry typeDefinitionRegistry;
   private final GraphQL graphQL;
 
   @Inject
   public GraphQlInitializer() {
     this.typeDefinitionRegistry = computeTypeDefinitionRegistry();
-    this.graphQL = getGraphQl(typeDefinitionRegistry);
+    this.graphQL = computeGraphQl(typeDefinitionRegistry);
   }
 
   public TypeDefinitionRegistry getTypeDefinitionRegistry() {
@@ -54,10 +52,7 @@ public final class GraphQlInitializer {
     return graphQL;
   }
 
-  private TypeDefinitionRegistry computeTypeDefinitionRegistry() {
-    if (typeDefinitionRegistry != null) {
-      return typeDefinitionRegistry;
-    }
+  private static TypeDefinitionRegistry computeTypeDefinitionRegistry() {
     SchemaParser schemaParser = new SchemaParser();
     TypeDefinitionRegistry typeDefinitionRegistryComplete = new TypeDefinitionRegistry();
     for (Entry<String, InputStream> entry : getResourceFileContents().entrySet()) {
@@ -66,7 +61,7 @@ public final class GraphQlInitializer {
     return typeDefinitionRegistryComplete;
   }
 
-  private Map<String, InputStream> getResourceFileContents() {
+  private static Map<String, InputStream> getResourceFileContents() {
     Map<String, InputStream> fileToContentMap = new HashMap<>();
     ConfigurationBuilder builder = new ConfigurationBuilder();
     Collection<URL> resource = ClasspathHelper.forResource("Schema.graphqls");
@@ -93,7 +88,8 @@ public final class GraphQlInitializer {
     return fileToContentMap;
   }
 
-  private GraphQL getGraphQl(TypeDefinitionRegistry typeDefinitionRegistry) {
+  private static GraphQL computeGraphQl(TypeDefinitionRegistry typeDefinitionRegistry) {
+    ConcurrentHashMap<String, PreparsedDocumentEntry> documentCache = new ConcurrentHashMap<>();
     Builder runtimeWiring = RuntimeWiring.newRuntimeWiring();
     runtimeWiring.scalar(ExtendedScalars.Object);
     runtimeWiring.scalar(ExtendedScalars.DateTime);

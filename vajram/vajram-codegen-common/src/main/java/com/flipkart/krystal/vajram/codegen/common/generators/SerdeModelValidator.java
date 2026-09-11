@@ -52,9 +52,11 @@ public final class SerdeModelValidator {
     }
     for (ExecutableElement method : modelMethods) {
       TypeMirror returnType = method.getReturnType();
-      // Unwrap Optional
+      // Unwrap Optional and Errable to check the inner type
       if (util.isOptional(returnType)) {
         returnType = util.getOptionalInnerType(returnType);
+      } else if (util.isErrable(returnType)) {
+        returnType = util.getErrableInnerType(returnType);
       }
       checkFieldForNestedModels(method, returnType);
     }

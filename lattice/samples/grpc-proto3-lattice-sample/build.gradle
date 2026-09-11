@@ -36,7 +36,7 @@ dependencies {
     /** END: Lattice dependencies **/
 
     runtimeOnly 'jakarta.servlet:jakarta.servlet-api'
-    compileOnly "org.projectlombok:lombok:$lombok_version"
+    compileOnly libs.lombok
 
     implementation 'org.slf4j:slf4j-api'
     implementation 'com.google.inject.extensions:guice-servlet'
@@ -82,6 +82,16 @@ protobuf {
 }
 
 tasks.named('extractProto').configure { mustRunAfter('krystalModelsGen') }
+
+// If the project uses classes which are generated AFTER krystalModelsGen task finishes,
+// then we need to skipCheckerFramework so that krystalModelsGen doesn't fail.
+// This is needed because checkerFramework fails if any of the classes used have not yet been generated.
+// The java compiler itself doesn't have a problem with this
+tasks.named('krystalModelsGen', org.gradle.api.tasks.compile.JavaCompile).configure {
+    checkerFramework {
+        skipCheckerFramework = true
+    }
+}
 
 extraJavaModuleInfo {
     failOnMissingModuleInfo = false

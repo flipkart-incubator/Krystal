@@ -300,7 +300,7 @@ public class SqlInsertVajramGen implements CodeGenerator {
     return false;
   }
 
-  private ExecutableElement findInputMethod(TypeElement traitElement) {
+  private @Nullable ExecutableElement findInputMethod(TypeElement traitElement) {
     for (TypeElement nested : ElementFilter.typesIn(traitElement.getEnclosedElements())) {
       if (nested.getSimpleName().contentEquals("_Inputs")) {
         List<ExecutableElement> methods = ElementFilter.methodsIn(nested.getEnclosedElements());

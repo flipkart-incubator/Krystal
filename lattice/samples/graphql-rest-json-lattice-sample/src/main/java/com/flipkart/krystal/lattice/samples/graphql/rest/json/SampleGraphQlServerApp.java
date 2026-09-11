@@ -54,9 +54,11 @@ public abstract class SampleGraphQlServerApp extends LatticeApplication {
         .configureExecutorWith(
             configBuilder ->
                 configBuilder.decorationOrdering(
-                    new DecorationOrdering(
-                        GraphQlOperationExecutor.DECORATOR_TYPE,
-                        DefaultTraitDispatcher.DECORATOR_TYPE)));
+                    DecorationOrdering.builder()
+                        .dependencyDecoratorOrdering(
+                            GraphQlOperationExecutor.DECORATOR_TYPE,
+                            DefaultTraitDispatcher.DECORATOR_TYPE)
+                        .build()));
   }
 
   @DopeWith

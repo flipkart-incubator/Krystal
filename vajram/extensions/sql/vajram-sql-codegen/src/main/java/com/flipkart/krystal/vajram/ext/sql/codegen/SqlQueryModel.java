@@ -168,7 +168,7 @@ public final class SqlQueryModel {
    * @param parentPkAlias the alias of the parent PK column in the SELECT (e.g. {@code "users_id"});
    *     used by the code generator to emit per-row parent identity validation
    */
-  public record JoinSqlResult(CodeBlock sql, String parentPkAlias) {}
+  public record JoinSqlResult(CodeBlock sql, @Nullable String parentPkAlias) {}
 
   /**
    * Serialization/deserialization info for a column annotated with {@code @SerdeWith}.

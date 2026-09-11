@@ -14,7 +14,7 @@ dependencies {
     /** START: Lattice dependencies **/
 
     implementation platform("com.flipkart.krystal:lattice-bom:${lattice_version}")
-    implementation enforcedPlatform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
+    implementation enforcedPlatform(libs.quarkus.bom)
     krystalModelsGenProcessor platform("com.flipkart.krystal:lattice-bom:${lattice_version}")
 
     implementation 'com.flipkart.krystal:lattice-core'
@@ -43,7 +43,7 @@ dependencies {
 
     implementation 'jakarta.inject:jakarta.inject-api'
 
-    compileOnly "org.projectlombok:lombok:$lombok_version"
+    compileOnly libs.lombok
     compileOnly 'com.google.auto.value:auto-value-annotations:1.11.0'
     annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
     annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
@@ -57,18 +57,6 @@ dependencies {
 
 extraJavaModuleInfo {
     failOnMissingModuleInfo = false
-}
-
-configurations {
-    krystalModelsGenProcessorPath {
-        attributes {
-            attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.class, Category.LIBRARY));
-            attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.class, Usage.JAVA_RUNTIME));
-            attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.class, LibraryElements.JAR));
-            attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling.class, Bundling.EXTERNAL));
-            attribute(TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE, objects.named(TargetJvmEnvironment.class, TargetJvmEnvironment.STANDARD_JVM));
-        }
-    }
 }
 
 checkerFramework {

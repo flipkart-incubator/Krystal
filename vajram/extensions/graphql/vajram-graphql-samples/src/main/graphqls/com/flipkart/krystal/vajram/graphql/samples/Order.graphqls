@@ -1,29 +1,34 @@
-#TODO Testcases: A, A!, [A], [A]!, [A!], [A!]! -> 4 types of As (Scalars, entities, composedTypes, types)
+#TODO Testcases: A, A!, [A], [A!], [A!]! -> 4 types of As (Scalars, entities, entityExtensions, types)
 """
 An order
 """
-type Order @entity @subPackage(name: "order"){
-    id: ID
+type Order @subPackage(name: "order"){
+    id: ID! @idField
     """
     List of order Item names in this order
     """
-    orderItemNames: [String] @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
-    nameString: String @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order")
-    orderPlacedAt: DateTime @dataFetcher(vajramId: "GetOrderSummary", subPackage: "order")
-    orderItemsCount: Long! @dataFetcher(vajramId: "GetOrderSummary", subPackage: "order")
-    orderAcceptDate: Date @dataFetcher(vajramId: "GetOrderSummary", subPackage: "order")
+    orderItemNames: [String] @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order", multiField: true)
+    nameString: String @dataFetcher(vajramId: "GetOrderItemNames", subPackage: "order", multiField: true)
+    orderPlacedAt: DateTime @dataFetcher(vajramId: "GetOrderSummary", subPackage: "order", multiField: true)
+    orderItemsCount: Long! @dataFetcher(vajramId: "GetOrderSummary", subPackage: "order", multiField: true)
+    orderAcceptDate: Date @dataFetcher(vajramId: "GetOrderSummary", subPackage: "order", multiField: true)
     dummy(name: String): Dummy @idFetcher(vajramId: "GetDummyIdForOrder", subPackage: "order")
-    dummies(filter: Boolean, preferredType: String, count: Int): [Dummy!]! @idFetcher(vajramId: "GetDummyIds", subPackage: "order")
+    dummies(filter: Boolean, preferredType: String, count: Int): [Dummy!]! @idFetcher(vajramId: "GetDummyIdsWithArgs", subPackage: "order")
+    noArgDummies: [Dummy!]! @idFetcher(vajramId: "GetDummyIds", subPackage: "order")
     hello: Hello @inferIdFromParent
-    recommendedHellos: [Hello!] @idFetcher(vajramId: "")
+    deprecatedHello: Hello @inferIdFromParent
     recommendedOrders: [Order]
     state: State @dataFetcher(vajramId: "GetOrderState", subPackage: "order")
-    hello2: Hello
-    name: Name
-
-    #TODO: Add check that fields with @inferIdFromParent must be @composedTypes
-    #TODO: Add check that fields with @composedTypes cannot be fanout types
-    #hellos: [Hello] @inferIdFromParent
+    stateDuplicate: State @dataFetcher(vajramId: "GetOrderState", subPackage: "order")
+    """
+    Single-field, arg-bearing scalar data fetcher: fans out one request per alias.
+    """
+    orderItemAt(index: Int!): String @dataFetcher(vajramId: "GetOrderItemAt", subPackage: "order")
+    """
+    Single-field, arg-bearing list data fetcher: fans out one request per alias.
+    """
+    orderItemNamesFrom(offset: Int!): [String] @dataFetcher(vajramId: "GetOrderItemNamesFrom", subPackage: "order")
+    name: Name #@dataFetcher(vajramId: "GetName")
 }
 
 enum State {
@@ -31,25 +36,26 @@ enum State {
     COMPLETED
 }
 
-type Dummy @entity(entityIdField: "dummyId"){
-    dummyId: ID
+type Dummy {
+    dummyId: ID! @idField
     name: String!
     age: Int
     order: Order
     f1: String
 }
 
-#TODO Testcase: Can be used inside Order entity only - using inside any other entity throws error
-#TODO Testcase: Will be aggregated if @inferIdFromParent is present on field- in which case the composing entity's id is used for aggregation (Fanout should not be possible)
-#TODO Testcase: Using idFetcher on composedTypes is an error
-#TODO Testcase: ?? Can @composedEntities be allowed as lists or only single (canFanout or not?)
-type Hello @composedType(inEntity: "Order"){
+type Hello @composedOnly(inRootType: "Order") {
     toName: String
+    details: HelloDetails
+}
+
+type HelloDetails @composedOnly(inRootType: "Order") {
+    message: String
 }
 
 type Name {
-    value: String
-    string: String
+    value: String @idField
+    string: String! @idField
 }
 
 #{

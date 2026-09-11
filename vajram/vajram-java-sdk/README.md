@@ -1,3 +1,7 @@
+---
+title: "The Vajram Programming Model"
+---
+
 The Vajram Programming Model
 ============================
 

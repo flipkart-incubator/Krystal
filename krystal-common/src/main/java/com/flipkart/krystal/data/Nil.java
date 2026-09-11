@@ -25,6 +25,11 @@ public final class Nil<T> implements Success<T> {
   }
 
   @Override
+  public void completeFuture(CompletableFuture<T> future) {
+    future.complete(null);
+  }
+
+  @Override
   public @Nullable T value() {
     return null;
   }

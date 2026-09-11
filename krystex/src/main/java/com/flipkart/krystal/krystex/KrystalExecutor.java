@@ -11,14 +11,20 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 public interface KrystalExecutor extends AutoCloseable {
 
-  default <T> CompletableFuture<@Nullable T> execute(ImmutableRequest<T> request) {
+  /*
+   found   : @Initialized @NonNull ImmutableRequest<T extends @Initialized @Nullable Object>
+   required: @Initialized @NonNull ImmutableRequest<@org.checkerframework.checker.nullness.qual.Nullable T extends @Initialized @Nullable Object>
+  */
+  @SuppressWarnings("argument")
+  default <T extends @Nullable Object> CompletableFuture<@Nullable T> execute(
+      ImmutableRequest<T> request) {
     return execute(request, VajramExecutionConfig.builder().build());
   }
 
-  <T> CompletableFuture<@Nullable T> execute(
+  <T extends @Nullable Object> CompletableFuture<@Nullable T> execute(
       ImmutableRequest<T> request, VajramExecutionConfig executionConfig);
 
-  <T> void execute(
+  <T extends @Nullable Object> void execute(
       RequestResponseFuture<? extends Request<T>, T> requestResponseFuture,
       VajramExecutionConfig executionConfig);
 

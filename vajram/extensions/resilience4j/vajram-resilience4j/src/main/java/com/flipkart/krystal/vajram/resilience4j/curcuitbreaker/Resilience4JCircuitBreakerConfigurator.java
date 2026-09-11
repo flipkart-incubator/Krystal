@@ -7,7 +7,7 @@ import com.flipkart.krystal.annos.ComputeDelegationMode;
 import com.flipkart.krystal.annos.OutputLogicDelegationMode;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
-import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
+import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
@@ -21,12 +21,12 @@ public class Resilience4JCircuitBreakerConfigurator implements KryonExecutorConf
   private final ConcurrentHashMap<String, Resilience4JCircuitBreaker> circuitBreakers =
       new ConcurrentHashMap<>();
 
-  private final Function<LogicExecutionContext, String> instanceIdGenerator;
+  private final Function<LogicDecorationContext, String> instanceIdGenerator;
   private final List<Consumer<Resilience4JCircuitBreaker>> listeners =
       synchronizedList(new ArrayList<>());
 
   Resilience4JCircuitBreakerConfigurator(
-      Function<LogicExecutionContext, String> instanceIdGenerator) {
+      Function<LogicDecorationContext, String> instanceIdGenerator) {
     this.instanceIdGenerator = instanceIdGenerator;
   }
 
@@ -35,17 +35,16 @@ public class Resilience4JCircuitBreakerConfigurator implements KryonExecutorConf
     configBuilder.outputLogicDecoratorConfig(
         new OutputLogicDecoratorConfig(
             DECORATOR_TYPE,
-            logicExecutionContext ->
-                logicExecutionContext
+            decorationContext ->
+                decorationContext
                         .logicTags()
                         .getAnnotationByType(OutputLogicDelegationMode.class)
                         .map(OutputLogicDelegationMode::value)
                         .orElse(ComputeDelegationMode.NONE)
                     != ComputeDelegationMode.NONE,
-            instanceIdGenerator,
-            logicDecoratorContext ->
+            decorationContext ->
                 circuitBreakers.computeIfAbsent(
-                    instanceIdGenerator.apply(logicDecoratorContext.logicExecutionContext()),
+                    instanceIdGenerator.apply(decorationContext),
                     instanceId -> {
                       Resilience4JCircuitBreaker circuitBreaker =
                           new Resilience4JCircuitBreaker(instanceId);

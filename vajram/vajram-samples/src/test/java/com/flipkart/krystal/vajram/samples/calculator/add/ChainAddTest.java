@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
-import static com.fasterxml.jackson.annotation.JsonInclude.Value.ALL_NON_NULL;
 import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
@@ -12,11 +11,6 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig;
@@ -32,6 +26,7 @@ import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
+import com.flipkart.krystal.vajram.json.Json;
 import com.flipkart.krystal.visualization.executiongraph.DefaultKryonExecutionReport;
 import com.flipkart.krystal.visualization.executiongraph.KryonExecutionReport;
 import com.flipkart.krystal.visualization.executiongraph.MainLogicExecReporter;
@@ -59,7 +54,6 @@ class ChainAddTest {
 
   private KrystexGraphBuilder kGraph;
   private VajramGraph graph;
-  private ObjectMapper objectMapper;
 
   private Lease<SingleThreadExecutor> executorLease;
 
@@ -73,12 +67,6 @@ class ChainAddTest {
             .dependentChainDisabler(
                 new SimpleDependentChainDisabler(getDisabledDependentChains(graph)));
     this.executorLease = EXEC_POOL.lease();
-    this.objectMapper =
-        JsonMapper.builder()
-            .addModules(new JavaTimeModule(), new Jdk8Module())
-            .defaultPropertyInclusion(ALL_NON_NULL)
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-            .build();
   }
 
   @AfterEach
@@ -87,7 +75,7 @@ class ChainAddTest {
   }
 
   @Test
-  void chainer_success() throws Exception {
+  void chainer_success() {
     CompletableFuture<Integer> future;
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
     kGraph.inputBatcherStrategy(new DefaultBatcherStrategy(_v -> 100));
@@ -107,7 +95,7 @@ class ChainAddTest {
     assertThat(future).succeedsWithin(ofSeconds(1)).isEqualTo(55);
     assertThat(Add.CALL_COUNTER.sum()).isEqualTo(1);
     System.out.println(
-        objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(kryonExecutionReport));
+        Json.MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(kryonExecutionReport));
   }
 
   @Test

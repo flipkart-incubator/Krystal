@@ -1,0 +1,24 @@
+package com.flipkart.krystal.vajram_lang.samples.friends;
+
+import vajram Set from java.lang;
+import vajram FriendServiceClient from com.flipkart.krystal.vajram_lang.samples.friendsservice;
+
+vajram getFriendsOfUser
+    (string userId)
+    out Set<string>
+    inject (FriendServiceClient svcClient)
+    permit callers public {
+
+  out ~{
+    svcClient.getFriendsIds(
+        new FriendServiceRequest(
+            #mod().stream()
+                .map{_.userId()}
+                .toSet()))
+      ~?.results()
+      ~? default(List.of())
+      ~ .stream()
+      ~ .toMap {
+          new #mod(_.userId()), _.friendIds()}
+  }
+}

@@ -1,3 +1,7 @@
+---
+title: "Lattice A2A Extension"
+---
+
 # Lattice A2A Extension
 
 This directory contains the Lattice extension modules that enable building

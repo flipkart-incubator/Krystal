@@ -19,7 +19,7 @@ public final class PredicateDispatchPolicyImpl extends PredicateDispatchPolicy {
   @Getter private final ImmutableList<DispatchCase> dispatchCases;
   @Getter private final ImmutableSet<VajramID> dispatchTargetIDs;
   @Getter private final ImmutableSet<Class<? extends Request<?>>> dispatchTargetReqs;
-  @NonNull private final VajramGraph graph;
+  private final @NonNull VajramGraph graph;
 
   public PredicateDispatchPolicyImpl(
       Class<? extends Request<?>> traitReqType,
@@ -49,7 +49,5 @@ public final class PredicateDispatchPolicyImpl extends PredicateDispatchPolicy {
    * cases, no explicit validation is needed.
    */
   @Override
-  protected void validateDispatchTarget(VajramID dispatchTargetID) {
-    return;
-  }
+  protected void validateDispatchTarget(VajramID dispatchTargetID) {}
 }

@@ -2,10 +2,12 @@ package com.flipkart.krystal.krystex.caching;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
 import com.flipkart.krystal.krystex.VajramGraph;
+import com.flipkart.krystal.krystex.caching.CacheContainer.CacheValue;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -14,10 +16,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * dependency vajram calls. This allows a single vajram or a sub-graph of vajrams to be unit-tested
  * in isolation instead of testing the whole vajram graph. This can be done in one of two ways:
  *
- * <p>1. Priming the cache using {@link #primeCache(FacetValues, CompletableFuture)} method: This
- * lets testing code explicitly map a given set of facet values of a vajram to an output. This
- * method is useful when the exact facet values which would be passed to a dependency vajram are
- * known.
+ * <p>1. Priming the cache using {@link #primeCache(FacetValues, Errable)} method: This lets testing
+ * code explicitly map a given set of facet values of a vajram to an output. This method is useful
+ * when the exact facet values which would be passed to a dependency vajram are known.
  *
  * <p>2. Mocking one of the two injection points provided. The injection points are {@link
  * #getFuture(ImmutableFacetValuesContainer)} and {@link #getValue(ImmutableFacetValuesContainer)}
@@ -50,17 +51,17 @@ public final class TestRequestLevelCache extends RequestLevelCache {
   }
 
   @Override
-  public void primeCache(FacetValues facetValues, CompletableFuture<@Nullable Object> data) {
+  public void primeCache(FacetValues facetValues, Errable<Object> data) {
     super.primeCache(facetValues, data);
   }
 
   @Override
-  @Nullable CompletableFuture<@Nullable Object> getCachedValue(ImmutableFacetValues cacheKey) {
+  CacheValue getCachedFuture(ImmutableFacetValues cacheKey) {
     CompletableFuture<@Nullable Object> futureStub = getFuture(cacheKey);
     if (futureStub.getNow(null) == NO_VALUE) {
-      return super.getCachedValue(cacheKey);
+      return super.getCachedFuture(cacheKey);
     }
-    return futureStub;
+    return new CacheValue(futureStub, 0);
   }
 
   /**

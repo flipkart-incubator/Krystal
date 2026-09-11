@@ -7,7 +7,7 @@ public interface SerializableModel {
   /**
    * Returns a non-blocking {@link InputStream} representing the serialized version of this object.
    */
-  InputStream _serialize() throws Exception;
+  InputStream _serialize();
 
   SerdeProtocol _serdeProtocol();
 }

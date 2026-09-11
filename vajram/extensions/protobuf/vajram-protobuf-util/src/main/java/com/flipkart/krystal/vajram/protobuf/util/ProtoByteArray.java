@@ -7,6 +7,7 @@ import com.google.protobuf.ByteString;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -97,6 +98,11 @@ public final class ProtoByteArray implements ByteArray {
   @Override
   public ByteArray subArray(int startIndexInclusive, int endIndexExclusive) {
     return new ProtoByteArray(byteString.substring(startIndexInclusive, endIndexExclusive));
+  }
+
+  @Override
+  public String asString(Charset charset) {
+    return byteString.toString(charset);
   }
 
   @Override
