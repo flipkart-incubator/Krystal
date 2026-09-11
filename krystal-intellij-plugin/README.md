@@ -1,3 +1,7 @@
+---
+title: "Krystal IntelliJ Plugin"
+---
+
 # Krystal IntelliJ Plugin
 
 IntelliJ IDEA support for authoring Krystal Vajrams.

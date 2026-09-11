@@ -1,3 +1,7 @@
+---
+title: "Vajram WASM Playground"
+---
+
 # Vajram WASM Playground
 
 Build the standalone distribution:

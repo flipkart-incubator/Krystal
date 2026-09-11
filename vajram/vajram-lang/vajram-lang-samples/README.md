@@ -1,3 +1,7 @@
+---
+title: "Vajram-Lang Samples"
+---
+
 # Vajram-Lang Samples
 
 This module compiles `.vajram` sources in `src/main/vajram` with `vajram-lang-rust-compiler` and packages the generated code as a Cargo crate under `build/generated-rust`.

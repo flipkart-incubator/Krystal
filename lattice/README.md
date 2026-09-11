@@ -1,3 +1,7 @@
+---
+title: "Introduction"
+---
+
 # Introduction
 
 * Lattice is an application development framework (in its beta) inside the Krystal ecosystem.

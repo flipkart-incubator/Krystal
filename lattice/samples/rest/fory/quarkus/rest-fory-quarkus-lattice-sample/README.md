@@ -1,3 +1,7 @@
+---
+title: "rest-fory-quarkus-lattice-sample"
+---
+
 # rest-fory-quarkus-lattice-sample
 
 **Sample Lattice application demonstrating Apache Fory serde integration**
