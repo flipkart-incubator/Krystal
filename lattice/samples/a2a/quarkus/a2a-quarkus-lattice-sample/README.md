@@ -1,3 +1,7 @@
+---
+title: "A2A Quarkus Lattice Sample"
+---
+
 # A2A Quarkus Lattice Sample
 
 A working example of a multi-skill A2A server built with the Krystal Lattice framework and

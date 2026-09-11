@@ -1,3 +1,7 @@
+---
+title: "vajram-sql-codegen"
+---
+
 # vajram-sql-codegen
 
 Framework-agnostic annotation model parsing and SQL query building for the Krystal SQL extension.
