@@ -1,15 +1,15 @@
 package com.flipkart.krystal.vajram.json;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.BeanDescription;
-import com.fasterxml.jackson.databind.DeserializationConfig;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.flipkart.krystal.model.EnumModel;
 import com.flipkart.krystal.model.ModelRoot;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.BeanDescription;
+import tools.jackson.databind.DeserializationConfig;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.JavaType;
+import tools.jackson.databind.ValueDeserializer;
+import tools.jackson.databind.deser.ValueDeserializerModifier;
+import tools.jackson.databind.module.SimpleModule;
 
 /**
  * A Jackson module that provides fallback deserialization for {@link EnumModel} enums. When an
@@ -24,15 +24,15 @@ final class EnumModelModule extends SimpleModule {
     setDeserializerModifier(new EnumModelDeserializerModifier());
   }
 
-  private static class EnumModelDeserializerModifier extends BeanDeserializerModifier {
+  private static class EnumModelDeserializerModifier extends ValueDeserializerModifier {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     @Override
-    public JsonDeserializer<?> modifyEnumDeserializer(
+    public ValueDeserializer<?> modifyEnumDeserializer(
         DeserializationConfig config,
         JavaType type,
-        BeanDescription beanDesc,
-        JsonDeserializer<?> deserializer) {
+        BeanDescription.Supplier beanDescRef,
+        ValueDeserializer<?> deserializer) {
       Class<?> rawClass = type.getRawClass();
       if (EnumModel.class.isAssignableFrom(rawClass) && rawClass.isEnum()) {
         return new EnumModelDeserializer(rawClass, deserializer);
@@ -42,13 +42,13 @@ final class EnumModelModule extends SimpleModule {
   }
 
   private static class EnumModelDeserializer<E extends Enum<E> & EnumModel>
-      extends JsonDeserializer<E> {
+      extends ValueDeserializer<E> {
 
-    private final JsonDeserializer<?> delegate;
+    private final ValueDeserializer<?> delegate;
     private final E firstEnumConstant;
 
     @SuppressWarnings("unchecked")
-    EnumModelDeserializer(Class<? extends Enum> enumClass, JsonDeserializer<?> delegate) {
+    EnumModelDeserializer(Class<? extends Enum> enumClass, ValueDeserializer<?> delegate) {
       this.delegate = delegate;
       E[] enumConstants = ((Class<E>) enumClass).getEnumConstants();
       if (enumConstants == null) {
@@ -64,9 +64,9 @@ final class EnumModelModule extends SimpleModule {
 
     @Override
     @SuppressWarnings("unchecked")
-    public E deserialize(JsonParser p, DeserializationContext ctxt) {
+    public E deserialize(JsonParser p, DeserializationContext context) {
       try {
-        return (E) delegate.deserialize(p, ctxt);
+        return (E) delegate.deserialize(p, context);
       } catch (Exception e) {
         return firstEnumConstant;
       }

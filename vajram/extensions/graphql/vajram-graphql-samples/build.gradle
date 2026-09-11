@@ -12,19 +12,26 @@ dependencies {
     implementation 'com.flipkart.krystal:vajram-graphql'
     krystalModelsGenProcessor 'com.flipkart.krystal:vajram-codegen'
     krystalModelsGenProcessor 'com.flipkart.krystal:vajram-graphql-codegen'
+
+    // GraphQL client query-facade feature: main-source client models under
+    // src/main/java/.../client exercise <Op>QueryFacade generation against this module's
+    // existing Schema.graphqls (used from VajramGraphQlTest).
+    implementation 'com.flipkart.krystal:vajram-graphql-client'
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-graphql-client-codegen'
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-json-codegen'
     implementation 'com.graphql-java:graphql-java:24.3'
     implementation 'com.graphql-java:graphql-java-extended-scalars:24.0'
 
     annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
 
-    compileOnly "org.projectlombok:lombok:$lombok_version"
-    annotationProcessor "org.projectlombok:lombok:$lombok_version"
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
 
     implementation 'org.slf4j:slf4j-api:2.0.13'
 
     implementation project(':vajram:extensions:json:vajram-json')
-    implementation 'com.fasterxml.jackson.core:jackson-annotations'
-    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation libs.jackson.annotations
+    implementation libs.jackson.databind
 
 
     testImplementation 'com.flipkart.krystal:krystex'

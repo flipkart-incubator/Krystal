@@ -61,7 +61,6 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -251,7 +250,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
     util.note("Generated " + pkg + "." + vajramName);
   }
 
-  private TraitResultType parseTraitResultType(@MonotonicNonNull VajramInfo vajramInfoLite) {
+  private TraitResultType parseTraitResultType(VajramInfo vajramInfoLite) {
     DeclaredType responseType =
         (DeclaredType) vajramInfoLite.lite().responseType().typeMirror(util.processingEnv());
     TypeElement responseTypeElem =
@@ -405,7 +404,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
       String resultName,
       TypeName outputReturnTypeName,
       String vajramName,
-      String parentPkAlias) {
+      @Nullable String parentPkAlias) {
 
     if (!selection.joins().isEmpty()) {
       if (resultType.isList()) {
@@ -498,7 +497,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
       String resultPkg,
       String resultName,
       TypeName outputReturnTypeName,
-      String parentPkAlias) {
+      @Nullable String parentPkAlias) {
     ClassName resultImmutPojo = ClassName.get(resultPkg, resultName + Constants.IMMUT_POJO_SUFFIX);
     ClassName resultClass = ClassName.get(resultPkg, resultName);
     ClassName builderClass =
@@ -571,39 +570,43 @@ public class SqlSelectVajramGen implements CodeGenerator {
 
     method.beginControlFlow("for ($T _row : $L)", Row.class, VertxSqlUtil.SQL_RESULT_FACET);
 
-    // Parent key
-    method.addStatement(
-        "$T _parentKey = _row.getValue($S)",
-        Object.class,
-        syntax.columnNameInResult(parentPkAlias));
+    if (parentPkAlias != null) {
+      // Parent key
+      method.addStatement(
+          "$T _parentKey = _row.getValue($S)",
+          Object.class,
+          syntax.columnNameInResult(parentPkAlias));
 
-    // Init parent entry on first encounter
-    method.beginControlFlow("if (_parentKey != null && !_parentBuilders.containsKey(_parentKey))");
-    CodeBlock.Builder parentChain =
-        CodeBlock.builder().add("_parentBuilders.put(_parentKey, $T._builder()", resultImmutPojo);
-    for (ScalarColumn col : selection.scalars()) {
-      String alias = selection.tableName() + "_" + col.methodName();
-      parentChain.add(vertxSqlUtil.readColumnAndSetValue(col, alias));
-    }
-    parentChain.add(")");
-    method.addStatement(parentChain.build());
-    // Initialize child accumulators for this new parent
-    for (JoinRelation join : selection.joins()) {
-      if (join.nestedJoins().isEmpty()) {
-        method.addStatement("_$L.put(_parentKey, new $T<>())", join.methodName(), ArrayList.class);
-      } else {
-        method.addStatement(
-            "_$LBuilders.put(_parentKey, new $T<>())", join.methodName(), LinkedHashMap.class);
-        for (JoinRelation nested : join.nestedJoins()) {
+      // Init parent entry on first encounter
+      method.beginControlFlow(
+          "if (_parentKey != null && !_parentBuilders.containsKey(_parentKey))");
+      CodeBlock.Builder parentChain =
+          CodeBlock.builder().add("_parentBuilders.put(_parentKey, $T._builder()", resultImmutPojo);
+      for (ScalarColumn col : selection.scalars()) {
+        String alias = selection.tableName() + "_" + col.methodName();
+        parentChain.add(vertxSqlUtil.readColumnAndSetValue(col, alias));
+      }
+      parentChain.add(")");
+      method.addStatement(parentChain.build());
+      // Initialize child accumulators for this new parent
+      for (JoinRelation join : selection.joins()) {
+        if (join.nestedJoins().isEmpty()) {
           method.addStatement(
-              "_$L_$L.put(_parentKey, new $T<>())",
-              join.methodName(),
-              nested.methodName(),
-              LinkedHashMap.class);
+              "_$L.put(_parentKey, new $T<>())", join.methodName(), ArrayList.class);
+        } else {
+          method.addStatement(
+              "_$LBuilders.put(_parentKey, new $T<>())", join.methodName(), LinkedHashMap.class);
+          for (JoinRelation nested : join.nestedJoins()) {
+            method.addStatement(
+                "_$L_$L.put(_parentKey, new $T<>())",
+                join.methodName(),
+                nested.methodName(),
+                LinkedHashMap.class);
+          }
         }
       }
+      method.endControlFlow();
     }
-    method.endControlFlow();
 
     // Accumulate child rows
     for (JoinRelation join : selection.joins()) {
@@ -774,7 +777,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
       String resultPkg,
       String resultName,
       String vajramName,
-      String parentPkAlias) {
+      @Nullable String parentPkAlias) {
     ClassName resultImmutPojo = ClassName.get(resultPkg, resultName + Constants.IMMUT_POJO_SUFFIX);
     ClassName builderClass =
         ClassName.get(resultPkg, resultName + Constants.IMMUT_POJO_SUFFIX, "Builder");
@@ -789,8 +792,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
 
     method.addStatement("$T _parent = null", builderClass);
 
-    boolean hasValidation = parentPkAlias != null;
-    if (hasValidation) {
+    if (parentPkAlias != null) {
       method.addStatement("$T _parentKey = null", Object.class);
     }
 
@@ -836,7 +838,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
     method.beginControlFlow("for ($T _row : $L)", Row.class, VertxSqlUtil.SQL_RESULT_FACET);
 
     // Parent initialisation / identity validation
-    if (hasValidation) {
+    if (parentPkAlias != null) {
       method.addStatement(
           "$T _rowKey = _row.getValue($S)", Object.class, syntax.columnNameInResult(parentPkAlias));
       method.beginControlFlow("if (_parent == null)");
@@ -853,7 +855,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
     }
     method.addStatement(parentChain.build());
 
-    if (hasValidation) {
+    if (parentPkAlias != null) {
       method.nextControlFlow("else if (!$T.equals(_parentKey, _rowKey))", Objects.class);
       method.addStatement(
           "throw new $T($S + _parentKey + $S + _rowKey + $S)",
@@ -1040,7 +1042,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
    * <p>If neither is projected, a compile error is emitted and {@code null} is returned; the
    * developer must add the PK or FK column to the selection.
    */
-  private String findSentinelMethodName(JoinRelation join) {
+  private @Nullable String findSentinelMethodName(JoinRelation join) {
     if (join.childPkColumn() != null) {
       for (ScalarColumn col : join.columns()) {
         if (col.columnName().equals(join.childPkColumn())) {
@@ -1080,7 +1082,7 @@ public class SqlSelectVajramGen implements CodeGenerator {
    * <p>If the child PK column is not selected, a compile error is emitted and {@code null} is
    * returned; the developer must add the PK column to the child selection.
    */
-  private String findDedupeKeyMethodName(JoinRelation join) {
+  private @Nullable String findDedupeKeyMethodName(JoinRelation join) {
     if (join.childPkColumn() != null) {
       for (ScalarColumn col : join.columns()) {
         if (col.columnName().equals(join.childPkColumn())) {

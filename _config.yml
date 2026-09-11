@@ -1,0 +1,43 @@
+title: Krystal
+description: Documentation for the Krystal framework
+theme: jekyll-theme-minimal
+markdown: kramdown
+
+# Dot-prefixed and underscore-prefixed files/dirs (.github, .idea, .gradle, etc.)
+# are excluded by Jekyll automatically. Everything below is extra: top-level
+# build tooling/config with no docs value, plus bulky source file types that
+# would otherwise get copied as static assets from module dirs that DO contain
+# READMEs (krystex/, lattice/, vajram/, krystal-intellij-plugin/).
+exclude:
+  - assets/
+  - code-coverage-report/
+  - config/
+  - fk-java-code-std-plugin/
+  - gradle/
+  - gradlew
+  - gradlew.bat
+  - build.gradle
+  - gradle.properties
+  - settings.gradle
+  - lombok.config
+  - intellij-java-google-style.xml
+  - publish_compile.sh
+  - upgradeVersionLocal.macOS.sh
+  - krystal-bom/
+  - krystal-codegen-common/
+  - krystal-common/
+  - krystal-gradle-plugin/
+  - krystal-visualization/
+  - mojo-publish-plugin/
+  - oss-java-deps-bom/
+  - skills/
+  - "**/*.java"
+  - "**/*.kt"
+  - "**/*.kts"
+  - "**/*.class"
+  - "**/*.jar"
+  - "**/*.rs"
+  - "**/*.wasm"
+  - "**/*.proto"
+  - "**/node_modules/"
+  - "**/target/"

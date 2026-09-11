@@ -7,7 +7,7 @@ dependencies {
     implementation project(':lattice:lattice-codegen')
     implementation project(':vajram:extensions:json:vajram-json')
 
-    api platform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
+    api platform(libs.quarkus.bom)
 
     implementation 'io.vertx:vertx-web'
 

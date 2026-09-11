@@ -11,6 +11,7 @@ import com.google.inject.Scope;
 import com.google.inject.Scopes;
 import java.util.HashMap;
 import java.util.Map;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Scopes a single execution of a block of code. Enter the scope using a KrystalExecutor and close
@@ -47,7 +48,7 @@ public class KrystalExecutorScope implements Scope {
 
   public static final KrystalExecutorScope INSTANCE = new KrystalExecutorScope();
 
-  private final Map<KrystalExecutor, Map<Key<?>, Object>> values = new HashMap<>();
+  private final Map<KrystalExecutor, Map<Key<?>, @Nullable Object>> values = new HashMap<>();
 
   private static final Provider<Object> SEEDED_KEY_PROVIDER =
       () -> {
@@ -68,9 +69,9 @@ public class KrystalExecutorScope implements Scope {
     return new ScopeInstance(krystalExecutor);
   }
 
-  public <T> Provider<T> scope(final Key<T> key, final Provider<T> unscoped) {
+  public <T> Provider<@Nullable T> scope(final Key<T> key, final Provider<T> unscoped) {
     return () -> {
-      Map<Key<?>, Object> scopedObjects = getScopedObjectMap(getExecutor());
+      Map<Key<?>, @Nullable Object> scopedObjects = getScopedObjectMap(getExecutor());
 
       @SuppressWarnings("unchecked")
       T current = (T) scopedObjects.get(key);
@@ -99,7 +100,7 @@ public class KrystalExecutorScope implements Scope {
     return (Provider<T>) SEEDED_KEY_PROVIDER;
   }
 
-  private Map<Key<?>, Object> getScopedObjectMap(KrystalExecutor krystalExecutor) {
+  private Map<Key<?>, @Nullable Object> getScopedObjectMap(KrystalExecutor krystalExecutor) {
     return values.computeIfAbsent(krystalExecutor, _k -> new HashMap<>());
   }
 
@@ -121,7 +122,7 @@ public class KrystalExecutorScope implements Scope {
     }
 
     public <T> void seed(Key<T> key, T value) {
-      Map<Key<?>, Object> scopedObjects = getScopedObjectMap(krystalExecutor);
+      Map<Key<?>, @Nullable Object> scopedObjects = getScopedObjectMap(krystalExecutor);
       checkState(
           !scopedObjects.containsKey(key),
           "A value for the key %s was "

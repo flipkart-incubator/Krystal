@@ -175,6 +175,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -233,7 +234,7 @@ public class VajramCodeGenerator implements CodeGenerator {
   private final @Nullable CodegenPhase codegenPhase;
   private final VajramCodeGenUtility vajramUtil;
   private final CodeGenUtility util;
-  private final @Nullable String vajramName;
+  private final String vajramName;
   private final Types typeUtils;
   private final Elements elementUtils;
 
@@ -283,7 +284,7 @@ public class VajramCodeGenerator implements CodeGenerator {
         creationContext.vajramInfo().dependencies().stream()
             .collect(toMap(DependencyModel::name, DependencyModel::canFanout));
     this.codegenPhase = creationContext.codegenPhase();
-    this.vajramName = currentVajramInfo().vajramName();
+    this.vajramName = currentVajramInfo.vajramName();
   }
 
   @Override
@@ -396,6 +397,7 @@ public class VajramCodeGenerator implements CodeGenerator {
                 inputsInfo.typeArguments().stream()
                     .filter(TypeVariable.class::isInstance)
                     .map(TypeVariable.class::cast)
+                    .map(Objects::requireNonNull)
                     .map(TypeVariableName::get)
                     .toList())
             .returns(inputsInfo.reqBuilderInterfaceType())
@@ -1554,7 +1556,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
       return elements.get(0);
     }
 
-    public Element[] elementArray() {
+    private Element[] elementArray() {
       return elements.toArray(Element[]::new);
     }
   }
@@ -2950,6 +2952,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
             facet.facetElement() instanceof ExecutableElement
                 ? "getDeclaredMethod"
                 : "getDeclaredField";
+        TypeElement vajramInputsSource = currentVajramInfo().inputsSource();
         initializerCodeBlock.add(
             """
                     $L,
@@ -2966,8 +2969,8 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                 """,
             facet.isBatched(),
             FacetUtils.class,
-            facet.facetType().equals(INPUT)
-                ? currentVajramInfo().inputsSource()
+            facet.facetType().equals(INPUT) && vajramInputsSource != null
+                ? vajramInputsSource
                 : ClassName.get(currentVajramInfo().vajramClassElem())
                     .nestedClass(_INTERNAL_FACETS_CLASS),
             facetReflectionAccessor,

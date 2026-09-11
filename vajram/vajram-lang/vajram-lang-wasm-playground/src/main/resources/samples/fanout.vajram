@@ -1,0 +1,13 @@
+package playground.samples;
+
+import vajram concatStrings from lang.Strings;
+
+// Fanout example: copy this into an editable tab and adapt it to your graph.
+vajram fanoutGreeting([string] names) out string
+    permit callers `outsideProcess public{
+  string* greetings = greeting(name =* names);
+
+  string greetingsConcat = concatStrings(strings = greetings; separator = "\n")
+
+  { "Fanout Vajram sample: " + greetingsConcat }
+}

@@ -8,7 +8,7 @@ import com.flipkart.krystal.annos.OutputLogicDelegationMode;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
-import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
+import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
@@ -22,11 +22,11 @@ public class Resilience4JBulkheadConfigurator implements KryonExecutorConfigurat
   private final ConcurrentHashMap<String, Resilience4JBulkhead> bulkheads =
       new ConcurrentHashMap<>();
 
-  private final Function<LogicExecutionContext, String> instanceIdGenerator;
+  private final Function<LogicDecorationContext, String> instanceIdGenerator;
   private final List<Consumer<Resilience4JBulkhead>> listeners =
       synchronizedList(new ArrayList<>());
 
-  Resilience4JBulkheadConfigurator(Function<LogicExecutionContext, String> instanceIdGenerator) {
+  Resilience4JBulkheadConfigurator(Function<LogicDecorationContext, String> instanceIdGenerator) {
     this.instanceIdGenerator = instanceIdGenerator;
   }
 
@@ -35,11 +35,9 @@ public class Resilience4JBulkheadConfigurator implements KryonExecutorConfigurat
     configBuilder.outputLogicDecoratorConfig(
         new OutputLogicDecoratorConfig(
             DECORATOR_TYPE,
-            logicExecutionContext -> {
+            decorationContext -> {
               KryonDefinition kryonDefinition =
-                  logicExecutionContext
-                      .kryonDefinitionRegistry()
-                      .get(logicExecutionContext.vajramID());
+                  decorationContext.kryonDefinitionRegistry().get(decorationContext.vajramID());
               if (kryonDefinition == null) {
                 return false;
               }
@@ -50,10 +48,9 @@ public class Resilience4JBulkheadConfigurator implements KryonExecutorConfigurat
                       .orElse(ComputeDelegationMode.NONE)
                   != ComputeDelegationMode.NONE;
             },
-            instanceIdGenerator,
-            logicDecoratorContext ->
+            decorationContext ->
                 bulkheads.computeIfAbsent(
-                    instanceIdGenerator.apply(logicDecoratorContext.logicExecutionContext()),
+                    instanceIdGenerator.apply(decorationContext),
                     instanceId -> {
                       Resilience4JBulkhead resilience4JBulkhead =
                           new Resilience4JBulkhead(instanceId);

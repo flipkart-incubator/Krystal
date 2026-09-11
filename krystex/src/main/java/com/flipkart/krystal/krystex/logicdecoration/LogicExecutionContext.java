@@ -8,5 +8,5 @@ import com.flipkart.krystal.tags.ElementTags;
 public record LogicExecutionContext(
     VajramID vajramID,
     ElementTags logicTags,
-    DependentChain dependents,
+    DependentChain dependentChain,
     KryonDefinitionRegistry kryonDefinitionRegistry) {}

@@ -18,6 +18,11 @@ public record NonNil<T>(@NonNull T value) implements Success<T> {
   }
 
   @Override
+  public void completeFuture(CompletableFuture<T> future) {
+    future.complete(value);
+  }
+
+  @Override
   public Optional<@NonNull T> valueOpt() {
     return Optional.of(value);
   }

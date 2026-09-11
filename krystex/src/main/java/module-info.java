@@ -8,8 +8,10 @@ module flipkart.krystal.krystex {
   exports com.flipkart.krystal.krystex.kryon;
   exports com.flipkart.krystal.krystex.kryondecoration;
   exports com.flipkart.krystal.krystex.logicdecoration;
+  exports com.flipkart.krystal.krystex.resolution;
   exports com.flipkart.krystal.krystex.traits;
   exports com.flipkart.krystal.krystex;
+  exports com.flipkart.krystal.krystex.epochs;
 
   requires com.google.common;
   requires flipkart.krystal.common;

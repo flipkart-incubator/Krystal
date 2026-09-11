@@ -3,6 +3,8 @@ package com.flipkart.krystal.lattice.samples.grpc.proto2024e.sampleProtoService;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.NonNil;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -444,5 +446,346 @@ class Proto2024eLatticeSampleResponseTest {
 
     assertThat(copy.namedStatuses()).containsEntry("k1", Status.COMPLETED).hasSize(1);
     assertThat(copy).isEqualTo(original);
+  }
+
+  // --- Errable field tests ---
+
+  @Test
+  void errableField_withValue_serializesAndDeserializesInnerValue() throws Exception {
+    Proto2024eLatticeSampleResponse_ImmutProto original =
+        Proto2024eLatticeSampleResponse_ImmutProto._builder()
+            .string("errable-test")
+            .mandatoryInt(1)
+            .mandatoryStringPartialConstruction("")
+            .status(Status.UNKNOWN)
+            .errableMessage(Errable.withValue("hello proto2024e errable"))
+            ._build();
+
+    assertThat(original.errableMessage()).isEqualTo(Errable.withValue("hello proto2024e errable"));
+
+    byte[] bytes = original._serialize().readAllBytes();
+    Proto2024eLatticeSampleResponse_ImmutProto deserialized =
+        new Proto2024eLatticeSampleResponse_ImmutProto(bytes);
+
+    assertThat(deserialized.errableMessage())
+        .isEqualTo(Errable.withValue("hello proto2024e errable"));
+    assertThat(deserialized).isEqualTo(original);
+  }
+
+  @Test
+  void errableField_absent_deserializesToNil() throws Exception {
+    Proto2024eLatticeSampleResponse_ImmutProto original =
+        Proto2024eLatticeSampleResponse_ImmutProto._builder()
+            .string("no-errable")
+            .mandatoryInt(2)
+            .mandatoryStringPartialConstruction("")
+            .status(Status.UNKNOWN)
+            ._build();
+
+    assertThat(original.errableMessage()).isEqualTo(Errable.nil());
+
+    byte[] bytes = original._serialize().readAllBytes();
+    Proto2024eLatticeSampleResponse_ImmutProto deserialized =
+        new Proto2024eLatticeSampleResponse_ImmutProto(bytes);
+
+    assertThat(deserialized.errableMessage()).isEqualTo(Errable.nil());
+    assertThat(deserialized).isEqualTo(original);
+  }
+
+  @Test
+  void errableField_setViaErrableSetter_withValue() {
+    Proto2024eLatticeSampleResponse_ImmutProto built =
+        Proto2024eLatticeSampleResponse_ImmutProto._builder()
+            .string("errable-setter")
+            .mandatoryInt(3)
+            .mandatoryStringPartialConstruction("")
+            .status(Status.UNKNOWN)
+            .errableMessage(Errable.withValue("via errable setter"))
+            ._build();
+
+    assertThat(built.errableMessage()).isEqualTo(Errable.withValue("via errable setter"));
+  }
+
+  @Test
+  void errableField_setViaErrableSetter_nil() {
+    Proto2024eLatticeSampleResponse_ImmutProto built =
+        Proto2024eLatticeSampleResponse_ImmutProto._builder()
+            .string("errable-nil")
+            .mandatoryInt(4)
+            .mandatoryStringPartialConstruction("")
+            .status(Status.UNKNOWN)
+            .errableMessage(Errable.nil())
+            ._build();
+
+    assertThat(built.errableMessage()).isEqualTo(Errable.nil());
+  }
+
+  @Test
+  void errableField_setViaErrableSetter_failure_losesErrorOnRoundTrip() throws Exception {
+    RuntimeException cause = new RuntimeException("upstream failure");
+    Proto2024eLatticeSampleResponse_ImmutProto built =
+        Proto2024eLatticeSampleResponse_ImmutProto._builder()
+            .string("errable-failure")
+            .mandatoryInt(5)
+            .mandatoryStringPartialConstruction("")
+            .status(Status.UNKNOWN)
+            .errableMessage(Errable.withError(cause))
+            ._build();
+
+    // Failure stored in-memory is not-NonNil
+    assertThat(built.errableMessage()).isNotInstanceOf(NonNil.class);
+
+    // After proto round-trip, failure state is lost → Errable.nil()
+    byte[] bytes = built._serialize().readAllBytes();
+    Proto2024eLatticeSampleResponse_ImmutProto deserialized =
+        new Proto2024eLatticeSampleResponse_ImmutProto(bytes);
+    assertThat(deserialized.errableMessage()).isEqualTo(Errable.nil());
+  }
+
+  @Test
+  void errableField_copyConstructor_preservesValue() {
+    Proto2024eLatticeSampleResponse_ImmutProto original =
+        Proto2024eLatticeSampleResponse_ImmutProto._builder()
+            .string("errable-copy")
+            .mandatoryInt(6)
+            .mandatoryStringPartialConstruction("")
+            .status(Status.UNKNOWN)
+            .errableMessage(Errable.withValue("copy value"))
+            ._build();
+
+    Proto2024eLatticeSampleResponse_ImmutProto copy =
+        new Proto2024eLatticeSampleResponse_ImmutProto(original);
+
+    assertThat(copy.errableMessage()).isEqualTo(Errable.withValue("copy value"));
+    assertThat(copy).isEqualTo(original);
+  }
+
+  @Test
+  void errableField_pojo_withValue_roundTrip() {
+    Proto2024eLatticeSampleResponse_ImmutPojo built =
+        Proto2024eLatticeSampleResponse_ImmutPojo._builder()
+            .string("pojo-errable")
+            .mandatoryInt(7)
+            .mandatoryStringPartialConstruction("")
+            .status(Status.UNKNOWN)
+            .errableMessage(Errable.withValue("pojo value"))
+            ._build();
+
+    assertThat(built.errableMessage()).isEqualTo(Errable.withValue("pojo value"));
+    assertThat(built).isEqualTo(built._newCopy()._build());
+  }
+
+  @Test
+  void errableField_pojo_nil_roundTrip() {
+    Proto2024eLatticeSampleResponse_ImmutPojo built =
+        Proto2024eLatticeSampleResponse_ImmutPojo._builder()
+            .string("pojo-nil")
+            .mandatoryInt(8)
+            .mandatoryStringPartialConstruction("")
+            .status(Status.UNKNOWN)
+            ._build();
+
+    assertThat(built.errableMessage()).isEqualTo(Errable.nil());
+    assertThat(built).isEqualTo(built._newCopy()._build());
+  }
+
+  // --- Errable-container field tests (List<Errable<T>>, Errable<List<T>>,
+  // Errable<List<Errable<T>>>, Map<K,Errable<T>>, Errable<Map<K,T>>,
+  // Errable<Map<K,Errable<T>>>), for T = primitive/Enum/Model ---
+
+  private static Proto2024eLatticeSampleResponse_ImmutProto.Builder baseBuilder(String label) {
+    return Proto2024eLatticeSampleResponse_ImmutProto._builder()
+        .string(label)
+        .mandatoryInt(1)
+        .mandatoryStringPartialConstruction("")
+        .status(Status.UNKNOWN);
+  }
+
+  @Test
+  void errableContainerFields_proto_roundTrip_withValues() throws Exception {
+    SubMessage_Immut sub1 = SubMessage_ImmutProto._builder().count(1)._build();
+    SubMessage_Immut sub2 = SubMessage_ImmutProto._builder().count(2)._build();
+
+    Proto2024eLatticeSampleResponse_ImmutProto original =
+        baseBuilder("errable-containers")
+            .errableInts(List.of(Errable.withValue(1), Errable.withValue(2)))
+            .errableStatuses(List.of(Errable.withValue(Status.COMPLETED)))
+            .errableSubMessages(List.of(Errable.withValue(sub1)))
+            .errableIntList(Errable.withValue(List.of(1, 2, 3)))
+            .errableStatusList(Errable.withValue(List.of(Status.PENDING)))
+            .errableSubMessageList(Errable.withValue(List.of(sub1, sub2)))
+            .errableListOfErrableInts(Errable.withValue(List.of(Errable.withValue(1))))
+            .errableListOfErrableStatuses(
+                Errable.withValue(List.of(Errable.withValue(Status.FAILED))))
+            .errableListOfErrableSubMessages(Errable.withValue(List.of(Errable.withValue(sub1))))
+            .errableIntMap(Map.of("a", Errable.withValue(1)))
+            .errableStatusMap(Map.of("a", Errable.withValue(Status.IN_PROGRESS)))
+            .errableSubMessageMap(Map.of("a", Errable.withValue(sub1)))
+            .errableIntMapWhole(Errable.withValue(Map.of("a", 1)))
+            .errableStatusMapWhole(Errable.withValue(Map.of("a", Status.COMPLETED)))
+            .errableSubMessageMapWhole(Errable.withValue(Map.of("a", sub1)))
+            .errableMapOfErrableInts(Errable.withValue(Map.of("a", Errable.withValue(1))))
+            .errableMapOfErrableStatuses(
+                Errable.withValue(Map.of("a", Errable.withValue(Status.PENDING))))
+            .errableMapOfErrableSubMessages(Errable.withValue(Map.of("a", Errable.withValue(sub1))))
+            ._build();
+
+    byte[] bytes = original._serialize().readAllBytes();
+    Proto2024eLatticeSampleResponse_ImmutProto d =
+        new Proto2024eLatticeSampleResponse_ImmutProto(bytes);
+
+    assertThat(d.errableInts()).containsExactly(Errable.withValue(1), Errable.withValue(2));
+    assertThat(d.errableStatuses()).containsExactly(Errable.withValue(Status.COMPLETED));
+    assertThat(d.errableSubMessages())
+        .extracting(Errable::value)
+        .extracting(SubMessage::count)
+        .containsExactly(1);
+
+    assertThat(d.errableIntList()).isEqualTo(Errable.withValue(List.of(1, 2, 3)));
+    assertThat(d.errableStatusList()).isEqualTo(Errable.withValue(List.of(Status.PENDING)));
+    assertThat(d.errableSubMessageList().value())
+        .extracting(SubMessage::count)
+        .containsExactly(1, 2);
+
+    assertThat(d.errableListOfErrableInts())
+        .isEqualTo(Errable.withValue(List.of(Errable.withValue(1))));
+    assertThat(d.errableListOfErrableStatuses())
+        .isEqualTo(Errable.withValue(List.of(Errable.withValue(Status.FAILED))));
+    assertThat(d.errableListOfErrableSubMessages().value())
+        .extracting(e -> e.value().count())
+        .containsExactly(1);
+
+    assertThat(d.errableIntMap()).isEqualTo(Map.of("a", Errable.withValue(1)));
+    assertThat(d.errableStatusMap()).isEqualTo(Map.of("a", Errable.withValue(Status.IN_PROGRESS)));
+    assertThat(d.errableSubMessageMap().get("a").value().count()).isEqualTo(1);
+
+    assertThat(d.errableIntMapWhole()).isEqualTo(Errable.withValue(Map.of("a", 1)));
+    assertThat(d.errableStatusMapWhole())
+        .isEqualTo(Errable.withValue(Map.of("a", Status.COMPLETED)));
+    assertThat(d.errableSubMessageMapWhole().value().get("a").count()).isEqualTo(1);
+
+    assertThat(d.errableMapOfErrableInts())
+        .isEqualTo(Errable.withValue(Map.of("a", Errable.withValue(1))));
+    assertThat(d.errableMapOfErrableStatuses())
+        .isEqualTo(Errable.withValue(Map.of("a", Errable.withValue(Status.PENDING))));
+    assertThat(d.errableMapOfErrableSubMessages().value().get("a").value().count()).isEqualTo(1);
+
+    assertThat(d).isEqualTo(original);
+  }
+
+  @Test
+  void errableContainerFields_proto_defaults_areEmpty() {
+    Proto2024eLatticeSampleResponse_ImmutProto d =
+        baseBuilder("errable-container-defaults")._build();
+
+    assertThat(d.errableInts()).isEmpty();
+    assertThat(d.errableStatuses()).isEmpty();
+    assertThat(d.errableSubMessages()).isEmpty();
+    assertThat(d.errableIntList()).isEqualTo(Errable.withValue(List.of()));
+    assertThat(d.errableStatusList()).isEqualTo(Errable.withValue(List.of()));
+    assertThat(d.errableSubMessageList()).isEqualTo(Errable.withValue(List.of()));
+    assertThat(d.errableListOfErrableInts()).isEqualTo(Errable.withValue(List.of()));
+    assertThat(d.errableIntMap()).isEmpty();
+    assertThat(d.errableStatusMap()).isEmpty();
+    assertThat(d.errableSubMessageMap()).isEmpty();
+    assertThat(d.errableIntMapWhole()).isEqualTo(Errable.withValue(Map.of()));
+    assertThat(d.errableStatusMapWhole()).isEqualTo(Errable.withValue(Map.of()));
+    assertThat(d.errableSubMessageMapWhole()).isEqualTo(Errable.withValue(Map.of()));
+    assertThat(d.errableMapOfErrableInts()).isEqualTo(Errable.withValue(Map.of()));
+  }
+
+  @Test
+  void errableContainerFields_nilAndFailureElements_areDroppedOnProtoRoundTrip() throws Exception {
+    SubMessage_Immut sub1 = SubMessage_ImmutProto._builder().count(1)._build();
+
+    Proto2024eLatticeSampleResponse_ImmutProto original =
+        baseBuilder("errable-container-drop-nil")
+            .errableInts(
+                List.of(
+                    Errable.withValue(1), Errable.nil(), Errable.withError(new RuntimeException())))
+            .errableStatuses(List.of(Errable.nil(), Errable.withValue(Status.COMPLETED)))
+            .errableSubMessages(List.of(Errable.nil(), Errable.withValue(sub1)))
+            .errableIntMap(
+                Map.of(
+                    "keep",
+                    Errable.withValue(9),
+                    "drop",
+                    Errable.nil(),
+                    "fail",
+                    Errable.withError(new RuntimeException())))
+            ._build();
+
+    byte[] bytes = original._serialize().readAllBytes();
+    Proto2024eLatticeSampleResponse_ImmutProto d =
+        new Proto2024eLatticeSampleResponse_ImmutProto(bytes);
+
+    assertThat(d.errableInts()).containsExactly(Errable.withValue(1));
+    assertThat(d.errableStatuses()).containsExactly(Errable.withValue(Status.COMPLETED));
+    assertThat(d.errableSubMessages())
+        .extracting(Errable::value)
+        .extracting(SubMessage::count)
+        .containsExactly(1);
+    assertThat(d.errableIntMap()).isEqualTo(Map.of("keep", Errable.withValue(9)));
+  }
+
+  @Test
+  void errableContainerFields_wholeContainerNil_roundTripsAsEmptyValue() throws Exception {
+    Proto2024eLatticeSampleResponse_ImmutProto original =
+        baseBuilder("errable-whole-nil")
+            .errableIntList(Errable.nil())
+            .errableIntMapWhole(Errable.withError(new RuntimeException("boom")))
+            ._build();
+
+    byte[] bytes = original._serialize().readAllBytes();
+    Proto2024eLatticeSampleResponse_ImmutProto d =
+        new Proto2024eLatticeSampleResponse_ImmutProto(bytes);
+
+    // A protobuf repeated/map field can't represent "absent" - Nil/Failure round-trips as an
+    // empty value wrapped in Errable.withValue(...), never as Errable.nil().
+    assertThat(d.errableIntList()).isEqualTo(Errable.withValue(List.of()));
+    assertThat(d.errableIntMapWhole()).isEqualTo(Errable.withValue(Map.of()));
+  }
+
+  @Test
+  void errableContainerFields_pojo_builderRoundTrip() {
+    SubMessage_Immut sub1 = SubMessage_ImmutProto._builder().count(3)._build();
+
+    Proto2024eLatticeSampleResponse_ImmutPojo built =
+        Proto2024eLatticeSampleResponse_ImmutPojo._builder()
+            .string("pojo-errable-containers")
+            .mandatoryInt(1)
+            .mandatoryStringPartialConstruction("")
+            .status(Status.UNKNOWN)
+            .errableInts(List.of(Errable.withValue(1), Errable.withValue(2)))
+            .errableSubMessages(List.of(Errable.withValue(sub1)))
+            .errableIntList(Errable.withValue(List.of(1, 2)))
+            .errableSubMessageList(Errable.withValue(List.of(sub1)))
+            .errableListOfErrableInts(
+                Errable.withValue(List.of(Errable.withValue(1), Errable.nil())))
+            .errableIntMap(Map.of("a", Errable.withValue(1)))
+            .errableSubMessageMap(Map.of("a", Errable.withValue(sub1)))
+            .errableIntMapWhole(Errable.withValue(Map.of("a", 1)))
+            .errableMapOfErrableInts(Errable.withValue(Map.of("a", Errable.withValue(1))))
+            ._build();
+
+    assertThat(built.errableInts()).containsExactly(Errable.withValue(1), Errable.withValue(2));
+    assertThat(built.errableSubMessages())
+        .extracting(Errable::value)
+        .extracting(SubMessage::count)
+        .containsExactly(3);
+    assertThat(built.errableIntList()).isEqualTo(Errable.withValue(List.of(1, 2)));
+    assertThat(built.errableSubMessageList().value())
+        .extracting(SubMessage::count)
+        .containsExactly(3);
+    assertThat(built.errableListOfErrableInts())
+        .isEqualTo(Errable.withValue(List.of(Errable.withValue(1), Errable.nil())));
+    assertThat(built.errableIntMap()).isEqualTo(Map.of("a", Errable.withValue(1)));
+    assertThat(built.errableSubMessageMap().get("a").value().count()).isEqualTo(3);
+    assertThat(built.errableIntMapWhole()).isEqualTo(Errable.withValue(Map.of("a", 1)));
+    assertThat(built.errableMapOfErrableInts())
+        .isEqualTo(Errable.withValue(Map.of("a", Errable.withValue(1))));
+
+    // POJO preserves nil/failure elements exactly (no lossy proto wire-format constraint).
+    assertThat(built).isEqualTo(built._newCopy()._build());
   }
 }

@@ -5,6 +5,10 @@ dependencies {
     api project(':vajram:vajram-java-sdk')
     api project(':krystal-codegen-common')
     implementation 'com.squareup:javapoet'
+
+    // Needed on the test runtime classpath so in-process javac/annotation-processing tests
+    // (e.g. ErrableMapKeyValidationTest) can resolve annotations that generated code refers to.
+    testImplementation 'org.projectlombok:lombok'
 }
 
 publishToMavenLocal {

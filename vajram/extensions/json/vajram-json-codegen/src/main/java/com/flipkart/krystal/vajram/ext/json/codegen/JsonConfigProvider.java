@@ -2,8 +2,8 @@ package com.flipkart.krystal.vajram.ext.json.codegen;
 
 import static com.flipkart.krystal.codegen.common.models.Constants.EMPTY_CODE_BLOCK;
 import static com.flipkart.krystal.vajram.json.Json.JSON;
+import static java.util.Objects.requireNonNull;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility.ModelRootInfo;
 import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider;
@@ -21,6 +21,7 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.type.TypeMirror;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import tools.jackson.core.type.TypeReference;
 
 @AutoService(ModelProtocolConfigProvider.class)
 public class JsonConfigProvider implements ModelProtocolConfigProvider {
@@ -99,7 +100,9 @@ public class JsonConfigProvider implements ModelProtocolConfigProvider {
               stringAnnotationValueMap ->
                   Creator.create(
                       SerdeOutputType.valueOf(
-                          ((Element) stringAnnotationValueMap.get("serializeAs").getValue())
+                          ((Element)
+                                  requireNonNull(stringAnnotationValueMap.get("serializeAs"))
+                                      .getValue())
                               .getSimpleName()
                               .toString())));
       return CodeBlock.of(
@@ -111,7 +114,7 @@ public class JsonConfigProvider implements ModelProtocolConfigProvider {
 
     private TypeName toJsonType(TypeMirror typeMirror, CodeGenUtility util) {
       if (util.isModelRoot(typeMirror)) {
-        return util.replaceTypeWith(typeMirror, util.getImmutTypeName(typeMirror, JSON));
+        return util.replaceContentTypeWith(typeMirror, util.getImmutTypeName(typeMirror, JSON));
       }
       return TypeName.get(util.getOptionalInnerType(typeMirror));
     }

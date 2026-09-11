@@ -18,25 +18,18 @@ ext {
     krystal_version = project['com.flipkart.krystal.currentVersion']
     lattice_version = project['com.flipkart.krystal.lattice.currentVersion']
 
-    protobuf_version = '4.35.0'
-    grpc_version = '1.81.0'
+    protobuf_version = libs.versions.protobuf.get()
+    grpc_version = libs.versions.grpc.get()
     fory_version = '0.17.0'
     quarkus_version = libs.versions.quarkus.get()
-    lombok_version = '1.18.46'
     kordamp_jandex_version = '2.3.0'
 }
 
 // Load the gradle.private.properties file for dev-local settings
 def privateProperties = new Properties()
 def privatePropertiesFile = rootProject.file('gradle.private.properties')
-
 if (privatePropertiesFile.exists()) {
-    privateProperties.load(new FileInputStream(privatePropertiesFile))
-
-    // 2. Inject them into Gradle's extra properties
-    privateProperties.each { key, value ->
-        extensions.extraProperties.set(key, value)
-    }
+    new FileInputStream(privatePropertiesFile).withStream { stream -> privateProperties.load(stream) }
 }
 
 group = 'com.flipkart.krystal'
@@ -54,8 +47,7 @@ configure(subprojects.findAll {
     //Only leaf projects need publishing
     it.subprojects.isEmpty()
             //Exclude non java projects
-            && it.name != 'code-coverage-report'
-            && it.name != 'krystal-intellij-plugin'
+            && it.name != 'code-coverage-report' && it.name != 'krystal-intellij-plugin'
             // Exclude sample projects so that they are configured independently making
             // them a better representation of how clients should use krystal
             && !it.name.contains('sample')
@@ -133,6 +125,10 @@ configure(subprojects.findAll {
     }
 }
 
+subprojects {
+    privateProperties.each { key, value -> project.extensions.extraProperties.set(key.toString(), value) }
+}
+
 configure(subprojects.findAll {
     //Only leaf projects are of interest to us
     it.subprojects.isEmpty()
@@ -173,18 +169,18 @@ configure(subprojects.findAll {
         testCompileOnly 'org.projectlombok:lombok'
         testAnnotationProcessor 'org.projectlombok:lombok'
 
-        api platform('org.mockito:mockito-bom:5.17.0')
-        api platform('org.assertj:assertj-bom:3.27.7')
-        api platform('io.github.resilience4j:resilience4j-bom:2.2.0')
-        api platform('com.google.inject:guice-bom:7.0.0')
-        api platform('org.slf4j:slf4j-bom:2.0.13')
-        api platform('com.fasterxml.jackson:jackson-bom:2.21.4')
-        api platform("com.google.protobuf:protobuf-bom:${protobuf_version}")
-        api platform("io.grpc:grpc-bom:${grpc_version}")
+        api platform(libs.mockito.bom)
+        api platform(libs.assertj.bom)
+        api platform(libs.resilience4j.bom)
+        api platform(libs.guice.bom)
+        api platform(libs.slf4j.bom)
+        api platform(libs.jackson.bom)
+        api platform(libs.protobuf.bom)
+        api platform(libs.grpc.bom)
         implementation platform(libs.vertx.stack.depchain)
 
         constraints { c ->
-            c.implementation "org.projectlombok:lombok:$lombok_version"
+            c.implementation libs.lombok
             c.implementation 'com.google.api.grpc:proto-google-common-protos:2.56.0'
             c.implementation 'com.google.auto.service:auto-service-annotations:1.1.1'
             c.implementation 'com.google.auto:auto-common:1.2.2'
@@ -209,23 +205,23 @@ configure(subprojects.findAll {
             c.implementation 'jakarta.servlet:jakarta.servlet-api:6.1.0'
             c.implementation 'jakarta.enterprise:jakarta.enterprise.cdi-api:4.1.0'
 
-            c.compileOnly "org.projectlombok:lombok:$lombok_version"
+            c.compileOnly libs.lombok
             c.compileOnly 'com.google.auto.value:auto-value-annotations:1.11.0'
             c.compileOnly 'org.jspecify:jspecify:1.0.0'
             c.compileOnly 'org.jetbrains:annotations:26.0.2'
 
-            c.annotationProcessor "org.projectlombok:lombok:$lombok_version"
+            c.annotationProcessor libs.lombok
             c.annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
             c.annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
             c.annotationProcessor 'com.google.guava:failureaccess:1.0.2'
             c.annotationProcessor 'com.google.j2objc:j2objc-annotations:3.0.0'
 
-            c.implementation 'com.graphql-java:graphql-java:24.3'
+            c.implementation 'com.graphql-java:graphql-java:26.1'
             c.implementation 'com.graphql-java:graphql-java-extended-scalars:24.0'
 
             c.testImplementation 'com.google.j2objc:j2objc-annotations:3.0.0'
 
-            c.testAnnotationProcessor "org.projectlombok:lombok:$lombok_version"
+            c.testAnnotationProcessor libs.lombok
             c.testAnnotationProcessor 'com.google.guava:failureaccess:1.0.2'
             c.testAnnotationProcessor 'com.google.j2objc:j2objc-annotations:3.0.0'
 
@@ -270,6 +266,7 @@ configure(subprojects.findAll {
         module('gradle-api-8.14.5.jar', 'gradle.api')
         module('gradle-installation-beacon-8.14.5.jar', 'gradle.installation.beacon')
         module('gradle-test-kit-8.14.5.jar', 'gradle.test.kit')
+        module('jsr305-3.0.2.jar', 'com.google.code.findbugs.jsr305')
 
         module('aopalliance:aopalliance', 'aopalliance')
         module('ch.qos.reload4j:reload4j', 'ch.qos.reload4j')
@@ -278,7 +275,7 @@ configure(subprojects.findAll {
         module('com.google.auto.value:auto-value', 'com.google.auto.value')
         module('com.google.auto.value:auto-value-annotations', 'com.google.auto.value.annotations')
         module('com.google.auto:auto-common', 'com.google.auto.common')
-        module('com.google.code.findbugs:jsr305', 'com.google.code.findbugs.jsr305')
+//        module('com.google.code.findbugs:jsr305', 'com.google.code.findbugs.jsr305')
         module('javax.cache:cache-api', 'javax.cache.api')
         module('javax.inject:javax.inject', 'javax.inject')
         module('org.abego.treelayout:org.abego.treelayout.core', 'org.abego.treelayout.core')

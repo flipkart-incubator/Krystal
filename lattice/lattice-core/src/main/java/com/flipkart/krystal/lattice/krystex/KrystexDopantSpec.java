@@ -13,22 +13,30 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 import lombok.Builder;
 import lombok.Singular;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 @Builder(buildMethodName = "_buildSpec")
 public record KrystexDopantSpec(
     @Singular("buildKrystexGraphWith") List<Consumer<KrystexGraphBuilder>> buildKrystexGraphWith,
     @Singular("configureExecutorWith")
         ImmutableList<KryonExecutorConfigurator> configureExecutorWith,
-    Collection<? extends TraitDispatchPolicy> traitDispatchPolicies)
+    Collection<? extends @NonNull TraitDispatchPolicy> traitDispatchPolicies)
     implements SimpleDopantSpec<KrystexDopant> {
 
-  public KrystexDopantSpec {
-    buildKrystexGraphWith = requireNonNullElse(buildKrystexGraphWith, List.of());
-    configureExecutorWith = requireNonNullElse(configureExecutorWith, ImmutableList.of());
-    traitDispatchPolicies = requireNonNullElse(traitDispatchPolicies, ImmutableList.of());
+  public KrystexDopantSpec(
+      @Singular("buildKrystexGraphWith") List<Consumer<KrystexGraphBuilder>> buildKrystexGraphWith,
+      @Singular("configureExecutorWith")
+          ImmutableList<KryonExecutorConfigurator> configureExecutorWith,
+      Collection<? extends @NonNull TraitDispatchPolicy> traitDispatchPolicies) {
+    this.buildKrystexGraphWith = requireNonNullElse(buildKrystexGraphWith, List.of());
+    this.configureExecutorWith = requireNonNullElse(configureExecutorWith, ImmutableList.of());
+    this.traitDispatchPolicies =
+        Objects.<Collection<? extends @NonNull TraitDispatchPolicy>>requireNonNullElse(
+            traitDispatchPolicies, ImmutableList.of());
   }
 
   @Override
@@ -44,7 +52,7 @@ public record KrystexDopantSpec(
   public static final class KrystexDopantSpecBuilder
       extends SimpleDopantSpecBuilder<KrystexDopantSpec> {
     @SuppressWarnings("MismatchedQueryAndUpdateOfCollection") // Used by lombok
-    private final List<TraitDispatchPolicy> traitDispatchPolicies = new ArrayList<>();
+    private final List<@NonNull TraitDispatchPolicy> traitDispatchPolicies = new ArrayList<>();
 
     public KrystexDopantSpecBuilder traitDispatchPolicies(
         Collection<? extends TraitDispatchPolicy> traitDispatchPolicies) {

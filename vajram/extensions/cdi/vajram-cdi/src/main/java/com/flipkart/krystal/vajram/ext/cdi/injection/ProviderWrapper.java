@@ -5,6 +5,7 @@ import jakarta.enterprise.inject.spi.Bean;
 import jakarta.enterprise.inject.spi.BeanContainer;
 import jakarta.inject.Provider;
 import java.lang.reflect.Type;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 sealed interface ProviderWrapper permits CloseableProviderCreator, SimpleProvider {
 
@@ -14,10 +15,8 @@ sealed interface ProviderWrapper permits CloseableProviderCreator, SimpleProvide
    * providers.
    *
    * <p>In other cases, the same provider is returned always.
-   *
-   * @return
    */
-  Provider<?> provider();
+  Provider<? extends @Nullable Object> provider();
 
   static ProviderWrapper newProviderWrapper(Bean<?> bean, Type type, BeanContainer beanContainer) {
     if (bean == null) {

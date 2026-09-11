@@ -1,11 +1,11 @@
 package com.flipkart.krystal.vajram.json.serialized;
 
-import com.fasterxml.jackson.databind.ObjectReader;
 import com.flipkart.krystal.model.array.ByteArray;
 import com.flipkart.krystal.vajram.json.array.JsonByteArray;
-import java.io.IOException;
 import java.io.InputStream;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import tools.jackson.databind.ObjectReader;
 
 public final class ByteArrayJson extends AbstractJsonRepresentation {
 
@@ -19,7 +19,7 @@ public final class ByteArrayJson extends AbstractJsonRepresentation {
   }
 
   @Override
-  public <T> T deserialize(ObjectReader reader) throws IOException {
+  public <T> T _deserialize(ObjectReader reader) {
     if (data instanceof JsonByteArray jsonByteArray) {
       return jsonByteArray.readFromJson(reader);
     } else {
@@ -28,12 +28,12 @@ public final class ByteArrayJson extends AbstractJsonRepresentation {
   }
 
   @Override
-  public InputStream newInputStream() {
+  public InputStream _serialize() {
     return data.newInputStream();
   }
 
   @Override
-  public boolean equals(Object obj) {
+  public boolean equals(@Nullable Object obj) {
     if (obj == this) {
       return true;
     }

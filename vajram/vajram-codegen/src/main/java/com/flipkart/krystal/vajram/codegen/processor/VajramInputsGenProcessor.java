@@ -62,16 +62,12 @@ import javax.lang.model.util.ElementFilter;
 @RunOnlyWhenCodegenPhaseIs(MODELS)
 public final class VajramInputsGenProcessor extends AbstractKrystalAnnoProcessor {
 
-  private VajramCodeGenUtility vajramUtil;
-
   @Override
   protected void processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-    this.vajramUtil = new VajramCodeGenUtility(codeGenUtil());
+    VajramCodeGenUtility vajramUtil = new VajramCodeGenUtility(codeGenUtil());
     Set<Element> inputsForVajramElements =
         new LinkedHashSet<>(roundEnv.getElementsAnnotatedWith(InputsForVajram.class));
     inputsForVajramElements.addAll(getImportedVajramInputs(roundEnv));
-
-    VajramCodeGenUtility vajramUtil = new VajramCodeGenUtility(codeGenUtil());
 
     CharSequence message =
         "SharedModelsGenProcessor found @InputsForVajram elements: %s"
@@ -143,7 +139,7 @@ public final class VajramInputsGenProcessor extends AbstractKrystalAnnoProcessor
     CodeGenType responseType = extractResponseType(inputsInterface);
 
     VajramID vajramId = vajramID(inputsForVajram.vajramId());
-    List<DefaultFacetModel> inputs = buildInputFacets(inputsInterface, vajramId);
+    List<DefaultFacetModel> inputs = buildInputFacets(inputsInterface, vajramId, vajramUtil);
     VajramInputsInfo inputsInfo =
         new VajramInputsInfo(
             vajramId, responseType, requestPackage, inputs, Collections.emptyList(), false);
@@ -190,13 +186,15 @@ public final class VajramInputsGenProcessor extends AbstractKrystalAnnoProcessor
             inputsInterface);
   }
 
-  private List<DefaultFacetModel> buildInputFacets(TypeElement inputsInterface, VajramID vajramID) {
+  private List<DefaultFacetModel> buildInputFacets(
+      TypeElement inputsInterface, VajramID vajramID, VajramCodeGenUtility vajramUtil) {
     List<DefaultFacetModel> facets = new ArrayList<>();
 
     for (ExecutableElement method :
         vajramUtil.extractFacetElements(inputsInterface).stream()
             .filter(ExecutableElement.class::isInstance)
             .map(ExecutableElement.class::cast)
+            .map(Objects::requireNonNull)
             .toList()) {
       String facetName = method.getSimpleName().toString();
       TypeMirror returnType = method.getReturnType();

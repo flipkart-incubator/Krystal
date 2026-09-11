@@ -4,20 +4,21 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 abstract sealed class AbstractJsonRepresentation implements JsonRepresentation
     permits ByteArrayJson, BytesJson, NodeJson, StringJson {
 
   /* ----Derived fields ----- */
-  protected String string;
+  protected @MonotonicNonNull String string;
 
   @Override
-  public InputStream newInputStream() {
+  public InputStream _serialize() {
     return new ByteArrayInputStream(asBytes());
   }
 
   @Override
-  public String asString() {
+  public String _asString() {
     if (string == null) {
       string = new String(asBytes(), UTF_8);
     }

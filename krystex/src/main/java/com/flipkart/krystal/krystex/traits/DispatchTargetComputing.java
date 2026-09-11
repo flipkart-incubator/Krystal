@@ -46,6 +46,7 @@ public class DispatchTargetComputing {
      * @param request The request sent to the trait
      * @return The vajramId of the dispatch target vajram
      */
+    @Override
     @Nullable VajramID computeDispatchTarget(@Nullable Dependency dependency, T request);
   }
 
@@ -67,6 +68,7 @@ public class DispatchTargetComputing {
      * @param request The request sent to the trait
      * @return The request type class of the dispatch target vajram
      */
+    @Override
     @Nullable Class<? extends T> computeDispatchTarget(@Nullable Dependency dependency, T request);
   }
 }

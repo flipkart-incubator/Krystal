@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Krystex orchestration: K7 vs K9 vs K11</title>
+<style>
+:root {
+  --ink: #f08c00;
+  --ink-soft: #b36a00;
+  --bg: #fffdf7;
+  --paper: #fff;
+  --success: #2f9e44;
+  --error: #e03131;
+  --muted: #888;
+  --line: #e2ddd0;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  font-family: 'Segoe UI', 'Trebuchet MS', sans-serif;
+  color: #333;
+}
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+header {
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+header h1 {
+  font-size: 20px;
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+header .subtitle {
+  color: var(--muted);
+  font-size: 13px;
+  flex: 1 1 260px;
+}
+
+.tabs { display: flex; gap: 6px; margin-left: auto; }
+.tab-btn {
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink-soft);
+  border-radius: 8px;
+  padding: 5px 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 13px;
+}
+.tab-btn:hover { background: rgba(240,140,0,0.1); }
+.tab-btn.active { background: var(--ink); color: #fff; }
+
+details.compare {
+  border-bottom: 2px solid var(--line);
+  background: #fff6e6;
+  padding: 6px 20px;
+}
+details.compare summary { cursor: pointer; font-weight: 700; color: var(--ink-soft); font-size: 13px; padding: 6px 0; }
+details.compare table { border-collapse: collapse; width: 100%; margin: 4px 0 12px; font-size: 12.5px; }
+details.compare th, details.compare td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+details.compare th { background: #fff0d1; color: var(--ink-soft); }
+details.compare code { background: #f3efe4; padding: 1px 4px; border-radius: 3px; }
+
+.stage {
+  position: relative;
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1.15fr 1px 0.85fr;
+  overflow: hidden;
+}
+
+.col-label {
+  position: absolute;
+  top: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  z-index: 5;
+}
+
+#runtime { position: relative; }
+#graph { position: relative; }
+.divider { background: var(--line); }
+#runtime .col-label { left: 20px; }
+#graph .col-label { left: 20px; }
+
+.card {
+  position: absolute;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  background: var(--paper);
+  padding: 8px 10px;
+  min-width: 150px;
+  box-shadow: 2px 3px 0 rgba(240,140,0,0.15);
+  transition: left .5s ease, top .5s ease, opacity .4s ease, transform .4s ease, min-width .3s ease;
+  opacity: 1;
+  z-index: 2;
+}
+.card.entering { opacity: 0; transform: scale(0.85); }
+.card .card-title {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-bottom: 4px;
+  border-bottom: 1px dashed var(--line);
+  padding-bottom: 3px;
+}
+.card .card-sub {
+  font-size: 10.5px;
+  color: var(--muted);
+  font-style: italic;
+  margin: -2px 0 4px;
+}
+.card .row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 12px;
+  padding: 1px 0;
+}
+.card .row .k { color: var(--ink-soft); }
+.card .row .v { color: #333; }
+.card .row.new { animation: rowFlash 1s ease; }
+.card.highlight { box-shadow: 0 0 0 3px rgba(240,140,0,0.35), 2px 3px 0 rgba(240,140,0,0.15); }
+.card.dim { opacity: 0.35; }
+.card.builder { border-style: dashed; }
+.card.request { border-style: solid; border-color: #4263eb; box-shadow: 2px 3px 0 rgba(66,99,235,0.15); }
+.card.request .card-title { color: #3355cc; }
+
+@keyframes rowFlash {
+  0% { background: rgba(240,140,0,0.35); }
+  100% { background: transparent; }
+}
+
+.node {
+  position: absolute;
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  border: 3px solid var(--ink);
+  background: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--ink-soft);
+  transition: box-shadow .3s ease, border-color .3s ease, background .3s ease, opacity .3s ease;
+}
+.node.idle { opacity: 0.45; }
+.node.ready { opacity: 1; border-color: #4263eb; color: #3355cc; }
+.node.executing { opacity: 1; box-shadow: 0 0 0 6px rgba(240,140,0,0.25); animation: pulse 1s infinite; }
+.node.done { opacity: 1; background: rgba(47,158,68,0.12); border-color: var(--success); color: var(--success); }
+.node.error { opacity: 1; background: rgba(224,49,49,0.12); border-color: var(--error); color: var(--error); animation: shake .4s; }
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(240,140,0,0.2); }
+  50% { box-shadow: 0 0 0 10px rgba(240,140,0,0.08); }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.node-label {
+  position: absolute;
+  font-size: 10.5px;
+  color: var(--muted);
+  text-align: center;
+  width: 100px;
+}
+
+svg.arrows {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+.static-edge { stroke: var(--line); stroke-width: 2; fill: none; stroke-dasharray: 5 4; }
+.flow-arrow {
+  stroke: var(--ink);
+  stroke-width: 2.5;
+  fill: none;
+  opacity: 0;
+  transition: opacity .3s ease;
+}
+.flow-arrow.show { opacity: 1; }
+.flow-label {
+  position: absolute;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: var(--bg);
+  padding: 1px 5px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity .3s ease;
+  white-space: nowrap;
+  z-index: 3;
+}
+.flow-label.show { opacity: 1; }
+
+.caption-bar {
+  border-top: 2px solid var(--line);
+  padding: 12px 20px;
+  min-height: 46px;
+  font-size: 15px;
+  line-height: 1.4;
+  background: #fffaf0;
+}
+.caption-bar .tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--ink);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.controls {
+  border-top: 1px solid var(--line);
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--paper);
+}
+.controls button {
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink-soft);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 13px;
+}
+.controls button:hover { background: rgba(240,140,0,0.1); }
+.controls button:disabled { opacity: 0.35; cursor: default; }
+.controls input[type=range] { flex: 1; accent-color: var(--ink); }
+.controls .step-counter { font-size: 12.5px; color: var(--muted); min-width: 70px; text-align: right; }
+.controls .speed-label { font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 id="title"></h1>
+    <span class="subtitle" id="subtitle"></span>
+    <div class="tabs">
+      <button class="tab-btn" data-scenario="k7">K7</button>
+      <button class="tab-btn" data-scenario="k9">K9</button>
+      <button class="tab-btn" data-scenario="k11">K11</button>
+    </div>
+  </header>
+
+  <details class="compare">
+    <summary>Compare K7 vs K9 vs K11 mechanics</summary>
+    <table>
+      <tr><th>Step</th><th>K7</th><th>K9</th><th>K11 (Direct, animated here)</th></tr>
+      <tr><td>Inputs arrive as</td><td>Facets map</td><td>typed Request</td><td>typed Request</td></tr>
+      <tr><td>Per-invocation state</td><td>re-copied Facets map every hop</td><td>1 FacetValuesBuilder, mutated in place</td><td>no builder/facets bookkeeping &mdash; a chained <code>CompletableFuture</code> graph</td></tr>
+      <tr><td>Dependency call</td><td>one <code>MultiResolver</code> returning Facets maps</td><td>per-dependency resolver chain writing into a Request.Builder</td><td>imperative <code>future.thenCompose(() -&gt; callDependency())</code></td></tr>
+      <tr><td>Response merge</td><td>side-channel &rarr; copied into new Facets</td><td><code>setFacetValue()</code> in place</td><td>future composition (no map/builder at all)</td></tr>
+      <tr><td><code>facetsFromRequest()</code></td><td>n/a &mdash; always a Map</td><td><b>wraps</b> the Request inside the builder (no field copy); done again for every dependency before it runs</td><td>same wrap mechanic, but the wrap happens without ever leaving application code</td></tr>
+      <tr><td>Platform&harr;app context switches (2-hop chain)</td><td>&asymp;6 (per resolver/forward/merge)</td><td>&asymp;6 (per resolver/forward/merge)</td><td><b>2</b> total (start + finish only)</td></tr>
+    </table>
+  </details>
+
+  <div class="stage" id="stage">
+    <div id="runtime"><div class="col-label">Krystex runtime</div></div>
+    <div class="divider"></div>
+    <div id="graph"><div class="col-label">Vajram dependency graph</div></div>
+    <svg class="arrows" id="arrow-svg">
+      <defs>
+        <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L7,3 z" fill="#f08c00"></path>
+        </marker>
+      </defs>
+    </svg>
+  </div>
+  <div class="caption-bar" id="caption"></div>
+  <div class="controls">
+    <button id="reset-btn">&#8634; Reset</button>
+    <button id="prev-btn">&#9664; Prev</button>
+    <button id="play-btn">&#9654; Play</button>
+    <button id="next-btn">Next &#9654;</button>
+    <input type="range" id="step-slider" min="0" max="0" value="0">
+    <span class="step-counter" id="step-counter"></span>
+    <span class="speed-label">speed</span>
+    <input type="range" id="speed" min="0" max="10" value="5" style="flex:0 0 100px;">
+  </div>
+</div>
+
+<script>
+/* ===================================================================
+ * Scenario data: K7, K9, K11
+ * =================================================================== */
+const SCENARIOS = {
+
+k7: {
+  title: 'K7 orchestration',
+  subtitle: "Vajram V1 \u2192 V2 \u2192 V3 (sequential). Mechanic: inputs are always a Map, copied at every hop.",
+  tag: 'K7',
+  graph: {
+    nodes: [
+      { id: 'V1', x: 50, y: 82 },
+      { id: 'V2', x: 24, y: 24 },
+      { id: 'V3', x: 76, y: 24 },
+    ],
+    edges: [{ from: 'V1', to: 'V2' }, { from: 'V1', to: 'V3' }],
+  },
+  steps: [
+    {
+      caption: "Krystex receives a <b>\u201CV1 inputs\u201D map</b> \u2014 a plain <code>Facets</code> (i.e. <code>Map&lt;String,FacetValue&gt;</code>) with values for all of V1's inputs.",
+      actions: [
+        { type: 'card', id: 'v1in', column: 'runtime', x: 6, y: 8, title: 'V1 input map', sub: 'Facets', rows: [{ k: 'i1', v: 'x1' }, { k: 'i2', v: 'x2' }] },
+        { type: 'node', id: 'V1', state: 'ready' },
+      ],
+    },
+    {
+      caption: "Krystex <b>copies</b> the V1 input map into a new <b>\u201CV1 Facets\u201D</b> map, placed beside it \u2014 a distinct object, not the same map mutated. This copy-into-a-new-map step repeats at every hop in K7.",
+      actions: [
+        { type: 'card', id: 'v1in', column: 'runtime', x: 6, y: 8, title: 'V1 input map', sub: 'Facets', rows: [{ k: 'i1', v: 'x1' }, { k: 'i2', v: 'x2' }], cls: 'dim' },
+        { type: 'card', id: 'v1facets', column: 'runtime', x: 40, y: 8, title: 'V1 Facets', sub: 'Facets (grows over time) \u2014 new object', rows: [{ k: 'i1', v: 'x1' }, { k: 'i2', v: 'x2' }] },
+        { type: 'arrow', from: { card: 'v1in' }, to: { card: 'v1facets' }, label: 'copy' },
+      ],
+    },
+    {
+      caption: "Krystex calls <code>resolveV2Inputs(V1 Facets)</code> on Vajram V1.",
+      actions: [
+        { type: 'removeCard', id: 'v1in' },
+        { type: 'node', id: 'V1', state: 'executing' },
+        { type: 'arrow', from: { card: 'v1facets' }, to: { node: 'V1' }, label: 'resolveV2Inputs(V1 Facets)' },
+      ],
+    },
+    {
+      caption: "The resolver returns a <b>\u201CV2 inputs\u201D map</b>.",
+      actions: [
+        { type: 'card', id: 'v2in', column: 'runtime', x: 6, y: 46, title: 'V2 input map', sub: 'Facets', rows: [{ k: 'a', v: 'x1' }] },
+        { type: 'node', id: 'V1', state: 'ready' },
+        { type: 'arrow', from: { node: 'V1' }, to: { card: 'v2in' }, label: 'returns V2 inputs' },
+      ],
+    },
+    {
+      caption: "Krystex <b>copies</b> the V2 inputs into a <b>\u201CV2 facets\u201D</b> map \u2014 again placed beside it as a fresh object.",
+      actions: [
+        { type: 'card', id: 'v2in', column: 'runtime', x: 6, y: 46, title: 'V2 input map', sub: 'Facets', rows: [{ k: 'a', v: 'x1' }], cls: 'dim' },
+        { type: 'card', id: 'v2facets', column: 'runtime', x: 40, y: 46, title: 'V2 facets', sub: 'Facets \u2014 new object', rows: [{ k: 'a', v: 'x1' }] },
+        { type: 'arrow', from: { card: 'v2in' }, to: { card: 'v2facets' }, label: 'copy' },
+      ],
+    },
+    {
+      caption: "Krystex forwards the V2 facets map to <b>Vajram V2</b>, which starts executing.",
+      actions: [
+        { type: 'removeCard', id: 'v2in' },
+        { type: 'node', id: 'V2', state: 'executing' },
+        { type: 'arrow', from: { card: 'v2facets' }, to: { node: 'V2' }, label: 'V2 facets' },
+      ],
+    },
+    {
+      caption: "V2 finishes and returns a <b>response value</b>.",
+      actions: [
+        { type: 'node', id: 'V2', state: 'done' },
+        { type: 'card', id: 'v2facets', column: 'runtime', x: 40, y: 46, title: 'V2 facets', sub: 'Facets', rows: [{ k: 'a', v: 'x1' }], cls: 'dim' },
+        { type: 'card', id: 'v2resp', column: 'runtime', x: 6, y: 46, title: 'V2 response', rows: [{ k: 'value', v: 'r2' }] },
+        { type: 'arrow', from: { node: 'V2' }, to: { card: 'v2resp' }, label: 'response' },
+      ],
+    },
+    {
+      caption: "The platform puts V2's response into <b>V1 Facets</b> under key <code>\u201CV2\u201D</code>.",
+      actions: [
+        { type: 'removeCard', id: 'v2facets' },
+        { type: 'card', id: 'v2resp', column: 'runtime', x: 6, y: 46, title: 'V2 response', rows: [{ k: 'value', v: 'r2' }], cls: 'dim' },
+        { type: 'card', id: 'v1facets', column: 'runtime', x: 40, y: 8, title: 'V1 Facets', sub: 'Facets (grows over time)', rows: [{ k: 'i1', v: 'x1' }, { k: 'i2', v: 'x2' }, { k: 'V2', v: 'r2' }] },
+        { type: 'arrow', from: { card: 'v2resp' }, to: { card: 'v1facets' }, label: 'facets[V2] = r2' },
+      ],
+    },
+    {
+      caption: "Krystex forwards V1 Facets (now including <code>V2</code>) back to V1, calling <code>resolveV3Inputs(V1 Facets)</code>. The cycle continues.",
+      actions: [
+        { type: 'removeCard', id: 'v2resp' },
+        { type: 'node', id: 'V1', state: 'executing' },
+        { type: 'arrow', from: { card: 'v1facets' }, to: { node: 'V1' }, label: 'resolveV3Inputs(V1 Facets)' },
+      ],
+    },
+    {
+      caption: "The resolver returns a <b>\u201CV3 inputs\u201D map</b>.",
+      actions: [
+        { type: 'card', id: 'v3in', column: 'runtime', x: 6, y: 46, title: 'V3 input map', sub: 'Facets', rows: [{ k: 'b', v: 'r2' }] },
+        { type: 'node', id: 'V1', state: 'ready' },
+        { type: 'arrow', from: { node: 'V1' }, to: { card: 'v3in' }, label: 'returns V3 inputs' },
+      ],
+    },
+    {
+      caption: "Krystex <b>copies</b> it into a <b>\u201CV3 facets\u201D</b> map, beside it as a fresh object.",
+      actions: [
+        { type: 'card', id: 'v3in', column: 'runtime', x: 6, y: 46, title: 'V3 input map', sub: 'Facets', rows: [{ k: 'b', v: 'r2' }], cls: 'dim' },
+        { type: 'card', id: 'v3facets', column: 'runtime', x: 40, y: 46, title: 'V3 facets', sub: 'Facets \u2014 new object', rows: [{ k: 'b', v: 'r2' }] },
+        { type: 'arrow', from: { card: 'v3in' }, to: { card: 'v3facets' }, label: 'copy' },
+      ],
+    },
+    {
+      caption: "Krystex forwards the V3 facets map to <b>Vajram V3</b>, which starts executing.",
+      actions: [
+        { type: 'removeCard', id: 'v3in' },
+        { type: 'node', id: 'V3', state: 'executing' },
+        { type: 'arrow', from: { card: 'v3facets' }, to: { node: 'V3' }, label: 'V3 facets' },
+      ],
+    },
+    {
+      caption: "V3 finishes and returns a <b>response value</b>.",
+      actions: [
+        { type: 'node', id: 'V3', state: 'done' },
+        { type: 'card', id: 'v3facets', column: 'runtime', x: 40, y: 46, title: 'V3 facets', sub: 'Facets', rows: [{ k: 'b', v: 'r2' }], cls: 'dim' },
+        { type: 'card', id: 'v3resp', column: 'runtime', x: 6, y: 46, title: 'V3 response', rows: [{ k: 'value', v: 'r3' }] },
+        { type: 'arrow', from: { node: 'V3' }, to: { card: 'v3resp' }, label: 'response' },
+      ],
+    },
+    {
+      caption: "The platform merges V3's response into <b>V1 Facets</b> under key <code>\u201CV3\u201D</code>. All of V1's dependencies are now resolved.",
+      actions: [
+        { type: 'removeCard', id: 'v3facets' },
+        { type: 'card', id: 'v3resp', column: 'runtime', x: 6, y: 46, title: 'V3 response', rows: [{ k: 'value', v: 'r3' }], cls: 'dim' },
+        { type: 'card', id: 'v1facets', column: 'runtime', x: 40, y: 8, title: 'V1 Facets', sub: 'Facets \u2014 complete', rows: [{ k: 'i1', v: 'x1' }, { k: 'i2', v: 'x2' }, { k: 'V2', v: 'r2' }, { k: 'V3', v: 'r3' }] },
+        { type: 'arrow', from: { card: 'v3resp' }, to: { card: 'v1facets' }, label: 'facets[V3] = r3' },
+      ],
+    },
+    {
+      caption: "Krystex forwards the completed V1 Facets to <b>Vajram V1</b> for execution.",
+      actions: [
+        { type: 'removeCard', id: 'v3resp' },
+        { type: 'node', id: 'V1', state: 'executing' },
+        { type: 'arrow', from: { card: 'v1facets' }, to: { node: 'V1' }, label: 'V1 Facets (complete)' },
+      ],
+    },
+    {
+      caption: "V1 succeeds. The platform returns V1's response to the original caller.",
+      actions: [
+        { type: 'node', id: 'V1', state: 'done' },
+        { type: 'card', id: 'v1facets', column: 'runtime', x: 40, y: 8, title: 'V1 Facets', sub: 'Facets \u2014 complete', rows: [{ k: 'i1', v: 'x1' }, { k: 'i2', v: 'x2' }, { k: 'V2', v: 'r2' }, { k: 'V3', v: 'r3' }], cls: 'dim' },
+        { type: 'card', id: 'v1resp', column: 'runtime', x: 6, y: 8, title: 'V1 response \u2192 caller', rows: [{ k: 'value', v: 'r1' }] },
+        { type: 'arrow', from: { node: 'V1' }, to: { card: 'v1resp' }, label: 'response' },
+      ],
+    },
+  ],
+},
+
+k9: {
+  title: 'K9 orchestration',
+  subtitle: "Vajram V1 \u2192 V2 \u2192 V3 (sequential). Mechanic: facetsFromRequest() wraps a Request inside a FacetValuesBuilder; resolvers write directly into the next Request.Builder.",
+  tag: 'K9',
+  graph: {
+    nodes: [
+      { id: 'V1', x: 50, y: 82 },
+      { id: 'V2', x: 24, y: 24 },
+      { id: 'V3', x: 76, y: 24 },
+    ],
+    edges: [{ from: 'V1', to: 'V2' }, { from: 'V1', to: 'V3' }],
+  },
+  steps: [
+    {
+      caption: "Krystex receives a typed <b>\u201CV1 Request\u201D</b> object (not a raw map).",
+      actions: [
+        { type: 'card', id: 'v1req', column: 'runtime', x: 6, y: 8, title: 'V1 Request', sub: 'typed, immutable', rows: [{ k: 'i1', v: 'x1' }, { k: 'i2', v: 'x2' }], cls: 'request' },
+        { type: 'node', id: 'V1', state: 'ready' },
+      ],
+    },
+    {
+      caption: "<code>facetsFromRequest(V1 Request)</code> creates a <b>\u201CV1 FacetValuesBuilder\u201D</b> that <b>wraps</b> the request object itself (holds a reference to it) \u2014 it does <i>not</i> copy fields into a new map. The request stays alive, referenced from inside the builder, for the whole invocation.",
+      actions: [
+        { type: 'card', id: 'v1req', column: 'runtime', x: 6, y: 8, title: 'V1 Request', sub: 'typed, immutable \u2014 wrapped, kept alive', rows: [{ k: 'i1', v: 'x1' }, { k: 'i2', v: 'x2' }], cls: 'request dim' },
+        { type: 'card', id: 'v1builder', column: 'runtime', x: 40, y: 8, title: 'V1 FacetValuesBuilder', sub: 'mutated in place from here on', rows: [{ k: '\u2192 wraps', v: 'V1 Request' }] },
+        { type: 'arrow', from: { card: 'v1req' }, to: { card: 'v1builder' }, label: 'facetsFromRequest() \u2014 wraps' },
+      ],
+    },
+    {
+      caption: "V2's <code>@Resolve</code> one-to-one resolver runs: it <b>reads</b> V1's FacetValues (through the wrapper) and <b>writes directly</b> into a fresh, empty <b>\u201CV2 Request.Builder\u201D</b>.",
+      actions: [
+        { type: 'node', id: 'V1', state: 'executing' },
+        { type: 'card', id: 'v2builder', column: 'runtime', x: 4, y: 46, title: 'V2 Request.Builder', sub: 'empty, written to directly', rows: [], cls: 'builder' },
+        { type: 'arrow', from: { card: 'v1builder' }, to: { node: 'V1' }, label: 'read facets' },
+        { type: 'arrow', from: { node: 'V1' }, to: { card: 'v2builder' }, label: 'targetInput.setToRequest(a, x1)' },
+      ],
+    },
+    {
+      caption: "The completed builder is turned into an immutable <b>\u201CV2 Request\u201D</b>. No Facets map is ever assembled for the call \u2014 the Request <i>is</i> the message.",
+      actions: [
+        { type: 'node', id: 'V1', state: 'ready' },
+        { type: 'card', id: 'v2builder', column: 'runtime', x: 4, y: 46, title: 'V2 Request.Builder', sub: 'built', rows: [{ k: 'a', v: 'x1' }], cls: 'builder dim' },
+        { type: 'card', id: 'v2req', column: 'runtime', x: 36, y: 46, title: 'V2 Request', sub: 'typed, immutable', rows: [{ k: 'a', v: 'x1' }], cls: 'request' },
+        { type: 'arrow', from: { card: 'v2builder' }, to: { card: 'v2req' }, label: 'build()' },
+      ],
+    },
+    {
+      caption: "Before forwarding, Krystex calls <code>facetsFromRequest(V2 Request)</code> again \u2014 the same wrap mechanic, this time creating <b>V2's own FacetValuesBuilder</b>, ready for V2 to execute against.",
+      actions: [
+        { type: 'removeCard', id: 'v2builder' },
+        { type: 'card', id: 'v2req', column: 'runtime', x: 36, y: 46, title: 'V2 Request', sub: 'typed, immutable \u2014 wrapped', rows: [{ k: 'a', v: 'x1' }], cls: 'request dim' },
+        { type: 'card', id: 'v2fvb', column: 'runtime', x: 68, y: 46, title: 'V2 FacetValuesBuilder', sub: 'wraps the Request', rows: [{ k: '\u2192 wraps', v: 'V2 Request' }] },
+        { type: 'arrow', from: { card: 'v2req' }, to: { card: 'v2fvb' }, label: 'facetsFromRequest() \u2014 wraps' },
+      ],
+    },
+    {
+      caption: "Krystex forwards to <b>Vajram V2</b> (<code>ForwardSend</code>), which starts executing against its own builder.",
+      actions: [
+        { type: 'removeCard', id: 'v2req' },
+        { type: 'node', id: 'V2', state: 'executing' },
+        { type: 'arrow', from: { card: 'v2fvb' }, to: { node: 'V2' }, label: 'ForwardSend' },
+      ],
+    },
+    {
+      caption: "V2 finishes and returns a <b>response value</b>.",
+      actions: [
+        { type: 'node', id: 'V2', state: 'done' },
+        { type: 'card', id: 'v2fvb', column: 'runtime', x: 68, y: 46, title: 'V2 FacetValuesBuilder', sub: 'wraps the Request', rows: [{ k: '\u2192 wraps', v: 'V2 Request' }], cls: 'dim' },
+        { type: 'card', id: 'v2resp', column: 'runtime', x: 4, y: 46, title: 'V2 response', rows: [{ k: 'value', v: 'r2' }] },
+        { type: 'arrow', from: { node: 'V2' }, to: { card: 'v2resp' }, label: 'response' },
+      ],
+    },
+    {
+      caption: "Krystex calls <code>incomingFacet.setFacetValue(v1builder, r2)</code> \u2014 it writes <b>directly into the same V1 FacetValuesBuilder</b> that's been alive since step 2. Nothing is copied; one object accumulates state.",
+      actions: [
+        { type: 'removeCard', id: 'v2fvb' },
+        { type: 'card', id: 'v2resp', column: 'runtime', x: 4, y: 46, title: 'V2 response', rows: [{ k: 'value', v: 'r2' }], cls: 'dim' },
+        { type: 'card', id: 'v1builder', column: 'runtime', x: 40, y: 8, title: 'V1 FacetValuesBuilder', sub: 'mutated in place, never copied', rows: [{ k: '\u2192 wraps', v: 'V1 Request' }, { k: 'V2', v: 'r2' }] },
+        { type: 'arrow', from: { card: 'v2resp' }, to: { card: 'v1builder' }, label: 'setFacetValue(V2, r2)' },
+      ],
+    },
+    {
+      caption: "V3's one-to-one resolver now runs the same way: reads V1's FacetValues, writes into a new <b>\u201CV3 Request.Builder\u201D</b>.",
+      actions: [
+        { type: 'removeCard', id: 'v2resp' },
+        { type: 'node', id: 'V1', state: 'executing' },
+        { type: 'card', id: 'v3builder', column: 'runtime', x: 4, y: 46, title: 'V3 Request.Builder', sub: 'empty, written to directly', rows: [], cls: 'builder' },
+        { type: 'arrow', from: { card: 'v1builder' }, to: { node: 'V1' }, label: 'read facets' },
+        { type: 'arrow', from: { node: 'V1' }, to: { card: 'v3builder' }, label: 'setToRequest(b, r2)' },
+      ],
+    },
+    {
+      caption: "The builder becomes an immutable <b>\u201CV3 Request\u201D</b>.",
+      actions: [
+        { type: 'node', id: 'V1', state: 'ready' },
+        { type: 'card', id: 'v3builder', column: 'runtime', x: 4, y: 46, title: 'V3 Request.Builder', sub: 'built', rows: [{ k: 'b', v: 'r2' }], cls: 'builder dim' },
+        { type: 'card', id: 'v3req', column: 'runtime', x: 36, y: 46, title: 'V3 Request', sub: 'typed, immutable', rows: [{ k: 'b', v: 'r2' }], cls: 'request' },
+        { type: 'arrow', from: { card: 'v3builder' }, to: { card: 'v3req' }, label: 'build()' },
+      ],
+    },
+    {
+      caption: "Before forwarding, <code>facetsFromRequest(V3 Request)</code> wraps it into <b>V3's own FacetValuesBuilder</b> \u2014 same mechanic as V1 and V2.",
+      actions: [
+        { type: 'removeCard', id: 'v3builder' },
+        { type: 'card', id: 'v3req', column: 'runtime', x: 36, y: 46, title: 'V3 Request', sub: 'typed, immutable \u2014 wrapped', rows: [{ k: 'b', v: 'r2' }], cls: 'request dim' },
+        { type: 'card', id: 'v3fvb', column: 'runtime', x: 68, y: 46, title: 'V3 FacetValuesBuilder', sub: 'wraps the Request', rows: [{ k: '\u2192 wraps', v: 'V3 Request' }] },
+        { type: 'arrow', from: { card: 'v3req' }, to: { card: 'v3fvb' }, label: 'facetsFromRequest() \u2014 wraps' },
+      ],
+    },
+    {
+      caption: "Krystex forwards to <b>Vajram V3</b> (<code>ForwardSend</code>), which starts executing.",
+      actions: [
+        { type: 'removeCard', id: 'v3req' },
+        { type: 'node', id: 'V3', state: 'executing' },
+        { type: 'arrow', from: { card: 'v3fvb' }, to: { node: 'V3' }, label: 'ForwardSend' },
+      ],
+    },
+    {
+      caption: "V3 finishes and returns a <b>response value</b>.",
+      actions: [
+        { type: 'node', id: 'V3', state: 'done' },
+        { type: 'card', id: 'v3fvb', column: 'runtime', x: 68, y: 46, title: 'V3 FacetValuesBuilder', sub: 'wraps the Request', rows: [{ k: '\u2192 wraps', v: 'V3 Request' }], cls: 'dim' },
+        { type: 'card', id: 'v3resp', column: 'runtime', x: 4, y: 46, title: 'V3 response', rows: [{ k: 'value', v: 'r3' }] },
+        { type: 'arrow', from: { node: 'V3' }, to: { card: 'v3resp' }, label: 'response' },
+      ],
+    },
+    {
+      caption: "<code>setFacetValue(v1builder, r3)</code> writes V3's response into the <i>same</i> V1 FacetValuesBuilder. All of V1's dependency facets are now present, in the one object created back in step 2.",
+      actions: [
+        { type: 'removeCard', id: 'v3fvb' },
+        { type: 'card', id: 'v3resp', column: 'runtime', x: 4, y: 46, title: 'V3 response', rows: [{ k: 'value', v: 'r3' }], cls: 'dim' },
+        { type: 'card', id: 'v1builder', column: 'runtime', x: 40, y: 8, title: 'V1 FacetValuesBuilder', sub: 'complete \u2014 same object throughout', rows: [{ k: '\u2192 wraps', v: 'V1 Request' }, { k: 'V2', v: 'r2' }, { k: 'V3', v: 'r3' }] },
+        { type: 'arrow', from: { card: 'v3resp' }, to: { card: 'v1builder' }, label: 'setFacetValue(V3, r3)' },
+      ],
+    },
+    {
+      caption: "Krystex builds V1's FacetValues from the completed builder and calls Vajram V1's execution logic.",
+      actions: [
+        { type: 'removeCard', id: 'v3resp' },
+        { type: 'node', id: 'V1', state: 'executing' },
+        { type: 'arrow', from: { card: 'v1builder' }, to: { node: 'V1' }, label: 'FacetValues (complete)' },
+      ],
+    },
+    {
+      caption: "V1 succeeds. The platform returns V1's response to the original caller.",
+      actions: [
+        { type: 'removeCard', id: 'v1req' },
+        { type: 'node', id: 'V1', state: 'done' },
+        { type: 'card', id: 'v1builder', column: 'runtime', x: 40, y: 8, title: 'V1 FacetValuesBuilder', sub: 'complete', rows: [{ k: '\u2192 wraps', v: 'V1 Request' }, { k: 'V2', v: 'r2' }, { k: 'V3', v: 'r3' }], cls: 'dim' },
+        { type: 'card', id: 'v1resp', column: 'runtime', x: 6, y: 8, title: 'V1 response \u2192 caller', rows: [{ k: 'value', v: 'r1' }] },
+        { type: 'arrow', from: { node: 'V1' }, to: { card: 'v1resp' }, label: 'response' },
+      ],
+    },
+  ],
+},
+
+k11: {
+  title: 'K11 orchestration \u2014 Direct path',
+  subtitle: "Vajram V1 \u2192 V2 \u2192 V3 (sequential). Mechanic: a chained CompletableFuture graph inside application code; only 2 platform\u2194application context switches total.",
+  tag: 'K11 \u00b7 Direct',
+  graph: {
+    nodes: [
+      { id: 'V1', x: 50, y: 84 },
+      { id: 'V2', x: 24, y: 20 },
+      { id: 'V3', x: 76, y: 20 },
+    ],
+    edges: [{ from: 'V1', to: 'V2' }, { from: 'V1', to: 'V3' }],
+  },
+  steps: [
+    {
+      caption: "Krystex receives a typed <b>\u201CV1 Request\u201D</b>.",
+      actions: [
+        { type: 'card', id: 'v1req', column: 'runtime', x: 6, y: 8, title: 'V1 Request', sub: 'typed, immutable', rows: [{ k: 'i1', v: 'x1' }, { k: 'i2', v: 'x2' }], cls: 'request' },
+        { type: 'card', id: 'switches', column: 'runtime', x: 6, y: 60, title: 'Platform \u2194 App context switches', rows: [{ k: 'count', v: '0' }] },
+        { type: 'node', id: 'V1', state: 'ready' },
+      ],
+    },
+    {
+      caption: "<code>facetsFromRequest(V1 Request)</code> creates V1's <b>FacetValuesBuilder</b> \u2014 it <b>wraps</b> the request object (holds a reference to it), it doesn't copy fields into a new map. This part is identical to K9.",
+      actions: [
+        { type: 'card', id: 'v1req', column: 'runtime', x: 6, y: 8, title: 'V1 Request', sub: 'typed, immutable \u2014 wrapped, kept alive', rows: [{ k: 'i1', v: 'x1' }, { k: 'i2', v: 'x2' }], cls: 'request dim' },
+        { type: 'card', id: 'v1builder', column: 'runtime', x: 40, y: 8, title: 'V1 FacetValuesBuilder', sub: 'wraps the Request', rows: [{ k: '\u2192 wraps', v: 'V1 Request' }] },
+        { type: 'arrow', from: { card: 'v1req' }, to: { card: 'v1builder' }, label: 'facetsFromRequest() \u2014 wraps' },
+      ],
+    },
+    {
+      caption: "K11's Direct path skips <code>BatchKryon</code>'s resolver loop entirely: V1's own generated code takes the builder and starts a chained <code>CompletableFuture</code> graph. Handing control over is the <b>only</b> platform\u2192application hop needed for the whole call.",
+      actions: [
+        { type: 'removeCard', id: 'v1req' },
+        { type: 'card', id: 'switches', column: 'runtime', x: 6, y: 60, title: 'Platform \u2194 App context switches', rows: [{ k: 'count', v: '1' }] },
+        { type: 'card', id: 'fRoot', column: 'graph', x: 40, y: 68, title: 'V1 Future (root)', sub: 'CompletableFuture<V1Response>, seeded from the builder', rows: [{ k: 'state', v: 'pending' }] },
+        { type: 'node', id: 'V1', state: 'executing' },
+        { type: 'arrow', from: { card: 'v1builder' }, to: { card: 'fRoot' }, label: 'execute() \u2014 switch #1: platform \u2192 app' },
+      ],
+    },
+    {
+      caption: "Still entirely inside application code: <code>future.thenCompose(v -&gt; callV2(v))</code> chains straight into calling <b>V2</b> \u2014 no hop back into platform orchestration code.",
+      actions: [
+        { type: 'arrow', from: { card: 'fRoot' }, to: { node: 'V2' }, label: 'thenCompose: call V2 (same thread)' },
+      ],
+    },
+    {
+      caption: "V2 receives the call and its own <code>facetsFromRequest()</code> wraps the incoming values into a <b>V2 FacetValuesBuilder</b> \u2014 same wrap mechanic as V1, and still zero platform hops.",
+      actions: [
+        { type: 'node', id: 'V2', state: 'executing' },
+        { type: 'card', id: 'v2fvb', column: 'graph', x: 4, y: 30, title: 'V2 FacetValuesBuilder', sub: 'wraps V2\u2019s inputs (no platform hop)', rows: [{ k: '\u2192 wraps', v: 'V2 inputs' }] },
+        { type: 'arrow', from: { node: 'V2' }, to: { card: 'v2fvb' }, label: 'facetsFromRequest() \u2014 wraps' },
+      ],
+    },
+    {
+      caption: "V2 executes and completes its own future.",
+      actions: [
+        { type: 'card', id: 'v2fvb', column: 'graph', x: 4, y: 30, title: 'V2 FacetValuesBuilder', sub: 'wraps V2\u2019s inputs', rows: [{ k: '\u2192 wraps', v: 'V2 inputs' }], cls: 'dim' },
+        { type: 'node', id: 'V2', state: 'done' },
+        { type: 'card', id: 'fV2', column: 'graph', x: 4, y: 48, title: 'V2 Future', sub: 'CompletableFuture<V2Response>', rows: [{ k: 'value', v: 'r2' }] },
+        { type: 'arrow', from: { card: 'v2fvb' }, to: { card: 'fV2' }, label: 'complete(r2)' },
+      ],
+    },
+    {
+      caption: "<code>thenCompose</code> immediately chains into calling <b>V3</b> with V2's result \u2014 still the same in-process future graph, still zero context switches.",
+      actions: [
+        { type: 'removeCard', id: 'v2fvb' },
+        { type: 'arrow', from: { card: 'fV2' }, to: { node: 'V3' }, label: 'thenCompose: call V3 (same thread)' },
+      ],
+    },
+    {
+      caption: "V3 receives the call and wraps its inputs into a <b>V3 FacetValuesBuilder</b> the same way.",
+      actions: [
+        { type: 'node', id: 'V3', state: 'executing' },
+        { type: 'card', id: 'v3fvb', column: 'graph', x: 64, y: 30, title: 'V3 FacetValuesBuilder', sub: 'wraps V3\u2019s inputs (no platform hop)', rows: [{ k: '\u2192 wraps', v: 'V3 inputs' }] },
+        { type: 'arrow', from: { node: 'V3' }, to: { card: 'v3fvb' }, label: 'facetsFromRequest() \u2014 wraps' },
+      ],
+    },
+    {
+      caption: "V3 executes and completes its future.",
+      actions: [
+        { type: 'card', id: 'v3fvb', column: 'graph', x: 64, y: 30, title: 'V3 FacetValuesBuilder', sub: 'wraps V3\u2019s inputs', rows: [{ k: '\u2192 wraps', v: 'V3 inputs' }], cls: 'dim' },
+        { type: 'node', id: 'V3', state: 'done' },
+        { type: 'card', id: 'fV3', column: 'graph', x: 64, y: 48, title: 'V3 Future', sub: 'CompletableFuture<V3Response>', rows: [{ k: 'value', v: 'r3' }] },
+        { type: 'arrow', from: { card: 'v3fvb' }, to: { card: 'fV3' }, label: 'complete(r3)' },
+      ],
+    },
+    {
+      caption: "The chain composes back up to the <b>root future</b> \u2014 V1's response is produced by the very call stack that started it, all inside application code.",
+      actions: [
+        { type: 'removeCard', id: 'v3fvb' },
+        { type: 'card', id: 'fRoot', column: 'graph', x: 40, y: 68, title: 'V1 Future (root)', sub: 'CompletableFuture<V1Response>', rows: [{ k: 'state', v: 'composing r1 = f(r2, r3)' }] },
+        { type: 'arrow', from: { card: 'fV3' }, to: { card: 'fRoot' }, label: 'compose(r2, r3) \u2192 r1' },
+      ],
+    },
+    {
+      caption: "The root future completes. V1's code hands the final result back to Krystex \u2014 the <b>second and last</b> platform\u2194application context switch for the entire call.",
+      actions: [
+        { type: 'card', id: 'fRoot', column: 'graph', x: 40, y: 68, title: 'V1 Future (root)', sub: 'CompletableFuture<V1Response>', rows: [{ k: 'state', v: 'done: r1' }], cls: 'dim' },
+        { type: 'card', id: 'switches', column: 'runtime', x: 6, y: 60, title: 'Platform \u2194 App context switches', rows: [{ k: 'count', v: '2' }] },
+        { type: 'card', id: 'v1resp', column: 'runtime', x: 6, y: 8, title: 'V1 response \u2192 caller', rows: [{ k: 'value', v: 'r1' }] },
+        { type: 'node', id: 'V1', state: 'done' },
+        { type: 'arrow', from: { card: 'fRoot' }, to: { card: 'v1resp' }, label: 'switch #2: app \u2192 platform' },
+      ],
+    },
+    {
+      caption: "<b>Compare:</b> K7/K9's Batch path crosses the platform\u2194application boundary on every resolver call, forward and response-merge \u2014 roughly 6 switches for this 2-hop chain. K11's Direct path needs only the <b>2</b> switches shown above.",
+      actions: [
+        { type: 'card', id: 'v1resp', column: 'runtime', x: 6, y: 8, title: 'V1 response \u2192 caller', rows: [{ k: 'value', v: 'r1' }], cls: 'dim' },
+        { type: 'card', id: 'switches', column: 'runtime', x: 6, y: 60, title: 'Platform \u2194 App context switches', rows: [{ k: 'K7 / K9 Batch', v: '\u2248 6' }, { k: 'K11 Direct', v: '2' }] },
+      ],
+    },
+  ],
+},
+
+};
+
+/* ===================================================================
+ * Engine: a tiny declarative step-player, mountable against any SCENARIOS.* entry.
+ * =================================================================== */
+(function () {
+  const stage = document.getElementById('stage');
+  const runtimeCol = document.getElementById('runtime');
+  const graphCol = document.getElementById('graph');
+  const arrowSvg = document.getElementById('arrow-svg');
+  const captionEl = document.getElementById('caption');
+  const counterEl = document.getElementById('step-counter');
+  const prevBtn = document.getElementById('prev-btn');
+  const nextBtn = document.getElementById('next-btn');
+  const resetBtn = document.getElementById('reset-btn');
+  const playBtn = document.getElementById('play-btn');
+  const slider = document.getElementById('step-slider');
+  const speedInput = document.getElementById('speed');
+  const titleEl = document.getElementById('title');
+  const subtitleEl = document.getElementById('subtitle');
+
+  let SCENARIO = null;
+  let idx = -1; // current step index, -1 = before first step
+  let playing = false;
+  let playTimer = null;
+  let cardEls = {}; // id -> DOM element
+  let flowLabelEls = [];
+  let pendingReveal = []; // new-card elements waiting to fade in *after* their arrow shows
+  let arrowTimer = null;
+  let revealTimer = null;
+
+  // ---- static graph rendering ----
+  function pctToPx(container, xPct, yPct) {
+    const r = container.getBoundingClientRect();
+    return { x: (xPct / 100) * r.width, y: (yPct / 100) * r.height };
+  }
+
+  function renderStaticEdges() {
+    SCENARIO.graph.edges.forEach(e => {
+      const a = SCENARIO.graph.nodes.find(n => n.id === e.from);
+      const b = SCENARIO.graph.nodes.find(n => n.id === e.to);
+      const pa = pctToPx(graphCol, a.x, a.y);
+      const pb = pctToPx(graphCol, b.x, b.y);
+      const graphRect = graphCol.getBoundingClientRect();
+      const stageRect = stage.getBoundingClientRect();
+      const offsetX = graphRect.left - stageRect.left;
+      const offsetY = graphRect.top - stageRect.top;
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      line.setAttribute('class', 'static-edge');
+      line.setAttribute('d', `M ${pa.x + offsetX} ${pa.y + offsetY} L ${pb.x + offsetX} ${pb.y + offsetY}`);
+      arrowSvg.appendChild(line);
+    });
+  }
+
+  function renderNodes() {
+    SCENARIO.graph.nodes.forEach(n => {
+      const el = document.createElement('div');
+      el.className = 'node idle';
+      el.id = 'node-' + n.id;
+      el.textContent = n.label || n.id;
+      el.style.left = `calc(${n.x}% - 37px)`;
+      el.style.top = `calc(${n.y}% - 37px)`;
+      graphCol.appendChild(el);
+      if (n.sub) {
+        const lbl = document.createElement('div');
+        lbl.className = 'node-label';
+        lbl.style.left = `calc(${n.x}% - 50px)`;
+        lbl.style.top = `calc(${n.y}% + 40px)`;
+        lbl.textContent = n.sub;
+        graphCol.appendChild(lbl);
+      }
+    });
+  }
+
+  window.addEventListener('resize', () => {
+    if (!SCENARIO) return;
+    arrowSvg.querySelectorAll('.static-edge').forEach(e => e.remove());
+    renderStaticEdges();
+  });
+
+  // ---- cumulative state replay ----
+  function computeStateUpTo(stepIdx) {
+    const cards = {}; // id -> card def
+    const nodeStates = {};
+    SCENARIO.graph.nodes.forEach(n => (nodeStates[n.id] = 'idle'));
+    for (let i = 0; i <= stepIdx; i++) {
+      SCENARIO.steps[i].actions.forEach(a => {
+        if (a.type === 'card') {
+          // full replace (not merge) so omitted fields like `cls` correctly clear
+          cards[a.id] = Object.assign({}, a);
+        } else if (a.type === 'removeCard') {
+          delete cards[a.id];
+        } else if (a.type === 'node') {
+          nodeStates[a.id] = a.state;
+        }
+      });
+    }
+    return { cards, nodeStates };
+  }
+
+  // fade out whatever arrows/labels are currently shown, then remove them from the
+  // DOM once the fade transition finishes (never yank them away instantly).
+  function fadeOutArrows() {
+    const arrows = Array.from(arrowSvg.querySelectorAll('.flow-arrow.show'));
+    const labels = flowLabelEls;
+    flowLabelEls = [];
+    arrows.forEach(a => a.classList.remove('show'));
+    labels.forEach(l => l.classList.remove('show'));
+    setTimeout(() => {
+      arrows.forEach(a => a.remove());
+      labels.forEach(l => l.remove());
+    }, 320);
+  }
+
+  function resolveEndpoint(ref) {
+    // ref: {card:'id'} | {node:'id'} | {point:{x,y}} where x,y are stage % coords
+    // returns {x, y, halfW, halfH} -- halfW/halfH are 0 for bare points (nothing to clip against)
+    if (ref.point) {
+      const p = pctToPx(stage, ref.point.x, ref.point.y);
+      return { x: p.x, y: p.y, halfW: 0, halfH: 0 };
+    }
+    let el;
+    if (ref.card) el = document.getElementById('card-' + ref.card);
+    if (ref.node) el = document.getElementById('node-' + ref.node);
+    if (!el) return { x: 0, y: 0, halfW: 0, halfH: 0 };
+    const r = el.getBoundingClientRect();
+    const stageRect = stage.getBoundingClientRect();
+    return {
+      x: r.left + r.width / 2 - stageRect.left,
+      y: r.top + r.height / 2 - stageRect.top,
+      halfW: r.width / 2 + 4,
+      halfH: r.height / 2 + 4,
+    };
+  }
+
+  // pull `point` back from `center` towards `towards`, stopping at the box edge
+  // (halfW/halfH) so the arrowhead lands just outside the box instead of being
+  // hidden underneath it.
+  function clipToBoxEdge(center, halfW, halfH, towards) {
+    if (halfW <= 0 && halfH <= 0) return center;
+    const dx = towards.x - center.x;
+    const dy = towards.y - center.y;
+    if (dx === 0 && dy === 0) return center;
+    const tx = dx !== 0 ? halfW / Math.abs(dx) : Infinity;
+    const ty = dy !== 0 ? halfH / Math.abs(dy) : Infinity;
+    const t = Math.min(tx, ty, 1);
+    return { x: center.x + dx * t, y: center.y + dy * t };
+  }
+
+  function drawArrows(stepIdx) {
+    const actions = SCENARIO.steps[stepIdx].actions.filter(a => a.type === 'arrow');
+    actions.forEach(a => {
+      const c1 = resolveEndpoint(a.from);
+      const c2 = resolveEndpoint(a.to);
+      const mx = (c1.x + c2.x) / 2;
+      const my = (c1.y + c2.y) / 2 + (a.bend || 0);
+      // clip both ends so the line (and arrowhead) starts/stops at the box edge, not its center
+      const p1 = clipToBoxEdge(c1, c1.halfW, c1.halfH, { x: mx, y: my });
+      const p2 = clipToBoxEdge(c2, c2.halfW, c2.halfH, { x: mx, y: my });
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('class', 'flow-arrow');
+      path.setAttribute('marker-end', 'url(#arrowhead)');
+      path.setAttribute('d', `M ${p1.x} ${p1.y} Q ${mx} ${my} ${p2.x} ${p2.y}`);
+      arrowSvg.appendChild(path);
+      let lbl = null;
+      if (a.label) {
+        lbl = document.createElement('div');
+        lbl.className = 'flow-label';
+        lbl.textContent = a.label;
+        lbl.style.left = mx + 'px';
+        lbl.style.top = (my - 12) + 'px';
+        lbl.style.transform = 'translate(-50%, -50%)';
+        stage.appendChild(lbl);
+        flowLabelEls.push(lbl);
+      }
+      // fade in on the next frame
+      requestAnimationFrame(() => {
+        path.classList.add('show');
+        if (lbl) lbl.classList.add('show');
+      });
+    });
+  }
+
+  function renderRows(card, prevCard) {
+    const prevRows = (prevCard && prevCard.rows) || [];
+    return (card.rows || []).map(row => {
+      const prev = prevRows.find(r => r.k === row.k);
+      const isNew = !prev || prev.v !== row.v;
+      return `<div class="row${isNew ? ' new' : ''}"><span class="k">${row.k}</span><span class="v">${row.v}</span></div>`;
+    }).join('');
+  }
+
+  function render(stepIdx) {
+    // cancel any in-flight arrow-draw / card-reveal from the previous step
+    if (arrowTimer) { clearTimeout(arrowTimer); arrowTimer = null; }
+    if (revealTimer) { clearTimeout(revealTimer); revealTimer = null; }
+    // reveal-instantly anything still pending from a skipped-past step (e.g. slider jump)
+    pendingReveal.forEach(el => el.classList.remove('entering'));
+    pendingReveal = [];
+
+    // fade out the previous step's arrows/labels *immediately*, in the same tick
+    // as boxes are added/removed/moved below -- keeps arrows and boxes in sync.
+    fadeOutArrows();
+
+    const prevState = idx >= 0 ? computeStateUpTo(idx) : { cards: {}, nodeStates: {} };
+    const { cards, nodeStates } = computeStateUpTo(stepIdx);
+
+    // remove cards no longer present
+    Object.keys(cardEls).forEach(id => {
+      if (!cards[id]) { cardEls[id].remove(); delete cardEls[id]; }
+    });
+
+    // add/update cards. Existing boxes update/move right away; *new* boxes are
+    // created (so their real size/position is known for arrow clipping) but kept
+    // invisible (`entering`) until after their causing arrow has been drawn --
+    // arrow first, target box second, matching cause -> effect.
+    Object.keys(cards).forEach(id => {
+      const def = cards[id];
+      const container = def.column === 'graph' ? graphCol : runtimeCol;
+      let el = cardEls[id];
+      const isNew = !el;
+      const baseClass = 'card' + (def.cls ? ' ' + def.cls : '');
+      if (isNew) {
+        el = document.createElement('div');
+        el.id = 'card-' + id;
+        container.appendChild(el);
+        cardEls[id] = el;
+        el.className = baseClass + ' entering';
+        pendingReveal.push(el);
+      } else {
+        el.className = baseClass;
+      }
+      el.style.left = def.x + '%';
+      el.style.top = def.y + '%';
+      if (def.width) el.style.minWidth = def.width;
+      const titleHtml = def.title ? `<div class="card-title">${def.title}</div>` : '';
+      const subHtml = def.sub ? `<div class="card-sub">${def.sub}</div>` : '';
+      el.innerHTML = titleHtml + subHtml + renderRows(def, prevState.cards[id]);
+    });
+
+    // node states
+    SCENARIO.graph.nodes.forEach(n => {
+      const el = document.getElementById('node-' + n.id);
+      const st = nodeStates[n.id] || 'idle';
+      el.className = 'node ' + st;
+    });
+
+    // caption
+    const step = SCENARIO.steps[stepIdx];
+    captionEl.innerHTML = `<span class="tag">${step.tag || SCENARIO.tag || ''}</span>${step.caption}`;
+    counterEl.textContent = `Step ${stepIdx + 1} / ${SCENARIO.steps.length}`;
+    slider.value = stepIdx;
+    prevBtn.disabled = stepIdx <= 0;
+    nextBtn.disabled = stepIdx >= SCENARIO.steps.length - 1;
+
+    idx = stepIdx;
+    // 1) let existing boxes settle into their (possibly new) positions, 2) draw the
+    // arrow and let it fade in, 3) only then reveal any brand-new target box(es) --
+    // so the arrow always animates before the box it points to appears.
+    const toReveal = pendingReveal;
+    pendingReveal = [];
+    arrowTimer = setTimeout(() => {
+      arrowTimer = null;
+      drawArrows(stepIdx);
+      revealTimer = setTimeout(() => {
+        revealTimer = null;
+        toReveal.forEach(el => el.classList.remove('entering'));
+      }, 380);
+    }, 520);
+  }
+
+  function goTo(stepIdx) {
+    stepIdx = Math.max(0, Math.min(SCENARIO.steps.length - 1, stepIdx));
+    render(stepIdx);
+  }
+
+  function next() { if (idx < SCENARIO.steps.length - 1) goTo(idx + 1); else stopPlay(); }
+  function prev() { if (idx > 0) goTo(idx - 1); }
+
+  function stopPlay() {
+    playing = false;
+    playBtn.textContent = '\u25B6 Play';
+    if (playTimer) clearTimeout(playTimer);
+  }
+  function startPlay() {
+    playing = true;
+    playBtn.textContent = '\u23F8 Pause';
+    scheduleNext();
+  }
+  function scheduleNext() {
+    if (!playing) return;
+    const delay = 3400 - (speedInput.value * 260);
+    playTimer = setTimeout(() => {
+      if (idx >= SCENARIO.steps.length - 1) { stopPlay(); return; }
+      next();
+      scheduleNext();
+    }, delay);
+  }
+
+  // ---- (re)mount a scenario: tear down everything and start fresh ----
+  function mount(key) {
+    stopPlay();
+    if (arrowTimer) { clearTimeout(arrowTimer); arrowTimer = null; }
+    if (revealTimer) { clearTimeout(revealTimer); revealTimer = null; }
+
+    SCENARIO = SCENARIOS[key];
+    idx = -1;
+    cardEls = {};
+    flowLabelEls = [];
+    pendingReveal = [];
+
+    runtimeCol.innerHTML = '<div class="col-label">Krystex runtime</div>';
+    graphCol.innerHTML = '<div class="col-label">Vajram dependency graph</div>';
+    arrowSvg.querySelectorAll('.static-edge, .flow-arrow, .flow-arrow-head').forEach(e => e.remove());
+    document.querySelectorAll('.flow-label').forEach(e => e.remove());
+
+    titleEl.textContent = SCENARIO.title;
+    subtitleEl.textContent = SCENARIO.subtitle || '';
+    slider.max = SCENARIO.steps.length - 1;
+    slider.value = 0;
+
+    renderNodes();
+    requestAnimationFrame(renderStaticEdges);
+    goTo(0);
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.scenario === key);
+    });
+  }
+
+  prevBtn.addEventListener('click', () => { stopPlay(); prev(); });
+  nextBtn.addEventListener('click', () => { stopPlay(); next(); });
+  resetBtn.addEventListener('click', () => { stopPlay(); goTo(0); });
+  playBtn.addEventListener('click', () => { playing ? stopPlay() : startPlay(); });
+  slider.addEventListener('input', () => { stopPlay(); goTo(parseInt(slider.value, 10)); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') { stopPlay(); next(); }
+    if (e.key === 'ArrowLeft') { stopPlay(); prev(); }
+    if (e.key === ' ') { e.preventDefault(); playing ? stopPlay() : startPlay(); }
+  });
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => mount(btn.dataset.scenario));
+  });
+
+  mount('k7');
+})();
+</script>
+</body>
+</html>

@@ -74,12 +74,12 @@ public final class KryonDefinitionRegistry {
   }
 
   public TraitKryonDefinition newTraitKryonDefinition(
-      String kryonId,
+      VajramID vajramID,
       Set<? extends Facet> facets,
       LogicDefinition<CreateNewRequest> createNewRequest,
       ElementTags tags) {
     TraitKryonDefinition kryonDefinition =
-        new TraitKryonDefinition(new VajramID(kryonId), facets, createNewRequest, this, tags);
+        new TraitKryonDefinition(vajramID, facets, createNewRequest, this, tags);
     kryonDefinitions.put(kryonDefinition.vajramID(), kryonDefinition);
     return kryonDefinition;
   }

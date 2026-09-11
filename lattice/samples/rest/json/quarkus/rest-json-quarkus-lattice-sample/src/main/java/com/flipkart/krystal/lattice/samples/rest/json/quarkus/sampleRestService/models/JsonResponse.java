@@ -4,6 +4,7 @@ import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VA
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.WILL_NEVER_FAIL;
 import static com.flipkart.krystal.model.ModelRoot.ModelType.RESPONSE;
 
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
@@ -92,4 +93,70 @@ public interface JsonResponse extends Model {
 
   @IfAbsent(ASSUME_DEFAULT_VALUE)
   List<Priority> priorities();
+
+  /**
+   * An optional string that may carry a computation error. Demonstrates {@link Errable} field
+   * support in JSON models: serializes as the inner value when present, absent when nil/failure.
+   */
+  Errable<String> errableMessage();
+
+  // --- Errable-container fields: List<Errable<T>>, Errable<List<T>>,
+  // Errable<List<Errable<T>>>, Map<K,Errable<T>>, Errable<Map<K,T>>, Errable<Map<K,Errable<T>>>,
+  // for T = primitive / Enum model / Model. ---
+
+  Errable<InnerDataV2> errableDataV2();
+
+  @IfAbsent(ASSUME_DEFAULT_VALUE)
+  List<Errable<Integer>> errableInts();
+
+  @IfAbsent(ASSUME_DEFAULT_VALUE)
+  List<Errable<Priority>> errablePriorities();
+
+  @IfAbsent(ASSUME_DEFAULT_VALUE)
+  List<Errable<InnerDataV2>> errableInnerDataList();
+
+  @IfAbsent(WILL_NEVER_FAIL)
+  Errable<List<Integer>> errableIntList();
+
+  @IfAbsent(WILL_NEVER_FAIL)
+  Errable<List<Priority>> errablePriorityList();
+
+  @IfAbsent(WILL_NEVER_FAIL)
+  Errable<List<InnerDataV2>> errableInnerDataListWhole();
+
+  @IfAbsent(WILL_NEVER_FAIL)
+  Errable<List<Errable<Integer>>> errableListOfErrableInts();
+
+  @IfAbsent(WILL_NEVER_FAIL)
+  Errable<List<Errable<Priority>>> errableListOfErrablePriorities();
+
+  @IfAbsent(WILL_NEVER_FAIL)
+  Errable<List<Errable<InnerDataV2>>> errableListOfErrableInnerData();
+
+  @IfAbsent(ASSUME_DEFAULT_VALUE)
+  Map<String, Errable<Integer>> errableIntMap();
+
+  @IfAbsent(ASSUME_DEFAULT_VALUE)
+  Map<String, Errable<Priority>> errablePriorityMap();
+
+  @IfAbsent(ASSUME_DEFAULT_VALUE)
+  Map<String, Errable<InnerDataV2>> errableInnerDataMap();
+
+  @IfAbsent(WILL_NEVER_FAIL)
+  Errable<Map<String, Integer>> errableIntMapWhole();
+
+  @IfAbsent(WILL_NEVER_FAIL)
+  Errable<Map<String, Priority>> errablePriorityMapWhole();
+
+  @IfAbsent(WILL_NEVER_FAIL)
+  Errable<Map<String, InnerDataV2>> errableInnerDataMapWhole();
+
+  @IfAbsent(WILL_NEVER_FAIL)
+  Errable<Map<String, Errable<Integer>>> errableMapOfErrableInts();
+
+  @IfAbsent(WILL_NEVER_FAIL)
+  Errable<Map<String, Errable<Priority>>> errableMapOfErrablePriorities();
+
+  @IfAbsent(WILL_NEVER_FAIL)
+  Errable<Map<String, Errable<InnerDataV2>>> errableMapOfErrableInnerData();
 }

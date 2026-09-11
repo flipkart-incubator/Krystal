@@ -58,6 +58,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Protocol-agnostic helpers shared across the protobuf codegen pipeline. */
 @Slf4j
@@ -187,10 +188,8 @@ public final class ProtoGenUtility {
       return false;
     }
 
-    Element annotationSource =
-        vajramInfo.inputsSource() != null ? vajramInfo.inputsSource() : vajramClass;
     List<? extends TypeMirror> serializationProtocols =
-        getSerializationProtocols(annotationSource, util);
+        getSerializationProtocols(vajramInfo.inputsSource(), util);
     if (serializationProtocols.stream()
         .noneMatch(
             serializationProtocol ->
@@ -281,6 +280,10 @@ public final class ProtoGenUtility {
       // explicit presence).
       ProtoFieldType inner = getProtobufType(typeParameters.get(0), util, element, config);
       return config.presenceWrapper().wrap(inner, util, element);
+    } else if (util.isErrable(javaModelType)) {
+      // Errable<T>: serialize/deserialize the inner type T. Nil/Failure → proto field absent;
+      // NonNil → proto field set. The outer caller applies explicit presence wrapping.
+      return getProtobufType(typeParameters.get(0), util, element, config);
     } else if (isProtoTypeRepeated(dataType)) {
       if (typeParameters.isEmpty()) {
         throw util.errorAndThrow("Raw list types are not supported by protobuf", element);
@@ -363,8 +366,11 @@ public final class ProtoGenUtility {
     }
   }
 
-  public static List<? extends TypeMirror> getSerializationProtocols(
-      Element annotationSource, VajramCodeGenUtility util) {
+  private static List<? extends TypeMirror> getSerializationProtocols(
+      @Nullable Element annotationSource, VajramCodeGenUtility util) {
+    if (annotationSource == null) {
+      return List.of();
+    }
     return util.codegenUtil().getSupportedProtocolTypeElements(annotationSource).stream()
         .map(TypeElement::asType)
         .toList();
@@ -391,11 +397,22 @@ public final class ProtoGenUtility {
    * required proto value which can be set in the proto builder.
    */
   static CodeBlock convertJavaToProtoCode(CodeGenType dataType, String fieldName) {
+    return convertJavaToProtoCode(dataType, fieldName, fieldName);
+  }
+
+  /**
+   * Like {@link #convertJavaToProtoCode(CodeGenType, String)}, but allows the setter method name
+   * (derived from {@code fieldName}) and the value expression to be set to the same field to differ
+   * - needed for {@code Errable<T>} fields, where the setter is still {@code setFieldName} but the
+   * value written to the proto builder is {@code fieldName.value()}.
+   */
+  static CodeBlock convertJavaToProtoCode(
+      CodeGenType dataType, String fieldName, String valueExpr) {
     return CodeBlock.of(
         "_proto.set$L($L)",
         capitalizeFirstChar(fieldName),
         JAVA_TO_PROTO_CONVERSION_CODE
             .getOrDefault(dataType.unAnnotated(), identity())
-            .apply(CodeBlock.of("$L", fieldName)));
+            .apply(CodeBlock.of("$L", valueExpr)));
   }
 }

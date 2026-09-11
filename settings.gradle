@@ -31,7 +31,10 @@ include 'krystal-gradle-plugin'
 include 'vajram:vajram-codegen'
 include 'vajram:vajram-codegen-common'
 include 'vajram:vajram-java-sdk'
-include 'vajram:vajram-lang'
+include 'vajram:vajram-lang:vajram-lang-grammar'
+include 'vajram:vajram-lang:vajram-lang-rust-compiler'
+include 'vajram:vajram-lang:vajram-lang-samples'
+include 'vajram:vajram-lang:vajram-lang-wasm-playground'
 
 /* ******** VAJRAM EXTENSIONS : START *********** */
 
@@ -51,6 +54,9 @@ include 'vajram:extensions:resilience4j:vajram-resilience4j'
 
 include 'vajram:extensions:graphql:vajram-graphql'
 include 'vajram:extensions:graphql:vajram-graphql-codegen'
+include 'vajram:extensions:graphql:vajram-graphql-schema-common'
+include 'vajram:extensions:graphql:vajram-graphql-client'
+include 'vajram:extensions:graphql:vajram-graphql-client-codegen'
 
 include 'vajram:extensions:sql:vajram-sql'
 include 'vajram:extensions:sql:vajram-sql-codegen'
@@ -113,5 +119,3 @@ include 'lattice:samples:mcp:quarkus:mcp-quarkus-lattice-sample'
 include 'lattice:samples:a2a:quarkus:a2a-quarkus-lattice-sample'
 include 'lattice:samples:rest:fory:quarkus:rest-fory-quarkus-lattice-sample'
 /* ******** SAMPLE PROJECTS : END *********** */
-
-

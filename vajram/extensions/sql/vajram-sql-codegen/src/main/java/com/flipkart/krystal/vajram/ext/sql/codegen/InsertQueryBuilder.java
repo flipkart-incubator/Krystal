@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajram.ext.sql.codegen;
 
+import static java.util.Objects.requireNonNull;
+
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider;
 import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider.ModelProtocolConfig;
@@ -184,7 +186,8 @@ public final class InsertQueryBuilder {
               .map(ModelProtocolConfigProvider::getConfig)
               .collect(
                   Collectors.toMap(
-                      c -> c.modelProtocol().getClass().getCanonicalName(), Function.identity()));
+                      c -> requireNonNull(c.modelProtocol().getClass().getCanonicalName()),
+                      Function.identity()));
     }
     String key = protocolTypeElement.getQualifiedName().toString();
     ModelProtocolConfig config = protocolConfigCache.get(key);

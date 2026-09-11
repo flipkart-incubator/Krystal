@@ -1,0 +1,59 @@
+plugins {
+    id 'application'
+}
+
+description = 'Self-contained localhost WebAssembly playground for vajram-lang'
+
+dependencies {
+    implementation project(':vajram:vajram-lang:vajram-lang-rust-compiler')
+}
+
+application {
+    mainClass = 'com.flipkart.krystal.vajram.lang.playground.PlaygroundServer'
+}
+
+java {
+    modularity.inferModulePath = false
+}
+
+extraJavaModuleInfo {
+    failOnMissingModuleInfo = false
+}
+
+def sampleSources = fileTree('src/main/resources/samples') {
+    include '**/*.vajram'
+}
+def generatedSampleResources = layout.buildDirectory.dir('generated-sample-resources')
+
+tasks.register('generateSampleIndex') {
+    inputs.files(sampleSources)
+    outputs.file(generatedSampleResources.map { it.file('samples/index.txt') })
+    doLast {
+        def index = generatedSampleResources.get().file('samples/index.txt').asFile
+        index.parentFile.mkdirs()
+        index.text = sampleSources.files
+                .collect { file -> project.file('src/main/resources/samples').toPath().relativize(file.toPath()).toString().replace(File.separatorChar, '/' as char) }
+                .sort()
+                .join('\n') + '\n'
+    }
+}
+
+tasks.named('processResources') {
+    dependsOn tasks.named('generateSampleIndex')
+    from(layout.projectDirectory.file('../VAJRAM_LANGUAGE_SPEC.md'))
+    from(generatedSampleResources)
+}
+
+tasks.register('playgroundZip', Zip) {
+    group = 'distribution'
+    description = 'Packages the standalone localhost playground distribution.'
+    dependsOn tasks.named('installDist')
+    archiveBaseName = 'vajram-lang-wasm-playground'
+    archiveVersion = project.version
+    from(layout.buildDirectory.dir("install/${project.name}"))
+    into(project.name)
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

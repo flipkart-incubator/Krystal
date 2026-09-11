@@ -1,0 +1,7 @@
+description = "Annotations and runtime types for generating type-safe GraphQL client request facades from a GraphQL SDL schema"
+
+dependencies {
+    implementation project(':krystal-common')
+
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}

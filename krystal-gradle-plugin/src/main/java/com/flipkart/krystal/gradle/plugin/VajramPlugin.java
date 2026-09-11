@@ -2,11 +2,20 @@ package com.flipkart.krystal.gradle.plugin;
 
 import java.io.File;
 import java.util.List;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import java.util.Locale;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.DependencyScopeConfiguration;
 import org.gradle.api.artifacts.ResolvableConfiguration;
+import org.gradle.api.attributes.Bundling;
+import org.gradle.api.attributes.Category;
+import org.gradle.api.attributes.LibraryElements;
+import org.gradle.api.attributes.Usage;
+import org.gradle.api.attributes.java.TargetJvmEnvironment;
+import org.gradle.api.file.FileTree;
+import org.gradle.api.file.ProjectLayout;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.compile.JavaCompile;
@@ -37,10 +46,10 @@ public class VajramPlugin implements Plugin<Project> {
   @Override
   public void apply(Project project) {
     var mainModelsGenDir =
-        new File(getBuildDir(project).getPath() + VAJRAM_MODELS_GEN_DIR + "/main");
+        new File(getBuildDir(project.getLayout()).getPath() + VAJRAM_MODELS_GEN_DIR + "/main");
 
     var testModelsGenDir =
-        new File(getBuildDir(project).getPath() + VAJRAM_MODELS_GEN_DIR + "/test");
+        new File(getBuildDir(project.getLayout()).getPath() + VAJRAM_MODELS_GEN_DIR + "/test");
 
     addSourceSets(project, mainModelsGenDir, testModelsGenDir);
     registerKrystalModelsGen(project, mainModelsGenDir);
@@ -76,18 +85,40 @@ public class VajramPlugin implements Plugin<Project> {
     DependencyScopeConfiguration krystalModelsGenProcessor =
         project.getConfigurations().dependencyScope(KRYSTAL_MODELS_GEN_PROC).get();
 
+    ObjectFactory projectObjects = project.getObjects();
     @SuppressWarnings("UnstableApiUsage")
-    ResolvableConfiguration krystalModelsGenProcessorPath =
+    Configuration krystalModelsGenProcessorPath =
         project
             .getConfigurations()
             .resolvable(KRYSTAL_MODELS_GEN_PROC_PATH, f -> f.extendsFrom(krystalModelsGenProcessor))
-            .get();
+            .get()
+            .attributes(
+                attributeContainer -> {
+                  attributeContainer.attribute(
+                      Category.CATEGORY_ATTRIBUTE,
+                      projectObjects.named(Category.class, Category.LIBRARY));
+                  attributeContainer.attribute(
+                      Usage.USAGE_ATTRIBUTE, projectObjects.named(Usage.class, Usage.JAVA_RUNTIME));
+                  attributeContainer.attribute(
+                      LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE,
+                      projectObjects.named(LibraryElements.class, LibraryElements.JAR));
+                  attributeContainer.attribute(
+                      Bundling.BUNDLING_ATTRIBUTE,
+                      projectObjects.named(Bundling.class, Bundling.EXTERNAL));
+                  attributeContainer.attribute(
+                      TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE,
+                      projectObjects.named(
+                          TargetJvmEnvironment.class, TargetJvmEnvironment.STANDARD_JVM));
+                });
 
     project
         .getConfigurations()
         .getByName(
             "annotationProcessor",
             annotationProcessor -> annotationProcessor.extendsFrom(krystalModelsGenProcessorPath));
+
+    FileTree krystalModelsGenProcessorPathFileTree = krystalModelsGenProcessorPath.getAsFileTree();
+    ProjectLayout layout = project.getLayout();
 
     project
         .getTasks()
@@ -111,13 +142,10 @@ public class VajramPlugin implements Plugin<Project> {
               // https://docs.gradle.org/current/userguide/build_cache_concepts.html#concepts_overlapping_outputs
               task.getDestinationDirectory()
                   .set(
-                      project
-                          .getObjects()
+                      projectObjects
                           .directoryProperty()
-                          .fileValue(getBuildDir(project).toPath().resolve(EMPTY_DIR).toFile()));
-              task.getOptions()
-                  .getGeneratedSourceOutputDirectory()
-                  .fileValue(project.file(mainModelsGenDir));
+                          .fileValue(getBuildDir(layout).toPath().resolve(EMPTY_DIR).toFile()));
+              task.getOptions().getGeneratedSourceOutputDirectory().fileValue(mainModelsGenDir);
               task.getOptions()
                   .getCompilerArgs()
                   .addAll(
@@ -127,14 +155,13 @@ public class VajramPlugin implements Plugin<Project> {
                           "-A"
                               + MODULE_ROOT_PATH_KEY
                               + "="
-                              + project.getProjectDir().getAbsolutePath()));
+                              + layout.getProjectDirectory().getAsFile().getAbsolutePath()));
             })
         .configure(
             krystalModelsGen ->
                 krystalModelsGen
                     .getOptions()
-                    .setAnnotationProcessorPath(
-                        project.getConfigurations().named(KRYSTAL_MODELS_GEN_PROC_PATH).get()));
+                    .setAnnotationProcessorPath(krystalModelsGenProcessorPathFileTree));
   }
 
   private static void configureCompileJava(Project project) {
@@ -188,6 +215,8 @@ public class VajramPlugin implements Plugin<Project> {
             "testAnnotationProcessor",
             annotationProcessor ->
                 annotationProcessor.extendsFrom(testKrystalModelsGenProcessorPath));
+    ProjectLayout layout = project.getLayout();
+    ObjectFactory projectObjects = project.getObjects();
     project
         .getTasks()
         .register(
@@ -212,15 +241,13 @@ public class VajramPlugin implements Plugin<Project> {
               // which share output directories with other tasks -
               // See:
               // https://docs.gradle.org/current/userguide/build_cache_concepts.html#concepts_overlapping_outputs
+
               task.getDestinationDirectory()
                   .set(
-                      project
-                          .getObjects()
+                      projectObjects
                           .directoryProperty()
-                          .fileValue(getBuildDir(project).toPath().resolve(EMPTY_DIR).toFile()));
-              task.getOptions()
-                  .getGeneratedSourceOutputDirectory()
-                  .fileValue(project.file(testModelsGenDir));
+                          .fileValue(getBuildDir(layout).toPath().resolve(EMPTY_DIR).toFile()));
+              task.getOptions().getGeneratedSourceOutputDirectory().fileValue(testModelsGenDir);
               task.getOptions()
                   .getCompilerArgs()
                   .addAll(
@@ -236,11 +263,11 @@ public class VajramPlugin implements Plugin<Project> {
                         project.getConfigurations().named(testModelGenProcessorPath).get()));
   }
 
-  private static @NonNull String capitalizeFirstChar(String krystalModelsGen) {
-    return krystalModelsGen.substring(0, 1).toUpperCase() + krystalModelsGen.substring(1);
+  private static String capitalizeFirstChar(String string) {
+    return string.substring(0, 1).toUpperCase(Locale.ROOT) + string.substring(1);
   }
 
-  private static File getBuildDir(Project project) {
-    return project.getLayout().getBuildDirectory().getAsFile().get();
+  private static File getBuildDir(ProjectLayout layout) {
+    return layout.getBuildDirectory().getAsFile().get();
   }
 }
