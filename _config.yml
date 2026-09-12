@@ -1,6 +1,6 @@
 title: Krystal
 description: Documentation for the Krystal framework
-theme: jekyll-theme-minimal
+remote_theme: pages-themes/cayman@v0.2.0
 markdown: kramdown
 
 # Dot-prefixed and underscore-prefixed files/dirs (.github, .idea, .gradle, etc.)
