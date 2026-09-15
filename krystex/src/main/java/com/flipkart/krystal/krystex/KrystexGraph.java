@@ -200,8 +200,7 @@ public final class KrystexGraph {
                   vajramGraph.vajramDefinitions().get(decorationContext.vajramID());
               return vajramDefinition != null && vajramDefinition.metadata().isBatched();
             },
-            decoratorContext ->
-                inputBatcherConfig.decoratorFactory().apply(decoratorContext.vajramID()));
+            decoratorContext -> inputBatcherConfig.decoratorFactory().apply(decoratorContext));
     return configBuilder -> {
       if (configBuilder.hasOutputLogicDecorator(decoratorType)) {
         // The decorator set in the executor config has higher precedence
