@@ -3,18 +3,58 @@
 use crate::vajram_rt::{Errable, VajramError};
 use std::rc::Rc;
 
-#[derive(Debug, Clone)]
-pub struct IsProductAvailableInputs {
-    pub productId: Rc<String>,
-}
+pub mod is_product_available {
+    use super::*;
 
-pub struct IsProductAvailableDeps {
-    pub availabilityDB: Rc<AvailabilityDB>,
-}
+    #[derive(Debug, Clone)]
+    pub struct IsProductAvailableInputs {
+        pub productId: Rc<String>,
+    }
 
-pub async fn call(
-    inputs: IsProductAvailableInputs,
-    deps: Rc<IsProductAvailableDeps>,
-) -> Result<Rc<bool>, VajramError> {
-    Rc::new(deps.availabilityDB.isAvailable(inputs.productId))
+    pub struct IsProductAvailable_Injections {
+        pub availabilityDB: Rc<dyn crate::vajram_rt::Provider<AvailabilityDB>>,
+    }
+    impl IsProductAvailable_Injections {
+        fn new<I: crate::vajram_rt::Injector + 'static>(
+            context: Rc<crate::vajram_rt::AppContext<I>>,
+        ) -> Rc<Self> {
+            Rc::new(Self {
+                availabilityDB: context.injector().get_provider(
+                    crate::vajram_rt::InjectionKey::new(
+                        "com.flipkart.krystal.vajram_lang.samples.products.AvailabilityDB",
+                        &[],
+                    ),
+                    Rc::clone(&context),
+                ),
+            })
+        }
+        fn instance<I: crate::vajram_rt::Injector + 'static>(
+            context: Rc<crate::vajram_rt::AppContext<I>>,
+        ) -> Rc<Self> {
+            context.injection_instance("IsProductAvailable_Injections", || {
+                Self::new(Rc::clone(&context))
+            })
+        }
+    }
+
+    pub async fn call<I: crate::vajram_rt::Injector + 'static>(
+        inputs: Vec<IsProductAvailableInputs>,
+        context: Rc<crate::vajram_rt::AppContext<I>>,
+    ) -> Result<Vec<Rc<bool>>, VajramError> {
+        let deps = IsProductAvailable_Injections::instance(Rc::clone(&context));
+        futures::future::try_join_all(
+            inputs
+                .into_iter()
+                .map(|inputs| call_one(inputs, Rc::clone(&deps), Rc::clone(&context))),
+        )
+        .await?
+    }
+
+    async fn call_one<I: crate::vajram_rt::Injector + 'static>(
+        inputs: IsProductAvailableInputs,
+        deps: Rc<IsProductAvailable_Injections>,
+        context: Rc<crate::vajram_rt::AppContext<I>>,
+    ) -> Result<Rc<bool>, VajramError> {
+        Rc::new(deps.availabilityDB.get().isAvailable(inputs.productId))
+    }
 }

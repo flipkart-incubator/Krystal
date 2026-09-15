@@ -1,0 +1,19 @@
+package vajram_samples.hello;
+
+import vajram readFileAsString from lang.fileSystem;
+import type ConsoleWriter from lang.process;
+
+// Run:
+// ./gradlew :vajram:vajram-lang:vajram-lang-samples:runVajram -Pvajram=headFile
+//    -PvajramArgs="--numChars 5 --filePath /path/to/file"
+vajram headFile(int32 numChars, string filePath)
+    out string~
+    inject (ConsoleWriter console)
+    permit callers `outsideProcess public{
+  string fileContent = readFileAsString(path = filePath);
+
+  out ~{
+    console.println("Returning first " + numChars + " chars of file " + filePath);
+    yield fileContent.first(numChars);
+  }
+}

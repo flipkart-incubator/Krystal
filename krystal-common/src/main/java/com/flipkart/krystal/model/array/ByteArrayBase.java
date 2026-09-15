@@ -7,6 +7,7 @@ import com.google.common.primitives.Bytes;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -94,6 +95,11 @@ public abstract class ByteArrayBase implements ByteArray {
       return Arrays.equals(data, byteArrayBase.data);
     }
     return areEqual(this, other);
+  }
+
+  @Override
+  public String asString(Charset charset) {
+    return new String(data, charset);
   }
 
   public ByteArrayInputStream newInputStream() {

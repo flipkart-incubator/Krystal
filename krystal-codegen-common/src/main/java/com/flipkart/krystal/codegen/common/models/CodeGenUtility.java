@@ -396,6 +396,41 @@ public class CodeGenUtility {
         .collect(toImmutableList());
   }
 
+  /**
+   * Like {@link #getModelFields(TypeElement)}, but only methods declared directly on {@code
+   * modelRootElem} itself - methods inherited from supertypes (e.g. via {@code extends}) are
+   * excluded, regardless of whether those supertypes are themselves {@code @ModelRoot}s.
+   */
+  public ImmutableList<ExecutableElement> getDeclaredModelFields(TypeElement modelRootElem) {
+    if (modelRootElem.getAnnotation(ModelRoot.class) == null) {
+      error("Model root type %s does not have @ModelRoot annotation", modelRootElem);
+    }
+    List<ExecutableElement> modelMethods = new ArrayList<>();
+    for (ExecutableElement method : ElementFilter.methodsIn(modelRootElem.getEnclosedElements())) {
+      if (!method.getModifiers().contains(STATIC)) {
+        if (method.getSimpleName().toString().startsWith("_")) {
+          // Ignore methods starting with '_' as they are not model fields and are reserved for
+          // platform use.
+          continue;
+        }
+        validateModelRootMethod(method);
+        modelMethods.add(method);
+      }
+    }
+    return ImmutableList.copyOf(modelMethods);
+  }
+
+  /**
+   * Like {@link #getModelFieldsForCodegen(TypeElement)}, restricted to methods declared directly on
+   * {@code modelRootElem} - see {@link #getDeclaredModelFields(TypeElement)}.
+   */
+  public ImmutableList<ExecutableElement> getDeclaredModelFieldsForCodegen(
+      TypeElement modelRootElem) {
+    return getDeclaredModelFields(modelRootElem).stream()
+        .filter(method -> isMethodEligibleForModelCodeGen(method, modelRootElem))
+        .collect(toImmutableList());
+  }
+
   private void validateModelRootMethod(ExecutableElement method) {
     TypeMirror returnType = method.getReturnType();
     // Validate method return type is not an array

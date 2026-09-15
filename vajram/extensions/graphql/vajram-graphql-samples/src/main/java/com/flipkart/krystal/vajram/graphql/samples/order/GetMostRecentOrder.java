@@ -16,6 +16,6 @@ public abstract class GetMostRecentOrder extends ComputeVajramDef<Order_Id> {
 
   @Output
   static Order_Id mostRecentOrder(String userId) {
-    return Order_Id_ImmutGQlResp._builder().id("MostRecentOrderOf_" + userId)._build();
+    return Order_Id_ImmutGQlServerResp._builder().id("MostRecentOrderOf_" + userId)._build();
   }
 }

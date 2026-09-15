@@ -43,8 +43,6 @@ import com.flipkart.krystal.krystex.commands.ForwardSendBatch;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.commands.ServerSideCommand;
 import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
-import com.flipkart.krystal.krystex.decoration.InitiableWithActiveDepChains;
-import com.flipkart.krystal.krystex.decoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecoratorConfig;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
@@ -182,7 +180,6 @@ public final class VajramKryonExecutor implements KrystalExecutor {
 
   private List<OutputLogicDecorator> getSortedOutputLogicDecorators(
       LogicDecorationContext logicDecorationContext) {
-    VajramID vajramID = logicDecorationContext.vajramID();
     DecorationOrdering decorationOrdering = executorConfig.decorationOrdering();
     ImmutableMap<String, Integer> decoratorIndices =
         decorationOrdering.outputLogicDecoratorIndices();
@@ -198,11 +195,6 @@ public final class VajramKryonExecutor implements KrystalExecutor {
           if (decoratorConfig.shouldDecorate().test(logicDecorationContext)) {
             OutputLogicDecorator outputLogicDecorator =
                 decoratorConfig.factory().apply(logicDecorationContext);
-            if (outputLogicDecorator
-                instanceof InitiableWithActiveDepChains initiableWithActiveDepChains) {
-              initiableWithActiveDepChains.initiateActiveDepChains(
-                  new InitiateActiveDepChains(vajramID, getDependentChains(vajramID)));
-            }
             if (outputLogicDecorator == null) {
               return;
             }
@@ -227,7 +219,7 @@ public final class VajramKryonExecutor implements KrystalExecutor {
     return sortedDecorators;
   }
 
-  private Set<DependentChain> getDependentChains(VajramID vajramID) {
+  Set<DependentChain> getDependentChains(VajramID vajramID) {
     return dependentChainsPerKryon.computeIfAbsent(
         vajramID,
         _v -> {
@@ -481,6 +473,7 @@ public final class VajramKryonExecutor implements KrystalExecutor {
       KryonCommand<? extends R> kryonCommand) {
     VajramID previousActiveVajram = executionInfo.activeVajram();
     try {
+      DependentChain dependentChain = kryonCommand.dependentChain();
       VajramKryonDefinition vajramKryonDefinition =
           validateAsVajram(kryonDefinitionRegistry.getOrThrow(kryonCommand.vajramID()));
       if (!(kryonCommand instanceof ServerSideCommand<? extends R>)) {
@@ -504,8 +497,7 @@ public final class VajramKryonExecutor implements KrystalExecutor {
           return _executeCommand(
               (KryonCommand<? extends R>)
                   DirectForwardCommand.ofExecutionItems(
-                      forwardSend.vajramID(), list, forwardSend.dependentChain()));
-
+                      forwardSend.vajramID(), list, dependentChain));
         } else if (kryonCommand instanceof ForwardSendBatch forwardSend) {
           //noinspection unchecked
           return (CompletableFuture<R>)
@@ -521,10 +513,17 @@ public final class VajramKryonExecutor implements KrystalExecutor {
                                           .facetsFromRequest()
                                           .logic()
                                           .facetsFromRequest(e.getValue()))),
-                      forwardSend.dependentChain()));
+                      dependentChain));
         }
       }
-      validate(kryonCommand);
+      if (isDepChainDisabled(dependentChain)) {
+        log.info(
+            "Returning empty response since dependentChain {} has been disabled", dependentChain);
+        // Throwing exception here is causing extreme CPU wastage due to JIT deoptimization.
+        // So we return an empty response instead.
+        return emptyResponse();
+      }
+      validate();
       VajramID vajramID = kryonCommand.vajramID();
       Kryon<KryonCommand<? extends R>, R> kryon = getDecoratedKryon(vajramID);
       executionInfo.activeVajram(kryon.getKryonDefinition().vajramID());
@@ -535,6 +534,17 @@ public final class VajramKryonExecutor implements KrystalExecutor {
     } finally {
       executionInfo.activeVajram(previousActiveVajram);
     }
+  }
+
+  private <R extends KryonCommandResponse> CompletableFuture<R> emptyResponse() {
+    @SuppressWarnings("unchecked")
+    R resp =
+        (R)
+            switch (executorConfig.kryonExecStrategy()) {
+              case BATCH -> BatchResponse.empty();
+              case DIRECT -> DirectResponse.instance();
+            };
+    return CompletableFuture.completedFuture(resp);
   }
 
   @SuppressWarnings("unchecked")
@@ -592,15 +602,18 @@ public final class VajramKryonExecutor implements KrystalExecutor {
     return sortedDecorators;
   }
 
-  private void validate(KryonCommand<?> kryonCommand) {
+  private void validate() {
     if (shutdownRequested) {
       throw new RejectedExecutionException("Kryon Executor shutdown requested.");
     }
-    DependentChain dependentChain = kryonCommand.dependentChain();
+  }
+
+  private boolean isDepChainDisabled(DependentChain dependentChain) {
     if (krystexGraph.dependentChainDisabler().isDisabled(dependentChain)
         || disabledDependentChainsForExecutor().contains(dependentChain)) {
-      throw new DisabledDependentChainException(dependentChain);
+      return true;
     }
+    return false;
   }
 
   @SuppressWarnings("FutureReturnValueIgnored")

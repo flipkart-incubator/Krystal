@@ -1,0 +1,8 @@
+package playground.samples;
+
+// HTTP browser capability sample. It will use the non-blocking browser fetch implementation.
+// This source is intentionally a template until the HTTP request/response model is finalized.
+vajram httpClient(url string) out string
+    permit callers `outsideProcess public{
+  { "HTTP request target: " + url }
+}

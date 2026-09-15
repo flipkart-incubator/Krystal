@@ -7,7 +7,7 @@ import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.graphql.samples.dummy.Dummy_Id;
-import com.flipkart.krystal.vajram.graphql.samples.dummy.Dummy_Id_ImmutGQlResp;
+import com.flipkart.krystal.vajram.graphql.samples.dummy.Dummy_Id_ImmutGQlServerResp;
 import java.util.List;
 
 @Vajram
@@ -22,6 +22,6 @@ public abstract class GetDummyIds extends ComputeVajramDef<List<Dummy_Id>> {
     if ("orderBadDummies".equals(id.id())) {
       throw new RuntimeException("GetDummyIds failed for id=orderBadDummies");
     }
-    return List.of(Dummy_Id_ImmutGQlResp._builder().dummyId(id.id() + "_dummy_1")._build());
+    return List.of(Dummy_Id_ImmutGQlServerResp._builder().dummyId(id.id() + "_dummy_1")._build());
   }
 }

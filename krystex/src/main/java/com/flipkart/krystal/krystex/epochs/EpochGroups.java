@@ -26,8 +26,10 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
+@Slf4j
 public record EpochGroups(ImmutableMap<VajramID, VajramEpochGroups> vajramEpochGroups) {
 
   public static EpochGroups computeEpochGroups(
@@ -73,10 +75,10 @@ public record EpochGroups(ImmutableMap<VajramID, VajramEpochGroups> vajramEpochG
     if (depVajramDef.isTrait()) {
       TraitDispatchPolicy traitDispatchPolicy = traitDispatchPolicies.get(depVajramID);
       if (traitDispatchPolicy == null) {
-        throw new IllegalStateException(
-            "Trait "
-                + depVajramID
-                + " does not have a trait dispatch policy defined. Cannot auto-compute batcher config.");
+        log.error(
+            "Trait {} does not have a trait dispatch policy defined. Cannot auto-compute epoch groups.",
+            depVajramID);
+        return List.of();
       }
       if (dependency != null
           && traitDispatchPolicy instanceof StaticDispatchPolicy staticDispatchPolicy) {

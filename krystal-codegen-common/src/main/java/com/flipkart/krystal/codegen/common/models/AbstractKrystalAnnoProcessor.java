@@ -67,6 +67,12 @@ public abstract class AbstractKrystalAnnoProcessor extends AbstractProcessor {
   private void validateAndInitCodegenPhase() {
     String currentPhaseString = processingEnv.getOptions().get(CODEGEN_PHASE_KEY);
     if (currentPhaseString == null) {
+      // No codegen-phase option was passed (e.g. a processor wired via
+      // testKrystalModelsGenProcessor also ends up on the regular compileTestJava task's
+      // annotationProcessorPath, which doesn't pass this option). codeGenUtil must still be
+      // initialized so that `process()`'s "skip" branch (for @RunOnlyWhenCodegenPhaseIs
+      // processors) can safely use it to log a note instead of NPE-ing.
+      this.codeGenUtil = new CodeGenUtility(processingEnv, this.getClass(), null);
       return;
     }
     try {

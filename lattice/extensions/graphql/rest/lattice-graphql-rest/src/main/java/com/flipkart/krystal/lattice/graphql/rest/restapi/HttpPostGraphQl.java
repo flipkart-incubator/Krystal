@@ -3,12 +3,10 @@ package com.flipkart.krystal.lattice.graphql.rest.restapi;
 import static com.flipkart.krystal.lattice.graphql.rest.restapi.HttpPostGraphQl_Fac.queryResponse_n;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.graphql.api.model.GraphQlOperation._asExecutionResult;
-import static com.flipkart.krystal.vajram.graphql.api.model.GraphQlResponse.GRAPHQL_RESPONSE_JSON_CONTENT_TYPE;
+import static com.flipkart.krystal.vajram.graphql.api.model.GraphQlServerResponse.GRAPHQL_RESPONSE_JSON_CONTENT_TYPE;
 import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 import static java.util.Objects.requireNonNullElse;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.annos.InvocableOutsideProcess;
 import com.flipkart.krystal.data.Errable;
@@ -29,6 +27,8 @@ import graphql.ExecutionInput;
 import jakarta.ws.rs.core.Response;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectWriter;
 
 @InvocableOutsideGraph
 @InvocableOutsideProcess

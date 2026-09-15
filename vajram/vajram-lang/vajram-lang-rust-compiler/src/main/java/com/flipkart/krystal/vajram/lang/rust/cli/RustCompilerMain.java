@@ -17,6 +17,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -30,34 +31,68 @@ import java.util.stream.Stream;
  */
 public final class RustCompilerMain {
 
+  /** Rust artifact target selected by the CLI or the programmatic compiler API. */
+  public enum Target {
+    NATIVE,
+    WASM;
+
+    static Target parse(String value) {
+      return switch (value) {
+        case "native" -> NATIVE;
+        case "wasm" -> WASM;
+        default -> throw new IllegalArgumentException("Unknown Rust target: " + value);
+      };
+    }
+
+    String resourceDirectory() {
+      return this == NATIVE ? "native" : "wasm";
+    }
+  }
+
   private RustCompilerMain() {}
 
   public static void main(String[] args) throws IOException {
     Path srcDir = null;
     Path outDir = null;
+    Target target = Target.NATIVE;
     for (int i = 0; i < args.length - 1; i++) {
       if ("--src".equals(args[i])) {
         srcDir = Path.of(args[i + 1]);
       } else if ("--out".equals(args[i])) {
         outDir = Path.of(args[i + 1]);
+      } else if ("--target".equals(args[i])) {
+        try {
+          target = Target.parse(args[i + 1]);
+        } catch (IllegalArgumentException e) {
+          System.err.println(e.getMessage());
+          System.err.println(
+              "Usage: RustCompilerMain --src <dir> --out <dir> [--target native|wasm]");
+          System.exit(2);
+          return;
+        }
       }
     }
     if (srcDir == null || outDir == null) {
-      System.err.println("Usage: RustCompilerMain --src <dir> --out <dir>");
+      System.err.println("Usage: RustCompilerMain --src <dir> --out <dir> [--target native|wasm]");
       System.exit(2);
       return;
     }
-    boolean ok = compile(srcDir, outDir);
+    boolean ok = compile(srcDir, outDir, target);
     System.exit(ok ? 0 : 1);
   }
 
   /** Returns {@code true} on success (no diagnostic errors). Also used directly by tests. */
   public static boolean compile(Path srcDir, Path outDir) throws IOException {
+    return compile(srcDir, outDir, Target.NATIVE);
+  }
+
+  /** Returns {@code true} on success (no diagnostic errors) for the selected Rust target. */
+  public static boolean compile(Path srcDir, Path outDir, Target target) throws IOException {
     Diagnostics diagnostics = new Diagnostics();
     List<VajramFile> files = parseAll(srcDir, diagnostics);
 
     SymbolTable symbolTable = SymbolTable.build(files, diagnostics);
-    Resolver.validate(files, symbolTable, diagnostics);
+    Resolver.validate(files, symbolTable, diagnostics, target);
 
     if (diagnostics.hasErrors()) {
       printDiagnostics(diagnostics);
@@ -67,16 +102,24 @@ public final class RustCompilerMain {
     Files.createDirectories(outDir);
     RustEmitter emitter = new RustEmitter(symbolTable);
     ModuleTree moduleTree = new ModuleTree();
+    Map<Path, List<VajramFile>> filesBySource = new LinkedHashMap<>();
     for (VajramFile file : files) {
-      List<String> dir = file.packageSegments().stream().map(Naming::toSnakeCase).toList();
-      String moduleName = Naming.toSnakeCase(file.vajram().name());
+      filesBySource.computeIfAbsent(file.sourcePath(), unused -> new ArrayList<>()).add(file);
+    }
+    for (List<VajramFile> sourceFiles : filesBySource.values()) {
+      VajramFile firstFile = sourceFiles.get(0);
+      List<String> dir = firstFile.packageSegments().stream().map(Naming::toSnakeCase).toList();
+      String moduleName = Naming.sourceModuleName(firstFile.sourcePath());
       moduleTree.register(dir, moduleName);
       Path modulePath = outDir.resolve(joinPath(dir)).resolve(moduleName + ".rs");
-      writeFile(modulePath, emitter.emit(file));
+      writeFile(modulePath, emitter.emit(sourceFiles));
     }
-    moduleTree.writeModDeclarations(outDir);
-    copyPrelude(outDir);
-    AnnotationProcessorRunner.process(files, outDir, symbolTable, diagnostics);
+    moduleTree.writeModDeclarations(outDir, target);
+    copyPrelude(outDir, target);
+    AnnotationProcessorRunner.process(files, outDir, symbolTable, diagnostics, target);
+    if (target == Target.WASM && !Files.exists(outDir.resolve("wasm_dispatch.rs"))) {
+      writeFile(outDir.resolve("wasm_dispatch.rs"), "");
+    }
     runRustfmtBestEffort(outDir);
     printDiagnostics(diagnostics);
     return !diagnostics.hasErrors();
@@ -118,12 +161,13 @@ public final class RustCompilerMain {
     Files.writeString(path, contents);
   }
 
-  private static void copyPrelude(Path outDir) throws IOException {
+  private static void copyPrelude(Path outDir, Target target) throws IOException {
     Path preludeDir = outDir.resolve("vajram_rt");
     Files.createDirectories(preludeDir);
     for (String resource : List.of("mod.rs", "errable.rs", "error.rs")) {
       try (InputStream in =
-          RustCompilerMain.class.getResourceAsStream("/rust-prelude/" + resource)) {
+          RustCompilerMain.class.getResourceAsStream(
+              "/rust-prelude/" + target.resourceDirectory() + "/" + resource)) {
         if (in == null) {
           throw new UncheckedIOException(new IOException("Missing bundled resource: " + resource));
         }
@@ -164,13 +208,16 @@ public final class RustCompilerMain {
       modulesByDir.computeIfAbsent(dir, k -> new HashSet<>()).add(moduleName);
     }
 
-    void writeModDeclarations(Path outDir) throws IOException {
+    void writeModDeclarations(Path outDir, Target target) throws IOException {
       Set<List<String>> allDirs = new HashSet<>(childDirs.keySet());
       allDirs.addAll(modulesByDir.keySet());
       for (List<String> dir : allDirs) {
         StringBuilder sb = new StringBuilder();
         if (dir.isEmpty()) {
           sb.append("pub mod vajram_rt;\n");
+          if (target == Target.WASM) {
+            sb.append("pub mod wasm_dispatch;\n");
+          }
         }
         for (String child : childDirs.getOrDefault(dir, Set.of()).stream().sorted().toList()) {
           sb.append("pub mod ").append(child).append(";\n");

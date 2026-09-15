@@ -1,3 +1,7 @@
+---
+title: "vajram-fory-codegen"
+---
+
 # vajram-fory-codegen
 
 **Annotation-processor codegen for the Apache Fory SerdeProtocol extension**

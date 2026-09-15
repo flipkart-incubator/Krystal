@@ -8,7 +8,7 @@ plugins {
 
 dependencies {
     implementation platform("com.flipkart.krystal:lattice-bom:${lattice_version}")
-    implementation enforcedPlatform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
+    implementation enforcedPlatform(libs.quarkus.bom)
     krystalModelsGenProcessor platform("com.flipkart.krystal:lattice-bom:${lattice_version}")
 
     implementation 'com.flipkart.krystal:lattice-core'
@@ -18,6 +18,10 @@ dependencies {
     implementation 'com.flipkart.krystal:vajram-json'
     implementation 'com.flipkart.krystal:vajram-java-sdk'
     implementation 'com.flipkart.krystal:vajram-graphql'
+    // GraphQL client query-facade feature: main-source client models under
+    // src/main/java/.../client exercise <Op>QueryFacade generation against this module's
+    // existing Schema.graphqls (used from GraphQlEndpointsE2eTest).
+    implementation 'com.flipkart.krystal:vajram-graphql-client'
     implementation 'com.graphql-java:graphql-java:24.3'
     implementation 'com.graphql-java:graphql-java-extended-scalars:24.0'
     implementation 'io.quarkus:quarkus-smallrye-context-propagation'
@@ -31,19 +35,21 @@ dependencies {
     krystalModelsGenProcessor 'com.flipkart.krystal:lattice-quarkus-codegen'
     krystalModelsGenProcessor 'com.flipkart.krystal:vajram-graphql-codegen'
     krystalModelsGenProcessor 'com.flipkart.krystal:lattice-graphql-codegen'
+    // GraphQL client query-facade feature: generates <Op>QueryFacade classes for the main-source
+    // client models under src/main/java/.../client.
+    krystalModelsGenProcessor 'com.flipkart.krystal:vajram-graphql-client-codegen'
 
 
     runtimeOnly 'jakarta.servlet:jakarta.servlet-api'
     implementation 'jakarta.inject:jakarta.inject-api'
 
-    compileOnly "org.projectlombok:lombok:$lombok_version"
-    annotationProcessor "org.projectlombok:lombok:$lombok_version"
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
 
     testImplementation platform('org.assertj:assertj-bom:3.27.7')
     testImplementation 'org.assertj:assertj-core'
 
     testImplementation 'io.quarkus:quarkus-junit5'
-
 }
 
 //Configure compilation tasks to read graphQl schemas
@@ -91,18 +97,6 @@ processResources.configure {
 
 tasks.named('compileQuarkusTestGeneratedSourcesJava') {
     enabled = false
-}
-
-configurations {
-    krystalModelsGenProcessorPath {
-        attributes {
-            attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.class, Category.LIBRARY));
-            attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.class, Usage.JAVA_RUNTIME));
-            attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.class, LibraryElements.JAR));
-            attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling.class, Bundling.EXTERNAL));
-            attribute(TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE, objects.named(TargetJvmEnvironment.class, TargetJvmEnvironment.STANDARD_JVM));
-        }
-    }
 }
 
 checkerFramework {

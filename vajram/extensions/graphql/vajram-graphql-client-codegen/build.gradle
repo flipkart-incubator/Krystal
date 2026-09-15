@@ -1,0 +1,16 @@
+description = "Annotation processor that generates type-safe GraphQL client request-facade classes from a GraphQL SDL schema"
+
+dependencies {
+    implementation project(':vajram:extensions:graphql:vajram-graphql-client')
+    implementation project(':vajram:extensions:graphql:vajram-graphql-schema-common')
+    implementation project(':krystal-codegen-common')
+    implementation project(':vajram:vajram-codegen-common')
+
+    implementation 'com.squareup:javapoet'
+    implementation 'com.graphql-java:graphql-java'
+    implementation 'com.google.auto.service:auto-service-annotations'
+    annotationProcessor 'com.google.auto.service:auto-service'
+
+    testImplementation project(':vajram:extensions:json:vajram-json')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}

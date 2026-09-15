@@ -7,7 +7,7 @@ import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.graphql.samples.dummy.Dummy_Id;
-import com.flipkart.krystal.vajram.graphql.samples.dummy.Dummy_Id_ImmutGQlResp;
+import com.flipkart.krystal.vajram.graphql.samples.dummy.Dummy_Id_ImmutGQlServerResp;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Vajram
@@ -24,6 +24,6 @@ public abstract class GetDummyIdForOrder extends ComputeVajramDef<Dummy_Id> {
     if ("boom".equals(name)) {
       throw new RuntimeException("GetDummyIdForOrder failed for name=boom");
     }
-    return Dummy_Id_ImmutGQlResp._builder().dummyId(id.id() + "_dummy_1")._build();
+    return Dummy_Id_ImmutGQlServerResp._builder().dummyId(id.id() + "_dummy_1")._build();
   }
 }

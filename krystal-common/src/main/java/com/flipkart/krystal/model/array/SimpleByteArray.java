@@ -1,5 +1,6 @@
 package com.flipkart.krystal.model.array;
 
+import java.nio.charset.Charset;
 import java.util.Arrays;
 
 /**
@@ -31,6 +32,10 @@ public final class SimpleByteArray extends ByteArrayBase {
    */
   public static SimpleByteArray backedBy(byte... data) {
     return new SimpleByteArray(data);
+  }
+
+  public static SimpleByteArray fromString(String data, Charset charset) {
+    return new SimpleByteArray(data.getBytes(charset));
   }
 
   private SimpleByteArray(byte[] data) {

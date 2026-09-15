@@ -1,0 +1,11 @@
+description = "Shared GraphQL SDL schema-parsing/type-mapping code, reused by GraphQL client and server codegen"
+
+dependencies {
+    implementation project(':krystal-codegen-common')
+
+    implementation 'com.squareup:javapoet'
+    implementation 'com.graphql-java:graphql-java'
+    implementation 'com.google.guava:guava'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}

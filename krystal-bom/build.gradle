@@ -29,6 +29,9 @@ dependencies {
         api 'com.flipkart.krystal:vajram-fory-codegen:' + project.krystal_version
         api 'com.flipkart.krystal:vajram-graphql:' + project.krystal_version
         api 'com.flipkart.krystal:vajram-graphql-codegen:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-graphql-schema-common:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-graphql-client:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-graphql-client-codegen:' + project.krystal_version
         api 'com.flipkart.krystal:vajram-sql:' + project.krystal_version
         api 'com.flipkart.krystal:vajram-sql-codegen:' + project.krystal_version
         api 'com.flipkart.krystal:vajram-sql-vertx:' + project.krystal_version

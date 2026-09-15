@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.lang.rust.plugin;
 
 import com.flipkart.krystal.vajram.lang.rust.ast.SourceLocation;
 import com.flipkart.krystal.vajram.lang.rust.ast.VajramFile;
+import com.flipkart.krystal.vajram.lang.rust.cli.RustCompilerMain.Target;
 import com.flipkart.krystal.vajram.lang.rust.diag.Diagnostics;
 import com.flipkart.krystal.vajram.lang.rust.resolve.SymbolTable;
 import java.io.IOException;
@@ -17,18 +18,21 @@ public final class AnnotationProcessorContext {
   private final Path outputDir;
   private final SymbolTable symbolTable;
   private final Diagnostics diagnostics;
+  private final Target target;
 
   public AnnotationProcessorContext(
       List<VajramFile> matchingVajrams,
       List<VajramFile> compilationVajrams,
       Path outputDir,
       SymbolTable symbolTable,
-      Diagnostics diagnostics) {
+      Diagnostics diagnostics,
+      Target target) {
     this.matchingVajrams = List.copyOf(matchingVajrams);
     this.compilationVajrams = List.copyOf(compilationVajrams);
     this.outputDir = outputDir;
     this.symbolTable = symbolTable;
     this.diagnostics = diagnostics;
+    this.target = target;
   }
 
   public List<VajramFile> matchingVajrams() {
@@ -41,6 +45,10 @@ public final class AnnotationProcessorContext {
 
   public SymbolTable symbolTable() {
     return symbolTable;
+  }
+
+  public Target target() {
+    return target;
   }
 
   public void error(SourceLocation location, String message) {

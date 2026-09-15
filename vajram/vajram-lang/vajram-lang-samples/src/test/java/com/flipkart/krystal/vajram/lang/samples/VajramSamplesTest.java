@@ -26,7 +26,7 @@ class VajramSamplesTest {
 
   @Test
   void helloWorld2() throws Exception {
-    assertEquals("Hello again from vajram-lang!", runVajram("helloWorld2"));
+    assertEquals("Hello again from vajram-lang, Mister!", runVajram("helloWorld2", "--name", "Mister"));
   }
 
   @Test
@@ -34,7 +34,8 @@ class VajramSamplesTest {
     Path file = Files.createTempFile("vajram-head-file-", ".txt");
     try {
       Files.writeString(file, "hello cafe");
-      assertEquals("hello", runVajram("headFile", "5", file.toString()));
+      assertEquals(
+          "hello", runVajram("headFile", "--numChars", "5", "--filePath", file.toString()));
     } finally {
       Files.deleteIfExists(file);
     }
@@ -45,7 +46,9 @@ class VajramSamplesTest {
     Path file = Files.createTempFile("vajram-multi-head-", ".txt");
     try {
       Files.writeString(file, "hello cafe");
-      assertEquals("hello cafe|hello cafe", runVajram("multiHeadFiles", "|", file.toString()));
+      assertEquals(
+          "hello cafe|hello cafe",
+          runVajram("multiHeadFiles", "--separator", "|", "--filePath", file.toString()));
     } finally {
       Files.deleteIfExists(file);
     }
@@ -58,7 +61,16 @@ class VajramSamplesTest {
     try {
       Files.writeString(first, "hello");
       Files.writeString(second, "cafe");
-      assertEquals("hello|cafe", runVajram("twoHeadFiles", "|", first.toString(), second.toString()));
+      assertEquals(
+          "hello|cafe",
+          runVajram(
+              "twoHeadFiles",
+              "--separator",
+              "|",
+              "--filePath1",
+              first.toString(),
+              "--filePath2",
+              second.toString()));
     } finally {
       Files.deleteIfExists(first);
       Files.deleteIfExists(second);
@@ -70,12 +82,15 @@ class VajramSamplesTest {
     command[0] = "target/debug/vajram-lang-samples";
     command[1] = vajram;
     System.arraycopy(arguments, 0, command, 2, arguments.length);
-    return run(command).trim();
+    return run(command).trim().lines().reduce((ignored, last) -> last).orElse("");
   }
 
   private static String run(String... command) throws Exception {
     Process process =
-        new ProcessBuilder(command).directory(GENERATED_RUST.toFile()).redirectErrorStream(true).start();
+        new ProcessBuilder(command)
+            .directory(GENERATED_RUST.toFile())
+            .redirectErrorStream(true)
+            .start();
     String output = new String(process.getInputStream().readAllBytes());
     assertEquals(0, process.waitFor(), output);
     return output;

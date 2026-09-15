@@ -18,7 +18,7 @@ public abstract class GetOrderItemNames extends ComputeVajramDef<GetOrderItemNam
 
   @Output
   static GetOrderItemNames_Fields orderItemNames(Order_Id id) {
-    return GetOrderItemNames_Fields_ImmutGQlResp._builder()
+    return GetOrderItemNames_Fields_ImmutGQlServerResp._builder()
         .orderItemNames(
             Errable.withValue(
                 List.of(Errable.withValue(id.id() + "_1"), Errable.withValue(id.id() + "_2"))))

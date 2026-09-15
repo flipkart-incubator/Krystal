@@ -1,21 +1,18 @@
 package com.flipkart.krystal.vajram.json;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.BeanProperty;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.deser.ContextualDeserializer;
-import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.NonNil;
-import java.io.IOException;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.BeanProperty;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.JavaType;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ValueDeserializer;
+import tools.jackson.databind.deser.std.StdDeserializer;
+import tools.jackson.databind.module.SimpleModule;
+import tools.jackson.databind.ser.std.StdSerializer;
 
 /**
  * A Jackson module that provides serialization and deserialization support for {@link Errable}.
@@ -47,22 +44,25 @@ final class ErrableModule extends SimpleModule {
   @SuppressWarnings("rawtypes")
   private static final class ErrableSerializer extends StdSerializer<Errable> {
 
+    @SuppressWarnings("unchecked")
     ErrableSerializer() {
       super(Errable.class);
     }
 
     @Override
-    public void serialize(Errable value, JsonGenerator gen, SerializerProvider provider)
-        throws IOException {
+    public void serialize(Errable value, JsonGenerator gen, SerializationContext context) {
       if (value instanceof NonNil<?> nonNil) {
-        provider.defaultSerializeValue(nonNil.value(), gen);
+        Object nonNilValue = nonNil.value();
+        context
+            .findRootValueSerializer(nonNilValue.getClass())
+            .serialize(nonNilValue, gen, context);
       } else {
-        gen.writeNull();
+        context.findNullValueSerializer(null).serialize(null, gen, context);
       }
     }
 
     @Override
-    public boolean isEmpty(SerializerProvider provider, Errable value) {
+    public boolean isEmpty(SerializationContext provider, Errable value) {
       // Nil and Failure are treated as absent (no JSON field emitted when NON_ABSENT is configured)
       return !(value instanceof NonNil<?>);
     }
@@ -73,19 +73,18 @@ final class ErrableModule extends SimpleModule {
    * deserializer and wraps it in {@link Errable#withValue}.
    */
   @SuppressWarnings("rawtypes")
-  private static final class ErrableDeserializer extends StdDeserializer<Errable>
-      implements ContextualDeserializer {
+  private static final class ErrableDeserializer extends StdDeserializer<Errable> {
 
-    private final @Nullable JsonDeserializer<Object> innerDeserializer;
+    private final @Nullable ValueDeserializer<Object> innerDeserializer;
 
-    ErrableDeserializer(@Nullable JsonDeserializer<Object> innerDeserializer) {
+    ErrableDeserializer(@Nullable ValueDeserializer<Object> innerDeserializer) {
       super(Errable.class);
       this.innerDeserializer = innerDeserializer;
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public Errable<?> deserialize(JsonParser p, DeserializationContext ctx) throws IOException {
+    public Errable<?> deserialize(JsonParser p, DeserializationContext ctx) {
       Object value =
           innerDeserializer != null
               ? innerDeserializer.deserialize(p, ctx)
@@ -100,15 +99,16 @@ final class ErrableModule extends SimpleModule {
 
     @Override
     @SuppressWarnings("unchecked")
-    public JsonDeserializer<?> createContextual(DeserializationContext ctx, BeanProperty property)
-        throws JsonMappingException {
-      JavaType type = ctx.getContextualType();
+    public ValueDeserializer<?> createContextual(
+        DeserializationContext context, BeanProperty property) {
+      JavaType type = context.getContextualType();
       if (type == null && property != null) {
         type = property.getType();
       }
       if (type != null && type.hasGenericTypes()) {
         JavaType innerType = type.containedType(0);
-        JsonDeserializer<Object> inner = ctx.findContextualValueDeserializer(innerType, property);
+        ValueDeserializer<Object> inner =
+            context.findContextualValueDeserializer(innerType, property);
         return new ErrableDeserializer(inner);
       }
       return this;

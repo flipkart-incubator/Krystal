@@ -5,7 +5,7 @@ plugins {
 description = "Quarkus extension for Lattice - Facilitates using Quarkus to power Lattice Apps"
 
 dependencies {
-    api platform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
+    api platform(libs.quarkus.bom)
 
     api project(':lattice:lattice-core')
     api 'io.quarkus:quarkus-arc'

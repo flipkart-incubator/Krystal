@@ -5,7 +5,6 @@ import static com.flipkart.krystal.vajram.graphql.samples.order.GetOrderSummary.
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig;
@@ -23,6 +22,56 @@ import com.flipkart.krystal.vajram.graphql.api.execution.GraphQlExecutionFacade;
 import com.flipkart.krystal.vajram.graphql.api.schema.GraphQlInitializer;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
 import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate_Req;
+import com.flipkart.krystal.vajram.graphql.client.GraphQlSpecRequest;
+import com.flipkart.krystal.vajram.graphql.samples.client.DummyIdOnly;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetNameByStringOp;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetNameByStringOp_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetNameByStringOp_SpecReq;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetNameByStringVariables_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetNameByValueOp;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetNameByValueOp_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetNameByValueOp_SpecReq;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetNameByValueVariables_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderDummiesFanoutOp;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderDummiesFanoutOp_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderDummiesFanoutOp_SpecReq;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderDummiesFanoutVariables_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderDummyFanoutOp;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderDummyFanoutOp_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderDummyFanoutOp_SpecReq;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderDummyFanoutVariables_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderExecutionOp;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderExecutionOp_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderExecutionOp_SpecReq;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderExecutionVariables_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderItemFanoutOp;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderItemFanoutOp_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderItemFanoutOp_SpecReq;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderItemFanoutVariables_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderNoArgDummiesFanoutOp;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderNoArgDummiesFanoutOp_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderNoArgDummiesFanoutOp_SpecReq;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderNoArgDummiesFanoutVariables_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderWithAliasedFragmentOp;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderWithAliasedFragmentOp_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderWithAliasedFragmentOp_SpecReq;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderWithAliasedFragmentVariables_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderWithDummiesOp;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderWithDummiesOp_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderWithDummiesOp_SpecReq;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderWithDummiesVariables_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderWithFragmentOp;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderWithFragmentOp_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderWithFragmentOp_SpecReq;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrderWithFragmentVariables_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrdersAliasedOp;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrdersAliasedOp_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrdersAliasedOp_SpecReq;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrdersAliasedVariables_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrdersWithFragmentOp;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrdersWithFragmentOp_ImmutJson;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrdersWithFragmentOp_SpecReq;
+import com.flipkart.krystal.vajram.graphql.samples.client.GetOrdersWithFragmentVariables_ImmutJson;
 import com.flipkart.krystal.vajram.graphql.samples.query.Query_GQlAggr_Req;
 import com.flipkart.krystal.vajram.graphql.samples.state.State;
 import com.flipkart.krystal.vajram.json.Json;
@@ -83,62 +132,41 @@ public class VajramGraphQlTest {
   }
 
   @Test
-  void graphqlQueryExecution_succeeds() throws JsonProcessingException {
+  void graphqlQueryExecution_succeeds() {
     CompletableFuture<ExecutionResult> result;
     try (VajramKryonExecutor executor = createExecutor()) {
+      GetOrderExecutionVariables_ImmutJson variables =
+          GetOrderExecutionVariables_ImmutJson._builder()
+              .orderId("order1")
+              .dummyId("dummy1")
+              .userId("user1")
+              ._build();
       result =
           new GraphQlExecutionFacade(GRAPHQL)
               .executeGraphQl(
                   executor,
                   VajramExecutionConfig.builder().build(),
-                  new GraphQLQuery(
-                      """
-                      query {
-                        order(id: "order1") {
-                          orderItemNames
-                          nameString
-                          state
-                          stateDuplicate
-                          orderPlacedAt
-                          orderItemsCount
-                          orderAcceptDate
-                          __typename
-                        }
-                        dummy(dummyId: "dummy1") {
-                          name
-                          age
-                          f1
-                          __typename
-                        }
-                        mostRecentOrder(userId: "user1") {
-                          orderItemNames
-                        }
-                        __typename
-                      }
-                      """,
-                      Map.of()));
+                  toGraphQLQuery(GetOrderExecutionOp_SpecReq.of(variables)));
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
     ExecutionResult executionResult = result.join();
     @SuppressWarnings("unchecked")
-    Map<String, Object> queryData = requireNonNull((Map<String, Object>) executionResult.getData());
-    @SuppressWarnings("unchecked")
-    Map<String, Object> orderData = requireNonNull((Map<String, Object>) queryData.get("order"));
-    @SuppressWarnings("unchecked")
-    Map<String, Object> dummyData = requireNonNull((Map<String, Object>) queryData.get("dummy"));
-    @SuppressWarnings("unchecked")
-    Map<String, Object> mostRecentOrderData =
-        requireNonNull((Map<String, Object>) queryData.get("mostRecentOrder"));
-    assertThat(orderData.get("orderItemNames")).isEqualTo(List.of("order1_1", "order1_2"));
-    assertThat(orderData.get("nameString")).isEqualTo("testOrderName");
-    assertThat(orderData.get("stateDuplicate")).isEqualTo(orderData.get("state"));
-    assertThat(orderData.get("__typename")).isEqualTo("Order");
-    assertThat(orderData.get("orderItemsCount")).isEqualTo(Long.MAX_VALUE);
-    assertThat(orderData.get("orderPlacedAt")).isEqualTo(UNIX_EPOCH_DATE_TIME);
-    assertThat(orderData.get("orderAcceptDate")).isEqualTo(UNIX_EPOCH_DATE);
-    assertThat(dummyData.get("__typename")).isEqualTo("Dummy");
-    assertThat(mostRecentOrderData.get("orderItemNames"))
+    Map<String, Object> queryData = requireNonNull(executionResult.getData());
+    GetOrderExecutionOp_ImmutJson result1 =
+        Json.MAPPER.convertValue(queryData, GetOrderExecutionOp_ImmutJson.class);
+    GetOrderExecutionOp response = result1;
+
+    assertThat(response.order().orderItemNames()).isEqualTo(List.of("order1_1", "order1_2"));
+    assertThat(response.order().nameString()).isEqualTo("testOrderName");
+    assertThat(response.order().stateDuplicate()).isEqualTo(response.order().state());
+    assertThat(response.order().typename()).isEqualTo("Order");
+    assertThat(response.order().orderItemsCount()).isEqualTo(Long.MAX_VALUE);
+    assertThat(response.order().orderPlacedAt()).isEqualTo(UNIX_EPOCH_DATE_TIME);
+    assertThat(response.order().orderAcceptDate()).isEqualTo(UNIX_EPOCH_DATE);
+    assertThat(response.dummy().typename()).isEqualTo("Dummy");
+    assertThat(response.mostRecentOrder().orderItemNames())
         .isEqualTo(List.of("MostRecentOrderOf_user1_1", "MostRecentOrderOf_user1_2"));
+    assertThat(response.typename()).isEqualTo("Query");
 
     System.out.println(
         Json.OBJECT_WRITER
@@ -153,104 +181,78 @@ public class VajramGraphQlTest {
     // non-null ones.
     CompletableFuture<ExecutionResult> result;
     try (VajramKryonExecutor executor = createExecutor()) {
+      GetNameByValueVariables_ImmutJson variables =
+          GetNameByValueVariables_ImmutJson._builder().value("v1").string("s1")._build();
       result =
           new GraphQlExecutionFacade(GRAPHQL)
               .executeGraphQl(
                   executor,
                   VajramExecutionConfig.builder().build(),
-                  new GraphQLQuery(
-                      """
-                      query {
-                        name(value: "v1", string: "s1") {
-                          value
-                          string
-                        }
-                      }
-                      """,
-                      Map.of()));
+                  toGraphQLQuery(GetNameByValueOp_SpecReq.of(variables)));
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
     ExecutionResult executionResult = result.join();
     @SuppressWarnings("unchecked")
     Map<String, Object> queryData = requireNonNull(executionResult.getData());
-    @SuppressWarnings("unchecked")
-    Map<String, Object> nameData = requireNonNull((Map<String, Object>) queryData.get("name"));
-    assertThat(nameData.get("value")).isEqualTo("v1");
-    assertThat(nameData.get("string")).isEqualTo("s1");
+    GetNameByValueOp_ImmutJson result1 =
+        Json.MAPPER.convertValue(queryData, GetNameByValueOp_ImmutJson.class);
+    GetNameByValueOp response = result1;
+    assertThat(response.name().value()).isEqualTo("v1");
+    assertThat(response.name().string()).isEqualTo("s1");
   }
 
   @Test
   void inferIdFromArgs_withOptionalIdFieldHavingNoArgAtAll_leavesItUnset() {
     // `nameByString` doesn't declare a `value` arg at all; Name's optional `value` @idField must
     // simply be left absent, not cause a build-time or run-time failure.
-    CompletableFuture<ExecutionResult> result;
+    CompletableFuture<ExecutionResult> future;
     try (VajramKryonExecutor executor = createExecutor()) {
-      result =
+      GetNameByStringVariables_ImmutJson variables =
+          GetNameByStringVariables_ImmutJson._builder().string("s1")._build();
+      future =
           new GraphQlExecutionFacade(GRAPHQL)
               .executeGraphQl(
                   executor,
                   VajramExecutionConfig.builder().build(),
-                  new GraphQLQuery(
-                      """
-                      query {
-                        nameByString(string: "s1") {
-                          value
-                          string
-                        }
-                      }
-                      """,
-                      Map.of()));
+                  toGraphQLQuery(GetNameByStringOp_SpecReq.of(variables)));
     }
-    assertThat(result).succeedsWithin(TEST_TIMEOUT);
-    ExecutionResult executionResult = result.join();
-    @SuppressWarnings("unchecked")
-    Map<String, Object> queryData = requireNonNull((Map<String, Object>) executionResult.getData());
-    @SuppressWarnings("unchecked")
-    Map<String, Object> nameData =
-        requireNonNull((Map<String, Object>) queryData.get("nameByString"));
-    assertThat(nameData.get("value")).isNull();
-    assertThat(nameData.get("string")).isEqualTo("s1");
+    assertThat(future).succeedsWithin(TEST_TIMEOUT);
+    ExecutionResult executionResult = future.join();
+    GetNameByStringOp response =
+        Json.MAPPER.convertValue(executionResult.getData(), GetNameByStringOp_ImmutJson.class);
+    assertThat(response.nameByString().value()).isNull();
+    assertThat(response.nameByString().string()).isEqualTo("s1");
   }
 
   @Test
-  void graphqlQueryWithQueryLevelAliases_succeeds() throws JsonProcessingException {
+  void graphqlQueryWithQueryLevelAliases_succeeds() {
     // Two aliases for the same arg-bearing `order` field at query level, each with a different id
     CompletableFuture<ExecutionResult> result;
     try (VajramKryonExecutor executor = createExecutor()) {
+      GetOrdersAliasedVariables_ImmutJson variables =
+          GetOrdersAliasedVariables_ImmutJson._builder().o1Id("order1").o2Id("order2")._build();
       result =
           new GraphQlExecutionFacade(GRAPHQL)
               .executeGraphQl(
                   executor,
                   VajramExecutionConfig.builder().build(),
-                  new GraphQLQuery(
-                      """
-                      query {
-                        o1: order(id: "order1") {
-                          s: state
-                          orderItemNames
-                        }
-                        o2: order(id: "order2") {
-                          state
-                          orderItemNames
-                        }
-                      }
-                      """,
-                      Map.of()));
+                  toGraphQLQuery(GetOrdersAliasedOp_SpecReq.of(variables)));
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
     ExecutionResult executionResult = result.join();
     @SuppressWarnings("unchecked")
-    Map<String, Object> queryData = requireNonNull((Map<String, Object>) executionResult.getData());
-    @SuppressWarnings("unchecked")
-    Map<String, Object> o1Data = requireNonNull((Map<String, Object>) queryData.get("o1"));
-    @SuppressWarnings("unchecked")
-    Map<String, Object> o2Data = requireNonNull((Map<String, Object>) queryData.get("o2"));
+    Map<String, Object> queryData = requireNonNull(executionResult.getData());
+    GetOrdersAliasedOp_ImmutJson result1 =
+        Json.MAPPER.convertValue(queryData, GetOrdersAliasedOp_ImmutJson.class);
+    GetOrdersAliasedOp response = result1;
 
     // `s: state` alias resolves the `state` field under a different response key
-    assertThat(o1Data.get("s")).isEqualTo(State.COMPLETED);
-    assertThat(o1Data.get("orderItemNames")).isEqualTo(List.of("order1_1", "order1_2"));
-    assertThat(o2Data.get("state")).isEqualTo(State.COMPLETED);
-    assertThat(o2Data.get("orderItemNames")).isEqualTo(List.of("order2_1", "order2_2"));
+    assertThat(response.o1().s())
+        .isEqualTo(com.flipkart.krystal.vajram.graphql.samples.client.State.COMPLETED);
+    assertThat(response.o1().orderItemNames()).isEqualTo(List.of("order1_1", "order1_2"));
+    assertThat(response.o2().state())
+        .isEqualTo(com.flipkart.krystal.vajram.graphql.samples.client.State.COMPLETED);
+    assertThat(response.o2().orderItemNames()).isEqualTo(List.of("order2_1", "order2_2"));
   }
 
   @Test
@@ -258,42 +260,30 @@ public class VajramGraphQlTest {
     // Two aliases for the same arg-bearing `dummy(name)` field nested inside order
     CompletableFuture<ExecutionResult> result;
     try (VajramKryonExecutor executor = createExecutor()) {
+      GetOrderWithDummiesVariables_ImmutJson variables =
+          GetOrderWithDummiesVariables_ImmutJson._builder()
+              .id("order1")
+              .d1Name("foo")
+              .d2Name("bar")
+              ._build();
       result =
           new GraphQlExecutionFacade(GRAPHQL)
               .executeGraphQl(
                   executor,
                   VajramExecutionConfig.builder().build(),
-                  new GraphQLQuery(
-                      """
-                      query {
-                        order(id: "order1") {
-                          d1: dummy(name: "foo") {
-                            dummyId
-                          }
-                          d2: dummy(name: "bar") {
-                            dummyId
-                          }
-                        }
-                      }
-                      """,
-                      Map.of()));
+                  toGraphQLQuery(GetOrderWithDummiesOp_SpecReq.of(variables)));
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
     ExecutionResult executionResult = result.join();
     @SuppressWarnings("unchecked")
     Map<String, Object> queryData = requireNonNull(executionResult.getData());
-    @SuppressWarnings("unchecked")
-    Map<String, Object> orderData = requireNonNull((Map<String, Object>) queryData.get("order"));
+    GetOrderWithDummiesOp response =
+        Json.MAPPER.convertValue(queryData, GetOrderWithDummiesOp_ImmutJson.class);
 
-    // Both aliases map to separate Dummy responses keyed by alias
-    @SuppressWarnings("unchecked")
-    Map<String, Object> d1Data = requireNonNull((Map<String, Object>) orderData.get("d1"));
-    @SuppressWarnings("unchecked")
-    Map<String, Object> d2Data = requireNonNull((Map<String, Object>) orderData.get("d2"));
-
-    // GetDummyIdForOrder ignores `name` arg, always returns orderId_dummy_1
-    assertThat(d1Data.get("dummyId")).isEqualTo("order1_dummy_1");
-    assertThat(d2Data.get("dummyId")).isEqualTo("order1_dummy_1");
+    // GetDummyIdForOrder ignores `name` arg, always returns orderId_dummy_1; both aliases map to
+    // separate Dummy responses keyed by alias.
+    assertThat(response.order().d1().dummyId()).isEqualTo("order1_dummy_1");
+    assertThat(response.order().d2().dummyId()).isEqualTo("order1_dummy_1");
   }
 
   @Test
@@ -303,33 +293,31 @@ public class VajramGraphQlTest {
     // get back a distinct, argument-specific response - not a shared/one-to-one response.
     CompletableFuture<ExecutionResult> result;
     try (VajramKryonExecutor executor = createExecutor()) {
+      GetOrderItemFanoutVariables_ImmutJson variables =
+          GetOrderItemFanoutVariables_ImmutJson._builder()
+              .id("order1")
+              .i1Index(1)
+              .i2Index(2)
+              .f1Offset(10)
+              .f2Offset(20)
+              ._build();
       result =
           new GraphQlExecutionFacade(GRAPHQL)
               .executeGraphQl(
                   executor,
                   VajramExecutionConfig.builder().build(),
-                  new GraphQLQuery(
-                      """
-                      query {
-                        order(id: "order1") {
-                          i1: orderItemAt(index: 1)
-                          i2: orderItemAt(index: 2)
-                          f1: orderItemNamesFrom(offset: 10)
-                          f2: orderItemNamesFrom(offset: 20)
-                        }
-                      }
-                      """,
-                      Map.of()));
+                  toGraphQLQuery(GetOrderItemFanoutOp_SpecReq.of(variables)));
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
     Map<String, Object> queryData = requireNonNull(result.join().getData());
-    @SuppressWarnings("unchecked")
-    Map<String, Object> orderData = requireNonNull((Map<String, Object>) queryData.get("order"));
+    GetOrderItemFanoutOp result1 =
+        Json.MAPPER.convertValue(queryData, GetOrderItemFanoutOp_ImmutJson.class);
+    GetOrderItemFanoutOp response = result1;
 
-    assertThat(orderData.get("i1")).isEqualTo("order1_item_1");
-    assertThat(orderData.get("i2")).isEqualTo("order1_item_2");
-    assertThat(orderData.get("f1")).isEqualTo(List.of("order1_from_10_1", "order1_from_10_2"));
-    assertThat(orderData.get("f2")).isEqualTo(List.of("order1_from_20_1", "order1_from_20_2"));
+    assertThat(response.order().i1()).isEqualTo("order1_item_1");
+    assertThat(response.order().i2()).isEqualTo("order1_item_2");
+    assertThat(response.order().f1()).isEqualTo(List.of("order1_from_10_1", "order1_from_10_2"));
+    assertThat(response.order().f2()).isEqualTo(List.of("order1_from_20_1", "order1_from_20_2"));
   }
 
   @Test
@@ -341,43 +329,37 @@ public class VajramGraphQlTest {
     // the response, and it must not corrupt data returned for the succeeding alias.
     CompletableFuture<ExecutionResult> result;
     try (VajramKryonExecutor executor = createExecutor()) {
+      GetOrderDummiesFanoutVariables_ImmutJson variables =
+          GetOrderDummiesFanoutVariables_ImmutJson._builder()
+              .id("order1")
+              .okFilter(true)
+              .okPreferredType("fine")
+              .okCount(2)
+              .badFilter(true)
+              .badPreferredType("boom")
+              .badCount(2)
+              ._build();
       result =
           new GraphQlExecutionFacade(GRAPHQL)
               .executeGraphQl(
                   executor,
                   VajramExecutionConfig.builder().build(),
-                  new GraphQLQuery(
-                      """
-                      query {
-                        order(id: "order1") {
-                          ok: dummies(filter: true, preferredType: "fine", count: 2) {
-                            dummyId
-                          }
-                          bad: dummies(filter: true, preferredType: "boom", count: 2) {
-                            dummyId
-                          }
-                        }
-                      }
-                      """,
-                      Map.of()));
+                  toGraphQLQuery(GetOrderDummiesFanoutOp_SpecReq.of(variables)));
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
     ExecutionResult executionResult = result.join();
     Map<String, Object> queryData = requireNonNull(executionResult.getData());
-    @SuppressWarnings("unchecked")
-    Map<String, Object> orderData = requireNonNull((Map<String, Object>) queryData.get("order"));
+    GetOrderDummiesFanoutOp response =
+        Json.MAPPER.convertValue(queryData, GetOrderDummiesFanoutOp_ImmutJson.class);
 
     // The successful alias must retain its own 2 ids, unaffected by the sibling failure.
-    @SuppressWarnings("unchecked")
-    List<Map<String, Object>> okData = (List<Map<String, Object>>) orderData.get("ok");
-    assertThat(okData).isNotNull();
-    assertThat(okData.stream().map(m -> m.get("dummyId")).toList())
+    assertThat(response.order().ok()).isNotNull();
+    assertThat(response.order().ok().stream().map(DummyIdOnly::dummyId).toList())
         .isEqualTo(List.of("order1_dummy_1", "order1_dummy_2"));
 
-    // The failing alias's key must still be present in the response (per GraphQL spec: a
-    // nullable field that errors resolves to `null` with an entry in `errors`), not vanish.
-    assertThat(orderData.containsKey("bad")).isTrue();
-    assertThat(orderData.get("bad")).isNull();
+    // The failing alias resolves to `null` (per GraphQL spec: a nullable field that errors
+    // resolves to `null` with an entry in `errors`), not an exception.
+    assertThat(response.order().bad()).isNull();
     assertThat(executionResult.getErrors().isEmpty()).isFalse();
   }
 
@@ -389,39 +371,29 @@ public class VajramGraphQlTest {
     // succeeding alias's data must be unaffected.
     CompletableFuture<ExecutionResult> result;
     try (VajramKryonExecutor executor = createExecutor()) {
+      GetOrderDummyFanoutVariables_ImmutJson variables =
+          GetOrderDummyFanoutVariables_ImmutJson._builder()
+              .id("order1")
+              .okName("fine")
+              .badName("boom")
+              ._build();
       result =
           new GraphQlExecutionFacade(GRAPHQL)
               .executeGraphQl(
                   executor,
                   VajramExecutionConfig.builder().build(),
-                  new GraphQLQuery(
-                      """
-                      query {
-                        order(id: "order1") {
-                          ok: dummy(name: "fine") {
-                            dummyId
-                          }
-                          bad: dummy(name: "boom") {
-                            dummyId
-                          }
-                        }
-                      }
-                      """,
-                      Map.of()));
+                  toGraphQLQuery(GetOrderDummyFanoutOp_SpecReq.of(variables)));
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
     ExecutionResult executionResult = result.join();
     Map<String, Object> queryData = requireNonNull(executionResult.getData());
-    @SuppressWarnings("unchecked")
-    Map<String, Object> orderData = requireNonNull((Map<String, Object>) queryData.get("order"));
+    GetOrderDummyFanoutOp response =
+        Json.MAPPER.convertValue(queryData, GetOrderDummyFanoutOp_ImmutJson.class);
 
-    @SuppressWarnings("unchecked")
-    Map<String, Object> okData = (Map<String, Object>) orderData.get("ok");
-    assertThat(okData).isNotNull();
-    assertThat(okData.get("dummyId")).isEqualTo("order1_dummy_1");
+    assertThat(response.order().ok()).isNotNull();
+    assertThat(response.order().ok().dummyId()).isEqualTo("order1_dummy_1");
 
-    assertThat(orderData.containsKey("bad")).isTrue();
-    assertThat(orderData.get("bad")).isNull();
+    assertThat(response.order().bad()).isNull();
     assertThat(executionResult.getErrors().isEmpty()).isFalse();
   }
 
@@ -433,70 +405,50 @@ public class VajramGraphQlTest {
     // not silently disappear.
     CompletableFuture<ExecutionResult> result;
     try (VajramKryonExecutor executor = createExecutor()) {
+      GetOrderNoArgDummiesFanoutVariables_ImmutJson variables =
+          GetOrderNoArgDummiesFanoutVariables_ImmutJson._builder().id("orderBadDummies")._build();
       result =
           new GraphQlExecutionFacade(GRAPHQL)
               .executeGraphQl(
                   executor,
                   VajramExecutionConfig.builder().build(),
-                  new GraphQLQuery(
-                      """
-                      query {
-                        order(id: "orderBadDummies") {
-                          a1: noArgDummies {
-                            dummyId
-                          }
-                          a2: noArgDummies {
-                            dummyId
-                          }
-                        }
-                      }
-                      """,
-                      Map.of()));
+                  toGraphQLQuery(GetOrderNoArgDummiesFanoutOp_SpecReq.of(variables)));
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
     ExecutionResult executionResult = result.join();
     Map<String, Object> queryData = requireNonNull(executionResult.getData());
-    @SuppressWarnings("unchecked")
-    Map<String, Object> orderData = requireNonNull((Map<String, Object>) queryData.get("order"));
+    GetOrderNoArgDummiesFanoutOp_ImmutJson result1 =
+        Json.MAPPER.convertValue(queryData, GetOrderNoArgDummiesFanoutOp_ImmutJson.class);
+    GetOrderNoArgDummiesFanoutOp response = result1;
 
-    assertThat(orderData.containsKey("a1")).isTrue();
-    assertThat(orderData.get("a1")).isNull();
-    assertThat(orderData.containsKey("a2")).isTrue();
-    assertThat(orderData.get("a2")).isNull();
+    assertThat(response.order().a1()).isNull();
+    assertThat(response.order().a2()).isNull();
     assertThat(executionResult.getErrors().isEmpty()).isFalse();
   }
 
   @Test
   void graphqlQueryWithNamedFragment_noAliases_succeeds() {
-    // A named fragment spread on `Order`, with no aliases anywhere in the query.
+    // A named fragment (`OrderFieldsFragment`, spread via `OrderWithFragment`), with no aliases
+    // anywhere in the query.
     CompletableFuture<ExecutionResult> result;
     try (VajramKryonExecutor executor = createExecutor()) {
+      GetOrderWithFragmentVariables_ImmutJson variables =
+          GetOrderWithFragmentVariables_ImmutJson._builder().id("order1")._build();
       result =
           new GraphQlExecutionFacade(GRAPHQL)
               .executeGraphQl(
                   executor,
                   VajramExecutionConfig.builder().build(),
-                  new GraphQLQuery(
-                      """
-                      query {\
-                        order(id: "order1") {\
-                          ...orderFields\
-                        }
-                      }
-                      fragment orderFields on Order {
-                        state
-                        orderItemNames
-                      }
-                      """,
-                      Map.of()));
+                  toGraphQLQuery(GetOrderWithFragmentOp_SpecReq.of(variables)));
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
     Map<String, Object> queryData = requireNonNull(result.join().getData());
-    @SuppressWarnings("unchecked")
-    Map<String, Object> orderData = requireNonNull((Map<String, Object>) queryData.get("order"));
+    GetOrderWithFragmentOp response =
+        Json.MAPPER.convertValue(queryData, GetOrderWithFragmentOp_ImmutJson.class);
 
-    assertThat(orderData.get("state")).isEqualTo(State.COMPLETED);
-    assertThat(orderData.get("orderItemNames")).isEqualTo(List.of("order1_1", "order1_2"));
+    assertThat(response.order().state())
+        .isEqualTo(com.flipkart.krystal.vajram.graphql.samples.client.State.COMPLETED);
+    assertThat(response.order().orderItemNames()).isEqualTo(List.of("order1_1", "order1_2"));
   }
 
   @Test
@@ -505,73 +457,54 @@ public class VajramGraphQlTest {
     // alias must resolve the fragment's fields against its own argument-specific order.
     CompletableFuture<ExecutionResult> result;
     try (VajramKryonExecutor executor = createExecutor()) {
+      GetOrdersWithFragmentVariables_ImmutJson variables =
+          GetOrdersWithFragmentVariables_ImmutJson._builder()
+              .o1Id("order1")
+              .o2Id("order2")
+              ._build();
       result =
           new GraphQlExecutionFacade(GRAPHQL)
               .executeGraphQl(
                   executor,
                   VajramExecutionConfig.builder().build(),
-                  new GraphQLQuery(
-                      """
-                      query {
-                        o1: order(id: "order1") {
-                          ...orderFields
-                        }
-                        o2: order(id: "order2") {
-                          ...orderFields
-                        }
-                      }
-                      fragment orderFields on Order {
-                        state
-                        orderItemNames
-                      }
-                      """,
-                      Map.of()));
+                  toGraphQLQuery(GetOrdersWithFragmentOp_SpecReq.of(variables)));
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
     Map<String, Object> queryData = requireNonNull(result.join().getData());
-    @SuppressWarnings("unchecked")
-    Map<String, Object> o1Data = requireNonNull((Map<String, Object>) queryData.get("o1"));
-    @SuppressWarnings("unchecked")
-    Map<String, Object> o2Data = requireNonNull((Map<String, Object>) queryData.get("o2"));
+    GetOrdersWithFragmentOp response =
+        Json.MAPPER.convertValue(queryData, GetOrdersWithFragmentOp_ImmutJson.class);
 
-    assertThat(o1Data.get("state")).isEqualTo(State.COMPLETED);
-    assertThat(o1Data.get("orderItemNames")).isEqualTo(List.of("order1_1", "order1_2"));
-    assertThat(o2Data.get("state")).isEqualTo(State.COMPLETED);
-    assertThat(o2Data.get("orderItemNames")).isEqualTo(List.of("order2_1", "order2_2"));
+    assertThat(response.o1().state())
+        .isEqualTo(com.flipkart.krystal.vajram.graphql.samples.client.State.COMPLETED);
+    assertThat(response.o1().orderItemNames()).isEqualTo(List.of("order1_1", "order1_2"));
+    assertThat(response.o2().state())
+        .isEqualTo(com.flipkart.krystal.vajram.graphql.samples.client.State.COMPLETED);
+    assertThat(response.o2().orderItemNames()).isEqualTo(List.of("order2_1", "order2_2"));
   }
 
   @Test
   void graphqlQueryWithNamedFragment_havingFieldAliasesInsideFragment_succeeds() {
-    // Fields aliased *inside* the fragment definition itself (not at the spread site) must
-    // resolve under their aliased response keys.
+    // Fields aliased *inside* the fragment definition itself (`OrderFieldsAliasedFragment`, not
+    // at the spread site) must resolve under their aliased response keys.
     CompletableFuture<ExecutionResult> result;
     try (VajramKryonExecutor executor = createExecutor()) {
+      GetOrderWithAliasedFragmentVariables_ImmutJson variables =
+          GetOrderWithAliasedFragmentVariables_ImmutJson._builder().id("order1")._build();
       result =
           new GraphQlExecutionFacade(GRAPHQL)
               .executeGraphQl(
                   executor,
                   VajramExecutionConfig.builder().build(),
-                  new GraphQLQuery(
-                      """
-                      query {
-                        order(id: "order1") {
-                          ...orderFields
-                        }
-                      }
-                      fragment orderFields on Order {
-                        s: state
-                        names: orderItemNames
-                      }
-                      """,
-                      Map.of()));
+                  toGraphQLQuery(GetOrderWithAliasedFragmentOp_SpecReq.of(variables)));
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT);
     Map<String, Object> queryData = requireNonNull(result.join().getData());
-    @SuppressWarnings("unchecked")
-    Map<String, Object> orderData = requireNonNull((Map<String, Object>) queryData.get("order"));
+    GetOrderWithAliasedFragmentOp response =
+        Json.MAPPER.convertValue(queryData, GetOrderWithAliasedFragmentOp_ImmutJson.class);
 
-    assertThat(orderData.get("s")).isEqualTo(State.COMPLETED);
-    assertThat(orderData.get("names")).isEqualTo(List.of("order1_1", "order1_2"));
+    assertThat(response.order().s())
+        .isEqualTo(com.flipkart.krystal.vajram.graphql.samples.client.State.COMPLETED);
+    assertThat(response.order().names()).isEqualTo(List.of("order1_1", "order1_2"));
   }
 
   @Test
@@ -604,6 +537,21 @@ public class VajramGraphQlTest {
 
     assertThat(orderData.get("state")).isEqualTo(State.COMPLETED);
     assertThat(orderData.get("orderItemNames")).isEqualTo(List.of("order1_1", "order1_2"));
+  }
+
+  /**
+   * Converts a generated {@link GraphQlSpecRequest} into a {@link GraphQLQuery} for in-process
+   * execution via {@link GraphQlExecutionFacade}. {@code req.variables()} is the raw variables
+   * model instance (not a Map); it's converted here since all client models in {@code client/}
+   * declare {@code @SupportedModelProtocol(Json.class)}.
+   */
+  private static GraphQLQuery toGraphQLQuery(GraphQlSpecRequest req) {
+    @SuppressWarnings("unchecked")
+    Map<String, Object> variables =
+        Json.OBJECT_READER
+            .forType(Map.class)
+            .readValue(Json.OBJECT_WRITER.writeValueAsString(req.variables()));
+    return new GraphQLQuery(req.query(), variables);
   }
 
   private VajramKryonExecutor createExecutor() {

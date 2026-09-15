@@ -1,3 +1,7 @@
+---
+title: "vajram-protobuf2024e"
+---
+
 # vajram-protobuf2024e
 
 Krystal `SerdeProtocol` implementation for **protobuf edition 2024**.

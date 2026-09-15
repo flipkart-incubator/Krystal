@@ -1,3 +1,7 @@
+---
+title: Polymorphism in Krystal
+---
+
 # Polymorphism in Krystal: Traits and Dispatch Mechanisms
 
 ## Introduction to Traits

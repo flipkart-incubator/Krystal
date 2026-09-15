@@ -2,8 +2,6 @@ package com.flipkart.krystal.visualization.staticgraph;
 
 import static com.flipkart.krystal.visualization.staticgraph.StaticCallGraphHtml.generateStaticCallGraphHtml;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.InputMirror;
 import com.flipkart.krystal.krystex.KrystexGraph;
@@ -16,6 +14,7 @@ import com.flipkart.krystal.vajram.VajramDefRoot;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
+import com.flipkart.krystal.vajram.json.Json;
 import com.flipkart.krystal.visualization.staticgraph.models.Graph;
 import com.flipkart.krystal.visualization.staticgraph.models.GraphGenerationResult;
 import com.flipkart.krystal.visualization.staticgraph.models.Input;
@@ -44,8 +43,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 @Slf4j
 public class StaticCallGraphGenerator {
-
-  private static final ObjectMapper OBJECT_MAPPER = JsonMapper.builder().build();
 
   /**
    * Generates a static call graph from a VajramKryonGraph and returns the HTML content and
@@ -291,7 +288,7 @@ public class StaticCallGraphGenerator {
    */
   private static String graphToJson(Graph graph) {
     try {
-      return OBJECT_MAPPER.writeValueAsString(graph);
+      return Json.MAPPER.writeValueAsString(graph);
     } catch (Exception e) {
       throw new RuntimeException("Error converting graph data to JSON", e);
     }

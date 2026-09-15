@@ -10,6 +10,7 @@ import com.flipkart.krystal.vajram.lang.rust.ast.Field;
 import com.flipkart.krystal.vajram.lang.rust.ast.OutputBlock;
 import com.flipkart.krystal.vajram.lang.rust.ast.VajramDef;
 import com.flipkart.krystal.vajram.lang.rust.ast.VajramFile;
+import com.flipkart.krystal.vajram.lang.rust.cli.RustCompilerMain.Target;
 import com.flipkart.krystal.vajram.lang.rust.diag.Diagnostics;
 import com.flipkart.krystal.vajram.lang.rust.system.SystemVajram;
 import java.util.HashMap;
@@ -25,6 +26,11 @@ public final class Resolver {
   private Resolver() {}
 
   public static void validate(List<VajramFile> files, SymbolTable table, Diagnostics diagnostics) {
+    validate(files, table, diagnostics, Target.NATIVE);
+  }
+
+  public static void validate(
+      List<VajramFile> files, SymbolTable table, Diagnostics diagnostics, Target target) {
     for (VajramFile file : files) {
       VajramDef vajram = file.vajram();
       Map<String, Boolean> facetFanout = new HashMap<>();
@@ -33,13 +39,13 @@ public final class Resolver {
           checkFieldFanout(field, facetFanout, diagnostics);
           facetFanout.put(field.name(), field.fanout());
         } else if (facet instanceof Dependency dependency) {
-          checkInvocation(file, dependency.invocation(), table, diagnostics);
+          checkInvocation(file, dependency.invocation(), table, diagnostics, target);
           checkDependencyFanout(dependency, diagnostics);
           facetFanout.put(dependency.name(), dependency.fanout());
         }
       }
       if (vajram.outputBlock() instanceof OutputBlock.Delegate delegate) {
-        checkInvocation(file, delegate.invocation(), table, diagnostics);
+        checkInvocation(file, delegate.invocation(), table, diagnostics, target);
       }
     }
   }
@@ -78,11 +84,19 @@ public final class Resolver {
       VajramFile caller,
       DependencyInvocation invocation,
       SymbolTable table,
-      Diagnostics diagnostics) {
+      Diagnostics diagnostics,
+      Target target) {
     VajramFile callee = table.lookup(invocation.vajramName());
     if (callee == null) {
       var systemVajram = SystemVajram.lookup(invocation.vajramName(), caller.imports());
       if (systemVajram.isPresent()) {
+        if (!systemVajram.get().supports(target)) {
+          diagnostics.error(
+              invocation.location(),
+              "System Vajram '"
+                  + invocation.vajramName()
+                  + "' is not supported for the wasm target: browser file-picker support is not bundled");
+        }
         return;
       }
       diagnostics.error(

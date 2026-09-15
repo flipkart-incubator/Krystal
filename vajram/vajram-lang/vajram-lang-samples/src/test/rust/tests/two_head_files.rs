@@ -9,8 +9,11 @@ fn runs_two_head_files() {
     support::assert_vajram_output(
         "twoHeadFiles",
         &[
+            "--separator",
             "|",
+            "--filePath1",
             first.to_str().expect("temporary path must be UTF-8"),
+            "--filePath2",
             second.to_str().expect("temporary path must be UTF-8"),
         ],
         "hello|cafe",

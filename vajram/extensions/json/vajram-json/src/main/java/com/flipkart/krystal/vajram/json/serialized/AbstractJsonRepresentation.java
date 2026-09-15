@@ -13,12 +13,12 @@ abstract sealed class AbstractJsonRepresentation implements JsonRepresentation
   protected @MonotonicNonNull String string;
 
   @Override
-  public InputStream newInputStream() {
+  public InputStream _serialize() {
     return new ByteArrayInputStream(asBytes());
   }
 
   @Override
-  public String asString() {
+  public String _asString() {
     if (string == null) {
       string = new String(asBytes(), UTF_8);
     }

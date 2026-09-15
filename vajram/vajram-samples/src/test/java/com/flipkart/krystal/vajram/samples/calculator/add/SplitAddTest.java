@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
-import static com.fasterxml.jackson.annotation.JsonInclude.Value.ALL_NON_NULL;
 import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
@@ -13,11 +12,6 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig;
@@ -31,6 +25,7 @@ import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
+import com.flipkart.krystal.vajram.json.Json;
 import com.flipkart.krystal.vajram.samples.calculator.Formula;
 import com.flipkart.krystal.visualization.executiongraph.DefaultKryonExecutionReport;
 import com.flipkart.krystal.visualization.executiongraph.KryonExecutionReport;
@@ -59,19 +54,12 @@ class SplitAddTest {
   }
 
   private VajramGraph graph;
-  private ObjectMapper objectMapper;
   private Lease<SingleThreadExecutor> executorLease;
 
   @BeforeEach
   void setUp() throws LeaseUnavailableException {
     this.executorLease = EXEC_POOL.lease();
     graph = loadFromClasspath(Formula.class.getPackageName()).build();
-    objectMapper =
-        JsonMapper.builder()
-            .addModules(new JavaTimeModule(), new Jdk8Module())
-            .defaultPropertyInclusion(ALL_NON_NULL)
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-            .build();
   }
 
   @AfterEach
@@ -80,9 +68,10 @@ class SplitAddTest {
   }
 
   @Test
-  void splitAdder_success() throws Exception {
+  void splitAdder_success() {
     CompletableFuture<Integer> future;
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
+    SingleThreadExecutor executorService = executorLease.get();
     try (VajramKryonExecutor krystexVajramExecutor =
         KrystexGraph.builder()
             .vajramGraph(graph)
@@ -92,7 +81,7 @@ class SplitAddTest {
             .createExecutor(
                 KrystalExecutorConfig.builder()
                     .executorId("chainAdderTest")
-                    .executorService(executorLease.get())
+                    .executorService(executorService)
                     .configureWith(
                         new MainLogicExecReporter(kryonExecutionReport)
                             .defaultKryonExecutorConfigurator())
@@ -101,8 +90,11 @@ class SplitAddTest {
       future = executeVajram(krystexVajramExecutor, 0);
     }
     assertThat(future).succeedsWithin(ofSeconds(1)).isEqualTo(55);
+    // Wait for all commands to be finished so that we don't get Concurrent
+    // Modification Exceptions in kryonExecutionReport
+    executorService.submit(() -> {}).join();
     System.out.println(
-        objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(kryonExecutionReport));
+        Json.MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(kryonExecutionReport));
   }
 
   @Test

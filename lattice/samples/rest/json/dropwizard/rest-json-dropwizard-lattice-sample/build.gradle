@@ -39,11 +39,11 @@ dependencies {
     runtimeOnly 'jakarta.servlet:jakarta.servlet-api'
     implementation 'org.slf4j:slf4j-api:2.0.13'
 
-    compileOnly "org.projectlombok:lombok:$lombok_version"
+    compileOnly libs.lombok
     compileOnly 'com.google.auto.value:auto-value-annotations:1.11.0'
     annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
 
-    testCompileOnly "org.projectlombok:lombok:$lombok_version"
+    testCompileOnly libs.lombok
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
     testImplementation platform('org.assertj:assertj-bom:3.27.7')

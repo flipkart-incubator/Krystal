@@ -14,7 +14,6 @@ module krystal.vajram.extensions.graphql {
   requires org.checkerframework.checker.qual;
   requires com.graphqljava.extendedscalars;
   requires flipkart.krystal.vajram.ext.json;
-  requires com.fasterxml.jackson.databind;
   requires static lombok;
   requires java.compiler;
   requires jakarta.inject;

@@ -4,7 +4,7 @@ import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.logic.account.Account_Id;
 import com.flipkart.krystal.lattice.samples.graphql.rest.json.logic.person.Person_Id;
-import com.flipkart.krystal.lattice.samples.graphql.rest.json.logic.person.Person_Id_ImmutGQlResp;
+import com.flipkart.krystal.lattice.samples.graphql.rest.json.logic.person.Person_Id_ImmutGQlServerResp;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -19,6 +19,6 @@ public abstract class GetOwnerOfAccount extends ComputeVajramDef<Person_Id> {
 
   @Output
   static Person_Id outputLogic(Account_Id id) {
-    return Person_Id_ImmutGQlResp._builder().id("PRSN" + id.id())._build();
+    return Person_Id_ImmutGQlServerResp._builder().id("PRSN" + id.id())._build();
   }
 }

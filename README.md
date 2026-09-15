@@ -1,3 +1,7 @@
+---
+title: "The Krystal Project"
+---
+
 # The Krystal Project
 
 ## Latest Releases

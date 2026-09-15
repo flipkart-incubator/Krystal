@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajram.lang.rust.codegen;
 
+import java.nio.file.Path;
+
 /** camelCase (vajram-lang identifiers) &lt;-&gt; snake_case (Rust module/fn conventions). */
 public final class Naming {
 
@@ -23,5 +25,11 @@ public final class Naming {
 
   public static String capitalize(String s) {
     return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
+  }
+
+  public static String sourceModuleName(Path sourcePath) {
+    String fileName = sourcePath.getFileName().toString();
+    int extensionStart = fileName.lastIndexOf('.');
+    return toSnakeCase(extensionStart == -1 ? fileName : fileName.substring(0, extensionStart));
   }
 }

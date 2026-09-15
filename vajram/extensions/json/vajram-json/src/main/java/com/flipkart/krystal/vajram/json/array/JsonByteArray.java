@@ -1,10 +1,9 @@
 package com.flipkart.krystal.vajram.json.array;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.ObjectReader;
 import com.flipkart.krystal.model.array.ByteArrayBase;
-import java.io.IOException;
 import java.util.Arrays;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.ObjectReader;
 
 public final class JsonByteArray extends ByteArrayBase {
 
@@ -44,12 +43,12 @@ public final class JsonByteArray extends ByteArrayBase {
   }
 
   /** The ObjectReader must not modify the provided byte array. */
-  public <T> T readFromJson(ObjectReader reader) throws IOException {
+  public <T> T readFromJson(ObjectReader reader) {
     return reader.readValue(data);
   }
 
   /** The JsonGenerator must not modify the provided byte array. */
-  public void writeBase64ToJson(JsonGenerator generator) throws IOException {
+  public void writeBase64ToJson(JsonGenerator generator) {
     generator.writeBinary(data);
   }
 }

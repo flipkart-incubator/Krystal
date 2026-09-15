@@ -3,18 +3,36 @@
 use crate::vajram_rt::{Errable, VajramError};
 use std::rc::Rc;
 
-#[derive(Debug, Clone)]
-pub struct GetAvailableProductDetailsInputs {
-    pub productId: Rc<String>,
-}
+pub mod get_available_product_details {
+    use super::*;
 
-pub async fn call(
-    inputs: GetAvailableProductDetailsInputs,
-) -> Result<Rc<ProductDetails>, VajramError> {
-    let _isAvailable_inputs = inputs.clone();
-    let isAvailable = crate::vajram_rt::spawn_local_shared(async move {
-        crate::com::flipkart::krystal::vajram_lang::samples::products::is_product_available::call(crate::com::flipkart::krystal::vajram_lang::samples::products::is_product_available::IsProductAvailableInputs { productId: Rc::clone(&_isAvailable_inputs.productId) }).await
-    });
-    // NOTE: ignoring `skipIf` clause - not modeled by this compiler yet
-    return crate::com::flipkart::krystal::vajram_lang::samples::products::get_product_details::call(crate::com::flipkart::krystal::vajram_lang::samples::products::get_product_details::GetProductDetailsInputs { productId: Rc::clone(&inputs.productId) }).await.default(|it| { ProductDetails::new(inputs.productId) });
+    #[derive(Debug, Clone)]
+    pub struct GetAvailableProductDetailsInputs {
+        pub productId: Rc<String>,
+    }
+
+    pub async fn call<I: crate::vajram_rt::Injector + 'static>(
+        inputs: Vec<GetAvailableProductDetailsInputs>,
+        context: Rc<crate::vajram_rt::AppContext<I>>,
+    ) -> Result<Vec<Rc<ProductDetails>>, VajramError> {
+        futures::future::try_join_all(
+            inputs
+                .into_iter()
+                .map(|inputs| call_one(inputs, Rc::clone(&context))),
+        )
+        .await?
+    }
+
+    async fn call_one<I: crate::vajram_rt::Injector + 'static>(
+        inputs: GetAvailableProductDetailsInputs,
+        context: Rc<crate::vajram_rt::AppContext<I>>,
+    ) -> Result<Rc<ProductDetails>, VajramError> {
+        let _isAvailable_inputs = inputs.clone();
+        let _isAvailable_context = Rc::clone(&context);
+        let isAvailable = crate::vajram_rt::spawn_local_shared(async move {
+            (crate::com::flipkart::krystal::vajram_lang::samples::products::is_product_available::is_product_available::call(vec![crate::com::flipkart::krystal::vajram_lang::samples::products::is_product_available::is_product_available::IsProductAvailableInputs { productId: Rc::clone(&_isAvailable_inputs.productId) }], Rc::clone(&_isAvailable_context)).await).into_iter().next().expect("single-item Vajram batch")
+        });
+        // NOTE: ignoring `skipIf` clause - not modeled by this compiler yet
+        return (crate::com::flipkart::krystal::vajram_lang::samples::products::get_product_details::get_product_details::call(vec![crate::com::flipkart::krystal::vajram_lang::samples::products::get_product_details::get_product_details::GetProductDetailsInputs { productId: Rc::clone(&inputs.productId) }], Rc::clone(&di)).await).into_iter().next().expect("single-item Vajram batch").default(|it| { ProductDetails::new(inputs.productId) });
+    }
 }

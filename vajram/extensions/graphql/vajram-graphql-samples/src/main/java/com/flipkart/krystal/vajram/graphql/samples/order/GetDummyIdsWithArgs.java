@@ -7,7 +7,7 @@ import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.graphql.samples.dummy.Dummy_Id;
-import com.flipkart.krystal.vajram.graphql.samples.dummy.Dummy_Id_ImmutGQlResp;
+import com.flipkart.krystal.vajram.graphql.samples.dummy.Dummy_Id_ImmutGQlServerResp;
 import java.util.ArrayList;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -33,7 +33,7 @@ public abstract class GetDummyIdsWithArgs extends ComputeVajramDef<List<Dummy_Id
     }
     List<Dummy_Id> ids = new ArrayList<>();
     for (int i = 1; i <= (count == null ? 1 : count); i++) {
-      ids.add(Dummy_Id_ImmutGQlResp._builder().dummyId(id.id() + "_dummy_" + i)._build());
+      ids.add(Dummy_Id_ImmutGQlServerResp._builder().dummyId(id.id() + "_dummy_" + i)._build());
     }
     return ids;
   }

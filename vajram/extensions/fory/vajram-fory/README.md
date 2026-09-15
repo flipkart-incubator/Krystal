@@ -1,3 +1,7 @@
+---
+title: "vajram-fory"
+---
+
 # vajram-fory
 
 **Apache Fory SerdeProtocol for Krystal Vajram SDK**

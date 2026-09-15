@@ -1,3 +1,7 @@
+---
+title: "vajram-sql"
+---
+
 # vajram-sql
 
 Developer SDK for declaratively modeling SQL tables and query contracts in the Krystal framework.
