@@ -54,6 +54,7 @@ import com.flipkart.krystal.vajram.samples.calculator.divide.Divide_FacImmutPojo
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.LongAdder;
@@ -625,7 +626,7 @@ class FormulaTest {
         ImmutableMap.of(
                 vajramID,
                 new InputBatchingDecorator(
-                    inputBatcherSupplier, new VajramEpochGroups(ImmutableMap.of())))
+                    inputBatcherSupplier, new VajramEpochGroups(ImmutableMap.of()), Set.of()))
             ::get);
   }
 }

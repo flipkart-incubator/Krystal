@@ -43,8 +43,6 @@ import com.flipkart.krystal.krystex.commands.ForwardSendBatch;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.commands.ServerSideCommand;
 import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
-import com.flipkart.krystal.krystex.decoration.InitiableWithActiveDepChains;
-import com.flipkart.krystal.krystex.decoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecoratorConfig;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
@@ -182,7 +180,6 @@ public final class VajramKryonExecutor implements KrystalExecutor {
 
   private List<OutputLogicDecorator> getSortedOutputLogicDecorators(
       LogicDecorationContext logicDecorationContext) {
-    VajramID vajramID = logicDecorationContext.vajramID();
     DecorationOrdering decorationOrdering = executorConfig.decorationOrdering();
     ImmutableMap<String, Integer> decoratorIndices =
         decorationOrdering.outputLogicDecoratorIndices();
@@ -198,11 +195,6 @@ public final class VajramKryonExecutor implements KrystalExecutor {
           if (decoratorConfig.shouldDecorate().test(logicDecorationContext)) {
             OutputLogicDecorator outputLogicDecorator =
                 decoratorConfig.factory().apply(logicDecorationContext);
-            if (outputLogicDecorator
-                instanceof InitiableWithActiveDepChains initiableWithActiveDepChains) {
-              initiableWithActiveDepChains.initiateActiveDepChains(
-                  new InitiateActiveDepChains(vajramID, getDependentChains(vajramID)));
-            }
             if (outputLogicDecorator == null) {
               return;
             }
@@ -227,7 +219,7 @@ public final class VajramKryonExecutor implements KrystalExecutor {
     return sortedDecorators;
   }
 
-  private Set<DependentChain> getDependentChains(VajramID vajramID) {
+  Set<DependentChain> getDependentChains(VajramID vajramID) {
     return dependentChainsPerKryon.computeIfAbsent(
         vajramID,
         _v -> {
