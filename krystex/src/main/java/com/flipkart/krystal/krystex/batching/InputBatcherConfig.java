@@ -25,7 +25,7 @@ public record InputBatcherConfig(
               epochGroups
                   .vajramEpochGroups()
                   .getOrDefault(vajramID, new VajramEpochGroups(ImmutableMap.of())),
-              context.activeDependentChains());
+              context.activeDependentChains().get());
         });
   }
 }

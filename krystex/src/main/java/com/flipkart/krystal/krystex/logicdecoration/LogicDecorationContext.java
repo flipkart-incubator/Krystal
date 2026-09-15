@@ -5,9 +5,10 @@ import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
 import com.flipkart.krystal.tags.ElementTags;
 import java.util.Set;
+import java.util.function.Supplier;
 
 public record LogicDecorationContext(
     VajramID vajramID,
     ElementTags logicTags,
     KryonDefinitionRegistry kryonDefinitionRegistry,
-    Set<DependentChain> activeDependentChains) {}
+    Supplier<Set<DependentChain>> activeDependentChains) {}
