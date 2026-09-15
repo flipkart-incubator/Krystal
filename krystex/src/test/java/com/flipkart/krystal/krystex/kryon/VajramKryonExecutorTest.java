@@ -563,16 +563,19 @@ class VajramKryonExecutorTest {
     kGraph.inputBatcherStrategy(
         new CustomBatcherStrategy(
             new InputBatcherConfig(
-                ImmutableMap.of(
-                        vGraph.getVajramIdByVajramDefType(TestUserService.class),
-                        new InputBatchingDecorator(
-                            () -> new InputBatcherImpl(100),
-                            new VajramEpochGroups(ImmutableMap.of())),
-                        vGraph.getVajramIdByVajramDefType(FriendsService.class),
-                        new InputBatchingDecorator(
-                            () -> new InputBatcherImpl(100),
-                            new VajramEpochGroups(ImmutableMap.of())))
-                    ::get)));
+                key ->
+                    ImmutableMap.of(
+                            vGraph.getVajramIdByVajramDefType(TestUserService.class),
+                            new InputBatchingDecorator(
+                                () -> new InputBatcherImpl(100),
+                                new VajramEpochGroups(ImmutableMap.of()),
+                                Set.of()),
+                            vGraph.getVajramIdByVajramDefType(FriendsService.class),
+                            new InputBatchingDecorator(
+                                () -> new InputBatcherImpl(100),
+                                new VajramEpochGroups(ImmutableMap.of()),
+                                Set.of()))
+                        .get(key.vajramID()))));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (VajramKryonExecutor krystexVajramExecutor =
@@ -659,12 +662,13 @@ class VajramKryonExecutorTest {
     kGraph.inputBatcherStrategy(
         new CustomBatcherStrategy(
             new InputBatcherConfig(
-                ImmutableMap.of(
-                        vGraph.getVajramIdByVajramDefType(FriendsService.class),
-                        new FlushableDecoratorImpl(friendServiceFlushCommand),
-                        vGraph.getVajramIdByVajramDefType(TestUserService.class),
-                        new FlushableDecoratorImpl(userServiceFlushCommand))
-                    ::get)));
+                key ->
+                    ImmutableMap.of(
+                            vGraph.getVajramIdByVajramDefType(FriendsService.class),
+                            new FlushableDecoratorImpl(friendServiceFlushCommand),
+                            vGraph.getVajramIdByVajramDefType(TestUserService.class),
+                            new FlushableDecoratorImpl(userServiceFlushCommand))
+                        .get(key.vajramID()))));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (VajramKryonExecutor krystexVajramExecutor =
@@ -730,10 +734,10 @@ class VajramKryonExecutorTest {
       Class<? extends VajramDefRoot<?>> vajramType, Supplier<InputBatcher> inputBatcherSupplier) {
     VajramID vajramId = vGraph.getVajramIdByVajramDefType(vajramType);
     return new InputBatcherConfig(
-        _v ->
-            vajramId.equals(_v)
+        _c ->
+            vajramId.equals(_c.vajramID())
                 ? new InputBatchingDecorator(
-                    inputBatcherSupplier, new VajramEpochGroups(ImmutableMap.of()))
+                    inputBatcherSupplier, new VajramEpochGroups(ImmutableMap.of()), Set.of())
                 : null);
   }
 

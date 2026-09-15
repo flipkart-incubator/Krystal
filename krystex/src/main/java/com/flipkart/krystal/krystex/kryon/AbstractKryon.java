@@ -67,7 +67,8 @@ abstract sealed class AbstractKryon<
               new LogicDecorationContext(
                   vajramID,
                   kryonDefinition.getOutputLogicDefinition().tags(),
-                  kryonDefinition.kryonDefinitionRegistry()));
+                  kryonDefinition.kryonDefinitionRegistry(),
+                  kryonExecutor.getDependentChains(vajramID)));
     }
     return outputLogicDecorators;
   }

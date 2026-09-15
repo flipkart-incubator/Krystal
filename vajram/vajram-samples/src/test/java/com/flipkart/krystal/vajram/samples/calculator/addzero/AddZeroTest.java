@@ -24,6 +24,7 @@ import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.samples.calculator.add.Add;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -66,12 +67,14 @@ class AddZeroTest {
     kGraph.inputBatcherStrategy(
         new CustomBatcherStrategy(
             new InputBatcherConfig(
-                ImmutableMap.of(
-                        vajramID,
-                        new InputBatchingDecorator(
-                            () -> new InputBatcherImpl(100),
-                            new VajramEpochGroups(ImmutableMap.of())))
-                    ::get)));
+                key ->
+                    ImmutableMap.of(
+                            vajramID,
+                            new InputBatchingDecorator(
+                                () -> new InputBatcherImpl(100),
+                                new VajramEpochGroups(ImmutableMap.of()),
+                                Set.of()))
+                        .get(key.vajramID()))));
     try (VajramKryonExecutor krystexVajramExecutor =
         kGraph
             .build()
