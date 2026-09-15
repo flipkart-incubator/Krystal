@@ -5,11 +5,7 @@ import com.flipkart.krystal.krystex.kryondecoration.KryonDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecorator;
 
 public sealed interface Decorator
-    permits FlushableDecorator,
-        InitiableWithActiveDepChains,
-        DependencyDecorator,
-        KryonDecorator,
-        LogicDecorator {
+    permits FlushableDecorator, DependencyDecorator, KryonDecorator, LogicDecorator {
 
   /**
    * The identifier for this object which is used to prevent duplicate decorators decorating the

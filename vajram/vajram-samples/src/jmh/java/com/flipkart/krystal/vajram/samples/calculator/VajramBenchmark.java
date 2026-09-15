@@ -42,7 +42,6 @@ import com.google.common.collect.ImmutableSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
@@ -189,7 +188,6 @@ public class VajramBenchmark {
   private KrystexGraph chainAddGraph;
   private KrystexGraph chainAddBatchedGraph;
   private KrystexGraph multiAddGraph;
-  private TraitDispatchPolicies multiAddTraitDispatch;
 
   @Setup(Level.Trial)
   public void setUp() throws LeaseUnavailableException {
@@ -229,18 +227,17 @@ public class VajramBenchmark {
             Add.class);
 
     VajramGraph graph = VajramGraph.builder().loadClasses(MultiAdd.class, SimpleAdd.class).build();
-    multiAddTraitDispatch =
-        new TraitDispatchPolicies(
-            PredicateDispatchUtil.dispatchTrait(MultiAdd_Req.class, graph)
-                .conditionally(
-                    PredicateDispatchUtil.when(
-                            MultiAdd_Req.numbers_s, InputValueMatcher.isAnyValue())
-                        .to(SimpleAdd_Req.class)));
     multiAddGraph =
         KrystexGraph.builder()
             .vajramGraph(graph)
             .externallyInvocableVajramIds(ImmutableSet.of(MultiAdd_Req._VAJRAM_ID))
-            .traitDispatchPolicies(multiAddTraitDispatch)
+            .traitDispatchPolicies(
+                new TraitDispatchPolicies(
+                    PredicateDispatchUtil.dispatchTrait(MultiAdd_Req.class, graph)
+                        .conditionally(
+                            PredicateDispatchUtil.when(
+                                    MultiAdd_Req.numbers_s, InputValueMatcher.isAnyValue())
+                                .to(SimpleAdd_Req.class))))
             .build();
   }
 
@@ -253,31 +250,25 @@ public class VajramBenchmark {
   @Benchmark
   public int formula() {
     return execute(
-        formulaGraph, FORMULA_REQUEST, splitAddDisabledChains(splitAddGraph.vajramGraph()), null);
+        formulaGraph, FORMULA_REQUEST, splitAddDisabledChains(splitAddGraph.vajramGraph()));
   }
 
   @Benchmark
   public int formulaTenRequests() {
     return executeTenRequests(
-        formulaGraph, FORMULA_REQUEST, splitAddDisabledChains(splitAddGraph.vajramGraph()), null);
+        formulaGraph, FORMULA_REQUEST, splitAddDisabledChains(splitAddGraph.vajramGraph()));
   }
 
   @Benchmark
   public int splitAdd() {
     return execute(
-        splitAddGraph,
-        SPLIT_ADD_REQUEST,
-        splitAddDisabledChains(splitAddGraph.vajramGraph()),
-        null);
+        splitAddGraph, SPLIT_ADD_REQUEST, splitAddDisabledChains(splitAddGraph.vajramGraph()));
   }
 
   @Benchmark
   public int splitAddTenRequests() {
     return executeTenRequests(
-        splitAddGraph,
-        SPLIT_ADD_REQUEST,
-        splitAddDisabledChains(splitAddGraph.vajramGraph()),
-        null);
+        splitAddGraph, SPLIT_ADD_REQUEST, splitAddDisabledChains(splitAddGraph.vajramGraph()));
   }
 
   @Benchmark
@@ -285,8 +276,7 @@ public class VajramBenchmark {
     return execute(
         splitAddBatchedGraph,
         SPLIT_ADD_REQUEST,
-        splitAddDisabledChains(splitAddBatchedGraph.vajramGraph()),
-        null);
+        splitAddDisabledChains(splitAddBatchedGraph.vajramGraph()));
   }
 
   @Benchmark
@@ -294,26 +284,19 @@ public class VajramBenchmark {
     return executeTenRequests(
         splitAddBatchedGraph,
         SPLIT_ADD_REQUEST,
-        splitAddDisabledChains(splitAddBatchedGraph.vajramGraph()),
-        null);
+        splitAddDisabledChains(splitAddBatchedGraph.vajramGraph()));
   }
 
   @Benchmark
   public int chainAdd() {
     return execute(
-        chainAddGraph,
-        CHAIN_ADD_REQUEST,
-        chainAddDisabledChains(chainAddGraph.vajramGraph()),
-        null);
+        chainAddGraph, CHAIN_ADD_REQUEST, chainAddDisabledChains(chainAddGraph.vajramGraph()));
   }
 
   @Benchmark
   public int chainAddTenRequests() {
     return executeTenRequests(
-        chainAddGraph,
-        CHAIN_ADD_REQUEST,
-        chainAddDisabledChains(chainAddGraph.vajramGraph()),
-        null);
+        chainAddGraph, CHAIN_ADD_REQUEST, chainAddDisabledChains(chainAddGraph.vajramGraph()));
   }
 
   @Benchmark
@@ -321,8 +304,7 @@ public class VajramBenchmark {
     return execute(
         chainAddBatchedGraph,
         CHAIN_ADD_REQUEST,
-        chainAddDisabledChains(chainAddBatchedGraph.vajramGraph()),
-        null);
+        chainAddDisabledChains(chainAddBatchedGraph.vajramGraph()));
   }
 
   @Benchmark
@@ -330,19 +312,17 @@ public class VajramBenchmark {
     return executeTenRequests(
         chainAddBatchedGraph,
         CHAIN_ADD_REQUEST,
-        chainAddDisabledChains(chainAddBatchedGraph.vajramGraph()),
-        null);
+        chainAddDisabledChains(chainAddBatchedGraph.vajramGraph()));
   }
 
   @Benchmark
   public int multiAddWithSimpleAdd() {
-    return execute(multiAddGraph, MULTI_ADD_REQUEST, ImmutableSet.of(), multiAddTraitDispatch);
+    return execute(multiAddGraph, MULTI_ADD_REQUEST, ImmutableSet.of());
   }
 
   @Benchmark
   public int multiAddWithSimpleAddTenRequests() {
-    return executeTenRequests(
-        multiAddGraph, MULTI_ADD_REQUEST, ImmutableSet.of(), multiAddTraitDispatch);
+    return executeTenRequests(multiAddGraph, MULTI_ADD_REQUEST, ImmutableSet.of());
   }
 
   @SafeVarargs
@@ -464,24 +444,21 @@ public class VajramBenchmark {
   private int execute(
       KrystexGraph graph,
       Request<Integer> request,
-      ImmutableSet<DependentChain> disabledDependantChains,
-      TraitDispatchPolicies traitDispatchPolicies) {
-    return executeNTimes(graph, request, disabledDependantChains, traitDispatchPolicies, 1);
+      ImmutableSet<DependentChain> disabledDependantChains) {
+    return executeNTimes(graph, request, disabledDependantChains, 1);
   }
 
   private int executeTenRequests(
       KrystexGraph graph,
       Request<Integer> request,
-      ImmutableSet<DependentChain> disabledDependantChains,
-      TraitDispatchPolicies traitDispatchPolicies) {
-    return executeNTimes(graph, request, disabledDependantChains, traitDispatchPolicies, 10);
+      ImmutableSet<DependentChain> disabledDependantChains) {
+    return executeNTimes(graph, request, disabledDependantChains, 10);
   }
 
   private Integer executeNTimes(
       KrystexGraph graph,
       Request<Integer> request,
       ImmutableSet<DependentChain> disabledDependantChains,
-      @Nullable TraitDispatchPolicies traitDispatchPolicies,
       int times) {
     CompletableFuture<Integer>[] results = new CompletableFuture[times];
     try (VajramKryonExecutor executor =
