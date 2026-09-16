@@ -225,7 +225,8 @@ public final class VajramKryonExecutor implements KrystalExecutor {
         _v -> {
           Set<@NonNull DependentChain> depChainsForVajram =
               krystexGraph.dependentChainsByVajram().getOrDefault(vajramID, Set.of());
-          Set<DependentChain> filtered = new HashSet<>();
+          Set<DependentChain> activeDepChains = new HashSet<>();
+          outer:
           for (DependentChain depChain : depChainsForVajram) {
             VajramID firstVajram = depChain.getFirstVajram();
             if (firstVajram == null) {
@@ -240,12 +241,12 @@ public final class VajramKryonExecutor implements KrystalExecutor {
             }
             for (DependentChain disabledDepChain : disabledDependentChainsForExecutor()) {
               if (depChain.startsWith(disabledDepChain)) {
-                continue;
+                continue outer;
               }
             }
-            filtered.add(depChain);
+            activeDepChains.add(depChain);
           }
-          return unmodifiableSet(filtered);
+          return unmodifiableSet(activeDepChains);
         });
   }
 
