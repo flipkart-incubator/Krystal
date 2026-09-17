@@ -5,6 +5,7 @@ import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.annotati
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.getTypeParameters;
 import static com.flipkart.krystal.codegen.common.models.Constants.EMPTY_CODE_BLOCK;
 import static com.flipkart.krystal.facets.FacetType.DEPENDENCY;
+import static com.flipkart.krystal.facets.FacetType.INJECTION;
 import static com.flipkart.krystal.facets.FacetType.INPUT;
 import static com.flipkart.krystal.model.PlainJavaObject.POJO;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.BATCHED_OUTPUT_VAR;
@@ -163,6 +164,8 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeVariableName;
 import com.squareup.javapoet.WildcardTypeName;
+import jakarta.inject.Inject;
+import jakarta.inject.Qualifier;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -2282,7 +2285,76 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                       .build())
               .addStatement("this._request = _request._asBuilder()")
               .build());
+
+      addNativeInjectionSupport(classSpec, enclosingClassType, eligibleFacets, codeGenParams);
     }
+  }
+
+  /**
+   * Generates a {@code @jakarta.inject.Inject}-annotated Builder constructor which accepts only
+   * this vajram's {@code INJECTION}-typed facets (so that native, reflection-free DI frameworks
+   * like Dagger/Guice can construct a Builder pre-populated with those facets), plus an override of
+   * {@link FacetValuesBuilder#_mergeInjectedFacetsFrom} which copies those facets onto an existing
+   * (e.g. request-derived) Builder. See {@link
+   * com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider} for the older,
+   * reflection-based alternative this is meant to replace.
+   */
+  private void addNativeInjectionSupport(
+      TypeSpec.Builder classSpec,
+      ClassName enclosingClassType,
+      List<? extends FacetGenModel> eligibleFacets,
+      CodeGenParams codeGenParams) {
+    List<? extends FacetGenModel> injectedFacets =
+        eligibleFacets.stream().filter(f -> INJECTION.equals(f.facetType())).toList();
+    if (injectedFacets.isEmpty()) {
+      return;
+    }
+    ClassName builderType = enclosingClassType.nestedClass("Builder");
+
+    MethodSpec.Builder injectedConstructor = constructorBuilder().addAnnotation(Inject.class);
+    for (FacetGenModel facet : injectedFacets) {
+      FacetJavaType facetFieldType = vajramUtil.getFacetFieldType(facet);
+      List<AnnotationSpec> qualifierAnnotations =
+          facet.facetElement().getAnnotationMirrors().stream()
+              .filter(VajramCodeGenerator::isQualifierAnnotation)
+              .map(AnnotationSpec::get)
+              .toList();
+      injectedConstructor.addParameter(
+          ParameterSpec.builder(
+                  facetFieldType
+                      .javaTypeName(facet)
+                      .annotated(
+                          annotations(
+                              facetFieldType.additionalTypeAnnotations(facet, codeGenParams))),
+                  facet.name())
+              .addAnnotations(qualifierAnnotations)
+              .build());
+    }
+    if (codeGenParams.wrapsRequest()) {
+      injectedConstructor.addStatement(
+          "this._request = $T._builder()", currentVajramInfo().lite().reqImmutPojoClassName());
+    }
+    for (FacetGenModel facet : injectedFacets) {
+      injectedConstructor.addStatement("this.$L = $L", facet.name(), facet.name());
+    }
+    classSpec.addMethod(injectedConstructor.build());
+
+    MethodSpec.Builder mergeMethod =
+        methodBuilder("_mergeInjectedFacetsFrom")
+            .addAnnotation(Override.class)
+            .addModifiers(PUBLIC)
+            .returns(builderType)
+            .addParameter(FacetValuesBuilder.class, "injectedFacets")
+            .addStatement("$T _injected = ($T) injectedFacets", builderType, builderType);
+    for (FacetGenModel facet : injectedFacets) {
+      mergeMethod.addStatement("this.$L = _injected.$L()", facet.name(), facet.name());
+    }
+    mergeMethod.addStatement("return this");
+    classSpec.addMethod(mergeMethod.build());
+  }
+
+  private static boolean isQualifierAnnotation(AnnotationMirror annotationMirror) {
+    return annotationMirror.getAnnotationType().asElement().getAnnotation(Qualifier.class) != null;
   }
 
   private void createFacetGetter(
