@@ -521,8 +521,10 @@ public final class VajramKryonExecutor implements KrystalExecutor {
         log.info(
             "Returning empty response since dependentChain {} has been disabled", dependentChain);
         // Throwing exception here is causing extreme CPU wastage due to JIT deoptimization.
-        // So we return an empty response instead.
-        return emptyResponse();
+        // So we use the exception to fail the futures instead.
+        Exception exception = new DisabledDependentChainException(dependentChain);
+        kryonCommand.error(exception);
+        return failedFuture(exception);
       }
       validate();
       VajramID vajramID = kryonCommand.vajramID();
@@ -535,17 +537,6 @@ public final class VajramKryonExecutor implements KrystalExecutor {
     } finally {
       executionInfo.activeVajram(previousActiveVajram);
     }
-  }
-
-  private <R extends KryonCommandResponse> CompletableFuture<R> emptyResponse() {
-    @SuppressWarnings("unchecked")
-    R resp =
-        (R)
-            switch (executorConfig.kryonExecStrategy()) {
-              case BATCH -> BatchResponse.empty();
-              case DIRECT -> DirectResponse.instance();
-            };
-    return CompletableFuture.completedFuture(resp);
   }
 
   @SuppressWarnings("unchecked")
