@@ -8,7 +8,9 @@ import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.FacetValuesBuilder;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.KrystexGraph;
@@ -41,6 +43,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -119,6 +123,36 @@ class GreetTest {
     assertThat(analyticsEventSink.events).hasSize(1);
     out.println(
         Json.MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(kryonExecutionReport));
+  }
+
+  @Test
+  void greetingVajram_success_withNativeInjection() {
+    CompletableFuture<String> future;
+    RequestContext requestContext = new RequestContext(REQUEST_ID, USER_ID);
+    assertThat(analyticsEventSink.events).isEmpty();
+    // Instead of the reflection-based VajramInjectionProvider, this hands KrystexGraph a
+    // Function<VajramID, Supplier<FacetValuesBuilder>>: Guice constructs Greet_FacImmutPojo.Builder
+    // natively via its generated @Inject constructor (no per-facet dynamic lookup by Krystal).
+    Function<VajramID, Supplier<FacetValuesBuilder>> injectedFacetsSupplierProvider =
+        vajramId ->
+            VajramID.vajramID("Greet").equals(vajramId)
+                ? injector.getProvider(Greet_FacImmutPojo.Builder.class)::get
+                : null;
+    KrystexGraphBuilder kGraph = KrystexGraph.builder().vajramGraph(graph);
+    kGraph.injectedFacetsSupplierProvider(injectedFacetsSupplierProvider);
+    try (VajramKryonExecutor krystexVajramExecutor =
+        kGraph
+            .build()
+            .createExecutor(
+                KrystalExecutorConfig.builder()
+                    .executorId(REQUEST_ID)
+                    .executorService(executorLease.get()))) {
+      future = executeVajram(krystexVajramExecutor, requestContext);
+    }
+    assertThat(future)
+        .succeedsWithin(TIMEOUT)
+        .isEqualTo("Hello Firstname Lastname (user@123)! Hope you are doing well!");
+    assertThat(analyticsEventSink.events).hasSize(1);
   }
 
   private class GuiceModule extends AbstractModule {
