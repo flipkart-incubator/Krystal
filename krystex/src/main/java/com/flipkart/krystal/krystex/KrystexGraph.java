@@ -113,7 +113,8 @@ public final class KrystexGraph {
         new DefaultTraitDispatcher(this.vajramGraph, this.traitDispatchPolicies);
     this.dependentChainDisabler =
         requireNonNullElse(dependentChainDisabler, DependentChainDisabler.DISABLE_NONE);
-    this.injectionConfig = create(injectionProvider, this.vajramGraph);
+    this.injectionConfig =
+        create(injectionProvider, injectedFacetsSupplierProvider, this.vajramGraph);
     this.nativeInjectionConfig = create(injectedFacetsSupplierProvider, this.vajramGraph);
     this.externallyInvocableVajramIds =
         requireNonNullElseGet(
@@ -164,7 +165,9 @@ public final class KrystexGraph {
   }
 
   private static KryonExecutorConfigurator create(
-      @Nullable VajramInjectionProvider injectionProvider, VajramGraph vajramGraph) {
+      @Nullable VajramInjectionProvider injectionProvider,
+      @Nullable Function<VajramID, Supplier<FacetValuesBuilder>> injectedFacetsSupplierProvider,
+      VajramGraph vajramGraph) {
     if (injectionProvider == null) {
       return KryonExecutorConfigurator.NO_OP;
     }
@@ -179,7 +182,13 @@ public final class KrystexGraph {
           new KryonDecoratorConfig(
               decoratorType,
               /* shouldDecorate= */ executionContext ->
-                  isInjectionNeeded(executionContext, vajramGraph),
+                  isInjectionNeeded(executionContext, vajramGraph)
+                      // A vajram with a native supplier is handled entirely by
+                      // NativeVajramInjector; don't also run the legacy, reflection-based
+                      // lookup for it.
+                      && (injectedFacetsSupplierProvider == null
+                          || injectedFacetsSupplierProvider.apply(executionContext.vajramID())
+                              == null),
               /* instanceIdGenerator= *//* factory= */ decoratorContext ->
                   new KryonInputInjector(vajramGraph, injectionProvider)));
     };
