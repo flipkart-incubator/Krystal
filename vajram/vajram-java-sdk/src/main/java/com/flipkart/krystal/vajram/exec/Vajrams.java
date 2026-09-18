@@ -97,8 +97,12 @@ final class Vajrams {
                 .put(depInputName, inputResolver);
         if (existingResolver != null) {
           String errorMessage =
-              "Two resolvers cannot resolve the same dependency input. Resolvers: %s, resolving input (%s) for dependency name (%s)"
-                  .formatted(List.of(existingResolver, inputResolver), depInputName, depName);
+              "Two resolvers cannot resolve the same dependency input. Resolvers: %s, of vajram: %s resolving input (%s) for dependency name (%s)"
+                  .formatted(
+                      List.of(existingResolver, inputResolver),
+                      inputResolver.definition().target().dependency().ofVajramID(),
+                      depInputName,
+                      depName);
           throw new VajramDefinitionException(errorMessage);
         }
       }
