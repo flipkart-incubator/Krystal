@@ -119,3 +119,15 @@ include 'lattice:samples:mcp:quarkus:mcp-quarkus-lattice-sample'
 include 'lattice:samples:a2a:quarkus:a2a-quarkus-lattice-sample'
 include 'lattice:samples:rest:fory:quarkus:rest-fory-quarkus-lattice-sample'
 /* ******** SAMPLE PROJECTS : END *********** */
+
+
+
+// Load the gradle.private.properties file for dev-local settings
+def privateProperties = new Properties()
+def privatePropertiesFile = file('gradle.private.properties')
+if (privatePropertiesFile.exists()) {
+    new FileInputStream(privatePropertiesFile).withStream { stream -> privateProperties.load(stream) }
+}
+gradle.beforeProject { project ->
+    privateProperties.each { key, value -> project.ext.set(key.toString(), value) }
+}

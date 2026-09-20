@@ -25,13 +25,6 @@ ext {
     kordamp_jandex_version = '2.3.0'
 }
 
-// Load the gradle.private.properties file for dev-local settings
-def privateProperties = new Properties()
-def privatePropertiesFile = rootProject.file('gradle.private.properties')
-if (privatePropertiesFile.exists()) {
-    new FileInputStream(privatePropertiesFile).withStream { stream -> privateProperties.load(stream) }
-}
-
 group = 'com.flipkart.krystal'
 configure(subprojects.findAll {
     //Only leaf projects are of interest to us
@@ -123,10 +116,6 @@ configure(subprojects.findAll {
             required { System.getenv("CI") != null }
         }
     }
-}
-
-subprojects {
-    privateProperties.each { key, value -> project.extensions.extraProperties.set(key.toString(), value) }
 }
 
 configure(subprojects.findAll {
