@@ -626,7 +626,10 @@ class FormulaTest {
         ImmutableMap.of(
                 vajramID,
                 new InputBatchingDecorator(
-                    inputBatcherSupplier, new VajramEpochGroups(ImmutableMap.of()), Set.of()))
+                    vajramID,
+                    inputBatcherSupplier,
+                    new VajramEpochGroups(ImmutableMap.of()),
+                    Set.of()))
             ::get);
   }
 }

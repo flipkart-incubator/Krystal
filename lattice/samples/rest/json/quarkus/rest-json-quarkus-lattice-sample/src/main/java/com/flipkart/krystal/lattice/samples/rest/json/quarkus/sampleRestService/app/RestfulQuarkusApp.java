@@ -2,7 +2,6 @@ package com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService
 
 import static com.flipkart.krystal.lattice.core.execution.ThreadingStrategy.POOLED_NATIVE_THREAD_PER_REQUEST;
 
-import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.lattice.core.LatticeApp;
 import com.flipkart.krystal.lattice.core.LatticeApplication;
 import com.flipkart.krystal.lattice.core.doping.DopeWith;
@@ -19,7 +18,6 @@ import com.flipkart.krystal.lattice.krystex.KrystexDopantSpec.KrystexDopantSpecB
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.logic.RestGetMappingLatticeSample;
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.logic.RestHeadMappingLatticeSample;
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.logic.RestLatticeSample;
-import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.logic.RestPostComplexPathMatching;
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.logic.RestPostMappingLatticeSample;
 import com.flipkart.krystal.lattice.samples.rest.json.quarkus.sampleRestService.logic.RestStreamingSample;
 import com.flipkart.krystal.lattice.vajram.VajramDopantSpec;
@@ -47,16 +45,7 @@ public abstract class RestfulQuarkusApp extends LatticeApplication {
 
   @DopeWith
   public static VajramDopantSpecBuilder vajramGraph() {
-    return VajramDopantSpec.builder()
-        .vajramGraphBuilder(
-            VajramGraph.builder()
-                .loadClasses(
-                    RestLatticeSample.class,
-                    RestGetMappingLatticeSample.class,
-                    RestPostMappingLatticeSample.class,
-                    RestPostComplexPathMatching.class,
-                    RestHeadMappingLatticeSample.class,
-                    RestStreamingSample.class));
+    return VajramDopantSpec.builder();
   }
 
   @DopeWith

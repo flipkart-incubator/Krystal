@@ -3,6 +3,7 @@ package com.flipkart.krystal.krystex.batching;
 import static com.flipkart.krystal.except.KrystalCompletionException.wrapAsCompletionException;
 
 import com.flipkart.krystal.core.OutputLogicExecutionInput;
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
@@ -33,15 +34,18 @@ public final class InputBatchingDecorator implements OutputLogicDecorator, Flush
   private final List<InputBatcher> sharedInputBatchersByEpoch;
   private final Map<DependentChain, InputBatcher> simpleInputBatchersByDepChain =
       new LinkedHashMap<>();
+  private final VajramID vajramID;
   private final Supplier<InputBatcher> inputBatcherFactory;
   private final Map<DependentChain, Integer> epochByDepChain = new LinkedHashMap<>();
   private final List<Set<DependentChain>> dependentChainsToFlushByEpoch = new ArrayList<>();
   private @MonotonicNonNull OutputLogicExecutionInput outputLogicExecutionInput;
 
   public InputBatchingDecorator(
+      VajramID vajramID,
       Supplier<InputBatcher> inputBatcherFactory,
       VajramEpochGroups vajramEpochGroups,
       Set<DependentChain> activeDependentChains) {
+    this.vajramID = vajramID;
     this.inputBatcherFactory = inputBatcherFactory;
     ImmutableMap<Integer, EpochGroup> depChainsByEpoch = vajramEpochGroups.depChainsByEpochGroup();
     this.sharedInputBatchersByEpoch = new ArrayList<>(depChainsByEpoch.size());
@@ -81,8 +85,8 @@ public final class InputBatchingDecorator implements OutputLogicDecorator, Flush
               f -> {
                 if (!(f.facetValues() instanceof BatchEnabledFacetValues)) {
                   throw new IllegalStateException(
-                      "Expected to receive instance of BatchEnabledFacetValues in batcher for %s but received %s"
-                          .formatted(context.vajramID(), f));
+                      "Expected to receive instance of BatchEnabledFacetValues in batcher for %s but received %s in batching decorator of vajram %s"
+                          .formatted(context.vajramID(), f, vajramID));
                 }
               });
       List<BatchedFacets> batchedFacetsList = new ArrayList<>();
@@ -129,7 +133,8 @@ public final class InputBatchingDecorator implements OutputLogicDecorator, Flush
         return;
       } else {
         throw new AssertionError(
-            "The decorateLogic was never invoked but facetsList is not empty. This should not be possible");
+            "The decorateLogic was never invoked but facetsList is not empty. This should not be possible. Vajram: %s"
+                .formatted(vajramID));
       }
     } else {
       try {
