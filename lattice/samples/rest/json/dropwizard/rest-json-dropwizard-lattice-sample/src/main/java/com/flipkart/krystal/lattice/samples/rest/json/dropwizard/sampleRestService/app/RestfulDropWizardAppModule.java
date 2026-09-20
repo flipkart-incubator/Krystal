@@ -5,6 +5,7 @@ import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.VajramGraph.VajramGraphBuilder;
 import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.logic.RestGetMappingLatticeSample;
+import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.logic.RestGetMappingLatticeSample2;
 import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.logic.RestHeadMappingLatticeSample;
 import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.logic.RestLatticeSample;
 import com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestService.logic.RestPostComplexPathMatching;
@@ -26,7 +27,8 @@ public class RestfulDropWizardAppModule extends AbstractModule {
             RestPostMappingLatticeSample.class,
             RestPostComplexPathMatching.class,
             RestHeadMappingLatticeSample.class,
-            RestStreamingSample.class);
+            RestStreamingSample.class,
+            RestGetMappingLatticeSample2.class);
   }
 
   @Provides
