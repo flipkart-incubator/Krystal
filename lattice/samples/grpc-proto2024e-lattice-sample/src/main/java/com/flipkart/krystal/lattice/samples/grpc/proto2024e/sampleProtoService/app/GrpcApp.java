@@ -3,7 +3,6 @@ package com.flipkart.krystal.lattice.samples.grpc.proto2024e.sampleProtoService.
 import static com.flipkart.krystal.lattice.core.execution.ThreadingStrategy.POOLED_NATIVE_THREAD_PER_REQUEST;
 import static com.flipkart.krystal.lattice.ext.grpc.GrpcServerDopant.grpcServer;
 
-import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.lattice.core.LatticeApp;
 import com.flipkart.krystal.lattice.core.LatticeApplication;
 import com.flipkart.krystal.lattice.core.doping.DopeWith;
@@ -44,12 +43,7 @@ public abstract class GrpcApp extends LatticeApplication {
 
   @DopeWith
   public static VajramDopantSpecBuilder vajramDopantSpecBuilder() {
-    return VajramDopantSpec.builder()
-        .vajramGraphBuilder(
-            VajramGraph.builder()
-                .loadFromPackage(
-                    "com.flipkart.krystal.lattice.samples.proto2024e.sampleProtoService.app")
-                .loadClasses(Proto2024eLatticeSample.class));
+    return VajramDopantSpec.builder();
   }
 
   @DopeWith

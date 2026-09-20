@@ -2,7 +2,6 @@ package com.flipkart.krystal.lattice.samples.graphql.rest.json;
 
 import static com.flipkart.krystal.lattice.core.execution.ThreadingStrategy.POOLED_NATIVE_THREAD_PER_REQUEST;
 
-import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
 import com.flipkart.krystal.krystex.traits.DefaultTraitDispatcher;
 import com.flipkart.krystal.lattice.core.LatticeApp;
@@ -25,7 +24,6 @@ import com.flipkart.krystal.lattice.krystex.KrystexDopantSpec.KrystexDopantSpecB
 import com.flipkart.krystal.lattice.vajram.VajramDopantSpec;
 import com.flipkart.krystal.lattice.vajram.VajramDopantSpec.VajramDopantSpecBuilder;
 import com.flipkart.krystal.vajram.graphql.api.GraphQlModule;
-import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
 
 @GraphQlModule
 @LatticeApp(
@@ -41,11 +39,7 @@ public abstract class SampleGraphQlServerApp extends LatticeApplication {
 
   @DopeWith
   static VajramDopantSpecBuilder vajrams() {
-    return VajramDopantSpec.builder()
-        .vajramGraphBuilder(
-            VajramGraph.builder()
-                .loadFromPackage("com.flipkart.krystal.lattice.samples.graphql.rest.json")
-                .loadClasses(GraphQlOperationAggregate.class, HttpPostGraphQl.class));
+    return VajramDopantSpec.builder();
   }
 
   @DopeWith

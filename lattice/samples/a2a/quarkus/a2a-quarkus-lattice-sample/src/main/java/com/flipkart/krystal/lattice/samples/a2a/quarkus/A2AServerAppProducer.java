@@ -1,5 +1,9 @@
 package com.flipkart.krystal.lattice.samples.a2a.quarkus;
 
+import com.flipkart.krystal.krystex.KrystexGraph;
+import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
+import com.flipkart.krystal.krystex.VajramGraph;
+import com.flipkart.krystal.krystex.VajramGraph.VajramGraphBuilder;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
 import java.util.List;
@@ -17,7 +21,7 @@ import org.a2aproject.sdk.spec.AgentSkill;
  * so no additional configuration is needed.
  */
 @ApplicationScoped
-public class SampleAgentCardProducer {
+public class A2AServerAppProducer {
 
   @Produces
   @PublicAgentCard
@@ -53,5 +57,18 @@ public class SampleAgentCardProducer {
                     .examples(List.of("Hello world"))
                     .build()))
         .build();
+  }
+
+  @Produces
+  @ApplicationScoped
+  public VajramGraphBuilder vajramGraphBuilder() {
+    return VajramGraph.builder()
+        .loadFromPackage("com.flipkart.krystal.lattice.samples.a2a.quarkus.logic");
+  }
+
+  @Produces
+  @ApplicationScoped
+  public KrystexGraphBuilder krystexGraphBuilder() {
+    return KrystexGraph.builder();
   }
 }

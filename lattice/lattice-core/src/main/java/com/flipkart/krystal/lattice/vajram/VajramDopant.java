@@ -1,6 +1,7 @@
 package com.flipkart.krystal.lattice.vajram;
 
 import com.flipkart.krystal.krystex.VajramGraph;
+import com.flipkart.krystal.krystex.VajramGraph.VajramGraphBuilder;
 import com.flipkart.krystal.lattice.core.di.Produces;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
 import com.flipkart.krystal.lattice.core.doping.SimpleDopant;
@@ -20,7 +21,7 @@ public final class VajramDopant implements SimpleDopant {
   private final VajramGraph vajramGraph;
 
   @Inject
-  VajramDopant(VajramDopantSpec vajramDopantSpec) {
-    this.vajramGraph = vajramDopantSpec.vajramGraphBuilder().build();
+  VajramDopant(VajramGraphBuilder vajramGraphBuilder, VajramDopantSpec vajramDopantSpec) {
+    this.vajramGraph = vajramGraphBuilder.build();
   }
 }
