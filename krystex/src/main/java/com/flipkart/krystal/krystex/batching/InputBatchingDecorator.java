@@ -8,8 +8,6 @@ import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import com.flipkart.krystal.krystex.decoration.FlushableDecorator;
-import com.flipkart.krystal.krystex.decoration.InitiableWithActiveDepChains;
-import com.flipkart.krystal.krystex.decoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.epochs.EpochGroup;
 import com.flipkart.krystal.krystex.epochs.VajramEpochGroups;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
@@ -19,7 +17,6 @@ import com.flipkart.krystal.vajram.batching.BatchEnabledFacetValues;
 import com.flipkart.krystal.vajram.batching.BatchedFacets;
 import com.flipkart.krystal.vajram.batching.InputBatcher;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -29,8 +26,7 @@ import java.util.Set;
 import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
-public final class InputBatchingDecorator
-    implements OutputLogicDecorator, FlushableDecorator, InitiableWithActiveDepChains {
+public final class InputBatchingDecorator implements OutputLogicDecorator, FlushableDecorator {
 
   public static final String DECORATOR_TYPE = InputBatchingDecorator.class.getName();
 
@@ -38,24 +34,31 @@ public final class InputBatchingDecorator
   private final Map<DependentChain, InputBatcher> simpleInputBatchersByDepChain =
       new LinkedHashMap<>();
   private final Supplier<InputBatcher> inputBatcherFactory;
-  private final ImmutableMap<Integer, EpochGroup> depChainsByEpoch;
   private final Map<DependentChain, Integer> epochByDepChain = new LinkedHashMap<>();
   private final List<Set<DependentChain>> dependentChainsToFlushByEpoch = new ArrayList<>();
   private @MonotonicNonNull OutputLogicExecutionInput outputLogicExecutionInput;
 
   public InputBatchingDecorator(
-      Supplier<InputBatcher> inputBatcherFactory, VajramEpochGroups vajramEpochGroups) {
+      Supplier<InputBatcher> inputBatcherFactory,
+      VajramEpochGroups vajramEpochGroups,
+      Set<DependentChain> activeDependentChains) {
     this.inputBatcherFactory = inputBatcherFactory;
     ImmutableMap<Integer, EpochGroup> depChainsByEpoch = vajramEpochGroups.depChainsByEpochGroup();
-    this.depChainsByEpoch = depChainsByEpoch;
     this.sharedInputBatchersByEpoch = new ArrayList<>(depChainsByEpoch.size());
     int localEpoch = 0;
     for (var epochGroup : depChainsByEpoch.values()) {
-      this.sharedInputBatchersByEpoch.add(inputBatcherFactory.get());
+      Set<DependentChain> depChainsToFlush = new LinkedHashSet<>();
       for (DependentChain dependentChain : epochGroup.dependentChains()) {
-        epochByDepChain.put(dependentChain, localEpoch);
+        if (activeDependentChains.contains(dependentChain)) {
+          epochByDepChain.put(dependentChain, localEpoch);
+          depChainsToFlush.add(dependentChain);
+        }
       }
-      localEpoch++;
+      if (!depChainsToFlush.isEmpty()) {
+        this.sharedInputBatchersByEpoch.add(inputBatcherFactory.get());
+        this.dependentChainsToFlushByEpoch.add(depChainsToFlush);
+        localEpoch++;
+      }
     }
   }
 
@@ -113,17 +116,6 @@ public final class InputBatchingDecorator
     }
     if (dependentChainsToFlush.isEmpty()) {
       getInputBatcher(dependentChain).batch();
-    }
-  }
-
-  @Override
-  public void initiateActiveDepChains(InitiateActiveDepChains initiateActiveDepChains) {
-    for (EpochGroup epochGroup : depChainsByEpoch.values()) {
-      Set<DependentChain> dependentChains = epochGroup.dependentChains();
-      dependentChainsToFlushByEpoch.add(
-          new LinkedHashSet<>(
-              // Retain only the ones which are applicable for this epoch
-              Sets.intersection(dependentChains, initiateActiveDepChains.dependentChains())));
     }
   }
 
