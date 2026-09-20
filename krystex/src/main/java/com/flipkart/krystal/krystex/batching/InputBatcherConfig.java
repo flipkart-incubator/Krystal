@@ -21,6 +21,7 @@ public record InputBatcherConfig(
         context -> {
           VajramID vajramID = context.vajramID();
           return new InputBatchingDecorator(
+              vajramID,
               () -> new InputBatcherImpl(batchSizeSupplier.getBatchSize(vajramID)),
               epochGroups
                   .vajramEpochGroups()

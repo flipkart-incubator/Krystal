@@ -71,6 +71,7 @@ class AddZeroTest {
                     ImmutableMap.of(
                             vajramID,
                             new InputBatchingDecorator(
+                                vajramID,
                                 () -> new InputBatcherImpl(100),
                                 new VajramEpochGroups(ImmutableMap.of()),
                                 Set.of()))
