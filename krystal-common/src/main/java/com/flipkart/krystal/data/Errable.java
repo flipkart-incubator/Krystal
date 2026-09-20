@@ -19,7 +19,7 @@ public sealed interface Errable<T> permits Success, Failure {
   CompletableFuture<@Nullable T> toFuture();
 
   /** Completes the future with the state of this errable */
-  void completeFuture(CompletableFuture<T> future);
+  void completeFuture(CompletableFuture<@Nullable T> future);
 
   @Nullable T value();
 
