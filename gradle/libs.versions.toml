@@ -10,9 +10,9 @@ protobuf = '4.36.0'
 resilience4j = '2.4.0'
 slf4j = '2.0.18'
 
-quarkus = '3.33.3.1' # Latest LTS release Note:3.33.3.2 needs to updated soon
+quarkus = '3.33.3.2' # Latest LTS release. Ref: https://quarkus.io/releases/
 # This is the version of vertx compatible with the above version of quarkus. Upgrade only in sync with quarkus version
-# Source: https://github.com/quarkusio/quarkus-platform/blob/3.37/generated-platform-project/quarkus/bom/pom.xml
+# Source: https://github.com/quarkusio/quarkus-platform/blob/3.33/generated-platform-project/quarkus/bom/pom.xml
 # As can be seen in the above file, all vertx dependencies (<groupId>io.vertx</groupId>) have been pinned to the following version
 vertx = '4.5.31'
 
