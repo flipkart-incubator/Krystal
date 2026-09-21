@@ -12,7 +12,6 @@ import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraver
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Collections.unmodifiableList;
-import static java.util.Collections.unmodifiableSet;
 import static java.util.Objects.requireNonNullElse;
 import static java.util.Objects.requireNonNullElseGet;
 import static java.util.concurrent.CompletableFuture.allOf;
@@ -31,22 +30,27 @@ import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponseFuture;
 import com.flipkart.krystal.except.KrystalCompletionException;
+import com.flipkart.krystal.except.SkippedExecutionException;
 import com.flipkart.krystal.except.StackTracingStrategy;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig;
 import com.flipkart.krystal.krystex.KrystalExecutorConfig.KrystalExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.KrystexGraph;
 import com.flipkart.krystal.krystex.commands.DirectForwardCommand;
+import com.flipkart.krystal.krystex.commands.DirectForwardReceive;
 import com.flipkart.krystal.krystex.commands.DirectForwardSend;
 import com.flipkart.krystal.krystex.commands.ForwardReceiveBatch;
 import com.flipkart.krystal.krystex.commands.ForwardSendBatch;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.commands.ServerSideCommand;
 import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
+import com.flipkart.krystal.krystex.decoration.FlushCommand;
+import com.flipkart.krystal.krystex.decoration.FlushableDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecoratorConfig;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
 import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
+import com.flipkart.krystal.krystex.epochs.EpochGroups;
 import com.flipkart.krystal.krystex.internal.KrystalExecutorExecService;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorationInput;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorator;
@@ -62,12 +66,10 @@ import com.flipkart.krystal.krystex.request.StringReqGenerator;
 import com.flipkart.krystal.traits.StaticDispatchPolicy;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -84,7 +86,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.calledmethods.qual.CalledMethods;
 import org.checkerframework.checker.initialization.qual.Initialized;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Default implementation of Krystal executor which */
@@ -92,10 +93,12 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class VajramKryonExecutor implements KrystalExecutor {
 
   public enum KryonExecStrategy {
+    @Deprecated
     BATCH,
     DIRECT;
   }
 
+  @Deprecated
   public enum GraphTraversalStrategy {
     DEPTH,
     BREADTH;
@@ -106,7 +109,6 @@ public final class VajramKryonExecutor implements KrystalExecutor {
   private final KrystexGraph krystexGraph;
   private final KryonDefinitionRegistry kryonDefinitionRegistry;
   private final KrystalExecutorConfig executorConfig;
-  private @MonotonicNonNull Set<DependentChain> disabledDependentChainsForExecutor;
 
   private final ExecutorService commandQueue;
 
@@ -126,10 +128,12 @@ public final class VajramKryonExecutor implements KrystalExecutor {
   private final ImmutableMap<String, DependencyDecoratorConfig> dependencyDecoratorConfigs;
   private final ImmutableMap<String, KryonDecoratorConfig> kryonDecoratorConfigs;
 
-  private final List<OutputLogicDecorator> outputLogicDecorators = new ArrayList<>();
-
   private final KryonRegistry<Kryon<?, ?>> kryonRegistry = new KryonRegistry<>();
-  private final Map<VajramID, Kryon<?, ?>> decoratedKryons = new HashMap<>();
+  private final Map<VajramID, Kryon<?, ?>> decoratedKryons = new LinkedHashMap<>();
+
+  private final Map<VajramID, List<KryonDecorator>> kryonDecorators = new LinkedHashMap<>();
+  private final Map<VajramID, List<OutputLogicDecorator>> outputLogicDecoratorsByVajram =
+      new LinkedHashMap<>();
   private final KryonExecutorMetrics kryonMetrics;
   private final Map<InvocationId, KryonExecution<?>> allExecutions = new LinkedHashMap<>();
 
@@ -139,9 +143,10 @@ public final class VajramKryonExecutor implements KrystalExecutor {
    */
   private final Set<VajramID> directlyInvokedVajrams = new LinkedHashSet<>();
 
-  private final Map<VajramID, Set<DependentChain>> dependentChainsPerKryon = new LinkedHashMap<>();
   private final RequestIdGenerator preferredReqGenerator;
   @Getter private final KrystalExecutorExecutionInfo executionInfo;
+
+  private @MonotonicNonNull List<FlushableDecorator> flushableDecorators;
 
   private volatile boolean closed;
   private boolean shutdownRequested;
@@ -178,110 +183,54 @@ public final class VajramKryonExecutor implements KrystalExecutor {
     this.commandQueue = decoratedExecService;
   }
 
-  private List<OutputLogicDecorator> getSortedOutputLogicDecorators(
-      LogicDecorationContext logicDecorationContext) {
-    DecorationOrdering decorationOrdering = executorConfig.decorationOrdering();
-    ImmutableMap<String, Integer> decoratorIndices =
-        decorationOrdering.outputLogicDecoratorIndices();
-    List<OutputLogicDecorator> decoratorsWithNoIndex = new ArrayList<>();
-
-    // Use radix sort for quick sorting
-    List<@Nullable OutputLogicDecorator> radixSortedDecorators =
-        new ArrayList<>(decoratorIndices.size());
-    decoratorIndices.forEach((s, integer) -> radixSortedDecorators.add(null));
-
-    outputLogicDecoratorConfigs.forEach(
-        (decoratorType, decoratorConfig) -> {
-          if (decoratorConfig.shouldDecorate().test(logicDecorationContext)) {
-            OutputLogicDecorator outputLogicDecorator =
-                decoratorConfig.factory().apply(logicDecorationContext);
-            if (outputLogicDecorator == null) {
-              return;
-            }
-            Integer index = decoratorIndices.get(decoratorType);
-            if (index == null) {
-              decoratorsWithNoIndex.add(outputLogicDecorator);
-            } else {
-              radixSortedDecorators.set(index, outputLogicDecorator);
-            }
-          }
-        });
-    List<OutputLogicDecorator> sortedDecorators =
-        new ArrayList<>(decoratorsWithNoIndex.size() + radixSortedDecorators.size());
-    sortedDecorators.addAll(decoratorsWithNoIndex); // decorators with no index go first
-    for (OutputLogicDecorator decorator : radixSortedDecorators) {
-      // Filter out nulls in radix sorted list
-      if (decorator != null) {
-        sortedDecorators.add(decorator);
-      }
-    }
-    outputLogicDecorators.addAll(sortedDecorators);
-    return sortedDecorators;
-  }
-
-  Set<DependentChain> getDependentChains(VajramID vajramID) {
-    return dependentChainsPerKryon.computeIfAbsent(
+  private List<OutputLogicDecorator> getSortedOutputLogicDecorators(VajramID vajramID) {
+    return outputLogicDecoratorsByVajram.computeIfAbsent(
         vajramID,
-        _v -> {
-          Set<@NonNull DependentChain> depChainsForVajram =
-              krystexGraph.dependentChainsByVajram().getOrDefault(vajramID, Set.of());
-          Set<DependentChain> activeDepChains = new HashSet<>();
-          outer:
-          for (DependentChain depChain : depChainsForVajram) {
-            VajramID firstVajram = depChain.getFirstVajram();
-            if (firstVajram == null) {
-              // This means that `depChain` is a DependentChainStart
-              // which means `vajramId` has been configured so that it can be invoked
-              // directly - so we should consider vajramId itself as the first vajram
-              firstVajram = vajramID;
+        _k -> {
+          VajramKryonDefinition kryonDefinition =
+              validateAsVajram(kryonDefinitionRegistry.getOrThrow(vajramID));
+          LogicDecorationContext logicDecorationContext =
+              new LogicDecorationContext(
+                  vajramID,
+                  kryonDefinition.getOutputLogicDefinition().tags(),
+                  kryonDefinition.kryonDefinitionRegistry());
+          DecorationOrdering decorationOrdering = executorConfig.decorationOrdering();
+          ImmutableMap<String, Integer> decoratorIndices =
+              decorationOrdering.outputLogicDecoratorIndices();
+          List<OutputLogicDecorator> decoratorsWithNoIndex = new ArrayList<>();
+
+          // Use radix sort for quick sorting
+          List<@Nullable OutputLogicDecorator> radixSortedDecorators =
+              new ArrayList<>(decoratorIndices.size());
+          decoratorIndices.forEach((s, integer) -> radixSortedDecorators.add(null));
+
+          outputLogicDecoratorConfigs.forEach(
+              (decoratorType, decoratorConfig) -> {
+                if (decoratorConfig.shouldDecorate().test(logicDecorationContext)) {
+                  OutputLogicDecorator outputLogicDecorator =
+                      decoratorConfig.factory().apply(logicDecorationContext);
+                  if (outputLogicDecorator == null) {
+                    return;
+                  }
+                  Integer index = decoratorIndices.get(decoratorType);
+                  if (index == null) {
+                    decoratorsWithNoIndex.add(outputLogicDecorator);
+                  } else {
+                    radixSortedDecorators.set(index, outputLogicDecorator);
+                  }
+                }
+              });
+          List<OutputLogicDecorator> sortedDecorators =
+              new ArrayList<>(decoratorsWithNoIndex.size() + radixSortedDecorators.size());
+          sortedDecorators.addAll(decoratorsWithNoIndex); // decorators with no index go first
+          for (OutputLogicDecorator decorator : radixSortedDecorators) {
+            // Filter out nulls in radix sorted list
+            if (decorator != null) {
+              sortedDecorators.add(decorator);
             }
-            if (!directlyInvokedVajrams.contains(firstVajram)) {
-              // Only consider those dependent chains which start with a vajram invoked directly
-              continue;
-            }
-            for (DependentChain disabledDepChain : disabledDependentChainsForExecutor()) {
-              if (depChain.startsWith(disabledDepChain)) {
-                continue outer;
-              }
-            }
-            activeDepChains.add(depChain);
           }
-          return unmodifiableSet(activeDepChains);
+          return unmodifiableList(sortedDecorators);
         });
-  }
-
-  /**
-   * Returns those dependent chains which have been disabled at the executor level, or have been
-   * disabled on all the individual executions in this executor.
-   */
-  private Set<DependentChain> disabledDependentChainsForExecutor() {
-    if (disabledDependentChainsForExecutor == null) {
-      Set<DependentChain> depChainsDisabledInAllExecutions = new LinkedHashSet<>();
-      {
-        // Find those dependentChains which are disabled in ALL the execution-level disabled chains.
-        // i.e. Find intersection of all sets in the list disabledDependentChainsPerExecution
-
-        // Algo: Take the first set, and call retainAll for all other sets
-        boolean first = true;
-        for (KryonExecution<?> kryonExecution : allExecutions.values()) {
-          ImmutableSet<DependentChain> disabledDepChains =
-              kryonExecution.executionConfig().disabledDependentChains();
-          if (first) {
-            depChainsDisabledInAllExecutions.addAll(disabledDepChains);
-            first = false;
-          } else {
-            if (depChainsDisabledInAllExecutions.isEmpty()) {
-              break;
-            }
-            depChainsDisabledInAllExecutions.retainAll(disabledDepChains);
-          }
-        }
-      }
-      // executorConfig level disabledDependentChains are considered disabled
-      depChainsDisabledInAllExecutions.addAll(executorConfig.disabledDependentChains());
-      disabledDependentChainsForExecutor = unmodifiableSet(depChainsDisabledInAllExecutions);
-    }
-    return disabledDependentChainsForExecutor;
   }
 
   private List<DependencyDecorator> getDependencyDecorators(
@@ -517,7 +466,10 @@ public final class VajramKryonExecutor implements KrystalExecutor {
                       dependentChain));
         }
       }
-      if (isDepChainDisabled(dependentChain)) {
+      if (shouldSkip(kryonCommand)) {
+        flushDescendents(kryonCommand.dependentChain(), kryonCommand.vajramID());
+        return failedFuture(new SkippedExecutionException("Skipping since there are no requests"));
+      } else if (isDepChainDisabled(dependentChain)) {
         log.info(
             "Returning empty response since dependentChain {} has been disabled", dependentChain);
         // Throwing exception here is causing extreme CPU wastage due to JIT deoptimization.
@@ -537,6 +489,50 @@ public final class VajramKryonExecutor implements KrystalExecutor {
     } finally {
       executionInfo.activeVajram(previousActiveVajram);
     }
+  }
+
+  private void flushDescendents(DependentChain ancestor, VajramID fromVajramId) {
+    if (flushableDecorators == null) {
+      List<FlushableDecorator> flushableCollector = new ArrayList<>();
+      EpochGroups epochGroupsToFlush =
+          krystexGraph
+              .epochGroupsByAncestors()
+              .epochGroupsFromVajram()
+              .getOrDefault(ancestor, ImmutableMap.of())
+              .get(fromVajramId);
+      if (epochGroupsToFlush == null) {
+        return;
+      }
+      for (VajramID targetVajram : epochGroupsToFlush.vajramEpochGroups().keySet()) {
+        List<KryonDecorator> sortedKryonDecorators = getSortedKryonDecorators(targetVajram);
+        for (KryonDecorator kryonDecorator : sortedKryonDecorators) {
+          if (kryonDecorator instanceof FlushableDecorator flushableDecorator) {
+            flushableCollector.add(flushableDecorator);
+          }
+        }
+        for (OutputLogicDecorator outputLogicDecorator :
+            getSortedOutputLogicDecorators(targetVajram)) {
+          if (outputLogicDecorator instanceof FlushableDecorator flushableDecorator) {
+            flushableCollector.add(flushableDecorator);
+          }
+        }
+      }
+      this.flushableDecorators = unmodifiableList(flushableCollector);
+    }
+    for (FlushableDecorator flushableDecorator : flushableDecorators) {
+      flushableDecorator.flushDecorator(new FlushCommand(ancestor, fromVajramId));
+    }
+  }
+
+  private <R extends KryonCommandResponse> boolean shouldSkip(
+      KryonCommand<? extends R> kryonCommand) {
+    if (kryonCommand instanceof DirectForwardReceive directForwardReceive) {
+      return directForwardReceive.shouldSkip();
+    }
+    if (kryonCommand instanceof ForwardSendBatch forwardSend) {
+      return forwardSend.shouldSkip();
+    }
+    return false;
   }
 
   @SuppressWarnings("unchecked")
@@ -559,39 +555,45 @@ public final class VajramKryonExecutor implements KrystalExecutor {
   }
 
   private List<KryonDecorator> getSortedKryonDecorators(VajramID vajramID) {
-    KryonExecutionContext executionContext = new KryonExecutionContext(vajramID);
-    DecorationOrdering decorationOrdering = executorConfig.decorationOrdering();
-    ImmutableMap<String, Integer> kryonDecoratorIndices =
-        decorationOrdering.kryonDecoratorIndices();
-    List<KryonDecorator> radixSortedDecorators = new ArrayList<>(kryonDecoratorIndices.size());
-    kryonDecoratorIndices.forEach((_d, _i) -> radixSortedDecorators.add(null));
-    List<KryonDecorator> decoratorsWithNoIndex = new ArrayList<>();
-    for (Entry<String, KryonDecoratorConfig> configsByType : kryonDecoratorConfigs.entrySet()) {
-      String decoratorType = configsByType.getKey();
-      KryonDecoratorConfig decoratorConfig = configsByType.getValue();
-      if (!decoratorConfig.shouldDecorate().test(executionContext)) {
-        continue;
-      }
-      KryonDecorator kryonDecorator = decoratorConfig.factory().apply(executionContext);
-      if (kryonDecorator == null) {
-        continue;
-      }
-      Integer index = kryonDecoratorIndices.get(decoratorType);
-      if (index == null) {
-        decoratorsWithNoIndex.add(kryonDecorator);
-      } else {
-        radixSortedDecorators.set(index, kryonDecorator);
-      }
-    }
-    List<KryonDecorator> sortedDecorators =
-        new ArrayList<>(radixSortedDecorators.size() + decoratorsWithNoIndex.size());
-    sortedDecorators.addAll(decoratorsWithNoIndex);
-    for (KryonDecorator kryonDecorator : radixSortedDecorators) {
-      if (kryonDecorator != null) {
-        sortedDecorators.add(kryonDecorator);
-      }
-    }
-    return sortedDecorators;
+    return kryonDecorators.computeIfAbsent(
+        vajramID,
+        _k -> {
+          KryonExecutionContext executionContext = new KryonExecutionContext(vajramID);
+          DecorationOrdering decorationOrdering = executorConfig.decorationOrdering();
+          ImmutableMap<String, Integer> kryonDecoratorIndices =
+              decorationOrdering.kryonDecoratorIndices();
+          List<KryonDecorator> radixSortedDecorators =
+              new ArrayList<>(kryonDecoratorIndices.size());
+          kryonDecoratorIndices.forEach((_d, _i) -> radixSortedDecorators.add(null));
+          List<KryonDecorator> decoratorsWithNoIndex = new ArrayList<>();
+          for (Entry<String, KryonDecoratorConfig> configsByType :
+              kryonDecoratorConfigs.entrySet()) {
+            String decoratorType = configsByType.getKey();
+            KryonDecoratorConfig decoratorConfig = configsByType.getValue();
+            if (!decoratorConfig.shouldDecorate().test(executionContext)) {
+              continue;
+            }
+            KryonDecorator kryonDecorator = decoratorConfig.factory().apply(executionContext);
+            if (kryonDecorator == null) {
+              continue;
+            }
+            Integer index = kryonDecoratorIndices.get(decoratorType);
+            if (index == null) {
+              decoratorsWithNoIndex.add(kryonDecorator);
+            } else {
+              radixSortedDecorators.set(index, kryonDecorator);
+            }
+          }
+          List<KryonDecorator> sortedDecorators =
+              new ArrayList<>(radixSortedDecorators.size() + decoratorsWithNoIndex.size());
+          sortedDecorators.addAll(decoratorsWithNoIndex);
+          for (KryonDecorator kryonDecorator : radixSortedDecorators) {
+            if (kryonDecorator != null) {
+              sortedDecorators.add(kryonDecorator);
+            }
+          }
+          return unmodifiableList(sortedDecorators);
+        });
   }
 
   private void validate() {
@@ -601,11 +603,7 @@ public final class VajramKryonExecutor implements KrystalExecutor {
   }
 
   private boolean isDepChainDisabled(DependentChain dependentChain) {
-    if (krystexGraph.dependentChainDisabler().isDisabled(dependentChain)
-        || disabledDependentChainsForExecutor().contains(dependentChain)) {
-      return true;
-    }
-    return false;
+    return krystexGraph.dependentChainDisabler().isDisabled(dependentChain);
   }
 
   @SuppressWarnings("FutureReturnValueIgnored")
@@ -615,6 +613,20 @@ public final class VajramKryonExecutor implements KrystalExecutor {
           switch (executorConfig.kryonExecStrategy()) {
             case BATCH -> submitBatch(allExecutions.values());
             case DIRECT -> submitDirect(allExecutions.values());
+          }
+          DependentChainStart dependentChainsStart =
+              kryonDefinitionRegistry.getDependentChainsStart();
+          // For those vajrams which are could have been invoked directly, but were not,
+          // Flush all the descendants to prune that part of the graph
+          ImmutableMap<VajramID, EpochGroups> directlyInvocableVajrams =
+              krystexGraph
+                  .epochGroupsByAncestors()
+                  .epochGroupsFromVajram()
+                  .getOrDefault(dependentChainsStart, ImmutableMap.of());
+          for (VajramID directlyInvocableVajram : directlyInvocableVajrams.keySet()) {
+            if (!directlyInvokedVajrams.contains(directlyInvocableVajram)) {
+              flushDescendents(dependentChainsStart, directlyInvocableVajram);
+            }
           }
         });
   }
@@ -744,7 +756,10 @@ public final class VajramKryonExecutor implements KrystalExecutor {
           return allOf(responseFutures)
               .whenComplete(
                   (unused, throwable) ->
-                      outputLogicDecorators.forEach(KrystalExecutorCompletionListener::onComplete));
+                      outputLogicDecoratorsByVajram.forEach(
+                          (vajramID, outputLogicDecorators) ->
+                              outputLogicDecorators.forEach(
+                                  KrystalExecutorCompletionListener::onComplete)));
         });
   }
 

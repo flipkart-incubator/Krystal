@@ -26,7 +26,7 @@ import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import com.flipkart.krystal.krystex.decoration.FlushableDecorator;
-import com.flipkart.krystal.krystex.epochs.VajramEpochGroups;
+import com.flipkart.krystal.krystex.epochs.EpochGroupsByAncestors;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
@@ -571,16 +571,16 @@ class VajramKryonExecutorTest {
                   return ImmutableMap.of(
                           testUserServiceVajramId,
                           new InputBatchingDecorator(
-                              testUserServiceVajramId,
                               () -> new InputBatcherImpl(100),
-                              new VajramEpochGroups(ImmutableMap.of()),
-                              Set.of()),
+                              testUserServiceVajramId,
+                              EpochGroupsByAncestors.empty(
+                                  vGraph.kryonDefinitionRegistry().getDependentChainsStart())),
                           friendsServiceVajramId,
                           new InputBatchingDecorator(
-                              friendsServiceVajramId,
                               () -> new InputBatcherImpl(100),
-                              new VajramEpochGroups(ImmutableMap.of()),
-                              Set.of()))
+                              friendsServiceVajramId,
+                              EpochGroupsByAncestors.empty(
+                                  vGraph.kryonDefinitionRegistry().getDependentChainsStart())))
                       .get(key.vajramID());
                 })));
     CompletableFuture<String> multiHellos;
@@ -744,10 +744,10 @@ class VajramKryonExecutorTest {
         _c ->
             vajramId.equals(_c.vajramID())
                 ? new InputBatchingDecorator(
-                    vajramId,
                     inputBatcherSupplier,
-                    new VajramEpochGroups(ImmutableMap.of()),
-                    Set.of())
+                    vajramId,
+                    EpochGroupsByAncestors.empty(
+                        vGraph.kryonDefinitionRegistry().getDependentChainsStart()))
                 : null);
   }
 

@@ -8,6 +8,7 @@ import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.epochs.LogicSet.DepResolvers;
 import com.flipkart.krystal.krystex.epochs.LogicSet.OutputLogics;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
+import com.flipkart.krystal.krystex.kryon.DependentChainStart;
 import com.flipkart.krystal.traits.StaticDispatchPolicy;
 import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
@@ -20,6 +21,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -29,10 +31,26 @@ import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
+/**
+ * Data structure which contains all descendants for an ancestor dependentChain (including itself)
+ * grouped by target vajram and further grouped by the epoch of the descendant.
+ *
+ * <p>If ancestor is {@link DependentChainStart} this represents the global set of all dependent
+ * chains since every dependent chain is guaranteed to be a descendant of {@link
+ * DependentChainStart}.
+ *
+ * @param ancestor
+ * @param vajramEpochGroups
+ */
 @Slf4j
-public record EpochGroups(ImmutableMap<VajramID, VajramEpochGroups> vajramEpochGroups) {
+public record EpochGroups(
+    DependentChain ancestor, ImmutableMap<VajramID, VajramEpochGroups> vajramEpochGroups) {
 
-  public static EpochGroups computeEpochGroups(
+  public static EpochGroups empty(DependentChainStart dependentChainStart) {
+    return new EpochGroups(dependentChainStart, ImmutableMap.of());
+  }
+
+  public static EpochGroupsByAncestors computeEpochGroups(
       VajramGraph graph,
       TraitDispatchPolicies traitDispatchPolicies,
       DependentChainDisabler dependentChainDisabler,
@@ -42,24 +60,27 @@ public record EpochGroups(ImmutableMap<VajramID, VajramEpochGroups> vajramEpochG
             .map(graph::tryGetVajramDefinition)
             .filter(Objects::nonNull)
             .toList();
-    Map<VajramID, Map<Integer, Set<DependentChain>>> vajramToOrdinalChains = new HashMap<>();
+    Map<VajramID, Map<Integer, Set<DependentChain>>> vajramToEpochChains = new HashMap<>();
     Map<VajramID, Integer> vajramsToOutgoingOrdinals = new HashMap<>();
+    DependentChainStart dependentChainsStart =
+        graph.kryonDefinitionRegistry().getDependentChainsStart();
     for (VajramDefinition vajramDefinition : externallyInvocableVajrams) {
       Collection<VajramID> dispatchTargets =
           getDispatchTargets(vajramDefinition.vajramId(), graph, traitDispatchPolicies, null);
       for (VajramID dispatchTargetID : dispatchTargets) {
-        collateDepChainOrdinals(
-            vajramToOrdinalChains,
+        collateDepChainEpochs(
+            vajramToEpochChains,
             vajramsToOutgoingOrdinals,
             graph,
             dispatchTargetID,
-            graph.kryonDefinitionRegistry().getDependentChainsStart(),
+            dependentChainsStart,
             0,
             dependentChainDisabler,
             traitDispatchPolicies);
       }
     }
-    return createEpochGroups(vajramToOrdinalChains);
+    return computeEpochAwareDescendants(
+        createEpochGroupsForDepChainStart(vajramToEpochChains, dependentChainsStart));
   }
 
   static Collection<VajramID> getDispatchTargets(
@@ -210,8 +231,8 @@ public record EpochGroups(ImmutableMap<VajramID, VajramEpochGroups> vajramEpochG
   /**
    * For every IO Vajram, this method collates all depChains ending in that IO Vajram by its ordinal
    *
-   * @param vajramsToOrdinalChains a cache which maps a vajram to its epoch to set of depChains
-   *     which map to that epoch
+   * @param vajramsToEpochChains a cache which maps a vajram to its epoch to set of depChains which
+   *     map to that epoch
    * @param vajramsToResponseOrdinals a cache which maps a vajram to its response ordinals
    * @param graph
    * @param vajramIDBeingInvoked the vajram for which depchain ordinals need to be collated
@@ -221,8 +242,8 @@ public record EpochGroups(ImmutableMap<VajramID, VajramEpochGroups> vajramEpochG
    * @param dependentChainDisabler
    * @param traitDispatchPolicies
    */
-  private static void collateDepChainOrdinals(
-      Map<VajramID, Map<Integer, Set<DependentChain>>> vajramsToOrdinalChains,
+  private static void collateDepChainEpochs(
+      Map<VajramID, Map<Integer, Set<DependentChain>>> vajramsToEpochChains,
       Map<VajramID, Integer> vajramsToResponseOrdinals,
       VajramGraph graph,
       VajramID vajramIDBeingInvoked,
@@ -248,8 +269,8 @@ public record EpochGroups(ImmutableMap<VajramID, VajramEpochGroups> vajramEpochG
           incomingDepChain.extend(vajramBeingInvoked.vajramId(), dependency);
       for (VajramID depVajramID :
           getDispatchTargets(dependency.onVajramID(), graph, traitDispatchPolicies, dependency)) {
-        collateDepChainOrdinals(
-            vajramsToOrdinalChains,
+        collateDepChainEpochs(
+            vajramsToEpochChains,
             vajramsToResponseOrdinals,
             graph,
             depVajramID,
@@ -277,7 +298,7 @@ public record EpochGroups(ImmutableMap<VajramID, VajramEpochGroups> vajramEpochG
                 incomingDepChain,
                 dependentChainDisabler,
                 traitDispatchPolicies);
-    vajramsToOrdinalChains
+    vajramsToEpochChains
         .computeIfAbsent(vajramIDBeingInvoked, _vid -> new HashMap<>())
         .computeIfAbsent(depChainOrdinal, _depth -> new HashSet<>())
         .add(incomingDepChain);
@@ -292,8 +313,9 @@ public record EpochGroups(ImmutableMap<VajramID, VajramEpochGroups> vajramEpochG
     return dependencies;
   }
 
-  private static EpochGroups createEpochGroups(
-      Map<VajramID, Map<Integer, Set<DependentChain>>> vajramConfigs) {
+  private static EpochGroups createEpochGroupsForDepChainStart(
+      Map<VajramID, Map<Integer, Set<DependentChain>>> vajramConfigs,
+      DependentChainStart dependentChainsStart) {
     Map<VajramID, VajramEpochGroups> depChainEpochGroupsByVajram = new LinkedHashMap<>();
     vajramConfigs.forEach(
         (vajramId, vajramConfig) -> {
@@ -304,9 +326,41 @@ public record EpochGroups(ImmutableMap<VajramID, VajramEpochGroups> vajramEpochG
                 new EpochGroup(vajramId, entry.getKey(), ImmutableSet.copyOf(entry.getValue())));
           }
           depChainEpochGroupsByVajram.put(
-              vajramId, new VajramEpochGroups(ImmutableMap.copyOf(epochGroups)));
+              vajramId, new VajramEpochGroups(vajramId, ImmutableMap.copyOf(epochGroups)));
         });
-    return new EpochGroups(ImmutableMap.copyOf(depChainEpochGroupsByVajram));
+    return new EpochGroups(dependentChainsStart, ImmutableMap.copyOf(depChainEpochGroupsByVajram));
+  }
+
+  private static EpochGroupsByAncestors computeEpochAwareDescendants(EpochGroups allEpochGroups) {
+    Map<DependentChain, Map<VajramID, Map<VajramID, Map<Integer, Set<DependentChain>>>>>
+        epochGroupsByAncestorsCollector = new HashMap<>();
+    allEpochGroups
+        .vajramEpochGroups()
+        .forEach(
+            (targetVajram, vajramEpochGroups) ->
+                vajramEpochGroups
+                    .depChainsByEpochs()
+                    .forEach(
+                        (epoch, epochGroup) -> {
+                          for (DependentChain dependentChain : epochGroup.dependentChains()) {
+                            DependentChain parent = dependentChain;
+                            VajramID onVajramID = targetVajram;
+                            while (parent != null) {
+                              epochGroupsByAncestorsCollector
+                                  .computeIfAbsent(parent, _k -> new LinkedHashMap<>())
+                                  .computeIfAbsent(onVajramID, _k -> new LinkedHashMap<>())
+                                  .computeIfAbsent(targetVajram, _k -> new LinkedHashMap<>())
+                                  .computeIfAbsent(epoch, _k -> new LinkedHashSet<>())
+                                  .add(dependentChain);
+                              Dependency latestDependency = parent.latestDependency();
+                              if (latestDependency != null) {
+                                onVajramID = latestDependency.ofVajramID();
+                              }
+                              parent = parent.parent();
+                            }
+                          }
+                        }));
+    return new EpochGroupsByAncestors(allEpochGroups, epochGroupsByAncestorsCollector);
   }
 
   record SourceOrdinalKey(

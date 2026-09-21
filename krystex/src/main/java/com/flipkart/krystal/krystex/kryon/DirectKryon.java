@@ -19,7 +19,6 @@ import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyInvocation;
-import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationContext;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.google.common.collect.ImmutableList;
@@ -33,8 +32,7 @@ public final class DirectKryon extends AbstractKryon<MultiRequestDirectCommand, 
   DirectKryon(
       VajramKryonDefinition definition,
       VajramKryonExecutor kryonExecutor,
-      Function<LogicDecorationContext, List<OutputLogicDecorator>>
-          sortedOutputLogicDecoratorsSupplier,
+      Function<VajramID, List<OutputLogicDecorator>> sortedOutputLogicDecoratorsSupplier,
       Function<DependencyExecutionContext, List<DependencyDecorator>> depDecoratorSuppliers,
       DecorationOrdering decorationOrdering) {
     super(

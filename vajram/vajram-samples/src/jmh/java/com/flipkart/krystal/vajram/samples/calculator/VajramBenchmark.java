@@ -466,7 +466,8 @@ public class VajramBenchmark {
             KrystalExecutorConfig.builder()
                 .executorService(executorLease.get())
                 .configureWith(
-                    new RequestLevelCache(graph.vajramGraph(), graph.epochGroups())
+                    new RequestLevelCache(
+                            graph.vajramGraph(), graph.epochGroupsByAncestors().allEpochGroups())
                         .defaultDecorationStrategy())
                 .disabledDependentChains(disabledDependantChains))) {
       for (int i = 0; i < results.length; i++) {

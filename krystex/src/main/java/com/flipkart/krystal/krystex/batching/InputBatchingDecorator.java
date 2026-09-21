@@ -10,6 +10,8 @@ import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import com.flipkart.krystal.krystex.decoration.FlushableDecorator;
 import com.flipkart.krystal.krystex.epochs.EpochGroup;
+import com.flipkart.krystal.krystex.epochs.EpochGroups;
+import com.flipkart.krystal.krystex.epochs.EpochGroupsByAncestors;
 import com.flipkart.krystal.krystex.epochs.VajramEpochGroups;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
@@ -20,10 +22,8 @@ import com.flipkart.krystal.vajram.batching.InputBatcher;
 import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
@@ -36,33 +36,33 @@ public final class InputBatchingDecorator implements OutputLogicDecorator, Flush
       new LinkedHashMap<>();
   private final VajramID vajramID;
   private final Supplier<InputBatcher> inputBatcherFactory;
-  private final Map<DependentChain, Integer> epochByDepChain = new LinkedHashMap<>();
-  private final List<Set<DependentChain>> dependentChainsToFlushByEpoch = new ArrayList<>();
+  private final EpochGroupsByAncestors epochGroupsByAncestors;
+  private final ImmutableMap<DependentChain, Integer> epochByDepChains;
   private @MonotonicNonNull OutputLogicExecutionInput outputLogicExecutionInput;
+  private final int[] yetToFlushCountsByEpoch;
 
   public InputBatchingDecorator(
-      VajramID vajramID,
       Supplier<InputBatcher> inputBatcherFactory,
-      VajramEpochGroups vajramEpochGroups,
-      Set<DependentChain> activeDependentChains) {
+      VajramID vajramID,
+      EpochGroupsByAncestors epochGroupsByAncestors) {
     this.vajramID = vajramID;
     this.inputBatcherFactory = inputBatcherFactory;
-    ImmutableMap<Integer, EpochGroup> depChainsByEpoch = vajramEpochGroups.depChainsByEpochGroup();
-    this.sharedInputBatchersByEpoch = new ArrayList<>(depChainsByEpoch.size());
-    int localEpoch = 0;
-    for (var epochGroup : depChainsByEpoch.values()) {
-      Set<DependentChain> depChainsToFlush = new LinkedHashSet<>();
-      for (DependentChain dependentChain : epochGroup.dependentChains()) {
-        if (activeDependentChains.contains(dependentChain)) {
-          epochByDepChain.put(dependentChain, localEpoch);
-          depChainsToFlush.add(dependentChain);
-        }
+    this.epochGroupsByAncestors = epochGroupsByAncestors;
+    VajramEpochGroups vajramEpochGroups =
+        epochGroupsByAncestors
+            .allEpochGroups()
+            .vajramEpochGroups()
+            .getOrDefault(vajramID, new VajramEpochGroups(vajramID, ImmutableMap.of()));
+    this.epochByDepChains = vajramEpochGroups.epochByDepChains();
+    this.sharedInputBatchersByEpoch = new ArrayList<>(vajramEpochGroups.maxEpoch() + 1);
+    this.yetToFlushCountsByEpoch = new int[vajramEpochGroups.maxEpoch() + 1];
+    for (int epoch = 0; epoch <= vajramEpochGroups.maxEpoch(); epoch++) {
+      this.sharedInputBatchersByEpoch.add(inputBatcherFactory.get());
+      EpochGroup epochGroup = vajramEpochGroups.depChainsByEpochs().get(epoch);
+      if (epochGroup == null) {
+        continue;
       }
-      if (!depChainsToFlush.isEmpty()) {
-        this.sharedInputBatchersByEpoch.add(inputBatcherFactory.get());
-        this.dependentChainsToFlushByEpoch.add(depChainsToFlush);
-        localEpoch++;
-      }
+      this.yetToFlushCountsByEpoch[epoch] = epochGroup.dependentChains().size();
     }
   }
 
@@ -100,7 +100,7 @@ public final class InputBatchingDecorator implements OutputLogicDecorator, Flush
   }
 
   private InputBatcher getInputBatcher(DependentChain dependentChain) {
-    Integer epoch = epochByDepChain.get(dependentChain);
+    Integer epoch = epochByDepChains.get(dependentChain);
     if (epoch == null) {
       return simpleInputBatchersByDepChain.computeIfAbsent(
           dependentChain, _d -> inputBatcherFactory.get());
@@ -111,16 +111,38 @@ public final class InputBatchingDecorator implements OutputLogicDecorator, Flush
 
   @Override
   public void flushDecorator(FlushCommand flushCommand) {
-    DependentChain dependentChain = flushCommand.dependentChain();
-    Integer epoch = epochByDepChain.get(dependentChain);
-    Set<DependentChain> dependentChainsToFlush = Set.of();
-    if (epoch != null) {
-      dependentChainsToFlush = dependentChainsToFlushByEpoch.get(epoch);
-      dependentChainsToFlush.remove(dependentChain);
+    DependentChain ancestor = flushCommand.ancestor();
+    VajramID fromVajramId = flushCommand.fromVajramId();
+    InputBatcher simpleInputBatcher = simpleInputBatchersByDepChain.get(ancestor);
+    if (simpleInputBatcher != null) {
+      simpleInputBatcher.batch();
     }
-    if (dependentChainsToFlush.isEmpty()) {
-      getInputBatcher(dependentChain).batch();
+    EpochGroups epochGroupsForAncestor =
+        epochGroupsByAncestors
+            .epochGroupsFromVajram()
+            .getOrDefault(ancestor, ImmutableMap.of())
+            .get(fromVajramId);
+    if (epochGroupsForAncestor == null) {
+      return;
     }
+    VajramEpochGroups vajramEpochsForAncestor =
+        epochGroupsForAncestor.vajramEpochGroups().get(vajramID);
+    if (vajramEpochsForAncestor == null) {
+      return;
+    }
+    ImmutableMap<Integer, EpochGroup> depChainsByEpochs =
+        vajramEpochsForAncestor.depChainsByEpochs();
+    depChainsByEpochs.forEach(
+        (epoch, epochGroup) -> {
+          int oldSize = yetToFlushCountsByEpoch[epoch];
+          if (oldSize > 0) {
+            yetToFlushCountsByEpoch[epoch] -= epochGroup.dependentChains().size();
+            int newSize = yetToFlushCountsByEpoch[epoch];
+            if (newSize <= 0) {
+              sharedInputBatchersByEpoch.get(epoch).batch();
+            }
+          }
+        });
   }
 
   @SuppressWarnings({"UnnecessaryTypeArgument", "unchecked"}) // --> To Handle nullChecker errors
