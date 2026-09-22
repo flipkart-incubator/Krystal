@@ -111,9 +111,7 @@ class SplitAddTest {
       future =
           krystexVajramExecutor.execute(
               SplitAdd_ReqImmutPojo._builder().numbers(List.of())._build(),
-              VajramExecutionConfig.builder()
-                  .disabledDependentChains(disabledDepChains(graph))
-                  .build());
+              VajramExecutionConfig.builder().build());
     }
     assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(0);
   }

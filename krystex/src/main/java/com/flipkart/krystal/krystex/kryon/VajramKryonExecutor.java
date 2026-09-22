@@ -494,16 +494,7 @@ public final class VajramKryonExecutor implements KrystalExecutor {
   private void flushDescendents(DependentChain ancestor, VajramID fromVajramId) {
     if (flushableDecorators == null) {
       List<FlushableDecorator> flushableCollector = new ArrayList<>();
-      EpochGroups epochGroupsToFlush =
-          krystexGraph
-              .epochGroupsByAncestors()
-              .epochGroupsFromVajram()
-              .getOrDefault(ancestor, ImmutableMap.of())
-              .get(fromVajramId);
-      if (epochGroupsToFlush == null) {
-        return;
-      }
-      for (VajramID targetVajram : epochGroupsToFlush.vajramEpochGroups().keySet()) {
+      for (VajramID targetVajram : krystexGraph.vajramGraph().vajramDefinitions().keySet()) {
         List<KryonDecorator> sortedKryonDecorators = getSortedKryonDecorators(targetVajram);
         for (KryonDecorator kryonDecorator : sortedKryonDecorators) {
           if (kryonDecorator instanceof FlushableDecorator flushableDecorator) {

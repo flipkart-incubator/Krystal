@@ -119,7 +119,6 @@ class MultiAddTest {
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
               VajramExecutionConfig.builder()
-                  .disabledDependentChains(getDisabledDependentChains(vGraph))
                   .executionId(REQUEST_ID)
                   .staticDispatchQualifier(AdditionMethod.Creator.create(CHAIN))
                   .build());
@@ -147,7 +146,6 @@ class MultiAddTest {
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
               VajramExecutionConfig.builder()
-                  .disabledDependentChains(getDisabledDependentChains(vGraph))
                   .executionId(REQUEST_ID)
                   .staticDispatchQualifier(AdditionMethod.Creator.create(SPLIT))
                   .build());
@@ -205,10 +203,7 @@ class MultiAddTest {
       future =
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
-              VajramExecutionConfig.builder()
-                  .disabledDependentChains(getDisabledDependentChains(vGraph))
-                  .executionId(REQUEST_ID)
-                  .build());
+              VajramExecutionConfig.builder().executionId(REQUEST_ID).build());
     }
 
     // Verify results
@@ -236,10 +231,7 @@ class MultiAddTest {
       future =
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
-              VajramExecutionConfig.builder()
-                  .disabledDependentChains(getDisabledDependentChains(vGraph))
-                  .executionId(REQUEST_ID)
-                  .build());
+              VajramExecutionConfig.builder().executionId(REQUEST_ID).build());
     }
 
     // Verify results
@@ -267,10 +259,7 @@ class MultiAddTest {
       future =
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
-              VajramExecutionConfig.builder()
-                  .disabledDependentChains(getDisabledDependentChains(vGraph))
-                  .executionId(REQUEST_ID)
-                  .build());
+              VajramExecutionConfig.builder().executionId(REQUEST_ID).build());
     }
 
     // Verify results
@@ -300,10 +289,7 @@ class MultiAddTest {
       future =
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
-              VajramExecutionConfig.builder()
-                  .disabledDependentChains(getDisabledDependentChains(vGraph))
-                  .executionId(REQUEST_ID)
-                  .build());
+              VajramExecutionConfig.builder().executionId(REQUEST_ID).build());
     }
 
     // Verify results
@@ -333,10 +319,7 @@ class MultiAddTest {
       future =
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
-              VajramExecutionConfig.builder()
-                  .disabledDependentChains(getDisabledDependentChains(vGraph))
-                  .executionId(REQUEST_ID)
-                  .build());
+              VajramExecutionConfig.builder().executionId(REQUEST_ID).build());
     }
 
     // Verify results
@@ -366,10 +349,7 @@ class MultiAddTest {
       future =
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
-              VajramExecutionConfig.builder()
-                  .disabledDependentChains(getDisabledDependentChains(vGraph))
-                  .executionId(REQUEST_ID)
-                  .build());
+              VajramExecutionConfig.builder().executionId(REQUEST_ID).build());
     }
 
     // Verify results
@@ -394,10 +374,7 @@ class MultiAddTest {
       future =
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
-              VajramExecutionConfig.builder()
-                  .disabledDependentChains(getDisabledDependentChains(vGraph))
-                  .executionId(REQUEST_ID)
-                  .build());
+              VajramExecutionConfig.builder().executionId(REQUEST_ID).build());
     }
 
     // Verify results
