@@ -10,7 +10,6 @@ import com.flipkart.krystal.krystex.decoration.FlushableDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyInvocation;
-import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -32,8 +31,7 @@ abstract sealed class AbstractKryon<
   protected final VajramID vajramID;
   protected final VajramKryonExecutor kryonExecutor;
 
-  private final Function<LogicDecorationContext, List<OutputLogicDecorator>>
-      sortedOutputLogicDecoratorsSupplier;
+  private final Function<VajramID, List<OutputLogicDecorator>> sortedOutputLogicDecoratorsSupplier;
 
   private final Function<DependencyExecutionContext, List<DependencyDecorator>>
       depDecoratorSuppliers;
@@ -48,8 +46,7 @@ abstract sealed class AbstractKryon<
   AbstractKryon(
       VajramKryonDefinition definition,
       VajramKryonExecutor kryonExecutor,
-      Function<LogicDecorationContext, List<OutputLogicDecorator>>
-          sortedOutputLogicDecoratorsSupplier,
+      Function<VajramID, List<OutputLogicDecorator>> sortedOutputLogicDecoratorsSupplier,
       Function<DependencyExecutionContext, List<DependencyDecorator>> depDecoratorSuppliers,
       DecorationOrdering decorationOrdering) {
     this.kryonDefinition = definition;
@@ -62,13 +59,7 @@ abstract sealed class AbstractKryon<
 
   protected List<OutputLogicDecorator> getSortedOutputLogicDecorators() {
     if (outputLogicDecorators == null) {
-      outputLogicDecorators =
-          sortedOutputLogicDecoratorsSupplier.apply(
-              new LogicDecorationContext(
-                  vajramID,
-                  kryonDefinition.getOutputLogicDefinition().tags(),
-                  kryonDefinition.kryonDefinitionRegistry(),
-                  () -> kryonExecutor.getDependentChains(vajramID)));
+      outputLogicDecorators = sortedOutputLogicDecoratorsSupplier.apply(vajramID);
     }
     return outputLogicDecorators;
   }
@@ -116,7 +107,7 @@ abstract sealed class AbstractKryon<
         getSortedOutputLogicDecorators()) {
       if (decorator instanceof FlushableDecorator flushableDecorator) {
         try {
-          flushableDecorator.flushDecorator(new FlushCommand(dependentChain));
+          flushableDecorator.flushDecorator(new FlushCommand(dependentChain, vajramID));
         } catch (Throwable e) {
           log.error(
               """

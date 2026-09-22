@@ -84,7 +84,7 @@ public final class KryonDefinitionRegistry {
     return kryonDefinition;
   }
 
-  public DependentChain getDependentChainsStart() {
+  public DependentChainStart getDependentChainsStart() {
     return dependentChainStart;
   }
 }

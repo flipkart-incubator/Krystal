@@ -35,7 +35,7 @@ import com.flipkart.krystal.krystex.batching.InputBatcherStrategy.CustomBatcherS
 import com.flipkart.krystal.krystex.batching.InputBatcherStrategy.DefaultBatcherStrategy;
 import com.flipkart.krystal.krystex.batching.InputBatchingDecorator;
 import com.flipkart.krystal.krystex.caching.TestRequestLevelCache;
-import com.flipkart.krystal.krystex.epochs.VajramEpochGroups;
+import com.flipkart.krystal.krystex.epochs.EpochGroupsByAncestors;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
 import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
@@ -54,7 +54,6 @@ import com.flipkart.krystal.vajram.samples.calculator.divide.Divide_FacImmutPojo
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.LongAdder;
@@ -620,16 +619,17 @@ class FormulaTest {
             }));
   }
 
-  public static InputBatcherConfig simpleInputBatcher(
+  public InputBatcherConfig simpleInputBatcher(
       VajramID vajramID, Supplier<InputBatcher> inputBatcherSupplier) {
     return new InputBatcherConfig(
-        ImmutableMap.of(
-                vajramID,
-                new InputBatchingDecorator(
+        context ->
+            ImmutableMap.of(
                     vajramID,
-                    inputBatcherSupplier,
-                    new VajramEpochGroups(ImmutableMap.of()),
-                    Set.of()))
-            ::get);
+                    new InputBatchingDecorator(
+                        inputBatcherSupplier,
+                        vajramID,
+                        EpochGroupsByAncestors.empty(
+                            graph.kryonDefinitionRegistry().getDependentChainsStart())))
+                .get(context.vajramID()));
   }
 }

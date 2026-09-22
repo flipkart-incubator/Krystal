@@ -249,80 +249,62 @@ public class VajramBenchmark {
 
   @Benchmark
   public int formula() {
-    return execute(
-        formulaGraph, FORMULA_REQUEST, splitAddDisabledChains(splitAddGraph.vajramGraph()));
+    return execute(formulaGraph, FORMULA_REQUEST);
   }
 
   @Benchmark
   public int formulaTenRequests() {
-    return executeTenRequests(
-        formulaGraph, FORMULA_REQUEST, splitAddDisabledChains(splitAddGraph.vajramGraph()));
+    return executeTenRequests(formulaGraph, FORMULA_REQUEST);
   }
 
   @Benchmark
   public int splitAdd() {
-    return execute(
-        splitAddGraph, SPLIT_ADD_REQUEST, splitAddDisabledChains(splitAddGraph.vajramGraph()));
+    return execute(splitAddGraph, SPLIT_ADD_REQUEST);
   }
 
   @Benchmark
   public int splitAddTenRequests() {
-    return executeTenRequests(
-        splitAddGraph, SPLIT_ADD_REQUEST, splitAddDisabledChains(splitAddGraph.vajramGraph()));
+    return executeTenRequests(splitAddGraph, SPLIT_ADD_REQUEST);
   }
 
   @Benchmark
   public int splitAddBatched() {
-    return execute(
-        splitAddBatchedGraph,
-        SPLIT_ADD_REQUEST,
-        splitAddDisabledChains(splitAddBatchedGraph.vajramGraph()));
+    return execute(splitAddBatchedGraph, SPLIT_ADD_REQUEST);
   }
 
   @Benchmark
   public int splitAddTenRequestsBatched() {
-    return executeTenRequests(
-        splitAddBatchedGraph,
-        SPLIT_ADD_REQUEST,
-        splitAddDisabledChains(splitAddBatchedGraph.vajramGraph()));
+    return executeTenRequests(splitAddBatchedGraph, SPLIT_ADD_REQUEST);
   }
 
   @Benchmark
   public int chainAdd() {
-    return execute(
-        chainAddGraph, CHAIN_ADD_REQUEST, chainAddDisabledChains(chainAddGraph.vajramGraph()));
+    return execute(chainAddGraph, CHAIN_ADD_REQUEST);
   }
 
   @Benchmark
   public int chainAddTenRequests() {
-    return executeTenRequests(
-        chainAddGraph, CHAIN_ADD_REQUEST, chainAddDisabledChains(chainAddGraph.vajramGraph()));
+    return executeTenRequests(chainAddGraph, CHAIN_ADD_REQUEST);
   }
 
   @Benchmark
   public int chainAddBatched() {
-    return execute(
-        chainAddBatchedGraph,
-        CHAIN_ADD_REQUEST,
-        chainAddDisabledChains(chainAddBatchedGraph.vajramGraph()));
+    return execute(chainAddBatchedGraph, CHAIN_ADD_REQUEST);
   }
 
   @Benchmark
   public int chainAddTenRequestsBatched() {
-    return executeTenRequests(
-        chainAddBatchedGraph,
-        CHAIN_ADD_REQUEST,
-        chainAddDisabledChains(chainAddBatchedGraph.vajramGraph()));
+    return executeTenRequests(chainAddBatchedGraph, CHAIN_ADD_REQUEST);
   }
 
   @Benchmark
   public int multiAddWithSimpleAdd() {
-    return execute(multiAddGraph, MULTI_ADD_REQUEST, ImmutableSet.of());
+    return execute(multiAddGraph, MULTI_ADD_REQUEST);
   }
 
   @Benchmark
   public int multiAddWithSimpleAddTenRequests() {
-    return executeTenRequests(multiAddGraph, MULTI_ADD_REQUEST, ImmutableSet.of());
+    return executeTenRequests(multiAddGraph, MULTI_ADD_REQUEST);
   }
 
   @SafeVarargs
@@ -441,41 +423,26 @@ public class VajramBenchmark {
             splitAdderId, splitSum2_s, splitSum2_s, splitSum2_s, splitSum2_s, splitSum2_s));
   }
 
-  private int execute(
-      KrystexGraph graph,
-      Request<Integer> request,
-      ImmutableSet<DependentChain> disabledDependantChains) {
-    return executeNTimes(graph, request, disabledDependantChains, 1);
+  private int execute(KrystexGraph graph, Request<Integer> request) {
+    return executeNTimes(graph, request, 1);
   }
 
-  private int executeTenRequests(
-      KrystexGraph graph,
-      Request<Integer> request,
-      ImmutableSet<DependentChain> disabledDependantChains) {
-    return executeNTimes(graph, request, disabledDependantChains, 10);
+  private int executeTenRequests(KrystexGraph graph, Request<Integer> request) {
+    return executeNTimes(graph, request, 10);
   }
 
-  private Integer executeNTimes(
-      KrystexGraph graph,
-      Request<Integer> request,
-      ImmutableSet<DependentChain> disabledDependantChains,
-      int times) {
+  private Integer executeNTimes(KrystexGraph graph, Request<Integer> request, int times) {
     CompletableFuture<Integer>[] results = new CompletableFuture[times];
     try (VajramKryonExecutor executor =
         graph.createExecutor(
             KrystalExecutorConfig.builder()
                 .executorService(executorLease.get())
                 .configureWith(
-                    new RequestLevelCache(graph.vajramGraph(), graph.epochGroups())
-                        .defaultDecorationStrategy())
-                .disabledDependentChains(disabledDependantChains))) {
+                    new RequestLevelCache(
+                            graph.vajramGraph(), graph.epochGroupsByAncestors().allEpochGroups())
+                        .defaultDecorationStrategy()))) {
       for (int i = 0; i < results.length; i++) {
-        results[i] =
-            executor.execute(
-                request._build(),
-                VajramExecutionConfig.builder()
-                    .disabledDependentChains(disabledDependantChains)
-                    .build());
+        results[i] = executor.execute(request._build(), VajramExecutionConfig.builder().build());
       }
     }
     return CompletableFuture.allOf(results).thenApply(ignored -> results[0].join()).join();

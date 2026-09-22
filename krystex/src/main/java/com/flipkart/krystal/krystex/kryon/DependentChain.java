@@ -19,4 +19,6 @@ public sealed interface DependentChain extends DependentChainBase
    * DependentChainStart}
    */
   @Nullable VajramID getFirstVajram();
+
+  @Nullable DependentChain parent();
 }

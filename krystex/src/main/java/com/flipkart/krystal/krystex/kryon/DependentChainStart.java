@@ -47,4 +47,9 @@ public final class DependentChainStart extends AbstractDependentChainBase<Depend
   public @Nullable VajramID getFirstVajram() {
     return null;
   }
+
+  @Override
+  public @Nullable DependentChain parent() {
+    return null;
+  }
 }

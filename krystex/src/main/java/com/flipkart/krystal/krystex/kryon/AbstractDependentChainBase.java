@@ -38,9 +38,9 @@ abstract sealed class AbstractDependentChainBase<T extends DependentChainBase>
   protected AbstractDependentChainBase(
       VajramID vajramID,
       Dependency latestDependency,
-      @Nullable DependentChainBase incomingDependentChain) {
+      @Nullable DependentChainBase parentDependentChain) {
     this.latestDependency = latestDependency;
-    this.array = create(vajramID, latestDependency, incomingDependentChain);
+    this.array = create(vajramID, latestDependency, parentDependentChain);
   }
 
   @Override
@@ -83,9 +83,9 @@ abstract sealed class AbstractDependentChainBase<T extends DependentChainBase>
   private static DependentChainNode[] create(
       VajramID vajramID,
       Dependency latestDependency,
-      @Nullable DependentChainBase incomingDependentChain) {
+      @Nullable DependentChainBase parentDependentChain) {
     DependentChainNode[] incomingArray;
-    if (incomingDependentChain instanceof AbstractDependentChainBase abstractDependentChain) {
+    if (parentDependentChain instanceof AbstractDependentChainBase abstractDependentChain) {
       incomingArray = abstractDependentChain.array;
     } else {
       incomingArray = new DependentChainNode[0];

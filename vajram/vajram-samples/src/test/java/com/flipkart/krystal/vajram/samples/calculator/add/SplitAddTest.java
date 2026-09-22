@@ -84,9 +84,7 @@ class SplitAddTest {
                     .executorService(executorService)
                     .configureWith(
                         new MainLogicExecReporter(kryonExecutionReport)
-                            .defaultKryonExecutorConfigurator())
-                    // Tests whether executor level disabled dependant chains is working
-                    .disabledDependentChains(disabledDepChains(graph)))) {
+                            .defaultKryonExecutorConfigurator()))) {
       future = executeVajram(krystexVajramExecutor, 0);
     }
     assertThat(future).succeedsWithin(ofSeconds(1)).isEqualTo(55);
@@ -113,9 +111,7 @@ class SplitAddTest {
       future =
           krystexVajramExecutor.execute(
               SplitAdd_ReqImmutPojo._builder().numbers(List.of())._build(),
-              VajramExecutionConfig.builder()
-                  .disabledDependentChains(disabledDepChains(graph))
-                  .build());
+              VajramExecutionConfig.builder().build());
     }
     assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(0);
   }
@@ -143,8 +139,7 @@ class SplitAddTest {
               .createExecutor(
                   KrystalExecutorConfig.builder()
                       .executorId("splitAdderTest")
-                      .executorService(executorLease.get())
-                      .disabledDependentChains(disabledDepChains(graph)))) {
+                      .executorService(executorLease.get()))) {
         metrics[value] = krystexVajramExecutor.getKryonMetrics();
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         long enqueueStart = System.nanoTime();
@@ -216,8 +211,7 @@ class SplitAddTest {
               .createExecutor(
                   KrystalExecutorConfig.builder()
                       .executorId("splitAdderTest")
-                      .executorService(executorLease.get())
-                      .disabledDependentChains(disabledDepChains(graph)))) {
+                      .executorService(executorLease.get()))) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         metrics[outer_i] = krystexVajramExecutor.getKryonMetrics();
         for (int inner_i = 0; inner_i < innerLoopCount; inner_i++) {

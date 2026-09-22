@@ -41,7 +41,6 @@ import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyInvocation;
-import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationContext;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.request.InvocationId;
@@ -92,6 +91,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * </ul>
  */
 @Slf4j
+@Deprecated
 final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>, BatchResponse> {
 
   private static final ResolverCommandRequests FORWARD_SKIP =
@@ -118,8 +118,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
   BatchKryon(
       VajramKryonDefinition kryonDefinition,
       VajramKryonExecutor kryonExecutor,
-      Function<LogicDecorationContext, List<OutputLogicDecorator>>
-          sortedOutputLogicDecoratorSupplier,
+      Function<VajramID, List<OutputLogicDecorator>> sortedOutputLogicDecoratorSupplier,
       Function<DependencyExecutionContext, List<DependencyDecorator>> depDecoratorSupplier,
       DecorationOrdering decorationOrdering,
       RequestIdGenerator requestIdGenerator) {

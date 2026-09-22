@@ -10,7 +10,6 @@ import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecoratorConfig;
 import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
-import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
 import com.flipkart.krystal.krystex.kryon.KrystalExecutorExecutionInfo;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy;
@@ -18,7 +17,6 @@ import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -33,8 +31,6 @@ import org.checkerframework.common.returnsreceiver.qual.This;
  *
  * @param decorationOrdering The ordering of logic decorators to be applied
  * @param outputLogicDecoratorConfigs The request scoped logic decorators to be applied
- * @param disabledDependentChains Invocation originating for these dependant chains will be blocked.
- *     Useful for avoid graph size explosion in case of recursive dependencies
  * @param kryonExecStrategy Currently on BATCH is supported. More might be added in future
  * @param graphTraversalStrategy DEPTH is more performant and memory efficient. BREADTH is sometimes
  *     useful for debugging
@@ -53,7 +49,6 @@ import org.checkerframework.common.returnsreceiver.qual.This;
 public record KrystalExecutorConfig(
     @Nullable String executorId,
     DecorationOrdering decorationOrdering,
-    ImmutableSet<DependentChain> disabledDependentChains,
     KryonExecStrategy kryonExecStrategy,
     GraphTraversalStrategy graphTraversalStrategy,
     Map<String, OutputLogicDecoratorConfig> outputLogicDecoratorConfigs,
@@ -91,9 +86,6 @@ public record KrystalExecutorConfig(
       outputLogicDecoratorConfigs = ImmutableMap.of();
     } else {
       outputLogicDecoratorConfigs = ImmutableMap.copyOf(outputLogicDecoratorConfigs);
-    }
-    if (disabledDependentChains == null) {
-      disabledDependentChains = ImmutableSet.of();
     }
     if (decorationOrdering == null) {
       decorationOrdering = DecorationOrdering.none();

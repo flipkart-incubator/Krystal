@@ -104,7 +104,9 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
    *     request level cache
    */
   public RequestLevelCache(VajramGraph vajramGraph) {
-    this(vajramGraph, new EpochGroups(ImmutableMap.of()));
+    this(
+        vajramGraph,
+        EpochGroups.empty(vajramGraph.kryonDefinitionRegistry().getDependentChainsStart()));
   }
 
   public RequestLevelCache(VajramGraph vajramGraph, EpochGroups epochGroups) {
@@ -332,7 +334,8 @@ public sealed class RequestLevelCache permits TestRequestLevelCache {
     private int getCurrentEpoch(DirectForwardReceive command) {
       return epochGroups
           .vajramEpochGroups()
-          .getOrDefault(command.vajramID(), new VajramEpochGroups(ImmutableMap.of()))
+          .getOrDefault(
+              command.vajramID(), new VajramEpochGroups(command.vajramID(), ImmutableMap.of()))
           .epochByDepChains()
           .getOrDefault(command.dependentChain(), 0);
     }
