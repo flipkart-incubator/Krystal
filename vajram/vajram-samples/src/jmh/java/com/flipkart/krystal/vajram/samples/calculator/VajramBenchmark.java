@@ -147,18 +147,18 @@ import org.openjdk.jmh.annotations.Warmup;
  * <pre>
  * Benchmark                          Mode  Cnt      Score      Error  Units
  * -----------------------------------------------------------------
- * chainAdd                          thrpt    5   25420.628 ±  3661.625  ops/s
- * chainAddBatched                   thrpt    5   28111.978 ±  1530.284  ops/s
- * chainAddTenRequests               thrpt    5   24358.067 ±  3342.048  ops/s
- * chainAddTenRequestsBatched        thrpt    5   24219.329 ±  1875.433  ops/s
- * formula                           thrpt    5   40531.569 ±  6535.609  ops/s
- * formulaTenRequests                thrpt    5   35016.804 ±  2576.025  ops/s
- * multiAddWithSimpleAdd             thrpt    5  167087.510 ± 11651.878  ops/s
- * multiAddWithSimpleAddTenRequests  thrpt    5  114295.005 ± 17410.792  ops/s
- * splitAdd                          thrpt    5   19455.687 ±   508.884  ops/s
- * splitAddBatched                   thrpt    5   17448.658 ±   507.167  ops/s
- * splitAddTenRequests               thrpt    5   16508.011 ±  4263.379  ops/s
- * splitAddTenRequestsBatched        thrpt    5   16072.886 ±   353.976  ops/s
+ * chainAdd                          thrpt    5   25977.748 ± 8222.868  ops/s
+ * chainAddBatched                   thrpt    5   27765.339 ±  747.450  ops/s
+ * chainAddTenRequests               thrpt    5   24621.601 ±  680.697  ops/s
+ * chainAddTenRequestsBatched        thrpt    5   24887.055 ±  521.142  ops/s
+ * formula                           thrpt    5   47951.503 ± 8487.547  ops/s
+ * formulaTenRequests                thrpt    5   43270.548 ± 1139.464  ops/s
+ * multiAddWithSimpleAdd             thrpt    5  172891.751 ± 3551.241  ops/s
+ * multiAddWithSimpleAddTenRequests  thrpt    5  117134.636 ± 8173.311  ops/s
+ * splitAdd                          thrpt    5   21664.591 ±  268.443  ops/s
+ * splitAddBatched                   thrpt    5   22248.752 ±  344.098  ops/s
+ * splitAddTenRequests               thrpt    5   20796.142 ± 1171.296  ops/s
+ * splitAddTenRequestsBatched        thrpt    5   20221.944 ±  265.483  ops/s
  *
  *
  *

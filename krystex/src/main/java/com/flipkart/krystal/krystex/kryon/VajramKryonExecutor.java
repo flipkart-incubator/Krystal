@@ -65,6 +65,7 @@ import com.flipkart.krystal.krystex.request.RequestIdGenerator;
 import com.flipkart.krystal.krystex.request.StringReqGenerator;
 import com.flipkart.krystal.traits.StaticDispatchPolicy;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
+import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
@@ -494,7 +495,12 @@ public final class VajramKryonExecutor implements KrystalExecutor {
   private void flushDescendents(DependentChain ancestor, VajramID fromVajramId) {
     if (flushableDecorators == null) {
       List<FlushableDecorator> flushableCollector = new ArrayList<>();
-      for (VajramID targetVajram : krystexGraph.vajramGraph().vajramDefinitions().keySet()) {
+      for (VajramDefinition targetVajramDef :
+          krystexGraph.vajramGraph().vajramDefinitions().values()) {
+        if (targetVajramDef.isTrait()) {
+          continue;
+        }
+        VajramID targetVajram = targetVajramDef.vajramId();
         List<KryonDecorator> sortedKryonDecorators = getSortedKryonDecorators(targetVajram);
         for (KryonDecorator kryonDecorator : sortedKryonDecorators) {
           if (kryonDecorator instanceof FlushableDecorator flushableDecorator) {
