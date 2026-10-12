@@ -3,7 +3,7 @@ module flipkart.krystal.lattice.ext.guice.codegen {
   requires com.google.common;
   requires com.google.guice.extensions.servlet;
   requires com.google.guice;
-  requires com.squareup.javapoet;
+  requires com.palantir.javapoet;
   requires flipkart.krystal.codegen.common;
   requires flipkart.krystal.lattice.codegen;
   requires flipkart.krystal.lattice.core;

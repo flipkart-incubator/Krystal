@@ -34,10 +34,10 @@ import static com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUti
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.squareup.javapoet.MethodSpec.constructorBuilder;
-import static com.squareup.javapoet.MethodSpec.methodBuilder;
-import static com.squareup.javapoet.MethodSpec.overriding;
-import static com.squareup.javapoet.TypeSpec.anonymousClassBuilder;
+import static com.palantir.javapoet.MethodSpec.constructorBuilder;
+import static com.palantir.javapoet.MethodSpec.methodBuilder;
+import static com.palantir.javapoet.MethodSpec.overriding;
+import static com.palantir.javapoet.TypeSpec.anonymousClassBuilder;
 import static java.util.Arrays.stream;
 import static java.util.Map.entry;
 import static java.util.Objects.requireNonNull;
@@ -151,18 +151,18 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.squareup.javapoet.AnnotationSpec;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.FieldSpec;
-import com.squareup.javapoet.JavaFile;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterSpec;
-import com.squareup.javapoet.ParameterizedTypeName;
-import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeSpec;
-import com.squareup.javapoet.TypeVariableName;
-import com.squareup.javapoet.WildcardTypeName;
+import com.palantir.javapoet.AnnotationSpec;
+import com.palantir.javapoet.ClassName;
+import com.palantir.javapoet.CodeBlock;
+import com.palantir.javapoet.FieldSpec;
+import com.palantir.javapoet.JavaFile;
+import com.palantir.javapoet.MethodSpec;
+import com.palantir.javapoet.ParameterSpec;
+import com.palantir.javapoet.ParameterizedTypeName;
+import com.palantir.javapoet.TypeName;
+import com.palantir.javapoet.TypeSpec;
+import com.palantir.javapoet.TypeVariableName;
+import com.palantir.javapoet.WildcardTypeName;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -2106,6 +2106,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
     }
     // TODO : Add checks for subsetRequest
     MethodSpec.Builder fullConstructor = constructorBuilder();
+    List<ParameterSpec> fullConstructorParams = new ArrayList<>();
     if (codeGenParams.withImpl()) {
       ClassName immutFacetsType =
           ClassName.get(vajramPackageName(), getImmutFacetsClassName(vajramName));
@@ -2127,8 +2128,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
             codeGenParams.isBuilder()
                 ? currentVajramInfo().conformsToTraitOrSelf().reqBuilderInterfaceType()
                 : currentVajramInfo().conformsToTraitOrSelf().reqImmutInterfaceTypeName();
-        fullConstructor.addParameter(
-            ParameterSpec.builder(requestOrBuilderType, "_request").build());
+        fullConstructorParams.add(ParameterSpec.builder(requestOrBuilderType, "_request").build());
         fullConstructor.addStatement("this._request = _request");
         FieldSpec.Builder field =
             FieldSpec.builder(requestOrBuilderType, "_request", PRIVATE, FINAL)
@@ -2188,7 +2188,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
             facetField.addModifiers(FINAL);
           }
           classSpec.addField(facetField.build());
-          fullConstructor.addParameter(facetParam);
+          fullConstructorParams.add(facetParam);
 
           fullConstructor.addStatement("this.$L = $L", facet.name(), facet.name());
         }
@@ -2247,12 +2247,10 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
       }
     }
     if (codeGenParams.withImpl()) {
-      classSpec.addMethod(fullConstructor.build());
+      classSpec.addMethod(fullConstructor.addParameters(fullConstructorParams).build());
     }
 
-    if (codeGenParams.isBuilder()
-        && codeGenParams.withImpl()
-        && !fullConstructor.parameters.isEmpty()) {
+    if (codeGenParams.isBuilder() && codeGenParams.withImpl() && !fullConstructorParams.isEmpty()) {
       // Make sure there is always a no-arg constructor for the builder
       classSpec.addMethod(
           constructorBuilder()

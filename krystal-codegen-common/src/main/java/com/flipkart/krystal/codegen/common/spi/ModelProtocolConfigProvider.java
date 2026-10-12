@@ -2,7 +2,7 @@ package com.flipkart.krystal.codegen.common.spi;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.model.ModelProtocol;
-import com.squareup.javapoet.CodeBlock;
+import com.palantir.javapoet.CodeBlock;
 import javax.lang.model.type.TypeMirror;
 
 public interface ModelProtocolConfigProvider {

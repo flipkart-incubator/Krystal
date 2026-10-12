@@ -28,11 +28,11 @@ import com.flipkart.krystal.lattice.core.doping.DopantType;
 import com.flipkart.krystal.lattice.core.doping.DopeWith;
 import com.google.auto.service.AutoService;
 import com.google.common.collect.ImmutableList;
-import com.squareup.javapoet.AnnotationSpec;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.ParameterSpec;
-import com.squareup.javapoet.TypeName;
+import com.palantir.javapoet.AnnotationSpec;
+import com.palantir.javapoet.ClassName;
+import com.palantir.javapoet.CodeBlock;
+import com.palantir.javapoet.ParameterSpec;
+import com.palantir.javapoet.TypeName;
 import jakarta.enterprise.context.NormalScope;
 import jakarta.inject.Qualifier;
 import jakarta.inject.Scope;
@@ -402,7 +402,7 @@ public class DopantBindingsProvider implements BindingsProvider {
             "return new $T($L);",
             LatticeAppBootstrap.class,
             dependencies.stream()
-                .map(p -> CodeBlock.of("$L", p.name))
+                .map(p -> CodeBlock.of("$L", p.name()))
                 .collect(CodeBlock.joining(", "))),
         AnnotationSpec.builder(Singleton.class).build());
   }
@@ -426,7 +426,7 @@ public class DopantBindingsProvider implements BindingsProvider {
             "return new $T($L);",
             LatticeDopantSet.class,
             dependencies.stream()
-                .map(p -> CodeBlock.of("$L", p.name))
+                .map(p -> CodeBlock.of("$L", p.name()))
                 .collect(CodeBlock.joining(", "))),
         AnnotationSpec.builder(Singleton.class).build());
   }
@@ -445,7 +445,7 @@ public class DopantBindingsProvider implements BindingsProvider {
           .forEach(
               element -> {
                 List<? extends AnnotationMirror> annotationMirrors = element.getAnnotationMirrors();
-                Produces producesAnno = element.getAnnotation(Produces.class);
+                Produces producesAnno = requireNonNull(element.getAnnotation(Produces.class));
                 List<AnnotationMirror> qualifierAnnotations =
                     annotationMirrors.stream()
                         .filter(
@@ -510,7 +510,7 @@ public class DopantBindingsProvider implements BindingsProvider {
                             producerContainer,
                             element.getSimpleName(),
                             additionalParams.stream()
-                                .map(p -> CodeBlock.of("$L", p.name))
+                                .map(p -> CodeBlock.of("$L", p.name()))
                                 .collect(CodeBlock.joining(", "))),
                         annotationSpecs,
                         AnnotationSpec.builder(ClassName.get(scopeElem)).build()));

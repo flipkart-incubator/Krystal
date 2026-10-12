@@ -9,7 +9,7 @@ import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.
 import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.isProtoTypeMap;
 import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.isProtoTypeRepeated;
 import static com.flipkart.krystal.vajram.protobuf.codegen.util.ProtoGenUtility.toTitleCaseProtoName;
-import static com.squareup.javapoet.MethodSpec.methodBuilder;
+import static com.palantir.javapoet.MethodSpec.methodBuilder;
 import static java.util.Map.entry;
 import static java.util.Map.ofEntries;
 import static java.util.Objects.requireNonNull;
@@ -41,17 +41,17 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
-import com.squareup.javapoet.AnnotationSpec;
-import com.squareup.javapoet.ArrayTypeName;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.FieldSpec;
-import com.squareup.javapoet.JavaFile;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterizedTypeName;
-import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeSpec;
-import com.squareup.javapoet.TypeSpec.Builder;
+import com.palantir.javapoet.AnnotationSpec;
+import com.palantir.javapoet.ArrayTypeName;
+import com.palantir.javapoet.ClassName;
+import com.palantir.javapoet.CodeBlock;
+import com.palantir.javapoet.FieldSpec;
+import com.palantir.javapoet.JavaFile;
+import com.palantir.javapoet.MethodSpec;
+import com.palantir.javapoet.ParameterizedTypeName;
+import com.palantir.javapoet.TypeName;
+import com.palantir.javapoet.TypeSpec;
+import com.palantir.javapoet.TypeSpec.Builder;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -151,7 +151,7 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
   private void generateEnumProtoUtils() {
     TypeElement enumElement = codeGenContext.modelRootType();
     String packageName = util.getCodegenPackageName(enumElement);
-    String utilsClassName = enumElement.getSimpleName().toString() + config.utilsSuffix();
+    String utilsClassName = enumElement.getSimpleName() + config.utilsSuffix();
 
     ClassName javaEnumType = ClassName.get(enumElement);
     // The protoc-generated Java class mirrors the proto enum name, which is TitleCased -
@@ -600,6 +600,7 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
    * proto-convertible value. Shared by both the whole-field-Errable and Optional/plain getter
    * paths, which differ only in how the result is presence-checked and (un)wrapped.
    */
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   private CodeBlock scalarValueExpr(
       CodeGenType dataType,
       TypeMirror scalarType,
@@ -630,6 +631,7 @@ public abstract class BaseProtoModelsGen implements CodeGenerator {
    * the covariant-narrowing note in {@link #getterMethod}); every other case returns a plain,
    * non-live {@code Lists.transform(...)} expression.
    */
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   private CodeBlock listGetterExpr(
       TypeMirror listType,
       String fieldName,
@@ -735,6 +737,7 @@ new $protoListBuilder:T<>(
   /**
    * Map analogue of {@link #listGetterExpr}, for {@code Map<K, V>} / {@code Map<K, Errable<V>>}.
    */
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   private CodeBlock mapGetterExpr(
       TypeMirror mapType,
       String fieldName,
@@ -1096,7 +1099,7 @@ new $protoMapBuilder:T<>(
                     fieldName)
                 .addAnnotation(Override.class)
                 .returns(builderType)
-                .addCode(setter.code)
+                .addCode(setter.code())
                 .build());
       }
     }

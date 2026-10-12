@@ -15,7 +15,7 @@ import com.flipkart.krystal.vajram.graphql.api.Constants.Directives;
 import com.flipkart.krystal.vajram.graphql.schema.GraphQLTypeName;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import com.squareup.javapoet.ClassName;
+import com.palantir.javapoet.ClassName;
 import graphql.language.Argument;
 import graphql.language.BooleanValue;
 import graphql.language.Directive;

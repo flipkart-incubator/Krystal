@@ -5,7 +5,7 @@ dependencies {
     api project(':vajram:vajram-codegen-common')
     api project(':lattice:lattice-core')
 
-    api 'com.squareup:javapoet'
+    api libs.javapoet
 
     implementation 'jakarta.enterprise:jakarta.enterprise.cdi-api'
     implementation 'org.projectlombok:lombok'

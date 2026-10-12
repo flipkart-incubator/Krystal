@@ -5,7 +5,7 @@ Tasks from this plugin are added under the group "Krystal"'''
 dependencies {
     implementation project(':vajram:vajram-codegen-common')
     implementation project(':krystal-codegen-common')
-    implementation 'com.squareup:javapoet'
+    implementation libs.javapoet
     implementation 'org.projectlombok:lombok'
 }
 

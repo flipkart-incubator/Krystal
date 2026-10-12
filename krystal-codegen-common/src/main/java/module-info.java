@@ -10,7 +10,7 @@ module flipkart.krystal.codegen.common {
   requires transitive flipkart.krystal.common;
   requires transitive java.compiler;
   requires com.google.common;
-  requires com.squareup.javapoet;
+  requires com.palantir.javapoet;
   requires jakarta.inject;
   requires org.slf4j;
   requires org.checkerframework.checker.qual;

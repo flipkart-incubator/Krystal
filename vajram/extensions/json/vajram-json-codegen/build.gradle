@@ -7,7 +7,7 @@ dependencies {
     implementation project(':krystal-common')
     implementation project(':vajram:extensions:json:vajram-json')
 
-    implementation 'com.squareup:javapoet'
+    implementation libs.javapoet
     implementation libs.jackson.annotations
     implementation libs.jackson.databind
 }

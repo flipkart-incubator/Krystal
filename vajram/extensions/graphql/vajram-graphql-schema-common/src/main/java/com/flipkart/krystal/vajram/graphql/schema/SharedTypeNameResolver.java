@@ -1,8 +1,8 @@
 package com.flipkart.krystal.vajram.graphql.schema;
 
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.ParameterizedTypeName;
-import com.squareup.javapoet.TypeName;
+import com.palantir.javapoet.ClassName;
+import com.palantir.javapoet.ParameterizedTypeName;
+import com.palantir.javapoet.TypeName;
 import graphql.language.Argument;
 import graphql.language.Directive;
 import graphql.language.DirectivesContainer;

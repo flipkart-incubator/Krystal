@@ -11,7 +11,7 @@ module flipkart.krystal.vajram.ext.protobuf.codegen.util {
   requires org.slf4j;
   requires com.google.common;
   requires org.checkerframework.checker.qual;
-  requires com.squareup.javapoet;
+  requires com.palantir.javapoet;
   requires static lombok;
   requires com.google.protobuf;
   requires flipkart.krystal.vajram.codegen.common;

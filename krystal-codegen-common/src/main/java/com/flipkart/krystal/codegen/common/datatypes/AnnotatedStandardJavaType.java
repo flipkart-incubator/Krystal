@@ -3,7 +3,7 @@ package com.flipkart.krystal.codegen.common.datatypes;
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.standardTypesByCanonicalName;
 
 import com.google.common.collect.ImmutableList;
-import com.squareup.javapoet.CodeBlock;
+import com.palantir.javapoet.CodeBlock;
 import java.util.List;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;

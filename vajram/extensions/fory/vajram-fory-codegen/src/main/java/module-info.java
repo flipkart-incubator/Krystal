@@ -1,7 +1,7 @@
 module flipkart.krystal.vajram.ext.fory.codegen {
   requires java.compiler;
   requires flipkart.krystal.codegen.common;
-  requires com.squareup.javapoet;
+  requires com.palantir.javapoet;
   requires flipkart.krystal.vajram.ext.fory;
   requires org.apache.fory.core;
   requires org.checkerframework.checker.qual;

@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.squareup.javapoet.ClassName;
+import com.palantir.javapoet.ClassName;
 import graphql.language.FieldDefinition;
 import graphql.language.InputValueDefinition;
 import graphql.schema.idl.TypeDefinitionRegistry;

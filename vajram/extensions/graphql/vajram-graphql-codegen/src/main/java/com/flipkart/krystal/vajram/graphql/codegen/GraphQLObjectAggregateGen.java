@@ -47,15 +47,15 @@ import com.flipkart.krystal.vajram.graphql.api.traits.GraphQlOperationAggregate;
 import com.flipkart.krystal.vajram.graphql.schema.GraphQLTypeName;
 import com.flipkart.krystal.vajram.graphql.schema.GraphQlTypeDecorator;
 import com.google.common.collect.ImmutableMap;
-import com.squareup.javapoet.AnnotationSpec;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.FieldSpec;
-import com.squareup.javapoet.JavaFile;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterizedTypeName;
-import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeSpec;
+import com.palantir.javapoet.AnnotationSpec;
+import com.palantir.javapoet.ClassName;
+import com.palantir.javapoet.CodeBlock;
+import com.palantir.javapoet.FieldSpec;
+import com.palantir.javapoet.JavaFile;
+import com.palantir.javapoet.MethodSpec;
+import com.palantir.javapoet.ParameterizedTypeName;
+import com.palantir.javapoet.TypeName;
+import com.palantir.javapoet.TypeSpec;
 import graphql.execution.ExecutionContext;
 import graphql.execution.ExecutionStrategyParameters;
 import graphql.execution.MergedField;
@@ -490,6 +490,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
             entry("typeName", objectTypeName.value())));
 
     if (hasId) {
+      //noinspection OverlyStrongTypeCast
       for (FieldDefinition fieldDefinition :
           ((ObjectTypeDefinition) objectTypeDefinition).getFieldDefinitions()) {
         String fieldName = fieldDefinition.getName();
@@ -752,7 +753,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                       entry("errable", Errable.class),
                       entry("failure", Failure.class),
                       entry("idListType", idListType),
-                      entry("idFetcherFacet", idFetcherFacet),
+                      entry("idFetcherFacet", requireNonNull(idFetcherFacet)),
                       entry("singleValue", SingleValue.class),
                       entry("arrayList", ArrayList.class),
                       entry("objectValue", GraphQlValue.ObjectValue.class),
@@ -947,7 +948,6 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
       GraphQLTypeName parentTypeName,
       TypeDefinition parentTypeDef) {
 
-    ClassName vajramReqClass = getRequestClassName(fetcher.vajramClassName());
     boolean parentTypeHasEntityId = schemaReaderUtil.hasObjectId(parentTypeDef);
 
     String facetName = getFacetName(fetcher, fields);
@@ -1038,10 +1038,8 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
       return fanoutBuilder.build();
     }
 
-    List<CodeBlock> depInputNames = new ArrayList<>();
     List<CodeBlock> depInputSetterCode = new ArrayList<>();
     if (parentTypeHasEntityId) {
-      depInputNames.add(CodeBlock.of("$T.id_n", vajramReqClass));
       depInputSetterCode.add(CodeBlock.of(".id($L)", Facets.GQL_OBJECT_ID));
     }
 
@@ -1049,7 +1047,6 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
       for (InputValueDefinition inputValueDefinition :
           fields.get(0).fieldDefinition().getInputValueDefinitions()) {
         String argName = inputValueDefinition.getName();
-        depInputNames.add(CodeBlock.of("$T.$L_n", vajramReqClass, argName));
         depInputSetterCode.add(
             CodeBlock.of(
                 ".$L($L.getExecutionStepInfo().getArgument($S))",
@@ -1249,8 +1246,7 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
                         """
                         _reqs.add(_req);
                         }
-                """,
-                        entityIdFacetName)
+                """)
                     : CodeBlock.of("")),
             entry(
                 "execute",
@@ -1487,11 +1483,11 @@ public class GraphQLObjectAggregateGen implements CodeGenerator {
     TypeName fetcherResponseType =
         fetcher instanceof VajramFetcher vajramFetcher
             ? getFetcherResponseType(vajramFetcher, List.of(fieldSpec))
-            : TypeName.OBJECT;
+            : ClassName.OBJECT;
     ClassName fetcherReqClass =
         fetcher instanceof VajramFetcher vajramFetcher
             ? getRequestClassName(vajramFetcher.vajramClassName())
-            : ClassName.get(Object.class);
+            : ClassName.OBJECT;
 
     MethodSpec.Builder methodBuilder =
         MethodSpec.methodBuilder(fieldName)
