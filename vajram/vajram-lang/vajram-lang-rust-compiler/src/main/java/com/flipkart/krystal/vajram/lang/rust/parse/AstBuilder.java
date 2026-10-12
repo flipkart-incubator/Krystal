@@ -128,8 +128,7 @@ public final class AstBuilder {
   }
 
   private VajramFile.ImportDecl toImport(Imports_declContext ctx) {
-    return new VajramFile.ImportDecl(
-        ctx.ID().getText(), toQualifiedName(ctx.qualifiedName()), ctx.FANOUT() != null);
+    return new VajramFile.ImportDecl(ctx.ID().getText(), toQualifiedName(ctx.qualifiedName()));
   }
 
   private List<String> toQualifiedName(QualifiedNameContext ctx) {
@@ -497,10 +496,10 @@ public final class AstBuilder {
       diagnostics.error(loc(ctx), "Unrecognized unary/postfix expression: " + ctx.getText());
       return target;
     }
-    // childExprs == 2: binary '+' or '=='
+    // childExprs == 2: binary '+', '*' or '=='
     Expr left = toExpr(ctx.expr(0));
     Expr right = toExpr(ctx.expr(1));
-    String op = ctx.PLUS() != null ? "+" : "==";
+    String op = ctx.PLUS() != null ? "+" : ctx.MULTIPLY() != null ? "*" : "==";
     return new Expr.BinaryOp(left, op, right);
   }
 

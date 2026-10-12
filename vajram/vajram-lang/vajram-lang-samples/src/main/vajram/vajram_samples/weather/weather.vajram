@@ -1,0 +1,36 @@
+package vajram_samples.weather;
+
+import vajram callHttp from lang.net;
+import type ConsoleWriter from lang.process;
+
+// Equivalent to:
+//   curl -X 'GET' 'https://api.weather.gov/alerts/active' -H 'accept: application/geo+json'
+// (callHttp only issues plain GETs today - no custom request headers yet - so the
+// `accept` header from the curl isn't sent; api.weather.gov still returns JSON by default.)
+//
+// Run:
+// ./gradlew :vajram:vajram-lang:vajram-lang-samples:runVajram -Pvajram=activeWeatherAlerts
+vajram activeWeatherAlerts()
+    out string~
+    inject (ConsoleWriter console)
+    permit callers `outsideProcess public {
+  string alertsJson = callHttp(url = "https://api.weather.gov/alerts/active");
+
+  out ~{
+    console.println("Fetched active weather alerts from api.weather.gov");
+    yield alertsJson;
+  }
+}
+
+vajram activeWeatherAlertsCount()
+    out string~
+    inject (ConsoleWriter console)
+    permit callers `outsideProcess public {
+  string alertsJson = callHttp(url = "https://api.weather.gov/alerts/active/count");
+
+  out ~{
+    console.println("Fetched active weather alerts from api.weather.gov");
+    yield alertsJson;
+  }
+}
+

@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajram_lang.samples.products;
 
 vajram getAvailableProductDetails
     in (string productId)
-    out ProductDetails? {
+    out ProductDetails?~ {
 
   bool? isAvailable = isProductAvailable(productId = productId);
 

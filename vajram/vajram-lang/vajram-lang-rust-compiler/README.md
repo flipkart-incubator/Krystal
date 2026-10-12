@@ -18,31 +18,30 @@ Dependency invocation is eager but dependency consumption is deferred. When a de
 
 The compiler must lower computed facets as a dependency graph, not as a linear sequence of blocking statements. Every facet task captures and awaits only the source facets it uses. This lets independent work progress concurrently: if `c1` consumes `d1` and `c2` consumes `d2`, both `d1` and `d2` start immediately, and either `c1` or `c2` may complete first. Source declaration order must not cause `c2` to wait for `d1` merely because `c1` appears first.
 
-Native generated crates using deferred facets execute tasks inside a Tokio `LocalSet`. WASM generated crates schedule eager task work with `wasm_bindgen_futures::spawn_local` and share results through `futures::future::Shared`; `Rc` values are deliberately single-threaded and cannot be sent to a multi-thread worker.
+Independent computed facets are lowered into unspawned `async { ... }` blocks, one per facet, grouped by dependency level (a topological sort over facet-to-facet references). Each level's facets are resolved together with `futures::join!`/`futures::try_join!` before the next level's blocks run. This keeps facets that don't depend on each other from blocking on one another purely due to declaration order, without ever detaching a task from the current stack frame — the current thread is never blocked, but nothing is spawned either, so borrowed (`&'a T`) facet values can flow into the joined futures. WASM and native targets share this same `join!`-based lowering.
 
 ## Ownership And Resolver Lifetimes
 
-Values crossing a generated Vajram boundary use `Rc<T>`:
+Each Vajram call is given a caller-supplied bump arena (`&'a vajram_rt::Arena`, backed by the `bumpalo` crate) instead of reference counting:
 
-- Input fields and injection fields are `Rc<T>`.
-- A Vajram returns `Rc<T>` or `Result<Rc<T>, VajramError>` for an errable output.
-- Passing an existing Vajram value to a dependency emits `Rc::clone(&value)`. This increments a reference count, not a deep copy or ownership transfer.
-- A resolver expression which computes a new value is wrapped in `Rc::new(...)` inside the dependency call.
+- Input fields and injection fields are `&'a T`, borrowed from the caller's arena.
+- A Vajram returns `&'a T` or `Result<&'a T, VajramError>` for an errable output — the returned value lives in the caller's arena and outlives the call.
+- Passing an existing Vajram value to a dependency passes the borrow through unchanged; no cloning or reference-count bump occurs.
+- A resolver expression which computes a new value is allocated with `arena.alloc(...)` inside the dependency call, unless the facet is marked `` `local ``.
+- A facet annotated `` `local `` is a plain owned Rust value (no arena allocation, no `&'a` wrapper): it is scoped to that Vajram's execution and freed by ordinary Rust `drop` at the end of the call. Passing a `` `local `` value into a nested Vajram call allocates a throwaway scratch `Arena::new()` for that nested call so the callee still receives an `&'a T`.
 
-Async dependency continuations own only `Rc` handles. Resolver-local values are created inside the `async move` continuation and their handles are dropped when that continuation completes. The underlying allocation is reclaimed after the last parent or dependent handle is dropped.
-
-`Rc` safe APIs prevent use-after-free, double-free, and data races. They do not collect reference cycles; generated application types must use `Weak<T>` for cyclic back-references. Mutable shared application state should be avoided; `Rc<RefCell<T>>` is memory-safe but can panic on an invalid runtime borrow.
+Because nothing survives a Vajram's own execution except what's written into the arena the caller passed in, memory allocated within a Vajram (other than its output) is reclaimed once that arena — or the throwaway scratch arena backing a `` `local `` value — goes out of scope. Dependency-injection singletons (`AppContext`, `Injector`, `Provider`) are the one deliberate exception: they are still `Rc`-based internally and threaded by plain reference (`&AppContext<I>`), since they are process-lifetime, not call-lifetime, state.
 
 ## Other Translation Rules
 
-- `T?` maps to `Result<T, VajramError>` internally and `Result<Rc<T>, VajramError>` at a Vajram boundary.
+- `T?` maps to `Result<T, VajramError>` internally and `Result<&'a T, VajramError>` at a Vajram boundary.
 - `string`, `int`, and `void` map to `String`, `i64`, and `()`.
 - `new Foo(args)` maps to `Foo::new(args)`.
 - `nil` maps to the bundled `vajram_rt::nil()` helper.
 - `?` errable method syntax is served by the bundled `Errable` trait.
 - Method chains and lambda bodies are structurally transliterated; unsupported Java-library idioms are intentionally left for Rust type checking to diagnose.
 
-The compiler copies `vajram_rt` into the generated crate. Native crates with async Vajrams need Tokio with the `rt` feature. WASM crates with async Vajrams need `futures`, `wasm-bindgen`, and `wasm-bindgen-futures`; Tokio is not used by the WASM prelude.
+The compiler copies `vajram_rt` into the generated crate. Every generated crate needs the `bumpalo` crate, since `vajram_rt::Arena` is a `bumpalo::Bump` alias used by every Vajram call regardless of sync/async. Native crates with async Vajrams need Tokio with the `rt` feature. WASM crates with async Vajrams need `futures`, `wasm-bindgen`, and `wasm-bindgen-futures`; Tokio is not used by the WASM prelude.
 
 ## Annotation Processors
 
@@ -63,6 +62,8 @@ It writes `main.rs`, which accepts a Vajram name as its first argument, dispatch
 `readFileAsString(path = filePath)` is a built-in soon Vajram for the native target. It is available without a source definition, reads the supplied path asynchronously with Tokio, decodes UTF-8, and returns a `string`. File I/O failures terminate the non-errable invocation with an error. Generated Cargo crates using it require Tokio's `fs` feature. WASM compilation rejects it with a source-positioned diagnostic until the browser File Picker SDK capability is bundled; it never lowers to Tokio filesystem I/O on WASM.
 
 `concatStrings(strings = values, separator = separator)` is a built-in now Vajram imported from `lang.Strings`. It joins an ordered array of strings into one `string`, inserting `separator` between adjacent values.
+
+`callHttp(url = requestUrl)` is a built-in soon Vajram imported from `lang.net`, supported on both targets. On the native target it issues a non-blocking HTTP GET using `reqwest`; generated Cargo crates need the `reqwest` crate (default features, which pull in Tokio). On the wasm target it lowers to the bundled `vajram_rt::fetch_text` helper, which drives the browser's `fetch` API through `wasm-bindgen`/`web-sys` instead of Tokio; generated wasm crates need the `web-sys` crate with the `Request`, `RequestInit`, `RequestMode`, `Response`, and `Window` features enabled. Either way it returns the response body decoded as a `string`, and request or decoding failures terminate the non-errable invocation with an error.
 
 ## Vajram Injection
 1. For every vajram which has injections defined, a struct called <Vajram>_Injections is generated where each injectable value has one corresponding field in the struct - the field type is `Provider<T>` where T is the type of the injection facet.

@@ -11,9 +11,7 @@ pub struct VajramError {
 
 impl VajramError {
     pub fn new(message: impl Into<String>) -> Self {
-        Self {
-            message: message.into(),
-        }
+        Self { message: message.into() }
     }
 
     /// Backs vajram-lang's `nil` literal - see the free function `nil()` below.

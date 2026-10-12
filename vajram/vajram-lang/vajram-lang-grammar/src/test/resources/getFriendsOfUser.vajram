@@ -5,7 +5,7 @@ import vajram FriendServiceClient from com.flipkart.krystal.vajram_lang.samples.
 
 vajram getFriendsOfUser
     (string userId)
-    out Set<string>
+    out Set<string>~
     inject (FriendServiceClient svcClient)
     permit callers public {
 

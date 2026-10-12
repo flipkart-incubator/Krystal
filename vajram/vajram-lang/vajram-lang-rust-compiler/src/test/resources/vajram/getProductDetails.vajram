@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajram_lang.samples.products;
 
 vajram getProductDetails
   (#batch string productId)
-  out ProductDetails?
+  out ProductDetails?~
   inject (ProductDB productDB){
 
   out ~{

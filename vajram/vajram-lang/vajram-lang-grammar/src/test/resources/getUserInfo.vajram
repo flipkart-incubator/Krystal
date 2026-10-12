@@ -4,7 +4,7 @@ import vajram UserServiceClient from com.flipkart.user_service.models;
 
 vajram getUserInfo
     in (#batch string userId)
-    out UserInfo
+    out UserInfo~
     inject (UserServiceClient svcClient)
     permit callers sayHelloToFriends {
 

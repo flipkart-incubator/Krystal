@@ -10,6 +10,13 @@ pub use error::{nil, VajramError};
 use std::rc::Rc;
 use std::{any::Any, cell::RefCell, collections::HashMap};
 
+/// Per-vajram-call-chain bump arena. Every non-`local` facet value (and a Vajram's own output) is
+/// allocated here instead of behind an `Rc`; the arena - and everything transient allocated into
+/// it - is reclaimed in bulk when the scope that owns it (a `let arena = Arena::new();` local, or
+/// one shared per top-level request) goes out of scope. Facets marked `` `local `` never touch an
+/// arena at all - they're plain owned Rust values freed by ordinary drop when their Vajram returns.
+pub type Arena = bumpalo::Bump;
+
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct InjectionKey {
     pub type_name: String,
@@ -26,8 +33,13 @@ pub trait Provider<T: ?Sized> {
     fn get(&self) -> Rc<T>;
 }
 
+/// DI singletons (`Injector`, `Provider`, and `AppContext`'s own internals below) are process/
+/// request-scoped, not per-vajram-call memory, so they intentionally stay `Rc`-based - out of
+/// scope for the arena/lifetime change. `AppContext` itself is now threaded around by plain
+/// reference (`&AppContext<I>`) instead of `Rc<AppContext<I>>`, since nothing spawns detached
+/// tasks anymore that would need a `'static` owned handle to it.
 pub trait Injector: Sized {
-    fn get_provider<T: ?Sized + 'static>(&self, key: InjectionKey, context: Rc<AppContext<Self>>) -> Rc<dyn Provider<T>>;
+    fn get_provider<T: ?Sized + 'static>(&self, key: InjectionKey, context: &AppContext<Self>) -> Rc<dyn Provider<T>>;
 }
 
 pub struct DefaultInjector {
@@ -50,7 +62,7 @@ impl Default for DefaultInjector {
 }
 
 impl Injector for DefaultInjector {
-    fn get_provider<T: ?Sized + 'static>(&self, key: InjectionKey, _context: Rc<AppContext<Self>>) -> Rc<dyn Provider<T>> {
+    fn get_provider<T: ?Sized + 'static>(&self, key: InjectionKey, _context: &AppContext<Self>) -> Rc<dyn Provider<T>> {
         self.providers.get(&key)
             .and_then(|provider| provider.downcast_ref::<Rc<dyn Provider<T>>>())
             .cloned()
@@ -89,25 +101,4 @@ impl ConsoleWriter for StdOut {
     fn println(&self, message: String) {
         println!("{}", message);
     }
-}
-
-/// Runs a generated async dependency on the current thread's Tokio LocalSet. The future owns only
-/// `Rc` handles, so resolver-local values are dropped when this continuation completes.
-#[cfg(feature = "tokio")]
-pub async fn spawn_local<T: 'static>(future: impl std::future::Future<Output = T> + 'static) -> T {
-    tokio::task::spawn_local(future)
-        .await
-        .expect("generated Vajram dependency task panicked or was cancelled")
-}
-
-/// Starts work on this LocalSet immediately and returns a cloneable handle for deferred facet use.
-#[cfg(feature = "tokio")]
-pub fn spawn_local_shared<T: Clone + 'static>(
-    future: impl std::future::Future<Output = T> + 'static,
-) -> impl std::future::Future<Output = T> + Clone {
-    use futures::FutureExt;
-
-    tokio::task::spawn_local(future)
-        .map(|result| result.expect("generated Vajram dependency task panicked or was cancelled"))
-        .shared()
 }

@@ -56,16 +56,31 @@ public final class TypeMapper {
   }
 
   /**
-   * Every value that crosses a generated Vajram boundary uses shared, local-task-safe ownership.
+   * Every value that crosses a generated Vajram boundary (by default) is borrowed out of some
+   * arena: a reference tied to the given {@code lifetime}, not a refcounted handle. Callers pass
+   * {@code "a"} for the callee's own arena/output lifetime, or {@code "i"} for the (independent)
+   * lifetime of the {@code Inputs} struct's fields - keeping the two decoupled is what lets a
+   * short-lived scratch arena back a {@code `local} facet's inputs without also shrinking the
+   * arena/output lifetime of the call that consumes them. See {@link #toRustLocalType(TypeRef)} for
+   * the {@code `local} facet case, which is a plain owned value instead.
    */
-  public static String toRustOwnedType(TypeRef type) {
-    return "Rc<" + toRustValueType(type) + ">";
+  public static String toRustOwnedType(TypeRef type, String lifetime) {
+    return "&'" + lifetime + " " + toRustValueType(type);
+  }
+
+  /**
+   * A {@code `local} facet's value never crosses this Vajram's own boundary, so it is just a plain
+   * owned Rust value - freed by ordinary scope/drop rules when {@code call_one} returns, no arena
+   * or reference involved.
+   */
+  public static String toRustLocalType(TypeRef type) {
+    return toRustValueType(type);
   }
 
   public static String toRustReturnType(TypeRef type) {
     TypeRef valueType =
         new TypeRef(type.name(), type.typeArgs(), type.grouperType(), false, type.soon());
-    String ownedValue = toRustOwnedType(valueType);
+    String ownedValue = toRustOwnedType(valueType, "a");
     return type.errable() ? "Result<" + ownedValue + ", VajramError>" : ownedValue;
   }
 

@@ -100,13 +100,14 @@ class GreetTest {
     assertThat(analyticsEventSink.events).isEmpty();
     KrystexGraphBuilder kGraph = KrystexGraph.builder().vajramGraph(graph);
     kGraph.injectionProvider(new VajramGuiceInputInjector(injector));
+    SingleThreadExecutor executorService = executorLease.get();
     try (VajramKryonExecutor krystexVajramExecutor =
         kGraph
             .build()
             .createExecutor(
                 KrystalExecutorConfig.builder()
                     .executorId(REQUEST_ID)
-                    .executorService(executorLease.get())
+                    .executorService(executorService)
                     .decorationOrdering(decorationOrdering)
                     .configureWith(
                         new MainLogicExecReporter(kryonExecutionReport)
@@ -117,6 +118,9 @@ class GreetTest {
         .succeedsWithin(TIMEOUT)
         .isEqualTo("Hello Firstname Lastname (user@123)! Hope you are doing well!");
     assertThat(analyticsEventSink.events).hasSize(1);
+    // Wait for all commands to be finished so that we don't get Concurrent
+    // Modification Exceptions in kryonExecutionReport
+    executorService.submit(() -> {}).join();
     out.println(
         Json.MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(kryonExecutionReport));
   }

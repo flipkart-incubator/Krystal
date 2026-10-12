@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.lang.rust.resolve;
 
 import com.flipkart.krystal.vajram.lang.rust.ast.Callers;
+import com.flipkart.krystal.vajram.lang.rust.ast.Completion;
 import com.flipkart.krystal.vajram.lang.rust.ast.ComputedFacet;
 import com.flipkart.krystal.vajram.lang.rust.ast.DepInputResolver;
 import com.flipkart.krystal.vajram.lang.rust.ast.Dependency;
@@ -47,6 +48,32 @@ public final class Resolver {
       if (vajram.outputBlock() instanceof OutputBlock.Delegate delegate) {
         checkInvocation(file, delegate.invocation(), table, diagnostics, target);
       }
+      checkCompletion(file, table, diagnostics);
+    }
+  }
+
+  /**
+   * A Vajram's declared output type is the only source of truth for whether it's async (see {@link
+   * SymbolTable#completionOf}) - so a Vajram whose body actually requires async execution (its own
+   * output block is marked {@code ~}/{@code ~~}, or it calls an async dependency/delegate) must say
+   * so on its signature too. Vajram-lang never blocks a thread to reconcile an actually-async body
+   * with a sync-declared ({@code out T}) signature, so this mismatch is a compile error rather than
+   * something silently inferred/promoted.
+   */
+  private static void checkCompletion(VajramFile file, SymbolTable table, Diagnostics diagnostics) {
+    if (file.vajram().outputType().soon()) {
+      return;
+    }
+    if (table.inferredCompletion(file) != Completion.NOW) {
+      diagnostics.error(
+          file.vajram().location(),
+          "Vajram '"
+              + file.vajram().name()
+              + "' requires asynchronous execution (its output block, or a dependency/delegate it"
+              + " calls, is async) but its declared output type doesn't say so - declare it as"
+              + " 'out "
+              + file.vajram().outputType().name()
+              + "~' instead");
     }
   }
 
@@ -95,7 +122,8 @@ public final class Resolver {
               invocation.location(),
               "System Vajram '"
                   + invocation.vajramName()
-                  + "' is not supported for the wasm target: browser file-picker support is not bundled");
+                  + "' is not supported for the wasm target: "
+                  + systemVajram.get().unsupportedTargetReason());
         }
         return;
       }

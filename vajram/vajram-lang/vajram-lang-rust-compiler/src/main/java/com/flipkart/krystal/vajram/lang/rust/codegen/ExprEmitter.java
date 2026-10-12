@@ -41,88 +41,28 @@ public final class ExprEmitter {
   private final Set<String> inputNames;
   private final Set<String> injectionNames;
   private final Map<String, String> boundaryTypeNames;
-  private final Set<String> fieldNames;
-  private final Set<String> deferredFacetNames;
-  private final String inputsRoot;
-  private final String depsRoot;
-  private final String diRoot;
+  private final Set<String> localFacetNames;
 
   public ExprEmitter(
       Set<String> inputNames,
       Set<String> injectionNames,
       Map<String, String> boundaryTypeNames,
-      Set<String> fieldNames) {
-    this(
-        inputNames,
-        injectionNames,
-        boundaryTypeNames,
-        fieldNames,
-        Set.of(),
-        "inputs",
-        "deps",
-        "di");
-  }
-
-  private ExprEmitter(
-      Set<String> inputNames,
-      Set<String> injectionNames,
-      Map<String, String> boundaryTypeNames,
-      Set<String> fieldNames,
-      Set<String> deferredFacetNames,
-      String inputsRoot,
-      String depsRoot,
-      String diRoot) {
+      Set<String> localFacetNames) {
     this.inputNames = inputNames;
     this.injectionNames = injectionNames;
     this.boundaryTypeNames = boundaryTypeNames;
-    this.fieldNames = fieldNames;
-    this.deferredFacetNames = deferredFacetNames;
-    this.inputsRoot = inputsRoot;
-    this.depsRoot = depsRoot;
-    this.diRoot = diRoot;
-  }
-
-  public ExprEmitter withDeferredFacets(Set<String> names) {
-    return new ExprEmitter(
-        inputNames,
-        injectionNames,
-        boundaryTypeNames,
-        fieldNames,
-        names,
-        inputsRoot,
-        depsRoot,
-        diRoot);
-  }
-
-  public ExprEmitter inTaskScope(String taskInputs, String taskDeps, String taskDi) {
-    return new ExprEmitter(
-        inputNames,
-        injectionNames,
-        boundaryTypeNames,
-        fieldNames,
-        deferredFacetNames,
-        taskInputs,
-        taskDeps,
-        taskDi);
-  }
-
-  public String diRoot() {
-    return diRoot;
-  }
-
-  public String contextRoot() {
-    return diRoot;
-  }
-
-  public boolean isDeferredFacetName(String name) {
-    return deferredFacetNames.contains(name);
+    this.localFacetNames = localFacetNames;
   }
 
   /**
-   * Whether a bare name is a locally owned computed field rather than an {@code Rc} boundary value.
+   * Whether a bare name is a {@code `local} facet: a plain owned Rust value freed when this
+   * Vajram's {@code call_one} returns, rather than a {@code &'a T} borrowed out of the output
+   * arena. Callers that hand this facet's value across a boundary (into a dependency's inputs, or
+   * into this Vajram's own output) must re-home it into the target arena rather than pass it
+   * through bare.
    */
-  public boolean isFieldName(String name) {
-    return fieldNames.contains(name);
+  public boolean isLocalFacetName(String name) {
+    return localFacetNames.contains(name);
   }
 
   public String emit(Expr expr) {
@@ -222,11 +162,8 @@ public final class ExprEmitter {
       return "nil()";
     }
     String name = resolve(v.name());
-    // `expr?` (errable-suffixed var use) surfaces the underlying Result directly via the
+    // `expr?` (errable-suffixed var-use) surfaces the underlying Result directly via the
     // Errable trait; a bare reference is just the value/binding itself.
-    if (deferredFacetNames.contains(v.name())) {
-      name += ".clone().await";
-    }
     return v.errableSuffix() ? name + ".as_errable()" : name;
   }
 
@@ -245,10 +182,10 @@ public final class ExprEmitter {
   private String resolve(String name) {
     String id = identifier(name);
     if (injectionNames.contains(name)) {
-      return depsRoot + "." + id + ".get()";
+      return "deps." + id + ".get()";
     }
     if (inputNames.contains(name)) {
-      return inputsRoot + "." + id;
+      return "inputs." + id;
     }
     return id;
   }
@@ -304,22 +241,32 @@ public final class ExprEmitter {
     return sb.toString();
   }
 
-  /** Wraps a Vajram result in shared ownership while preserving an existing owned binding. */
+  /**
+   * Shared by Vajram output logic blocks: statements, then the trailing value allocated into {@code
+   * arena} - the output arena `call_one` was handed by its caller - so it survives past this
+   * Vajram's own return, per the {@code `local}-vs-default rule described on {@link
+   * TypeMapper#toRustOwnedType}.
+   */
   public String emitOwnedBlockBody(List<Statement> statements, @Nullable YieldStatement yield) {
     StringBuilder sb = new StringBuilder();
     for (Statement statement : statements) {
       sb.append(emitStatement(statement)).append(' ');
     }
     if (yield == null) {
-      sb.append("Rc::new(())");
+      sb.append("arena.alloc(())");
     } else if (yield.values().size() == 1 && yield.values().get(0) instanceof Expr.VarUse varUse) {
-      if (isDeferredFacetName(varUse.name())) {
-        sb.append(emit(varUse));
+      String value = emit(varUse);
+      if (isLocalFacetName(varUse.name())) {
+        // The referenced facet is a plain owned value with no arena lifetime of its own - it must
+        // be re-homed into the output arena to survive past this Vajram's return.
+        sb.append("arena.alloc(").append(value).append(")");
       } else {
-        sb.append("Rc::clone(&").append(emit(varUse)).append(")");
+        // Already a `&'a T` tied to this Vajram's own output arena (an input, injection, or
+        // non-local facet) - pass it straight through, no copy needed.
+        sb.append(value);
       }
     } else {
-      sb.append("Rc::new(").append(emitYieldValue(yield)).append(")");
+      sb.append("arena.alloc(").append(emitYieldValue(yield)).append(")");
     }
     return sb.toString();
   }

@@ -8,5 +8,5 @@ public record VajramFile(
     Path sourcePath, List<String> packageSegments, List<ImportDecl> imports, VajramDef vajram) {
 
   /** Grammar rule {@code imports_decl}: local Vajram name and the module it comes from. */
-  public record ImportDecl(String vajramName, List<String> sourceSegments, boolean wildcard) {}
+  public record ImportDecl(String vajramName, List<String> sourceSegments) {}
 }

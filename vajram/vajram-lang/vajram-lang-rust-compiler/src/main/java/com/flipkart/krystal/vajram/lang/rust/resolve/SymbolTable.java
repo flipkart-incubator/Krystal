@@ -46,41 +46,47 @@ public final class SymbolTable {
     return filesByVajramName.get(vajramName);
   }
 
+  /**
+   * A Vajram's completion is authoritatively its own declared output type: {@code out T} is {@link
+   * Completion#NOW}, {@code out T~} is {@link Completion#SOON}. It is deliberately *not* inferred
+   * from the Vajram's body - a caller deciding whether to {@code .await} a dependency needs a
+   * simple, non-recursive answer, and Vajram-lang never blocks a thread to reconcile an
+   * actually-async body with a sync-declared signature. {@link #inferredCompletion} validates the
+   * body actually honors this contract.
+   */
   public Completion completionOf(VajramFile file) {
-    return completionOf(file, new java.util.HashSet<>());
+    return file.vajram().outputType().soon() ? Completion.SOON : Completion.NOW;
   }
 
-  private Completion completionOf(VajramFile file, java.util.Set<String> resolving) {
-    if (!resolving.add(file.vajram().name())) {
-      return Completion.NOW;
+  /**
+   * The completion actually required by a Vajram's body: its output block's own {@code ~}/{@code
+   * ~~} marker, or any dependency/delegate call to a Vajram (or system Vajram) whose own completion
+   * is async. Used only to validate (see {@link Resolver}) that a Vajram declaring a sync ({@code
+   * out T}) type doesn't secretly require async execution - that mismatch is a compile error, not
+   * something silently promoted.
+   */
+  public Completion inferredCompletion(VajramFile file) {
+    Completion completion = Completion.NOW;
+    if (file.vajram().outputBlock() instanceof OutputBlock.Logic logic) {
+      completion =
+          logic.later() ? Completion.LATER : logic.soon() ? Completion.SOON : Completion.NOW;
     }
-    Completion completion = declaredCompletion(file);
     for (ComputedFacet facet : file.vajram().computedFacets()) {
       if (facet instanceof Dependency dependency) {
-        completion =
-            max(completion, completionOfInvocation(file, dependency.invocation(), resolving));
+        completion = max(completion, completionOfInvocation(file, dependency.invocation()));
       }
     }
     if (file.vajram().outputBlock() instanceof OutputBlock.Delegate delegate) {
-      completion = max(completion, completionOfInvocation(file, delegate.invocation(), resolving));
+      completion = max(completion, completionOfInvocation(file, delegate.invocation()));
     }
-    resolving.remove(file.vajram().name());
     return completion;
   }
 
-  private Completion declaredCompletion(VajramFile file) {
-    if (file.vajram().outputBlock() instanceof OutputBlock.Logic logic) {
-      return logic.later() ? Completion.LATER : logic.soon() ? Completion.SOON : Completion.NOW;
-    }
-    return Completion.NOW;
-  }
-
-  private Completion completionOfInvocation(
-      VajramFile caller, DependencyInvocation invocation, java.util.Set<String> resolving) {
+  private Completion completionOfInvocation(VajramFile caller, DependencyInvocation invocation) {
     VajramFile callee = lookup(invocation.vajramName());
     Completion completion;
     if (callee != null) {
-      completion = completionOf(callee, resolving);
+      completion = completionOf(callee);
     } else {
       completion =
           SystemVajram.lookup(invocation.vajramName(), caller.imports())

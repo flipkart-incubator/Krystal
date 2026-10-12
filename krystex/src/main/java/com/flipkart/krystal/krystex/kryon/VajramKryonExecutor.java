@@ -188,13 +188,18 @@ public final class VajramKryonExecutor implements KrystalExecutor {
     return outputLogicDecoratorsByVajram.computeIfAbsent(
         vajramID,
         _k -> {
-          VajramKryonDefinition kryonDefinition =
+          KryonDefinition kryonDefinition = kryonDefinitionRegistry.getOrThrow(vajramID);
+          if (kryonDefinition instanceof TraitKryonDefinition) {
+            // Traits don't have an output logic - so no output logic decorators
+            return List.of();
+          }
+          VajramKryonDefinition vajramKryonDefinition =
               validateAsVajram(kryonDefinitionRegistry.getOrThrow(vajramID));
           LogicDecorationContext logicDecorationContext =
               new LogicDecorationContext(
                   vajramID,
-                  kryonDefinition.getOutputLogicDefinition().tags(),
-                  kryonDefinition.kryonDefinitionRegistry());
+                  vajramKryonDefinition.getOutputLogicDefinition().tags(),
+                  vajramKryonDefinition.kryonDefinitionRegistry());
           DecorationOrdering decorationOrdering = executorConfig.decorationOrdering();
           ImmutableMap<String, Integer> decoratorIndices =
               decorationOrdering.outputLogicDecoratorIndices();

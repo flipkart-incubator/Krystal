@@ -7,6 +7,9 @@ pub use error::{nil, VajramError};
 use std::rc::Rc;
 use std::{any::Any, cell::RefCell, collections::HashMap};
 
+/// Per-vajram-call-chain bump arena - see the native prelude's doc comment for the full rationale.
+pub type Arena = bumpalo::Bump;
+
 #[wasm_bindgen::prelude::wasm_bindgen]
 extern "C" {
     #[wasm_bindgen::prelude::wasm_bindgen(js_name = emit_vajram_output)]
@@ -29,8 +32,9 @@ pub trait Provider<T: ?Sized> {
     fn get(&self) -> Rc<T>;
 }
 
+/// See the native prelude: `AppContext` is now threaded by plain reference, not `Rc`.
 pub trait Injector: Sized {
-    fn get_provider<T: ?Sized + 'static>(&self, key: InjectionKey, context: Rc<AppContext<Self>>) -> Rc<dyn Provider<T>>;
+    fn get_provider<T: ?Sized + 'static>(&self, key: InjectionKey, context: &AppContext<Self>) -> Rc<dyn Provider<T>>;
 }
 
 pub struct DefaultInjector {
@@ -53,7 +57,7 @@ impl Default for DefaultInjector {
 }
 
 impl Injector for DefaultInjector {
-    fn get_provider<T: ?Sized + 'static>(&self, key: InjectionKey, _context: Rc<AppContext<Self>>) -> Rc<dyn Provider<T>> {
+    fn get_provider<T: ?Sized + 'static>(&self, key: InjectionKey, _context: &AppContext<Self>) -> Rc<dyn Provider<T>> {
         self.providers.get(&key)
             .and_then(|provider| provider.downcast_ref::<Rc<dyn Provider<T>>>())
             .cloned()
@@ -94,23 +98,29 @@ impl ConsoleWriter for StdOut {
     }
 }
 
-pub fn spawn_local<T: 'static>(future: impl std::future::Future<Output = T> + 'static) {
-    wasm_bindgen_futures::spawn_local(async move {
-        let _ = future.await;
-    });
-}
+/// Non-blocking HTTP GET for `lang.net.callHttp` on the wasm target, backed by the browser's
+/// `fetch` API. Requires the `web_sys` crate with the `Request`, `RequestInit`, `RequestMode`,
+/// `Response`, and `Window` features enabled.
+pub async fn fetch_text(url: &str) -> String {
+    use wasm_bindgen::JsCast;
+    use wasm_bindgen_futures::JsFuture;
+    use web_sys::{Request, RequestInit, RequestMode, Response};
 
-pub fn spawn_local_shared<T: Clone + 'static>(
-    future: impl std::future::Future<Output = T> + 'static,
-) -> impl std::future::Future<Output = T> + Clone {
-    use futures::FutureExt;
+    let opts = RequestInit::new();
+    opts.set_method("GET");
+    opts.set_mode(RequestMode::Cors);
+    let request =
+        Request::new_with_str_and_init(url, &opts).expect("callHttp failed to build request");
 
-    let shared = future.shared();
-    spawn_local({
-        let task = shared.clone();
-        async move {
-            let _ = task.await;
-        }
-    });
-    shared
+    let window = web_sys::window().expect("callHttp requires a browser window global");
+    let response_value = JsFuture::from(window.fetch_with_request(&request))
+        .await
+        .expect("callHttp failed");
+    let response: Response = response_value
+        .dyn_into()
+        .expect("callHttp received a non-Response value");
+    let text_value = JsFuture::from(response.text().expect("callHttp failed to read response body"))
+        .await
+        .expect("callHttp failed");
+    text_value.as_string().expect("callHttp response body was not a string")
 }

@@ -10,3 +10,5 @@ tokio = []
 [dependencies]
 futures = "0.3"
 tokio = { version = "1", features = ["rt", "fs"] }
+reqwest = "0.12"
+bumpalo = "3"

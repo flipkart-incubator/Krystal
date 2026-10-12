@@ -8,8 +8,8 @@ package com.flipkart.krystal.vajram_lang.samples.friends;
 
   UserInfo userInfo = getUserInfo(userId = userId);
 
-  UserInfo* friendsInfos = getUserInfo(
-      userId =*
+  UserInfo... friendsInfos = getUserInfo(
+      userId =...
           IntStream
               .range(0, numberOfFriends?default(2))
               .mapToObj(i, getFriendId(i))

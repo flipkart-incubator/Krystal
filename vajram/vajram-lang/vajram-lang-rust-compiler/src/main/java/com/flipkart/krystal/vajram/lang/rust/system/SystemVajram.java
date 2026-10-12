@@ -9,7 +9,8 @@ import java.util.Optional;
 /** Built-in Vajrams supplied by the runtime rather than by a source file. */
 public enum SystemVajram {
   READ_FILE_AS_STRING("readFileAsString", List.of("lang", "fileSystem"), Completion.SOON),
-  CONCAT_STRINGS("concatStrings", List.of("lang", "strings"), Completion.NOW);
+  CONCAT_STRINGS("concatStrings", List.of("lang", "strings"), Completion.NOW),
+  CALL_HTTP("callHttp", List.of("lang", "net"), Completion.SOON);
 
   private final String name;
   private final List<String> sourceSegments;
@@ -27,7 +28,18 @@ public enum SystemVajram {
 
   /** Returns whether this runtime-provided capability can be emitted for the selected target. */
   public boolean supports(Target target) {
-    return this != READ_FILE_AS_STRING || target == Target.NATIVE;
+    return switch (this) {
+      case READ_FILE_AS_STRING -> target == Target.NATIVE;
+      case CONCAT_STRINGS, CALL_HTTP -> true;
+    };
+  }
+
+  /** Explains why {@link #supports} rejected the wasm target, for use in diagnostics. */
+  public String unsupportedTargetReason() {
+    return switch (this) {
+      case READ_FILE_AS_STRING -> "browser file-picker support is not bundled";
+      case CONCAT_STRINGS, CALL_HTTP -> "unsupported";
+    };
   }
 
   public static Optional<SystemVajram> lookup(String name, List<VajramFile.ImportDecl> imports) {

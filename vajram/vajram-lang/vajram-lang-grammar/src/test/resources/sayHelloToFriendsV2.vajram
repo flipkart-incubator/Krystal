@@ -13,7 +13,7 @@ vajram sayHelloToFriendsV2
 
   Set<string> friendIds = getFriendIdsOfUser(userId = userId);
 
-  UserInfo* friendInfos = getUserInfo(userId =* friendIds);
+  UserInfo... friendInfos =... getUserInfo(userId =... friendIds);
 
   out {
     yield "Hello Friends of %s ! %s"

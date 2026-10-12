@@ -1,0 +1,20 @@
+package vajram_samples.calculator;
+
+vajram a2SqPlusB2Sq(int32 a, int32 b)
+  out int32~
+  permit callers `outsideProcess public {
+
+  `local int32 a2 = add(a = a; b = a);
+
+  `local int32 b2 = add(a = b; b = b);
+
+  `local int32 a2sq = multiply(a = a2; b = a2);
+  `local int32 b2sq = multiply(a = b2; b = b2);
+
+  int32 output = add(a = a2sq; b = b2sq);
+
+  out {
+    yield output;
+  }
+
+}

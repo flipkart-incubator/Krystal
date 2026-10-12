@@ -100,7 +100,7 @@ public final class RustCompilerMain {
     }
 
     Files.createDirectories(outDir);
-    RustEmitter emitter = new RustEmitter(symbolTable);
+    RustEmitter emitter = new RustEmitter(symbolTable, target);
     ModuleTree moduleTree = new ModuleTree();
     Map<Path, List<VajramFile>> filesBySource = new LinkedHashMap<>();
     for (VajramFile file : files) {
@@ -184,7 +184,13 @@ public final class RustCompilerMain {
       if (rsFiles.isEmpty()) {
         return;
       }
-      List<String> command = new ArrayList<>(List.of("rustfmt", "--edition", "2024"));
+      // Package-derived module paths in generated code (e.g.
+      // `crate::com::example::foo::bar::bar::call(...)`) are often far longer than rustfmt's
+      // default 100-column `max_width`. When a single unbreakable token in a method-chain head
+      // exceeds `max_width`, rustfmt gives up on reformatting that whole statement rather than
+      // degrading gracefully - so a wider budget is needed for our output to consistently wrap.
+      List<String> command =
+          new ArrayList<>(List.of("rustfmt", "--edition", "2024", "--config", "max_width=200"));
       command.addAll(rsFiles);
       Process process = new ProcessBuilder(command).redirectErrorStream(true).start();
       process.getInputStream().readAllBytes();

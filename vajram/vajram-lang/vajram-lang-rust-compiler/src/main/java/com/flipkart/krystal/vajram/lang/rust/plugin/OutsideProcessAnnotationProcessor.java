@@ -83,6 +83,9 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
     source.append("    });\n");
     source.append("    let mut arguments = std::env::args().skip(2);\n");
     source.append("    let mut inputs = std::collections::HashMap::new();\n");
+    source.append("    let arena = crate::vajram_rt::Arena::new();\n");
+    source.append(
+        "    let app_context = crate::vajram_rt::AppContext::new(std::rc::Rc::new(crate::vajram_rt::DefaultInjector::default()));\n");
     source.append("    while let Some(flag) = arguments.next() {\n");
     source.append(
         "        let input = flag.strip_prefix(\"--\").filter(|input| !input.is_empty()).unwrap_or_else(|| {\n");
@@ -104,7 +107,8 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
       emitCase(source, target, context.symbolTable().completionOf(target), context);
     }
     source.append("        _ => {\n");
-    source.append("            eprintln!(\"unknown outside-process Vajram: {}\", vajram);\n");
+    source.append(
+        "            eprintln!(\"Vajram {} has not been declared to be called from outside-process\", vajram);\n");
     source.append("            std::process::exit(2);\n");
     source.append("        }\n");
     source.append("    }\n");
@@ -162,7 +166,7 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
             .collect(java.util.stream.Collectors.joining(", "));
     String fields =
         target.vajram().inputs().stream()
-            .map(input -> input.name() + ": Rc::new(" + input.name() + ")")
+            .map(input -> input.name() + ": arena.alloc(" + input.name() + ")")
             .collect(java.util.stream.Collectors.joining(", "));
     source.append("\n#[wasm_bindgen]\n");
     source
@@ -173,6 +177,9 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
         .append("(")
         .append(parameters)
         .append(") -> String {\n");
+    source.append("    let arena = crate::vajram_rt::Arena::new();\n");
+    source.append(
+        "    let app_context = crate::vajram_rt::AppContext::new(Rc::new(crate::vajram_rt::DefaultInjector::default()));\n");
     source
         .append("    let output = ")
         .append(module)
@@ -182,8 +189,7 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
         .append(Naming.capitalize(target.vajram().name()))
         .append("Inputs { ")
         .append(fields)
-        .append(" }]")
-        .append(defaultDiArgument(target, module, context))
+        .append(" }], &arena, &app_context")
         .append(")")
         .append(completion.isAsync() ? ".await" : "")
         .append(".into_iter().next().expect(\"outside-process Vajram result\");\n");
@@ -253,7 +259,7 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
           .append(module)
           .append("::call(vec![")
           .append(inputs)
-          .append(defaultDiArgument(target, module, context))
+          .append(", &arena, &app_context")
           .append(").into_iter().next().expect(\"outside-process Vajram result\");\n");
       source.append("            println!(\"{}\", output);\n");
     } else {
@@ -266,7 +272,7 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
           .append(module)
           .append("::call(vec![")
           .append(inputs)
-          .append(defaultDiArgument(target, module, context))
+          .append(", &arena, &app_context")
           .append(").await.into_iter().next().expect(\"outside-process Vajram result\");\n");
       source.append("                println!(\"{}\", output);\n");
       source.append("            });\n");
@@ -314,11 +320,6 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
     }
   }
 
-  private static String defaultDiArgument(
-      VajramFile target, String module, AnnotationProcessorContext context) {
-    return ", std::rc::Rc::new(crate::vajram_rt::AppContext::new(std::rc::Rc::new(crate::vajram_rt::DefaultInjector::default())))";
-  }
-
   private static boolean isWasmOutput(VajramFile file) {
     return !file.vajram().outputType().errable()
         && ("string".equals(file.vajram().outputType().name())
@@ -340,10 +341,10 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
             + vajramName
             + "\"); std::process::exit(2) })";
     if ("string".equals(input.type().name())) {
-      return "std::rc::Rc::new(" + argument + ".to_owned())";
+      return "arena.alloc(" + argument + ".to_owned())";
     }
     String numericType = rustNumericType(input.type().name());
-    return "std::rc::Rc::new("
+    return "arena.alloc("
         + argument
         + ".parse::<"
         + numericType

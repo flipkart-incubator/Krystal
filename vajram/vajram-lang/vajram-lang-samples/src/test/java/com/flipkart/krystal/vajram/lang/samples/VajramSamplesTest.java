@@ -1,8 +1,7 @@
 package com.flipkart.krystal.vajram.lang.samples;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeAll;
@@ -21,12 +20,13 @@ class VajramSamplesTest {
 
   @Test
   void helloWorld() throws Exception {
-    assertEquals("Hello from vajram-lang!", runVajram("helloWorld"));
+    assertThat(runVajram("helloWorld")).isEqualTo("Hello from vajram-lang!");
   }
 
   @Test
   void helloWorld2() throws Exception {
-    assertEquals("Hello again from vajram-lang, Mister!", runVajram("helloWorld2", "--name", "Mister"));
+    assertThat(runVajram("helloWorld2", "--name", "Mister"))
+        .isEqualTo("Hello again from vajram-lang, Mister!");
   }
 
   @Test
@@ -34,8 +34,8 @@ class VajramSamplesTest {
     Path file = Files.createTempFile("vajram-head-file-", ".txt");
     try {
       Files.writeString(file, "hello cafe");
-      assertEquals(
-          "hello", runVajram("headFile", "--numChars", "5", "--filePath", file.toString()));
+      assertThat(runVajram("headFile", "--numChars", "5", "--filePath", file.toString()))
+          .isEqualTo("hello");
     } finally {
       Files.deleteIfExists(file);
     }
@@ -46,9 +46,9 @@ class VajramSamplesTest {
     Path file = Files.createTempFile("vajram-multi-head-", ".txt");
     try {
       Files.writeString(file, "hello cafe");
-      assertEquals(
-          "hello cafe|hello cafe",
-          runVajram("multiHeadFiles", "--separator", "|", "--filePath", file.toString()));
+      assertThat(
+              runVajram("multiHeadFiles", "--separator", "|", "--filePath", file.toString()))
+          .isEqualTo("hello cafe|hello cafe");
     } finally {
       Files.deleteIfExists(file);
     }
@@ -61,20 +61,34 @@ class VajramSamplesTest {
     try {
       Files.writeString(first, "hello");
       Files.writeString(second, "cafe");
-      assertEquals(
-          "hello|cafe",
-          runVajram(
-              "twoHeadFiles",
-              "--separator",
-              "|",
-              "--filePath1",
-              first.toString(),
-              "--filePath2",
-              second.toString()));
+      assertThat(
+              runVajram(
+                  "twoHeadFiles",
+                  "--separator",
+                  "|",
+                  "--filePath1",
+                  first.toString(),
+                  "--filePath2",
+                  second.toString()))
+          .isEqualTo("hello|cafe");
     } finally {
       Files.deleteIfExists(first);
       Files.deleteIfExists(second);
     }
+  }
+
+  // ponytail: hits the live api.weather.gov API, so these only assert on the stable response
+  // shape (not exact content) and can flake on network/API outages. Upgrade: stub callHttp.
+  @Test
+  void activeWeatherAlerts() throws Exception {
+    assertThat(run("target/debug/vajram-lang-samples", "activeWeatherAlerts"))
+        .contains("\"type\": \"FeatureCollection\"");
+  }
+
+  @Test
+  void activeWeatherAlertsCount() throws Exception {
+    assertThat(run("target/debug/vajram-lang-samples", "activeWeatherAlertsCount"))
+        .contains("\"total\"");
   }
 
   private static String runVajram(String vajram, String... arguments) throws Exception {
@@ -92,7 +106,7 @@ class VajramSamplesTest {
             .redirectErrorStream(true)
             .start();
     String output = new String(process.getInputStream().readAllBytes());
-    assertEquals(0, process.waitFor(), output);
+    assertThat(process.waitFor()).withFailMessage(output).isEqualTo(0);
     return output;
   }
 }
