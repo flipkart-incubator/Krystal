@@ -7,7 +7,7 @@ import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIO
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.WILL_NEVER_FAIL;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.squareup.javapoet.CodeBlock.joining;
+import static com.palantir.javapoet.CodeBlock.joining;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 import static java.util.Arrays.stream;
@@ -44,17 +44,17 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Range;
 import com.google.googlejavaformat.java.GoogleJavaFormatTool;
-import com.squareup.javapoet.AnnotationSpec;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.JavaFile;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterizedTypeName;
-import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeSpec;
-import com.squareup.javapoet.TypeSpec.Builder;
-import com.squareup.javapoet.TypeVariableName;
-import com.squareup.javapoet.WildcardTypeName;
+import com.palantir.javapoet.AnnotationSpec;
+import com.palantir.javapoet.ClassName;
+import com.palantir.javapoet.CodeBlock;
+import com.palantir.javapoet.JavaFile;
+import com.palantir.javapoet.MethodSpec;
+import com.palantir.javapoet.ParameterizedTypeName;
+import com.palantir.javapoet.TypeName;
+import com.palantir.javapoet.TypeSpec;
+import com.palantir.javapoet.TypeSpec.Builder;
+import com.palantir.javapoet.TypeVariableName;
+import com.palantir.javapoet.WildcardTypeName;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -1086,7 +1086,7 @@ public class CodeGenUtility {
     } else {
       boxed = processingEnv.getTypeUtils().boxedClass((PrimitiveType) typeMirror).asType();
     }
-    return new TypeAndName(TypeName.get(boxed).annotated(javaType.typeName().annotations), boxed);
+    return new TypeAndName(TypeName.get(boxed).annotated(javaType.typeName().annotations()), boxed);
   }
 
   public TypeAndName getTypeName(CodeGenType dataType) {
@@ -1261,7 +1261,7 @@ public class CodeGenUtility {
   public void writeJavaFile(String packageName, TypeSpec typeSpec, TypeElement originatingElement) {
     try {
       JavaFile javaFile = JavaFile.builder(packageName, typeSpec).build();
-      String fileName = packageName + "." + typeSpec.name;
+      String fileName = packageName + "." + typeSpec.name();
       generateSourceFile(fileName, javaFile.toString(), originatingElement);
     } catch (Exception e) {
       error("Error generating Java file: " + e.getMessage(), originatingElement);
@@ -1373,7 +1373,7 @@ public class CodeGenUtility {
             // ModelsListBuilder/ImmutableList since Errable<> is invariant in its type parameter;
             // isContentErrable means the elements are Errable<Model>, which ModelsListBuilder
             // can't represent since it requires M extends Model). Fall back to a plain List in
-            // both cases; see getModelFieldType javadoc / design note on Errable<T> support.
+            // both cases; see getModelFieldType Javadoc / design note on Errable<T> support.
             boolean noLiveContainer = isContentErrable || isErrable;
             if (isBuilder) {
               if (fieldModelRootInfo.isPresent()
@@ -1472,7 +1472,7 @@ public class CodeGenUtility {
       // Errable<T>'s own type parameter is invariant, so List<Errable<? extends T>> is NOT
       // assignable to/from List<Errable<T>> (unlike a bare List<? extends T>, where the wildcard
       // is on the List's own type argument). Keep content-Errable element types exact; likewise,
-      // if the whole container is itself Errable-wrapped (isErrable), a wildcarded content type
+      // if the whole container is itself Errable-wrapped (isErrable), a wildcard content type
       // would produce Errable<List<? extends T>>, which - for the same invariance reason -
       // doesn't match the exact Errable<List<T>> declared on the model interface method.
       TypeName plainContentTypeName = contentType.accept(new TypeNameVisitor(), null);
@@ -1503,12 +1503,12 @@ public class CodeGenUtility {
 
   private static boolean hasNullableAnnotation(TypeName typeName) {
     AnnotationSpec nullableAnnoSpec = AnnotationSpec.builder(ClassName.get(Nullable.class)).build();
-    boolean hasNullable = typeName.annotations.contains(nullableAnnoSpec);
+    boolean hasNullable = typeName.annotations().contains(nullableAnnoSpec);
     if (hasNullable) {
       return true;
     }
     if (typeName instanceof ParameterizedTypeName parameterizedTypeName) {
-      return hasNullableAnnotation(parameterizedTypeName.rawType);
+      return hasNullableAnnotation(parameterizedTypeName.rawType());
     }
     return false;
   }
@@ -1632,7 +1632,7 @@ public class CodeGenUtility {
     if (typeName instanceof ClassName className) {
       return className;
     } else if (typeName instanceof ParameterizedTypeName parameterizedTypeName) {
-      return parameterizedTypeName.rawType;
+      return parameterizedTypeName.rawType();
     } else {
       throw new AssertionError();
     }

@@ -9,5 +9,5 @@ dependencies {
     implementation project(':krystal-codegen-common')
     implementation project(':vajram:vajram-codegen-common')
 
-    implementation 'com.squareup:javapoet'
+    implementation libs.javapoet
 }

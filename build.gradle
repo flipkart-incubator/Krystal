@@ -177,7 +177,6 @@ configure(subprojects.findAll {
             c.api 'com.google.guava:guava:33.6.0-jre'
             c.implementation 'com.google.guava:guava:33.6.0-jre'
             c.implementation 'com.google.j2objc:j2objc-annotations:3.0.0'
-            c.implementation 'com.squareup:javapoet:1.13.0'
             c.implementation 'commons-cli:commons-cli:1.6.0'
             c.implementation 'jakarta.inject:jakarta.inject-api:2.0.1'
             c.api 'jakarta.ws.rs:jakarta.ws.rs-api:4.0.0'
@@ -284,7 +283,6 @@ configure(subprojects.findAll {
         knownModule('com.graphql-java:graphql-java', 'com.graphqljava')
         knownModule('com.graphql-java:graphql-java-extended-scalars', 'com.graphqljava.extendedscalars')
         knownModule('com.ibm.icu:icu4j', 'com.ibm.icu.icu4j')
-        knownModule('com.squareup:javapoet', 'com.squareup.javapoet')
         knownModule('jakarta.inject:jakarta.inject-api', 'jakarta.inject')
         knownModule('org.antlr:antlr4-runtime', 'org.antlr.antlr4.runtime')
         knownModule('org.checkerframework:checker-qual', 'org.checkerframework.checker.qual')

@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajram.graphql.codegen;
 
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
-import com.squareup.javapoet.AnnotationSpec;
+import com.palantir.javapoet.AnnotationSpec;
 import java.nio.file.Path;
 
 public class CodeGenConstants {

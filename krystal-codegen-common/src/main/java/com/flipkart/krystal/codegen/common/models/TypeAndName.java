@@ -1,6 +1,6 @@
 package com.flipkart.krystal.codegen.common.models;
 
-import com.squareup.javapoet.TypeName;
+import com.palantir.javapoet.TypeName;
 import javax.lang.model.type.TypeMirror;
 import org.checkerframework.checker.nullness.qual.Nullable;
 

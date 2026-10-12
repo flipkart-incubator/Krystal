@@ -9,10 +9,10 @@ import com.flipkart.krystal.lattice.codegen.spi.di.ProviderMethod;
 import com.flipkart.krystal.lattice.ext.rest.dropwizard.DropwizardRestApplication;
 import com.google.auto.service.AutoService;
 import com.google.common.collect.ImmutableList;
-import com.squareup.javapoet.AnnotationSpec;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.ParameterSpec;
+import com.palantir.javapoet.AnnotationSpec;
+import com.palantir.javapoet.ClassName;
+import com.palantir.javapoet.CodeBlock;
+import com.palantir.javapoet.ParameterSpec;
 import jakarta.inject.Singleton;
 import java.util.List;
 

@@ -25,13 +25,13 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.servlet.RequestScoped;
 import com.google.inject.util.Providers;
-import com.squareup.javapoet.AnnotationSpec;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.JavaFile;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeSpec.Builder;
+import com.palantir.javapoet.AnnotationSpec;
+import com.palantir.javapoet.ClassName;
+import com.palantir.javapoet.CodeBlock;
+import com.palantir.javapoet.JavaFile;
+import com.palantir.javapoet.MethodSpec;
+import com.palantir.javapoet.TypeName;
+import com.palantir.javapoet.TypeSpec.Builder;
 import jakarta.inject.Singleton;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -193,14 +193,14 @@ public class GuiceModuleGenProvider implements LatticeCodeGeneratorProvider {
       if (scope == null) {
         return null;
       }
-      TypeName type = scope.type;
+      TypeName type = scope.type();
       if (type.equals(ClassName.get(jakarta.enterprise.context.RequestScoped.class))) {
         return ClassName.get(RequestScoped.class);
       }
       if (type.equals(ClassName.get(jakarta.enterprise.context.ApplicationScoped.class))) {
         return ClassName.get(Singleton.class);
       }
-      return (ClassName) scope.type;
+      return (ClassName) scope.type();
     }
   }
 }

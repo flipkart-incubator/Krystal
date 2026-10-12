@@ -250,16 +250,6 @@ Obtain the right implementation via `SqlSyntax.forDialect(SqlDialect)`.
 
 ## Dependencies
 
-```groovy
-dependencies {
-    api project(':vajram:extensions:sql:vajram-sql')
-    api project(':krystal-codegen-common')
-    api project(':vajram:vajram-codegen-common')
-    implementation project(':vajram:vajram-java-sdk')
-    implementation 'com.squareup:javapoet'
-}
-```
-
 This module depends on:
 - **vajram-sql** — annotation types (`@Table`, `@Selection`, `@WHERE`, `@Column`, `@IsEqualTo`,
   `SqlOrPredicate`, `ColumnPredicate`, etc.)

@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajram.ext.sql.vertx.codegen;
 
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.InsertResultType;
 import com.flipkart.krystal.vajram.ext.sql.lang.SqlDialect;
-import com.squareup.javapoet.MethodSpec;
+import com.palantir.javapoet.MethodSpec;
 
 sealed interface DialectCodeGenerator
     permits MySqlCodeGenerator, PostGreCompatibleCodeGenerator, Sql2023CodeGenerator {

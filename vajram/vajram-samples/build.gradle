@@ -106,7 +106,6 @@ extraJavaModuleInfo {
     knownModule('com.google.auto.service:auto-service-annotations', 'com.google.auto.service')
     knownModule('org.checkerframework:checker-qual', 'org.checkerframework.checker.qual')
     knownModule('com.google.guava:guava', 'com.google.common')
-    knownModule('com.squareup:javapoet', 'com.squareup.javapoet')
     knownModule('org.projectlombok:lombok', 'lombok')
     knownModule('com.google.j2objc:j2objc-annotations', 'com.google.j2objc.annotations')
     knownModule('org.reflections:reflections', 'org.reflections')

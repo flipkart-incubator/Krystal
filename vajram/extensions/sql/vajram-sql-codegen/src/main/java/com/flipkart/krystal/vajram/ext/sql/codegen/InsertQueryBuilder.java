@@ -12,7 +12,7 @@ import com.flipkart.krystal.vajram.ext.sql.codegen.syntax.SqlSyntax;
 import com.flipkart.krystal.vajram.ext.sql.data.DataUtils;
 import com.flipkart.krystal.vajram.ext.sql.lang.SqlDialect;
 import com.flipkart.krystal.vajram.ext.sql.model.DefaultValue;
-import com.squareup.javapoet.CodeBlock;
+import com.palantir.javapoet.CodeBlock;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;

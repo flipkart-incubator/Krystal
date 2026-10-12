@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajram.ext.sql.codegen;
 
 import com.flipkart.krystal.vajram.ext.sql.lang.ColumnPredicate;
 import com.flipkart.krystal.vajram.ext.sql.lang.ORDER;
-import com.squareup.javapoet.CodeBlock;
+import com.palantir.javapoet.CodeBlock;
 import java.util.List;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
