@@ -25,7 +25,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 @Slf4j
 abstract sealed class AbstractKryon<
         C extends KryonCommand<? extends R>, R extends KryonCommandResponse>
-    implements Kryon<C, R> permits BatchKryon, DirectKryon {
+    implements Kryon<C, R> permits DirectKryon {
 
   protected final VajramKryonDefinition kryonDefinition;
   protected final VajramID vajramID;
