@@ -1,7 +1,5 @@
 package com.flipkart.krystal.krystex.kryon;
 
-import static com.flipkart.krystal.concurrent.Futures.linkFutures;
-import static com.flipkart.krystal.concurrent.Futures.propagateCancellation;
 import static com.flipkart.krystal.config.PropertyNames.RISKY_OPEN_ALL_VAJRAMS_TO_EXTERNAL_INVOCATION_PROP_NAME;
 import static com.flipkart.krystal.data.RequestResponseFuture.forRequest;
 import static com.flipkart.krystal.except.KrystalCompletionException.wrapAsCompletionException;
@@ -10,21 +8,17 @@ import static com.flipkart.krystal.except.StackTracingStrategy.FILL;
 import static com.flipkart.krystal.krystex.kryon.KryonUtils.validateAsVajram;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNullElse;
 import static java.util.Objects.requireNonNullElseGet;
 import static java.util.concurrent.CompletableFuture.allOf;
-import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.groupingBy;
 import static lombok.AccessLevel.PACKAGE;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.core.VajramID;
-import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
@@ -39,8 +33,6 @@ import com.flipkart.krystal.krystex.KrystexGraph;
 import com.flipkart.krystal.krystex.commands.DirectForwardCommand;
 import com.flipkart.krystal.krystex.commands.DirectForwardReceive;
 import com.flipkart.krystal.krystex.commands.DirectForwardSend;
-import com.flipkart.krystal.krystex.commands.ForwardReceiveBatch;
-import com.flipkart.krystal.krystex.commands.ForwardSendBatch;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.commands.ServerSideCommand;
 import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
@@ -94,12 +86,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class VajramKryonExecutor implements KrystalExecutor {
 
   public enum KryonExecStrategy {
-    @Deprecated
-    BATCH,
     DIRECT;
   }
 
-  @Deprecated
   public enum GraphTraversalStrategy {
     DEPTH,
     BREADTH;
@@ -368,23 +357,12 @@ public final class VajramKryonExecutor implements KrystalExecutor {
         _n -> {
           VajramKryonDefinition kryonDefinition =
               validateAsVajram(kryonDefinitionRegistry.getOrThrow(vajramID));
-          return switch (executorConfig.kryonExecStrategy()) {
-            case BATCH ->
-                new BatchKryon(
-                    kryonDefinition,
-                    this,
-                    this::getSortedOutputLogicDecorators,
-                    this::getDependencyDecorators,
-                    executorConfig.decorationOrdering(),
-                    preferredReqGenerator);
-            case DIRECT ->
-                new DirectKryon(
-                    kryonDefinition,
-                    this,
-                    this::getSortedOutputLogicDecorators,
-                    this::getDependencyDecorators,
-                    executorConfig.decorationOrdering());
-          };
+          return new DirectKryon(
+              kryonDefinition,
+              this,
+              this::getSortedOutputLogicDecorators,
+              this::getDependencyDecorators,
+              executorConfig.decorationOrdering());
         });
   }
 
@@ -454,22 +432,6 @@ public final class VajramKryonExecutor implements KrystalExecutor {
               (KryonCommand<? extends R>)
                   DirectForwardCommand.ofExecutionItems(
                       forwardSend.vajramID(), list, dependentChain));
-        } else if (kryonCommand instanceof ForwardSendBatch forwardSend) {
-          //noinspection unchecked
-          return (CompletableFuture<R>)
-              _executeCommand(
-                  new ForwardReceiveBatch(
-                      forwardSend.vajramID(),
-                      forwardSend.executableRequests().entrySet().stream()
-                          .collect(
-                              toImmutableMap(
-                                  Entry::getKey,
-                                  e ->
-                                      vajramKryonDefinition
-                                          .facetsFromRequest()
-                                          .logic()
-                                          .facetsFromRequest(e.getValue()))),
-                      dependentChain));
         }
       }
       if (shouldSkip(kryonCommand)) {
@@ -530,9 +492,6 @@ public final class VajramKryonExecutor implements KrystalExecutor {
       KryonCommand<? extends R> kryonCommand) {
     if (kryonCommand instanceof DirectForwardReceive directForwardReceive) {
       return directForwardReceive.shouldSkip();
-    }
-    if (kryonCommand instanceof ForwardSendBatch forwardSend) {
-      return forwardSend.shouldSkip();
     }
     return false;
   }
@@ -612,10 +571,7 @@ public final class VajramKryonExecutor implements KrystalExecutor {
   private void flush() {
     enqueueRunnable(
         () -> {
-          switch (executorConfig.kryonExecStrategy()) {
-            case BATCH -> submitBatch(allExecutions.values());
-            case DIRECT -> submitDirect(allExecutions.values());
-          }
+          submitDirect(allExecutions.values());
           DependentChainStart dependentChainsStart =
               kryonDefinitionRegistry.getDependentChainsStart();
           // For those vajrams which are could have been invoked directly, but were not,
@@ -665,61 +621,6 @@ public final class VajramKryonExecutor implements KrystalExecutor {
               ke.response().completeExceptionally(wrapAsCompletionException(throwable));
             }
           }
-        });
-  }
-
-  @SuppressWarnings("FutureReturnValueIgnored")
-  private void submitBatch(Collection<KryonExecution<?>> allExecutions) {
-    Map<VajramID, List<KryonExecution<?>>> executionsByKryon =
-        allExecutions.stream().collect(groupingBy(KryonExecution::vajramID));
-    executionsByKryon.forEach(
-        (vajramID, kryonExecutions) -> {
-          CompletableFuture<BatchResponse> batchResponseFuture;
-          try {
-            Map<InvocationId, Request<Object>> requests =
-                new LinkedHashMap<>(kryonExecutions.size());
-            for (KryonExecution<?> kryonExecution : kryonExecutions) {
-              requests.put(kryonExecution.instanceExecutionId(), kryonExecution.request());
-            }
-            batchResponseFuture =
-                this.executeCommand(
-                    new ForwardSendBatch(
-                        vajramID, requests, kryonDefinitionRegistry.getDependentChainsStart()));
-          } catch (Throwable throwable) {
-            batchResponseFuture =
-                completedFuture(
-                    new BatchResponse(
-                        kryonExecutions.stream()
-                            .collect(
-                                toImmutableMap(
-                                    KryonExecution::instanceExecutionId,
-                                    _k -> Errable.withError(throwable)))));
-          }
-          batchResponseFuture
-              .thenApply(BatchResponse::responses)
-              .whenComplete(
-                  (responses, throwable) -> {
-                    for (KryonExecution<?> kryonExecution : kryonExecutions) {
-                      if (throwable != null) {
-                        kryonExecution
-                            .requestResponseFuture()
-                            .response()
-                            .completeExceptionally(wrapAsCompletionException(throwable));
-                      } else {
-                        linkFutures(
-                            responses
-                                .getOrDefault(kryonExecution.instanceExecutionId(), Errable.nil())
-                                .toFuture(),
-                            kryonExecution.response());
-                      }
-                    }
-                  });
-          propagateCancellation(
-              allOf(
-                  kryonExecutions.stream()
-                      .map(KryonExecution::response)
-                      .toArray(CompletableFuture[]::new)),
-              batchResponseFuture);
         });
   }
 
@@ -826,10 +727,6 @@ public final class VajramKryonExecutor implements KrystalExecutor {
 
     private CompletableFuture<@Nullable Object> response() {
       return (CompletableFuture<@Nullable Object>) requestResponseFuture().response();
-    }
-
-    private Request<Object> request() {
-      return (Request<Object>) requestResponseFuture().request();
     }
   }
 }

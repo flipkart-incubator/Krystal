@@ -2,7 +2,6 @@ package com.flipkart.krystal.vajram.samples.calculator.add;
 
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.DEPTH;
-import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy.BATCH;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy.DIRECT;
 import static com.flipkart.krystal.krystex.traits.PredicateDispatchUtil.dispatchTrait;
 import static com.flipkart.krystal.krystex.traits.PredicateDispatchUtil.when;
@@ -432,7 +431,6 @@ class MultiAddTest {
   }
 
   public static Stream<Arguments> executorConfigsToTest() {
-    return Stream.of(
-        Arguments.of(BATCH, DEPTH), Arguments.of(BATCH, BREADTH), Arguments.of(DIRECT, DEPTH));
+    return Stream.of(Arguments.of(DIRECT, DEPTH), Arguments.of(DIRECT, BREADTH));
   }
 }

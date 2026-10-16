@@ -20,7 +20,6 @@ import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
 import com.flipkart.krystal.krystex.inputinjection.KryonInputInjector;
 import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
-import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.testharness.VajramTestHarness;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
@@ -154,10 +153,7 @@ class GreetTest {
   void greeting_success_when_user_service_call_is_success() {
     CompletableFuture<String> future;
     KrystalExecutorConfigBuilder executorConfig =
-        KrystalExecutorConfig.builder()
-            .executorId(REQUEST_ID)
-            .executorService(executorLease.get())
-            .graphTraversalStrategy(GraphTraversalStrategy.DEPTH);
+        KrystalExecutorConfig.builder().executorId(REQUEST_ID).executorService(executorLease.get());
     RequestContext requestContext = new RequestContext(REQUEST_ID, USER_ID);
     VajramGraph vajramGraph = graph;
     KrystexGraphBuilder kGraph = KrystexGraph.builder().vajramGraph(vajramGraph);
@@ -180,10 +176,7 @@ class GreetTest {
   void greeting_success_when_user_service_fails_with_request_timeout() {
     CompletableFuture<String> future;
     KrystalExecutorConfigBuilder executorConfig =
-        KrystalExecutorConfig.builder()
-            .executorId(REQUEST_ID)
-            .executorService(executorLease.get())
-            .graphTraversalStrategy(GraphTraversalStrategy.DEPTH);
+        KrystalExecutorConfig.builder().executorId(REQUEST_ID).executorService(executorLease.get());
     RequestContext requestContext = new RequestContext(REQUEST_ID, USER_ID);
     VajramGraph vajramGraph = graph;
     KrystexGraphBuilder krystexGraph = KrystexGraph.builder().vajramGraph(vajramGraph);

@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy.DIRECT;
 import static java.time.Duration.ofSeconds;
@@ -734,7 +735,7 @@ class VajramKryonExecutorTest {
   }
 
   public static Stream<Arguments> executorConfigsToTest() {
-    return Stream.of(Arguments.of(DIRECT, DEPTH));
+    return Stream.of(Arguments.of(DIRECT, DEPTH), Arguments.of(DIRECT, BREADTH));
   }
 
   private InputBatcherConfig singleBatcherConfig(

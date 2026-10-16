@@ -8,30 +8,23 @@ import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.ErrableFacetValue;
 import com.flipkart.krystal.data.ExecutionItem;
-import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FacetValuesBuilder;
 import com.flipkart.krystal.data.Failure;
 import com.flipkart.krystal.except.KrystalCompletionException;
 import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.commands.DirectForwardReceive;
-import com.flipkart.krystal.krystex.commands.ForwardReceiveBatch;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
-import com.flipkart.krystal.krystex.kryon.BatchResponse;
 import com.flipkart.krystal.krystex.kryon.Kryon;
 import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
 import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
-import com.flipkart.krystal.krystex.request.InvocationId;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.facets.specs.DefaultFacetSpec;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
-import com.google.common.collect.ImmutableMap;
 import jakarta.inject.Provider;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -65,9 +58,7 @@ class InjectingDecoratedKryon
         vajramGraph.getVajramDefinition(vajramID(kryonCommand.vajramID().id()));
     if (vajramDefinition.metadata().isInputInjectionNeeded()
         && vajramDefinition.def() instanceof VajramDef<?>) {
-      if (kryonCommand instanceof ForwardReceiveBatch forwardBatch) {
-        return injectFacets(forwardBatch, vajramDefinition);
-      } else if (kryonCommand instanceof DirectForwardReceive forwardReceive) {
+      if (kryonCommand instanceof DirectForwardReceive forwardReceive) {
         return injectFacets(forwardReceive, vajramDefinition);
       }
     }
@@ -98,39 +89,6 @@ class InjectingDecoratedKryon
               });
     }
     return kryon.executeCommand(forwardReceive);
-  }
-
-  @SuppressWarnings("FutureReturnValueIgnored")
-  private CompletableFuture<KryonCommandResponse> injectFacets(
-      ForwardReceiveBatch forwardBatch, VajramDefinition vajramDefinition) {
-    Map<InvocationId, ? extends FacetValues> requestIdToFacets =
-        forwardBatch.executableInvocations();
-
-    ImmutableMap.Builder<InvocationId, FacetValues> newRequests = ImmutableMap.builder();
-
-    List<AutoCloseable> closeables = new ArrayList<>();
-    for (Entry<InvocationId, ? extends FacetValues> entry : requestIdToFacets.entrySet()) {
-      InvocationId invocationId = entry.getKey();
-      FacetValuesBuilder facetsBuilder;
-      facetsBuilder = entry.getValue()._asBuilder();
-      closeables.addAll(injectFacetsOfVajram(vajramDefinition, facetsBuilder));
-      newRequests.put(invocationId, facetsBuilder);
-    }
-    KryonCommand<BatchResponse> kryonCommand =
-        new ForwardReceiveBatch(
-            forwardBatch.vajramID(), newRequests.build(), forwardBatch.dependentChain());
-    CompletableFuture<KryonCommandResponse> resp = kryon.executeCommand(kryonCommand);
-    resp.whenComplete(
-        (o, throwable) -> {
-          for (var closeable : closeables) {
-            try {
-              closeable.close();
-            } catch (Exception e) {
-              log.error("Failed to close injected closeable", e);
-            }
-          }
-        });
-    return resp;
   }
 
   private List<AutoCloseable> injectFacetsOfVajram(

@@ -11,7 +11,6 @@ import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.VajramGraph.VajramGraphBuilder;
 import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
-import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
@@ -58,7 +57,6 @@ class A2MinusB2Test {
             .createExecutor(
                 KrystalExecutorConfig.builder()
                     .kryonExecStrategy(KryonExecStrategy.DIRECT)
-                    .graphTraversalStrategy(GraphTraversalStrategy.DEPTH)
                     .executorId(REQUEST_ID)
                     .executorService(executorLease.get()))) {
       future =
