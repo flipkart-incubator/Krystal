@@ -94,12 +94,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class VajramKryonExecutor implements KrystalExecutor {
 
   public enum KryonExecStrategy {
-    @Deprecated
-    BATCH,
     DIRECT;
   }
 
-  @Deprecated
   public enum GraphTraversalStrategy {
     DEPTH,
     BREADTH;
@@ -368,23 +365,12 @@ public final class VajramKryonExecutor implements KrystalExecutor {
         _n -> {
           VajramKryonDefinition kryonDefinition =
               validateAsVajram(kryonDefinitionRegistry.getOrThrow(vajramID));
-          return switch (executorConfig.kryonExecStrategy()) {
-            case BATCH ->
-                new BatchKryon(
-                    kryonDefinition,
-                    this,
-                    this::getSortedOutputLogicDecorators,
-                    this::getDependencyDecorators,
-                    executorConfig.decorationOrdering(),
-                    preferredReqGenerator);
-            case DIRECT ->
-                new DirectKryon(
-                    kryonDefinition,
-                    this,
-                    this::getSortedOutputLogicDecorators,
-                    this::getDependencyDecorators,
-                    executorConfig.decorationOrdering());
-          };
+          return new DirectKryon(
+              kryonDefinition,
+              this,
+              this::getSortedOutputLogicDecorators,
+              this::getDependencyDecorators,
+              executorConfig.decorationOrdering());
         });
   }
 
@@ -612,10 +598,7 @@ public final class VajramKryonExecutor implements KrystalExecutor {
   private void flush() {
     enqueueRunnable(
         () -> {
-          switch (executorConfig.kryonExecStrategy()) {
-            case BATCH -> submitBatch(allExecutions.values());
-            case DIRECT -> submitDirect(allExecutions.values());
-          }
+          submitDirect(allExecutions.values());
           DependentChainStart dependentChainsStart =
               kryonDefinitionRegistry.getDependentChainsStart();
           // For those vajrams which are could have been invoked directly, but were not,

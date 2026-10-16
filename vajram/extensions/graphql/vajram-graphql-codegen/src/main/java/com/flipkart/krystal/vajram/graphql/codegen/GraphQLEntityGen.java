@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajram.graphql.codegen;
 import static com.flipkart.krystal.vajram.graphql.api.Constants.Directives.DATA_FETCHER;
 import static com.flipkart.krystal.vajram.graphql.codegen.CodeGenConstants.IF_ABSENT_FAIL;
 import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlCodeGenUtil.GRAPHQL_FIELDS_SUFFIX;
+import static com.flipkart.krystal.vajram.graphql.codegen.GraphQlCodeGenUtil.GRAPHQL_ID_SUFFIX;
 import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.fieldSpecFromField;
 import static com.flipkart.krystal.vajram.graphql.codegen.SchemaReaderUtil.isMultiFieldDataFetcher;
 import static com.google.common.base.Throwables.getStackTraceAsString;
@@ -129,7 +130,7 @@ class GraphQLEntityGen implements CodeGenerator {
                 ClassName className =
                     ClassName.get(
                         schemaReaderUtil.getPackageNameForType(graphQLTypeName),
-                        graphQLTypeName.value() + GraphQlCodeGenUtil.GRAPHQL_ID_SUFFIX);
+                        graphQLTypeName.value() + GRAPHQL_ID_SUFFIX);
                 generateResponseModel(className, idFields, graphQLTypeName, true);
               } catch (Throwable e) {
                 util.error(

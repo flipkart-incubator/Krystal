@@ -6,7 +6,6 @@ import static com.flipkart.krystal.data.Errable.errableFrom;
 import static com.flipkart.krystal.data.Errable.withValue;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.DEPTH;
-import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy.BATCH;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy.DIRECT;
 import static com.flipkart.krystal.krystex.testfixtures.SimpleFacet.dependency;
 import static com.flipkart.krystal.krystex.testfixtures.SimpleFacet.input;
@@ -764,7 +763,6 @@ class KryonExecutionTest {
   }
 
   public static Stream<Arguments> executorConfigsToTest() {
-    return Stream.of(
-        Arguments.of(BATCH, DEPTH), Arguments.of(BATCH, BREADTH), Arguments.of(DIRECT, DEPTH));
+    return Stream.of(Arguments.of(DIRECT, DEPTH), Arguments.of(DIRECT, BREADTH));
   }
 }

@@ -39,7 +39,6 @@ import com.flipkart.krystal.krystex.epochs.EpochGroupsByAncestors;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
 import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
-import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
@@ -546,10 +545,7 @@ class FormulaTest {
                         graph.getVajramIdByVajramDefType(Add.class),
                         () -> new InputBatcherImpl(100))));
     KrystalExecutorConfigBuilder executorConfig =
-        KrystalExecutorConfig.builder()
-            .executorId(REQUEST_ID)
-            .executorService(executorLease.get())
-            .graphTraversalStrategy(GraphTraversalStrategy.DEPTH);
+        KrystalExecutorConfig.builder().executorId(REQUEST_ID).executorService(executorLease.get());
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, REQUEST_ID);
     try (VajramKryonExecutor krystexVajramExecutor =
         kGraph
