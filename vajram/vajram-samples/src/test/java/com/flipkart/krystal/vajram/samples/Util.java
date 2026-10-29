@@ -5,11 +5,17 @@ import static java.time.Duration.ofSeconds;
 import static java.util.Arrays.stream;
 import static java.util.concurrent.CompletableFuture.allOf;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.VajramGraph.VajramGraphBuilder;
+import com.flipkart.krystal.krystex.batching.InputBatcherConfig;
+import com.flipkart.krystal.krystex.batching.InputBatchingDecorator;
+import com.flipkart.krystal.krystex.epochs.EpochGroupsByAncestors;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
 import com.flipkart.krystal.pooling.MultiLeasePool;
 import com.flipkart.krystal.pooling.MultiLeasePoolStats;
+import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
+import com.google.common.collect.ImmutableMap;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -113,5 +119,19 @@ public final class Util {
     VajramGraphBuilder builder = VajramGraph.builder();
     stream(packagePrefixes).forEach(builder::loadFromPackage);
     return builder;
+  }
+
+  /** Batches the requests of the given vajram, with a batch size of 100 unique requests. */
+  public static InputBatcherConfig simpleInputBatcher(VajramGraph graph, VajramID vajramId) {
+    return new InputBatcherConfig(
+        context ->
+            ImmutableMap.of(
+                    vajramId,
+                    new InputBatchingDecorator(
+                        () -> new InputBatcherImpl(100),
+                        vajramId,
+                        EpochGroupsByAncestors.empty(
+                            graph.kryonDefinitionRegistry().getDependentChainsStart())))
+                .get(context.vajramID()));
   }
 }

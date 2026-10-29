@@ -16,6 +16,7 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramDefRoot;
 import com.flipkart.krystal.vajram.exception.VajramDefinitionException;
+import com.flipkart.krystal.vajram.facets.ComputeField;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
@@ -29,9 +30,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import lombok.experimental.UtilityClass;
@@ -206,5 +209,26 @@ final class Vajrams {
       Vajrams.inferFacet(param, facetsByName).ifPresent(facetIds::add);
     }
     return facetIds.build();
+  }
+
+  /**
+   * Returns the edges contributed by {@link ComputeField} methods: field name -> names of the
+   * facets (the method's parameters) consumed to compute that field.
+   */
+  static Map<String, Set<String>> parseComputeFieldEdges(VajramDefRoot<?> vajramDefRoot) {
+    Map<String, Set<String>> edges = new LinkedHashMap<>();
+    for (Method method : getVajramDefClass(vajramDefRoot.getClass()).getDeclaredMethods()) {
+      ComputeField computeField = method.getAnnotation(ComputeField.class);
+      if (computeField == null) {
+        continue;
+      }
+      String qualifiedName = computeField.value();
+      String fieldName = qualifiedName.substring(qualifiedName.lastIndexOf(':') + 1);
+      Set<String> deps = edges.computeIfAbsent(fieldName, _k -> new LinkedHashSet<>());
+      for (Parameter param : method.getParameters()) {
+        deps.add(param.getName());
+      }
+    }
+    return edges;
   }
 }

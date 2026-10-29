@@ -19,6 +19,7 @@ public record VajramInfo(
     VajramInfoLite lite,
     String packageName,
     ImmutableList<DefaultFacetModel> givenFacets,
+    ImmutableList<DefaultFacetModel> fields,
     ImmutableList<DependencyModel> dependencies,
     TypeElement definitionElement,
     @Nullable VajramInfoLite conformsToTraitInfo,
@@ -43,7 +44,7 @@ public record VajramInfo(
   }
 
   public Stream<FacetGenModel> facetStream() {
-    return Stream.concat(givenFacets.stream(), dependencies.stream());
+    return Stream.of(givenFacets.stream(), fields.stream(), dependencies.stream()).flatMap(s -> s);
   }
 
   public TypeElement vajramClassElem() {
