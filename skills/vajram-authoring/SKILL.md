@@ -1,6 +1,6 @@
 ---
 name: vajram-authoring
-description: Writes business logic as Krystal Vajrams — the composable, concurrently-executed unit of logic in flipkart-incubator/Krystal (vajram-java-sdk + krystex runtime). Covers ComputeVajramDef vs IOVajramDef, _Inputs/_InternalFacets, @IfAbsent optionality, @Dependency wiring, @Resolve resolvers (fan-out via FanoutCommand, skips via One2OneCommand), @Output/@Output.Batched+@Output.Unbatch, writing Vajram Traits (@Trait/TraitDef interfaces with no implementation) and dispatching among their conforming Vajrams via static/qualifier dispatch (@Qualifier + TraitBinder) or predicate dispatch (@UseForPredicateDispatch + PredicateDispatchPolicy), and tests via VajramGraph/KrystexGraph/VajramKryonExecutor (incl. VajramTestHarness mocking and wiring trait dispatch policies). Use whenever adding/changing a Vajram, defining or implementing a Trait, modeling logic as a DAG node, wiring a dependency, adding fan-out/batching, or writing/debugging a vajram-graph test — even if the user just says "add a vajram for X", "make this pluggable/strategy-based", or "call service Y as a step in Z" without naming Krystal, as long as the repo uses Krystal/Vajram. Not for SQL table modeling or SELECT/INSERT traits — use vajram-sql-data-modelling for that.
+description: Writes business logic as Krystal Vajrams — the composable, concurrently-executed unit of logic in flipkart-incubator/Krystal (vajram-java-sdk + krystex runtime). Covers ComputeVajramDef vs IOVajramDef, _Inputs/_InternalFacets, @IfAbsent optionality, @Field/@ComputeField computed fields (preferred for values shared across resolvers/outputs/other fields), @Dependency wiring, @Resolve resolvers (fan-out via FanoutCommand, skips via One2OneCommand), @Output/@Output.Batched+@Output.Unbatch, writing Vajram Traits (@Trait/TraitDef interfaces with no implementation) and dispatching among their conforming Vajrams via static/qualifier dispatch (@Qualifier + TraitBinder) or predicate dispatch (@UseForPredicateDispatch + PredicateDispatchPolicy), and tests via VajramGraph/KrystexGraph/VajramKryonExecutor (incl. VajramTestHarness mocking and wiring trait dispatch policies). Use whenever adding/changing a Vajram, defining or implementing a Trait, modeling logic as a DAG node, wiring a dependency, adding fan-out/batching, or writing/debugging a vajram-graph test — even if the user just says "add a vajram for X", "make this pluggable/strategy-based", or "call service Y as a step in Z" without naming Krystal, as long as the repo uses Krystal/Vajram. Not for SQL table modeling or SELECT/INSERT traits — use vajram-sql-data-modelling for that.
 ---
 
 # Writing business logic as Krystal Vajrams
@@ -199,6 +199,13 @@ for fanout resolvers for performance reasons (`executeFanoutWith(builderCollecti
 `skipFanout("reason")`). Always reference dependency facets via
 generated constants (`SomeDep_Req.someInput_n`, `dep = someFacet_n`) — never hand-written strings.
 
+**Shared derived values → `@Field`.** When the same derived value is needed by more than one logic method
+(resolvers, other field computations, or the output), make it a `@Field` in `_InternalFacets` with a
+`@ComputeField(<name>_n)` static method, and consume it by name. Fields are preferred in that case over
+repeating the expression in each consumer. A value used by a single consumer can stay inline. Fields are
+pure computations (no IO) and use plain types. See `references/vajram-anatomy.md`'s `@Field`/`@ComputeField`
+section.
+
 **Static imports for facet constants** — always statically import the current Vajram's own `_n`/`_s`
 constants. Never statically import facet constants from other Vajrams — leave those qualified
 (`OtherVajram_Req.someInput_n`) so it is always clear which Vajram a constant belongs to.
@@ -267,6 +274,8 @@ framework's own sample module) are in `references/examples.md`.
 - No resolver does IO or blocks; only `IOVajramDef` output methods touch the network/disk, and they return
   a `CompletableFuture` immediately rather than blocking on one.
 - Expected-skip resolver paths use `skipExecution`/`skipFanout`, never `throw`.
+- Derived values needed by two or more logic methods are `@Field`s with a `@ComputeField` method, not
+  duplicated expressions; field types are plain `T` and compute methods do no IO.
 - When throwing for unexpected errors in resolvers or output methods, throw `KrystalCompletionException`
   (or a custom subtype) rather than a plain `RuntimeException` — it skips expensive stack-trace filling
   in production and avoids `CompletableFuture` double-wrapping.
