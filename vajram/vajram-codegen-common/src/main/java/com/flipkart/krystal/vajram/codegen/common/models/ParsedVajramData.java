@@ -112,6 +112,8 @@ public record ParsedVajramData(
       List<ExecutableElement> computeFieldMethods,
       VajramInfo vajramInfo,
       VajramCodeGenUtility util) {
+    Set<String> declaredFields =
+        vajramInfo.fields().stream().map(DefaultFacetModel::name).collect(toImmutableSet());
     Map<String, ExecutableElement> methodsByField = new LinkedHashMap<>();
     for (ExecutableElement method : computeFieldMethods) {
       String field =
@@ -119,6 +121,13 @@ public record ParsedVajramData(
               vajramInfo.lite().vajramId().id(),
               checkNotNull(method.getAnnotation(ComputeField.class)).value(),
               method);
+      if (!declaredFields.contains(field)) {
+        throw util.codegenUtil()
+            .errorAndThrow(
+                "@ComputeField target '%s' is not a @Field facet declared in _InternalFacets. Please make sure the facet name refers to a @Field facet."
+                    .formatted(field),
+                method);
+      }
       ExecutableElement existingMethod = methodsByField.put(field, method);
       if (existingMethod != null) {
         throw util.codegenUtil()

@@ -43,7 +43,7 @@ class FacetValidationTest {
       import com.flipkart.krystal.vajram.batching.BatchesGroupedBy;
       import com.flipkart.krystal.vajram.facets.Field;
       import com.flipkart.krystal.vajram.facets.Output;
-      import com.flipkart.krystal.vajram.facets.computation.ComputeField;
+      import com.flipkart.krystal.vajram.facets.ComputeField;
 
       """;
 
@@ -71,6 +71,31 @@ class FacetValidationTest {
             e ->
                 e.contains(
                     "Field facet 'greeting' is declared but has no corresponding @ComputeField"));
+  }
+
+  @Test
+  void computeFieldTargetingNonField_isRejected() {
+    List<String> errors =
+        compileErrors(
+            "NonFieldTargetVajram",
+            """
+            @Vajram
+            public abstract class NonFieldTargetVajram extends ComputeVajramDef<String> {
+              interface _Inputs {
+                @IfAbsent(FAIL) String name();
+              }
+              @ComputeField("NonFieldTargetVajram:name")
+              static String computeName() { return "x"; }
+              @Output
+              static String output(String name) { return name; }
+            }
+            """);
+
+    assertThat(errors)
+        .anyMatch(
+            e ->
+                e.contains(
+                    "@ComputeField target 'name' is not a @Field facet declared in _InternalFacets"));
   }
 
   @Test

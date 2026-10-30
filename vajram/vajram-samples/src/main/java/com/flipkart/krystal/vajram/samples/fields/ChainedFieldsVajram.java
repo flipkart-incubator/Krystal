@@ -7,9 +7,9 @@ import static com.flipkart.krystal.vajram.samples.fields.ChainedFieldsVajram_Fac
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
+import com.flipkart.krystal.vajram.facets.ComputeField;
 import com.flipkart.krystal.vajram.facets.Field;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.facets.ComputeField;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Test vajram demonstrating a field computed from another field and an optional input. */

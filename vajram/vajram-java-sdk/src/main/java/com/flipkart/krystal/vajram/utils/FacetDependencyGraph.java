@@ -30,8 +30,8 @@ public final class FacetDependencyGraph {
   }
 
   /**
-   * Returns the path of a dependency cycle if there is one. The first and last elements of the path
-   * are the same facet.
+   * Returns the path of a dependency cycle if there is one. The path contains only the facets of
+   * the cycle, and its first and last elements are the same facet.
    */
   public Optional<List<String>> findCycle() {
     Set<String> visited = new LinkedHashSet<>();
@@ -50,6 +50,7 @@ public final class FacetDependencyGraph {
     for (String dependency : dependencies.getOrDefault(facet, Set.of())) {
       if (path.contains(dependency)) {
         path.add(dependency);
+        path.subList(0, path.indexOf(dependency)).clear(); // Drop the acyclic prefix
         return true;
       }
       if (!visited.contains(dependency) && findCycle(dependency, visited, path)) {
