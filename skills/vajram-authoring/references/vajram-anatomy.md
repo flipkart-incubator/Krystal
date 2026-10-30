@@ -99,6 +99,41 @@ treat it as a breaking API change.
 - `canFanout = true` — this dependency may be invoked multiple times per invocation of the current Vajram
   (e.g. once per element of a list). Requires exactly one fanout resolver (see below).
 
+## `@Field` and `@ComputeField` — computed values shared across logic
+
+`@Field` (`com.flipkart.krystal.vajram.facets.Field`) on an `_InternalFacets` method declares a field;
+`@ComputeField` (`com.flipkart.krystal.vajram.facets.ComputeField`) on a static method computes it.
+
+```java
+interface _InternalFacets {
+  @IfAbsent(FAIL)
+  @Field
+  String fullName();
+}
+
+@ComputeField(fullName_n)
+static String computeFullName(String firstName, String lastName) {
+  return firstName + " " + lastName;
+}
+```
+
+- The `@ComputeField` value is the generated `<fieldName>_n` constant from `<VajramId>_Fac`, statically
+  imported like any other facet of the current Vajram.
+- Compute-method parameters bind by name to facets: inputs, injected values, dependency outputs, or other
+  fields. Optional parameters follow Convention A (`@Nullable T` / `Optional<T>`).
+- Field types are plain `T`. Never `Optional<T>` or `Errable<T>`. Fields are optional by default; add
+  `@IfAbsent(FAIL)` when a consumer takes a plain `T`.
+- Compute methods are pure, like resolvers: no IO, no blocking. A field is computed as soon as the facets
+  its compute method consumes are ready. Anything that needs IO belongs in a `@Dependency`, not a field.
+- Fields are consumed by name from `@Resolve` methods, `@Output` methods, and other `@ComputeField` methods.
+
+**When to use a field:** prefer a field whenever the same derived value is needed by more than one logic
+method (resolvers, other field computations, or the output). Compute it once and consume it everywhere
+instead of repeating the expression. A value used by exactly one consumer can stay inline in that consumer.
+
+Real samples: `FieldWithDependencyVajram` (one field feeds both a resolver and the output) and
+`ChainedFieldsVajram` (a field computed from another field) in `vajram/vajram-samples/.../samples/fields/`.
+
 ## `@Resolve` — the primary resolver mechanism
 
 A Vajram is responsible for computing the inputs of its own dependencies using `@Resolve`-annotated
