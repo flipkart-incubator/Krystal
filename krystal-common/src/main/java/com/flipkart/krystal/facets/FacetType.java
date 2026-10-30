@@ -8,6 +8,8 @@ public enum FacetType {
   INPUT(false, true),
   /** Facet whose value is provided by the runtime */
   INJECTION(true, true),
+  /** Facet whose value is computed locally by this vajram */
+  FIELD(true, false),
   /** Facet whose value is computed by a dependency */
   DEPENDENCY(true, false),
   /** Facet whose value is computed by this vajram */

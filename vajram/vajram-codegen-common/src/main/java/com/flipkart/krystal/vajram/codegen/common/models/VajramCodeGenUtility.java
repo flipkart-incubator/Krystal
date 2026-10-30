@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajram.codegen.common.models;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.asTypeNameWithTypes;
 import static com.flipkart.krystal.codegen.common.models.Constants.SHARED_MODELS_SUB_PACKAGE;
 import static com.flipkart.krystal.core.VajramID.vajramID;
+import static com.flipkart.krystal.facets.FacetType.FIELD;
 import static com.flipkart.krystal.facets.FacetType.INJECTION;
 import static com.flipkart.krystal.facets.FacetType.INPUT;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.FACETS_CLASS_SUFFIX;
@@ -15,6 +16,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.partitioningBy;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 
 import com.flipkart.krystal.annos.ComputeDelegationMode;
@@ -52,6 +54,7 @@ import com.flipkart.krystal.vajram.codegen.common.models.VajramInfoLite.FacetDet
 import com.flipkart.krystal.vajram.exception.VajramDefinitionException;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FacetIdNameMapping;
+import com.flipkart.krystal.vajram.facets.Field;
 import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
@@ -65,6 +68,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
@@ -229,7 +233,7 @@ public class VajramCodeGenUtility {
             .toList();
     ComputeDelegationMode outputLogicDelegationMode;
     if (vajramInfoLite.isTrait()) {
-      // Traits don't have output logic, so there is not outputLogicDelegationMode
+      // Traits don't have output logic, so there is no outputLogicDelegationMode
       outputLogicDelegationMode = null;
     } else if (IOVajramDef.class.getCanonicalName().equals(parentClassName)) {
       outputLogicDelegationMode = ComputeDelegationMode.SYNC;
@@ -239,19 +243,23 @@ public class VajramCodeGenUtility {
       throw codegenUtil.errorAndThrow(
           "Unknown vajram parent class " + parentClassName, vajramClass);
     }
-    ImmutableList<DefaultFacetModel> givenFacets =
+    Map<Boolean, ImmutableList<DefaultFacetModel>> givenAndFieldFacets =
         Stream.concat(
                 vajramInfoLite.inputsInfo().inputs().stream(),
                 internalFacetElements.stream()
-                    .map(facetElement -> toGivenFacetModel(facetElement, vajramInfoLite.vajramId()))
-                    .filter(Optional::isPresent)
-                    .map(Optional::get))
-            .collect(toImmutableList());
+                    .map(
+                        facetElement ->
+                            toDefaultFacetModel(facetElement, vajramInfoLite.vajramId()))
+                    .flatMap(Optional::stream))
+            .collect(partitioningBy(DefaultFacetModel::isGiven, toImmutableList()));
+    ImmutableList<DefaultFacetModel> givenFacets = givenAndFieldFacets.get(true);
+    ImmutableList<DefaultFacetModel> fields = givenAndFieldFacets.get(false);
     VajramInfo vajramInfo =
         new VajramInfo(
             vajramInfoLite,
             vajramPackageName,
             givenFacets,
+            fields,
             dependencyElements.stream()
                 .map(
                     depElement ->
@@ -360,7 +368,7 @@ public class VajramCodeGenUtility {
     return element.asType();
   }
 
-  private Optional<DefaultFacetModel> toGivenFacetModel(Element facetElement, VajramID vajramID) {
+  private Optional<DefaultFacetModel> toDefaultFacetModel(Element facetElement, VajramID vajramID) {
     DefaultFacetModelBuilder facetBuilder = DefaultFacetModel.builder().facetElement(facetElement);
     String facetName = facetElement.getSimpleName().toString();
     facetBuilder.name(facetName);
@@ -381,11 +389,11 @@ public class VajramCodeGenUtility {
             new DeclaredTypeVisitor(codegenUtil, facetElement, DISALLOWED_FACET_TYPES), null);
     facetBuilder.dataType(dataType);
     FacetType facetType = getFacetType(facetElement);
-    if (facetType == null) {
+    if (DefaultFacetModel.ALLOWED_FACET_TYPES.contains(facetType)) {
+      return Optional.of(facetBuilder.facetType(facetType).vajramId(vajramID).build());
+    } else {
       return Optional.empty();
     }
-    DefaultFacetModel facetModel = facetBuilder.facetType(facetType).vajramId(vajramID).build();
-    return Optional.of(facetModel);
   }
 
   private @Nullable FacetType getFacetType(Element facetElement) {
@@ -404,6 +412,16 @@ public class VajramCodeGenUtility {
             .error("Inject facet '%s' cannot be an input facet".formatted(facetName), facetElement);
       }
       facetType = INJECTION;
+    }
+    if (facetElement.getAnnotation(Field.class) != null) {
+      if (isInput) {
+        codegenUtil()
+            .error(
+                "Field facet '%s' cannot be in _Inputs interface. Field facets must be declared in _InternalFacets."
+                    .formatted(facetName),
+                facetElement);
+      }
+      facetType = FIELD;
     }
     return facetType;
   }
@@ -526,7 +544,7 @@ public class VajramCodeGenUtility {
               new DeclaredTypeVisitor(codegenUtil, vajramOrReqClass, DISALLOWED_FACET_TYPES), null);
       inputs =
           extractFacetElements(vajramOrReqClass).stream()
-              .map(facetElement -> toGivenFacetModel(facetElement, vajramId))
+              .map(facetElement -> toDefaultFacetModel(facetElement, vajramId))
               .filter(Optional::isPresent)
               .map(Optional::get)
               .collect(toImmutableList());
@@ -559,7 +577,7 @@ public class VajramCodeGenUtility {
           extractFacetElements(
                   externalInputsElement != null ? externalInputsElement : inputsElement)
               .stream()
-              .map(facetElement -> toGivenFacetModel(facetElement, vajramId))
+              .map(facetElement -> toDefaultFacetModel(facetElement, vajramId))
               .filter(Optional::isPresent)
               .map(Optional::get)
               .collect(toImmutableList());

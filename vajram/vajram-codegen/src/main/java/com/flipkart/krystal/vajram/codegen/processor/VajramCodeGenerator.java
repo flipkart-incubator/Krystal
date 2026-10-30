@@ -108,8 +108,8 @@ import com.flipkart.krystal.vajram.VajramRequestRoot;
 import com.flipkart.krystal.vajram.batching.BatchEnabledFacetValues;
 import com.flipkart.krystal.vajram.batching.BatchEnabledImmutableFacetValues;
 import com.flipkart.krystal.vajram.batching.BatchItemExecutionItem;
+import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.batching.BatchedFacets;
-import com.flipkart.krystal.vajram.batching.BatchesGroupedBy;
 import com.flipkart.krystal.vajram.codegen.common.models.CodeGenParams;
 import com.flipkart.krystal.vajram.codegen.common.models.DefaultFacetModel;
 import com.flipkart.krystal.vajram.codegen.common.models.DependencyModel;
@@ -1009,16 +1009,26 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
         CompletableFuture.class,
         Void.class,
         HashMap.class);
-    for (DependencyModel dependency : currentVajramInfo().dependencies()) {
+
+    // Create futures for facets which are computed in this vajram. Computations wait for the
+    // futures of the facets they consume.
+    for (FacetGenModel facet :
+        Stream.concat(
+                currentVajramInfo().fields().stream(), currentVajramInfo().dependencies().stream())
+            .toList()) {
       executeGraph.addCode(
-          "var _$L_ready = new $T<$T>();", dependency.name(), CompletableFuture.class, Void.class);
+          "var _$L_ready = new $T<$T>();", facet.name(), CompletableFuture.class, Void.class);
       executeGraph.addCode(
           "_futuresByFacet.put($T.$L_s, _$L_ready);",
           currentVajramInfo().facetsInterfaceType(),
-          dependency.name(),
-          dependency.name());
+          facet.name(),
+          facet.name());
       executeGraph.addCode("\n");
     }
+
+    // Generate field computation code before dependencies
+    executeGraph.addCode(generateFieldComputations());
+
     executeGraph.addCode(executionCode.build());
     return executeGraph.build();
   }
@@ -1028,6 +1038,84 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
     Map<String, Object> map = new HashMap<>(commonNamesMap);
     map.putAll(customNamesMap);
     return map;
+  }
+
+  /**
+   * Generates the code which computes the fields. A field is computed once all the facets it
+   * consumes are ready, so the order in which the computations are generated does not matter.
+   */
+  private CodeBlock generateFieldComputations() {
+    CodeBlock.Builder fieldCode = CodeBlock.builder();
+    ImmutableMap<String, ExecutableElement> computeMethods =
+        requireNonNull(getParsedVajramData().logicMethods()).computeFieldMethods();
+    for (DefaultFacetModel field : currentVajramInfo().fields()) {
+      ExecutableElement computeMethod = computeMethods.get(field.name());
+      CodeBlock allUsedFutures =
+          computeMethod.getParameters().stream()
+              .map(this::inferFacet)
+              .filter(facet -> !facet.isGiven())
+              .map(facet -> CodeBlock.of("_$L_ready", facet.name()))
+              .collect(CodeBlock.joining(", "));
+
+      fieldCode.add(
+          """
+          {
+            $T.allOf($L)
+                .whenComplete(
+                    _contextEnricher.enrichContext(
+                        (_unused, _throwable) -> {
+                          $T<$T> _executionItems = _graphExecData.executionItems();
+                          for ($T _executionItem : _executionItems) {
+                            $T.Builder $L =
+                                ($T.Builder) _executionItem.facetValues()._asBuilder();
+                            try {
+                              $L
+                              $L.$L(_result);
+                            } catch ($T _e) {
+                              _executionItem.response().completeExceptionally(_e);
+                            }
+                          }
+                          _$L_ready.complete(null);
+                        }));
+          }
+          """,
+          CompletableFuture.class,
+          allUsedFutures,
+          List.class,
+          ExecutionItem.class,
+          ExecutionItem.class,
+          currentVajramInfo().facetsImmutPojoType(),
+          FACET_VALUES_VAR,
+          currentVajramInfo().facetsImmutPojoType(),
+          computeFieldInvocation(computeMethod),
+          FACET_VALUES_VAR,
+          field.name(),
+          Exception.class,
+          field.name());
+    }
+    return fieldCode.build();
+  }
+
+  private CodeBlock computeFieldInvocation(ExecutableElement computeMethod) {
+    CodeBlock.Builder invocation = CodeBlock.builder();
+
+    // facetLocalVariable declares a local variable named after the facet; declare them all first
+    // and then pass the variables as arguments.
+    List<CodeBlock> params = new ArrayList<>();
+    for (VariableElement param : computeMethod.getParameters()) {
+      invocation.add(facetLocalVariable(computeMethod, param, FACET_VALUES_VAR));
+      params.add(CodeBlock.of("$L", inferFacet(param).name()));
+    }
+
+    TypeName returnType = new TypeNameVisitor(true).visit(computeMethod.getReturnType());
+    invocation.add(
+        "$T _result = $T.$L($L);",
+        returnType,
+        currentVajramInfo().vajramClassElem(),
+        computeMethod.getSimpleName(),
+        params.stream().collect(CodeBlock.joining(", ")));
+
+    return invocation.build();
   }
 
   private FacetGenModel inferFacet(VariableElement parameter) {
@@ -1618,12 +1706,15 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                 + currentVajramInfo().lite().vajramId();
         @Nullable Element[] elements = param.elementArray();
         util.error(message, elements);
-      } else if (!facet.isUsedToGroupBatches()) {
+      } else if (facet.isBatched()) {
         String message =
             "Facet '"
                 + facet.name()
-                + "' can be accessed individually in the output logic only if it has been annotated as @"
-                + BatchesGroupedBy.class.getSimpleName();
+                + "' is annotated as @"
+                + Batched.class.getSimpleName()
+                + " and hence must be accessed via the '"
+                + BATCHES_VAR
+                + "' param, not individually";
         @Nullable Element[] elements = param.elementArray();
         util.error(message, elements);
       }
@@ -1707,7 +1798,8 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
     FacetGenModel usingFacetModel = inferFacet(parameter);
     CodeBlock facetLocalVarCode = EMPTY_CODE_BLOCK;
     if (usingFacetModel instanceof DependencyModel) {
-      facetLocalVarCode = depFacetLocalVariable(method, usingFacetModel.name(), parameter);
+      facetLocalVarCode =
+          depFacetLocalVariable(method, usingFacetModel.name(), parameter, facetsVar);
     } else if (usingFacetModel instanceof DefaultFacetModel defaultFacetModel) {
       TypeMirror facetType = defaultFacetModel.dataType().typeMirror(util.processingEnv());
       TypeMirror parameterTypeMirror = parameter.asType();
@@ -1768,7 +1860,10 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
    * @param parameter the bind parameter in the resolver method
    */
   private CodeBlock depFacetLocalVariable(
-      ExecutableElement method, final String usingFacetId, VariableElement parameter) {
+      ExecutableElement method,
+      final String usingFacetId,
+      VariableElement parameter,
+      String facetsVar) {
     CodeBlock returnValue = EMPTY_CODE_BLOCK;
     FacetGenModel usingFacetDef = checkNotNull(facetModelsByName.get(usingFacetId));
 
@@ -1805,7 +1900,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                 "$T $L = $L.$L();",
                 vajramUtil.responsesType(dependencyModel),
                 variableName,
-                FACET_VALUES_VAR,
+                facetsVar,
                 usingFacetName);
       } else {
         // This means the dependency being consumed used is not a fanout dependency
@@ -1825,7 +1920,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                         + depAccessRhs
                         + ".response().value(), $5S, $6S);",
                     variableName,
-                    FACET_VALUES_VAR,
+                    facetsVar,
                     usingFacetName,
                     FacetValidation.class,
                     currentVajramInfo().lite().vajramId().id(),
@@ -1851,10 +1946,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
             // response and provide it.
             returnValue =
                 CodeBlock.of(
-                    depValueAccessorCode + ".response();",
-                    variableName,
-                    FACET_VALUES_VAR,
-                    usingFacetName);
+                    depValueAccessorCode + ".response();", variableName, facetsVar, usingFacetName);
           } else if (util.isRawAssignable(parameterType, Optional.class)) {
             // This means this dependencyDef being consumed is not a fanout and the
             // dev has  requested an 'Optional'. So we retrieve the Errable from the
@@ -1863,7 +1955,7 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                 CodeBlock.of(
                     depValueAccessorCode + ".response().valueOpt();",
                     variableName,
-                    FACET_VALUES_VAR,
+                    facetsVar,
                     usingFacetName);
           } else if (util.isAnyNullable(parameterType, parameter)) {
             // This means this dependencyDef being consumed is not a fanout and the
@@ -1873,13 +1965,13 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                 CodeBlock.of(
                     depValueAccessorCode + ".response().value();",
                     variableName,
-                    FACET_VALUES_VAR,
+                    facetsVar,
                     usingFacetName);
           } else if (util.isRawAssignable(parameterType, One2OneDepResponse.class)) {
             // This means this dependencyDef being consumed is not a fanout and the  dev has
             // requested a 'One2OneDepResponse'.
             returnValue =
-                CodeBlock.of(depValueAccessorCode, variableName, FACET_VALUES_VAR, usingFacetName);
+                CodeBlock.of(depValueAccessorCode, variableName, facetsVar, usingFacetName);
           } else {
             //noinspection SpellCheckingInspection
             util.error(
@@ -2624,8 +2716,9 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
 
     List<FacetGenModel> batchedFacets =
         currentVajramInfo().facetStream().filter(FacetGenModel::isBatched).toList();
+    // All facets which are not @Batched are read individually via the batch key object.
     List<FacetGenModel> commonFacets =
-        currentVajramInfo().facetStream().filter(FacetGenModel::isUsedToGroupBatches).toList();
+        currentVajramInfo().facetStream().filter(f -> !f.isBatched()).toList();
 
     TypeSpec.Builder batchItemsIface =
         util.interfaceBuilder(
@@ -2762,6 +2855,8 @@ if (_$facetName:L_reqBuilders.isEmpty()) {
                       .annotated(
                           annotations(returnType.additionalTypeAnnotations(facet, codeGenParams))))
               .addStatement(returnType.fieldGetterCode(facet, codeGenParams));
+      // The given facets here are the @BatchesGroupedBy facets. They are the batch keys which the
+      // batcher uses (via equals/hashCode) to group requests.
       if (facet.isGiven()) {
         getter.addAnnotation(Include.class);
       }

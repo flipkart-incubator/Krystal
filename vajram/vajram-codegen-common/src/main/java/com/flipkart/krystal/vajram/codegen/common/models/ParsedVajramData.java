@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.codegen.common.models;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.lang.Boolean.TRUE;
 import static java.util.Arrays.stream;
 
@@ -9,9 +10,13 @@ import com.flipkart.krystal.annos.CallGraphDelegationMode;
 import com.flipkart.krystal.vajram.codegen.common.models.LogicMethods.OutputLogics;
 import com.flipkart.krystal.vajram.codegen.common.models.LogicMethods.OutputLogics.NoBatching;
 import com.flipkart.krystal.vajram.codegen.common.models.LogicMethods.OutputLogics.WithBatching;
+import com.flipkart.krystal.vajram.facets.ComputeField;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
+import com.flipkart.krystal.vajram.utils.BatchingRules;
+import com.flipkart.krystal.vajram.utils.FacetDependencyGraph;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -99,9 +104,126 @@ public record ParsedVajramData(
     }
   }
 
+  /**
+   * Returns the {@code @ComputeField} methods by the name of the field they compute. Fails if a
+   * field is computed by multiple methods, or if a field does not have a compute method.
+   */
+  private static ImmutableMap<String, ExecutableElement> computeFieldsByName(
+      List<ExecutableElement> computeFieldMethods,
+      VajramInfo vajramInfo,
+      VajramCodeGenUtility util) {
+    Set<String> declaredFields =
+        vajramInfo.fields().stream().map(DefaultFacetModel::name).collect(toImmutableSet());
+    Map<String, ExecutableElement> methodsByField = new LinkedHashMap<>();
+    for (ExecutableElement method : computeFieldMethods) {
+      String field =
+          util.extractFacetName(
+              vajramInfo.lite().vajramId().id(),
+              checkNotNull(method.getAnnotation(ComputeField.class)).value(),
+              method);
+      if (!declaredFields.contains(field)) {
+        throw util.codegenUtil()
+            .errorAndThrow(
+                "@ComputeField target '%s' is not a @Field facet declared in _InternalFacets. Please make sure the facet name refers to a @Field facet."
+                    .formatted(field),
+                method);
+      }
+      ExecutableElement existingMethod = methodsByField.put(field, method);
+      if (existingMethod != null) {
+        throw util.codegenUtil()
+            .errorAndThrow(
+                "Duplicate @ComputeField methods for field '%s': %s and %s"
+                    .formatted(field, existingMethod.getSimpleName(), method.getSimpleName()),
+                method);
+      }
+    }
+    for (DefaultFacetModel field : vajramInfo.fields()) {
+      if (!methodsByField.containsKey(field.name())) {
+        throw util.codegenUtil()
+            .errorAndThrow(
+                "Field facet '%s' is declared but has no corresponding @ComputeField method"
+                    .formatted(field.name()),
+                field.facetElement());
+      }
+    }
+    return ImmutableMap.copyOf(methodsByField);
+  }
+
+  /**
+   * Validates the dependencies between the facets which can be inferred from {@code @Resolve} and
+   * {@code @ComputeField} methods: there should be no cycles and the {@link BatchingRules} should
+   * be followed. Dependencies defined in {@code getSimpleInputResolvers()} cannot be inferred here
+   * and are validated at runtime by {@code VajramDefinition}.
+   */
+  private static void validateFacetDependencies(
+      VajramInfo vajramInfo,
+      List<ExecutableElement> resolverMethods,
+      Map<String, ExecutableElement> computeFieldMethods,
+      VajramCodeGenUtility util) {
+    FacetDependencyGraph graph = new FacetDependencyGraph();
+    Set<String> facetNames =
+        vajramInfo.facetStream().map(FacetGenModel::name).collect(toImmutableSet());
+    facetNames.forEach(graph::addFacet);
+    computeFieldMethods.forEach(
+        (field, method) -> graph.addDependencies(field, facetParams(method, facetNames)));
+    for (ExecutableElement method : resolverMethods) {
+      String dependency =
+          util.extractFacetName(
+              vajramInfo.lite().vajramId().id(),
+              checkNotNull(method.getAnnotation(Resolve.class)).dep(),
+              method);
+      graph.addDependencies(dependency, facetParams(method, facetNames));
+    }
+
+    graph
+        .findCycle()
+        .ifPresent(
+            cycle -> {
+              throw util.codegenUtil()
+                  .errorAndThrow(
+                      "Cycle detected in facet dependencies: %s"
+                          .formatted(String.join(" → ", cycle)),
+                      elementOf(cycle.get(0), vajramInfo));
+            });
+
+    List<BatchingRules.Violation> violations =
+        BatchingRules.validate(
+            vajramInfo
+                .facetStream()
+                .map(
+                    facet ->
+                        new BatchingRules.FacetInfo(
+                            facet.name(),
+                            facet.facetType(),
+                            facet.isBatched(),
+                            facet.isUsedToGroupBatches()))
+                .toList(),
+            graph);
+    for (BatchingRules.Violation violation : violations) {
+      util.codegenUtil().error(violation.message(), elementOf(violation.facet(), vajramInfo));
+    }
+  }
+
+  private static List<String> facetParams(ExecutableElement method, Set<String> facetNames) {
+    return method.getParameters().stream()
+        .map(param -> param.getSimpleName().toString())
+        .filter(facetNames::contains)
+        .toList();
+  }
+
+  private static Element elementOf(String facetName, VajramInfo vajramInfo) {
+    return vajramInfo
+        .facetStream()
+        .filter(facet -> facet.name().equals(facetName))
+        .findFirst()
+        .<Element>map(FacetGenModel::facetElement)
+        .orElse(vajramInfo.vajramClassElem());
+  }
+
   private static LogicMethods getOutputLogicAndResolverMethods(
       VajramInfo vajramInfo, VajramCodeGenUtility util) {
     List<ExecutableElement> resolverMethods = new ArrayList<>();
+    List<ExecutableElement> computeFieldMethods = new ArrayList<>();
 
     boolean vajramSupportsBatching = vajramInfo.facetStream().anyMatch(FacetGenModel::isBatched);
     ExecutableElement nonBatchedOutputLogic = null;
@@ -113,6 +235,8 @@ public record ParsedVajramData(
     for (ExecutableElement method : methods) {
       if (isResolver(method)) {
         resolverMethods.add(method);
+      } else if (isComputeField(method)) {
+        computeFieldMethods.add(method);
       } else if (isNonBatchedOutputLogic(method)) {
         if (nonBatchedOutputLogic != null) {
           String message =
@@ -170,11 +294,18 @@ public record ParsedVajramData(
       outputLogics = new WithBatching(batchedOutputLogic, unbatchOutputLogic);
     }
     validateNoDuplicateResolvers(resolverMethods, vajramInfo, util);
-    return new LogicMethods(outputLogics, resolverMethods);
+    ImmutableMap<String, ExecutableElement> computeFieldsByName =
+        computeFieldsByName(computeFieldMethods, vajramInfo, util);
+    validateFacetDependencies(vajramInfo, resolverMethods, computeFieldsByName, util);
+    return new LogicMethods(outputLogics, resolverMethods, computeFieldsByName);
   }
 
   private static boolean isResolver(ExecutableElement method) {
     return hasAnnotation(method, Resolve.class);
+  }
+
+  private static boolean isComputeField(ExecutableElement method) {
+    return hasAnnotation(method, ComputeField.class);
   }
 
   private static boolean isNonBatchedOutputLogic(ExecutableElement method) {
