@@ -1,7 +1,0 @@
-package vajram_samples.products;
-
-vajram getProductDetails(string productId)
-    out string {
-
-  { "details-of-" + productId }
-}

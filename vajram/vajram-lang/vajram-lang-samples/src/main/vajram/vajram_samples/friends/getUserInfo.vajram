@@ -1,8 +1,0 @@
-package vajram_samples.friends;
-
-vajram getUserInfo(string userId)
-    out string
-    permit callers sayHelloToFriends {
-
-  { "user-" + userId }
-}

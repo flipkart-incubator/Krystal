@@ -1,0 +1,11 @@
+package keka_samples.products;
+
+vajram getAvailableProductDetails(string productId)
+    out string {
+
+  bool isAvailable = isProductAvailable(productId = productId);
+
+  out getProductDetails(productId = productId)
+      `skipIf(reason = "Product is not available.")
+      { isAvailable == false };
+}
