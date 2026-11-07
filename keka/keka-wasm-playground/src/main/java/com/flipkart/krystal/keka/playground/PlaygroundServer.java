@@ -63,7 +63,7 @@ public final class PlaygroundServer {
         new PlaygroundServer(
             port, Path.of(System.getProperty("java.io.tmpdir"), "vajram-playground"));
     playground.start();
-    System.out.println("Vajram WASM Playground: http://127.0.0.1:" + port + "/");
+    System.out.println("KEKA WASM Playground: http://127.0.0.1:" + port + "/");
   }
 
   private static void prerequisiteCheck() throws IOException, InterruptedException {

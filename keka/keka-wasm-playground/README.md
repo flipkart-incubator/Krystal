@@ -1,8 +1,19 @@
 ---
-title: "Vajram WASM Playground"
+title: "KEKA WASM Playground"
 ---
 
-# Vajram WASM Playground
+# KEKA WASM Playground
+
+Run the playground (single command, from the repo root):
+
+```bash
+./gradlew :keka:keka-wasm-playground:run
+```
+
+The server prints its localhost URL (default `http://127.0.0.1:8787/`). Rust/Cargo,
+`wasm32-unknown-unknown`, and `wasm-bindgen` must be installed locally.
+
+## Standalone distribution
 
 Build the standalone distribution:
 
