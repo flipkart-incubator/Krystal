@@ -247,27 +247,38 @@ public final class ExprEmitter {
    * own return, per the {@code `local}-vs-default rule described on {@link
    * TypeMapper#toRustOwnedType}.
    */
-  public String emitOwnedBlockBody(List<Statement> statements, @Nullable YieldStatement yield) {
+  public String emitOwnedBlockBody(
+      List<Statement> statements, @Nullable YieldStatement yield, boolean errable) {
     StringBuilder sb = new StringBuilder();
     for (Statement statement : statements) {
-      sb.append(emitStatement(statement)).append(' ');
-    }
-    if (yield == null) {
-      sb.append("arena.alloc(())");
-    } else if (yield.values().size() == 1 && yield.values().get(0) instanceof Expr.VarUse varUse) {
-      String value = emit(varUse);
-      if (isLocalFacetName(varUse.name())) {
-        // The referenced facet is a plain owned value with no arena lifetime of its own - it must
-        // be re-homed into the output arena to survive past this Vajram's return.
-        sb.append("arena.alloc(").append(value).append(")");
+      if (errable && statement instanceof Statement.Throw t) {
+        // Fails only this input: the caller wraps the body in a `'__item` labeled block.
+        sb.append("break '__item Err(VajramError::from(").append(emit(t.value())).append("));");
       } else {
-        // Already a `&'a T` tied to this Vajram's own output arena (an input, injection, or
-        // non-local facet) - pass it straight through, no copy needed.
-        sb.append(value);
+        sb.append(emitStatement(statement));
+      }
+      sb.append(' ');
+    }
+    String value;
+    if (yield == null) {
+      value = "arena.alloc(())";
+    } else if (yield.values().size() == 1 && yield.values().get(0) instanceof Expr.VarUse varUse) {
+      String name = emit(varUse);
+      // A `local` facet is a plain owned value with no arena lifetime of its own, and an input
+      // is only borrowed for the independent `'i` - both must be re-homed into the output arena
+      // to survive past this Vajram's return. Anything else (an injection or non-local facet) is
+      // already a `&'a T` tied to the output arena.
+      if (isLocalFacetName(varUse.name())) {
+        value = "arena.alloc(" + name + ")";
+      } else if (inputNames.contains(varUse.name())) {
+        value = "arena.alloc((*" + name + ").clone())";
+      } else {
+        value = name;
       }
     } else {
-      sb.append("arena.alloc(").append(emitYieldValue(yield)).append(")");
+      value = "arena.alloc(" + emitYieldValue(yield) + ")";
     }
+    sb.append(errable ? "Ok(" + value + ")" : value);
     return sb.toString();
   }
 
