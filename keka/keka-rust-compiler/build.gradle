@@ -1,0 +1,11 @@
+description = "Compiles keka (.keka) source files into idiomatic async Rust code"
+
+dependencies {
+    implementation project(':keka:keka-grammar')
+}
+
+tasks.withType(Test).configureEach {
+    if (project.hasProperty('updateRustGoldens')) {
+        systemProperty 'updateRustGoldens', 'true'
+    }
+}

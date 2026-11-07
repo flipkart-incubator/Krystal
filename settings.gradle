@@ -31,10 +31,10 @@ include 'krystal-gradle-plugin'
 include 'vajram:vajram-codegen'
 include 'vajram:vajram-codegen-common'
 include 'vajram:vajram-java-sdk'
-include 'vajram:vajram-lang:vajram-lang-grammar'
-include 'vajram:vajram-lang:vajram-lang-rust-compiler'
-include 'vajram:vajram-lang:vajram-lang-samples'
-include 'vajram:vajram-lang:vajram-lang-wasm-playground'
+include 'keka:keka-grammar'
+include 'keka:keka-rust-compiler'
+include 'keka:keka-samples'
+include 'keka:keka-wasm-playground'
 
 /* ******** VAJRAM EXTENSIONS : START *********** */
 

@@ -1,0 +1,23 @@
+package keka_samples.friends;
+
+import vajram concatStrings from lang.strings;
+
+// Run:
+// ./gradlew :keka:keka-samples:runVajram -Pvajram=sayHelloToFriends
+//    -PvajramArgs="--userId alice"
+vajram sayHelloToFriends(string userId)
+    out string~
+    permit callers `outsideProcess public {
+
+  string userInfo = getUserInfo(userId = userId);
+
+  string... friendIds = [userId + "-friend1", userId + "-friend2"];
+
+  string... friendsInfos = ...getUserInfo(userId =... friendIds);
+
+  string friends = concatStrings(strings = friendsInfos; separator = ", ");
+
+  {
+    "Hello Friends of " + userInfo + "! " + friends
+  }
+}
