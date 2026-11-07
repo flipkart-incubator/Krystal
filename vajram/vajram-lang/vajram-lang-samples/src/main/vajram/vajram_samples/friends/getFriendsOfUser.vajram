@@ -1,0 +1,7 @@
+package vajram_samples.friends;
+
+vajram getFriendsOfUser(string userId)
+    out List<string> {
+
+  { [userId + "-friend1", userId + "-friend2"] }
+}

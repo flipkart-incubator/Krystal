@@ -1,0 +1,7 @@
+package vajram_samples.products;
+
+vajram isProductAvailable(string productId)
+    out bool {
+
+  { not productId.is_empty() }
+}

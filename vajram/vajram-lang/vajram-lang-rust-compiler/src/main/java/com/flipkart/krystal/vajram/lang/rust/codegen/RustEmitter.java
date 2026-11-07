@@ -19,7 +19,6 @@ import com.flipkart.krystal.vajram.lang.rust.resolve.SymbolTable;
 import com.flipkart.krystal.vajram.lang.rust.system.SystemVajram;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +36,7 @@ import org.jspecify.annotations.Nullable;
  * annotation is allocated into that same arena, so it survives past this Vajram's own return - a
  * borrowed {@code &'a T}, cascading zero-copy all the way up a call chain until something is
  * finally consumed without escaping further. A {@code `local}-annotated facet is a plain owned Rust
- * value instead: no arena, no refcounting, just freed by ordinary scope/drop when {@code call_one}
+ * value instead: no arena, no refcounting, just freed by ordinary scope/drop when {@code call}
  * returns. DI singletons ({@code AppContext}/{@code Injector}/{@code Provider}) stay {@code
  * Rc}-based throughout - they are process/request-scoped, not per-call memory.
  */
@@ -125,19 +124,18 @@ public final class RustEmitter {
     // arenas for their inputs, which must not force this call's own (possibly caller-chosen,
     // longer-lived) `'a` to shrink to match.
     String lifetimeParams = "'a" + (inputsHaveLifetime ? ", 'i" : "");
-    String returnType = TypeMapper.toRustReturnType(vajram.outputType());
+    String elemType =
+        TypeMapper.toRustReturnType(
+            new com.flipkart.krystal.vajram.lang.rust.ast.TypeRef(
+                vajram.outputType().name(),
+                vajram.outputType().typeArgs(),
+                vajram.outputType().grouperType(),
+                false,
+                vajram.outputType().soon()));
     String batchReturnType =
         vajram.outputType().errable()
-            ? "Result<Vec<"
-                + TypeMapper.toRustReturnType(
-                    new com.flipkart.krystal.vajram.lang.rust.ast.TypeRef(
-                        vajram.outputType().name(),
-                        vajram.outputType().typeArgs(),
-                        vajram.outputType().grouperType(),
-                        false,
-                        vajram.outputType().soon()))
-                + ">, VajramError>"
-            : "Vec<" + returnType + ">";
+            ? "Result<Vec<" + elemType + ">, VajramError>"
+            : "Vec<" + elemType + ">";
     String signature =
         "pub "
             + (completion.isAsync() ? "async " : "")
@@ -154,40 +152,16 @@ public final class RustEmitter {
     if (hasInjections) {
       w.line("let deps = " + typeName + "_Injections::instance(context);");
     }
-    String perInputCall =
-        "call_one(inputs" + (hasInjections ? ", Rc::clone(&deps)" : "") + ", arena, context)";
+    w.line("let __n = inputs.len();");
     if (completion.isAsync()) {
-      String joiner = vajram.outputType().errable() ? "try_join_all" : "join_all";
-      w.line(
-          "futures::future::"
-              + joiner
-              + "(inputs.into_iter().map(|inputs| "
-              + perInputCall
-              + ")).await"
-              + (vajram.outputType().errable() ? "?" : ""));
-    } else {
-      w.line(
-          "inputs.into_iter().map(|inputs| "
-              + perInputCall
-              + ").collect"
-              + (vajram.outputType().errable() ? "::<Result<Vec<_>, _>>()" : "()"));
+      // Facet futures are `async move` blocks: re-borrow so each captures a `Copy` reference rather
+      // than moving the owned batch (or injections) into the first block that mentions it.
+      w.line("let inputs = &inputs;");
+      if (hasInjections) {
+        w.line("let deps = &*deps;");
+      }
     }
-    w.closeBlock();
-    w.blank();
-    String singleSignature =
-        ""
-            + (completion.isAsync() ? "async " : "")
-            + "fn call_one<"
-            + lifetimeParams
-            + ", I: crate::vajram_rt::Injector + 'static>(inputs: "
-            + inputsTypeRef
-            + (hasInjections ? ", deps: Rc<" + typeName + "_Injections>" : "")
-            + ", arena: &'a Arena"
-            + ", context: &crate::vajram_rt::AppContext<I>"
-            + ") -> "
-            + returnType;
-    w.openBlock(singleSignature);
-    emitBody(w, vajram, exprs, completion, hasInjections, facetNames, localFacetNames);
+    emitBody(w, vajram, exprs, completion, facetNames, localFacetNames, elemType);
     w.closeBlock();
   }
 
@@ -209,20 +183,26 @@ public final class RustEmitter {
     throw new IllegalStateException("Unhandled computed facet kind: " + facet.getClass());
   }
 
+  /**
+   * Every facet is a <i>vector</i> with one entry per input in the batch ({@code __n} entries), and
+   * every dependency is invoked once for the whole batch - never once per input. Per-input logic
+   * (field values, resolver expressions, the output block) runs in a loop over the batch, binding
+   * each referenced facet to its entry at that index.
+   */
   private void emitBody(
       RustWriter w,
       VajramDef vajram,
       ExprEmitter exprs,
       Completion completion,
-      boolean hasDeps,
       Set<String> facetNames,
-      Set<String> localFacetNames) {
+      Set<String> localFacetNames,
+      String elemType) {
     List<ComputedFacet> facets = vajram.computedFacets();
     // Every `local` dependency invocation needs some arena to hand the callee as its own output
     // arena (the callee always requires one), even though the result is discarded/owned rather
     // than escaping this call. One arena, declared once here and shared by every `local`
     // dependency in this Vajram, is enough - it (and everything bump-allocated into it) is freed
-    // by ordinary drop when `call_one` returns, same as N separate scratch arenas would be.
+    // by ordinary drop when `call` returns.
     boolean hasLocalDependencies =
         facets.stream()
             .anyMatch(
@@ -232,46 +212,73 @@ public final class RustEmitter {
     }
     if (completion.isAsync()) {
       emitAsyncFacetsGraph(
-          w, facets, exprs, hasDeps, completion, facetNames, localFacetNames, hasLocalDependencies);
+          w, facets, exprs, completion, facetNames, localFacetNames, hasLocalDependencies);
     } else {
       for (ComputedFacet facet : facets) {
         boolean local = localFacetNames.contains(facetName(facet));
-        if (facet instanceof Field field) {
-          w.append(emitSyncField(field, exprs, local));
-        } else if (facet instanceof Dependency dependency) {
-          w.append(emitSyncDependency(dependency, hasDeps, completion, exprs, facetNames, local));
-        }
+        w.line(
+            "let "
+                + facetName(facet)
+                + " = "
+                + emitFacetVector(
+                    facet, exprs, completion, facetNames, local, local ? "(&__locals)" : "arena")
+                + ";");
       }
     }
-    w.append(emitOutputBlock(vajram.outputBlock(), hasDeps, completion, exprs, facetNames));
+    emitOutputBlock(w, vajram, completion, exprs, facetNames, elemType);
   }
 
-  private String emitSyncField(Field field, ExprEmitter exprs, boolean local) {
-    String value = exprs.emit(field.value());
-    return "let " + field.name() + " = " + (local ? value : "arena.alloc(" + value + ")") + ";";
-  }
-
-  private String emitSyncDependency(
-      Dependency dependency,
-      boolean hasDeps,
-      Completion completion,
+  /** The batch-wide value of a facet: a {@code Vec} with one entry per input. */
+  private String emitFacetVector(
+      ComputedFacet facet,
       ExprEmitter exprs,
+      Completion completion,
       Set<String> facetNames,
-      boolean local) {
-    StringBuilder sb = new StringBuilder();
-    String targetArena = local ? "(&__locals)" : "arena";
-    sb.append("let ")
-        .append(dependency.name())
-        .append(" = ")
-        .append(
-            emitInvocationCall(
-                dependency.invocation(),
-                dependency.fanout(),
-                completion,
-                exprs,
-                facetNames,
-                targetArena))
-        .append(";");
+      boolean local,
+      String targetArena) {
+    Set<String> refs = new LinkedHashSet<>();
+    collectFacetRefs(facet, facetNames, refs);
+    refs.remove(facetName(facet));
+    if (facet instanceof Field field) {
+      // `Arena::alloc` (bumpalo) returns `&mut T`, which is never `Clone`; reborrow immutably so
+      // the per-input entries can be cloned out (and `Shared`, in the async path) like any other
+      // facet.
+      String value = exprs.emit(field.value());
+      return collectPerInput(refs, local ? value : "&*arena.alloc(" + value + ")");
+    }
+    Dependency dependency = (Dependency) facet;
+    return emitBatchedInvocation(
+        dependency.invocation(),
+        dependency.fanout(),
+        completion,
+        exprs,
+        facetNames,
+        targetArena,
+        refs);
+  }
+
+  /**
+   * Loops over the batch, running {@code itemExpr} once per input with {@code refs} bound to that
+   * input's entry, and collects the results into a {@code Vec}. A loop (not a closure) so the
+   * expression can contain {@code .await}.
+   */
+  private static String collectPerInput(Set<String> refs, String itemExpr) {
+    return "{ let mut __v = Vec::with_capacity(__n); for __i in 0..__n { "
+        + perInputBindings(refs)
+        + "__v.push("
+        + itemExpr
+        + "); } __v }";
+  }
+
+  /**
+   * Binds {@code inputs} to the current input and each referenced facet to its entry at the current
+   * index, so per-input expressions read exactly like they would for a single input.
+   */
+  private static String perInputBindings(Set<String> refs) {
+    StringBuilder sb = new StringBuilder("let inputs = &inputs[__i]; ");
+    for (String ref : refs) {
+      sb.append("let ").append(ref).append(" = Clone::clone(&").append(ref).append("[__i]); ");
+    }
     return sb.toString();
   }
 
@@ -279,23 +286,21 @@ public final class RustEmitter {
    * Async Vajrams run every facet as a not-detached future (no spawning - detached tasks would need
    * {@code 'static} data, which is incompatible with borrowing this call's arena). Each facet is
    * wrapped as a {@code futures::future::Shared} future (memoizing, poll-anywhere, requires {@code
-   * Output: Clone} - already guaranteed by this system's {@code Errable<T: Clone>} contract). A
+   * Output: Clone}), resolving to an {@code Rc<Vec<_>>} so sharing it doesn't copy the batch. A
    * facet's own async block clones+awaits only the {@code Shared} futures of the facets it actually
    * references (per {@link #collectFacetRefs}) - never every other facet that merely happens to be
    * declared nearby. All facets are then driven concurrently with a single flat {@code
    * futures::join!} over every facet in this call, so independent facets still start immediately,
-   * and each facet blocks on exactly - and only - the futures it needs, regardless of how many
-   * other unrelated facets exist alongside it.
+   * and each facet blocks on exactly - and only - the futures it needs.
    *
    * <p>The source list is already declared in a valid dependency order (a facet can only reference
-   * facets declared earlier - the same assumption the sync path above relies on), so facets are
-   * emitted in that same original order; no separate topological sort is required.
+   * facets declared earlier - the same assumption the sync path relies on), so facets are emitted
+   * in that same original order; no separate topological sort is required.
    */
   private void emitAsyncFacetsGraph(
       RustWriter w,
       List<ComputedFacet> facets,
       ExprEmitter exprs,
-      boolean hasDeps,
       Completion completion,
       Set<String> facetNames,
       Set<String> localFacetNames,
@@ -305,70 +310,41 @@ public final class RustEmitter {
       // `__locals` (the Arena itself) by name inside a block would move the whole arena in,
       // leaving the returned `&T` dangling once that (now block-owned) arena drops with the
       // future. Take the reference once, outside every block, instead - a `&Arena` is `Copy`, so
-      // each `async move` block below only captures a pointer, leaving the arena itself owned by
-      // this outer `call_one` frame for the whole of its body.
+      // each `async move` block below only captures a pointer.
       w.line("let __locals_ref = &__locals;");
-    }
-    Map<String, Set<String>> refs = new LinkedHashMap<>();
-    for (ComputedFacet facet : facets) {
-      Set<String> referenced = new LinkedHashSet<>();
-      collectFacetRefs(facet, facetNames, referenced);
-      referenced.remove(facetName(facet));
-      refs.put(facetName(facet), referenced);
     }
     List<String> allNames = new ArrayList<>();
     for (ComputedFacet facet : facets) {
       String name = facetName(facet);
       boolean local = localFacetNames.contains(name);
-      String futureBody;
-      String targetArena = "arena";
-      // `async move` captures every free variable it references *by move*. For a dependency's
-      // `Shared` future, cloning it *inside* the block (`dep_fut.clone().await`) would move the
-      // original `dep_fut` itself into this block, leaving it inaccessible to the final flat
-      // `join!` (and to any other sibling that also depends on it) - a "borrow of moved value"
-      // error. So the clone must happen *outside*, as its own statement, and only the (fresh,
-      // single-use) clone gets moved in.
+      Set<String> referenced = new LinkedHashSet<>();
+      collectFacetRefs(facet, facetNames, referenced);
+      referenced.remove(name);
+      // Cloning a dependency's `Shared` future *inside* its `async move` block would move the
+      // original into that block, leaving it inaccessible to the final `join!` and to siblings
+      // that also depend on it. So clone outside, as its own statement, and move only the clone.
       StringBuilder depAwaits = new StringBuilder();
-      for (String dep : refs.getOrDefault(name, Set.of())) {
+      for (String dep : referenced) {
         String cloneVar = "_" + name + "_needs_" + dep;
         w.line("let " + cloneVar + " = " + dep + "_fut.clone();");
         depAwaits.append("let ").append(dep).append(" = ").append(cloneVar).append(".await; ");
       }
-      if (facet instanceof Field field) {
-        String value = exprs.emit(field.value());
-        // `Arena::alloc` (bumpalo) returns `&mut T`; `Shared` requires `Output: Clone`, which
-        // `&mut T` never is (only `&T` is). Reborrow immutably right away so this facet's
-        // `Shared` future has a `&T` output, matching every other (dependency-call-derived)
-        // facet - a real vajram callee's own return type already forces this same coercion at
-        // its `call_one` boundary, so this only changes behavior for plain computed fields.
-        futureBody = local ? value : "&*arena.alloc(" + value + ")";
-      } else {
-        Dependency dependency = (Dependency) facet;
-        if (local) {
-          targetArena = "__locals_ref";
-        }
-        futureBody =
-            emitInvocationCall(
-                dependency.invocation(),
-                dependency.fanout(),
-                completion,
-                exprs,
-                facetNames,
-                targetArena);
-      }
+      String targetArena = local && facet instanceof Dependency ? "__locals_ref" : "arena";
+      String vector = emitFacetVector(facet, exprs, completion, facetNames, local, targetArena);
       w.line(
           "let "
               + name
               + "_fut = async move { "
               + depAwaits
-              + futureBody
-              + " }.boxed_local().shared();");
+              + "Rc::new("
+              + vector
+              + ") }.boxed_local().shared();");
       allNames.add(name);
     }
     if (allNames.size() == 1) {
       String name = allNames.get(0);
       w.line("let " + name + " = " + name + "_fut.clone().await;");
-    } else {
+    } else if (allNames.size() > 1) {
       String lhs = String.join(", ", allNames);
       String rhs = allNames.stream().map(n -> n + "_fut.clone()").collect(Collectors.joining(", "));
       w.line("let (" + lhs + ") = futures::join!(" + rhs + ");");
@@ -382,12 +358,17 @@ public final class RustEmitter {
     if (facet instanceof Field field) {
       collectVarNames(field.value(), facetNames, out);
     } else if (facet instanceof Dependency dependency) {
-      for (DepInputResolver resolver : dependency.invocation().resolvers()) {
-        if (resolver instanceof DepInputResolver.Stat stat) {
-          stat.values().forEach(value -> collectVarNames(value, facetNames, out));
-        } else if (resolver instanceof DepInputResolver.Func func) {
-          collectVarNames(func.body(), facetNames, out);
-        }
+      collectInvocationRefs(dependency.invocation(), facetNames, out);
+    }
+  }
+
+  private void collectInvocationRefs(
+      DependencyInvocation invocation, Set<String> facetNames, Set<String> out) {
+    for (DepInputResolver resolver : invocation.resolvers()) {
+      if (resolver instanceof DepInputResolver.Stat stat) {
+        stat.values().forEach(value -> collectVarNames(value, facetNames, out));
+      } else if (resolver instanceof DepInputResolver.Func func) {
+        collectVarNames(func.body(), facetNames, out);
       }
     }
   }
@@ -512,23 +493,37 @@ public final class RustEmitter {
                     : String.join(".", currentFile.packageSegments()) + "." + typeName);
   }
 
-  private String emitOutputBlock(
-      OutputBlock block,
-      boolean hasDeps,
+  private void emitOutputBlock(
+      RustWriter w,
+      VajramDef vajram,
       Completion completion,
       ExprEmitter exprs,
-      Set<String> facetNames) {
+      Set<String> facetNames,
+      String elemType) {
+    OutputBlock block = vajram.outputBlock();
+    boolean errable = vajram.outputType().errable();
     if (block instanceof OutputBlock.Logic logic) {
-      return exprs.emitOwnedBlockBody(logic.body().statements(), logic.body().yield());
+      Set<String> refs = new LinkedHashSet<>();
+      collectVarNames(logic.body(), facetNames, refs);
+      // Explicit element type: `arena.alloc` yields `&mut T`, which must coerce to the `&T` return.
+      w.line("let mut __out: Vec<" + elemType + "> = Vec::with_capacity(__n);");
+      w.line(
+          "for __i in 0..__n { "
+              + perInputBindings(refs)
+              + "__out.push({ "
+              + exprs.emitOwnedBlockBody(logic.body().statements(), logic.body().yield())
+              + " }); }");
+      w.line(errable ? "Ok(__out)" : "__out");
     } else if (block instanceof OutputBlock.Delegate delegate) {
-      return emitDelegate(delegate, hasDeps, completion, exprs, facetNames);
+      w.append(emitDelegate(delegate, errable, completion, exprs, facetNames));
+    } else {
+      throw new IllegalStateException("Unhandled output block kind: " + block.getClass());
     }
-    throw new IllegalStateException("Unhandled output block kind: " + block.getClass());
   }
 
   private String emitDelegate(
       OutputBlock.Delegate delegate,
-      boolean hasDeps,
+      boolean errable,
       Completion completion,
       ExprEmitter exprs,
       Set<String> facetNames) {
@@ -539,23 +534,41 @@ public final class RustEmitter {
           .append(String.join(" ", block.annotations()))
           .append("` clause - not modeled by this compiler yet\n");
     }
+    Set<String> refs = new LinkedHashSet<>();
+    collectInvocationRefs(invocation, facetNames, refs);
     // The output block's own result always feeds this Vajram's return value, so it always
     // allocates directly into the received output arena, never a throwaway scratch.
-    String call = emitInvocationCall(invocation, false, completion, exprs, facetNames, "arena");
+    String call =
+        emitBatchedInvocation(invocation, false, completion, exprs, facetNames, "arena", refs);
     if (invocation.errableFallback() != null) {
       call = call + "." + exprs.emit(invocation.errableFallback());
     }
-    sb.append("return ").append(call).append(";");
+    VajramFile callee = symbolTable.lookup(invocation.vajramName());
+    boolean calleeYieldsResult =
+        isCalleeErrable(invocation.vajramName())
+            && callee != null
+            && symbolTable.completionOf(callee).isAsync();
+    sb.append("return ")
+        .append(errable && !calleeYieldsResult ? "Ok(" + call + ")" : call)
+        .append(";");
     return sb.toString();
   }
 
-  private String emitInvocationCall(
+  /**
+   * Invokes a dependency once for the whole batch. The callee receives one inputs struct per input
+   * (or, for a fanned-out resolver, one per element of every input's fanned collection, flattened
+   * into a single batch), so the callee's own logic also runs vectorized. Returns an expression
+   * evaluating to a {@code Vec} with one entry per input: the callee's single output for a plain
+   * dependency, or a {@code Vec} of its outputs for a fanout.
+   */
+  private String emitBatchedInvocation(
       DependencyInvocation invocation,
       boolean declaredFanout,
       Completion callerCompletion,
       ExprEmitter exprs,
       Set<String> facetNames,
-      String targetArena) {
+      String targetArena,
+      Set<String> refs) {
     VajramFile callee = symbolTable.lookup(invocation.vajramName());
     String calleeModule = calleeModule(callee, invocation.vajramName());
     String calleeType = Naming.capitalize(invocation.vajramName());
@@ -565,34 +578,30 @@ public final class RustEmitter {
 
     var systemVajram = SystemVajram.lookup(invocation.vajramName(), currentFile.imports());
     if (systemVajram.isPresent()) {
-      return switch (systemVajram.get()) {
-        case READ_FILE_AS_STRING -> emitReadFileAsString(invocation, exprs, targetArena);
-        case CONCAT_STRINGS -> emitConcatStrings(invocation, exprs, targetArena);
-        case CALL_HTTP -> emitCallHttp(invocation, exprs, targetArena);
-      };
+      // System vajrams are inlined per input (they're runtime primitives, not generated modules).
+      String perInput =
+          switch (systemVajram.get()) {
+            case READ_FILE_AS_STRING -> emitReadFileAsString(invocation, exprs, targetArena);
+            case CONCAT_STRINGS -> emitConcatStrings(invocation, exprs, targetArena);
+            case CALL_HTTP -> emitCallHttp(invocation, exprs, targetArena);
+          };
+      return collectPerInput(refs, perInput);
     }
 
+    String inputsType = calleeModule + "::" + calleeType + "Inputs";
+    String bindings = perInputBindings(refs);
     DepInputResolver fannedResolver = findFanned(invocation, declaredFanout);
     if (fannedResolver == null) {
       List<String> fieldList = new ArrayList<>();
       for (DepInputResolver resolver : invocation.resolvers()) {
         fieldList.addAll(fieldAssignments(resolver, exprs, targetArena));
       }
-      String fields = String.join(", ", fieldList);
-      String call =
-          calleeModule
-              + "::call("
-              + "vec!["
-              + calleeModule
-              + "::"
-              + calleeType
-              + "Inputs { "
-              + fields
-              + " }]"
-              + arenaArg
-              + contextArg
-              + ")";
-      return singleBatchResult(asyncInvocation(call, invocation.vajramName(), calleeErrable));
+      String batch =
+          collectPerInput(refs, inputsType + " { " + String.join(", ", fieldList) + " }");
+      return asyncInvocation(
+          calleeModule + "::call(" + batch + arenaArg + contextArg + ")",
+          invocation.vajramName(),
+          calleeErrable);
     }
 
     String fannedField =
@@ -612,25 +621,35 @@ public final class RustEmitter {
       }
     }
     String restFields = otherFields.isEmpty() ? "" : ", " + String.join(", ", otherFields);
-    String fanoutCall =
-        calleeModule
-            + "::call("
-            + fannedExpr
-            + ".into_iter().map(|it| "
-            + calleeModule
-            + "::"
-            + calleeType
-            + "Inputs { "
-            + fannedField
-            + ": "
-            + targetArena
-            + ".alloc(it)"
-            + restFields
-            + " }).collect()"
-            + arenaArg
-            + contextArg
-            + ")";
-    return asyncInvocation(fanoutCall, invocation.vajramName(), calleeErrable);
+    String call =
+        asyncInvocation(
+            calleeModule
+                + "::call(__groups.into_iter().flatten().collect()"
+                + arenaArg
+                + contextArg
+                + ")",
+            invocation.vajramName(),
+            calleeErrable);
+    // Flatten every input's fanned inputs into one callee batch, then split the callee's outputs
+    // back into one group per input using the recorded group sizes.
+    return "{ let mut __groups = Vec::with_capacity(__n); for __i in 0..__n { "
+        + bindings
+        + "__groups.push("
+        + fannedExpr
+        + ".into_iter().map(|it| "
+        + inputsType
+        + " { "
+        + fannedField
+        + ": "
+        + targetArena
+        + ".alloc(it)"
+        + restFields
+        + " }).collect::<Vec<_>>()); } "
+        + "let __sizes: Vec<usize> = __groups.iter().map(|g| g.len()).collect(); "
+        + "let mut __results = "
+        + call
+        + ".into_iter(); "
+        + "__sizes.into_iter().map(|size| __results.by_ref().take(size).collect::<Vec<_>>()).collect::<Vec<_>>() }";
   }
 
   private static String calleeModule(@Nullable VajramFile callee, String vajramName) {
@@ -654,10 +673,6 @@ public final class RustEmitter {
       return call + (calleeErrable ? "?" : "");
     }
     return call + ".await";
-  }
-
-  private static String singleBatchResult(String call) {
-    return "(" + call + ").into_iter().next().expect(\"single-item Vajram batch\")";
   }
 
   private String emitReadFileAsString(

@@ -56,10 +56,10 @@ public final class ExprEmitter {
 
   /**
    * Whether a bare name is a {@code `local} facet: a plain owned Rust value freed when this
-   * Vajram's {@code call_one} returns, rather than a {@code &'a T} borrowed out of the output
-   * arena. Callers that hand this facet's value across a boundary (into a dependency's inputs, or
-   * into this Vajram's own output) must re-home it into the target arena rather than pass it
-   * through bare.
+   * Vajram's {@code call} returns, rather than a {@code &'a T} borrowed out of the output arena.
+   * Callers that hand this facet's value across a boundary (into a dependency's inputs, or into
+   * this Vajram's own output) must re-home it into the target arena rather than pass it through
+   * bare.
    */
   public boolean isLocalFacetName(String name) {
     return localFacetNames.contains(name);
@@ -243,8 +243,8 @@ public final class ExprEmitter {
 
   /**
    * Shared by Vajram output logic blocks: statements, then the trailing value allocated into {@code
-   * arena} - the output arena `call_one` was handed by its caller - so it survives past this
-   * Vajram's own return, per the {@code `local}-vs-default rule described on {@link
+   * arena} - the output arena `call` was handed by its caller - so it survives past this Vajram's
+   * own return, per the {@code `local}-vs-default rule described on {@link
    * TypeMapper#toRustOwnedType}.
    */
   public String emitOwnedBlockBody(List<Statement> statements, @Nullable YieldStatement yield) {

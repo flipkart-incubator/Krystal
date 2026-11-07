@@ -261,7 +261,10 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
           .append(inputs)
           .append(", &arena, &app_context")
           .append(").into_iter().next().expect(\"outside-process Vajram result\");\n");
-      source.append("            println!(\"{}\", output);\n");
+      source.append(
+          isVoidOutput(target)
+              ? "            let _ = output;\n"
+              : "            println!(\"{}\", output);\n");
     } else {
       source.append(
           "            let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();\n");
@@ -274,10 +277,18 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
           .append(inputs)
           .append(", &arena, &app_context")
           .append(").await.into_iter().next().expect(\"outside-process Vajram result\");\n");
-      source.append("                println!(\"{}\", output);\n");
+      source.append(
+          isVoidOutput(target)
+              ? "                let _ = output;\n"
+              : "                println!(\"{}\", output);\n");
       source.append("            });\n");
     }
     source.append("        }\n");
+  }
+
+  /** A {@code void} Vajram yields {@code ()}, which has nothing to print. */
+  private static boolean isVoidOutput(VajramFile target) {
+    return "void".equals(target.vajram().outputType().name());
   }
 
   private static boolean isCliInput(InputDecl input) {

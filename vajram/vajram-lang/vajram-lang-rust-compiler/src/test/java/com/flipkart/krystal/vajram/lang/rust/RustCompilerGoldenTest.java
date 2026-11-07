@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.vajram.lang.rust.ast.Callers.Caller;
 import com.flipkart.krystal.vajram.lang.rust.cli.RustCompilerMain;
+import com.flipkart.krystal.vajram.lang.rust.codegen.Naming;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,9 +16,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * Compiles every {@code .vajram} fixture (copied from {@code vajram-lang-grammar}'s known-passing
- * parser test resources) and checks the generated Rust against a checked-in "golden" copy under
- * {@code src/test/resources/expected/}.
+ * Compiles every {@code .vajram} file in {@code vajram-lang-samples} (the real, cargo-built
+ * samples) and checks the generated Rust against a checked-in "golden" copy under {@code
+ * src/test/resources/expected/}.
  *
  * <p>If a golden file doesn't exist yet, this test writes one and fails with instructions to review
  * and commit it - the standard low-maintenance way to bootstrap/update golden tests without
@@ -25,7 +26,7 @@ import org.junit.jupiter.api.io.TempDir;
  */
 class RustCompilerGoldenTest {
 
-  private static final Path FIXTURES_DIR = Path.of("src/test/resources/vajram");
+  private static final Path FIXTURES_DIR = Path.of("../vajram-lang-samples/src/main/vajram");
   private static final Path EXPECTED_DIR = Path.of("src/test/resources/expected");
   private static final boolean UPDATE_GOLDENS = Boolean.getBoolean("updateRustGoldens");
 
@@ -67,6 +68,22 @@ class RustCompilerGoldenTest {
           "Wrote new golden file(s), review and commit them: " + missingGolden);
     }
     assertThat(mismatched).as("generated Rust drifted from golden files").isEmpty();
+  }
+
+  @Test
+  void everySampleVajramHasAGoldenFile() throws IOException {
+    List<String> missing = new java.util.ArrayList<>();
+    try (Stream<Path> paths = Files.walk(FIXTURES_DIR)) {
+      for (Path source : paths.filter(p -> p.toString().endsWith(".vajram")).toList()) {
+        Path relativeDir = FIXTURES_DIR.relativize(source).getParent();
+        Path golden =
+            EXPECTED_DIR.resolve(relativeDir).resolve(Naming.sourceModuleName(source) + ".rs");
+        if (!Files.exists(golden)) {
+          missing.add(FIXTURES_DIR.relativize(source) + " -> " + EXPECTED_DIR.relativize(golden));
+        }
+      }
+    }
+    assertThat(missing).as("sample vajrams without a golden file").isEmpty();
   }
 
   @Test
@@ -311,7 +328,8 @@ class RustCompilerGoldenTest {
         .contains("fn instance<I: crate::vajram_rt::Injector + 'static>")
         .contains("let deps = Leaf_Injections::instance(context);")
         .contains("::leaf::call(")
-        .contains(", arena, context)")
+        .contains("arena,")
+        .contains("context,")
         .contains("deps.prefix.get()");
   }
 
@@ -536,15 +554,14 @@ class RustCompilerGoldenTest {
         .contains(
             "        let _firstValue_needs_first = first_fut.clone();\n"
                 + "        let firstValue_fut = async move {\n"
-                + "            let first = _firstValue_needs_first.await;\n"
-                + "            &*arena.alloc(first + \"\")\n"
-                + "        }")
+                + "            let first = _firstValue_needs_first.await;\n")
         .contains(
             "        let _secondValue_needs_second = second_fut.clone();\n"
                 + "        let secondValue_fut = async move {\n"
-                + "            let second = _secondValue_needs_second.await;\n"
-                + "            &*arena.alloc(second + \"\")\n"
-                + "        }")
+                + "            let second = _secondValue_needs_second.await;\n")
+        // Per-input entries are bound from the awaited facet vectors inside the batch loop.
+        .contains("let first = Clone::clone(&first[__i]);")
+        .contains("__v.push(&*arena.alloc(first + \"\"));")
         .doesNotContain("_secondValue_needs_first")
         .doesNotContain("_firstValue_needs_second")
         .contains(
@@ -588,12 +605,11 @@ class RustCompilerGoldenTest {
     assertThat(diamond)
         .contains("let _combined_needs_a = a_fut.clone();")
         .contains("let _combined_needs_b = b_fut.clone();")
-        .contains(
-            "let combined_fut = async move {\n"
-                + "            let a = _combined_needs_a.await;\n"
-                + "            let b = _combined_needs_b.await;\n"
-                + "            &*arena.alloc(a + b)\n"
-                + "        }");
+        .contains("let combined_fut = async move {\n")
+        .contains("let a = _combined_needs_a.await;\n")
+        .contains("let b = _combined_needs_b.await;\n")
+        .contains("let a = Clone::clone(&a[__i]);")
+        .contains("__v.push(&*arena.alloc(a + b));");
     String combinedBody =
         diamond.substring(
             diamond.indexOf("let combined_fut ="), diamond.indexOf("let (a, b, c, combined)"));
@@ -715,7 +731,7 @@ class RustCompilerGoldenTest {
         .contains("pub struct CallerInputs")
         .contains("crate::combined::combined::leaf::call(")
         .contains("crate::combined::combined::leaf::LeafInputs {}")
-        .contains("single-item Vajram batch");
+        .doesNotContain("call_one");
   }
 
   @Test

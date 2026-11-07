@@ -1,9 +1,12 @@
 package vajram_samples.hello;
 
-// Run:
-// ./gradlew :vajram:vajram-lang:vajram-lang-samples:runVajram -Pvajram=helloWorld
-vajram helloWorld() out string
-    permit callers `outsideProcess public{
+import type ConsoleWriter from lang.process;
 
-  { "Hello from vajram-lang!" }
+// Run: ./gradlew :vajram:vajram-lang:vajram-lang-samples:runVajram -Pvajram=helloWorld
+vajram helloWorld() out void
+    inject (ConsoleWriter writer)
+    permit callers `outsideProcess public {
+  {
+    writer.println("Hello! World.")
+  }
 }

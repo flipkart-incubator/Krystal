@@ -20,13 +20,19 @@ class VajramSamplesTest {
 
   @Test
   void helloWorld() throws Exception {
-    assertThat(runVajram("helloWorld")).isEqualTo("Hello from vajram-lang!");
+    assertThat(runVajram("helloWorld")).isEqualTo("Hello! World.");
   }
 
   @Test
   void helloWorld2() throws Exception {
     assertThat(runVajram("helloWorld2", "--name", "Mister"))
         .isEqualTo("Hello again from vajram-lang, Mister!");
+  }
+
+  @Test
+  void sayHelloToFriends() throws Exception {
+    assertThat(runVajram("sayHelloToFriends", "--userId", "alice"))
+        .isEqualTo("Hello Friends of user-alice! user-alice-friend1, user-alice-friend2");
   }
 
   @Test
