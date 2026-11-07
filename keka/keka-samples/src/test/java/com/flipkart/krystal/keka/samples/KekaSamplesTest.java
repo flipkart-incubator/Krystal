@@ -36,6 +36,12 @@ class KekaSamplesTest {
   }
 
   @Test
+  void errableAsyncCalleeYieldsPerInputResults() throws Exception {
+    assertThat(runVajram("checkErrors", "--input", "x")).isEqualTo("true");
+    assertThat(runVajram("checkErrorsInFanout", "--input", "x")).isEqualTo("true");
+  }
+
+  @Test
   void headFile() throws Exception {
     Path file = Files.createTempFile("vajram-head-file-", ".txt");
     try {

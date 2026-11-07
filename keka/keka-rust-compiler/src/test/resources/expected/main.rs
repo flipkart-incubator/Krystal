@@ -164,6 +164,70 @@ fn main() {
                 println!("{}", output);
             });
         }
+        "checkErrors" => {
+            for input in inputs.keys() {
+                if !["input"].contains(&input.as_str()) {
+                    eprintln!("unknown input {} for checkErrors", input);
+                    std::process::exit(2);
+                }
+            }
+            let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+            let local = tokio::task::LocalSet::new();
+            local.block_on(&runtime, async {
+                let output = keka_samples::errors::error_handling::check_errors::call(
+                    vec![keka_samples::errors::error_handling::check_errors::CheckErrorsInputs {
+                        input: arena.alloc(
+                            inputs
+                                .get("input")
+                                .unwrap_or_else(|| {
+                                    eprintln!("missing input input for checkErrors");
+                                    std::process::exit(2)
+                                })
+                                .to_owned(),
+                        ),
+                    }],
+                    &arena,
+                    &app_context,
+                )
+                .await
+                .into_iter()
+                .next()
+                .expect("outside-process Vajram result");
+                println!("{}", output);
+            });
+        }
+        "checkErrorsInFanout" => {
+            for input in inputs.keys() {
+                if !["input"].contains(&input.as_str()) {
+                    eprintln!("unknown input {} for checkErrorsInFanout", input);
+                    std::process::exit(2);
+                }
+            }
+            let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+            let local = tokio::task::LocalSet::new();
+            local.block_on(&runtime, async {
+                let output = keka_samples::errors::error_handling::check_errors_in_fanout::call(
+                    vec![keka_samples::errors::error_handling::check_errors_in_fanout::CheckErrorsInFanoutInputs {
+                        input: arena.alloc(
+                            inputs
+                                .get("input")
+                                .unwrap_or_else(|| {
+                                    eprintln!("missing input input for checkErrorsInFanout");
+                                    std::process::exit(2)
+                                })
+                                .to_owned(),
+                        ),
+                    }],
+                    &arena,
+                    &app_context,
+                )
+                .await
+                .into_iter()
+                .next()
+                .expect("outside-process Vajram result");
+                println!("{}", output);
+            });
+        }
         "headFile" => {
             for input in inputs.keys() {
                 if !["numChars", "filePath"].contains(&input.as_str()) {

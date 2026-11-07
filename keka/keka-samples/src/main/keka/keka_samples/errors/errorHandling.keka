@@ -1,0 +1,42 @@
+package keka_samples.errors;
+
+// Async errable callees: each input of a batch yields its own Result, so one failing input
+// doesn't fail the others.
+vajram succeed(string input) out string?~ {~{
+  yield input;
+}}
+
+vajram failAlways(string input) out string?~ {~{
+  throw "boom";
+  yield input;
+}}
+
+// Prints true if `succeed` produced a value and `failAlways` produced an error.
+//
+// Run:
+// ./gradlew :keka:keka-samples:runVajram -Pvajram=checkErrors -PvajramArgs="--input x"
+vajram checkErrors(string input)
+    out bool~
+    permit callers `outsideProcess public {
+  string? good = succeed(input = input);
+  string? bad = failAlways(input = input);
+
+  ~{
+    yield good?valuePresent() == bad?errorPresent();
+  }
+}
+
+// Fanout over an errable async callee: each input gets a Vec of per-element Results.
+//
+// Run:
+// ./gradlew :keka:keka-samples:runVajram -Pvajram=checkErrorsInFanout -PvajramArgs="--input x"
+vajram checkErrorsInFanout(string input)
+    out bool~
+    permit callers `outsideProcess public {
+  string... copies = [input, input];
+  string?... results = ...failAlways(input =... copies);
+
+  ~{
+    yield not results.is_empty();
+  }
+}

@@ -122,18 +122,9 @@ public final class RustEmitter {
     // arenas for their inputs, which must not force this call's own (possibly caller-chosen,
     // longer-lived) `'a` to shrink to match.
     String lifetimeParams = "'a" + (inputsHaveLifetime ? ", 'i" : "");
-    String elemType =
-        TypeMapper.toRustReturnType(
-            new com.flipkart.krystal.keka.rust.ast.TypeRef(
-                vajram.outputType().name(),
-                vajram.outputType().typeArgs(),
-                vajram.outputType().grouperType(),
-                false,
-                vajram.outputType().soon()));
-    String batchReturnType =
-        vajram.outputType().errable()
-            ? "Result<Vec<" + elemType + ">, VajramError>"
-            : "Vec<" + elemType + ">";
+    // An errable Vajram yields one `Result` per input, so a failing input doesn't fail the batch.
+    String elemType = TypeMapper.toRustReturnType(vajram.outputType());
+    String batchReturnType = "Vec<" + elemType + ">";
     String signature =
         "pub "
             + (completion.isAsync() ? "async " : "")
@@ -505,13 +496,16 @@ public final class RustEmitter {
       collectVarNames(logic.body(), facetNames, refs);
       // Explicit element type: `arena.alloc` yields `&mut T`, which must coerce to the `&T` return.
       w.line("let mut __out: Vec<" + elemType + "> = Vec::with_capacity(__n);");
+      String body =
+          exprs.emitOwnedBlockBody(logic.body().statements(), logic.body().yield(), errable);
       w.line(
           "for __i in 0..__n { "
               + perInputBindings(refs)
-              + "__out.push({ "
-              + exprs.emitOwnedBlockBody(logic.body().statements(), logic.body().yield())
-              + " }); }");
-      w.line(errable ? "Ok(__out)" : "__out");
+              + "__out.push("
+              // A labeled block lets `throw` fail just this input, not the whole batch.
+              + (errable ? "'__item: { " + body + " }" : "{ " + body + " }")
+              + "); }");
+      w.line("__out");
     } else if (block instanceof OutputBlock.Delegate delegate) {
       w.append(emitDelegate(delegate, errable, completion, exprs, facetNames));
     } else {
@@ -538,17 +532,20 @@ public final class RustEmitter {
     // allocates directly into the received output arena, never a throwaway scratch.
     String call =
         emitBatchedInvocation(invocation, false, completion, exprs, facetNames, "arena", refs);
+    // The callee yields one `Result` per input iff it is errable; adapt to this Vajram's own
+    // errability per input.
+    boolean calleeErrable = isCalleeErrable(invocation.vajramName());
     if (invocation.errableFallback() != null) {
-      call = call + "." + exprs.emit(invocation.errableFallback());
+      String fallback = exprs.emit(invocation.errableFallback());
+      call =
+          call
+              + ".into_iter().map(|__r| "
+              + (errable ? "Ok(__r." + fallback + ")" : "__r." + fallback)
+              + ").collect::<Vec<_>>()";
+    } else if (errable && !calleeErrable) {
+      call = call + ".into_iter().map(Ok).collect::<Vec<_>>()";
     }
-    VajramFile callee = symbolTable.lookup(invocation.vajramName());
-    boolean calleeYieldsResult =
-        isCalleeErrable(invocation.vajramName())
-            && callee != null
-            && symbolTable.completionOf(callee).isAsync();
-    sb.append("return ")
-        .append(errable && !calleeYieldsResult ? "Ok(" + call + ")" : call)
-        .append(";");
+    sb.append("return ").append(call).append(";");
     return sb.toString();
   }
 
@@ -570,7 +567,6 @@ public final class RustEmitter {
     VajramFile callee = symbolTable.lookup(invocation.vajramName());
     String calleeModule = calleeModule(callee, invocation.vajramName());
     String calleeType = Naming.capitalize(invocation.vajramName());
-    boolean calleeErrable = isCalleeErrable(invocation.vajramName());
     String contextArg = ", context";
     String arenaArg = ", " + targetArena;
 
@@ -597,9 +593,7 @@ public final class RustEmitter {
       String batch =
           collectPerInput(refs, inputsType + " { " + String.join(", ", fieldList) + " }");
       return asyncInvocation(
-          calleeModule + "::call(" + batch + arenaArg + contextArg + ")",
-          invocation.vajramName(),
-          calleeErrable);
+          calleeModule + "::call(" + batch + arenaArg + contextArg + ")", invocation.vajramName());
     }
 
     String fannedField =
@@ -625,8 +619,7 @@ public final class RustEmitter {
                 + arenaArg
                 + contextArg
                 + ")",
-            invocation.vajramName(),
-            calleeErrable);
+            invocation.vajramName());
     // Flatten every input's fanned inputs into one callee batch, then split the callee's outputs
     // back into one group per input using the recorded group sizes.
     return "{ let mut __groups = Vec::with_capacity(__n); for __i in 0..__n { "
@@ -664,12 +657,11 @@ public final class RustEmitter {
         + Naming.toSnakeCase(callee.vajram().name());
   }
 
-  private String asyncInvocation(String call, String vajramName, boolean calleeErrable) {
+  /** An errable callee's per-input {@code Result}s are left for the consumer to inspect. */
+  private String asyncInvocation(String call, String vajramName) {
     VajramFile callee = symbolTable.lookup(vajramName);
-    if (callee == null || !symbolTable.completionOf(callee).isAsync()) {
-      return call + (calleeErrable ? "?" : "");
-    }
-    return call + ".await";
+    boolean async = callee != null && symbolTable.completionOf(callee).isAsync();
+    return async ? call + ".await" : call;
   }
 
   private String emitReadFileAsString(
