@@ -42,16 +42,19 @@ public final class ExprEmitter {
   private final Set<String> injectionNames;
   private final Map<String, String> boundaryTypeNames;
   private final Set<String> localFacetNames;
+  private final Set<String> stringFacetNames;
 
   public ExprEmitter(
       Set<String> inputNames,
       Set<String> injectionNames,
       Map<String, String> boundaryTypeNames,
-      Set<String> localFacetNames) {
+      Set<String> localFacetNames,
+      Set<String> stringFacetNames) {
     this.inputNames = inputNames;
     this.injectionNames = injectionNames;
     this.boundaryTypeNames = boundaryTypeNames;
     this.localFacetNames = localFacetNames;
+    this.stringFacetNames = stringFacetNames;
   }
 
   /**
@@ -133,6 +136,12 @@ public final class ExprEmitter {
     }
     String type = boundaryTypeNames.get(varUse.name());
     if (type == null) {
+      if (left && stringFacetNames.contains(varUse.name())) {
+        // A computed string facet is `&String` (or an owned `String` for `local` facets), and
+        // `&String + ..` doesn't compile; `to_string` yields an owned `String` for both. Right
+        // operands need no change: `String + &String` deref-coerces.
+        return emit(varUse) + ".to_string()";
+      }
       return emit(operand);
     }
     String value = emit(varUse);
@@ -148,7 +157,8 @@ public final class ExprEmitter {
       return true;
     }
     if (expr instanceof Expr.VarUse varUse) {
-      return "string".equals(boundaryTypeNames.get(varUse.name()));
+      return "string".equals(boundaryTypeNames.get(varUse.name()))
+          || stringFacetNames.contains(varUse.name());
     }
     return expr instanceof Expr.BinaryOp binaryOp
         && "+".equals(binaryOp.operator())

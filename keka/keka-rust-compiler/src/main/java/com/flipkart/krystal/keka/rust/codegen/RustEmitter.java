@@ -12,6 +12,7 @@ import com.flipkart.krystal.keka.rust.ast.InputDecl;
 import com.flipkart.krystal.keka.rust.ast.LogicBlock;
 import com.flipkart.krystal.keka.rust.ast.OutputBlock;
 import com.flipkart.krystal.keka.rust.ast.Statement;
+import com.flipkart.krystal.keka.rust.ast.TypeRef;
 import com.flipkart.krystal.keka.rust.ast.VajramDef;
 import com.flipkart.krystal.keka.rust.ast.VajramFile;
 import com.flipkart.krystal.keka.rust.cli.RustCompilerMain.Target;
@@ -105,8 +106,14 @@ public final class RustEmitter {
             .filter(RustEmitter::isLocal)
             .map(RustEmitter::facetName)
             .collect(Collectors.toSet());
+    Set<String> stringFacetNames =
+        vajram.computedFacets().stream()
+            .filter(RustEmitter::isPlainStringFacet)
+            .map(RustEmitter::facetName)
+            .collect(Collectors.toSet());
     ExprEmitter exprs =
-        new ExprEmitter(inputNames, injectionNames, boundaryTypeNames, localFacetNames);
+        new ExprEmitter(
+            inputNames, injectionNames, boundaryTypeNames, localFacetNames, stringFacetNames);
 
     boolean inputsHaveLifetime = !vajram.inputs().isEmpty();
     emitInputsStruct(w, vajram, typeName, inputsHaveLifetime);
@@ -161,6 +168,22 @@ public final class RustEmitter {
       return dependency.annotations().contains("local");
     }
     throw new IllegalStateException("Unhandled computed facet kind: " + facet.getClass());
+  }
+
+  /** A facet whose Rust binding is a single string: not fanned out and not errable. */
+  private static boolean isPlainStringFacet(ComputedFacet facet) {
+    TypeRef type;
+    boolean fanout;
+    if (facet instanceof Field field) {
+      type = field.type();
+      fanout = field.fanout();
+    } else if (facet instanceof Dependency dependency) {
+      type = dependency.type();
+      fanout = dependency.fanout();
+    } else {
+      throw new IllegalStateException("Unhandled computed facet kind: " + facet.getClass());
+    }
+    return "string".equals(type.name()) && !fanout && !type.errable();
   }
 
   private static String facetName(ComputedFacet facet) {

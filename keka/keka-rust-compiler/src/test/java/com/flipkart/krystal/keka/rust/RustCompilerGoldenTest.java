@@ -558,7 +558,7 @@ class RustCompilerGoldenTest {
                 + "            let second = _secondValue_needs_second.await;\n")
         // Per-input entries are bound from the awaited facet vectors inside the batch loop.
         .contains("let first = Clone::clone(&first[__i]);")
-        .contains("__v.push(&*_arena.alloc(first + \"\"));")
+        .contains("__v.push(&*_arena.alloc(first.to_string() + \"\"));")
         .doesNotContain("_secondValue_needs_first")
         .doesNotContain("_firstValue_needs_second")
         .contains(
@@ -606,7 +606,7 @@ class RustCompilerGoldenTest {
         .contains("let a = _combined_needs_a.await;\n")
         .contains("let b = _combined_needs_b.await;\n")
         .contains("let a = Clone::clone(&a[__i]);")
-        .contains("__v.push(&*_arena.alloc(a + b));");
+        .contains("__v.push(&*_arena.alloc(a.to_string() + b));");
     String combinedBody =
         diamond.substring(
             diamond.indexOf("let _combined_fut ="), diamond.indexOf("let (a, b, c, combined)"));
