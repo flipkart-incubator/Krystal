@@ -13,16 +13,16 @@ pub mod succeed {
     }
 
     pub async fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(
-        inputs: Vec<SucceedInputs<'i>>,
-        arena: &'a Arena,
-        context: &crate::keka_rt::AppContext<I>,
+        _inputs: Vec<SucceedInputs<'i>>,
+        _arena: &'a Arena,
+        _context: &crate::keka_rt::AppContext<I>,
     ) -> Vec<Result<&'a String, VajramError>> {
-        let __n = inputs.len();
-        let inputs = &inputs;
+        let __n = _inputs.len();
+        let _inputs = &_inputs;
         let mut __out: Vec<Result<&'a String, VajramError>> = Vec::with_capacity(__n);
         for __i in 0..__n {
-            let inputs = &inputs[__i];
-            __out.push('__item: { Ok(arena.alloc((*inputs.input).clone())) });
+            let _inputs = &_inputs[__i];
+            __out.push('__item: { Ok(_arena.alloc((*_inputs.input).clone())) });
         }
         __out
     }
@@ -37,18 +37,18 @@ pub mod fail_always {
     }
 
     pub async fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(
-        inputs: Vec<FailAlwaysInputs<'i>>,
-        arena: &'a Arena,
-        context: &crate::keka_rt::AppContext<I>,
+        _inputs: Vec<FailAlwaysInputs<'i>>,
+        _arena: &'a Arena,
+        _context: &crate::keka_rt::AppContext<I>,
     ) -> Vec<Result<&'a String, VajramError>> {
-        let __n = inputs.len();
-        let inputs = &inputs;
+        let __n = _inputs.len();
+        let _inputs = &_inputs;
         let mut __out: Vec<Result<&'a String, VajramError>> = Vec::with_capacity(__n);
         for __i in 0..__n {
-            let inputs = &inputs[__i];
+            let _inputs = &_inputs[__i];
             __out.push('__item: {
                 break '__item Err(VajramError::from("boom".to_string()));
-                Ok(arena.alloc((*inputs.input).clone()))
+                Ok(_arena.alloc((*_inputs.input).clone()))
             });
         }
         __out
@@ -63,54 +63,54 @@ pub mod check_errors {
         pub input: &'i String,
     }
 
-    pub async fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(inputs: Vec<CheckErrorsInputs<'i>>, arena: &'a Arena, context: &crate::keka_rt::AppContext<I>) -> Vec<&'a bool> {
-        let __n = inputs.len();
-        let inputs = &inputs;
-        let good_fut = async move {
+    pub async fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(_inputs: Vec<CheckErrorsInputs<'i>>, _arena: &'a Arena, _context: &crate::keka_rt::AppContext<I>) -> Vec<&'a bool> {
+        let __n = _inputs.len();
+        let _inputs = &_inputs;
+        let _good_fut = async move {
             Rc::new(
                 crate::keka_samples::errors::error_handling::succeed::call(
                     {
                         let mut __v = Vec::with_capacity(__n);
                         for __i in 0..__n {
-                            let inputs = &inputs[__i];
-                            __v.push(crate::keka_samples::errors::error_handling::succeed::SucceedInputs { input: inputs.input });
+                            let _inputs = &_inputs[__i];
+                            __v.push(crate::keka_samples::errors::error_handling::succeed::SucceedInputs { input: _inputs.input });
                         }
                         __v
                     },
-                    arena,
-                    context,
+                    _arena,
+                    _context,
                 )
                 .await,
             )
         }
         .boxed_local()
         .shared();
-        let bad_fut = async move {
+        let _bad_fut = async move {
             Rc::new(
                 crate::keka_samples::errors::error_handling::fail_always::call(
                     {
                         let mut __v = Vec::with_capacity(__n);
                         for __i in 0..__n {
-                            let inputs = &inputs[__i];
-                            __v.push(crate::keka_samples::errors::error_handling::fail_always::FailAlwaysInputs { input: inputs.input });
+                            let _inputs = &_inputs[__i];
+                            __v.push(crate::keka_samples::errors::error_handling::fail_always::FailAlwaysInputs { input: _inputs.input });
                         }
                         __v
                     },
-                    arena,
-                    context,
+                    _arena,
+                    _context,
                 )
                 .await,
             )
         }
         .boxed_local()
         .shared();
-        let (good, bad) = futures::join!(good_fut.clone(), bad_fut.clone());
+        let (good, bad) = futures::join!(_good_fut.clone(), _bad_fut.clone());
         let mut __out: Vec<&'a bool> = Vec::with_capacity(__n);
         for __i in 0..__n {
-            let inputs = &inputs[__i];
+            let _inputs = &_inputs[__i];
             let good = Clone::clone(&good[__i]);
             let bad = Clone::clone(&bad[__i]);
-            __out.push({ arena.alloc(good.valuePresent() == bad.errorPresent()) });
+            __out.push({ _arena.alloc(good.valuePresent() == bad.errorPresent()) });
         }
         __out
     }
@@ -124,52 +124,52 @@ pub mod check_errors_in_fanout {
         pub input: &'i String,
     }
 
-    pub async fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(inputs: Vec<CheckErrorsInFanoutInputs<'i>>, arena: &'a Arena, context: &crate::keka_rt::AppContext<I>) -> Vec<&'a bool> {
-        let __n = inputs.len();
-        let inputs = &inputs;
-        let copies_fut = async move {
+    pub async fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(_inputs: Vec<CheckErrorsInFanoutInputs<'i>>, _arena: &'a Arena, _context: &crate::keka_rt::AppContext<I>) -> Vec<&'a bool> {
+        let __n = _inputs.len();
+        let _inputs = &_inputs;
+        let _inputs_fut = async move {
             Rc::new({
                 let mut __v = Vec::with_capacity(__n);
                 for __i in 0..__n {
-                    let inputs = &inputs[__i];
-                    __v.push(&*arena.alloc(vec![(*inputs.input).clone(), (*inputs.input).clone()]));
+                    let _inputs = &_inputs[__i];
+                    __v.push(&*_arena.alloc(vec![(*_inputs.input).clone(), (*_inputs.input).clone()]));
                 }
                 __v
             })
         }
         .boxed_local()
         .shared();
-        let _results_needs_copies = copies_fut.clone();
-        let results_fut = async move {
-            let copies = _results_needs_copies.await;
+        let _results_needs_inputs = _inputs_fut.clone();
+        let _results_fut = async move {
+            let inputs = _results_needs_inputs.await;
             Rc::new({
                 let mut __groups = Vec::with_capacity(__n);
                 for __i in 0..__n {
-                    let inputs = &inputs[__i];
-                    let copies = Clone::clone(&copies[__i]);
+                    let _inputs = &_inputs[__i];
+                    let inputs = Clone::clone(&inputs[__i]);
                     __groups.push(
-                        copies
+                        inputs
                             .clone()
                             .into_iter()
-                            .map(|it| crate::keka_samples::errors::error_handling::fail_always::FailAlwaysInputs { input: arena.alloc(it) })
+                            .map(|_it| crate::keka_samples::errors::error_handling::fail_always::FailAlwaysInputs { input: _arena.alloc(_it) })
                             .collect::<Vec<_>>(),
                     );
                 }
-                let __sizes: Vec<usize> = __groups.iter().map(|g| g.len()).collect();
-                let mut __results = crate::keka_samples::errors::error_handling::fail_always::call(__groups.into_iter().flatten().collect(), arena, context)
+                let __sizes: Vec<usize> = __groups.iter().map(|_g| _g.len()).collect();
+                let mut __results = crate::keka_samples::errors::error_handling::fail_always::call(__groups.into_iter().flatten().collect(), _arena, _context)
                     .await
                     .into_iter();
-                __sizes.into_iter().map(|size| __results.by_ref().take(size).collect::<Vec<_>>()).collect::<Vec<_>>()
+                __sizes.into_iter().map(|_size| __results.by_ref().take(_size).collect::<Vec<_>>()).collect::<Vec<_>>()
             })
         }
         .boxed_local()
         .shared();
-        let (copies, results) = futures::join!(copies_fut.clone(), results_fut.clone());
+        let (inputs, results) = futures::join!(_inputs_fut.clone(), _results_fut.clone());
         let mut __out: Vec<&'a bool> = Vec::with_capacity(__n);
         for __i in 0..__n {
-            let inputs = &inputs[__i];
+            let _inputs = &_inputs[__i];
             let results = Clone::clone(&results[__i]);
-            __out.push({ arena.alloc(!(results).is_empty()) });
+            __out.push({ _arena.alloc(!(results).is_empty()) });
         }
         __out
     }

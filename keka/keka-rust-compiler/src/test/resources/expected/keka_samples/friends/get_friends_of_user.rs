@@ -12,12 +12,12 @@ pub mod get_friends_of_user {
         pub userId: &'i String,
     }
 
-    pub fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(inputs: Vec<GetFriendsOfUserInputs<'i>>, arena: &'a Arena, context: &crate::keka_rt::AppContext<I>) -> Vec<&'a Vec<String>> {
-        let __n = inputs.len();
+    pub fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(_inputs: Vec<GetFriendsOfUserInputs<'i>>, _arena: &'a Arena, _context: &crate::keka_rt::AppContext<I>) -> Vec<&'a Vec<String>> {
+        let __n = _inputs.len();
         let mut __out: Vec<&'a Vec<String>> = Vec::with_capacity(__n);
         for __i in 0..__n {
-            let inputs = &inputs[__i];
-            __out.push({ arena.alloc(vec![(*inputs.userId).clone() + "-friend1", (*inputs.userId).clone() + "-friend2"]) });
+            let _inputs = &_inputs[__i];
+            __out.push({ _arena.alloc(vec![(*_inputs.userId).clone() + "-friend1", (*_inputs.userId).clone() + "-friend2"]) });
         }
         __out
     }

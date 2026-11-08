@@ -130,24 +130,24 @@ public final class RustEmitter {
             + (completion.isAsync() ? "async " : "")
             + "fn call<"
             + lifetimeParams
-            + ", I: crate::keka_rt::Injector + 'static>(inputs: Vec<"
+            + ", I: crate::keka_rt::Injector + 'static>(_inputs: Vec<"
             + inputsTypeRef
             + ">"
-            + ", arena: &'a Arena"
-            + ", context: &crate::keka_rt::AppContext<I>"
+            + ", _arena: &'a Arena"
+            + ", _context: &crate::keka_rt::AppContext<I>"
             + ") -> "
             + batchReturnType;
     w.openBlock(signature);
     if (hasInjections) {
-      w.line("let deps = " + typeName + "_Injections::instance(context);");
+      w.line("let _deps = " + typeName + "_Injections::instance(_context);");
     }
-    w.line("let __n = inputs.len();");
+    w.line("let __n = _inputs.len();");
     if (completion.isAsync()) {
       // Facet futures are `async move` blocks: re-borrow so each captures a `Copy` reference rather
       // than moving the owned batch (or injections) into the first block that mentions it.
-      w.line("let inputs = &inputs;");
+      w.line("let _inputs = &_inputs;");
       if (hasInjections) {
-        w.line("let deps = &*deps;");
+        w.line("let _deps = &*_deps;");
       }
     }
     emitBody(w, vajram, exprs, completion, facetNames, localFacetNames, elemType);
@@ -210,7 +210,7 @@ public final class RustEmitter {
                 + facetName(facet)
                 + " = "
                 + emitFacetVector(
-                    facet, exprs, completion, facetNames, local, local ? "(&__locals)" : "arena")
+                    facet, exprs, completion, facetNames, local, local ? "(&__locals)" : "_arena")
                 + ";");
       }
     }
@@ -233,7 +233,7 @@ public final class RustEmitter {
       // the per-input entries can be cloned out (and `Shared`, in the async path) like any other
       // facet.
       String value = exprs.emit(field.value());
-      return collectPerInput(refs, local ? value : "&*arena.alloc(" + value + ")");
+      return collectPerInput(refs, local ? value : "&*_arena.alloc(" + value + ")");
     }
     Dependency dependency = (Dependency) facet;
     return emitBatchedInvocation(
@@ -264,7 +264,7 @@ public final class RustEmitter {
    * index, so per-input expressions read exactly like they would for a single input.
    */
   private static String perInputBindings(Set<String> refs) {
-    StringBuilder sb = new StringBuilder("let inputs = &inputs[__i]; ");
+    StringBuilder sb = new StringBuilder("let _inputs = &_inputs[__i]; ");
     for (String ref : refs) {
       sb.append("let ").append(ref).append(" = Clone::clone(&").append(ref).append("[__i]); ");
     }
@@ -315,13 +315,14 @@ public final class RustEmitter {
       StringBuilder depAwaits = new StringBuilder();
       for (String dep : referenced) {
         String cloneVar = "_" + name + "_needs_" + dep;
-        w.line("let " + cloneVar + " = " + dep + "_fut.clone();");
+        w.line("let " + cloneVar + " = _" + dep + "_fut.clone();");
         depAwaits.append("let ").append(dep).append(" = ").append(cloneVar).append(".await; ");
       }
-      String targetArena = local && facet instanceof Dependency ? "__locals_ref" : "arena";
+      String targetArena = local && facet instanceof Dependency ? "__locals_ref" : "_arena";
       String vector = emitFacetVector(facet, exprs, completion, facetNames, local, targetArena);
       w.line(
           "let "
+              + "_"
               + name
               + "_fut = async move { "
               + depAwaits
@@ -332,10 +333,11 @@ public final class RustEmitter {
     }
     if (allNames.size() == 1) {
       String name = allNames.get(0);
-      w.line("let " + name + " = " + name + "_fut.clone().await;");
+      w.line("let " + name + " = _" + name + "_fut.clone().await;");
     } else if (allNames.size() > 1) {
       String lhs = String.join(", ", allNames);
-      String rhs = allNames.stream().map(n -> n + "_fut.clone()").collect(Collectors.joining(", "));
+      String rhs =
+          allNames.stream().map(n -> "_" + n + "_fut.clone()").collect(Collectors.joining(", "));
       w.line("let (" + lhs + ") = futures::join!(" + rhs + ");");
     }
   }
@@ -441,12 +443,12 @@ public final class RustEmitter {
     w.closeBlock();
     w.openBlock("impl " + injectionsType);
     w.openBlock(
-        "fn new<I: crate::keka_rt::Injector + 'static>(context: &crate::keka_rt::AppContext<I>) -> Rc<Self>");
+        "fn new<I: crate::keka_rt::Injector + 'static>(_context: &crate::keka_rt::AppContext<I>) -> Rc<Self>");
     w.line("Rc::new(Self {");
     for (InjectionDecl injection : vajram.injections()) {
       w.line(
           injection.name()
-              + ": context.injector()."
+              + ": _context.injector()."
               + "get_provider"
               + "(crate::keka_rt::InjectionKey::new(\""
               + fullyQualifiedInjectionTypeName(injection)
@@ -454,13 +456,13 @@ public final class RustEmitter {
               + injection.annotations().stream()
                   .map(annotation -> "\"" + annotation + "\"")
                   .collect(Collectors.joining(", "))
-              + "]), context),");
+              + "]), _context),");
     }
     w.line("})");
     w.closeBlock();
     w.openBlock(
-        "fn instance<I: crate::keka_rt::Injector + 'static>(context: &crate::keka_rt::AppContext<I>) -> Rc<Self>");
-    w.line("context.injection_instance(\"" + injectionsType + "\", || Self::new(context))");
+        "fn instance<I: crate::keka_rt::Injector + 'static>(_context: &crate::keka_rt::AppContext<I>) -> Rc<Self>");
+    w.line("_context.injection_instance(\"" + injectionsType + "\", || Self::new(_context))");
     w.closeBlock();
     w.closeBlock();
     w.blank();
@@ -531,7 +533,7 @@ public final class RustEmitter {
     // The output block's own result always feeds this Vajram's return value, so it always
     // allocates directly into the received output arena, never a throwaway scratch.
     String call =
-        emitBatchedInvocation(invocation, false, completion, exprs, facetNames, "arena", refs);
+        emitBatchedInvocation(invocation, false, completion, exprs, facetNames, "_arena", refs);
     // The callee yields one `Result` per input iff it is errable; adapt to this Vajram's own
     // errability per input.
     boolean calleeErrable = isCalleeErrable(invocation.vajramName());
@@ -567,7 +569,7 @@ public final class RustEmitter {
     VajramFile callee = symbolTable.lookup(invocation.vajramName());
     String calleeModule = calleeModule(callee, invocation.vajramName());
     String calleeType = Naming.capitalize(invocation.vajramName());
-    String contextArg = ", context";
+    String contextArg = ", _context";
     String arenaArg = ", " + targetArena;
 
     var systemVajram = SystemVajram.lookup(invocation.vajramName(), currentFile.imports());
@@ -626,20 +628,20 @@ public final class RustEmitter {
         + bindings
         + "__groups.push("
         + fannedExpr
-        + ".into_iter().map(|it| "
+        + ".into_iter().map(|_it| "
         + inputsType
         + " { "
         + fannedField
         + ": "
         + targetArena
-        + ".alloc(it)"
+        + ".alloc(_it)"
         + restFields
         + " }).collect::<Vec<_>>()); } "
-        + "let __sizes: Vec<usize> = __groups.iter().map(|g| g.len()).collect(); "
+        + "let __sizes: Vec<usize> = __groups.iter().map(|_g| _g.len()).collect(); "
         + "let mut __results = "
         + call
         + ".into_iter(); "
-        + "__sizes.into_iter().map(|size| __results.by_ref().take(size).collect::<Vec<_>>()).collect::<Vec<_>>() }";
+        + "__sizes.into_iter().map(|_size| __results.by_ref().take(_size).collect::<Vec<_>>()).collect::<Vec<_>>() }";
   }
 
   private static String calleeModule(@Nullable VajramFile callee, String vajramName) {
@@ -732,7 +734,7 @@ public final class RustEmitter {
         + targetArena
         + ".alloc("
         + strings
-        + ".iter().map(|value| value.as_str()).collect::<Vec<_>>().join("
+        + ".iter().map(|_value| _value.as_str()).collect::<Vec<_>>().join("
         + separator
         + ".as_str()))";
   }

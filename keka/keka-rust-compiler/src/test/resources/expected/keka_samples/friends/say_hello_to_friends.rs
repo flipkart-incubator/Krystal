@@ -12,82 +12,82 @@ pub mod say_hello_to_friends {
         pub userId: &'i String,
     }
 
-    pub async fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(inputs: Vec<SayHelloToFriendsInputs<'i>>, arena: &'a Arena, context: &crate::keka_rt::AppContext<I>) -> Vec<&'a String> {
-        let __n = inputs.len();
-        let inputs = &inputs;
-        let userInfo_fut = async move {
+    pub async fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(_inputs: Vec<SayHelloToFriendsInputs<'i>>, _arena: &'a Arena, _context: &crate::keka_rt::AppContext<I>) -> Vec<&'a String> {
+        let __n = _inputs.len();
+        let _inputs = &_inputs;
+        let _userInfo_fut = async move {
             Rc::new(crate::keka_samples::friends::get_user_info::get_user_info::call(
                 {
                     let mut __v = Vec::with_capacity(__n);
                     for __i in 0..__n {
-                        let inputs = &inputs[__i];
-                        __v.push(crate::keka_samples::friends::get_user_info::get_user_info::GetUserInfoInputs { userId: inputs.userId });
+                        let _inputs = &_inputs[__i];
+                        __v.push(crate::keka_samples::friends::get_user_info::get_user_info::GetUserInfoInputs { userId: _inputs.userId });
                     }
                     __v
                 },
-                arena,
-                context,
+                _arena,
+                _context,
             ))
         }
         .boxed_local()
         .shared();
-        let friendIds_fut = async move {
+        let _friendIds_fut = async move {
             Rc::new({
                 let mut __v = Vec::with_capacity(__n);
                 for __i in 0..__n {
-                    let inputs = &inputs[__i];
-                    __v.push(&*arena.alloc(vec![(*inputs.userId).clone() + "-friend1", (*inputs.userId).clone() + "-friend2"]));
+                    let _inputs = &_inputs[__i];
+                    __v.push(&*_arena.alloc(vec![(*_inputs.userId).clone() + "-friend1", (*_inputs.userId).clone() + "-friend2"]));
                 }
                 __v
             })
         }
         .boxed_local()
         .shared();
-        let _friendsInfos_needs_friendIds = friendIds_fut.clone();
-        let friendsInfos_fut = async move {
+        let _friendsInfos_needs_friendIds = _friendIds_fut.clone();
+        let _friendsInfos_fut = async move {
             let friendIds = _friendsInfos_needs_friendIds.await;
             Rc::new({
                 let mut __groups = Vec::with_capacity(__n);
                 for __i in 0..__n {
-                    let inputs = &inputs[__i];
+                    let _inputs = &_inputs[__i];
                     let friendIds = Clone::clone(&friendIds[__i]);
                     __groups.push(
                         friendIds
                             .clone()
                             .into_iter()
-                            .map(|it| crate::keka_samples::friends::get_user_info::get_user_info::GetUserInfoInputs { userId: arena.alloc(it) })
+                            .map(|_it| crate::keka_samples::friends::get_user_info::get_user_info::GetUserInfoInputs { userId: _arena.alloc(_it) })
                             .collect::<Vec<_>>(),
                     );
                 }
-                let __sizes: Vec<usize> = __groups.iter().map(|g| g.len()).collect();
-                let mut __results = crate::keka_samples::friends::get_user_info::get_user_info::call(__groups.into_iter().flatten().collect(), arena, context).into_iter();
-                __sizes.into_iter().map(|size| __results.by_ref().take(size).collect::<Vec<_>>()).collect::<Vec<_>>()
+                let __sizes: Vec<usize> = __groups.iter().map(|_g| _g.len()).collect();
+                let mut __results = crate::keka_samples::friends::get_user_info::get_user_info::call(__groups.into_iter().flatten().collect(), _arena, _context).into_iter();
+                __sizes.into_iter().map(|_size| __results.by_ref().take(_size).collect::<Vec<_>>()).collect::<Vec<_>>()
             })
         }
         .boxed_local()
         .shared();
-        let _friends_needs_friendsInfos = friendsInfos_fut.clone();
-        let friends_fut = async move {
+        let _friends_needs_friendsInfos = _friendsInfos_fut.clone();
+        let _friends_fut = async move {
             let friendsInfos = _friends_needs_friendsInfos.await;
             Rc::new({
                 let mut __v = Vec::with_capacity(__n);
                 for __i in 0..__n {
-                    let inputs = &inputs[__i];
+                    let _inputs = &_inputs[__i];
                     let friendsInfos = Clone::clone(&friendsInfos[__i]);
-                    __v.push(&*arena.alloc(friendsInfos.iter().map(|value| value.as_str()).collect::<Vec<_>>().join(", ".to_string().as_str())));
+                    __v.push(&*_arena.alloc(friendsInfos.iter().map(|_value| _value.as_str()).collect::<Vec<_>>().join(", ".to_string().as_str())));
                 }
                 __v
             })
         }
         .boxed_local()
         .shared();
-        let (userInfo, friendIds, friendsInfos, friends) = futures::join!(userInfo_fut.clone(), friendIds_fut.clone(), friendsInfos_fut.clone(), friends_fut.clone());
+        let (userInfo, friendIds, friendsInfos, friends) = futures::join!(_userInfo_fut.clone(), _friendIds_fut.clone(), _friendsInfos_fut.clone(), _friends_fut.clone());
         let mut __out: Vec<&'a String> = Vec::with_capacity(__n);
         for __i in 0..__n {
-            let inputs = &inputs[__i];
+            let _inputs = &_inputs[__i];
             let userInfo = Clone::clone(&userInfo[__i]);
             let friends = Clone::clone(&friends[__i]);
-            __out.push({ arena.alloc("Hello Friends of ".to_string() + userInfo + "! " + friends) });
+            __out.push({ _arena.alloc("Hello Friends of ".to_string() + userInfo + "! " + friends) });
         }
         __out
     }

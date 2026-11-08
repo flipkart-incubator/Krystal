@@ -12,12 +12,12 @@ pub mod is_product_available {
         pub productId: &'i String,
     }
 
-    pub fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(inputs: Vec<IsProductAvailableInputs<'i>>, arena: &'a Arena, context: &crate::keka_rt::AppContext<I>) -> Vec<&'a bool> {
-        let __n = inputs.len();
+    pub fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(_inputs: Vec<IsProductAvailableInputs<'i>>, _arena: &'a Arena, _context: &crate::keka_rt::AppContext<I>) -> Vec<&'a bool> {
+        let __n = _inputs.len();
         let mut __out: Vec<&'a bool> = Vec::with_capacity(__n);
         for __i in 0..__n {
-            let inputs = &inputs[__i];
-            __out.push({ arena.alloc(!(inputs.productId).is_empty()) });
+            let _inputs = &_inputs[__i];
+            __out.push({ _arena.alloc(!(_inputs.productId).is_empty()) });
         }
         __out
     }

@@ -182,10 +182,10 @@ public final class ExprEmitter {
   private String resolve(String name) {
     String id = identifier(name);
     if (injectionNames.contains(name)) {
-      return "deps." + id + ".get()";
+      return "_deps." + id + ".get()";
     }
     if (inputNames.contains(name)) {
-      return "inputs." + id;
+      return "_inputs." + id;
     }
     return id;
   }
@@ -219,7 +219,7 @@ public final class ExprEmitter {
       callee = identifier(call.name());
     }
     if (call.lambda() != null) {
-      return callee + "(|it| " + emitLambdaBody(call.lambda()) + ")";
+      return callee + "(|_it| " + emitLambdaBody(call.lambda()) + ")";
     }
     String args = call.args().stream().map(this::emit).reduce((a, b) -> a + ", " + b).orElse("");
     return callee + "(" + args + ")";
@@ -261,7 +261,7 @@ public final class ExprEmitter {
     }
     String value;
     if (yield == null) {
-      value = "arena.alloc(())";
+      value = "_arena.alloc(())";
     } else if (yield.values().size() == 1 && yield.values().get(0) instanceof Expr.VarUse varUse) {
       String name = emit(varUse);
       // A `local` facet is a plain owned value with no arena lifetime of its own, and an input
@@ -269,14 +269,14 @@ public final class ExprEmitter {
       // to survive past this Vajram's return. Anything else (an injection or non-local facet) is
       // already a `&'a T` tied to the output arena.
       if (isLocalFacetName(varUse.name())) {
-        value = "arena.alloc(" + name + ")";
+        value = "_arena.alloc(" + name + ")";
       } else if (inputNames.contains(varUse.name())) {
-        value = "arena.alloc((*" + name + ").clone())";
+        value = "_arena.alloc((*" + name + ").clone())";
       } else {
         value = name;
       }
     } else {
-      value = "arena.alloc(" + emitYieldValue(yield) + ")";
+      value = "_arena.alloc(" + emitYieldValue(yield) + ")";
     }
     sb.append(errable ? "Ok(" + value + ")" : value);
     return sb.toString();
@@ -306,7 +306,7 @@ public final class ExprEmitter {
    * Rust reserves {@code _} as a discard pattern; keka's implicit lambda arg becomes {@code it}.
    */
   private static String identifier(String name) {
-    return "_".equals(name) ? "it" : name;
+    return "_".equals(name) ? "_it" : name;
   }
 
   private static String rustTypeName(String name) {

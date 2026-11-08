@@ -13,58 +13,58 @@ pub mod a2_sq_plus_b2_sq {
         pub b: &'i i32,
     }
 
-    pub async fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(inputs: Vec<A2SqPlusB2SqInputs<'i>>, arena: &'a Arena, context: &crate::keka_rt::AppContext<I>) -> Vec<&'a i32> {
-        let __n = inputs.len();
-        let inputs = &inputs;
+    pub async fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(_inputs: Vec<A2SqPlusB2SqInputs<'i>>, _arena: &'a Arena, _context: &crate::keka_rt::AppContext<I>) -> Vec<&'a i32> {
+        let __n = _inputs.len();
+        let _inputs = &_inputs;
         let __locals = Arena::new();
         let __locals_ref = &__locals;
-        let a2_fut = async move {
+        let _a2_fut = async move {
             Rc::new(
                 crate::keka_samples::calculator::basic_math_ops::add::call(
                     {
                         let mut __v = Vec::with_capacity(__n);
                         for __i in 0..__n {
-                            let inputs = &inputs[__i];
-                            __v.push(crate::keka_samples::calculator::basic_math_ops::add::AddInputs { a: inputs.a, b: inputs.a });
+                            let _inputs = &_inputs[__i];
+                            __v.push(crate::keka_samples::calculator::basic_math_ops::add::AddInputs { a: _inputs.a, b: _inputs.a });
                         }
                         __v
                     },
                     __locals_ref,
-                    context,
+                    _context,
                 )
                 .await,
             )
         }
         .boxed_local()
         .shared();
-        let b2_fut = async move {
+        let _b2_fut = async move {
             Rc::new(
                 crate::keka_samples::calculator::basic_math_ops::add::call(
                     {
                         let mut __v = Vec::with_capacity(__n);
                         for __i in 0..__n {
-                            let inputs = &inputs[__i];
-                            __v.push(crate::keka_samples::calculator::basic_math_ops::add::AddInputs { a: inputs.b, b: inputs.b });
+                            let _inputs = &_inputs[__i];
+                            __v.push(crate::keka_samples::calculator::basic_math_ops::add::AddInputs { a: _inputs.b, b: _inputs.b });
                         }
                         __v
                     },
                     __locals_ref,
-                    context,
+                    _context,
                 )
                 .await,
             )
         }
         .boxed_local()
         .shared();
-        let _a2sq_needs_a2 = a2_fut.clone();
-        let a2sq_fut = async move {
+        let _a2sq_needs_a2 = _a2_fut.clone();
+        let _a2sq_fut = async move {
             let a2 = _a2sq_needs_a2.await;
             Rc::new(
                 crate::keka_samples::calculator::basic_math_ops::multiply::call(
                     {
                         let mut __v = Vec::with_capacity(__n);
                         for __i in 0..__n {
-                            let inputs = &inputs[__i];
+                            let _inputs = &_inputs[__i];
                             let a2 = Clone::clone(&a2[__i]);
                             __v.push(crate::keka_samples::calculator::basic_math_ops::multiply::MultiplyInputs {
                                 a: __locals_ref.alloc(a2),
@@ -74,22 +74,22 @@ pub mod a2_sq_plus_b2_sq {
                         __v
                     },
                     __locals_ref,
-                    context,
+                    _context,
                 )
                 .await,
             )
         }
         .boxed_local()
         .shared();
-        let _b2sq_needs_b2 = b2_fut.clone();
-        let b2sq_fut = async move {
+        let _b2sq_needs_b2 = _b2_fut.clone();
+        let _b2sq_fut = async move {
             let b2 = _b2sq_needs_b2.await;
             Rc::new(
                 crate::keka_samples::calculator::basic_math_ops::multiply::call(
                     {
                         let mut __v = Vec::with_capacity(__n);
                         for __i in 0..__n {
-                            let inputs = &inputs[__i];
+                            let _inputs = &_inputs[__i];
                             let b2 = Clone::clone(&b2[__i]);
                             __v.push(crate::keka_samples::calculator::basic_math_ops::multiply::MultiplyInputs {
                                 a: __locals_ref.alloc(b2),
@@ -99,16 +99,16 @@ pub mod a2_sq_plus_b2_sq {
                         __v
                     },
                     __locals_ref,
-                    context,
+                    _context,
                 )
                 .await,
             )
         }
         .boxed_local()
         .shared();
-        let _output_needs_a2sq = a2sq_fut.clone();
-        let _output_needs_b2sq = b2sq_fut.clone();
-        let output_fut = async move {
+        let _output_needs_a2sq = _a2sq_fut.clone();
+        let _output_needs_b2sq = _b2sq_fut.clone();
+        let _output_fut = async move {
             let a2sq = _output_needs_a2sq.await;
             let b2sq = _output_needs_b2sq.await;
             Rc::new(
@@ -116,28 +116,28 @@ pub mod a2_sq_plus_b2_sq {
                     {
                         let mut __v = Vec::with_capacity(__n);
                         for __i in 0..__n {
-                            let inputs = &inputs[__i];
+                            let _inputs = &_inputs[__i];
                             let a2sq = Clone::clone(&a2sq[__i]);
                             let b2sq = Clone::clone(&b2sq[__i]);
                             __v.push(crate::keka_samples::calculator::basic_math_ops::add::AddInputs {
-                                a: arena.alloc(a2sq),
-                                b: arena.alloc(b2sq),
+                                a: _arena.alloc(a2sq),
+                                b: _arena.alloc(b2sq),
                             });
                         }
                         __v
                     },
-                    arena,
-                    context,
+                    _arena,
+                    _context,
                 )
                 .await,
             )
         }
         .boxed_local()
         .shared();
-        let (a2, b2, a2sq, b2sq, output) = futures::join!(a2_fut.clone(), b2_fut.clone(), a2sq_fut.clone(), b2sq_fut.clone(), output_fut.clone());
+        let (a2, b2, a2sq, b2sq, output) = futures::join!(_a2_fut.clone(), _b2_fut.clone(), _a2sq_fut.clone(), _b2sq_fut.clone(), _output_fut.clone());
         let mut __out: Vec<&'a i32> = Vec::with_capacity(__n);
         for __i in 0..__n {
-            let inputs = &inputs[__i];
+            let _inputs = &_inputs[__i];
             let output = Clone::clone(&output[__i]);
             __out.push({ output });
         }
