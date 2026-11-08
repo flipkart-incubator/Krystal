@@ -50,7 +50,7 @@ output_decl: OUT (errableType);
 
 injections_list : ( annotation* injection_id_declaration COMMA)* ( annotation* injection_id_declaration) ;
 
-grouper: SPECIAL ID;
+grouper: HASH ID;
 
 annotation: BACKTICK ID annotation_param_list?;
 
@@ -78,7 +78,8 @@ yield_statement: (YIELD (expr COMMA)* expr SEMI | (expr COMMA)* expr);
 output_block: OUT? annotated_delegatable_logic_block | OUT dependency_invocation;
 
 type:
-    | non_param_type ('<' ((type COMMA)* type COMMA?)? '>')? ERRABLE? SOON?;
+    | non_param_type ('<' ((type COMMA)* type COMMA?)? '>')? ERRABLE? SOON?
+    | '[' type ']';
 
 non_param_type: ID
               | STRING
@@ -104,8 +105,8 @@ expr: var_use
     | expr accessor func_chain
     | expr accessor ID
     | expr '::' ID
-    | SPECIAL? func_call_in_output_logic
-    | NEW SPECIAL? func_call_in_output_logic
+    | HASH? func_call_in_output_logic
+    | NEW HASH? func_call_in_output_logic
     | grouper
     | array_expr
     ;
@@ -132,7 +133,7 @@ LPAREN : '(' ;
 RPAREN : ')' ;
 LCURLY : '{' ;
 RCURLY : '}' ;
-SPECIAL : '#' ;
+HASH : '#' ;
 
 IS_EQ : 'eq' ;
 VAJRAM : 'vajram' ;

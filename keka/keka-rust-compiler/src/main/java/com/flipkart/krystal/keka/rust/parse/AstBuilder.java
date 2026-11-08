@@ -466,7 +466,7 @@ public final class AstBuilder {
         return toFuncChain(ctx.func_chain());
       }
       if (ctx.func_call_in_output_logic() != null) {
-        return toCall(ctx.func_call_in_output_logic(), ctx.NEW() != null, ctx.SPECIAL() != null);
+        return toCall(ctx.func_call_in_output_logic(), ctx.NEW() != null, ctx.HASH() != null);
       }
       if (ctx.grouper() != null) {
         return new Expr.GrouperRef(grouperName(ctx.grouper()));
