@@ -12,48 +12,48 @@ pub mod get_products_details {
         pub productIds: &'i Vec<String>,
     }
 
-    pub async fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(inputs: Vec<GetProductsDetailsInputs<'i>>, arena: &'a Arena, context: &crate::keka_rt::AppContext<I>) -> Vec<&'a String> {
-        let __n = inputs.len();
-        let inputs = &inputs;
-        let details_fut = async move {
+    pub async fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(_inputs: Vec<GetProductsDetailsInputs<'i>>, _arena: &'a Arena, _context: &crate::keka_rt::AppContext<I>) -> Vec<&'a String> {
+        let __n = _inputs.len();
+        let _inputs = &_inputs;
+        let _details_fut = async move {
             Rc::new({
                 let mut __groups = Vec::with_capacity(__n);
                 for __i in 0..__n {
-                    let inputs = &inputs[__i];
+                    let _inputs = &_inputs[__i];
                     __groups.push(
-                        inputs
+                        _inputs
                             .productIds
                             .into_iter()
-                            .map(|it| crate::keka_samples::products::get_product_details::get_product_details::GetProductDetailsInputs { productId: arena.alloc(it) })
+                            .map(|_it| crate::keka_samples::products::get_product_details::get_product_details::GetProductDetailsInputs { productId: _arena.alloc(_it) })
                             .collect::<Vec<_>>(),
                     );
                 }
-                let __sizes: Vec<usize> = __groups.iter().map(|g| g.len()).collect();
-                let mut __results = crate::keka_samples::products::get_product_details::get_product_details::call(__groups.into_iter().flatten().collect(), arena, context).into_iter();
-                __sizes.into_iter().map(|size| __results.by_ref().take(size).collect::<Vec<_>>()).collect::<Vec<_>>()
+                let __sizes: Vec<usize> = __groups.iter().map(|_g| _g.len()).collect();
+                let mut __results = crate::keka_samples::products::get_product_details::get_product_details::call(__groups.into_iter().flatten().collect(), _arena, _context).into_iter();
+                __sizes.into_iter().map(|_size| __results.by_ref().take(_size).collect::<Vec<_>>()).collect::<Vec<_>>()
             })
         }
         .boxed_local()
         .shared();
-        let _joined_needs_details = details_fut.clone();
-        let joined_fut = async move {
+        let _joined_needs_details = _details_fut.clone();
+        let _joined_fut = async move {
             let details = _joined_needs_details.await;
             Rc::new({
                 let mut __v = Vec::with_capacity(__n);
                 for __i in 0..__n {
-                    let inputs = &inputs[__i];
+                    let _inputs = &_inputs[__i];
                     let details = Clone::clone(&details[__i]);
-                    __v.push(&*arena.alloc(details.iter().map(|value| value.as_str()).collect::<Vec<_>>().join(", ".to_string().as_str())));
+                    __v.push(&*_arena.alloc(details.iter().map(|_value| _value.as_str()).collect::<Vec<_>>().join(", ".to_string().as_str())));
                 }
                 __v
             })
         }
         .boxed_local()
         .shared();
-        let (details, joined) = futures::join!(details_fut.clone(), joined_fut.clone());
+        let (details, joined) = futures::join!(_details_fut.clone(), _joined_fut.clone());
         let mut __out: Vec<&'a String> = Vec::with_capacity(__n);
         for __i in 0..__n {
-            let inputs = &inputs[__i];
+            let _inputs = &_inputs[__i];
             let joined = Clone::clone(&joined[__i]);
             __out.push({ joined });
         }

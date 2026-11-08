@@ -13,13 +13,13 @@ pub mod add {
         pub b: &'i i32,
     }
 
-    pub async fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(inputs: Vec<AddInputs<'i>>, arena: &'a Arena, context: &crate::keka_rt::AppContext<I>) -> Vec<&'a i32> {
-        let __n = inputs.len();
-        let inputs = &inputs;
+    pub async fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(_inputs: Vec<AddInputs<'i>>, _arena: &'a Arena, _context: &crate::keka_rt::AppContext<I>) -> Vec<&'a i32> {
+        let __n = _inputs.len();
+        let _inputs = &_inputs;
         let mut __out: Vec<&'a i32> = Vec::with_capacity(__n);
         for __i in 0..__n {
-            let inputs = &inputs[__i];
-            __out.push({ arena.alloc(*inputs.a + *inputs.b) });
+            let _inputs = &_inputs[__i];
+            __out.push({ _arena.alloc(*_inputs.a + *_inputs.b) });
         }
         __out
     }
@@ -34,13 +34,13 @@ pub mod multiply {
         pub b: &'i i32,
     }
 
-    pub async fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(inputs: Vec<MultiplyInputs<'i>>, arena: &'a Arena, context: &crate::keka_rt::AppContext<I>) -> Vec<&'a i32> {
-        let __n = inputs.len();
-        let inputs = &inputs;
+    pub async fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(_inputs: Vec<MultiplyInputs<'i>>, _arena: &'a Arena, _context: &crate::keka_rt::AppContext<I>) -> Vec<&'a i32> {
+        let __n = _inputs.len();
+        let _inputs = &_inputs;
         let mut __out: Vec<&'a i32> = Vec::with_capacity(__n);
         for __i in 0..__n {
-            let inputs = &inputs[__i];
-            __out.push({ arena.alloc(inputs.a * inputs.b) });
+            let _inputs = &_inputs[__i];
+            __out.push({ _arena.alloc(_inputs.a * _inputs.b) });
         }
         __out
     }

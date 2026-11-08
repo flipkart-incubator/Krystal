@@ -14,28 +14,28 @@ pub mod active_weather_alerts {
         pub console: Rc<dyn crate::keka_rt::Provider<dyn crate::keka_rt::ConsoleWriter>>,
     }
     impl ActiveWeatherAlerts_Injections {
-        fn new<I: crate::keka_rt::Injector + 'static>(context: &crate::keka_rt::AppContext<I>) -> Rc<Self> {
+        fn new<I: crate::keka_rt::Injector + 'static>(_context: &crate::keka_rt::AppContext<I>) -> Rc<Self> {
             Rc::new(Self {
-                console: context.injector().get_provider(crate::keka_rt::InjectionKey::new("lang.process.ConsoleWriter", &[]), context),
+                console: _context.injector().get_provider(crate::keka_rt::InjectionKey::new("lang.process.ConsoleWriter", &[]), _context),
             })
         }
-        fn instance<I: crate::keka_rt::Injector + 'static>(context: &crate::keka_rt::AppContext<I>) -> Rc<Self> {
-            context.injection_instance("ActiveWeatherAlerts_Injections", || Self::new(context))
+        fn instance<I: crate::keka_rt::Injector + 'static>(_context: &crate::keka_rt::AppContext<I>) -> Rc<Self> {
+            _context.injection_instance("ActiveWeatherAlerts_Injections", || Self::new(_context))
         }
     }
 
-    pub async fn call<'a, I: crate::keka_rt::Injector + 'static>(inputs: Vec<ActiveWeatherAlertsInputs>, arena: &'a Arena, context: &crate::keka_rt::AppContext<I>) -> Vec<&'a String> {
-        let deps = ActiveWeatherAlerts_Injections::instance(context);
-        let __n = inputs.len();
-        let inputs = &inputs;
-        let deps = &*deps;
-        let alertsJson_fut = async move {
+    pub async fn call<'a, I: crate::keka_rt::Injector + 'static>(_inputs: Vec<ActiveWeatherAlertsInputs>, _arena: &'a Arena, _context: &crate::keka_rt::AppContext<I>) -> Vec<&'a String> {
+        let _deps = ActiveWeatherAlerts_Injections::instance(_context);
+        let __n = _inputs.len();
+        let _inputs = &_inputs;
+        let _deps = &*_deps;
+        let _alertsJson_fut = async move {
             Rc::new({
                 let mut __v = Vec::with_capacity(__n);
                 for __i in 0..__n {
-                    let inputs = &inputs[__i];
+                    let _inputs = &_inputs[__i];
                     __v.push(
-                        &*arena.alloc(
+                        &*_arena.alloc(
                             reqwest::Client::new()
                                 .get("https://api.weather.gov/alerts/active".to_string().as_str())
                                 .header(reqwest::header::USER_AGENT, "keka")
@@ -53,13 +53,13 @@ pub mod active_weather_alerts {
         }
         .boxed_local()
         .shared();
-        let alertsJson = alertsJson_fut.clone().await;
+        let alertsJson = _alertsJson_fut.clone().await;
         let mut __out: Vec<&'a String> = Vec::with_capacity(__n);
         for __i in 0..__n {
-            let inputs = &inputs[__i];
+            let _inputs = &_inputs[__i];
             let alertsJson = Clone::clone(&alertsJson[__i]);
             __out.push({
-                deps.console.get().println("Fetched active weather alerts from api.weather.gov".to_string());
+                _deps.console.get().println("Fetched active weather alerts from api.weather.gov".to_string());
                 alertsJson
             });
         }
@@ -77,28 +77,28 @@ pub mod active_weather_alerts_count {
         pub console: Rc<dyn crate::keka_rt::Provider<dyn crate::keka_rt::ConsoleWriter>>,
     }
     impl ActiveWeatherAlertsCount_Injections {
-        fn new<I: crate::keka_rt::Injector + 'static>(context: &crate::keka_rt::AppContext<I>) -> Rc<Self> {
+        fn new<I: crate::keka_rt::Injector + 'static>(_context: &crate::keka_rt::AppContext<I>) -> Rc<Self> {
             Rc::new(Self {
-                console: context.injector().get_provider(crate::keka_rt::InjectionKey::new("lang.process.ConsoleWriter", &[]), context),
+                console: _context.injector().get_provider(crate::keka_rt::InjectionKey::new("lang.process.ConsoleWriter", &[]), _context),
             })
         }
-        fn instance<I: crate::keka_rt::Injector + 'static>(context: &crate::keka_rt::AppContext<I>) -> Rc<Self> {
-            context.injection_instance("ActiveWeatherAlertsCount_Injections", || Self::new(context))
+        fn instance<I: crate::keka_rt::Injector + 'static>(_context: &crate::keka_rt::AppContext<I>) -> Rc<Self> {
+            _context.injection_instance("ActiveWeatherAlertsCount_Injections", || Self::new(_context))
         }
     }
 
-    pub async fn call<'a, I: crate::keka_rt::Injector + 'static>(inputs: Vec<ActiveWeatherAlertsCountInputs>, arena: &'a Arena, context: &crate::keka_rt::AppContext<I>) -> Vec<&'a String> {
-        let deps = ActiveWeatherAlertsCount_Injections::instance(context);
-        let __n = inputs.len();
-        let inputs = &inputs;
-        let deps = &*deps;
-        let alertsJson_fut = async move {
+    pub async fn call<'a, I: crate::keka_rt::Injector + 'static>(_inputs: Vec<ActiveWeatherAlertsCountInputs>, _arena: &'a Arena, _context: &crate::keka_rt::AppContext<I>) -> Vec<&'a String> {
+        let _deps = ActiveWeatherAlertsCount_Injections::instance(_context);
+        let __n = _inputs.len();
+        let _inputs = &_inputs;
+        let _deps = &*_deps;
+        let _alertsJson_fut = async move {
             Rc::new({
                 let mut __v = Vec::with_capacity(__n);
                 for __i in 0..__n {
-                    let inputs = &inputs[__i];
+                    let _inputs = &_inputs[__i];
                     __v.push(
-                        &*arena.alloc(
+                        &*_arena.alloc(
                             reqwest::Client::new()
                                 .get("https://api.weather.gov/alerts/active/count".to_string().as_str())
                                 .header(reqwest::header::USER_AGENT, "keka")
@@ -116,13 +116,13 @@ pub mod active_weather_alerts_count {
         }
         .boxed_local()
         .shared();
-        let alertsJson = alertsJson_fut.clone().await;
+        let alertsJson = _alertsJson_fut.clone().await;
         let mut __out: Vec<&'a String> = Vec::with_capacity(__n);
         for __i in 0..__n {
-            let inputs = &inputs[__i];
+            let _inputs = &_inputs[__i];
             let alertsJson = Clone::clone(&alertsJson[__i]);
             __out.push({
-                deps.console.get().println("Fetched active weather alerts from api.weather.gov".to_string());
+                _deps.console.get().println("Fetched active weather alerts from api.weather.gov".to_string());
                 alertsJson
             });
         }

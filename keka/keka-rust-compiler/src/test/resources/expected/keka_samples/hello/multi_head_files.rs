@@ -13,68 +13,68 @@ pub mod multi_head_files {
         pub filePath: &'i String,
     }
 
-    pub async fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(inputs: Vec<MultiHeadFilesInputs<'i>>, arena: &'a Arena, context: &crate::keka_rt::AppContext<I>) -> Vec<&'a String> {
-        let __n = inputs.len();
-        let inputs = &inputs;
-        let files_fut = async move {
+    pub async fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(_inputs: Vec<MultiHeadFilesInputs<'i>>, _arena: &'a Arena, _context: &crate::keka_rt::AppContext<I>) -> Vec<&'a String> {
+        let __n = _inputs.len();
+        let _inputs = &_inputs;
+        let _files_fut = async move {
             Rc::new({
                 let mut __v = Vec::with_capacity(__n);
                 for __i in 0..__n {
-                    let inputs = &inputs[__i];
-                    __v.push(&*arena.alloc(vec![(*inputs.filePath).clone(), (*inputs.filePath).clone()]));
+                    let _inputs = &_inputs[__i];
+                    __v.push(&*_arena.alloc(vec![(*_inputs.filePath).clone(), (*_inputs.filePath).clone()]));
                 }
                 __v
             })
         }
         .boxed_local()
         .shared();
-        let _filesContent_needs_files = files_fut.clone();
-        let filesContent_fut = async move {
+        let _filesContent_needs_files = _files_fut.clone();
+        let _filesContent_fut = async move {
             let files = _filesContent_needs_files.await;
             Rc::new({
                 let mut __groups = Vec::with_capacity(__n);
                 for __i in 0..__n {
-                    let inputs = &inputs[__i];
+                    let _inputs = &_inputs[__i];
                     let files = Clone::clone(&files[__i]);
                     __groups.push(
                         files
                             .clone()
                             .into_iter()
-                            .map(|it| crate::keka_samples::hello::head_file::head_file::HeadFileInputs {
-                                filePath: arena.alloc(it),
-                                numChars: arena.alloc(100),
+                            .map(|_it| crate::keka_samples::hello::head_file::head_file::HeadFileInputs {
+                                filePath: _arena.alloc(_it),
+                                numChars: _arena.alloc(100),
                             })
                             .collect::<Vec<_>>(),
                     );
                 }
-                let __sizes: Vec<usize> = __groups.iter().map(|g| g.len()).collect();
-                let mut __results = crate::keka_samples::hello::head_file::head_file::call(__groups.into_iter().flatten().collect(), arena, context)
+                let __sizes: Vec<usize> = __groups.iter().map(|_g| _g.len()).collect();
+                let mut __results = crate::keka_samples::hello::head_file::head_file::call(__groups.into_iter().flatten().collect(), _arena, _context)
                     .await
                     .into_iter();
-                __sizes.into_iter().map(|size| __results.by_ref().take(size).collect::<Vec<_>>()).collect::<Vec<_>>()
+                __sizes.into_iter().map(|_size| __results.by_ref().take(_size).collect::<Vec<_>>()).collect::<Vec<_>>()
             })
         }
         .boxed_local()
         .shared();
-        let _concatStrings_needs_filesContent = filesContent_fut.clone();
-        let concatStrings_fut = async move {
+        let _concatStrings_needs_filesContent = _filesContent_fut.clone();
+        let _concatStrings_fut = async move {
             let filesContent = _concatStrings_needs_filesContent.await;
             Rc::new({
                 let mut __v = Vec::with_capacity(__n);
                 for __i in 0..__n {
-                    let inputs = &inputs[__i];
+                    let _inputs = &_inputs[__i];
                     let filesContent = Clone::clone(&filesContent[__i]);
-                    __v.push(&*arena.alloc(filesContent.iter().map(|value| value.as_str()).collect::<Vec<_>>().join(inputs.separator.as_str())));
+                    __v.push(&*_arena.alloc(filesContent.iter().map(|_value| _value.as_str()).collect::<Vec<_>>().join(_inputs.separator.as_str())));
                 }
                 __v
             })
         }
         .boxed_local()
         .shared();
-        let (files, filesContent, concatStrings) = futures::join!(files_fut.clone(), filesContent_fut.clone(), concatStrings_fut.clone());
+        let (files, filesContent, concatStrings) = futures::join!(_files_fut.clone(), _filesContent_fut.clone(), _concatStrings_fut.clone());
         let mut __out: Vec<&'a String> = Vec::with_capacity(__n);
         for __i in 0..__n {
-            let inputs = &inputs[__i];
+            let _inputs = &_inputs[__i];
             let concatStrings = Clone::clone(&concatStrings[__i]);
             __out.push({ concatStrings });
         }
@@ -92,67 +92,67 @@ pub mod two_head_files {
         pub filePath2: &'i String,
     }
 
-    pub async fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(inputs: Vec<TwoHeadFilesInputs<'i>>, arena: &'a Arena, context: &crate::keka_rt::AppContext<I>) -> Vec<&'a String> {
-        let __n = inputs.len();
-        let inputs = &inputs;
-        let filesContent1_fut = async move {
+    pub async fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(_inputs: Vec<TwoHeadFilesInputs<'i>>, _arena: &'a Arena, _context: &crate::keka_rt::AppContext<I>) -> Vec<&'a String> {
+        let __n = _inputs.len();
+        let _inputs = &_inputs;
+        let _filesContent1_fut = async move {
             Rc::new(
                 crate::keka_samples::hello::head_file::head_file::call(
                     {
                         let mut __v = Vec::with_capacity(__n);
                         for __i in 0..__n {
-                            let inputs = &inputs[__i];
+                            let _inputs = &_inputs[__i];
                             __v.push(crate::keka_samples::hello::head_file::head_file::HeadFileInputs {
-                                numChars: arena.alloc(100),
-                                filePath: inputs.filePath1,
+                                numChars: _arena.alloc(100),
+                                filePath: _inputs.filePath1,
                             });
                         }
                         __v
                     },
-                    arena,
-                    context,
+                    _arena,
+                    _context,
                 )
                 .await,
             )
         }
         .boxed_local()
         .shared();
-        let filesContent2_fut = async move {
+        let _filesContent2_fut = async move {
             Rc::new(
                 crate::keka_samples::hello::head_file::head_file::call(
                     {
                         let mut __v = Vec::with_capacity(__n);
                         for __i in 0..__n {
-                            let inputs = &inputs[__i];
+                            let _inputs = &_inputs[__i];
                             __v.push(crate::keka_samples::hello::head_file::head_file::HeadFileInputs {
-                                numChars: arena.alloc(100),
-                                filePath: inputs.filePath2,
+                                numChars: _arena.alloc(100),
+                                filePath: _inputs.filePath2,
                             });
                         }
                         __v
                     },
-                    arena,
-                    context,
+                    _arena,
+                    _context,
                 )
                 .await,
             )
         }
         .boxed_local()
         .shared();
-        let (filesContent1, filesContent2) = futures::join!(filesContent1_fut.clone(), filesContent2_fut.clone());
+        let (filesContent1, filesContent2) = futures::join!(_filesContent1_fut.clone(), _filesContent2_fut.clone());
         return {
             let mut __v = Vec::with_capacity(__n);
             for __i in 0..__n {
-                let inputs = &inputs[__i];
+                let _inputs = &_inputs[__i];
                 let filesContent1 = Clone::clone(&filesContent1[__i]);
                 let filesContent2 = Clone::clone(&filesContent2[__i]);
                 __v.push(
-                    &*arena.alloc(
+                    &*_arena.alloc(
                         vec![filesContent1, filesContent2]
                             .iter()
-                            .map(|value| value.as_str())
+                            .map(|_value| _value.as_str())
                             .collect::<Vec<_>>()
-                            .join(inputs.separator.as_str()),
+                            .join(_inputs.separator.as_str()),
                     ),
                 );
             }

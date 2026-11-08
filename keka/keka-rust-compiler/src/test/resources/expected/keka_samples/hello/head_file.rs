@@ -17,45 +17,46 @@ pub mod head_file {
         pub console: Rc<dyn crate::keka_rt::Provider<dyn crate::keka_rt::ConsoleWriter>>,
     }
     impl HeadFile_Injections {
-        fn new<I: crate::keka_rt::Injector + 'static>(context: &crate::keka_rt::AppContext<I>) -> Rc<Self> {
+        fn new<I: crate::keka_rt::Injector + 'static>(_context: &crate::keka_rt::AppContext<I>) -> Rc<Self> {
             Rc::new(Self {
-                console: context.injector().get_provider(crate::keka_rt::InjectionKey::new("lang.process.ConsoleWriter", &[]), context),
+                console: _context.injector().get_provider(crate::keka_rt::InjectionKey::new("lang.process.ConsoleWriter", &[]), _context),
             })
         }
-        fn instance<I: crate::keka_rt::Injector + 'static>(context: &crate::keka_rt::AppContext<I>) -> Rc<Self> {
-            context.injection_instance("HeadFile_Injections", || Self::new(context))
+        fn instance<I: crate::keka_rt::Injector + 'static>(_context: &crate::keka_rt::AppContext<I>) -> Rc<Self> {
+            _context.injection_instance("HeadFile_Injections", || Self::new(_context))
         }
     }
 
-    pub async fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(inputs: Vec<HeadFileInputs<'i>>, arena: &'a Arena, context: &crate::keka_rt::AppContext<I>) -> Vec<&'a String> {
-        let deps = HeadFile_Injections::instance(context);
-        let __n = inputs.len();
-        let inputs = &inputs;
-        let deps = &*deps;
+    pub async fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(_inputs: Vec<HeadFileInputs<'i>>, _arena: &'a Arena, _context: &crate::keka_rt::AppContext<I>) -> Vec<&'a String> {
+        let _deps = HeadFile_Injections::instance(_context);
+        let __n = _inputs.len();
+        let _inputs = &_inputs;
+        let _deps = &*_deps;
         let __locals = Arena::new();
         let __locals_ref = &__locals;
-        let fileContent_fut = async move {
+        let _fileContent_fut = async move {
             Rc::new({
                 let mut __v = Vec::with_capacity(__n);
                 for __i in 0..__n {
-                    let inputs = &inputs[__i];
-                    __v.push(&*__locals_ref.alloc(tokio::fs::read_to_string(inputs.filePath.as_str()).await.expect("readFileAsString failed")));
+                    let _inputs = &_inputs[__i];
+                    __v.push(&*__locals_ref.alloc(tokio::fs::read_to_string(_inputs.filePath.as_str()).await.expect("readFileAsString failed")));
                 }
                 __v
             })
         }
         .boxed_local()
         .shared();
-        let fileContent = fileContent_fut.clone().await;
+        let fileContent = _fileContent_fut.clone().await;
         let mut __out: Vec<&'a String> = Vec::with_capacity(__n);
         for __i in 0..__n {
-            let inputs = &inputs[__i];
+            let _inputs = &_inputs[__i];
             let fileContent = Clone::clone(&fileContent[__i]);
             __out.push({
-                deps.console
+                _deps
+                    .console
                     .get()
-                    .println("Returning first ".to_string() + &(*inputs.numChars).to_string() + " chars of file " + inputs.filePath.as_str());
-                arena.alloc(fileContent.chars().take((*inputs.numChars) as usize).collect::<String>())
+                    .println("Returning first ".to_string() + &(*_inputs.numChars).to_string() + " chars of file " + _inputs.filePath.as_str());
+                _arena.alloc(fileContent.chars().take((*_inputs.numChars) as usize).collect::<String>())
             });
         }
         __out

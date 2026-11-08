@@ -12,32 +12,32 @@ pub mod get_available_product_details {
         pub productId: &'i String,
     }
 
-    pub fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(inputs: Vec<GetAvailableProductDetailsInputs<'i>>, arena: &'a Arena, context: &crate::keka_rt::AppContext<I>) -> Vec<&'a String> {
-        let __n = inputs.len();
+    pub fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(_inputs: Vec<GetAvailableProductDetailsInputs<'i>>, _arena: &'a Arena, _context: &crate::keka_rt::AppContext<I>) -> Vec<&'a String> {
+        let __n = _inputs.len();
         let isAvailable = crate::keka_samples::products::is_product_available::is_product_available::call(
             {
                 let mut __v = Vec::with_capacity(__n);
                 for __i in 0..__n {
-                    let inputs = &inputs[__i];
-                    __v.push(crate::keka_samples::products::is_product_available::is_product_available::IsProductAvailableInputs { productId: inputs.productId });
+                    let _inputs = &_inputs[__i];
+                    __v.push(crate::keka_samples::products::is_product_available::is_product_available::IsProductAvailableInputs { productId: _inputs.productId });
                 }
                 __v
             },
-            arena,
-            context,
+            _arena,
+            _context,
         );
         // NOTE: ignoring `skipIf` clause - not modeled by this compiler yet
         return crate::keka_samples::products::get_product_details::get_product_details::call(
             {
                 let mut __v = Vec::with_capacity(__n);
                 for __i in 0..__n {
-                    let inputs = &inputs[__i];
-                    __v.push(crate::keka_samples::products::get_product_details::get_product_details::GetProductDetailsInputs { productId: inputs.productId });
+                    let _inputs = &_inputs[__i];
+                    __v.push(crate::keka_samples::products::get_product_details::get_product_details::GetProductDetailsInputs { productId: _inputs.productId });
                 }
                 __v
             },
-            arena,
-            context,
+            _arena,
+            _context,
         );
     }
 }

@@ -14,23 +14,23 @@ pub mod hello_world {
         pub writer: Rc<dyn crate::keka_rt::Provider<dyn crate::keka_rt::ConsoleWriter>>,
     }
     impl HelloWorld_Injections {
-        fn new<I: crate::keka_rt::Injector + 'static>(context: &crate::keka_rt::AppContext<I>) -> Rc<Self> {
+        fn new<I: crate::keka_rt::Injector + 'static>(_context: &crate::keka_rt::AppContext<I>) -> Rc<Self> {
             Rc::new(Self {
-                writer: context.injector().get_provider(crate::keka_rt::InjectionKey::new("lang.process.ConsoleWriter", &[]), context),
+                writer: _context.injector().get_provider(crate::keka_rt::InjectionKey::new("lang.process.ConsoleWriter", &[]), _context),
             })
         }
-        fn instance<I: crate::keka_rt::Injector + 'static>(context: &crate::keka_rt::AppContext<I>) -> Rc<Self> {
-            context.injection_instance("HelloWorld_Injections", || Self::new(context))
+        fn instance<I: crate::keka_rt::Injector + 'static>(_context: &crate::keka_rt::AppContext<I>) -> Rc<Self> {
+            _context.injection_instance("HelloWorld_Injections", || Self::new(_context))
         }
     }
 
-    pub fn call<'a, I: crate::keka_rt::Injector + 'static>(inputs: Vec<HelloWorldInputs>, arena: &'a Arena, context: &crate::keka_rt::AppContext<I>) -> Vec<&'a ()> {
-        let deps = HelloWorld_Injections::instance(context);
-        let __n = inputs.len();
+    pub fn call<'a, I: crate::keka_rt::Injector + 'static>(_inputs: Vec<HelloWorldInputs>, _arena: &'a Arena, _context: &crate::keka_rt::AppContext<I>) -> Vec<&'a ()> {
+        let _deps = HelloWorld_Injections::instance(_context);
+        let __n = _inputs.len();
         let mut __out: Vec<&'a ()> = Vec::with_capacity(__n);
         for __i in 0..__n {
-            let inputs = &inputs[__i];
-            __out.push({ arena.alloc(deps.writer.get().println("Hello! World.".to_string())) });
+            let _inputs = &_inputs[__i];
+            __out.push({ _arena.alloc(_deps.writer.get().println("Hello! World.".to_string())) });
         }
         __out
     }

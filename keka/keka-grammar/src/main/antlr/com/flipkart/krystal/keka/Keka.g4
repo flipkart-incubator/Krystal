@@ -164,6 +164,6 @@ FALSE : 'false' ;
 STRING: 'string' ;
 VOID: 'void' ;
 STRING_LITERAL:     '"' (~["\\\r\n])* '"';
-ID: [a-zA-Z_][a-zA-Z_0-9]* ;
+ID: [a-zA-Z][a-zA-Z_0-9]* ;
 LINE_COMMENT: '//' ~[\r\n]* -> skip;
 WS: [ \t\n\r\f]+ -> skip ;

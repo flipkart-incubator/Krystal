@@ -153,8 +153,8 @@ class RustCompilerGoldenTest {
     assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
     String caller = Files.readString(outDir.resolve("lifecycle/caller.rs"));
     assertThat(caller).contains("pub async fn call");
-    assertThat(caller).contains("let value_fut = async move {");
-    assertThat(caller).contains("let value = value_fut.clone().await;");
+    assertThat(caller).contains("let _value_fut = async move {");
+    assertThat(caller).contains("let value = _value_fut.clone().await;");
   }
 
   @Test
@@ -182,7 +182,7 @@ class RustCompilerGoldenTest {
 
     assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
     String main = Files.readString(outDir.resolve("main.rs"));
-    assertThat(main).contains("match vajram.as_str()");
+    assertThat(main).contains("match _vajram.as_str()");
     assertThat(main).contains("usage: <program> <vajram-name> [--input value]...");
     assertThat(main).contains(".strip_prefix(\"--\")");
     assertThat(main).contains(".get(\"input\")");
@@ -215,8 +215,8 @@ class RustCompilerGoldenTest {
         .contains("use wasm_bindgen::prelude::*;")
         .contains("#[wasm_bindgen]")
         .contains("pub fn outside_process_greet(name: String, count: i64) -> String")
-        .contains("name: arena.alloc(name)")
-        .contains("count: arena.alloc(count)");
+        .contains("name: _arena.alloc(name)")
+        .contains("count: _arena.alloc(count)");
     assertThat(Files.readString(outDir.resolve("keka_rt/mod.rs")))
         .contains("WASM prelude")
         .contains("wasm_bindgen_futures::JsFuture")
@@ -323,11 +323,11 @@ class RustCompilerGoldenTest {
         .contains("prefix: Rc<dyn crate::keka_rt::Provider<String>>")
         .contains("InjectionKey::new(\"string\", &[])")
         .contains("fn instance<I: crate::keka_rt::Injector + 'static>")
-        .contains("let deps = Leaf_Injections::instance(context);")
+        .contains("let _deps = Leaf_Injections::instance(_context);")
         .contains("::leaf::call(")
-        .contains("arena,")
-        .contains("context,")
-        .contains("deps.prefix.get()");
+        .contains("_arena,")
+        .contains("_context,")
+        .contains("_deps.prefix.get()");
   }
 
   @Test
@@ -366,7 +366,7 @@ class RustCompilerGoldenTest {
 
     assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
     assertThat(Files.readString(outDir.resolve("test/logger.rs")))
-        .contains("Console.log(inputs.message);");
+        .contains("Console.log(_inputs.message);");
   }
 
   @Test
@@ -423,8 +423,8 @@ class RustCompilerGoldenTest {
 
     assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
     String reader = Files.readString(outDir.resolve("system/reader.rs"));
-    assertThat(reader).contains("tokio::fs::read_to_string(inputs.filePath.as_str())");
-    assertThat(reader).contains("let content_fut = async move {");
+    assertThat(reader).contains("tokio::fs::read_to_string(_inputs.filePath.as_str())");
+    assertThat(reader).contains("let _content_fut = async move {");
   }
 
   @Test
@@ -447,10 +447,10 @@ class RustCompilerGoldenTest {
     String fetcher = Files.readString(outDir.resolve("system/fetcher.rs"));
     assertThat(fetcher)
         .contains("reqwest::Client::new()")
-        .contains(".get(inputs.requestUrl.as_str())")
+        .contains(".get(_inputs.requestUrl.as_str())")
         .contains(".header(reqwest::header::USER_AGENT,");
     assertThat(fetcher).contains(".text()").contains(".expect(\"callHttp failed\")");
-    assertThat(fetcher).contains("let body_fut = async move {");
+    assertThat(fetcher).contains("let _body_fut = async move {");
   }
 
   @Test
@@ -472,7 +472,7 @@ class RustCompilerGoldenTest {
     assertThat(RustCompilerMain.compile(sourceDir, outDir, RustCompilerMain.Target.WASM)).isTrue();
     String fetcher = Files.readString(outDir.resolve("system/fetcher.rs"));
     assertThat(fetcher)
-        .contains("crate::keka_rt::fetch_text(inputs.requestUrl.as_str())")
+        .contains("crate::keka_rt::fetch_text(_inputs.requestUrl.as_str())")
         .contains(".await");
   }
 
@@ -542,30 +542,30 @@ class RustCompilerGoldenTest {
     assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
     String parent = Files.readString(outDir.resolve("graph/graph.rs"));
     // `first`/`second` are independent, and each is wrapped as a `Shared` future so it can be
-    // awaited by exactly the facet(s) that need it. `firstValue` only clones+awaits `first_fut`
-    // (never `second_fut`), and `secondValue` only clones+awaits `second_fut` - so neither of
+    // awaited by exactly the facet(s) that need it. `firstValue` only clones+awaits `_first_fut`
+    // (never `_second_fut`), and `secondValue` only clones+awaits `_second_fut` - so neither of
     // them can be blocked by the other's dependency, unlike a level-grouped join.
-    assertThat(parent).contains("let first_fut = async move {");
-    assertThat(parent).contains("let second_fut = async move {");
+    assertThat(parent).contains("let _first_fut = async move {");
+    assertThat(parent).contains("let _second_fut = async move {");
     assertThat(parent)
         .contains(
-            "        let _firstValue_needs_first = first_fut.clone();\n"
-                + "        let firstValue_fut = async move {\n"
+            "        let _firstValue_needs_first = _first_fut.clone();\n"
+                + "        let _firstValue_fut = async move {\n"
                 + "            let first = _firstValue_needs_first.await;\n")
         .contains(
-            "        let _secondValue_needs_second = second_fut.clone();\n"
-                + "        let secondValue_fut = async move {\n"
+            "        let _secondValue_needs_second = _second_fut.clone();\n"
+                + "        let _secondValue_fut = async move {\n"
                 + "            let second = _secondValue_needs_second.await;\n")
         // Per-input entries are bound from the awaited facet vectors inside the batch loop.
         .contains("let first = Clone::clone(&first[__i]);")
-        .contains("__v.push(&*arena.alloc(first + \"\"));")
+        .contains("__v.push(&*_arena.alloc(first + \"\"));")
         .doesNotContain("_secondValue_needs_first")
         .doesNotContain("_firstValue_needs_second")
         .contains(
-            "let (first, second, firstValue, secondValue) = futures::join!(first_fut.clone(),"
-                + " second_fut.clone(), firstValue_fut.clone(), secondValue_fut.clone());");
-    assertThat(parent.indexOf("let second_fut ="))
-        .isLessThan(parent.indexOf("let firstValue_fut ="));
+            "let (first, second, firstValue, secondValue) = futures::join!(_first_fut.clone(),"
+                + " _second_fut.clone(), _firstValue_fut.clone(), _secondValue_fut.clone());");
+    assertThat(parent.indexOf("let _second_fut ="))
+        .isLessThan(parent.indexOf("let _firstValue_fut ="));
   }
 
   @Test
@@ -593,28 +593,28 @@ class RustCompilerGoldenTest {
     assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
     String diamond = Files.readString(outDir.resolve("diamond/diamond.rs"));
     // `combined` depends on both `a` and `b`, but not on the unrelated independent `c` - it must
-    // clone+await exactly `a_fut` and `b_fut`, and never reference `c_fut` at all. This is the
+    // clone+await exactly `_a_fut` and `_b_fut`, and never reference `_c_fut` at all. This is the
     // case the old level-grouped `join!` got wrong: `c` would have shared a level with `a`/`b`
     // and `combined` would have been forced to wait on it regardless.
-    assertThat(diamond).contains("let a_fut = async move {");
-    assertThat(diamond).contains("let b_fut = async move {");
-    assertThat(diamond).contains("let c_fut = async move {");
+    assertThat(diamond).contains("let _a_fut = async move {");
+    assertThat(diamond).contains("let _b_fut = async move {");
+    assertThat(diamond).contains("let _c_fut = async move {");
     assertThat(diamond)
-        .contains("let _combined_needs_a = a_fut.clone();")
-        .contains("let _combined_needs_b = b_fut.clone();")
-        .contains("let combined_fut = async move {\n")
+        .contains("let _combined_needs_a = _a_fut.clone();")
+        .contains("let _combined_needs_b = _b_fut.clone();")
+        .contains("let _combined_fut = async move {\n")
         .contains("let a = _combined_needs_a.await;\n")
         .contains("let b = _combined_needs_b.await;\n")
         .contains("let a = Clone::clone(&a[__i]);")
-        .contains("__v.push(&*arena.alloc(a + b));");
+        .contains("__v.push(&*_arena.alloc(a + b));");
     String combinedBody =
         diamond.substring(
-            diamond.indexOf("let combined_fut ="), diamond.indexOf("let (a, b, c, combined)"));
-    assertThat(combinedBody).doesNotContain("c_fut");
+            diamond.indexOf("let _combined_fut ="), diamond.indexOf("let (a, b, c, combined)"));
+    assertThat(combinedBody).doesNotContain("_c_fut");
     assertThat(diamond)
         .contains(
-            "let (a, b, c, combined) = futures::join!(a_fut.clone(), b_fut.clone(),"
-                + " c_fut.clone(), combined_fut.clone());");
+            "let (a, b, c, combined) = futures::join!(_a_fut.clone(), _b_fut.clone(),"
+                + " _c_fut.clone(), _combined_fut.clone());");
   }
 
   @Test
@@ -634,7 +634,7 @@ class RustCompilerGoldenTest {
 
     assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
     assertThat(Files.readString(outDir.resolve("hello/hello.rs")))
-        .contains("\"Hello, \".to_string() + inputs.name.as_str()");
+        .contains("\"Hello, \".to_string() + _inputs.name.as_str()");
   }
 
   @Test
@@ -654,7 +654,7 @@ class RustCompilerGoldenTest {
 
     assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
     assertThat(Files.readString(outDir.resolve("hello/hello.rs")))
-        .contains("\"Hello, \".to_string() + inputs.name.as_str() + \"!\"");
+        .contains("\"Hello, \".to_string() + _inputs.name.as_str() + \"!\"");
   }
 
   @Test
@@ -674,7 +674,7 @@ class RustCompilerGoldenTest {
 
     assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
     String generated = Files.readString(outDir.resolve("math/math.rs"));
-    assertThat(generated).contains("arena.alloc(*inputs.left + *inputs.right)");
+    assertThat(generated).contains("_arena.alloc(*_inputs.left + *_inputs.right)");
   }
 
   @Test
@@ -699,7 +699,7 @@ class RustCompilerGoldenTest {
         .contains("values")
         .contains("value.as_str()")
         .contains("collect::<Vec<_>>()")
-        .contains("join(inputs.separator.as_str())");
+        .contains("join(_inputs.separator.as_str())");
   }
 
   @Test
@@ -755,9 +755,9 @@ class RustCompilerGoldenTest {
         .contains("leaf::call(")
         .contains("values")
         .contains(".into_iter()")
-        .contains(".map(|it|")
+        .contains(".map(|_it|")
         .contains("LeafInputs {")
-        .contains("value: arena.alloc(it)")
+        .contains("value: _arena.alloc(_it)")
         .doesNotContain("futures::future::join_all");
   }
 

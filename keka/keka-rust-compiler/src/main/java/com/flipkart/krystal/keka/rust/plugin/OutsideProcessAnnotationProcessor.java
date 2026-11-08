@@ -77,38 +77,38 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
         .sorted()
         .forEach(module -> source.append("pub mod ").append(module).append(";\n"));
     source.append("\nfn main() {\n");
-    source.append("    let vajram = std::env::args().nth(1).unwrap_or_else(|| {\n");
+    source.append("    let _vajram = std::env::args().nth(1).unwrap_or_else(|| {\n");
     source.append("        eprintln!(\"usage: <program> <vajram-name> [--input value]...\");\n");
     source.append("        std::process::exit(2);\n");
     source.append("    });\n");
-    source.append("    let mut arguments = std::env::args().skip(2);\n");
-    source.append("    let mut inputs = std::collections::HashMap::new();\n");
-    source.append("    let arena = crate::keka_rt::Arena::new();\n");
+    source.append("    let mut _arguments = std::env::args().skip(2);\n");
+    source.append("    let mut _inputs = std::collections::HashMap::new();\n");
+    source.append("    let _arena = crate::keka_rt::Arena::new();\n");
     source.append(
-        "    let app_context = crate::keka_rt::AppContext::new(std::rc::Rc::new(crate::keka_rt::DefaultInjector::default()));\n");
-    source.append("    while let Some(flag) = arguments.next() {\n");
+        "    let _app_context = crate::keka_rt::AppContext::new(std::rc::Rc::new(crate::keka_rt::DefaultInjector::default()));\n");
+    source.append("    while let Some(_flag) = _arguments.next() {\n");
     source.append(
-        "        let input = flag.strip_prefix(\"--\").filter(|input| !input.is_empty()).unwrap_or_else(|| {\n");
+        "        let _input = _flag.strip_prefix(\"--\").filter(|_input| !_input.is_empty()).unwrap_or_else(|| {\n");
     source.append(
-        "            eprintln!(\"expected input flag in the form --input value, got {}\", flag);\n");
+        "            eprintln!(\"expected input flag in the form --input value, got {}\", _flag);\n");
     source.append("            std::process::exit(2);\n");
     source.append("        });\n");
-    source.append("        let value = arguments.next().unwrap_or_else(|| {\n");
-    source.append("            eprintln!(\"missing value for input {}\", input);\n");
+    source.append("        let _value = _arguments.next().unwrap_or_else(|| {\n");
+    source.append("            eprintln!(\"missing value for input {}\", _input);\n");
     source.append("            std::process::exit(2);\n");
     source.append("        });\n");
-    source.append("        if inputs.insert(input.to_owned(), value).is_some() {\n");
-    source.append("            eprintln!(\"input {} was specified more than once\", input);\n");
+    source.append("        if _inputs.insert(_input.to_owned(), _value).is_some() {\n");
+    source.append("            eprintln!(\"input {} was specified more than once\", _input);\n");
     source.append("            std::process::exit(2);\n");
     source.append("        }\n");
     source.append("    }\n");
-    source.append("    match vajram.as_str() {\n");
+    source.append("    match _vajram.as_str() {\n");
     for (VajramFile target : targets) {
       emitCase(source, target, context.symbolTable().completionOf(target), context);
     }
     source.append("        _ => {\n");
     source.append(
-        "            eprintln!(\"Vajram {} has not been declared to be called from outside-process\", vajram);\n");
+        "            eprintln!(\"Vajram {} has not been declared to be called from outside-process\", _vajram);\n");
     source.append("            std::process::exit(2);\n");
     source.append("        }\n");
     source.append("    }\n");
@@ -166,7 +166,7 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
             .collect(java.util.stream.Collectors.joining(", "));
     String fields =
         target.vajram().inputs().stream()
-            .map(input -> input.name() + ": arena.alloc(" + input.name() + ")")
+            .map(input -> input.name() + ": _arena.alloc(" + input.name() + ")")
             .collect(java.util.stream.Collectors.joining(", "));
     source.append("\n#[wasm_bindgen]\n");
     source
@@ -177,11 +177,11 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
         .append("(")
         .append(parameters)
         .append(") -> String {\n");
-    source.append("    let arena = crate::keka_rt::Arena::new();\n");
+    source.append("    let _arena = crate::keka_rt::Arena::new();\n");
     source.append(
-        "    let app_context = crate::keka_rt::AppContext::new(Rc::new(crate::keka_rt::DefaultInjector::default()));\n");
+        "    let _app_context = crate::keka_rt::AppContext::new(Rc::new(crate::keka_rt::DefaultInjector::default()));\n");
     source
-        .append("    let output = ")
+        .append("    let _output = ")
         .append(module)
         .append("::call(vec![")
         .append(module)
@@ -189,13 +189,13 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
         .append(Naming.capitalize(target.vajram().name()))
         .append("Inputs { ")
         .append(fields)
-        .append(" }], &arena, &app_context")
+        .append(" }], &_arena, &_app_context")
         .append(")")
         .append(completion.isAsync() ? ".await" : "")
         .append(".into_iter().next().expect(\"outside-process Vajram result\");\n");
     switch (target.vajram().outputType().name()) {
-      case "string" -> source.append("    (*output).clone()\n");
-      case "int" -> source.append("    output.to_string()\n");
+      case "string" -> source.append("    (*_output).clone()\n");
+      case "int" -> source.append("    _output.to_string()\n");
       case "void" -> source.append("    String::new()\n");
       default -> throw new IllegalStateException("Validated unsupported WASM output");
     }
@@ -237,7 +237,7 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
             + inputFields
             + " }]";
     source.append("        \"").append(target.vajram().name()).append("\" => {\n");
-    source.append("            for input in inputs.keys() {\n");
+    source.append("            for _input in _inputs.keys() {\n");
     source.append("                if ![");
     for (int i = 0; i < target.vajram().inputs().size(); i++) {
       if (i > 0) {
@@ -245,42 +245,42 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
       }
       source.append("\"").append(target.vajram().inputs().get(i).name()).append("\"");
     }
-    source.append("].contains(&input.as_str()) {\n");
+    source.append("].contains(&_input.as_str()) {\n");
     source
         .append("                    eprintln!(\"unknown input {} for ")
         .append(target.vajram().name())
-        .append("\", input);\n");
+        .append("\", _input);\n");
     source.append("                    std::process::exit(2);\n");
     source.append("                }\n");
     source.append("            }\n");
     if (completion == Completion.NOW) {
       source
-          .append("            let output = ")
+          .append("            let _output = ")
           .append(module)
           .append("::call(vec![")
           .append(inputs)
-          .append(", &arena, &app_context")
+          .append(", &_arena, &_app_context")
           .append(").into_iter().next().expect(\"outside-process Vajram result\");\n");
       source.append(
           isVoidOutput(target)
-              ? "            let _ = output;\n"
-              : "            println!(\"{}\", output);\n");
+              ? "            let _ = _output;\n"
+              : "            println!(\"{}\", _output);\n");
     } else {
       source.append(
-          "            let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();\n");
-      source.append("            let local = tokio::task::LocalSet::new();\n");
-      source.append("            local.block_on(&runtime, async {\n");
+          "            let _runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();\n");
+      source.append("            let _local = tokio::task::LocalSet::new();\n");
+      source.append("            _local.block_on(&_runtime, async {\n");
       source
-          .append("                let output = ")
+          .append("                let _output = ")
           .append(module)
           .append("::call(vec![")
           .append(inputs)
-          .append(", &arena, &app_context")
+          .append(", &_arena, &_app_context")
           .append(").await.into_iter().next().expect(\"outside-process Vajram result\");\n");
       source.append(
           isVoidOutput(target)
-              ? "                let _ = output;\n"
-              : "                println!(\"{}\", output);\n");
+              ? "                let _ = _output;\n"
+              : "                println!(\"{}\", _output);\n");
       source.append("            });\n");
     }
     source.append("        }\n");
@@ -344,7 +344,7 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
 
   private static String cliInputValue(InputDecl input, String vajramName) {
     String argument =
-        "inputs.get(\""
+        "_inputs.get(\""
             + input.name()
             + "\").unwrap_or_else(|| { eprintln!(\"missing input "
             + input.name()
@@ -352,10 +352,10 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
             + vajramName
             + "\"); std::process::exit(2) })";
     if ("string".equals(input.type().name())) {
-      return "arena.alloc(" + argument + ".to_owned())";
+      return "_arena.alloc(" + argument + ".to_owned())";
     }
     String numericType = rustNumericType(input.type().name());
-    return "arena.alloc("
+    return "_arena.alloc("
         + argument
         + ".parse::<"
         + numericType
