@@ -20,9 +20,9 @@ qualifiedName: ID ('.' ID)*;
 
 computed_facet : dependency | field;
 
-field : annotation* type FANOUT? ID EQ expr SEMI;
+field : annotation* type FANOUT? ID ASSIGN expr SEMI;
 
-dependency: annotation* type FANOUT? ID EQ dependency_invocation ;
+dependency: annotation* type FANOUT? ID ASSIGN dependency_invocation ;
 
 dependency_invocation : FANOUT? ID '(' (dep_input_resolver SEMI)* dep_input_resolver? ')' (ERRABLE func_call)? annotated_logic_block* SEMI ;
 
@@ -56,7 +56,7 @@ annotation: BACKTICK ID annotation_param_list?;
 
 annotation_param_list : '(' ((annotation_arg COMMA)* annotation_arg COMMA?)? ')' ;
 
-annotation_arg: ID EQ expr;
+annotation_arg: ID ASSIGN expr;
 
 permissions: PERMIT callers?;
 
@@ -70,8 +70,8 @@ errableType : type ERRABLE? ;
 
 dep_input_resolver: dep_input_resolver_stat | dep_input_resolver_func;
 
-dep_input_resolver_stat: (ID COMMA)* ID EQ FANOUT? (expr COMMA)* expr;
-dep_input_resolver_func: (ID COMMA)* ID EQ FANOUT? '{' statement* yield_statement '}';
+dep_input_resolver_stat: (ID COMMA)* ID ASSIGN FANOUT? (expr COMMA)* expr;
+dep_input_resolver_func: (ID COMMA)* ID ASSIGN FANOUT? '{' statement* yield_statement '}';
 
 yield_statement: (YIELD (expr COMMA)* expr SEMI | (expr COMMA)* expr);
 
@@ -90,7 +90,7 @@ bool: TRUE | FALSE;
 statement: assign_stat|throw_stat;
 
 throw_stat: THROW expr SEMI;
-assign_stat: (input_id_declaration EQ)? expr SEMI;
+assign_stat: (input_id_declaration ASSIGN)? expr SEMI;
 
 expr: var_use
     | STRING_LITERAL
@@ -123,8 +123,7 @@ func_call: ID (param_list | annotated_logic_block );
 param_list : '(' ((expr COMMA)* expr COMMA?)? ')' ;
 
 NOT : 'not' ;
-EQ : '=' ;
-IS_EQ : '==' ;
+ASSIGN : '=' ;
 PLUS : '+';
 MULTIPLY : '*';
 COMMA : ',' ;
@@ -135,6 +134,7 @@ LCURLY : '{' ;
 RCURLY : '}' ;
 SPECIAL : '#' ;
 
+IS_EQ : 'eq' ;
 VAJRAM : 'vajram' ;
 TYPE : 'type' ;
 NEW : 'new' ;
@@ -164,6 +164,6 @@ FALSE : 'false' ;
 STRING: 'string' ;
 VOID: 'void' ;
 STRING_LITERAL:     '"' (~["\\\r\n])* '"';
-ID: [a-zA-Z][a-zA-Z_0-9]* ;
+ID: [_] | [a-zA-Z][a-zA-Z_0-9]* ;
 LINE_COMMENT: '//' ~[\r\n]* -> skip;
 WS: [ \t\n\r\f]+ -> skip ;

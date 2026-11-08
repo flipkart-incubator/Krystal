@@ -22,7 +22,7 @@ vajram checkErrors(string input)
   string? bad = failAlways(input = input);
 
   ~{
-    yield good?valuePresent() == bad?errorPresent();
+    yield good?valuePresent() eq bad?errorPresent();
   }
 }
 

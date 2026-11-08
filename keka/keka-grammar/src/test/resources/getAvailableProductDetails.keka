@@ -9,5 +9,5 @@ vajram getAvailableProductDetails
   out getProductDetails(productId = productId)
         ?default{ new ProductDetails(productId) }
       `skipIf(reason="Product is not available.")
-      { isAvailable? == false };
+      { isAvailable? eq false };
 }

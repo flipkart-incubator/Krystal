@@ -7,5 +7,5 @@ vajram getAvailableProductDetails(string productId)
 
   out getProductDetails(productId = productId)
       `skipIf(reason = "Product is not available.")
-      { isAvailable == false };
+      { isAvailable eq false };
 }
