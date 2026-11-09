@@ -217,6 +217,52 @@ fn main() {
                 println!("{}", _output);
             });
         }
+        "checkCallPairing" => {
+            for _input in _inputs.keys() {
+                if !["path"].contains(&_input.as_str()) {
+                    eprintln!("unknown input {} for checkCallPairing", _input);
+                    std::process::exit(2);
+                }
+            }
+            let _runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+            let _local = tokio::task::LocalSet::new();
+            _local.block_on(&_runtime, async {
+                let _output = keka_samples::errors::error_handling::check_call_pairing::call(
+                    vec![keka_samples::errors::error_handling::check_call_pairing::CheckCallPairingInputs {
+                        path: _arena.alloc(
+                            _inputs
+                                .get("path")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input path was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
+                                .unwrap_or_else(|| {
+                                    eprintln!("missing input path for checkCallPairing");
+                                    std::process::exit(2)
+                                })
+                                .to_owned(),
+                        ),
+                    }],
+                    &_arena,
+                    &_app_context,
+                )
+                .await
+                .into_iter()
+                .next()
+                .expect("outside-process Vajram result");
+                let _output = match _output {
+                    Ok(_value) => _value,
+                    Err(_error) => {
+                        eprintln!("error: {}", _error);
+                        std::process::exit(1)
+                    }
+                };
+                println!("{}", _output);
+            });
+        }
         "checkErrors" => {
             for _input in _inputs.keys() {
                 if !["input"].contains(&_input.as_str()) {
@@ -333,6 +379,52 @@ fn main() {
                                 })
                                 .unwrap_or_else(|| {
                                     eprintln!("missing input path for checkPartialFailure");
+                                    std::process::exit(2)
+                                })
+                                .to_owned(),
+                        ),
+                    }],
+                    &_arena,
+                    &_app_context,
+                )
+                .await
+                .into_iter()
+                .next()
+                .expect("outside-process Vajram result");
+                let _output = match _output {
+                    Ok(_value) => _value,
+                    Err(_error) => {
+                        eprintln!("error: {}", _error);
+                        std::process::exit(1)
+                    }
+                };
+                println!("{}", _output);
+            });
+        }
+        "checkSingleCall" => {
+            for _input in _inputs.keys() {
+                if !["input"].contains(&_input.as_str()) {
+                    eprintln!("unknown input {} for checkSingleCall", _input);
+                    std::process::exit(2);
+                }
+            }
+            let _runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+            let _local = tokio::task::LocalSet::new();
+            _local.block_on(&_runtime, async {
+                let _output = keka_samples::errors::error_handling::check_single_call::call(
+                    vec![keka_samples::errors::error_handling::check_single_call::CheckSingleCallInputs {
+                        input: _arena.alloc(
+                            _inputs
+                                .get("input")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input input was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
+                                .unwrap_or_else(|| {
+                                    eprintln!("missing input input for checkSingleCall");
                                     std::process::exit(2)
                                 })
                                 .to_owned(),

@@ -106,6 +106,14 @@ public class KekaParserTest {
   }
 
   @Test
+  void batchedInputsAreMarkedWithAnAnnotationNotAGrouper() {
+    assertThat(syntaxErrors("package t;\nvajram v(`batched string a) out `now string { { a } }"))
+        .isEmpty();
+    assertThat(syntaxErrors("package t;\nvajram v(#batch string a) out `now string { { a } }"))
+        .isNotEmpty();
+  }
+
+  @Test
   void localVariablesMayCarryACompletionMarker() {
     assertThat(syntaxErrors("package t;\nvajram v() out `now string { string~ x = y; { x } }"))
         .isEmpty();

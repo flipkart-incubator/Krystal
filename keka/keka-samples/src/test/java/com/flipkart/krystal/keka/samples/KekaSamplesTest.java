@@ -39,6 +39,7 @@ class KekaSamplesTest {
   void errableAsyncCalleeYieldsPerInputResults() throws Exception {
     assertThat(runVajram("checkErrors", "--input", "x")).isEqualTo("true");
     assertThat(runVajram("checkErrorsInFanout", "--input", "x")).isEqualTo("true");
+    assertThat(runVajram("checkSingleCall", "--input", "x")).isEqualTo("true");
   }
 
   @Test
@@ -49,6 +50,8 @@ class KekaSamplesTest {
       assertThat(runVajram("checkPartialFailure", "--path", file.toString())).isEqualTo("true");
       // Plain `string...`: the failed element is dropped, the input still succeeds.
       assertThat(runVajram("readAvailable", "--path", file.toString())).isEqualTo("hello");
+      // `Call<_, string>`: the surviving pair still names the request it answers.
+      assertThat(runVajram("checkCallPairing", "--path", file.toString())).isEqualTo("true");
     } finally {
       Files.deleteIfExists(file);
     }

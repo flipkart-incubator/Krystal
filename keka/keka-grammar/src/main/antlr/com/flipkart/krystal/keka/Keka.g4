@@ -18,11 +18,11 @@ imports_decl: IMPORT (VAJRAM | TYPE | BACKTICK TYPE) ID FROM qualifiedName SEMI;
 
 qualifiedName: ID ('.' ID)*;
 
-computed_facet : dependency | field;
+computed_facet : dependency_declaration | field;
 
 field : annotation* type FANOUT? ID ASSIGN expr SEMI;
 
-dependency: annotation* type FANOUT? ID ASSIGN dependency_invocation ;
+dependency_declaration: annotation* type FANOUT? ID ASSIGN dependency_invocation ;
 
 dependency_invocation : FANOUT? ID '(' (dep_input_resolver SEMI)* dep_input_resolver? ')' (ERRABLE func_call)? annotated_logic_block* SEMI ;
 
@@ -42,13 +42,18 @@ visibility: PUBLIC | PRIVATE;
 
 inputs_decl: IN ? '(' inputs_list? ')';
 
-inputs_list : ( grouper? annotation* input_id_declaration COMMA)* ( grouper? annotation* input_id_declaration) ;
+inputs_list : (input_declaration COMMA)* input_declaration ;
+
+// A batched input is marked with the `batched annotation, not a #grouper.
+input_declaration: annotation* input_type ID;
 
 injection_decl: 'inject' '(' injections_list?')';
 
 output_decl: OUT annotation* type;
 
-injections_list : ( annotation* injection_id_declaration COMMA)* ( annotation* injection_id_declaration) ;
+injections_list : (injection_declaration COMMA)* injection_declaration ;
+
+injection_declaration: annotation* injection_type ID;
 
 grouper: HASH ID;
 
@@ -62,10 +67,6 @@ permissions: PERMIT callers?;
 
 callers: CALLERS (annotation* ID (COMMA annotation* ID)* | (annotation* PUBLIC));
 
-input_id_declaration: nowType ID;
-
-injection_id_declaration: nowType ID;
-
 nowType
     : non_param_type ('<' ((nowType COMMA)* nowType COMMA?)? '>')? ERRABLE?
     | '[' nowType ']'
@@ -76,9 +77,14 @@ type
     | '[' type ']'
     ;
 
+input_type: nowType;
+
+injection_type: nowType;
+
 completion_suffix : ERRABLE | SOON | LATER ;
 
-non_param_type: ID
+// `ID grouper` is a type generated for another vajram, e.g. `getFriends#req`.
+non_param_type: ID grouper?
               | STRING
               | VOID
               | grouper

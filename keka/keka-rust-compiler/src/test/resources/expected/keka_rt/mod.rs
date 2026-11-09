@@ -7,6 +7,13 @@ mod error;
 pub use errable::{Errable, ErrableBatch};
 pub use error::{VajramError, nil};
 
+/// One element of a `Call<_, T>...` fanout: a response paired with the request that produced it.
+#[derive(Debug, Clone)]
+pub struct Call<Q, R> {
+    pub req: Q,
+    pub resp: R,
+}
+
 use std::rc::Rc;
 use std::{any::Any, cell::RefCell, collections::HashMap};
 

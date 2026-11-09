@@ -98,7 +98,7 @@ public final class TypeMapper {
 
   private static String baseName(TypeRef type) {
     if (type.grouperType()) {
-      // `#mod`/`#batch` used as a type refers to the facet-group key type; the compiler doesn't
+      // `#batch`/`#req` used as a type refers to the facet-group key type; the compiler doesn't
       // synthesize it, it just names it consistently with the value-position mapping below.
       return capitalize(type.name()) + "Key";
     }

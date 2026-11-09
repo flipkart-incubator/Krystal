@@ -218,7 +218,8 @@ public final class ExprEmitter {
     String callee;
     if (call.isSpecial()) {
       // `#name(...)` / `new #name(...)` both construct a facet-group key value; must be checked
-      // before the plain `isNew()` branch below since grouper names like `mod` are Rust keywords
+      // before the plain `isNew()` branch below since grouper names like `req` could clash with
+      // Rust names
       // and can't appear before `::` the way a type name normally would.
       callee = Naming.capitalize(call.name()) + "Key::new";
     } else if (call.isNew()) {

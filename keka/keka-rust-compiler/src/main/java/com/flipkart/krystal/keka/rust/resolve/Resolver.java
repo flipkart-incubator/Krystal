@@ -44,12 +44,14 @@ public final class Resolver {
         } else if (facet instanceof Dependency dependency) {
           checkInvocation(file, dependency.invocation(), table, diagnostics, target);
           checkDependencyFanout(dependency, diagnostics);
+          checkCallType(file, dependency, table, diagnostics);
           facetFanout.put(dependency.name(), dependency.fanout());
         }
       }
       if (vajram.outputBlock() instanceof OutputBlock.Delegate delegate) {
         checkInvocation(file, delegate.invocation(), table, diagnostics, target);
       }
+      checkInferredTypes(vajram, diagnostics);
       if (checkOutputCompletionDeclared(vajram, diagnostics)) {
         checkCompletion(file, table, diagnostics);
         checkErrability(file, table, diagnostics);
@@ -209,6 +211,61 @@ public final class Resolver {
     diagnostics.error(
         field.location(),
         "Fanout field '" + field.name() + "' requires an array or another fanout facet value");
+  }
+
+  /**
+   * {@code Call<Req, Resp>} pairs a dependency's response with its request (one pair per call, or a
+   * list of pairs with {@code Call<Req, Resp>...} on a fanout). The callee must be a generated
+   * (non-system) vajram, and {@code Req} is {@code _} (inferred) or {@code callee#req}.
+   */
+  private static void checkCallType(
+      VajramFile file, Dependency dependency, SymbolTable table, Diagnostics diagnostics) {
+    TypeRef type = dependency.type();
+    if (!"Call".equals(type.name())) {
+      return;
+    }
+    String callee = dependency.invocation().vajramName();
+    if (type.typeArgs().size() != 2) {
+      diagnostics.error(dependency.location(), "'Call' takes two type arguments: Call<Req, Resp>");
+    } else if (!type.typeArgs().get(0).name().equals("_")
+        && !type.typeArgs().get(0).name().equals(callee + "#req")) {
+      diagnostics.error(
+          dependency.location(),
+          "The request type of 'Call' for '" + callee + "' must be '_' or '" + callee + "#req'");
+    }
+    if (table.lookup(callee) == null) {
+      diagnostics.error(
+          dependency.location(),
+          "'Call<...>' needs a request type, which system vajram '" + callee + "' doesn't have");
+    }
+  }
+
+  /** {@code _} (an inferred type) is only allowed as the request type of a {@code Call}. */
+  private static void checkInferredTypes(VajramDef vajram, Diagnostics diagnostics) {
+    checkNoInferred(vajram.outputType(), vajram, diagnostics);
+    vajram.inputs().forEach(input -> checkNoInferred(input.type(), vajram, diagnostics));
+    vajram
+        .injections()
+        .forEach(injection -> checkNoInferred(injection.type(), vajram, diagnostics));
+    for (ComputedFacet facet : vajram.computedFacets()) {
+      TypeRef type = facet instanceof Field field ? field.type() : ((Dependency) facet).type();
+      if ("Call".equals(type.name()) && type.typeArgs().size() == 2) {
+        checkNoInferred(type.typeArgs().get(1), vajram, diagnostics);
+      } else {
+        checkNoInferred(type, vajram, diagnostics);
+      }
+    }
+  }
+
+  private static void checkNoInferred(TypeRef type, VajramDef vajram, Diagnostics diagnostics) {
+    if (type.name().equals("_")) {
+      diagnostics.error(
+          vajram.location(),
+          "'_' can only be used as the request type of 'Call<_, T>' in vajram '"
+              + vajram.name()
+              + "'");
+    }
+    type.typeArgs().forEach(arg -> checkNoInferred(arg, vajram, diagnostics));
   }
 
   private static void checkDependencyFanout(Dependency dependency, Diagnostics diagnostics) {

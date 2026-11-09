@@ -144,6 +144,31 @@ A vajram is always invoked with a vector (batch) of inputs - one logical call pe
 * Failures that the compiler cannot prevent (IO, etc.) are likewise confined to the element.
 * When an outermost (entry-point) vajram call fails, the error is reported to the caller of the program (for the CLI: the error is printed and the exit code is non-zero).
 
+### Generated types (`#`) and batched inputs
+
+`#name` refers to a type that the compiler generates for a vajram. Inside a vajram, `#name` is shorthand for `thisVajram#name`; from elsewhere, write `vajram#name`. Only two names are defined; any other `#name` is a compile error.
+
+* `#batch` - the key of a batch of calls to a vajram whose inputs are marked batched.
+* `#req` - the request type of a vajram: its inputs as one value. `getFriends#req` has a field per input of `getFriends`. For a fanout it holds the one fanned element, not the whole list. It is available only for vajrams defined in source (not the built-in system vajrams) and follows the vajram's `permit callers`.
+
+An input is marked as batched with the `` `batched `` annotation (``(`batched string productId)``), not with a `#` prefix.
+
+### Pairing responses with their requests
+
+A dependency normally yields only responses. To keep a response next to the request that produced it, declare the facet as `Call<Req, Resp>` (a single call) or `Call<Req, Resp>...` (a fanout, one pair per fanned element):
+
+```
+Call<_, string> one = readFile(path = p);                    // .req and .resp
+string... paths = [a, b, c];
+Call<_, string>... calls = ...readFile(path =... paths);     // each element has .req and .resp
+```
+
+* `Req` is `_` (inferred) or `callee#req`. `_` is an `ID`, and means "infer" only here: it is a compile error anywhere else a type is written.
+* `Call<...>` is valid only on a dependency of a vajram defined in source. `Call<...>...` goes with a fanout, plain `Call<...>` with a single call.
+* For a single `Call<_, T>`, a failed response fails the input; `Call<_, T?>` keeps the error in `.resp`.
+* For a fanout, `Call<_, T>...` drops failed elements (the input fails with the first error only if all failed); the surviving elements still carry their request. `Call<_, T?>...` keeps failed elements, with `.resp` holding the error.
+* Requests are not unique: the same request may appear in several elements.
+
 ### Vajram Call Graph Delegation Mode
 
 The vajram itself can have one of three delegation modes. This is declared by the vajram in this way:

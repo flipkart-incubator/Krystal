@@ -17,7 +17,7 @@ vajram computeValue(float a, float b) out `now float{
 }
 
 // Invoked by the language runtime when two numbers are multiplied
-vajram binaryMultiply<T>(#batch T operand1, #batch T operand2) out `now T {
+vajram binaryMultiply<T>(`batched T operand1, `batched T operand2) out `now T {
   {
     list<#batch> = #batch.batches();
     // language native implementation of

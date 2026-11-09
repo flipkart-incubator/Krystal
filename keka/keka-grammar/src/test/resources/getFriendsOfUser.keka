@@ -12,13 +12,13 @@ vajram getFriendsOfUser
   out ~{
     svcClient.getFriendsIds(
         new FriendServiceRequest(
-            #mod().stream()
+            #batch().stream()
                 .map{_.userId()}
                 .toSet()))
       ~?.results()
       ~? default(List.of())
       ~ .stream()
       ~ .toMap {
-          new #mod(_.userId()), _.friendIds()}
+          new #batch(_.userId()), _.friendIds()}
   }
 }

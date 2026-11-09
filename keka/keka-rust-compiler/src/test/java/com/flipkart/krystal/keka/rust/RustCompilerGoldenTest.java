@@ -422,6 +422,52 @@ class RustCompilerGoldenTest {
   }
 
   @Test
+  void onlyBatchAndReqGroupersAreDefined(@TempDir Path tempDir) throws IOException {
+    for (String grouper : List.of("batch", "req", "mod", "foo")) {
+      Path source = Files.createDirectories(tempDir.resolve("src" + grouper));
+      Files.writeString(
+          source.resolve("v.keka"),
+          "package g;\nvajram v(`batched string a) out `now void { Map<#"
+              + grouper
+              + ", string> m = #"
+              + grouper
+              + "(); { } }\n");
+      boolean ok = grouper.equals("batch") || grouper.equals("req");
+      assertThat(RustCompilerMain.compile(source, tempDir.resolve("out" + grouper)))
+          .as(grouper)
+          .isEqualTo(ok);
+    }
+  }
+
+  @Test
+  void callPairsRequestsOfGeneratedVajrams(@TempDir Path tempDir) throws IOException {
+    String callee = "vajram leaf(string x) out string { ~{ yield x; } }\n";
+    String[][] cases = {
+      {"ok", "Call<_, string>... r = ...leaf(x =... xs);", "true"},
+      {"okExplicit", "Call<leaf#req, string>... r = ...leaf(x =... xs);", "true"},
+      {"handled", "Call<_, string?>... r = ...leaf(x =... xs);", "true"},
+      {"wrongReq", "Call<other#req, string>... r = ...leaf(x =... xs);", "false"},
+      {"single", "Call<_, string> r = leaf(x = a);", "true"},
+      {"singleHandled", "Call<_, string?> r = leaf(x = a);", "true"},
+      {"fanoutMismatch", "Call<_, string> r = ...leaf(x =... xs);", "false"},
+      {"strayInfer", "_... r = ...leaf(x =... xs);", "false"},
+    };
+    for (String[] c : cases) {
+      Path source = Files.createDirectories(tempDir.resolve("src" + c[0]));
+      Files.writeString(
+          source.resolve("v.keka"),
+          "package c;\n"
+              + callee
+              + "vajram v(string a) out string {\n  string... xs = [a];\n  "
+              + c[1]
+              + "\n  ~{ yield a; }\n}\n");
+      assertThat(RustCompilerMain.compile(source, tempDir.resolve("out" + c[0])))
+          .as(c[0])
+          .isEqualTo(Boolean.parseBoolean(c[2]));
+    }
+  }
+
+  @Test
   void callerCannotCompleteEarlierThanItsDependency(@TempDir Path tempDir) throws IOException {
     String[][] cases = {
       {"`now string", "string", "false"},

@@ -42,7 +42,7 @@ vajram checkErrorsInFanout(string input)
     out bool
     permit callers `outsideProcess public {
   string... inputs = [input, input];
-  string?... results = ...failAlways(input =... inputs);
+  Call<_, string?>... results = ...failAlways(input =... inputs);
 
   ~{
     yield not results.is_empty();
@@ -77,4 +77,35 @@ vajram readAvailable(string path)
   string... contents = ...readOrFail(path =... paths);
 
   out concatStrings(strings = contents; separator = "|");
+}
+
+// `Call<_, T>` pairs each response with the request that produced it. The failed element is
+// dropped, but the surviving pair still says which path it answered. Prints true iff the first
+// surviving pair answers `path` (not the missing file listed before it).
+//
+// Run:
+// ./gradlew :keka:keka-samples:runVajram -Pvajram=checkCallPairing -PvajramArgs="--path /some/file"
+vajram checkCallPairing(string path)
+    out bool
+    permit callers `outsideProcess public {
+  string... paths = [path + ".missing", path];
+  Call<_, string>... calls = ...readOrFail(path =... paths);
+
+  ~{
+    yield calls.first().unwrap().req.path eq path;
+  }
+}
+
+// `Call<_, T>` (no fanout) pairs a single call's response with its request.
+//
+// Run:
+// ./gradlew :keka:keka-samples:runVajram -Pvajram=checkSingleCall -PvajramArgs="--input x"
+vajram checkSingleCall(string input)
+    out bool
+    permit callers `outsideProcess public {
+  Call<_, string> call = succeed(input = input);
+
+  ~{
+    yield call.req.input eq input;
+  }
 }
