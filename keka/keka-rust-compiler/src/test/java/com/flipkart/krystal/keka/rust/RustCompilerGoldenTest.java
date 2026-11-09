@@ -468,6 +468,39 @@ class RustCompilerGoldenTest {
   }
 
   @Test
+  void generatedTypesNeedADefinedPermittingVajramWithBatchedInputsForBatch(@TempDir Path tempDir)
+      throws IOException {
+    String vajrams =
+        "vajram open(string x) out `now string { { x } }\n"
+            + "vajram batchy(`batched string x) out `now string { { x } }\n"
+            + "vajram closed(string x) out `now string permit callers somebodyElse { { x } }\n";
+    String[][] cases = {
+      {"req", "open#req r", "true"},
+      {"batchFromOutside", "batchy#batch b", "false"},
+      {"bareBatchWithoutBatched", "Map<#batch, string> m", "false"},
+      {"undefined", "ghost#req r", "false"},
+      {"batchWithoutBatched", "open#batch b", "false"},
+      {"notPermitted", "closed#req r", "false"},
+      {"bareReq", "#req r", "true"},
+    };
+    for (String[] c : cases) {
+      Path source = Files.createDirectories(tempDir.resolve("src" + c[0]));
+      Files.writeString(
+          source.resolve("v.keka"),
+          "package g;\n"
+              + vajrams
+              + "vajram user("
+              + c[1]
+              + ") out `now void { { } }\n"
+              + "vajram batchedUser(`batched string x, #batch own, batchedUser#batch same)"
+              + " out `now void { { } }\n");
+      assertThat(RustCompilerMain.compile(source, tempDir.resolve("out" + c[0])))
+          .as(c[0])
+          .isEqualTo(Boolean.parseBoolean(c[2]));
+    }
+  }
+
+  @Test
   void callerCannotCompleteEarlierThanItsDependency(@TempDir Path tempDir) throws IOException {
     String[][] cases = {
       {"`now string", "string", "false"},

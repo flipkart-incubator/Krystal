@@ -9,6 +9,7 @@ import com.flipkart.krystal.keka.rust.ast.DependencyInvocation;
 import com.flipkart.krystal.keka.rust.ast.Expr;
 import com.flipkart.krystal.keka.rust.ast.Field;
 import com.flipkart.krystal.keka.rust.ast.OutputBlock;
+import com.flipkart.krystal.keka.rust.ast.SourceLocation;
 import com.flipkart.krystal.keka.rust.ast.Statement;
 import com.flipkart.krystal.keka.rust.ast.TypeRef;
 import com.flipkart.krystal.keka.rust.ast.VajramDef;
@@ -52,6 +53,7 @@ public final class Resolver {
         checkInvocation(file, delegate.invocation(), table, diagnostics, target);
       }
       checkInferredTypes(vajram, diagnostics);
+      checkGeneratedTypes(file, table, diagnostics);
       if (checkOutputCompletionDeclared(vajram, diagnostics)) {
         checkCompletion(file, table, diagnostics);
         checkErrability(file, table, diagnostics);
@@ -306,19 +308,104 @@ public final class Resolver {
           "Vajram '" + invocation.vajramName() + "' is not defined in this compilation");
       return;
     }
-    Callers callers = callee.vajram().callers();
-    if (callers instanceof Callers.Named named
+    checkCallerPermitted(caller, callee, invocation.location(), diagnostics);
+  }
+
+  private static void checkCallerPermitted(
+      VajramFile caller, VajramFile callee, SourceLocation location, Diagnostics diagnostics) {
+    if (callee.vajram().callers() instanceof Callers.Named named
         && named.callers().stream()
             .noneMatch(entry -> entry.name().equals(caller.vajram().name()))) {
       diagnostics.error(
-          invocation.location(),
+          location,
           "Vajram '"
-              + invocation.vajramName()
+              + callee.vajram().name()
               + "' does not permit being depended on by '"
               + caller.vajram().name()
               + "' (callers: "
               + named.callers().stream().map(Callers.Caller::name).toList()
               + ")");
+    }
+  }
+
+  /**
+   * Checks every declared type that names a generated type: {@code vajram#req} / {@code
+   * vajram#batch} need {@code vajram} to be defined in source and to permit this vajram as a
+   * caller, and {@code #batch} (in either form) needs the vajram to have a {@code `batched} input.
+   * A bare {@code #name} refers to this vajram itself.
+   */
+  private static void checkGeneratedTypes(
+      VajramFile file, SymbolTable table, Diagnostics diagnostics) {
+    VajramDef vajram = file.vajram();
+    checkGeneratedType(file, vajram.outputType(), vajram.location(), table, diagnostics);
+    vajram
+        .inputs()
+        .forEach(
+            input -> checkGeneratedType(file, input.type(), vajram.location(), table, diagnostics));
+    vajram
+        .injections()
+        .forEach(
+            injection ->
+                checkGeneratedType(file, injection.type(), vajram.location(), table, diagnostics));
+    for (ComputedFacet facet : vajram.computedFacets()) {
+      if (facet instanceof Field field) {
+        checkGeneratedType(file, field.type(), field.location(), table, diagnostics);
+      } else if (facet instanceof Dependency dependency) {
+        checkGeneratedType(file, dependency.type(), dependency.location(), table, diagnostics);
+      }
+    }
+  }
+
+  private static void checkGeneratedType(
+      VajramFile file,
+      TypeRef type,
+      SourceLocation location,
+      SymbolTable table,
+      Diagnostics diagnostics) {
+    String name = type.name();
+    int hash = name.indexOf('#');
+    if (hash > 0) {
+      String vajramName = name.substring(0, hash);
+      String generated = name.substring(hash + 1);
+      VajramFile target = table.lookup(vajramName);
+      if (generated.equals("batch")) {
+        // A batch is an implementation detail of its vajram: only code inside it can name it.
+        if (!vajramName.equals(file.vajram().name())) {
+          diagnostics.error(
+              location,
+              "'"
+                  + name
+                  + "' is internal to '"
+                  + vajramName
+                  + "' and can't be used from outside it");
+        } else {
+          requireBatchedInput(file, generated, location, diagnostics);
+        }
+      } else if (target == null) {
+        diagnostics.error(
+            location,
+            "'" + name + "' needs vajram '" + vajramName + "' to be defined in this compilation");
+      } else {
+        checkCallerPermitted(file, target, location, diagnostics);
+      }
+    } else if (type.grouperType()) {
+      requireBatchedInput(file, name, location, diagnostics);
+    }
+    type.typeArgs().forEach(arg -> checkGeneratedType(file, arg, location, table, diagnostics));
+  }
+
+  private static void requireBatchedInput(
+      VajramFile target, String generated, SourceLocation location, Diagnostics diagnostics) {
+    if (generated.equals("batch")
+        && target.vajram().inputs().stream()
+            .noneMatch(input -> input.annotations().contains("batched"))) {
+      diagnostics.error(
+          location,
+          "'"
+              + target.vajram().name()
+              + "#batch' needs at least one input annotated with `batched in vajram '"
+              + target.vajram().name()
+              + "'");
     }
   }
 }

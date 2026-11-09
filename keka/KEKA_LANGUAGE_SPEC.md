@@ -146,10 +146,10 @@ A vajram is always invoked with a vector (batch) of inputs - one logical call pe
 
 ### Generated types (`#`) and batched inputs
 
-`#name` refers to a type that the compiler generates for a vajram. Inside a vajram, `#name` is shorthand for `thisVajram#name`; from elsewhere, write `vajram#name`. Only two names are defined; any other `#name` is a compile error.
+`#name` refers to a type that the compiler generates for a vajram. Inside a vajram, `#name` is shorthand for `thisVajram#name`; other vajrams' types are written `vajram#name` (only `#req` is available that way, see below). Only two names are defined; any other `#name` is a compile error.
 
-* `#batch` - the key of a batch of calls to a vajram whose inputs are marked batched.
-* `#req` - the request type of a vajram: its inputs as one value. `getFriends#req` has a field per input of `getFriends`. For a fanout it holds the one fanned element, not the whole list. It is available only for vajrams defined in source (not the built-in system vajrams) and follows the vajram's `permit callers`.
+* `#batch` - the key of a batch of calls to a vajram whose inputs are marked batched. A batch is an implementation detail of its vajram: only code inside that vajram may name it (`#batch`, or `thisVajram#batch`); `other#batch` is a compile error, whatever `other` permits. It is also a compile error to use `#batch` in a vajram without a `` `batched `` input.
+* `#req` - the request type of a vajram: its inputs as one value. `getFriends#req` has a field per input of `getFriends`. For a fanout it holds the one fanned element, not the whole list. It is available only for vajrams defined in source (not the built-in system vajrams), and `vajram#req` is rejected if `vajram` doesn't permit the current vajram as a caller.
 
 An input is marked as batched with the `` `batched `` annotation (``(`batched string productId)``), not with a `#` prefix.
 
