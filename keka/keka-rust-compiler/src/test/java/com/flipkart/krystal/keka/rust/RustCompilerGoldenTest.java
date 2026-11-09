@@ -394,12 +394,23 @@ class RustCompilerGoldenTest {
   @Test
   void rejectsConflictingOutputCompletionDeclarations(@TempDir Path tempDir) throws IOException {
     for (String out :
-        List.of("string", "string~", "`now string", "`now string~", "string~~", "`now string~~")) {
+        List.of(
+            "string",
+            "string~",
+            "`now string",
+            "`now string?",
+            "`now string~",
+            "`now string?~",
+            "`now string~?",
+            "string~~",
+            "`now string~~",
+            "`now string?~~")) {
       Path source = Files.createDirectories(tempDir.resolve("src" + out.hashCode()));
       Files.writeString(
           source.resolve("v.keka"),
           "package completion;\nvajram v() out " + out + " { { \"x\" } }\n");
-      boolean ok = !out.startsWith("`now") || out.equals("`now string");
+      boolean ok =
+          !out.startsWith("`now") || out.equals("`now string") || out.equals("`now string?");
       assertThat(RustCompilerMain.compile(source, tempDir.resolve("out" + out.hashCode())))
           .as(out)
           .isEqualTo(ok);
