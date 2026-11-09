@@ -6,5 +6,7 @@ vajram helloWorld2
     out `now string
     permit
       callers `outsideProcess public {
-  { "Hello again from keka, " + name + "!"}
+  string greeting = concatTwoStrings(first = "Hello again from keka, "; second = name);
+
+  { greeting + "!" }
 }

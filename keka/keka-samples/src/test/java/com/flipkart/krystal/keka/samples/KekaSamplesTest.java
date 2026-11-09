@@ -42,6 +42,19 @@ class KekaSamplesTest {
   }
 
   @Test
+  void failureIsLimitedToItsOwnElementOfAFanout() throws Exception {
+    Path file = Files.createTempFile("vajram-partial-failure-", ".txt");
+    try {
+      Files.writeString(file, "hello");
+      assertThat(runVajram("checkPartialFailure", "--path", file.toString())).isEqualTo("true");
+      // Plain `string...`: the failed element is dropped, the input still succeeds.
+      assertThat(runVajram("readAvailable", "--path", file.toString())).isEqualTo("hello");
+    } finally {
+      Files.deleteIfExists(file);
+    }
+  }
+
+  @Test
   void headFile() throws Exception {
     Path file = Files.createTempFile("vajram-head-file-", ".txt");
     try {

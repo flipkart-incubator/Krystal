@@ -4,7 +4,7 @@
 mod errable;
 mod error;
 
-pub use errable::Errable;
+pub use errable::{Errable, ErrableBatch};
 pub use error::{VajramError, nil};
 
 use std::rc::Rc;

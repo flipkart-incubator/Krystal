@@ -9,6 +9,7 @@ import com.flipkart.krystal.keka.rust.ast.DependencyInvocation;
 import com.flipkart.krystal.keka.rust.ast.Expr;
 import com.flipkart.krystal.keka.rust.ast.Field;
 import com.flipkart.krystal.keka.rust.ast.OutputBlock;
+import com.flipkart.krystal.keka.rust.ast.Statement;
 import com.flipkart.krystal.keka.rust.ast.TypeRef;
 import com.flipkart.krystal.keka.rust.ast.VajramDef;
 import com.flipkart.krystal.keka.rust.ast.VajramFile;
@@ -51,6 +52,7 @@ public final class Resolver {
       }
       if (checkOutputCompletionDeclared(vajram, diagnostics)) {
         checkCompletion(file, table, diagnostics);
+        checkErrability(file, table, diagnostics);
       }
     }
   }
@@ -80,6 +82,64 @@ public final class Resolver {
               + file.vajram().outputType().name()
               + (required == Completion.LATER ? "~~" : "")
               + "' instead");
+    }
+  }
+
+  /**
+   * A Vajram is errable iff it declares {@code T?} or completes {@code ~}/{@code ~~} (see {@link
+   * SymbolTable#isErrable}). A non-errable ({@code `now T}) Vajram can't fail, so it can neither
+   * {@code throw} nor ignore the failure of an errable dependency: it must declare that facet
+   * {@code T?} and handle it.
+   */
+  private static void checkErrability(VajramFile file, SymbolTable table, Diagnostics diagnostics) {
+    VajramDef vajram = file.vajram();
+    if (table.isErrable(file)) {
+      return;
+    }
+    if (vajram.outputBlock() instanceof OutputBlock.Logic logic
+        && logic.body().statements().stream().anyMatch(Statement.Throw.class::isInstance)) {
+      diagnostics.error(
+          vajram.location(),
+          "Vajram '"
+              + vajram.name()
+              + "' is non-errable ('out `now "
+              + vajram.outputType().name()
+              + "') so it cannot 'throw' - declare 'out "
+              + vajram.outputType().name()
+              + "?' or make it async");
+    }
+    for (ComputedFacet facet : vajram.computedFacets()) {
+      if (facet instanceof Dependency dependency
+          && !dependency.type().errable()
+          && table.isErrableCallee(file, dependency.invocation().vajramName())) {
+        diagnostics.error(
+            dependency.location(),
+            "Dependency '"
+                + dependency.name()
+                + "' calls errable '"
+                + dependency.invocation().vajramName()
+                + "' from non-errable vajram '"
+                + vajram.name()
+                + "' - declare it as '"
+                + dependency.type().name()
+                + "? "
+                + dependency.name()
+                + "' and handle the error, or make '"
+                + vajram.name()
+                + "' errable");
+      }
+    }
+    if (vajram.outputBlock() instanceof OutputBlock.Delegate delegate
+        && table.isErrableCallee(file, delegate.invocation().vajramName())) {
+      diagnostics.error(
+          delegate.invocation().location(),
+          "Vajram '"
+              + vajram.name()
+              + "' delegates to errable '"
+              + delegate.invocation().vajramName()
+              + "' but is non-errable - declare 'out "
+              + vajram.outputType().name()
+              + "?'");
     }
   }
 

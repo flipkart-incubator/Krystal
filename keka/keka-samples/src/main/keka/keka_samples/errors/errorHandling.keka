@@ -1,5 +1,8 @@
 package keka_samples.errors;
 
+import vajram readFileAsString from lang.fileSystem;
+import vajram concatStrings from lang.strings;
+
 // Async errable callees: each input of a batch yields its own Result, so one failing input
 // doesn't fail the others.
 vajram succeed(string input) out string? {~{
@@ -10,6 +13,11 @@ vajram failAlways(string input) out string? {~{
   throw "boom";
   yield input;
 }}
+
+// Fails for a missing file only; succeeds with the file's contents otherwise.
+vajram readOrFail(string path) out string? {
+  out readFileAsString(path = path);
+}
 
 // Prints true if `succeed` produced a value and `failAlways` produced an error.
 //
@@ -39,4 +47,34 @@ vajram checkErrorsInFanout(string input)
   ~{
     yield not results.is_empty();
   }
+}
+
+// Batch isolation: a missing file fails only its own element of the fanout; the other element
+// still succeeds. Prints true iff exactly one succeeded and one failed.
+//
+// Run:
+// ./gradlew :keka:keka-samples:runVajram -Pvajram=checkPartialFailure -PvajramArgs="--path /some/file"
+vajram checkPartialFailure(string path)
+    out bool
+    permit callers `outsideProcess public {
+  string... paths = [path, path + ".missing"];
+  string?... contents = ...readOrFail(path =... paths);
+
+  ~{
+    yield contents.okCount() eq contents.errorCount();
+  }
+}
+
+// A plain-`T` fanout keeps the elements that succeeded: an input fails only if every element
+// failed. Prints the one readable file's contents, ignoring the missing one.
+//
+// Run:
+// ./gradlew :keka:keka-samples:runVajram -Pvajram=readAvailable -PvajramArgs="--path /some/file"
+vajram readAvailable(string path)
+    out string
+    permit callers `outsideProcess public {
+  string... paths = [path, path + ".missing"];
+  string... contents = ...readOrFail(path =... paths);
+
+  out concatStrings(strings = contents; separator = "|");
 }

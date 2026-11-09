@@ -1,3 +1,4 @@
+pub mod concat_two_strings;
 pub mod head_file;
 pub mod hello_world;
 pub mod hello_world2;

@@ -53,7 +53,7 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
                   }
                   context.error(
                       file.vajram().location(),
-                      "`outsideProcess supports string and int inputs plus ConsoleWriter injections or errable inputs");
+                      "`outsideProcess supports string, numeric and List of string/numeric inputs plus ConsoleWriter injections or errable inputs");
                   return false;
                 })
             .sorted(java.util.Comparator.comparing(file -> file.vajram().name()))
@@ -82,7 +82,8 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
     source.append("        std::process::exit(2);\n");
     source.append("    });\n");
     source.append("    let mut _arguments = std::env::args().skip(2);\n");
-    source.append("    let mut _inputs = std::collections::HashMap::new();\n");
+    source.append(
+        "    let mut _inputs: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();\n");
     source.append("    let _arena = crate::keka_rt::Arena::new();\n");
     source.append(
         "    let _app_context = crate::keka_rt::AppContext::new(std::rc::Rc::new(crate::keka_rt::DefaultInjector::default()));\n");
@@ -97,10 +98,7 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
     source.append("            eprintln!(\"missing value for input {}\", _input);\n");
     source.append("            std::process::exit(2);\n");
     source.append("        });\n");
-    source.append("        if _inputs.insert(_input.to_owned(), _value).is_some() {\n");
-    source.append("            eprintln!(\"input {} was specified more than once\", _input);\n");
-    source.append("            std::process::exit(2);\n");
-    source.append("        }\n");
+    source.append("        _inputs.entry(_input.to_owned()).or_default().push(_value);\n");
     source.append("    }\n");
     source.append("    match _vajram.as_str() {\n");
     for (VajramFile target : targets) {
@@ -122,6 +120,12 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
         targets.stream()
             .filter(
                 file -> {
+                  if (file.vajram().inputs().stream().anyMatch(i -> isListInput(i))) {
+                    context.error(
+                        file.vajram().location(),
+                        "WASM `outsideProcess` does not support List inputs");
+                    return false;
+                  }
                   if (isWasmOutput(file)) {
                     return true;
                   }
@@ -193,6 +197,10 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
         .append(")")
         .append(completion.isAsync() ? ".await" : "")
         .append(".into_iter().next().expect(\"outside-process Vajram result\");\n");
+    if (context.symbolTable().isErrable(target)) {
+      source.append(
+          "    let _output = match _output { Ok(_value) => _value, Err(_error) => return format!(\"error: {}\", _error) };\n");
+    }
     switch (target.vajram().outputType().name()) {
       case "string" -> source.append("    (*_output).clone()\n");
       case "int" -> source.append("    _output.to_string()\n");
@@ -261,6 +269,7 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
           .append(inputs)
           .append(", &_arena, &_app_context")
           .append(").into_iter().next().expect(\"outside-process Vajram result\");\n");
+      appendCliUnwrap(source, target, context, "            ");
       source.append(
           isVoidOutput(target)
               ? "            let _ = _output;\n"
@@ -277,6 +286,7 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
           .append(inputs)
           .append(", &_arena, &_app_context")
           .append(").await.into_iter().next().expect(\"outside-process Vajram result\");\n");
+      appendCliUnwrap(source, target, context, "                ");
       source.append(
           isVoidOutput(target)
               ? "                let _ = _output;\n"
@@ -286,6 +296,17 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
     source.append("        }\n");
   }
 
+  /** An errable Vajram yields a {@code Result}: print its error to stderr and exit non-zero. */
+  private static void appendCliUnwrap(
+      StringBuilder source, VajramFile target, AnnotationProcessorContext context, String indent) {
+    if (context.symbolTable().isErrable(target)) {
+      source
+          .append(indent)
+          .append(
+              "let _output = match _output { Ok(_value) => _value, Err(_error) => { eprintln!(\"error: {}\", _error); std::process::exit(1) } };\n");
+    }
+  }
+
   /** A {@code void} Vajram yields {@code ()}, which has nothing to print. */
   private static boolean isVoidOutput(VajramFile target) {
     return "void".equals(target.vajram().outputType().name());
@@ -293,7 +314,18 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
 
   private static boolean isCliInput(InputDecl input) {
     return !input.type().errable()
-        && ("string".equals(input.type().name()) || rustNumericType(input.type().name()) != null);
+        && (isScalar(input.type())
+            || (isListInput(input) && isScalar(input.type().typeArgs().get(0))));
+  }
+
+  private static boolean isScalar(com.flipkart.krystal.keka.rust.ast.TypeRef type) {
+    return !type.errable()
+        && type.typeArgs().isEmpty()
+        && ("string".equals(type.name()) || rustNumericType(type.name()) != null);
+  }
+
+  private static boolean isListInput(InputDecl input) {
+    return "List".equals(input.type().name()) && input.type().typeArgs().size() == 1;
   }
 
   private static boolean supportsOutsideProcessDi(
@@ -343,27 +375,44 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
   }
 
   private static String cliInputValue(InputDecl input, String vajramName) {
+    if (isListInput(input)) {
+      // Repeated flag; an omitted flag is an empty list.
+      return "_arena.alloc(_inputs.get(\""
+          + input.name()
+          + "\").map(|_values| _values.iter().map(|_e| "
+          + cliScalar("_e", input.type().typeArgs().get(0), input.name(), vajramName)
+          + ").collect::<Vec<_>>()).unwrap_or_default())";
+    }
     String argument =
         "_inputs.get(\""
             + input.name()
-            + "\").unwrap_or_else(|| { eprintln!(\"missing input "
+            + "\").map(|_values| { if _values.len() > 1 { eprintln!(\"input "
+            + input.name()
+            + " was specified more than once\"); std::process::exit(2) } &_values[0] })"
+            + ".unwrap_or_else(|| { eprintln!(\"missing input "
             + input.name()
             + " for "
             + vajramName
             + "\"); std::process::exit(2) })";
-    if ("string".equals(input.type().name())) {
-      return "_arena.alloc(" + argument + ".to_owned())";
+    return "_arena.alloc(" + cliScalar(argument, input.type(), input.name(), vajramName) + ")";
+  }
+
+  private static String cliScalar(
+      String argument,
+      com.flipkart.krystal.keka.rust.ast.TypeRef type,
+      String inputName,
+      String vajramName) {
+    if ("string".equals(type.name())) {
+      return argument + ".to_owned()";
     }
-    String numericType = rustNumericType(input.type().name());
-    return "_arena.alloc("
-        + argument
+    return argument
         + ".parse::<"
-        + numericType
+        + rustNumericType(type.name())
         + ">().unwrap_or_else(|_| { eprintln!(\"invalid numeric input "
-        + input.name()
+        + inputName
         + " for "
         + vajramName
-        + "\"); std::process::exit(2) }))";
+        + "\"); std::process::exit(2) })";
   }
 
   private static String rustNumericType(String type) {

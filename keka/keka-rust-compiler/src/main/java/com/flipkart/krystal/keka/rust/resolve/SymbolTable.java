@@ -66,6 +66,27 @@ public final class SymbolTable {
   }
 
   /**
+   * Whether a Vajram yields one {@code Result} per input in its batch: it declared {@code out T?},
+   * or it completes {@code ~}/{@code ~~} (async work, e.g. IO, can always fail - so every async
+   * Vajram is errable whether or not it says {@code ?}). A {@code `now} Vajram without {@code ?}
+   * can't fail (see {@link Resolver}).
+   */
+  public boolean isErrable(VajramFile file) {
+    return file.vajram().outputType().errable() || completionOf(file).isAsync();
+  }
+
+  /** {@link #isErrable} for the callee named in {@code caller}'s invocation (incl. system ones). */
+  public boolean isErrableCallee(VajramFile caller, String vajramName) {
+    VajramFile callee = lookup(vajramName);
+    if (callee != null) {
+      return isErrable(callee);
+    }
+    return SystemVajram.lookup(vajramName, caller.imports())
+        .map(system -> system.completion().isAsync())
+        .orElse(false);
+  }
+
+  /**
    * The completion actually required by a Vajram's body: its output block's own {@code ~}/{@code
    * ~~} marker, or any dependency/delegate call to a Vajram (or system Vajram) whose own completion
    * is async. Used only to validate (see {@link Resolver}) that a Vajram declaring a sync ({@code

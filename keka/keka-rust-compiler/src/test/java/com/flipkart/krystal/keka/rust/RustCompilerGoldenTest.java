@@ -195,6 +195,28 @@ class RustCompilerGoldenTest {
   }
 
   @Test
+  void outsideProcessAcceptsRepeatedFlagListInputs(@TempDir Path tempDir) throws IOException {
+    Path sourceDir = tempDir.resolve("vajram");
+    Path outDir = tempDir.resolve("out");
+    Files.createDirectories(sourceDir);
+    Files.writeString(
+        sourceDir.resolve("join.keka"),
+        """
+        package external;
+        vajram join(List<string> names, List<int> counts) out `now string permit callers `outsideProcess public {
+          { "x" }
+        }
+        """);
+
+    assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
+    assertThat(Files.readString(outDir.resolve("main.rs")))
+        .contains(".or_default().push(_value)")
+        .contains("names: _arena.alloc(_inputs.get(\"names\").map(")
+        .contains(".get(\"counts\")")
+        .contains(".parse::<i64>()");
+  }
+
+  @Test
   void wasmTargetGeneratesTypedOutsideProcessDispatchers(@TempDir Path tempDir) throws IOException {
     Path sourceDir = tempDir.resolve("vajram");
     Path outDir = tempDir.resolve("out");
@@ -491,7 +513,9 @@ class RustCompilerGoldenTest {
         .contains("reqwest::Client::new()")
         .contains(".get(_inputs.requestUrl.as_str())")
         .contains(".header(reqwest::header::USER_AGENT,");
-    assertThat(fetcher).contains(".text()").contains(".expect(\"callHttp failed\")");
+    assertThat(fetcher)
+        .contains(".text()")
+        .contains(".map_err(|_e| VajramError::from(_e.to_string()))");
     assertThat(fetcher).contains("let _body_fut = async move {");
   }
 
@@ -599,8 +623,8 @@ class RustCompilerGoldenTest {
                 + "        let _secondValue_fut = async move {\n"
                 + "            let second = _secondValue_needs_second.await;\n")
         // Per-input entries are bound from the awaited facet vectors inside the batch loop.
-        .contains("let first = Clone::clone(&first[__i]);")
-        .contains("__v.push(&*_arena.alloc(first.to_string() + \"\"));")
+        .contains("let first = match Clone::clone(&first[__i])")
+        .contains("Ok(&*_arena.alloc(first.to_string() + \"\"))")
         .doesNotContain("_secondValue_needs_first")
         .doesNotContain("_firstValue_needs_second")
         .contains(
@@ -647,8 +671,8 @@ class RustCompilerGoldenTest {
         .contains("let _combined_fut = async move {\n")
         .contains("let a = _combined_needs_a.await;\n")
         .contains("let b = _combined_needs_b.await;\n")
-        .contains("let a = Clone::clone(&a[__i]);")
-        .contains("__v.push(&*_arena.alloc(a.to_string() + b));");
+        .contains("let a = match Clone::clone(&a[__i])")
+        .contains("Ok(&*_arena.alloc(a.to_string() + b))");
     String combinedBody =
         diamond.substring(
             diamond.indexOf("let _combined_fut ="), diamond.indexOf("let (a, b, c, combined)"));

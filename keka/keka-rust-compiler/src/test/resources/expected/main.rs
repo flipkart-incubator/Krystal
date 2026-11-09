@@ -7,7 +7,7 @@ fn main() {
         std::process::exit(2);
     });
     let mut _arguments = std::env::args().skip(2);
-    let mut _inputs = std::collections::HashMap::new();
+    let mut _inputs: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
     let _arena = crate::keka_rt::Arena::new();
     let _app_context = crate::keka_rt::AppContext::new(std::rc::Rc::new(crate::keka_rt::DefaultInjector::default()));
     while let Some(_flag) = _arguments.next() {
@@ -19,10 +19,7 @@ fn main() {
             eprintln!("missing value for input {}", _input);
             std::process::exit(2);
         });
-        if _inputs.insert(_input.to_owned(), _value).is_some() {
-            eprintln!("input {} was specified more than once", _input);
-            std::process::exit(2);
-        }
+        _inputs.entry(_input.to_owned()).or_default().push(_value);
     }
     match _vajram.as_str() {
         "a2SqPlusB2Sq" => {
@@ -40,6 +37,13 @@ fn main() {
                         a: _arena.alloc(
                             _inputs
                                 .get("a")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input a was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
                                 .unwrap_or_else(|| {
                                     eprintln!("missing input a for a2SqPlusB2Sq");
                                     std::process::exit(2)
@@ -53,6 +57,13 @@ fn main() {
                         b: _arena.alloc(
                             _inputs
                                 .get("b")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input b was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
                                 .unwrap_or_else(|| {
                                     eprintln!("missing input b for a2SqPlusB2Sq");
                                     std::process::exit(2)
@@ -71,6 +82,13 @@ fn main() {
                 .into_iter()
                 .next()
                 .expect("outside-process Vajram result");
+                let _output = match _output {
+                    Ok(_value) => _value,
+                    Err(_error) => {
+                        eprintln!("error: {}", _error);
+                        std::process::exit(1)
+                    }
+                };
                 println!("{}", _output);
             });
         }
@@ -90,6 +108,13 @@ fn main() {
                         .into_iter()
                         .next()
                         .expect("outside-process Vajram result");
+                let _output = match _output {
+                    Ok(_value) => _value,
+                    Err(_error) => {
+                        eprintln!("error: {}", _error);
+                        std::process::exit(1)
+                    }
+                };
                 println!("{}", _output);
             });
         }
@@ -112,6 +137,13 @@ fn main() {
                 .into_iter()
                 .next()
                 .expect("outside-process Vajram result");
+                let _output = match _output {
+                    Ok(_value) => _value,
+                    Err(_error) => {
+                        eprintln!("error: {}", _error);
+                        std::process::exit(1)
+                    }
+                };
                 println!("{}", _output);
             });
         }
@@ -130,6 +162,13 @@ fn main() {
                         a: _arena.alloc(
                             _inputs
                                 .get("a")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input a was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
                                 .unwrap_or_else(|| {
                                     eprintln!("missing input a for add");
                                     std::process::exit(2)
@@ -143,6 +182,13 @@ fn main() {
                         b: _arena.alloc(
                             _inputs
                                 .get("b")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input b was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
                                 .unwrap_or_else(|| {
                                     eprintln!("missing input b for add");
                                     std::process::exit(2)
@@ -161,6 +207,13 @@ fn main() {
                 .into_iter()
                 .next()
                 .expect("outside-process Vajram result");
+                let _output = match _output {
+                    Ok(_value) => _value,
+                    Err(_error) => {
+                        eprintln!("error: {}", _error);
+                        std::process::exit(1)
+                    }
+                };
                 println!("{}", _output);
             });
         }
@@ -179,6 +232,13 @@ fn main() {
                         input: _arena.alloc(
                             _inputs
                                 .get("input")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input input was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
                                 .unwrap_or_else(|| {
                                     eprintln!("missing input input for checkErrors");
                                     std::process::exit(2)
@@ -193,6 +253,13 @@ fn main() {
                 .into_iter()
                 .next()
                 .expect("outside-process Vajram result");
+                let _output = match _output {
+                    Ok(_value) => _value,
+                    Err(_error) => {
+                        eprintln!("error: {}", _error);
+                        std::process::exit(1)
+                    }
+                };
                 println!("{}", _output);
             });
         }
@@ -211,6 +278,13 @@ fn main() {
                         input: _arena.alloc(
                             _inputs
                                 .get("input")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input input was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
                                 .unwrap_or_else(|| {
                                     eprintln!("missing input input for checkErrorsInFanout");
                                     std::process::exit(2)
@@ -225,6 +299,59 @@ fn main() {
                 .into_iter()
                 .next()
                 .expect("outside-process Vajram result");
+                let _output = match _output {
+                    Ok(_value) => _value,
+                    Err(_error) => {
+                        eprintln!("error: {}", _error);
+                        std::process::exit(1)
+                    }
+                };
+                println!("{}", _output);
+            });
+        }
+        "checkPartialFailure" => {
+            for _input in _inputs.keys() {
+                if !["path"].contains(&_input.as_str()) {
+                    eprintln!("unknown input {} for checkPartialFailure", _input);
+                    std::process::exit(2);
+                }
+            }
+            let _runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+            let _local = tokio::task::LocalSet::new();
+            _local.block_on(&_runtime, async {
+                let _output = keka_samples::errors::error_handling::check_partial_failure::call(
+                    vec![keka_samples::errors::error_handling::check_partial_failure::CheckPartialFailureInputs {
+                        path: _arena.alloc(
+                            _inputs
+                                .get("path")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input path was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
+                                .unwrap_or_else(|| {
+                                    eprintln!("missing input path for checkPartialFailure");
+                                    std::process::exit(2)
+                                })
+                                .to_owned(),
+                        ),
+                    }],
+                    &_arena,
+                    &_app_context,
+                )
+                .await
+                .into_iter()
+                .next()
+                .expect("outside-process Vajram result");
+                let _output = match _output {
+                    Ok(_value) => _value,
+                    Err(_error) => {
+                        eprintln!("error: {}", _error);
+                        std::process::exit(1)
+                    }
+                };
                 println!("{}", _output);
             });
         }
@@ -243,6 +370,13 @@ fn main() {
                         numChars: _arena.alloc(
                             _inputs
                                 .get("numChars")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input numChars was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
                                 .unwrap_or_else(|| {
                                     eprintln!("missing input numChars for headFile");
                                     std::process::exit(2)
@@ -256,6 +390,13 @@ fn main() {
                         filePath: _arena.alloc(
                             _inputs
                                 .get("filePath")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input filePath was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
                                 .unwrap_or_else(|| {
                                     eprintln!("missing input filePath for headFile");
                                     std::process::exit(2)
@@ -270,6 +411,13 @@ fn main() {
                 .into_iter()
                 .next()
                 .expect("outside-process Vajram result");
+                let _output = match _output {
+                    Ok(_value) => _value,
+                    Err(_error) => {
+                        eprintln!("error: {}", _error);
+                        std::process::exit(1)
+                    }
+                };
                 println!("{}", _output);
             });
         }
@@ -298,6 +446,13 @@ fn main() {
                     name: _arena.alloc(
                         _inputs
                             .get("name")
+                            .map(|_values| {
+                                if _values.len() > 1 {
+                                    eprintln!("input name was specified more than once");
+                                    std::process::exit(2)
+                                }
+                                &_values[0]
+                            })
                             .unwrap_or_else(|| {
                                 eprintln!("missing input name for helloWorld2");
                                 std::process::exit(2)
@@ -328,6 +483,13 @@ fn main() {
                         separator: _arena.alloc(
                             _inputs
                                 .get("separator")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input separator was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
                                 .unwrap_or_else(|| {
                                     eprintln!("missing input separator for multiHeadFiles");
                                     std::process::exit(2)
@@ -337,6 +499,13 @@ fn main() {
                         filePath: _arena.alloc(
                             _inputs
                                 .get("filePath")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input filePath was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
                                 .unwrap_or_else(|| {
                                     eprintln!("missing input filePath for multiHeadFiles");
                                     std::process::exit(2)
@@ -351,6 +520,13 @@ fn main() {
                 .into_iter()
                 .next()
                 .expect("outside-process Vajram result");
+                let _output = match _output {
+                    Ok(_value) => _value,
+                    Err(_error) => {
+                        eprintln!("error: {}", _error);
+                        std::process::exit(1)
+                    }
+                };
                 println!("{}", _output);
             });
         }
@@ -369,6 +545,13 @@ fn main() {
                         a: _arena.alloc(
                             _inputs
                                 .get("a")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input a was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
                                 .unwrap_or_else(|| {
                                     eprintln!("missing input a for multiply");
                                     std::process::exit(2)
@@ -382,6 +565,13 @@ fn main() {
                         b: _arena.alloc(
                             _inputs
                                 .get("b")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input b was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
                                 .unwrap_or_else(|| {
                                     eprintln!("missing input b for multiply");
                                     std::process::exit(2)
@@ -400,6 +590,59 @@ fn main() {
                 .into_iter()
                 .next()
                 .expect("outside-process Vajram result");
+                let _output = match _output {
+                    Ok(_value) => _value,
+                    Err(_error) => {
+                        eprintln!("error: {}", _error);
+                        std::process::exit(1)
+                    }
+                };
+                println!("{}", _output);
+            });
+        }
+        "readAvailable" => {
+            for _input in _inputs.keys() {
+                if !["path"].contains(&_input.as_str()) {
+                    eprintln!("unknown input {} for readAvailable", _input);
+                    std::process::exit(2);
+                }
+            }
+            let _runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+            let _local = tokio::task::LocalSet::new();
+            _local.block_on(&_runtime, async {
+                let _output = keka_samples::errors::error_handling::read_available::call(
+                    vec![keka_samples::errors::error_handling::read_available::ReadAvailableInputs {
+                        path: _arena.alloc(
+                            _inputs
+                                .get("path")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input path was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
+                                .unwrap_or_else(|| {
+                                    eprintln!("missing input path for readAvailable");
+                                    std::process::exit(2)
+                                })
+                                .to_owned(),
+                        ),
+                    }],
+                    &_arena,
+                    &_app_context,
+                )
+                .await
+                .into_iter()
+                .next()
+                .expect("outside-process Vajram result");
+                let _output = match _output {
+                    Ok(_value) => _value,
+                    Err(_error) => {
+                        eprintln!("error: {}", _error);
+                        std::process::exit(1)
+                    }
+                };
                 println!("{}", _output);
             });
         }
@@ -418,6 +661,13 @@ fn main() {
                         userId: _arena.alloc(
                             _inputs
                                 .get("userId")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input userId was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
                                 .unwrap_or_else(|| {
                                     eprintln!("missing input userId for sayHelloToFriends");
                                     std::process::exit(2)
@@ -432,6 +682,13 @@ fn main() {
                 .into_iter()
                 .next()
                 .expect("outside-process Vajram result");
+                let _output = match _output {
+                    Ok(_value) => _value,
+                    Err(_error) => {
+                        eprintln!("error: {}", _error);
+                        std::process::exit(1)
+                    }
+                };
                 println!("{}", _output);
             });
         }
@@ -450,6 +707,13 @@ fn main() {
                         separator: _arena.alloc(
                             _inputs
                                 .get("separator")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input separator was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
                                 .unwrap_or_else(|| {
                                     eprintln!("missing input separator for twoHeadFiles");
                                     std::process::exit(2)
@@ -459,6 +723,13 @@ fn main() {
                         filePath1: _arena.alloc(
                             _inputs
                                 .get("filePath1")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input filePath1 was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
                                 .unwrap_or_else(|| {
                                     eprintln!("missing input filePath1 for twoHeadFiles");
                                     std::process::exit(2)
@@ -468,6 +739,13 @@ fn main() {
                         filePath2: _arena.alloc(
                             _inputs
                                 .get("filePath2")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input filePath2 was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
                                 .unwrap_or_else(|| {
                                     eprintln!("missing input filePath2 for twoHeadFiles");
                                     std::process::exit(2)
@@ -482,6 +760,13 @@ fn main() {
                 .into_iter()
                 .next()
                 .expect("outside-process Vajram result");
+                let _output = match _output {
+                    Ok(_value) => _value,
+                    Err(_error) => {
+                        eprintln!("error: {}", _error);
+                        std::process::exit(1)
+                    }
+                };
                 println!("{}", _output);
             });
         }
