@@ -119,6 +119,31 @@ A vajram's `out` type says when its output is available. At most one of the foll
 
 With none of them, `out T` defaults to soon, i.e. it means `out T~`.
 
+A vajram cannot complete earlier than what it depends on: a `now` vajram cannot depend on a `~`/`~~` vajram, and a `~` vajram cannot depend on a `~~` vajram. A mismatch is a compile error.
+
+### Errability
+
+A vajram is *errable* if it declares its output as `out T?` **or** its completion is `~`/`~~` (soon or later, including the default `out T`). Work delegated outside the current thread can never be guaranteed to return a value, so every soon/later vajram is inherently errable, with or without the `?`. Errability is never inferred from anything else.
+
+* A `now` vajram without `?` is non-errable. It cannot fail: a `throw` in it is a compile error.
+* A non-errable vajram cannot have a dependency facet declared as a plain `T` on an errable vajram (or delegate its output to one) - it has no way to fail in turn. It must declare the facet `T?` and handle the error itself.
+* The built-in `callHttp` and `readFileAsString` are soon, hence errable. Their failures (network errors, missing files) are per-input errors, not crashes.
+
+A facet declared `T?` is *handled*: the author sees the result with the errable accessors (`facet?valuePresent()`, `?errorPresent()`, `?default(...)`, etc.). A facet declared as plain `T` is *propagating*: see below.
+
+### Vectorized calls and failure isolation
+
+A vajram is always invoked with a vector (batch) of inputs - one logical call per element. This includes the elements produced by a fanout (`...dep(x =... list)`). **A failure is always limited to the element(s) of the vector that caused it**; other elements are never affected.
+
+* An errable vajram yields one result-or-error per input element. `throw` in an errable vajram fails only the element being processed.
+* **Auto-propagation.** If a dependency facet declared as plain `T` fails for element i, then every facet computed from it, and the vajram's own output, also fail for element i with that same error. So the error travels up the call chain only for the elements that originated it. The failed element is not passed to further dependencies: only the surviving elements are batched into their calls.
+* **Handled facets.** A facet declared `T?` receives the error as a value instead of propagating it.
+* **Fanout facets.** For a fanout dependency the facet holds one value per fanned element:
+  * `T?...` keeps one result-or-error per element, in the original positions, and never fails the element as a whole.
+  * Plain `T...` over an errable callee collapses the per-fanned-element results for each input: failed fanned elements are dropped (the list gets shorter, positions shift, the dropped errors are lost), and the input fails, with the first error, only if *all* its fanned elements failed. A group with no fanned elements is not a failure. This "all must fail" policy is the default; a future annotation will allow selecting "any fanned element fails" instead.
+* Failures that the compiler cannot prevent (IO, etc.) are likewise confined to the element.
+* When an outermost (entry-point) vajram call fails, the error is reported to the caller of the program (for the CLI: the error is printed and the exit code is non-zero).
+
 ### Vajram Call Graph Delegation Mode
 
 The vajram itself can have one of three delegation modes. This is declared by the vajram in this way:
