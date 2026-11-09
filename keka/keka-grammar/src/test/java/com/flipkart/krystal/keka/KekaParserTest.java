@@ -79,10 +79,44 @@ public class KekaParserTest {
                 .map(classLoader -> classLoader.getResource(name))
                 .orElseThrow()
                 .toURI());
-    String code = readString(path);
+    assertThat(syntaxErrors(readString(path))).isEqualTo(emptyList());
+  }
+
+  @Test
+  void outputTypeAcceptsAtMostOneSuffix() {
+    for (String type : List.of("string", "string?", "string~", "string~~", "`now string?")) {
+      assertThat(syntaxErrors("package t;\nvajram v() out " + type + " { { \"x\" } }"))
+          .as(type)
+          .isEmpty();
+    }
+    for (String type : List.of("string?~", "string~?", "string??", "string?~~")) {
+      assertThat(syntaxErrors("package t;\nvajram v() out " + type + " { { \"x\" } }"))
+          .as(type)
+          .isNotEmpty();
+    }
+  }
+
+  @Test
+  void inputsAndInjectionsAcceptOnlyErrableMarker() {
+    assertThat(syntaxErrors("package t;\nvajram v(string? a) out `now string { { a } }")).isEmpty();
+    assertThat(syntaxErrors("package t;\nvajram v(string~ a) out `now string { { a } }"))
+        .isNotEmpty();
+    assertThat(syntaxErrors("package t;\nvajram v() out `now string inject (Db~ db) { { \"x\" } }"))
+        .isNotEmpty();
+  }
+
+  @Test
+  void localVariablesMayCarryACompletionMarker() {
+    assertThat(syntaxErrors("package t;\nvajram v() out `now string { string~ x = y; { x } }"))
+        .isEmpty();
+  }
+
+  private static List<String> syntaxErrors(String code) {
     KekaLexer kekaLexer = new KekaLexer(fromString(code));
     KekaParser kekaParser = new KekaParser(new CommonTokenStream(kekaLexer));
     List<String> errors = new ArrayList<>();
+    kekaLexer.removeErrorListeners();
+    kekaParser.removeErrorListeners();
     kekaParser.addErrorListener(
         new BaseErrorListener() {
           @Override
@@ -97,6 +131,6 @@ public class KekaParserTest {
           }
         });
     kekaParser.program();
-    assertThat(errors).isEqualTo(emptyList());
+    return errors;
   }
 }

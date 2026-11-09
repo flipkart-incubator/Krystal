@@ -46,7 +46,7 @@ inputs_list : ( grouper? annotation* input_id_declaration COMMA)* ( grouper? ann
 
 injection_decl: 'inject' '(' injections_list?')';
 
-output_decl: OUT annotation* errableType;
+output_decl: OUT annotation* type;
 
 injections_list : ( annotation* injection_id_declaration COMMA)* ( annotation* injection_id_declaration) ;
 
@@ -62,11 +62,27 @@ permissions: PERMIT callers?;
 
 callers: CALLERS (annotation* ID (COMMA annotation* ID)* | (annotation* PUBLIC));
 
-input_id_declaration: errableType ID;
+input_id_declaration: nowType ID;
 
-injection_id_declaration: errableType ID;
+injection_id_declaration: nowType ID;
 
-errableType : type ERRABLE? ;
+nowType
+    : non_param_type ('<' ((nowType COMMA)* nowType COMMA?)? '>')? ERRABLE?
+    | '[' nowType ']'
+    ;
+
+type
+    : non_param_type ('<' ((type COMMA)* type COMMA?)? '>')? completion_suffix?
+    | '[' type ']'
+    ;
+
+completion_suffix : ERRABLE | SOON | LATER ;
+
+non_param_type: ID
+              | STRING
+              | VOID
+              | grouper
+              ;
 
 dep_input_resolver: dep_input_resolver_stat | dep_input_resolver_func;
 
@@ -77,21 +93,14 @@ yield_statement: (YIELD (expr COMMA)* expr SEMI | (expr COMMA)* expr);
 
 output_block: OUT? annotated_delegatable_logic_block | OUT dependency_invocation;
 
-type:
-    | non_param_type ('<' ((type COMMA)* type COMMA?)? '>')? ERRABLE? (SOON | LATER)?
-    | '[' type ']';
-
-non_param_type: ID
-              | STRING
-              | VOID
-              | grouper
-              ;
-
 bool: TRUE | FALSE;
 statement: assign_stat|throw_stat;
 
 throw_stat: THROW expr SEMI;
-assign_stat: (input_id_declaration ASSIGN)? expr SEMI;
+assign_stat: (local_declaration ASSIGN)? expr SEMI;
+
+// A local variable may carry a completion marker (e.g. `Map<K, V>~ x`), unlike an input.
+local_declaration: type ID;
 
 expr: var_use
     | STRING_LITERAL

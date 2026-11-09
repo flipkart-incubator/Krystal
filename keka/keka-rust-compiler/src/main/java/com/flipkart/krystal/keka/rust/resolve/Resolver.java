@@ -86,13 +86,27 @@ public final class Resolver {
   }
 
   /**
-   * A Vajram is errable iff it declares {@code T?} or completes {@code ~}/{@code ~~} (see {@link
-   * SymbolTable#isErrable}). A non-errable ({@code `now T}) Vajram can't fail, so it can neither
-   * {@code throw} nor ignore the failure of an errable dependency: it must declare that facet
-   * {@code T?} and handle it.
+   * A Vajram is errable iff it declares {@code `now T?} or completes {@code ~}/{@code ~~} (see
+   * {@link SymbolTable#isErrable}). A non-errable ({@code `now T}) Vajram can't fail, so it can
+   * neither {@code throw} nor ignore the failure of an errable dependency: it must declare that
+   * facet {@code T?} and handle it.
    */
   private static void checkErrability(VajramFile file, SymbolTable table, Diagnostics diagnostics) {
     VajramDef vajram = file.vajram();
+    if (vajram.outputType().errable() && !vajram.outputAnnotations().contains("now")) {
+      diagnostics.error(
+          vajram.location(),
+          "Vajram '"
+              + vajram.name()
+              + "' declares 'out "
+              + vajram.outputType().name()
+              + "?' without 'now' - the '?' is redundant because every soon/later vajram is"
+              + " errable; write 'out "
+              + vajram.outputType().name()
+              + "' (or 'out `now "
+              + vajram.outputType().name()
+              + "?' for a sync errable vajram)");
+    }
     if (table.isErrable(file)) {
       return;
     }

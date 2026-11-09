@@ -398,6 +398,7 @@ class RustCompilerGoldenTest {
             "string",
             "string~",
             "`now string",
+            "string?",
             "`now string?",
             "`now string~",
             "`now string?~",
@@ -409,8 +410,11 @@ class RustCompilerGoldenTest {
       Files.writeString(
           source.resolve("v.keka"),
           "package completion;\nvajram v() out " + out + " { { \"x\" } }\n");
+      // Rejected: conflicting markers, and a redundant `?` on a soon/later (non-`now) output.
       boolean ok =
-          !out.startsWith("`now") || out.equals("`now string") || out.equals("`now string?");
+          (!out.startsWith("`now") && !out.equals("string?"))
+              || out.equals("`now string")
+              || out.equals("`now string?");
       assertThat(RustCompilerMain.compile(source, tempDir.resolve("out" + out.hashCode())))
           .as(out)
           .isEqualTo(ok);

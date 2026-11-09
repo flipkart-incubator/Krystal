@@ -9,7 +9,6 @@ import com.flipkart.krystal.keka.KekaParser.Computed_facetContext;
 import com.flipkart.krystal.keka.KekaParser.Dep_input_resolverContext;
 import com.flipkart.krystal.keka.KekaParser.DependencyContext;
 import com.flipkart.krystal.keka.KekaParser.Dependency_invocationContext;
-import com.flipkart.krystal.keka.KekaParser.ErrableTypeContext;
 import com.flipkart.krystal.keka.KekaParser.ExprContext;
 import com.flipkart.krystal.keka.KekaParser.FieldContext;
 import com.flipkart.krystal.keka.KekaParser.Func_callContext;
@@ -20,7 +19,10 @@ import com.flipkart.krystal.keka.KekaParser.Imports_declContext;
 import com.flipkart.krystal.keka.KekaParser.Injections_listContext;
 import com.flipkart.krystal.keka.KekaParser.Input_id_declarationContext;
 import com.flipkart.krystal.keka.KekaParser.Inputs_listContext;
+import com.flipkart.krystal.keka.KekaParser.Local_declarationContext;
 import com.flipkart.krystal.keka.KekaParser.Logic_blockContext;
+import com.flipkart.krystal.keka.KekaParser.Non_param_typeContext;
+import com.flipkart.krystal.keka.KekaParser.NowTypeContext;
 import com.flipkart.krystal.keka.KekaParser.Output_blockContext;
 import com.flipkart.krystal.keka.KekaParser.Param_listContext;
 import com.flipkart.krystal.keka.KekaParser.ProgramContext;
@@ -140,7 +142,7 @@ public final class AstBuilder {
         ctx.inputs_decl().inputs_list() == null
             ? List.of()
             : toInputsList(ctx.inputs_decl().inputs_list());
-    TypeRef outputType = toErrableType(ctx.output_decl().errableType());
+    TypeRef outputType = toType(ctx.output_decl().type());
     Callers callers = toCallers(ctx);
     List<InjectionDecl> injections =
         ctx.injection_decl() == null || ctx.injection_decl().injections_list() == null
@@ -228,7 +230,7 @@ public final class AstBuilder {
             new InputDecl(
                 pendingGrouper,
                 List.copyOf(pendingAnnotations),
-                toErrableType(decl.errableType()),
+                toNowType(decl.nowType()),
                 decl.ID().getText()));
         pendingGrouper = null;
         pendingAnnotations = new ArrayList<>();
@@ -247,9 +249,7 @@ public final class AstBuilder {
           instanceof com.flipkart.krystal.keka.KekaParser.Injection_id_declarationContext decl) {
         result.add(
             new InjectionDecl(
-                List.copyOf(pendingAnnotations),
-                toErrableType(decl.errableType()),
-                decl.ID().getText()));
+                List.copyOf(pendingAnnotations), toNowType(decl.nowType()), decl.ID().getText()));
         pendingAnnotations = new ArrayList<>();
       }
     }
@@ -264,35 +264,37 @@ public final class AstBuilder {
     return ctx.ID().getText();
   }
 
-  private TypeRef toErrableType(ErrableTypeContext ctx) {
-    TypeRef base = toType(ctx.type());
-    return ctx.ERRABLE() == null
-        ? base
-        : new TypeRef(
-            base.name(), base.typeArgs(), base.grouperType(), true, base.soon(), base.later());
+  /** A type with no completion marker: only an optional {@code ?} (inputs and injections). */
+  private TypeRef toNowType(NowTypeContext ctx) {
+    String name = typeName(ctx.non_param_type());
+    boolean grouperType = ctx.non_param_type().grouper() != null;
+    List<TypeRef> typeArgs = ctx.nowType().stream().map(this::toNowType).toList();
+    return new TypeRef(name, typeArgs, grouperType, ctx.ERRABLE() != null, false, false);
   }
 
   private TypeRef toType(TypeContext ctx) {
-    String name;
-    boolean grouperType = false;
-    if (ctx.non_param_type().ID() != null) {
-      name = ctx.non_param_type().ID().getText();
-    } else if (ctx.non_param_type().STRING() != null) {
-      name = "string";
-    } else if (ctx.non_param_type().VOID() != null) {
-      name = "void";
-    } else {
-      name = grouperName(ctx.non_param_type().grouper());
-      grouperType = true;
-    }
+    String name = typeName(ctx.non_param_type());
+    boolean grouperType = ctx.non_param_type().grouper() != null;
     List<TypeRef> typeArgs = ctx.type().stream().map(this::toType).toList();
+    var suffix = ctx.completion_suffix();
     return new TypeRef(
         name,
         typeArgs,
         grouperType,
-        ctx.ERRABLE() != null,
-        ctx.SOON() != null,
-        ctx.LATER() != null);
+        suffix != null && suffix.ERRABLE() != null,
+        suffix != null && suffix.SOON() != null,
+        suffix != null && suffix.LATER() != null);
+  }
+
+  private String typeName(Non_param_typeContext ctx) {
+    if (ctx.ID() != null) {
+      return ctx.ID().getText();
+    } else if (ctx.STRING() != null) {
+      return "string";
+    } else if (ctx.VOID() != null) {
+      return "void";
+    }
+    return grouperName(ctx.grouper());
   }
 
   private Dependency toDependency(DependencyContext ctx) {
@@ -375,13 +377,12 @@ public final class AstBuilder {
   private Statement toStatement(StatementContext ctx) {
     if (ctx.assign_stat() != null) {
       var stat = ctx.assign_stat();
-      Input_id_declarationContext decl = stat.input_id_declaration();
+      Local_declarationContext decl = stat.local_declaration();
       if (decl == null) {
         return new Statement.Expression(toExpr(stat.expr()));
       }
       return new Statement.Assign(
-          InputDecl.of(toErrableType(decl.errableType()), decl.ID().getText()),
-          toExpr(stat.expr()));
+          InputDecl.of(toType(decl.type()), decl.ID().getText()), toExpr(stat.expr()));
     }
     return new Statement.Throw(toExpr(ctx.throw_stat().expr()));
   }

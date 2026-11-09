@@ -123,7 +123,7 @@ A vajram cannot complete earlier than what it depends on: a `now` vajram cannot 
 
 ### Errability
 
-A vajram is *errable* if it declares its output as `out T?` **or** its completion is `~`/`~~` (soon or later, including the default `out T`). Work delegated outside the current thread can never be guaranteed to return a value, so every soon/later vajram is inherently errable, with or without the `?`. Errability is never inferred from anything else.
+A vajram is *errable* if it declares its output as `` out `now T? `` **or** its completion is `~`/`~~` (soon or later, including the default `out T`). Work delegated outside the current thread can never be guaranteed to return a value, so every soon/later vajram is inherently errable. Because of this, writing `?` on a soon/later output (`out T?`, which defaults to soon) is a compile error as redundant: `?` is only meaningful together with `now`. Errability is never inferred from anything else.
 
 * A `now` vajram without `?` is non-errable. It cannot fail: a `throw` in it is a compile error.
 * A non-errable vajram cannot have a dependency facet declared as a plain `T` on an errable vajram (or delegate its output to one) - it has no way to fail in turn. It must declare the facet `T?` and handle the error itself.

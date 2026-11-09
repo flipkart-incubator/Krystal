@@ -5,17 +5,17 @@ import vajram concatStrings from lang.strings;
 
 // Async errable callees: each input of a batch yields its own Result, so one failing input
 // doesn't fail the others.
-vajram succeed(string input) out string? {~{
+vajram succeed(string input) out string {~{
   yield input;
 }}
 
-vajram failAlways(string input) out string? {~{
+vajram failAlways(string input) out string {~{
   throw "boom";
   yield input;
 }}
 
 // Fails for a missing file only; succeeds with the file's contents otherwise.
-vajram readOrFail(string path) out string? {
+vajram readOrFail(string path) out string {
   out readFileAsString(path = path);
 }
 
