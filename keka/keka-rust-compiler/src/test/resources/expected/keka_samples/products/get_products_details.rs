@@ -29,7 +29,9 @@ pub mod get_products_details {
                     );
                 }
                 let __sizes: Vec<usize> = __groups.iter().map(|_g| _g.len()).collect();
-                let mut __results = crate::keka_samples::products::get_product_details::get_product_details::call(__groups.into_iter().flatten().collect(), _arena, _context).into_iter();
+                let mut __results = crate::keka_samples::products::get_product_details::get_product_details::call(__groups.into_iter().flatten().collect(), _arena, _context)
+                    .await
+                    .into_iter();
                 __sizes.into_iter().map(|_size| __results.by_ref().take(_size).collect::<Vec<_>>()).collect::<Vec<_>>()
             })
         }

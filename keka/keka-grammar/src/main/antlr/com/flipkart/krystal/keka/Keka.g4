@@ -46,7 +46,7 @@ inputs_list : ( grouper? annotation* input_id_declaration COMMA)* ( grouper? ann
 
 injection_decl: 'inject' '(' injections_list?')';
 
-output_decl: OUT (errableType);
+output_decl: OUT annotation* errableType;
 
 injections_list : ( annotation* injection_id_declaration COMMA)* ( annotation* injection_id_declaration) ;
 
@@ -78,7 +78,7 @@ yield_statement: (YIELD (expr COMMA)* expr SEMI | (expr COMMA)* expr);
 output_block: OUT? annotated_delegatable_logic_block | OUT dependency_invocation;
 
 type:
-    | non_param_type ('<' ((type COMMA)* type COMMA?)? '>')? ERRABLE? SOON?
+    | non_param_type ('<' ((type COMMA)* type COMMA?)? '>')? ERRABLE? (SOON | LATER)?
     | '[' type ']';
 
 non_param_type: ID

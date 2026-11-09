@@ -3,7 +3,7 @@ package keka_samples.hello;
 import type ConsoleWriter from lang.process;
 
 // Run: ./gradlew :keka:keka-samples:runVajram -Pvajram=helloWorld
-vajram helloWorld() out void
+vajram helloWorld() out `now void
     inject (ConsoleWriter writer)
     permit callers `outsideProcess public {
   {

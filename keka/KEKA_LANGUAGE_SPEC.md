@@ -109,6 +109,16 @@ The [output logic](#vajram-output) of a vajram can have exactly one of three del
 `out ~{}` implies SYNC i.e. the logic returns a soon value,
 `out ~~{}` implies ASYNC i.e. the logic returns a later value.
 
+### Vajram output completion
+
+A vajram's `out` type says when its output is available. At most one of the following may be given; giving more than one is a compile error:
+
+`out `now T` - the output is available now (the `now` annotation),
+`out T~` - the output is available soon,
+`out T~~` - the output is available later.
+
+With none of them, `out T` defaults to soon, i.e. it means `out T~`.
+
 ### Vajram Call Graph Delegation Mode
 
 The vajram itself can have one of three delegation modes. This is declared by the vajram in this way:
@@ -159,7 +169,7 @@ A provider vajram MUST satisfy these conditions
 Another way a value can be provided for injection is inside a vajram. A vajram can chose to provide values to its immediate and transitive dependencies at the point of dependency declaration. For example:
 
 ```vajram
-vajram computeValue(int seed) out Result {
+vajram computeValue(int seed) out `now Result {
   
   Result initialResult = computeInitialResult(input = seed; `provider {
     `selector1 Strategy initialStrategy = new ConservativeStrategy();

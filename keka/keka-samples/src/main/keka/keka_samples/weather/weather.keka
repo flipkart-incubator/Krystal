@@ -11,7 +11,7 @@ import type ConsoleWriter from lang.process;
 // Run:
 // ./gradlew :keka:keka-samples:runVajram -Pvajram=activeWeatherAlerts
 vajram activeWeatherAlerts()
-    out string~
+    out string
     inject (ConsoleWriter console)
     permit callers `outsideProcess public {
   string alertsJson = callHttp(url = "https://api.weather.gov/alerts/active");
@@ -23,7 +23,7 @@ vajram activeWeatherAlerts()
 }
 
 vajram activeWeatherAlertsCount()
-    out string~
+    out string
     inject (ConsoleWriter console)
     permit callers `outsideProcess public {
   string alertsJson = callHttp(url = "https://api.weather.gov/alerts/active/count");

@@ -5,6 +5,7 @@ import com.flipkart.krystal.keka.rust.ast.ComputedFacet;
 import com.flipkart.krystal.keka.rust.ast.Dependency;
 import com.flipkart.krystal.keka.rust.ast.DependencyInvocation;
 import com.flipkart.krystal.keka.rust.ast.OutputBlock;
+import com.flipkart.krystal.keka.rust.ast.TypeRef;
 import com.flipkart.krystal.keka.rust.ast.VajramFile;
 import com.flipkart.krystal.keka.rust.diag.Diagnostics;
 import com.flipkart.krystal.keka.rust.system.SystemVajram;
@@ -47,15 +48,21 @@ public final class SymbolTable {
   }
 
   /**
-   * A Vajram's completion is authoritatively its own declared output type: {@code out T} is {@link
-   * Completion#NOW}, {@code out T~} is {@link Completion#SOON}. It is deliberately *not* inferred
-   * from the Vajram's body - a caller deciding whether to {@code .await} a dependency needs a
-   * simple, non-recursive answer, and Keka never blocks a thread to reconcile an actually-async
-   * body with a sync-declared signature. {@link #inferredCompletion} validates the body actually
-   * honors this contract.
+   * A Vajram's completion is authoritatively its own declared output type: {@code out `now T} is
+   * {@link Completion#NOW}, {@code out T~} and plain {@code out T} are {@link Completion#SOON},
+   * {@code out T~~} is {@link Completion#LATER}. It is deliberately *not* inferred from the
+   * Vajram's body - a caller deciding whether to {@code .await} a dependency needs a simple,
+   * non-recursive answer, and Keka never blocks a thread to reconcile an actually-async body with a
+   * sync-declared signature. {@link #inferredCompletion} validates the body actually honors this
+   * contract.
    */
   public Completion completionOf(VajramFile file) {
-    return file.vajram().outputType().soon() ? Completion.SOON : Completion.NOW;
+    TypeRef output = file.vajram().outputType();
+    if (output.later()) {
+      return Completion.LATER;
+    }
+    boolean now = file.vajram().outputAnnotations().contains("now");
+    return now ? Completion.NOW : Completion.SOON;
   }
 
   /**

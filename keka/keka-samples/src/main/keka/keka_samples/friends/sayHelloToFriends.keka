@@ -6,7 +6,7 @@ import vajram concatStrings from lang.strings;
 // ./gradlew :keka:keka-samples:runVajram -Pvajram=sayHelloToFriends
 //    -PvajramArgs="--userId alice"
 vajram sayHelloToFriends(string userId)
-    out string~
+    out string
     permit callers `outsideProcess public {
 
   string userInfo = getUserInfo(userId = userId);

@@ -7,7 +7,7 @@ import vajram concatStrings from lang.strings;
 // ./gradlew :keka:keka-samples:runVajram
 //    -Pvajram=multiHeadFiles -PvajramArgs="--separator | --filePath /path/to/file"
 vajram multiHeadFiles(string separator, string filePath)
-    out string~
+    out string
     permit callers `outsideProcess public {
   string... files = [filePath, filePath];
 
@@ -24,7 +24,7 @@ vajram multiHeadFiles(string separator, string filePath)
 // ./gradlew :keka:keka-samples:runVajram -Pvajram=twoHeadFiles
 //    -PvajramArgs="--separator | --filePath1 /path/to/first --filePath2 /path/to/second"
 vajram twoHeadFiles(string separator, string filePath1, string filePath2)
-    out string~
+    out string
     permit callers `outsideProcess public {
   string filesContent1 = headFile(numChars = 100; filePath = filePath1);
   string filesContent2 = headFile(numChars = 100; filePath = filePath2);

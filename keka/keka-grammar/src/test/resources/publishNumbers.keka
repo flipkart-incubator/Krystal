@@ -1,4 +1,4 @@
-vajram publishNumbers(int request) out #stream int{
+vajram publishNumbers(int request) out `now #stream int{
 
   out #stream `Schedule(1, SECONDS){
 

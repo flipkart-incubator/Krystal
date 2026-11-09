@@ -153,6 +153,7 @@ public final class AstBuilder {
         ctx.annotation().stream().map(this::toVajramAnnotation).toList(),
         inputs,
         outputType,
+        ctx.output_decl().annotation().stream().map(this::annotationName).toList(),
         callers,
         injections,
         computedFacets,
@@ -267,7 +268,8 @@ public final class AstBuilder {
     TypeRef base = toType(ctx.type());
     return ctx.ERRABLE() == null
         ? base
-        : new TypeRef(base.name(), base.typeArgs(), base.grouperType(), true, base.soon());
+        : new TypeRef(
+            base.name(), base.typeArgs(), base.grouperType(), true, base.soon(), base.later());
   }
 
   private TypeRef toType(TypeContext ctx) {
@@ -284,7 +286,13 @@ public final class AstBuilder {
       grouperType = true;
     }
     List<TypeRef> typeArgs = ctx.type().stream().map(this::toType).toList();
-    return new TypeRef(name, typeArgs, grouperType, ctx.ERRABLE() != null, ctx.SOON() != null);
+    return new TypeRef(
+        name,
+        typeArgs,
+        grouperType,
+        ctx.ERRABLE() != null,
+        ctx.SOON() != null,
+        ctx.LATER() != null);
   }
 
   private Dependency toDependency(DependencyContext ctx) {

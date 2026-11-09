@@ -3,7 +3,9 @@ package playground.samples;
 import vajram readFileAsString from lang.FileSystem;
 
 // In a browser build, filePath is a display placeholder and selecting a file is required.
-vajram filePicker(filePath string) out string
+vajram filePicker(string filePath)
+    out string
     permit callers `outsideProcess public{
-  { readFileAsString(path = filePath) }
+  string fileContent = readFileAsString(path = filePath)
+  ~{ fileContent }
 }

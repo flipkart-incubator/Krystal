@@ -9,6 +9,7 @@ import com.flipkart.krystal.keka.rust.ast.DependencyInvocation;
 import com.flipkart.krystal.keka.rust.ast.Expr;
 import com.flipkart.krystal.keka.rust.ast.Field;
 import com.flipkart.krystal.keka.rust.ast.OutputBlock;
+import com.flipkart.krystal.keka.rust.ast.TypeRef;
 import com.flipkart.krystal.keka.rust.ast.VajramDef;
 import com.flipkart.krystal.keka.rust.ast.VajramFile;
 import com.flipkart.krystal.keka.rust.cli.RustCompilerMain.Target;
@@ -48,33 +49,75 @@ public final class Resolver {
       if (vajram.outputBlock() instanceof OutputBlock.Delegate delegate) {
         checkInvocation(file, delegate.invocation(), table, diagnostics, target);
       }
-      checkCompletion(file, table, diagnostics);
+      if (checkOutputCompletionDeclared(vajram, diagnostics)) {
+        checkCompletion(file, table, diagnostics);
+      }
     }
   }
 
   /**
-   * A Vajram's declared output type is the only source of truth for whether it's async (see {@link
-   * SymbolTable#completionOf}) - so a Vajram whose body actually requires async execution (its own
-   * output block is marked {@code ~}/{@code ~~}, or it calls an async dependency/delegate) must say
-   * so on its signature too. Keka never blocks a thread to reconcile an actually-async body with a
-   * sync-declared ({@code out T}) signature, so this mismatch is a compile error rather than
-   * something silently inferred/promoted.
+   * A Vajram's declared output type is the only source of truth for when it completes (see {@link
+   * SymbolTable#completionOf}) - so it must be at least as late as its body requires (its own
+   * output block's {@code ~}/{@code ~~} marker, or the declared completion of any dependency or
+   * delegate it calls): a {@code `now} Vajram cannot depend on a {@code ~}/{@code ~~} one, and a
+   * {@code ~} Vajram cannot depend on a {@code ~~} one. Keka never blocks a thread to reconcile
+   * this, so a mismatch is a compile error rather than something silently inferred/promoted.
    */
   private static void checkCompletion(VajramFile file, SymbolTable table, Diagnostics diagnostics) {
-    if (file.vajram().outputType().soon()) {
-      return;
-    }
-    if (table.inferredCompletion(file) != Completion.NOW) {
+    Completion declared = table.completionOf(file);
+    Completion required = table.inferredCompletion(file);
+    if (required.compareTo(declared) > 0) {
       diagnostics.error(
           file.vajram().location(),
           "Vajram '"
               + file.vajram().name()
-              + "' requires asynchronous execution (its output block, or a dependency/delegate it"
-              + " calls, is async) but its declared output type doesn't say so - declare it as"
+              + "' is declared "
+              + describe(declared)
+              + " but its output block, or a dependency/delegate it calls, completes "
+              + describe(required)
+              + " - a vajram cannot complete earlier than what it depends on; declare it as"
               + " 'out "
               + file.vajram().outputType().name()
-              + "~' instead");
+              + (required == Completion.LATER ? "~~" : "")
+              + "' instead");
     }
+  }
+
+  private static String describe(Completion completion) {
+    return switch (completion) {
+      case NOW -> "'now'";
+      case SOON -> "soon ('~')";
+      case LATER -> "later ('~~')";
+    };
+  }
+
+  /**
+   * A Vajram's output completion is {@code `now}, {@code T~} (soon) or {@code T~~} (later); with no
+   * marker it defaults to soon. At most one marker may be given. Returns whether that holds.
+   */
+  private static boolean checkOutputCompletionDeclared(VajramDef vajram, Diagnostics diagnostics) {
+    TypeRef output = vajram.outputType();
+    int declared =
+        (vajram.outputAnnotations().contains("now") ? 1 : 0)
+            + (output.soon() ? 1 : 0)
+            + (output.later() ? 1 : 0);
+    if (declared <= 1) {
+      return true;
+    }
+    diagnostics.error(
+        vajram.location(),
+        "Vajram '"
+            + vajram.name()
+            + "' declares conflicting output completions - use at most one of 'out `now "
+            + output.name()
+            + "', 'out "
+            + output.name()
+            + "~' or 'out "
+            + output.name()
+            + "~~' (plain 'out "
+            + output.name()
+            + "' means soon)");
+    return false;
   }
 
   private static void checkFieldFanout(

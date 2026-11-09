@@ -16,18 +16,21 @@ pub mod say_hello_to_friends {
         let __n = _inputs.len();
         let _inputs = &_inputs;
         let _userInfo_fut = async move {
-            Rc::new(crate::keka_samples::friends::get_user_info::get_user_info::call(
-                {
-                    let mut __v = Vec::with_capacity(__n);
-                    for __i in 0..__n {
-                        let _inputs = &_inputs[__i];
-                        __v.push(crate::keka_samples::friends::get_user_info::get_user_info::GetUserInfoInputs { userId: _inputs.userId });
-                    }
-                    __v
-                },
-                _arena,
-                _context,
-            ))
+            Rc::new(
+                crate::keka_samples::friends::get_user_info::get_user_info::call(
+                    {
+                        let mut __v = Vec::with_capacity(__n);
+                        for __i in 0..__n {
+                            let _inputs = &_inputs[__i];
+                            __v.push(crate::keka_samples::friends::get_user_info::get_user_info::GetUserInfoInputs { userId: _inputs.userId });
+                        }
+                        __v
+                    },
+                    _arena,
+                    _context,
+                )
+                .await,
+            )
         }
         .boxed_local()
         .shared();
@@ -60,7 +63,9 @@ pub mod say_hello_to_friends {
                     );
                 }
                 let __sizes: Vec<usize> = __groups.iter().map(|_g| _g.len()).collect();
-                let mut __results = crate::keka_samples::friends::get_user_info::get_user_info::call(__groups.into_iter().flatten().collect(), _arena, _context).into_iter();
+                let mut __results = crate::keka_samples::friends::get_user_info::get_user_info::call(__groups.into_iter().flatten().collect(), _arena, _context)
+                    .await
+                    .into_iter();
                 __sizes.into_iter().map(|_size| __results.by_ref().take(_size).collect::<Vec<_>>()).collect::<Vec<_>>()
             })
         }

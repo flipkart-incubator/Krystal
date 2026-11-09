@@ -4,7 +4,7 @@ package com.flipkart.krystal.keka.samples.friends;
       (
       string userId,
       int? numberOfFriends)
-    out string{
+    out `now string{
 
   UserInfo userInfo = getUserInfo(userId = userId);
 

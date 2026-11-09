@@ -99,7 +99,7 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("hello.keka"),
         """
         package smoke;
-        vajram hello(int32 count) out string inject (ConsoleWriter console) {
+        vajram hello(int32 count) out `now string inject (ConsoleWriter console) {
           { console.println("hello"); "hello" }
         }
         """);
@@ -138,13 +138,13 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("source.keka"),
         """
         package lifecycle;
-        vajram laterLeaf() out string~ { ~~ { "leaf" } }
+        vajram laterLeaf() out string~~ { ~~ { "leaf" } }
         """);
     Files.writeString(
         sourceDir.resolve("caller.keka"),
         """
         package lifecycle;
-        vajram nowCaller() out string~ {
+        vajram nowCaller() out string~~ {
           string value = laterLeaf();
           { value }
         }
@@ -167,7 +167,7 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("first.keka"),
         """
         package external;
-        vajram first(string input) out string permit callers `outsideProcess public {
+        vajram first(string input) out `now string permit callers `outsideProcess public {
           { input }
         }
         """);
@@ -175,7 +175,7 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("second.keka"),
         """
         package external;
-        vajram second() out string permit callers `outsideProcess public {
+        vajram second() out `now string permit callers `outsideProcess public {
           { "second" }
         }
         """);
@@ -203,7 +203,7 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("dispatch.keka"),
         """
         package external;
-        vajram greet(string name, int count) out string permit callers `outsideProcess public {
+        vajram greet(string name, int count) out `now string permit callers `outsideProcess public {
           { name }
         }
         """);
@@ -233,7 +233,7 @@ class RustCompilerGoldenTest {
                 Path.of("callers.keka"),
                 """
                 package test;
-                vajram target() out void permit callers `first callerA, `second callerB {
+                vajram target() out `now void permit callers `first callerA, `second callerB {
                   { }
                 }
                 """);
@@ -257,7 +257,7 @@ class RustCompilerGoldenTest {
                 Path.of("provider.keka"),
                 """
                 package test;
-                `provider(forScope = REQUEST) vajram database() out Database { { new Database() } }
+                `provider(forScope = REQUEST) vajram database() out `now Database { { new Database() } }
                 """);
 
     assertThat(diagnostics.hasErrors()).as(diagnostics.all().toString()).isFalse();
@@ -282,7 +282,7 @@ class RustCompilerGoldenTest {
                 Path.of("fields.keka"),
                 """
                 package test;
-                vajram fields() out void {
+                vajram fields() out `now void {
                   string values = ["one", "two"];
                   { }
                 }
@@ -307,10 +307,10 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("injected.keka"),
         """
         package injections;
-        vajram leaf() out string inject (string prefix) {
+        vajram leaf() out `now string inject (string prefix) {
           { prefix }
         }
-        vajram parent() out string {
+        vajram parent() out `now string {
           string value = leaf();
           { value }
         }
@@ -340,7 +340,7 @@ class RustCompilerGoldenTest {
         """
         package injections;
         import type ConsoleWriter from lang.process;
-        vajram logger() out void inject (ConsoleWriter writer) {
+        vajram logger() out `now void inject (ConsoleWriter writer) {
           { writer.println("hello") }
         }
         """);
@@ -359,7 +359,7 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("logger.keka"),
         """
         package test;
-        vajram logger(string message) out void {
+        vajram logger(string message) out `now void {
           { Console.log(message); }
         }
         """);
@@ -367,6 +367,48 @@ class RustCompilerGoldenTest {
     assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
     assertThat(Files.readString(outDir.resolve("test/logger.rs")))
         .contains("Console.log(_inputs.message);");
+  }
+
+  @Test
+  void rejectsConflictingOutputCompletionDeclarations(@TempDir Path tempDir) throws IOException {
+    for (String out :
+        List.of("string", "string~", "`now string", "`now string~", "string~~", "`now string~~")) {
+      Path source = Files.createDirectories(tempDir.resolve("src" + out.hashCode()));
+      Files.writeString(
+          source.resolve("v.keka"),
+          "package completion;\nvajram v() out " + out + " { { \"x\" } }\n");
+      boolean ok = !out.startsWith("`now") || out.equals("`now string");
+      assertThat(RustCompilerMain.compile(source, tempDir.resolve("out" + out.hashCode())))
+          .as(out)
+          .isEqualTo(ok);
+    }
+  }
+
+  @Test
+  void callerCannotCompleteEarlierThanItsDependency(@TempDir Path tempDir) throws IOException {
+    String[][] cases = {
+      {"`now string", "string", "false"},
+      {"`now string", "string~", "false"},
+      {"`now string", "string~~", "false"},
+      {"string", "string~~", "false"},
+      {"string", "`now string", "true"},
+      {"string~~", "string~", "true"},
+    };
+    for (int i = 0; i < cases.length; i++) {
+      Path source = Files.createDirectories(tempDir.resolve("src" + i));
+      Files.writeString(
+          source.resolve("v.keka"),
+          "package dep;\nvajram leaf() out "
+              + cases[i][1]
+              + " { "
+              + (cases[i][1].endsWith("~~") ? "~~ " : cases[i][1].endsWith("~") ? "~ " : "")
+              + "{ \"x\" } }\nvajram caller() out "
+              + cases[i][0]
+              + " { string v = leaf(); { v } }\n");
+      assertThat(RustCompilerMain.compile(source, tempDir.resolve("out" + i)))
+          .as(String.join(" <- ", cases[i]))
+          .isEqualTo(Boolean.parseBoolean(cases[i][2]));
+    }
   }
 
   @Test
@@ -378,7 +420,7 @@ class RustCompilerGoldenTest {
         scalarSource.resolve("scalar.keka"),
         """
         package fanout;
-        vajram scalar() out void {
+        vajram scalar() out `now void {
           string... values = "not a collection";
           { }
         }
@@ -391,13 +433,13 @@ class RustCompilerGoldenTest {
         mismatchSource.resolve("leaf.keka"),
         """
         package fanout;
-        vajram leaf() out string { { "leaf" } }
+        vajram leaf() out `now string { { "leaf" } }
         """);
     Files.writeString(
         mismatchSource.resolve("parent.keka"),
         """
         package fanout;
-        vajram parent() out void {
+        vajram parent() out `now void {
           string... values = leaf();
           { }
         }
@@ -415,7 +457,7 @@ class RustCompilerGoldenTest {
         """
         package system;
         import vajram readFileAsString from lang.fileSystem;
-        vajram reader(string filePath) out string~ permit callers public {
+        vajram reader(string filePath) out string permit callers public {
           string content = readFileAsString(path = filePath);
           out ~ { content }
         }
@@ -437,7 +479,7 @@ class RustCompilerGoldenTest {
         """
         package system;
         import vajram callHttp from lang.net;
-        vajram fetcher(string requestUrl) out string~ permit callers public {
+        vajram fetcher(string requestUrl) out string permit callers public {
           string body = callHttp(url = requestUrl);
           out ~ { body }
         }
@@ -463,7 +505,7 @@ class RustCompilerGoldenTest {
         """
         package system;
         import vajram callHttp from lang.net;
-        vajram fetcher(string requestUrl) out string~ permit callers public {
+        vajram fetcher(string requestUrl) out string permit callers public {
           string body = callHttp(url = requestUrl);
           out ~ { body }
         }
@@ -487,7 +529,7 @@ class RustCompilerGoldenTest {
         """
         package system;
         import vajram readFileAsString from lang.fileSystem;
-        vajram reader(string filePath) out string {
+        vajram reader(string filePath) out `now string {
           out readFileAsString(path = filePath);
         }
         """);
@@ -505,7 +547,7 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("dispatch.keka"),
         """
         package external;
-        vajram greet(string name) out string~ permit callers `outsideProcess public {
+        vajram greet(string name) out string permit callers `outsideProcess public {
           ~ { name }
         }
         """);
@@ -528,9 +570,9 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("graph.keka"),
         """
         package graph;
-        vajram firstLeaf() out string~ { ~ { "first" } }
-        vajram secondLeaf() out string~ { ~ { "second" } }
-        vajram parent() out string~ {
+        vajram firstLeaf() out string { ~ { "first" } }
+        vajram secondLeaf() out string { ~ { "second" } }
+        vajram parent() out string {
           string first = firstLeaf();
           string second = secondLeaf();
           string firstValue = first + "";
@@ -578,10 +620,10 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("diamond.keka"),
         """
         package diamond;
-        vajram leafA() out string~ { ~ { "a" } }
-        vajram leafB() out string~ { ~ { "b" } }
-        vajram leafC() out string~ { ~ { "c" } }
-        vajram diamond() out string~ {
+        vajram leafA() out string { ~ { "a" } }
+        vajram leafB() out string { ~ { "b" } }
+        vajram leafC() out string { ~ { "c" } }
+        vajram diamond() out string {
           string a = leafA();
           string b = leafB();
           string c = leafC();
@@ -627,7 +669,7 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("hello.keka"),
         """
         package hello;
-        vajram greet(string name) out string {
+        vajram greet(string name) out `now string {
           { "Hello, " + name }
         }
         """);
@@ -647,7 +689,7 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("hello.keka"),
         """
         package hello;
-        vajram greet(string name) out string {
+        vajram greet(string name) out `now string {
           { "Hello, " + name + "!" }
         }
         """);
@@ -667,9 +709,9 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("math.keka"),
         """
         package math;
-        vajram sumInts(int left, int right) out int { { left + right } }
-        vajram sumFloats(float left, float right) out float { { left + right } }
-        vajram sumDoubles(double left, double right) out double { { left + right } }
+        vajram sumInts(int left, int right) out `now int { { left + right } }
+        vajram sumFloats(float left, float right) out `now float { { left + right } }
+        vajram sumDoubles(double left, double right) out `now double { { left + right } }
         """);
 
     assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
@@ -687,7 +729,7 @@ class RustCompilerGoldenTest {
         """
         package system;
         import vajram concatStrings from lang.strings;
-        vajram join(string separator) out string {
+        vajram join(string separator) out `now string {
           string values = ["one", "two"];
           out concatStrings(strings = values; separator = separator);
         }
@@ -711,9 +753,9 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("combined.keka"),
         """
         package combined;
-        vajram leaf() out string { { "leaf" } }
+        vajram leaf() out `now string { { "leaf" } }
 
-        vajram caller() out string {
+        vajram caller() out `now string {
           string value = leaf();
           { value }
         }
@@ -741,8 +783,8 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("fanout.keka"),
         """
         package fanout;
-        vajram leaf(string value) out string { { value } }
-        vajram parent() out List<string> {
+        vajram leaf(string value) out `now string { { value } }
+        vajram parent() out `now List<string> {
           string... values = ["one", "two"];
           string... results = leaf(value =... values);
           { results }

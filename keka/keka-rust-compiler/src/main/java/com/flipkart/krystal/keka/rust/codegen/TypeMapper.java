@@ -79,7 +79,8 @@ public final class TypeMapper {
 
   public static String toRustReturnType(TypeRef type) {
     TypeRef valueType =
-        new TypeRef(type.name(), type.typeArgs(), type.grouperType(), false, type.soon());
+        new TypeRef(
+            type.name(), type.typeArgs(), type.grouperType(), false, type.soon(), type.later());
     String ownedValue = toRustOwnedType(valueType, "a");
     return type.errable() ? "Result<" + ownedValue + ", VajramError>" : ownedValue;
   }

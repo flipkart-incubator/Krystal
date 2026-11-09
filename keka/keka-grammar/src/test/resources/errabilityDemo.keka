@@ -1,6 +1,6 @@
 package com.flipkart.krystal.keka.samples;
 
-vajram errabilityDemo() out void {
+vajram errabilityDemo() out `now void {
 
   // this dependency might fail
   string? errableFacet = tryGetString();

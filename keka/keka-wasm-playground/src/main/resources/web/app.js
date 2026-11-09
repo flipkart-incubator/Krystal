@@ -1,6 +1,6 @@
 const files = new Map([['main.keka', `package playground;
 
-vajram hello(string name) out string
+vajram hello(string name) out `now string
     permit callers \`outsideProcess public{
   { "Hello, " + name }
 }

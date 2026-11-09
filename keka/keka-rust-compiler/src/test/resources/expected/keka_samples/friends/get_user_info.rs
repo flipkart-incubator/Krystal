@@ -12,8 +12,9 @@ pub mod get_user_info {
         pub userId: &'i String,
     }
 
-    pub fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(_inputs: Vec<GetUserInfoInputs<'i>>, _arena: &'a Arena, _context: &crate::keka_rt::AppContext<I>) -> Vec<&'a String> {
+    pub async fn call<'a, 'i, I: crate::keka_rt::Injector + 'static>(_inputs: Vec<GetUserInfoInputs<'i>>, _arena: &'a Arena, _context: &crate::keka_rt::AppContext<I>) -> Vec<&'a String> {
         let __n = _inputs.len();
+        let _inputs = &_inputs;
         let mut __out: Vec<&'a String> = Vec::with_capacity(__n);
         for __i in 0..__n {
             let _inputs = &_inputs[__i];
