@@ -10,6 +10,7 @@ Goal: mitram drives keka's evolution. Add an entry whenever a need or bug surfac
 | GAP-4 | runtime | all | No persistence; no way to create a post or friendship | Stubbed data | open |
 | GAP-6 | runtime | n/a | No HTTP server entry point for vajrams | n/a | open |
 | GAP-7 | runtime | n/a | `callHttp` is GET-only, no headers | n/a | open |
+| GAP-9 | runtime | `getFeed` (fanout) | In a fanout, request→response correspondence is lost: responses can't be matched back to the request (input element) that produced them | n/a | open |
 
 ## Fixed
 
