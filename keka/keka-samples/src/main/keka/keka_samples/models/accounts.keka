@@ -1,0 +1,80 @@
+package keka_samples.models;
+
+// Run:
+// ./gradlew :keka:keka-samples:runVajram -Pvajram=describeAccount -PvajramArgs="--id a1"
+vajram describeAccount(string id)
+    out string
+    permit callers `outsideProcess public {
+  Account account =
+      new Account(id = id; owner = "ram"; balance = new Money(amountMinor = 150); history = []);
+
+  { account.owner }
+}
+
+// Two accounts with the same id are equal even when every other field differs: an entity is its
+// `idField. Prints true.
+vajram sameAccount(string id)
+    out bool
+    permit callers `outsideProcess public {
+  Account first =
+      new Account(id = id; owner = "a"; balance = new Money(amountMinor = 1); history = []);
+  Account second =
+      new Account(id = id; owner = "b"; balance = new Money(amountMinor = 2); history = []);
+
+  ~{
+    yield first eq second;
+  }
+}
+
+// A value is equal to another with the same fields (the default currency fills in). Prints true.
+vajram sameMoney(int64 amountMinor)
+    out bool
+    permit callers `outsideProcess public {
+  Money first = new Money(amountMinor = amountMinor);
+  Money second = new Money(amountMinor = amountMinor; currency = "USD");
+
+  ~{
+    yield first eq second;
+  }
+}
+
+// Values that differ in a field are not equal. Prints false.
+vajram differentMoney(int64 amountMinor)
+    out bool
+    permit callers `outsideProcess public {
+  Money first = new Money(amountMinor = amountMinor);
+  Money second = new Money(amountMinor = amountMinor; currency = "EUR");
+
+  ~{
+    yield first eq second;
+  }
+}
+
+// An omitted errable field is nil. Prints true.
+vajram nicknameIsNil(string id)
+    out bool
+    permit callers `outsideProcess public {
+  Account account =
+      new Account(id = id; owner = "ram"; balance = new Money(amountMinor = 1); history = []);
+
+  ~{
+    yield account.nickname?isNil();
+  }
+}
+
+// An errable field set to a value holds it. Prints true.
+vajram nicknameIsSet(string id)
+    out bool
+    permit callers `outsideProcess public {
+  Account account =
+      new Account(
+          id = id;
+          owner = "ram";
+          balance = new Money(amountMinor = 1);
+          nickname = "ramu";
+          history = []);
+
+  ~{
+    yield account.nickname?valuePresent();
+  }
+}

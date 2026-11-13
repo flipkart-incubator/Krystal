@@ -4,21 +4,33 @@
 use std::fmt;
 
 /// The error type behind every keka errable (`T?`) facet, mapped to `Result<T, VajramError>`.
-#[derive(Debug, Clone)]
+///
+/// It is `PartialEq`, `Eq` and `Hash` so that models with errable fields can be compared and hashed.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct VajramError {
     pub message: String,
+    /// True only for keka's `nil` (an absent value), as opposed to a real error.
+    pub nil: bool,
 }
 
 impl VajramError {
     pub fn new(message: impl Into<String>) -> Self {
         Self {
             message: message.into(),
+            nil: false,
         }
+    }
+
+    pub fn is_nil(&self) -> bool {
+        self.nil
     }
 
     /// Backs keka's `nil` literal - see the free function `nil()` below.
     pub fn nil() -> Self {
-        Self::new("nil")
+        Self {
+            message: "nil".to_string(),
+            nil: true,
+        }
     }
 }
 

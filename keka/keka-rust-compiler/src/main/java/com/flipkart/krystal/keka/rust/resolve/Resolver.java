@@ -12,6 +12,7 @@ import com.flipkart.krystal.keka.rust.ast.OutputBlock;
 import com.flipkart.krystal.keka.rust.ast.SourceLocation;
 import com.flipkart.krystal.keka.rust.ast.Statement;
 import com.flipkart.krystal.keka.rust.ast.TypeRef;
+import com.flipkart.krystal.keka.rust.ast.VajramAnnotation;
 import com.flipkart.krystal.keka.rust.ast.VajramDef;
 import com.flipkart.krystal.keka.rust.ast.VajramFile;
 import com.flipkart.krystal.keka.rust.cli.RustCompilerMain.Target;
@@ -35,6 +36,8 @@ public final class Resolver {
 
   public static void validate(
       List<VajramFile> files, SymbolTable table, Diagnostics diagnostics, Target target) {
+    AnnotationValidator.validate(files, table, diagnostics);
+    ModelValidator.validate(files, table, diagnostics);
     for (VajramFile file : files) {
       VajramDef vajram = file.vajram();
       Map<String, Boolean> facetFanout = new HashMap<>();
@@ -97,7 +100,7 @@ public final class Resolver {
    */
   private static void checkErrability(VajramFile file, SymbolTable table, Diagnostics diagnostics) {
     VajramDef vajram = file.vajram();
-    if (vajram.outputType().errable() && !vajram.outputAnnotations().contains("now")) {
+    if (vajram.outputType().errable() && !VajramAnnotation.has(vajram.outputAnnotations(), "now")) {
       diagnostics.error(
           vajram.location(),
           "Vajram '"
@@ -176,7 +179,7 @@ public final class Resolver {
   private static boolean checkOutputCompletionDeclared(VajramDef vajram, Diagnostics diagnostics) {
     TypeRef output = vajram.outputType();
     int declared =
-        (vajram.outputAnnotations().contains("now") ? 1 : 0)
+        (VajramAnnotation.has(vajram.outputAnnotations(), "now") ? 1 : 0)
             + (output.soon() ? 1 : 0)
             + (output.later() ? 1 : 0);
     if (declared <= 1) {
@@ -398,7 +401,7 @@ public final class Resolver {
       VajramFile target, String generated, SourceLocation location, Diagnostics diagnostics) {
     if (generated.equals("batch")
         && target.vajram().inputs().stream()
-            .noneMatch(input -> input.annotations().contains("batched"))) {
+            .noneMatch(input -> VajramAnnotation.has(input.annotations(), "batched"))) {
       diagnostics.error(
           location,
           "'"

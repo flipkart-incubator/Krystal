@@ -447,6 +447,102 @@ fn main() {
                 println!("{}", _output);
             });
         }
+        "describeAccount" => {
+            for _input in _inputs.keys() {
+                if !["id"].contains(&_input.as_str()) {
+                    eprintln!("unknown input {} for describeAccount", _input);
+                    std::process::exit(2);
+                }
+            }
+            let _runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+            let _local = tokio::task::LocalSet::new();
+            _local.block_on(&_runtime, async {
+                let _output = keka_samples::models::accounts::describe_account::call(
+                    vec![keka_samples::models::accounts::describe_account::DescribeAccountInputs {
+                        id: _arena.alloc(
+                            _inputs
+                                .get("id")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input id was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
+                                .unwrap_or_else(|| {
+                                    eprintln!("missing input id for describeAccount");
+                                    std::process::exit(2)
+                                })
+                                .to_owned(),
+                        ),
+                    }],
+                    &_arena,
+                    &_app_context,
+                )
+                .await
+                .into_iter()
+                .next()
+                .expect("outside-process Vajram result");
+                let _output = match _output {
+                    Ok(_value) => _value,
+                    Err(_error) => {
+                        eprintln!("error: {}", _error);
+                        std::process::exit(1)
+                    }
+                };
+                println!("{}", _output);
+            });
+        }
+        "differentMoney" => {
+            for _input in _inputs.keys() {
+                if !["amountMinor"].contains(&_input.as_str()) {
+                    eprintln!("unknown input {} for differentMoney", _input);
+                    std::process::exit(2);
+                }
+            }
+            let _runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+            let _local = tokio::task::LocalSet::new();
+            _local.block_on(&_runtime, async {
+                let _output = keka_samples::models::accounts::different_money::call(
+                    vec![keka_samples::models::accounts::different_money::DifferentMoneyInputs {
+                        amountMinor: _arena.alloc(
+                            _inputs
+                                .get("amountMinor")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input amountMinor was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
+                                .unwrap_or_else(|| {
+                                    eprintln!("missing input amountMinor for differentMoney");
+                                    std::process::exit(2)
+                                })
+                                .parse::<i64>()
+                                .unwrap_or_else(|_| {
+                                    eprintln!("invalid numeric input amountMinor for differentMoney");
+                                    std::process::exit(2)
+                                }),
+                        ),
+                    }],
+                    &_arena,
+                    &_app_context,
+                )
+                .await
+                .into_iter()
+                .next()
+                .expect("outside-process Vajram result");
+                let _output = match _output {
+                    Ok(_value) => _value,
+                    Err(_error) => {
+                        eprintln!("error: {}", _error);
+                        std::process::exit(1)
+                    }
+                };
+                println!("{}", _output);
+            });
+        }
         "headFile" => {
             for _input in _inputs.keys() {
                 if !["numChars", "filePath"].contains(&_input.as_str()) {
@@ -692,6 +788,98 @@ fn main() {
                 println!("{}", _output);
             });
         }
+        "nicknameIsNil" => {
+            for _input in _inputs.keys() {
+                if !["id"].contains(&_input.as_str()) {
+                    eprintln!("unknown input {} for nicknameIsNil", _input);
+                    std::process::exit(2);
+                }
+            }
+            let _runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+            let _local = tokio::task::LocalSet::new();
+            _local.block_on(&_runtime, async {
+                let _output = keka_samples::models::accounts::nickname_is_nil::call(
+                    vec![keka_samples::models::accounts::nickname_is_nil::NicknameIsNilInputs {
+                        id: _arena.alloc(
+                            _inputs
+                                .get("id")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input id was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
+                                .unwrap_or_else(|| {
+                                    eprintln!("missing input id for nicknameIsNil");
+                                    std::process::exit(2)
+                                })
+                                .to_owned(),
+                        ),
+                    }],
+                    &_arena,
+                    &_app_context,
+                )
+                .await
+                .into_iter()
+                .next()
+                .expect("outside-process Vajram result");
+                let _output = match _output {
+                    Ok(_value) => _value,
+                    Err(_error) => {
+                        eprintln!("error: {}", _error);
+                        std::process::exit(1)
+                    }
+                };
+                println!("{}", _output);
+            });
+        }
+        "nicknameIsSet" => {
+            for _input in _inputs.keys() {
+                if !["id"].contains(&_input.as_str()) {
+                    eprintln!("unknown input {} for nicknameIsSet", _input);
+                    std::process::exit(2);
+                }
+            }
+            let _runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+            let _local = tokio::task::LocalSet::new();
+            _local.block_on(&_runtime, async {
+                let _output = keka_samples::models::accounts::nickname_is_set::call(
+                    vec![keka_samples::models::accounts::nickname_is_set::NicknameIsSetInputs {
+                        id: _arena.alloc(
+                            _inputs
+                                .get("id")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input id was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
+                                .unwrap_or_else(|| {
+                                    eprintln!("missing input id for nicknameIsSet");
+                                    std::process::exit(2)
+                                })
+                                .to_owned(),
+                        ),
+                    }],
+                    &_arena,
+                    &_app_context,
+                )
+                .await
+                .into_iter()
+                .next()
+                .expect("outside-process Vajram result");
+                let _output = match _output {
+                    Ok(_value) => _value,
+                    Err(_error) => {
+                        eprintln!("error: {}", _error);
+                        std::process::exit(1)
+                    }
+                };
+                println!("{}", _output);
+            });
+        }
         "readAvailable" => {
             for _input in _inputs.keys() {
                 if !["path"].contains(&_input.as_str()) {
@@ -719,6 +907,102 @@ fn main() {
                                     std::process::exit(2)
                                 })
                                 .to_owned(),
+                        ),
+                    }],
+                    &_arena,
+                    &_app_context,
+                )
+                .await
+                .into_iter()
+                .next()
+                .expect("outside-process Vajram result");
+                let _output = match _output {
+                    Ok(_value) => _value,
+                    Err(_error) => {
+                        eprintln!("error: {}", _error);
+                        std::process::exit(1)
+                    }
+                };
+                println!("{}", _output);
+            });
+        }
+        "sameAccount" => {
+            for _input in _inputs.keys() {
+                if !["id"].contains(&_input.as_str()) {
+                    eprintln!("unknown input {} for sameAccount", _input);
+                    std::process::exit(2);
+                }
+            }
+            let _runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+            let _local = tokio::task::LocalSet::new();
+            _local.block_on(&_runtime, async {
+                let _output = keka_samples::models::accounts::same_account::call(
+                    vec![keka_samples::models::accounts::same_account::SameAccountInputs {
+                        id: _arena.alloc(
+                            _inputs
+                                .get("id")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input id was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
+                                .unwrap_or_else(|| {
+                                    eprintln!("missing input id for sameAccount");
+                                    std::process::exit(2)
+                                })
+                                .to_owned(),
+                        ),
+                    }],
+                    &_arena,
+                    &_app_context,
+                )
+                .await
+                .into_iter()
+                .next()
+                .expect("outside-process Vajram result");
+                let _output = match _output {
+                    Ok(_value) => _value,
+                    Err(_error) => {
+                        eprintln!("error: {}", _error);
+                        std::process::exit(1)
+                    }
+                };
+                println!("{}", _output);
+            });
+        }
+        "sameMoney" => {
+            for _input in _inputs.keys() {
+                if !["amountMinor"].contains(&_input.as_str()) {
+                    eprintln!("unknown input {} for sameMoney", _input);
+                    std::process::exit(2);
+                }
+            }
+            let _runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+            let _local = tokio::task::LocalSet::new();
+            _local.block_on(&_runtime, async {
+                let _output = keka_samples::models::accounts::same_money::call(
+                    vec![keka_samples::models::accounts::same_money::SameMoneyInputs {
+                        amountMinor: _arena.alloc(
+                            _inputs
+                                .get("amountMinor")
+                                .map(|_values| {
+                                    if _values.len() > 1 {
+                                        eprintln!("input amountMinor was specified more than once");
+                                        std::process::exit(2)
+                                    }
+                                    &_values[0]
+                                })
+                                .unwrap_or_else(|| {
+                                    eprintln!("missing input amountMinor for sameMoney");
+                                    std::process::exit(2)
+                                })
+                                .parse::<i64>()
+                                .unwrap_or_else(|_| {
+                                    eprintln!("invalid numeric input amountMinor for sameMoney");
+                                    std::process::exit(2)
+                                }),
                         ),
                     }],
                     &_arena,

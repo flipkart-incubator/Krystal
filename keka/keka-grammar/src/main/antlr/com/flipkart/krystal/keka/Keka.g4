@@ -5,16 +5,36 @@ package com.flipkart.krystal.keka;
 }
 
 program
-    : vajram_file
+    : keka_file
     ;
 
-vajram_file: package_decl imports_decl* vajram_def+ ;
+keka_file: package_decl imports_decl* top_level_file_element+ ;
+
+top_level_file_element: vajram_def | type_def | model_def;
 
 vajram_def : annotation* VAJRAM ID inputs_decl output_decl injection_decl? permissions? '{' (computed_facet)* output_block'}' ;
 
+type_def : annotation_def;
+
+// A model: all data is a model. A model with `idField fields is an entity (equality and hash use only
+// those fields); otherwise it is a value. Fields are separated by `;` (a trailing `;` is allowed), may
+// carry annotations and a constant default, and may be errable (`T?`: a value, an error or nil).
+model_def: annotation* MODEL ID LPAREN model_field_list? RPAREN;
+
+model_field_list: model_field (SEMI model_field)* SEMI?;
+
+model_field: annotation* nowType ID (ASSIGN annotation_value)?;
+
+// A custom annotation definition, e.g. `` `target(kinds = [VAJRAM]) `type table(string name, bool indexed = false) ``.
+// Its parameters are compile-time constants (see annotation_value); a trailing comma is allowed and
+// an annotation with no parameters is a marker annotation, and its parentheses are optional.
+annotation_def: annotation* BACKTICK TYPE ID (LPAREN annotation_def_field_list? RPAREN)?;
+
+annotation_def_field_list : (annotation_field COMMA)* annotation_field COMMA? ;
+
 package_decl: annotation* PACKAGE qualifiedName SEMI;
 
-imports_decl: IMPORT (VAJRAM | TYPE | BACKTICK TYPE) ID FROM qualifiedName SEMI;
+imports_decl: IMPORT (VAJRAM | MODEL | TYPE | BACKTICK TYPE) ID FROM qualifiedName SEMI;
 
 qualifiedName: ID ('.' ID)*;
 
@@ -44,6 +64,8 @@ inputs_decl: IN ? '(' inputs_list? ')';
 
 inputs_list : (input_declaration COMMA)* input_declaration ;
 
+annotation_field: annotation* annotation_field_type ID (ASSIGN annotation_value)?;
+
 // A batched input is marked with the `batched annotation, not a #grouper.
 input_declaration: annotation* input_type ID;
 
@@ -61,7 +83,27 @@ annotation: BACKTICK ID annotation_param_list?;
 
 annotation_param_list : '(' ((annotation_arg COMMA)* annotation_arg COMMA?)? ')' ;
 
-annotation_arg: ID ASSIGN expr;
+annotation_arg: ID ASSIGN annotation_value;
+
+// Annotation arguments and parameter defaults must be compile-time constants, since compiler plugins
+// read them before anything runs: literals, arrays, `+`/`*` over constants, and named constants
+// (enum constants, type references). No variables, calls or `new`. `*` binds tighter than `+`.
+annotation_value
+    : annotation_value MULTIPLY annotation_value
+    | annotation_value PLUS annotation_value
+    | annotation_value_atom
+    ;
+
+annotation_value_atom
+    : STRING_LITERAL
+    | NUM_LITERAL
+    | bool
+    | annotation_array
+    | qualifiedName
+    | LPAREN annotation_value RPAREN
+    ;
+
+annotation_array: '[' (annotation_value (COMMA annotation_value)* COMMA?)? ']';
 
 permissions: PERMIT callers?;
 
@@ -80,6 +122,12 @@ type
 input_type: nowType;
 
 injection_type: nowType;
+
+// Annotation parameters are constants: a primitive or string, or a list of those. (Enums and entities
+// will be added here once the language can declare them.)
+annotation_field_type: annotation_scalar_type | '[' annotation_field_type ']';
+
+annotation_scalar_type: ID | STRING;
 
 completion_suffix : ERRABLE | SOON | LATER ;
 
@@ -122,9 +170,15 @@ expr: var_use
     | expr '::' ID
     | HASH? func_call_in_output_logic
     | NEW HASH? func_call_in_output_logic
+    | new_model
     | grouper
     | array_expr
     ;
+
+// Creates a model by naming its fields, e.g. `new Money(amountMinor = 5; currency = usd)`.
+new_model: NEW ID LPAREN model_arg (SEMI model_arg)* SEMI? RPAREN;
+
+model_arg: ID ASSIGN expr;
 
 array_expr: '[' (expr COMMA)* expr? ']';
 
@@ -153,6 +207,7 @@ HASH : '#' ;
 IS_EQ : 'eq' ;
 VAJRAM : 'vajram' ;
 TYPE : 'type' ;
+MODEL : 'model' ;
 NEW : 'new' ;
 IN: 'in';
 OUT: 'out';

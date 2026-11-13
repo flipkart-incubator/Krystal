@@ -267,7 +267,14 @@ class RustCompilerGoldenTest {
     var named = (com.flipkart.krystal.keka.rust.ast.Callers.Named) file.vajram().callers();
     assertThat(named.callers())
         .containsExactly(
-            new Caller(List.of("first"), "callerA"), new Caller(List.of("second"), "callerB"));
+            new Caller(
+                List.of(
+                    new com.flipkart.krystal.keka.rust.ast.VajramAnnotation("first", List.of())),
+                "callerA"),
+            new Caller(
+                List.of(
+                    new com.flipkart.krystal.keka.rust.ast.VajramAnnotation("second", List.of())),
+                "callerB"));
   }
 
   @Test
@@ -919,6 +926,320 @@ class RustCompilerGoldenTest {
         .contains("LeafInputs {")
         .contains("value: _arena.alloc(_it)")
         .doesNotContain("futures::future::join_all");
+  }
+
+  @Test
+  void parsesAnnotationDefinitions() {
+    var diagnostics = new com.flipkart.krystal.keka.rust.diag.Diagnostics();
+    var parsed =
+        new com.flipkart.krystal.keka.rust.parse.AstBuilder(diagnostics)
+            .buildSource(
+                Path.of("defs.keka"),
+                """
+                package test;
+                `target(kinds = [VAJRAM]) `type table(string name, bool indexed = false, [int32] sizes = [1, 2 * 3],)
+                `type marker()
+                `type flag
+                vajram v() out `now void { { } }
+                """);
+
+    assertThat(diagnostics.hasErrors()).as(diagnostics.all().toString()).isFalse();
+    assertThat(parsed.vajrams()).hasSize(1);
+    var table = parsed.annotationDefs().get(0).definition();
+    assertThat(table.name()).isEqualTo("table");
+    assertThat(table.metaAnnotations()).extracting(a -> a.name()).containsExactly("target");
+    assertThat(table.parameters())
+        .extracting(p -> p.name())
+        .containsExactly("name", "indexed", "sizes");
+    assertThat(table.parameters().get(0).defaultValue()).isNull();
+    assertThat(table.parameters().get(2).type().name()).isEqualTo("List");
+    assertThat(parsed.annotationDefs().get(1).definition().parameters()).isEmpty();
+    assertThat(parsed.annotationDefs().get(2).definition().name()).isEqualTo("flag");
+    assertThat(parsed.annotationDefs().get(2).definition().parameters()).isEmpty();
+  }
+
+  @Test
+  void annotationArgumentsMustBeConstantSyntax() {
+    for (String argument : List.of("foo()", "new Foo()", "a.b()", "not true", "#req")) {
+      var diagnostics = new com.flipkart.krystal.keka.rust.diag.Diagnostics();
+      new com.flipkart.krystal.keka.rust.parse.AstBuilder(diagnostics)
+          .buildSource(
+              Path.of("args.keka"),
+              "package test;\n`tag(value = " + argument + ") vajram v() out `now void { { } }\n");
+      assertThat(diagnostics.hasErrors()).as(argument).isTrue();
+    }
+  }
+
+  @Test
+  void validatesUsesOfDefinedAnnotations() {
+    String definitions =
+        "package test;\n"
+            + "`target(kinds = [VAJRAM]) `type table(string name, bool indexed = false, [int32] sizes = [1])\n"
+            + "`target(kinds = [INPUT]) `type column(string name)\n"
+            + "`type untargeted()\n";
+    record Case(String use, String expectedError) {}
+    for (Case testCase :
+        List.of(
+            new Case("`table(name = \"a\" + \"b\", sizes = [2 * 3, 4])", null),
+            new Case("`table(name = \"a\", indexed = true)", null),
+            new Case("`table(indexed = true)", "missing required parameter 'name'"),
+            new Case("`table(name = \"a\", color = \"red\")", "has no parameter 'color'"),
+            new Case("`table(name = \"a\", name = \"b\")", "more than once"),
+            new Case("`table(name = 5)", "must be a constant of type 'string'"),
+            new Case(
+                "`table(name = \"a\", sizes = [\"x\"])", "must be a constant of type '[int32]'"),
+            new Case(
+                "`table(name = \"a\", sizes = [3000000000])",
+                "must be a constant of type '[int32]'"),
+            new Case("`table(name = SOME_NAME)", "must be a constant of type 'string'"),
+            new Case("`table(name = \"a\" * 2)", "operands it does not support"),
+            new Case("`column(name = \"a\")", "cannot be applied to a vajram"),
+            new Case("`untargeted()", "allowed nowhere"),
+            new Case("`unknownBuiltin(anything = 1)", null))) {
+      var diagnostics = new com.flipkart.krystal.keka.rust.diag.Diagnostics();
+      var parsed =
+          new com.flipkart.krystal.keka.rust.parse.AstBuilder(diagnostics)
+              .buildSource(
+                  Path.of("uses.keka"),
+                  definitions + testCase.use() + " vajram v() out `now void { { } }\n");
+      assertThat(diagnostics.hasErrors()).as(diagnostics.all().toString()).isFalse();
+      var table =
+          com.flipkart.krystal.keka.rust.resolve.SymbolTable.build(
+              parsed.vajrams(), parsed.annotationDefs(), diagnostics);
+      com.flipkart.krystal.keka.rust.resolve.Resolver.validate(
+          parsed.vajrams(), table, diagnostics);
+      if (testCase.expectedError() == null) {
+        assertThat(diagnostics.hasErrors()).as(testCase.use() + diagnostics.all()).isFalse();
+      } else {
+        assertThat(diagnostics.all().toString())
+            .as(testCase.use())
+            .contains(testCase.expectedError());
+      }
+    }
+  }
+
+  @Test
+  void checksAnnotationTargetsAtEverySite() {
+    String template =
+        """
+        @@PACKAGE@@ package test;
+        `target(kinds = [PACKAGE]) `type pkgTag
+        `target(kinds = [VAJRAM]) `type vajTag
+        `target(kinds = [INPUT]) `type inTag
+        `target(kinds = [OUTPUT]) `type outTag
+        `target(kinds = [FACET]) `type facetTag
+        `target(kinds = [DEPENDENCY]) `type depTag
+        `target(kinds = [CALLERS]) `type callersTag
+        `target(kinds = [INJECTION]) `type injTag
+        vajram other(string a) out `now string { { a } }
+        @@VAJRAM@@ vajram v(@@INPUT@@ string a) out @@OUTPUT@@ `now string
+            inject (@@INJECTION@@ Logger logger) permit callers @@CALLERS@@ public {
+          @@FACET@@ string x = "a";
+          @@DEPENDENCY@@ string d = other(a = "x");
+          { d }
+        }
+        """;
+    java.util.Map<String, String> correct =
+        java.util.Map.of(
+            "PACKAGE", "`pkgTag",
+            "VAJRAM", "`vajTag",
+            "INPUT", "`inTag",
+            "OUTPUT", "`outTag",
+            "FACET", "`facetTag",
+            "DEPENDENCY", "`depTag",
+            "CALLERS", "`callersTag",
+            "INJECTION", "`injTag");
+    java.util.Map<String, String> siteNames =
+        java.util.Map.of(
+            "PACKAGE", "a package",
+            "VAJRAM", "a vajram",
+            "INPUT", "an input",
+            "OUTPUT", "an output",
+            "FACET", "a facet",
+            "DEPENDENCY", "a dependency",
+            "CALLERS", "a callers declaration",
+            "INJECTION", "an injection");
+    // Every annotation at its own site is accepted.
+    assertThat(diagnoseSource(fill(template, correct)).all().toString()).isEqualTo("[]");
+    // A wrong-target annotation at any one site is rejected, naming that site.
+    for (String site : correct.keySet()) {
+      java.util.Map<String, String> wrong = new java.util.HashMap<>(correct);
+      wrong.put(site, site.equals("INPUT") ? "`facetTag" : "`inTag");
+      assertThat(diagnoseSource(fill(template, wrong)).all().toString())
+          .as(site)
+          .contains("cannot be applied to " + siteNames.get(site));
+    }
+  }
+
+  @Test
+  void parsesModels() {
+    var diagnostics = new com.flipkart.krystal.keka.rust.diag.Diagnostics();
+    var parsed =
+        new com.flipkart.krystal.keka.rust.parse.AstBuilder(diagnostics)
+            .buildSource(
+                Path.of("models.keka"),
+                """
+                package test;
+                import model Money from other.pkg;
+                model Money(int64 amountMinor; string currency = "USD";)
+                model Account(
+                  `idField string id;
+                  `range(min = 0) int32 tier = 1 * 2;
+                  string? nickname;
+                  List<Money> history
+                )
+                model Empty()
+                vajram v() out `now void {
+                  Account a = new Account(id = "x"; history = []);
+                  { }
+                }
+                """);
+
+    assertThat(diagnostics.hasErrors()).as(diagnostics.all().toString()).isFalse();
+    assertThat(parsed.models())
+        .extracting(m -> m.model().name())
+        .containsExactly("Money", "Account", "Empty");
+    var account = parsed.models().get(1).model();
+    assertThat(account.isEntity()).isTrue();
+    assertThat(account.idFields()).extracting(f -> f.name()).containsExactly("id");
+    assertThat(parsed.models().get(0).model().isEntity()).isFalse();
+    assertThat(account.fields().get(1).annotations())
+        .extracting(a -> a.name())
+        .containsExactly("range");
+    assertThat(account.fields().get(1).defaultValue())
+        .isInstanceOf(com.flipkart.krystal.keka.rust.ast.Expr.BinaryOp.class);
+    assertThat(account.fields().get(2).type().errable()).isTrue();
+    assertThat(account.fields().get(3).type().name()).isEqualTo("List");
+    assertThat(parsed.models().get(2).model().fields()).isEmpty();
+    var field =
+        (com.flipkart.krystal.keka.rust.ast.Field)
+            parsed.vajrams().get(0).vajram().computedFacets().get(0);
+    assertThat(field.value()).isInstanceOf(com.flipkart.krystal.keka.rust.ast.Expr.NewModel.class);
+    var newModel = (com.flipkart.krystal.keka.rust.ast.Expr.NewModel) field.value();
+    assertThat(newModel.arguments()).extracting(a -> a.name()).containsExactly("id", "history");
+  }
+
+  @Test
+  void validatesModels() {
+    record Case(String source, String expectedError) {}
+    String money = "model Money(int64 amountMinor; string currency = \"USD\")\n";
+    String vajram = "vajram v() out `now void { { } }\n";
+    for (Case testCase :
+        List.of(
+            new Case(
+                money
+                    + "model Account(`idField string id; Money balance; string? nick; List<Money> hist; Map<string, Money> m; int32 t = 1 + 2; float64 f = 3)\n"
+                    + vajram,
+                null),
+            new Case("model A(string x; string x)\n" + vajram, "declares field 'x' more than once"),
+            new Case("model A(Foo x)\n" + vajram, "Unknown type 'Foo'"),
+            new Case("model A(#req x)\n" + vajram, "cannot be a generated type"),
+            new Case("model A(List<string, string> x)\n" + vajram, "takes 1 type argument"),
+            new Case("model A(string<int32> x)\n" + vajram, "takes no type arguments"),
+            new Case("model A(int32 x = \"s\")\n" + vajram, "must be a constant of type 'int32'"),
+            new Case(
+                money + "model A(Money m = 5)\n" + vajram, "defaults are limited to primitives"),
+            new Case("model A(B b)\nmodel B(A a)\n" + vajram, "contains itself (A -> B -> A)"),
+            new Case("model A(A? self)\n" + vajram, "contains itself (A -> A)"),
+            new Case("model A(List<A> children)\n" + vajram, null),
+            new Case("model A(`idField float64 id)\n" + vajram, "must be hashable"),
+            new Case("model A(`idField string? id)\n" + vajram, "cannot be errable"),
+            new Case("model A(`idField Map<string, string> id)\n" + vajram, "must be hashable"),
+            new Case("model A(Map<float64, string> m)\n" + vajram, "must be hashable"),
+            new Case("model A(string x)\nmodel A(string y)\n" + vajram, "Duplicate model name 'A'"),
+            new Case("model v(string x)\n" + vajram, "clashes with the model of the same name"),
+            new Case("`idField model A(string x)\n" + vajram, "cannot be applied to a model"),
+            new Case("`type idField()\n" + vajram, "built into the language"),
+            new Case(
+                "vajram w(`idField string a) out `now void { { } }\n",
+                "cannot be applied to an input"),
+            new Case(
+                money + "vajram w() out `now void { Money m = new Money(amountMinor = 1); { } }\n",
+                null),
+            new Case(
+                money
+                    + "vajram w() out `now void { Money m = new Money(amountMinor = 1; color = 2); { } }\n",
+                "has no field 'color'"),
+            new Case(
+                money
+                    + "vajram w() out `now void { Money m = new Money(amountMinor = 1; amountMinor = 2); { } }\n",
+                "is set twice"),
+            new Case(
+                money
+                    + "vajram w() out `now void { Money m = new Money(currency = \"EUR\"); { } }\n",
+                "Field 'amountMinor' of model 'Money' has no default"),
+            new Case(
+                money + "vajram w() out `now void { Money m = new Money(5); { } }\n",
+                "Create model 'Money' with named fields"),
+            new Case(
+                money + "vajram w() out `now void { Money m = new Money(); { } }\n",
+                "Field 'amountMinor' of model 'Money' has no default"),
+            new Case(
+                "model D(int32 a = 1; string b = \"x\")\nvajram w() out `now void { D d = new D(); { } }\n",
+                null),
+            new Case(
+                "vajram w() out `now void { Nope n = new Nope(a = 1); { } }\n",
+                "Unknown model 'Nope'"))) {
+      var diagnostics = diagnoseSource("package test;\n" + testCase.source());
+      if (testCase.expectedError() == null) {
+        assertThat(diagnostics.all().toString()).as(testCase.source()).isEqualTo("[]");
+      } else {
+        assertThat(diagnostics.all().toString())
+            .as(testCase.source())
+            .contains(testCase.expectedError());
+      }
+    }
+  }
+
+  private static String fill(String template, java.util.Map<String, String> values) {
+    String result = template;
+    for (var entry : values.entrySet()) {
+      result = result.replace("@@" + entry.getKey() + "@@", entry.getValue());
+    }
+    return result;
+  }
+
+  private static com.flipkart.krystal.keka.rust.diag.Diagnostics diagnoseSource(String source) {
+    var diagnostics = new com.flipkart.krystal.keka.rust.diag.Diagnostics();
+    var parsed =
+        new com.flipkart.krystal.keka.rust.parse.AstBuilder(diagnostics)
+            .buildSource(Path.of("sites.keka"), source);
+    var table =
+        com.flipkart.krystal.keka.rust.resolve.SymbolTable.build(
+            parsed.vajrams(), parsed.annotationDefs(), parsed.models(), diagnostics);
+    com.flipkart.krystal.keka.rust.resolve.Resolver.validate(parsed.vajrams(), table, diagnostics);
+    return diagnostics;
+  }
+
+  @Test
+  void rejectsInvalidAnnotationDefinitions() {
+    record Case(String definition, String expectedError) {}
+    for (Case testCase :
+        List.of(
+            new Case("`type a(string x, string x)", "more than once"),
+            new Case("`type a(Foo x)", "unsupported type 'Foo'"),
+            new Case("`type a(int32 x = \"s\")", "must be a constant of type 'int32'"),
+            new Case("`type a(int32 x = foo)", "must be a constant of type 'int32'"),
+            new Case("`target(kinds = [NOWHERE]) `type a()", "Unknown annotation target"),
+            new Case("`target(where = [VAJRAM]) `type a()", "takes one parameter"),
+            new Case("`type a() `type a()", "Duplicate annotation name 'a'"))) {
+      var diagnostics = new com.flipkart.krystal.keka.rust.diag.Diagnostics();
+      var parsed =
+          new com.flipkart.krystal.keka.rust.parse.AstBuilder(diagnostics)
+              .buildSource(
+                  Path.of("bad.keka"),
+                  "package test;\n"
+                      + testCase.definition()
+                      + "\nvajram v() out `now void { { } }\n");
+      var table =
+          com.flipkart.krystal.keka.rust.resolve.SymbolTable.build(
+              parsed.vajrams(), parsed.annotationDefs(), diagnostics);
+      com.flipkart.krystal.keka.rust.resolve.Resolver.validate(
+          parsed.vajrams(), table, diagnostics);
+      assertThat(diagnostics.all().toString())
+          .as(testCase.definition())
+          .contains(testCase.expectedError());
+    }
   }
 
   private static boolean commandAvailable(String command) {

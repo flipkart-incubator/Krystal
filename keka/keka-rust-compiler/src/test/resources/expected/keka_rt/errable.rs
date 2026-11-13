@@ -22,9 +22,8 @@ pub trait Errable<T> {
         !self.errorPresent()
     }
 
-    fn isNil(&self) -> bool {
-        self.valueAbsent() && self.errorAbsent()
-    }
+    /// True only for `nil` (an absent value): neither a value nor a real error.
+    fn isNil(&self) -> bool;
 
     fn value(&self) -> Option<T>;
 
@@ -48,6 +47,10 @@ impl<T: Clone> Errable<T> for Result<T, VajramError> {
 
     fn errorPresent(&self) -> bool {
         self.is_err()
+    }
+
+    fn isNil(&self) -> bool {
+        self.as_ref().err().map_or(false, |error| error.is_nil())
     }
 
     fn value(&self) -> Option<T> {

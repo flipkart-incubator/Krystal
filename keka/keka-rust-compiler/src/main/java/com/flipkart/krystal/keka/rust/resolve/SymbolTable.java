@@ -1,14 +1,22 @@
 package com.flipkart.krystal.keka.rust.resolve;
 
+import com.flipkart.krystal.keka.rust.ast.AnnotationDef;
+import com.flipkart.krystal.keka.rust.ast.AnnotationDefFile;
 import com.flipkart.krystal.keka.rust.ast.Completion;
 import com.flipkart.krystal.keka.rust.ast.ComputedFacet;
 import com.flipkart.krystal.keka.rust.ast.Dependency;
 import com.flipkart.krystal.keka.rust.ast.DependencyInvocation;
+import com.flipkart.krystal.keka.rust.ast.Expr;
+import com.flipkart.krystal.keka.rust.ast.ModelDef;
+import com.flipkart.krystal.keka.rust.ast.ModelFile;
 import com.flipkart.krystal.keka.rust.ast.OutputBlock;
+import com.flipkart.krystal.keka.rust.ast.SourceLocation;
 import com.flipkart.krystal.keka.rust.ast.TypeRef;
+import com.flipkart.krystal.keka.rust.ast.VajramAnnotation;
 import com.flipkart.krystal.keka.rust.ast.VajramFile;
 import com.flipkart.krystal.keka.rust.diag.Diagnostics;
 import com.flipkart.krystal.keka.rust.system.SystemVajram;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,11 +32,68 @@ import org.jspecify.annotations.Nullable;
 public final class SymbolTable {
 
   private final Map<String, VajramFile> filesByVajramName = new HashMap<>();
+  private final Map<String, AnnotationDefFile> annotationDefsByName = new HashMap<>();
+  private final Map<String, ModelFile> modelsByName = new java.util.LinkedHashMap<>();
+
+  /** Annotations the language itself defines; they cannot be redefined by user code. */
+  private static final Map<String, AnnotationDef> BUILT_IN_ANNOTATIONS =
+      Map.of(
+          ModelDef.ID_FIELD,
+          new AnnotationDef(
+              ModelDef.ID_FIELD,
+              List.of(
+                  new VajramAnnotation(
+                      AnnotationValidator.TARGET_META_ANNOTATION,
+                      List.of(
+                          new VajramAnnotation.Argument(
+                              "kinds", new Expr.Array(List.of(new Expr.VarUse("FIELD", false))))))),
+              List.of(),
+              new SourceLocation("<built-in>", 1, 1)));
 
   public static SymbolTable build(List<VajramFile> files, Diagnostics diagnostics) {
+    return build(files, List.of(), diagnostics);
+  }
+
+  public static SymbolTable build(
+      List<VajramFile> files, List<AnnotationDefFile> annotationDefs, Diagnostics diagnostics) {
+    return build(files, annotationDefs, List.of(), diagnostics);
+  }
+
+  public static SymbolTable build(
+      List<VajramFile> files,
+      List<AnnotationDefFile> annotationDefs,
+      List<ModelFile> models,
+      Diagnostics diagnostics) {
     SymbolTable table = new SymbolTable();
+    for (ModelFile file : models) {
+      String name = file.model().name();
+      ModelFile existing = table.modelsByName.putIfAbsent(name, file);
+      if (existing != null) {
+        diagnostics.error(
+            file.model().location(),
+            "Duplicate model name '" + name + "' also defined in " + existing.sourcePath());
+      }
+    }
+    for (AnnotationDefFile file : annotationDefs) {
+      String name = file.definition().name();
+      AnnotationDefFile existing = table.annotationDefsByName.putIfAbsent(name, file);
+      if (BUILT_IN_ANNOTATIONS.containsKey(name)) {
+        diagnostics.error(
+            file.definition().location(),
+            "Annotation name '" + name + "' is built into the language and cannot be redefined");
+      } else if (existing != null) {
+        diagnostics.error(
+            file.definition().location(),
+            "Duplicate annotation name '" + name + "' also defined in " + existing.sourcePath());
+      }
+    }
     for (VajramFile file : files) {
       String name = file.vajram().name();
+      if (table.modelsByName.containsKey(name)) {
+        diagnostics.error(
+            file.vajram().location(),
+            "Vajram name '" + name + "' clashes with the model of the same name");
+      }
       VajramFile existing = table.filesByVajramName.putIfAbsent(name, file);
       if (existing != null) {
         diagnostics.error(
@@ -37,6 +102,35 @@ public final class SymbolTable {
       }
     }
     return table;
+  }
+
+  /** The custom annotation definition with this name, or null if there is none. */
+  public @Nullable AnnotationDef annotationDefinition(String name) {
+    AnnotationDef builtIn = BUILT_IN_ANNOTATIONS.get(name);
+    if (builtIn != null) {
+      return builtIn;
+    }
+    AnnotationDefFile file = annotationDefsByName.get(name);
+    return file == null ? null : file.definition();
+  }
+
+  /** The model with this name, or null if there is none. */
+  public @Nullable ModelDef model(String name) {
+    ModelFile file = modelsByName.get(name);
+    return file == null ? null : file.model();
+  }
+
+  public @Nullable ModelFile modelFile(String name) {
+    return modelsByName.get(name);
+  }
+
+  /** Every model, in declaration order across files. */
+  public List<ModelFile> models() {
+    return new ArrayList<>(modelsByName.values());
+  }
+
+  public List<AnnotationDefFile> annotationDefinitions() {
+    return new ArrayList<>(annotationDefsByName.values());
   }
 
   public Optional<VajramFile> resolve(String vajramName) {
@@ -61,7 +155,7 @@ public final class SymbolTable {
     if (output.later()) {
       return Completion.LATER;
     }
-    boolean now = file.vajram().outputAnnotations().contains("now");
+    boolean now = VajramAnnotation.has(file.vajram().outputAnnotations(), "now");
     return now ? Completion.NOW : Completion.SOON;
   }
 

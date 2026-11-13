@@ -36,6 +36,20 @@ class KekaSamplesTest {
   }
 
   @Test
+  void modelsCompareByIdentityOrByValue() throws Exception {
+    assertThat(runVajram("describeAccount", "--id", "a1")).isEqualTo("ram");
+    assertThat(runVajram("sameAccount", "--id", "a1")).isEqualTo("true");
+    assertThat(runVajram("sameMoney", "--amountMinor", "5")).isEqualTo("true");
+    assertThat(runVajram("differentMoney", "--amountMinor", "5")).isEqualTo("false");
+  }
+
+  @Test
+  void errableModelFieldsHoldNilOrAValue() throws Exception {
+    assertThat(runVajram("nicknameIsNil", "--id", "a1")).isEqualTo("true");
+    assertThat(runVajram("nicknameIsSet", "--id", "a1")).isEqualTo("true");
+  }
+
+  @Test
   void errableAsyncCalleeYieldsPerInputResults() throws Exception {
     assertThat(runVajram("checkErrors", "--input", "x")).isEqualTo("true");
     assertThat(runVajram("checkErrorsInFanout", "--input", "x")).isEqualTo("true");

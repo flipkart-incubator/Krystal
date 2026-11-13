@@ -5,7 +5,7 @@ pub trait Errable<T> {
     fn valueAbsent(&self) -> bool { !self.valuePresent() }
     fn errorPresent(&self) -> bool;
     fn errorAbsent(&self) -> bool { !self.errorPresent() }
-    fn isNil(&self) -> bool { self.valueAbsent() && self.errorAbsent() }
+    fn isNil(&self) -> bool;
     fn value(&self) -> Option<T>;
     fn error(&self) -> Option<VajramError>;
     fn default(&self, fallback: T) -> T { self.value().unwrap_or(fallback) }
@@ -15,6 +15,7 @@ pub trait Errable<T> {
 impl<T: Clone> Errable<T> for Result<T, VajramError> {
     fn valuePresent(&self) -> bool { self.is_ok() }
     fn errorPresent(&self) -> bool { self.is_err() }
+    fn isNil(&self) -> bool { self.as_ref().err().map_or(false, |error| error.is_nil()) }
     fn value(&self) -> Option<T> { self.as_ref().ok().cloned() }
     fn error(&self) -> Option<VajramError> { self.as_ref().err().cloned() }
 }

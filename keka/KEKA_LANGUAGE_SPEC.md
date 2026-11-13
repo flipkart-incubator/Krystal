@@ -67,6 +67,54 @@ Annotations in vajrams are written using the
 `` ` `` character followed by the name of the
 annotation provided they have been imported in the file.
 
+### Annotation definitions
+
+A custom annotation is declared with `` `type ``, at the top level of a file beside vajrams:
+
+```keka
+`target(kinds = [VAJRAM])
+`type table(string name, bool indexed = false, [int32] sizes = [1],)
+
+`type marker
+```
+
+* Parameters are written `Type name` (with an optional constant default `= value`), separated by commas; a trailing comma is allowed. With no parameters the parentheses are optional (a marker annotation).
+* A parameter type is a primitive, `string`, or a list of those (`[T]`).
+* Annotation arguments and defaults must be compile-time constants: literals, arrays, `+` and `*` over constants (`*` binds tighter), and named constants. Calls, variables and `new` are syntax errors.
+* `` `target(kinds = [...]) `` says where the annotation may be written: `VAJRAM`, `INPUT`, `OUTPUT`, `FACET`, `DEPENDENCY`, `INJECTION`, `CALLERS`, `PACKAGE`, `MODEL`, `FIELD`. Without it the annotation is allowed nowhere.
+* A use is checked against its definition at every site: unknown or repeated parameters, a missing required parameter, a value of the wrong type, and a wrong target are compile errors. Annotations with no definition (such as `` `batched ``) are not checked.
+* `` `idField `` is built in (target `FIELD`) and cannot be redefined.
+
+### Models
+
+All data is a model. A model is declared with `model`, a parenthesised list of fields separated by `;` (a trailing `;` is allowed):
+
+```keka
+model Money(int64 amountMinor; string currency = "USD";)
+
+model Account(
+  `idField string id;
+  string owner;
+  Money balance;
+  string? nickname;
+  int32 tier = 1;
+  List<Money> history;
+)
+
+vajram openAccount(string id) out `now string {
+  Account account = new Account(id = id; owner = "ram"; balance = new Money(amountMinor = 150); history = []);
+  { account.owner }
+}
+```
+
+* A model with `` `idField `` fields is an **entity**: its equality and hash use only those fields. Any other model is a **value**, compared field by field. Id fields must be hashable (no floats, sets or maps) and not errable.
+* Field types are primitives, other models, `List<T>`, `Set<T>`, `Map<K, V>`, and `T?`. A `T?` field is errable like everywhere else: it holds a value, an error, or `nil` (absent). A field may have a constant default.
+* A model cannot contain itself through plain or errable fields; a `List`, `Set` or `Map` breaks the cycle. Entity-typed fields embed a copy of the entity.
+* `new Model(field = value; ...)` creates an instance. An omitted field takes its default, an omitted `T?` field is `nil`, and any other omitted field is a compile error. `new Model()` works when every field has a default.
+* Model names are unique across the compilation and cannot match a vajram name.
+* `import model Name from package;` is accepted; models are visible everywhere by name.
+* Enums are not models yet; they will be added as tagged unions.
+
 ### Vajram inputs
 
 ### Vajram injections

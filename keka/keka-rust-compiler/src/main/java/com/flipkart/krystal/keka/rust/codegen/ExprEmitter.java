@@ -2,10 +2,15 @@ package com.flipkart.krystal.keka.rust.codegen;
 
 import com.flipkart.krystal.keka.rust.ast.Accessor;
 import com.flipkart.krystal.keka.rust.ast.Expr;
+import com.flipkart.krystal.keka.rust.ast.ModelDef;
 import com.flipkart.krystal.keka.rust.ast.Statement;
+import com.flipkart.krystal.keka.rust.ast.TypeRef;
 import com.flipkart.krystal.keka.rust.ast.YieldStatement;
+import com.flipkart.krystal.keka.rust.resolve.SymbolTable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
@@ -43,6 +48,8 @@ public final class ExprEmitter {
   private final Map<String, String> boundaryTypeNames;
   private final Set<String> localFacetNames;
   private final Set<String> stringFacetNames;
+  private final @Nullable SymbolTable symbolTable;
+  private final Set<String> arenaFacetNames;
 
   public ExprEmitter(
       Set<String> inputNames,
@@ -50,11 +57,35 @@ public final class ExprEmitter {
       Map<String, String> boundaryTypeNames,
       Set<String> localFacetNames,
       Set<String> stringFacetNames) {
+    this(
+        inputNames,
+        injectionNames,
+        boundaryTypeNames,
+        localFacetNames,
+        stringFacetNames,
+        null,
+        Set.of());
+  }
+
+  /**
+   * {@code symbolTable} lets {@code new Model(...)} find the model's fields and defaults; {@code
+   * arenaFacetNames} are the non-{@code `local} facets, held as {@code &'a T}.
+   */
+  public ExprEmitter(
+      Set<String> inputNames,
+      Set<String> injectionNames,
+      Map<String, String> boundaryTypeNames,
+      Set<String> localFacetNames,
+      Set<String> stringFacetNames,
+      @Nullable SymbolTable symbolTable,
+      Set<String> arenaFacetNames) {
     this.inputNames = inputNames;
     this.injectionNames = injectionNames;
     this.boundaryTypeNames = boundaryTypeNames;
     this.localFacetNames = localFacetNames;
     this.stringFacetNames = stringFacetNames;
+    this.symbolTable = symbolTable;
+    this.arenaFacetNames = arenaFacetNames;
   }
 
   /**
@@ -115,8 +146,65 @@ public final class ExprEmitter {
       return emitCall(c);
     } else if (expr instanceof Expr.FuncChain fc) {
       return emitChain(fc);
+    } else if (expr instanceof Expr.NewModel n) {
+      return emitNewModel(n.name(), n.arguments());
     }
     throw new IllegalStateException("Unhandled expr kind: " + expr.getClass());
+  }
+
+  /**
+   * A struct literal: given fields use their values, omitted fields take their constant default,
+   * and an omitted errable field is {@code nil}.
+   */
+  private String emitNewModel(String name, List<Expr.NewModel.Argument> arguments) {
+    ModelDef model = Objects.requireNonNull(symbolTable).model(name);
+    Map<String, Expr> given = new HashMap<>();
+    arguments.forEach(argument -> given.put(argument.name(), argument.value()));
+    StringBuilder sb = new StringBuilder(name).append(" { ");
+    for (ModelDef.FieldDecl field : Objects.requireNonNull(model).fields()) {
+      Expr value = given.get(field.name());
+      String rust;
+      if (value != null) {
+        rust = emitModelFieldValue(value, field.type());
+      } else if (field.defaultValue() != null) {
+        TypeRef plain =
+            new TypeRef(field.type().name(), field.type().typeArgs(), false, false, false, false);
+        String constant = ModelEmitter.emitConstant(field.defaultValue(), plain);
+        rust = field.type().errable() ? "Ok(" + constant + ")" : constant;
+      } else {
+        rust = "crate::keka_rt::nil()";
+      }
+      sb.append(field.name()).append(": ").append(rust).append(", ");
+    }
+    return sb.append("}").toString();
+  }
+
+  private String emitModelFieldValue(Expr value, TypeRef fieldType) {
+    if (fieldType.errable()) {
+      if (value instanceof Expr.VarUse v && "nil".equals(v.name())) {
+        return emit(v);
+      }
+      if (value instanceof Expr.VarUse v && v.errableSuffix()) {
+        return emit(v) + ".clone()";
+      }
+      return "Ok(" + emitModelFieldValue(value, plainType(fieldType)) + ")";
+    }
+    if (value instanceof Expr.VarUse v) {
+      String name = emit(v);
+      if (localFacetNames.contains(v.name())) {
+        return name + ".clone()";
+      }
+      if (inputNames.contains(v.name())
+          || injectionNames.contains(v.name())
+          || arenaFacetNames.contains(v.name())) {
+        return "(*" + name + ").clone()";
+      }
+    }
+    return emit(value);
+  }
+
+  private static TypeRef plainType(TypeRef type) {
+    return new TypeRef(type.name(), type.typeArgs(), type.grouperType(), false, false, false);
   }
 
   private String emitArrayElement(Expr element) {
@@ -169,7 +257,7 @@ public final class ExprEmitter {
     if ("nil".equals(v.name())) {
       // keka's `nil` literal is just an identifier grammatically; Rust has no single
       // nameable "nil of any type" value, so it becomes a call to the prelude's generic `nil()`.
-      return "nil()";
+      return "crate::keka_rt::nil()";
     }
     String name = resolve(v.name());
     // `expr?` (errable-suffixed var-use) surfaces the underlying Result directly via the
@@ -222,6 +310,12 @@ public final class ExprEmitter {
       // Rust names
       // and can't appear before `::` the way a type name normally would.
       callee = Naming.capitalize(call.name()) + "Key::new";
+    } else if (call.isNew()
+        && call.args().isEmpty()
+        && call.lambda() == null
+        && symbolTable != null
+        && symbolTable.model(call.name()) != null) {
+      return emitNewModel(call.name(), List.of());
     } else if (call.isNew()) {
       callee = rustTypeName(call.name()) + "::new";
     } else {
@@ -287,7 +381,12 @@ public final class ExprEmitter {
         value = name;
       }
     } else {
-      value = "_arena.alloc(" + emitYieldValue(yield) + ")";
+      Expr only = yield.values().size() == 1 ? yield.values().get(0) : null;
+      // A model field read is a place behind a reference: clone it into the output arena.
+      value =
+          only instanceof Expr.MemberAccess access && access.accessor() == Accessor.DOT
+              ? "_arena.alloc((" + emitYieldValue(yield) + ").clone())"
+              : "_arena.alloc(" + emitYieldValue(yield) + ")";
     }
     sb.append(errable ? "Ok(" + value + ")" : value);
     return sb.toString();

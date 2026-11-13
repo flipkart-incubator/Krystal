@@ -69,8 +69,10 @@ public final class OutsideProcessAnnotationProcessor implements VajramAnnotation
 
     StringBuilder source = new StringBuilder();
     source.append("mod keka_rt;\n");
-    context.compilationVajrams().stream()
-        .map(VajramFile::packageSegments)
+    java.util.stream.Stream.concat(
+            context.compilationVajrams().stream().map(VajramFile::packageSegments),
+            context.symbolTable().models().stream()
+                .map(com.flipkart.krystal.keka.rust.ast.ModelFile::packageSegments))
         .filter(segments -> !segments.isEmpty())
         .map(segments -> Naming.toSnakeCase(segments.get(0)))
         .distinct()
