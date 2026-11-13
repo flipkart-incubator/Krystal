@@ -2,7 +2,6 @@ package com.flipkart.krystal.lattice.samples.rest.json.dropwizard.sampleRestServ
 
 import static com.flipkart.krystal.lattice.core.execution.ThreadingStrategy.POOLED_NATIVE_THREAD_PER_REQUEST;
 
-import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.lattice.core.LatticeApp;
 import com.flipkart.krystal.lattice.core.LatticeApplication;
 import com.flipkart.krystal.lattice.core.doping.DopeWith;
@@ -51,16 +50,7 @@ public abstract class RestfulDropWizardApp extends LatticeApplication {
 
   @DopeWith
   public static VajramDopantSpecBuilder vajramGraph() {
-    return VajramDopantSpec.builder()
-        .vajramGraphBuilder(
-            VajramGraph.builder()
-                .loadClasses(
-                    RestLatticeSample.class,
-                    RestGetMappingLatticeSample.class,
-                    RestPostMappingLatticeSample.class,
-                    RestPostComplexPathMatching.class,
-                    RestHeadMappingLatticeSample.class,
-                    RestStreamingSample.class));
+    return VajramDopantSpec.builder();
   }
 
   @DopeWith

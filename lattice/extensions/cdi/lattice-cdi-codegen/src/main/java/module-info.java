@@ -8,7 +8,7 @@ module flipkart.krystal.lattice.ext.cdi.codegen {
 
   requires com.google.auto.service;
   requires com.google.common;
-  requires com.squareup.javapoet;
+  requires com.palantir.javapoet;
   requires flipkart.krystal.codegen.common;
   requires flipkart.krystal.lattice.codegen;
   requires flipkart.krystal.lattice.core;

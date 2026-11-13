@@ -12,7 +12,7 @@ import com.flipkart.krystal.lattice.core.LatticeApplication;
 import com.flipkart.krystal.lattice.ext.guice.GuiceFramework;
 import com.flipkart.krystal.lattice.ext.guice.servlet.GuiceServletFramework;
 import com.google.auto.service.AutoService;
-import com.squareup.javapoet.CodeBlock;
+import com.palantir.javapoet.CodeBlock;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;

@@ -9,7 +9,7 @@ module flipkart.krystal.lattice.codegen {
 
   requires com.google.auto.service;
   requires com.google.common;
-  requires com.squareup.javapoet;
+  requires com.palantir.javapoet;
   requires flipkart.krystal.codegen.common;
   requires flipkart.krystal.lattice.core;
   requires flipkart.krystal.vajram.codegen.common;

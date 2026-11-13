@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy.DIRECT;
 import static java.time.Duration.ofSeconds;
@@ -26,7 +27,7 @@ import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import com.flipkart.krystal.krystex.decoration.FlushableDecorator;
-import com.flipkart.krystal.krystex.epochs.VajramEpochGroups;
+import com.flipkart.krystal.krystex.epochs.EpochGroupsByAncestors;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
@@ -563,19 +564,26 @@ class VajramKryonExecutorTest {
     kGraph.inputBatcherStrategy(
         new CustomBatcherStrategy(
             new InputBatcherConfig(
-                key ->
-                    ImmutableMap.of(
-                            vGraph.getVajramIdByVajramDefType(TestUserService.class),
-                            new InputBatchingDecorator(
-                                () -> new InputBatcherImpl(100),
-                                new VajramEpochGroups(ImmutableMap.of()),
-                                Set.of()),
-                            vGraph.getVajramIdByVajramDefType(FriendsService.class),
-                            new InputBatchingDecorator(
-                                () -> new InputBatcherImpl(100),
-                                new VajramEpochGroups(ImmutableMap.of()),
-                                Set.of()))
-                        .get(key.vajramID()))));
+                key -> {
+                  VajramID testUserServiceVajramId =
+                      vGraph.getVajramIdByVajramDefType(TestUserService.class);
+                  VajramID friendsServiceVajramId =
+                      vGraph.getVajramIdByVajramDefType(FriendsService.class);
+                  return ImmutableMap.of(
+                          testUserServiceVajramId,
+                          new InputBatchingDecorator(
+                              () -> new InputBatcherImpl(100),
+                              testUserServiceVajramId,
+                              EpochGroupsByAncestors.empty(
+                                  vGraph.kryonDefinitionRegistry().getDependentChainsStart())),
+                          friendsServiceVajramId,
+                          new InputBatchingDecorator(
+                              () -> new InputBatcherImpl(100),
+                              friendsServiceVajramId,
+                              EpochGroupsByAncestors.empty(
+                                  vGraph.kryonDefinitionRegistry().getDependentChainsStart())))
+                      .get(key.vajramID());
+                })));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (VajramKryonExecutor krystexVajramExecutor =
@@ -727,7 +735,7 @@ class VajramKryonExecutorTest {
   }
 
   public static Stream<Arguments> executorConfigsToTest() {
-    return Stream.of(Arguments.of(DIRECT, DEPTH));
+    return Stream.of(Arguments.of(DIRECT, DEPTH), Arguments.of(DIRECT, BREADTH));
   }
 
   private InputBatcherConfig singleBatcherConfig(
@@ -737,7 +745,10 @@ class VajramKryonExecutorTest {
         _c ->
             vajramId.equals(_c.vajramID())
                 ? new InputBatchingDecorator(
-                    inputBatcherSupplier, new VajramEpochGroups(ImmutableMap.of()), Set.of())
+                    inputBatcherSupplier,
+                    vajramId,
+                    EpochGroupsByAncestors.empty(
+                        vGraph.kryonDefinitionRegistry().getDependentChainsStart()))
                 : null);
   }
 

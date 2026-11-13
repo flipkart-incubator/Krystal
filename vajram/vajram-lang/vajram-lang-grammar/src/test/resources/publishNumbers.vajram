@@ -1,6 +1,0 @@
-vajram publishNumbers(int request) out #stream int{
-
-  out #stream `Schedule(1, SECONDS){
-
-  }
-}

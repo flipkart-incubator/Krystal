@@ -8,7 +8,7 @@ dependencies {
     implementation platform('org.a2aproject.sdk:a2a-java-sdk-reference-bom:1.0.0.CR1')
     implementation 'org.a2aproject.sdk:a2a-java-sdk-server-common'
     implementation 'org.a2aproject.sdk:a2a-java-sdk-spec'
-    implementation 'com.squareup:javapoet'
+    implementation libs.javapoet
     implementation platform(libs.quarkus.bom)
     implementation 'io.quarkus:quarkus-arc'
 }

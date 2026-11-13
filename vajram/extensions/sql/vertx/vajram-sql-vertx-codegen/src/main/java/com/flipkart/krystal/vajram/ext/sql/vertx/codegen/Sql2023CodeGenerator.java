@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.ext.sql.vertx.codegen;
 
 import com.flipkart.krystal.vajram.ext.sql.codegen.SqlQueryModel.InsertResultType;
-import com.squareup.javapoet.MethodSpec;
+import com.palantir.javapoet.MethodSpec;
 
 public final class Sql2023CodeGenerator implements DialectCodeGenerator {
 

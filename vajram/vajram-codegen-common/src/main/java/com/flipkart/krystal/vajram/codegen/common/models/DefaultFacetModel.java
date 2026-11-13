@@ -15,7 +15,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * @param vajramId the vajram that this facet belongs to
  */
-@Builder
 public record DefaultFacetModel(
     int id,
     @NonNull String name,
@@ -26,9 +25,10 @@ public record DefaultFacetModel(
     @NonNull Element facetElement)
     implements FacetGenModel {
 
-  private static final ImmutableSet<FacetType> ALLOWED_FACET_TYPES =
-      ImmutableSet.of(FacetType.INPUT, FacetType.INJECTION);
+  static final ImmutableSet<FacetType> ALLOWED_FACET_TYPES =
+      ImmutableSet.of(FacetType.INPUT, FacetType.INJECTION, FacetType.FIELD);
 
+  @Builder
   public DefaultFacetModel {
     if (!ALLOWED_FACET_TYPES.contains(facetType)) {
       throw new IllegalArgumentException(
@@ -38,6 +38,6 @@ public record DefaultFacetModel(
 
   @Override
   public boolean isGiven() {
-    return true;
+    return facetType().isGiven();
   }
 }

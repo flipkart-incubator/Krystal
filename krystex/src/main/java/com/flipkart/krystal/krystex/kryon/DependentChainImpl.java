@@ -2,15 +2,18 @@ package com.flipkart.krystal.krystex.kryon;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.Dependency;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 // For performance reasons, equals and hashcode use Object class implementations. This is possible
 // because AbstractDependentChainBase has an intern pool of these instances
 final class DependentChainImpl extends AbstractDependentChainBase<DependentChain>
     implements DependentChain {
 
-  DependentChainImpl(
-      VajramID vajramID, Dependency latestDependency, DependentChain incomingDependentChain) {
-    super(vajramID, latestDependency, incomingDependentChain);
+  private final DependentChain parent;
+
+  DependentChainImpl(VajramID vajramID, Dependency latestDependency, DependentChain parent) {
+    super(vajramID, latestDependency, parent);
+    this.parent = parent;
   }
 
   @Override
@@ -38,5 +41,10 @@ final class DependentChainImpl extends AbstractDependentChainBase<DependentChain
   @Override
   public VajramID getFirstVajram() {
     return this.array()[0].vajramId();
+  }
+
+  @Override
+  public @Nullable DependentChain parent() {
+    return parent;
   }
 }

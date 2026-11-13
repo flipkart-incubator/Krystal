@@ -6,7 +6,7 @@ import static java.util.Objects.requireNonNull;
 import com.flipkart.krystal.codegen.common.models.CodeGenerationException;
 import com.flipkart.krystal.model.DefaultValue;
 import com.google.common.collect.ImmutableList;
-import com.squareup.javapoet.CodeBlock;
+import com.palantir.javapoet.CodeBlock;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;

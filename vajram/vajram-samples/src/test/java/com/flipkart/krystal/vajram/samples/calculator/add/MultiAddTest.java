@@ -2,7 +2,6 @@ package com.flipkart.krystal.vajram.samples.calculator.add;
 
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.DEPTH;
-import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy.BATCH;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy.DIRECT;
 import static com.flipkart.krystal.krystex.traits.PredicateDispatchUtil.dispatchTrait;
 import static com.flipkart.krystal.krystex.traits.PredicateDispatchUtil.when;
@@ -27,6 +26,7 @@ import com.flipkart.krystal.krystex.KrystexGraph;
 import com.flipkart.krystal.krystex.KrystexGraph.KrystexGraphBuilder;
 import com.flipkart.krystal.krystex.SimpleDependentChainDisabler;
 import com.flipkart.krystal.krystex.VajramGraph;
+import com.flipkart.krystal.krystex.batching.InputBatcherStrategy.DefaultBatcherStrategy;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.VajramExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor;
@@ -99,6 +99,7 @@ class MultiAddTest {
         KrystexGraph.builder()
             .vajramGraph(vGraph)
             .externallyInvocableVajramIds(ImmutableSet.of(MultiAdd_Req._VAJRAM_ID))
+            .inputBatcherStrategy(new DefaultBatcherStrategy(_v -> 100))
             .dependentChainDisabler(
                 new SimpleDependentChainDisabler(getDisabledDependentChains(vGraph)));
   }
@@ -119,7 +120,6 @@ class MultiAddTest {
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
               VajramExecutionConfig.builder()
-                  .disabledDependentChains(getDisabledDependentChains(vGraph))
                   .executionId(REQUEST_ID)
                   .staticDispatchQualifier(AdditionMethod.Creator.create(CHAIN))
                   .build());
@@ -147,7 +147,6 @@ class MultiAddTest {
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
               VajramExecutionConfig.builder()
-                  .disabledDependentChains(getDisabledDependentChains(vGraph))
                   .executionId(REQUEST_ID)
                   .staticDispatchQualifier(AdditionMethod.Creator.create(SPLIT))
                   .build());
@@ -205,10 +204,7 @@ class MultiAddTest {
       future =
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
-              VajramExecutionConfig.builder()
-                  .disabledDependentChains(getDisabledDependentChains(vGraph))
-                  .executionId(REQUEST_ID)
-                  .build());
+              VajramExecutionConfig.builder().executionId(REQUEST_ID).build());
     }
 
     // Verify results
@@ -236,10 +232,7 @@ class MultiAddTest {
       future =
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
-              VajramExecutionConfig.builder()
-                  .disabledDependentChains(getDisabledDependentChains(vGraph))
-                  .executionId(REQUEST_ID)
-                  .build());
+              VajramExecutionConfig.builder().executionId(REQUEST_ID).build());
     }
 
     // Verify results
@@ -267,10 +260,7 @@ class MultiAddTest {
       future =
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
-              VajramExecutionConfig.builder()
-                  .disabledDependentChains(getDisabledDependentChains(vGraph))
-                  .executionId(REQUEST_ID)
-                  .build());
+              VajramExecutionConfig.builder().executionId(REQUEST_ID).build());
     }
 
     // Verify results
@@ -300,10 +290,7 @@ class MultiAddTest {
       future =
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
-              VajramExecutionConfig.builder()
-                  .disabledDependentChains(getDisabledDependentChains(vGraph))
-                  .executionId(REQUEST_ID)
-                  .build());
+              VajramExecutionConfig.builder().executionId(REQUEST_ID).build());
     }
 
     // Verify results
@@ -333,10 +320,7 @@ class MultiAddTest {
       future =
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
-              VajramExecutionConfig.builder()
-                  .disabledDependentChains(getDisabledDependentChains(vGraph))
-                  .executionId(REQUEST_ID)
-                  .build());
+              VajramExecutionConfig.builder().executionId(REQUEST_ID).build());
     }
 
     // Verify results
@@ -366,10 +350,7 @@ class MultiAddTest {
       future =
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
-              VajramExecutionConfig.builder()
-                  .disabledDependentChains(getDisabledDependentChains(vGraph))
-                  .executionId(REQUEST_ID)
-                  .build());
+              VajramExecutionConfig.builder().executionId(REQUEST_ID).build());
     }
 
     // Verify results
@@ -394,10 +375,7 @@ class MultiAddTest {
       future =
           krystexVajramExecutor.execute(
               MultiAdd_ReqImmutPojo._builder().numbers(numbers1)._build(),
-              VajramExecutionConfig.builder()
-                  .disabledDependentChains(getDisabledDependentChains(vGraph))
-                  .executionId(REQUEST_ID)
-                  .build());
+              VajramExecutionConfig.builder().executionId(REQUEST_ID).build());
     }
 
     // Verify results
@@ -453,7 +431,6 @@ class MultiAddTest {
   }
 
   public static Stream<Arguments> executorConfigsToTest() {
-    return Stream.of(
-        Arguments.of(BATCH, DEPTH), Arguments.of(BATCH, BREADTH), Arguments.of(DIRECT, DEPTH));
+    return Stream.of(Arguments.of(DIRECT, DEPTH), Arguments.of(DIRECT, BREADTH));
   }
 }

@@ -6,7 +6,7 @@ module krystal.vajram.ext.sql.codegen {
   requires flipkart.krystal.vajram;
   requires flipkart.krystal.vajram.codegen.common;
   requires com.google.common;
-  requires com.squareup.javapoet;
+  requires com.palantir.javapoet;
   requires static lombok;
 
   exports com.flipkart.krystal.vajram.ext.sql.codegen;

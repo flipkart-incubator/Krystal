@@ -1,11 +1,9 @@
 package com.flipkart.krystal.krystex.traits;
 
 import static java.util.Objects.requireNonNullElse;
-import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import com.flipkart.krystal.core.VajramID;
-import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponseFuture;
 import com.flipkart.krystal.facets.Dependency;
@@ -13,25 +11,20 @@ import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.krystex.commands.ClientSideCommand;
 import com.flipkart.krystal.krystex.commands.DirectForwardCommand;
 import com.flipkart.krystal.krystex.commands.DirectForwardSend;
-import com.flipkart.krystal.krystex.commands.ForwardSendBatch;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyInvocation;
 import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
-import com.flipkart.krystal.krystex.kryon.BatchResponse;
 import com.flipkart.krystal.krystex.kryon.DirectResponse;
 import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
-import com.flipkart.krystal.krystex.request.InvocationId;
 import com.flipkart.krystal.traits.DynamicDispatchPolicy;
 import com.flipkart.krystal.traits.StaticDispatchPolicy;
 import com.flipkart.krystal.traits.TraitDispatchPolicies;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import lombok.Getter;
 
@@ -70,68 +63,7 @@ public class DefaultTraitDispatcher implements TraitDispatchDecorator {
         ClientSideCommand<R> commandToDispatch = kryonCommand.rerouteTo(dispatchTarget);
         return invocationToDecorate.invokeDependency(commandToDispatch);
       } else if (traitDispatchPolicy instanceof DynamicDispatchPolicy dynamicPolicy) {
-        if (kryonCommand instanceof ForwardSendBatch forwardSend) {
-          var originalExecutableRequests = forwardSend.executableRequests();
-          Map<VajramID, Map<InvocationId, Request<Object>>> dispatchRequests =
-              new LinkedHashMap<>();
-          Map<VajramID, CompletableFuture<BatchResponse>> dispatchResponses = new LinkedHashMap<>();
-          for (Entry<InvocationId, ? extends Request<Object>> requestEntry :
-              originalExecutableRequests.entrySet()) {
-            InvocationId invocationId = requestEntry.getKey();
-            Request<Object> originalRequest = requestEntry.getValue();
-            VajramID dispatchTarget =
-                dynamicPolicy.getDispatchTargetID(dependency, originalRequest);
-            if (dispatchTarget != null) {
-              dispatchRequests
-                  .computeIfAbsent(dispatchTarget, k -> new LinkedHashMap<>())
-                  .put(invocationId, originalRequest);
-            }
-          }
-          ImmutableSet<VajramID> dispatchTargets = dynamicPolicy.dispatchTargetIDs();
-
-          for (VajramID dispatchTargetID : dispatchTargets) {
-            Map<InvocationId, Request<Object>> requestsForTarget =
-                dispatchRequests.getOrDefault(dispatchTargetID, Map.of());
-            ClientSideCommand<BatchResponse> commandToDispatch =
-                new ForwardSendBatch(
-                    dispatchTargetID, requestsForTarget, forwardSend.dependentChain());
-            @SuppressWarnings("unchecked")
-            CompletableFuture<BatchResponse> depResponse =
-                (CompletableFuture<BatchResponse>)
-                    invocationToDecorate.invokeDependency((ClientSideCommand<R>) commandToDispatch);
-            dispatchResponses.put(dispatchTargetID, depResponse);
-          }
-          CompletableFuture<BatchResponse> mergedResponse = new CompletableFuture<>();
-          allOf(dispatchResponses.values().toArray(CompletableFuture[]::new))
-              .whenComplete(
-                  (unused, throwable) -> {
-                    Map<InvocationId, Errable<Object>> mergedResults = new LinkedHashMap<>();
-                    for (Entry<VajramID, CompletableFuture<BatchResponse>> dispatchResponseEntry :
-                        dispatchResponses.entrySet()) {
-                      VajramID dispatchTarget = dispatchResponseEntry.getKey();
-                      CompletableFuture<BatchResponse> dispatchResponse =
-                          dispatchResponseEntry.getValue();
-                      if (dispatchResponse.isCompletedExceptionally()) {
-                        try {
-                          dispatchResponse.join(); // Will throw exception
-                        } catch (Throwable e) {
-                          Set<InvocationId> invocationIds =
-                              dispatchRequests.getOrDefault(dispatchTarget, Map.of()).keySet();
-                          for (InvocationId id : invocationIds) {
-                            mergedResults.put(id, Errable.withError(e));
-                          }
-                        }
-                      } else {
-                        BatchResponse resultValue = dispatchResponse.getNow(BatchResponse.empty());
-                        mergedResults.putAll(resultValue.responses());
-                      }
-                    }
-                    mergedResponse.complete(new BatchResponse(ImmutableMap.copyOf(mergedResults)));
-                  });
-          @SuppressWarnings("unchecked")
-          CompletableFuture<R> castMergedResponse = (CompletableFuture<R>) mergedResponse;
-          return castMergedResponse;
-        } else if (kryonCommand instanceof DirectForwardSend forwardSend) {
+        if (kryonCommand instanceof DirectForwardSend forwardSend) {
           List<? extends RequestResponseFuture<? extends Request<?>, ?>>
               originalExecutableRequests = forwardSend.executableRequests();
           Map<VajramID, List<RequestResponseFuture<? extends Request<?>, ?>>> dispatchRequests =

@@ -96,13 +96,13 @@ separately and not yet managed by a BOM.
 * **BOM:** [Krystal BOM](#krystal-bom)
 * **README:** [vajram-java-sdk/README.md](vajram/vajram-java-sdk/README.md)
 
-#### **vajram-lang**
+#### **keka**
 * **What it has**
   * An experimental standalone language embodying Krystal design philosophy (not the primary Java SDK)
 * **When to use**
-  * For experimentation with the vajram-lang programming model; production workflows should use `vajram-java-sdk`
-* **Coordinates:** [![Maven Central](https://img.shields.io/maven-central/v/com.flipkart.krystal/vajram-lang.svg?label=vajram-lang&color=green)](https://central.sonatype.com/artifact/com.flipkart.krystal/vajram-lang)
-* **Location:** [./vajram/vajram-lang](vajram/vajram-lang)
+  * For experimentation with the keka programming model; production workflows should use `vajram-java-sdk`
+* **Coordinates:** [![Maven Central](https://img.shields.io/maven-central/v/com.flipkart.krystal/keka.svg?label=keka&color=green)](https://central.sonatype.com/artifact/com.flipkart.krystal/keka)
+* **Location:** [./keka](keka)
 
 #### **vajram-codegen-common**
 * **What it has**

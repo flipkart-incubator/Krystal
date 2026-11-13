@@ -26,8 +26,7 @@ abstract sealed class AbstractDependentChainBase<T extends DependentChainBase>
   // Must use ConcurrentHashMap for thread safety - else we will encounter
   // ConcurrentModificationException
   @EqualsAndHashCode.Exclude @ToString.Exclude
-  private final ConcurrentHashMap<DependentChainNode, T> dependenciesInternPool =
-      new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<Dependency, T> dependenciesInternPool = new ConcurrentHashMap<>();
 
   private @MonotonicNonNull String toString;
 
@@ -39,18 +38,17 @@ abstract sealed class AbstractDependentChainBase<T extends DependentChainBase>
   protected AbstractDependentChainBase(
       VajramID vajramID,
       Dependency latestDependency,
-      @Nullable DependentChainBase incomingDependentChain) {
+      @Nullable DependentChainBase parentDependentChain) {
     this.latestDependency = latestDependency;
-    this.array = create(vajramID, latestDependency, incomingDependentChain);
+    this.array = create(vajramID, latestDependency, parentDependentChain);
   }
 
   @Override
   public T extend(VajramID vajramID, Dependency dependency) {
-    DependentChainNode key = new DependentChainNode(vajramID, dependency);
-    T dependentChain = dependenciesInternPool.get(key);
+    T dependentChain = dependenciesInternPool.get(dependency);
     if (dependentChain == null) {
       T newDependentChain = _extend(vajramID, dependency);
-      T existing = dependenciesInternPool.putIfAbsent(key, newDependentChain);
+      T existing = dependenciesInternPool.putIfAbsent(dependency, newDependentChain);
       dependentChain = existing != null ? existing : newDependentChain;
     }
     return dependentChain;
@@ -85,9 +83,9 @@ abstract sealed class AbstractDependentChainBase<T extends DependentChainBase>
   private static DependentChainNode[] create(
       VajramID vajramID,
       Dependency latestDependency,
-      @Nullable DependentChainBase incomingDependentChain) {
+      @Nullable DependentChainBase parentDependentChain) {
     DependentChainNode[] incomingArray;
-    if (incomingDependentChain instanceof AbstractDependentChainBase abstractDependentChain) {
+    if (parentDependentChain instanceof AbstractDependentChainBase abstractDependentChain) {
       incomingArray = abstractDependentChain.array;
     } else {
       incomingArray = new DependentChainNode[0];

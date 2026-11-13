@@ -18,7 +18,7 @@ public record NonNil<T>(@NonNull T value) implements Success<T> {
   }
 
   @Override
-  public void completeFuture(CompletableFuture<T> future) {
+  public void completeFuture(CompletableFuture<@Nullable T> future) {
     future.complete(value);
   }
 

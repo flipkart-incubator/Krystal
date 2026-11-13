@@ -6,7 +6,7 @@ dependencies {
     implementation project(':krystal-common')
     implementation project(':vajram:extensions:fory:vajram-fory')
 
-    implementation 'com.squareup:javapoet'
+    implementation libs.javapoet
     implementation 'org.apache.fory:fory-core'
 }
 

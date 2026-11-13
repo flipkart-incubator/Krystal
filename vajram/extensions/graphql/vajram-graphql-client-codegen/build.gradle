@@ -6,7 +6,7 @@ dependencies {
     implementation project(':krystal-codegen-common')
     implementation project(':vajram:vajram-codegen-common')
 
-    implementation 'com.squareup:javapoet'
+    implementation libs.javapoet
     implementation 'com.graphql-java:graphql-java'
     implementation 'com.google.auto.service:auto-service-annotations'
     annotationProcessor 'com.google.auto.service:auto-service'

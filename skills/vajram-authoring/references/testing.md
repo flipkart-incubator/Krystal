@@ -71,7 +71,7 @@ Key behavioral notes:
 - `KrystalExecutorConfig` (per-executor): `executorId`, `executorService` (a `SingleThreadExecutor` —
   lease from a `SingleThreadExecutorsPool` when the project has one to avoid repeated construction
   overhead, otherwise construct fresh per test; match whatever pattern existing tests in this repo use),
-  `kryonExecStrategy` (`DIRECT` default, or `BATCH`), `graphTraversalStrategy` (`DEPTH` default — required
+  `kryonExecStrategy` (`DIRECT` default), `graphTraversalStrategy` (`DEPTH` default — required
   for `DIRECT`; `BREADTH` for debugging), plus decorator config maps and a `debug` flag (adds stack
   tracing / readable names, at a perf cost — fine for tests).
 - Assertions: AssertJ's `assertThat(future).succeedsWithin(TEST_TIMEOUT).isEqualTo(expected)` /

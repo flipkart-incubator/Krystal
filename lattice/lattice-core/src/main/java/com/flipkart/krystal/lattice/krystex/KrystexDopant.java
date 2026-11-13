@@ -47,12 +47,12 @@ public final class KrystexDopant implements SimpleDopant {
 
   @Inject
   public KrystexDopant(
+      KrystexGraphBuilder krystexGraphBuilder,
       KrystexDopantSpec krystexDopantSpec,
       DependencyInjectionFramework dependencyInjectionFramework,
       VajramGraph vajramGraph,
       ThreadingStrategyDopant threadingStrategyDopant) {
     this.threadingStrategyDopant = threadingStrategyDopant;
-    KrystexGraphBuilder krystexGraphBuilder = KrystexGraph.builder();
     for (Consumer<KrystexGraphBuilder> p : krystexDopantSpec.buildKrystexGraphWith()) {
       p.accept(krystexGraphBuilder);
     }
@@ -64,7 +64,6 @@ public final class KrystexDopant implements SimpleDopant {
         krystexGraphBuilder
             .vajramGraph(vajramGraph)
             .injectionProvider(dependencyInjectionFramework.toVajramInjectionProvider())
-            .traitDispatchPolicies(krystexDopantSpec.traitDispatchPolicies())
             .build();
   }
 

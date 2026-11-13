@@ -79,13 +79,14 @@ class ChainAddTest {
     CompletableFuture<Integer> future;
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
     kGraph.inputBatcherStrategy(new DefaultBatcherStrategy(_v -> 100));
+    SingleThreadExecutor executorService = executorLease.get();
     try (VajramKryonExecutor krystexVajramExecutor =
         kGraph
             .build()
             .createExecutor(
                 KrystalExecutorConfig.builder()
                     .executorId("chainAdderTest")
-                    .executorService(executorLease.get())
+                    .executorService(executorService)
                     .configureWith(
                         new MainLogicExecReporter(kryonExecutionReport)
                             .defaultKryonExecutorConfigurator()))) {
@@ -94,6 +95,9 @@ class ChainAddTest {
     }
     assertThat(future).succeedsWithin(ofSeconds(1)).isEqualTo(55);
     assertThat(Add.CALL_COUNTER.sum()).isEqualTo(1);
+    // Wait for all commands to be finished so that we don't get Concurrent
+    // Modification Exceptions in kryonExecutionReport
+    executorService.submit(() -> {}).join();
     System.out.println(
         Json.MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(kryonExecutionReport));
   }
@@ -106,9 +110,7 @@ class ChainAddTest {
       future =
           krystexVajramExecutor.execute(
               ChainAdd_ReqImmutPojo._builder().numbers(List.of())._build(),
-              VajramExecutionConfig.builder()
-                  .disabledDependentChains(getDisabledDependentChains(graph))
-                  .build());
+              VajramExecutionConfig.builder().build());
     }
     assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(0);
   }
@@ -260,11 +262,7 @@ class ChainAddTest {
                         .map(integer -> integer + multiplier * 10)
                         .toList()))
             ._build(),
-        VajramExecutionConfig.builder()
-            .executionId(String.valueOf(multiplier))
-            // Tests whether execution level disabled dependant chains is working
-            .disabledDependentChains(getDisabledDependentChains(graph))
-            .build());
+        VajramExecutionConfig.builder().executionId(String.valueOf(multiplier)).build());
   }
 
   private void chainAdd(Integer value) {

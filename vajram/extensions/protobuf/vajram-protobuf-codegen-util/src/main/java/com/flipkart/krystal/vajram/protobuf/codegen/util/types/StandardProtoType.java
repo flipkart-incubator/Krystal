@@ -5,7 +5,7 @@ import static java.util.Objects.requireNonNull;
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.squareup.javapoet.CodeBlock;
+import com.palantir.javapoet.CodeBlock;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import javax.annotation.processing.ProcessingEnvironment;

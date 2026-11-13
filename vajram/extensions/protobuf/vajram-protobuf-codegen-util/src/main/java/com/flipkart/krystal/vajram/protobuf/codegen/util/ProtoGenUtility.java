@@ -45,7 +45,7 @@ import com.flipkart.krystal.vajram.protobuf.util.ProtoByteArray;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Shorts;
 import com.google.protobuf.ByteString;
-import com.squareup.javapoet.CodeBlock;
+import com.palantir.javapoet.CodeBlock;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;

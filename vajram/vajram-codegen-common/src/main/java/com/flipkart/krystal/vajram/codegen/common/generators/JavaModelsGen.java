@@ -58,16 +58,16 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.squareup.javapoet.AnnotationSpec;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.FieldSpec;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterSpec;
-import com.squareup.javapoet.ParameterizedTypeName;
-import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeSpec;
-import com.squareup.javapoet.TypeVariableName;
+import com.palantir.javapoet.AnnotationSpec;
+import com.palantir.javapoet.ClassName;
+import com.palantir.javapoet.CodeBlock;
+import com.palantir.javapoet.FieldSpec;
+import com.palantir.javapoet.MethodSpec;
+import com.palantir.javapoet.ParameterSpec;
+import com.palantir.javapoet.ParameterizedTypeName;
+import com.palantir.javapoet.TypeName;
+import com.palantir.javapoet.TypeSpec;
+import com.palantir.javapoet.TypeVariableName;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -657,7 +657,7 @@ public final class JavaModelsGen implements CodeGenerator {
     List<TypeVariableName> typeVariableNames =
         modelRootType.getTypeParameters().stream().map(TypeVariableName::get).toList();
 
-    ModelRoot modelRoot = modelRootType.getAnnotation(ModelRoot.class);
+    ModelRoot modelRoot = requireNonNull(modelRootType.getAnnotation(ModelRoot.class));
     Optional<TypeMirror> parentModelRootTypeOpt =
         getParentInterfaceWithAnnotation(modelRootType, ModelRoot.class);
     boolean hasParentModelRoot = parentModelRootTypeOpt.isPresent();
@@ -1160,6 +1160,7 @@ public final class JavaModelsGen implements CodeGenerator {
    * into an {@link ImmutableList}/{@link ImmutableMap}, converting Model elements/values to their
    * Immut form, and re-wrapping per-element Errable values if {@code isContentErrable}.
    */
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   private static CodeBlock listOrMapCollectionExpr(
       boolean isList,
       String src,
@@ -1758,7 +1759,7 @@ public final class JavaModelsGen implements CodeGenerator {
   /** Checks if an AnnotationSpec represents any @Nullable annotation. */
   @SuppressWarnings("BooleanMethodIsAlwaysInverted")
   static boolean isNullableAnnotation(AnnotationSpec annotationSpec) {
-    if (annotationSpec.type instanceof ClassName className) {
+    if (annotationSpec.type() instanceof ClassName className) {
       return className.simpleName().equals("Nullable");
     }
     return false;
@@ -1767,7 +1768,7 @@ public final class JavaModelsGen implements CodeGenerator {
   /** Strips @Nullable annotations from a TypeName. */
   public static TypeName stripNullableAnnotation(TypeName typeName) {
     List<AnnotationSpec> filtered =
-        typeName.annotations.stream().filter(a -> !isNullableAnnotation(a)).toList();
+        typeName.annotations().stream().filter(a -> !isNullableAnnotation(a)).toList();
     return typeName.withoutAnnotations().annotated(filtered);
   }
 }

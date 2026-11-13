@@ -3,7 +3,7 @@ description = "Shared GraphQL SDL schema-parsing/type-mapping code, reused by Gr
 dependencies {
     implementation project(':krystal-codegen-common')
 
-    implementation 'com.squareup:javapoet'
+    implementation libs.javapoet
     implementation 'com.graphql-java:graphql-java'
     implementation 'com.google.guava:guava'
 

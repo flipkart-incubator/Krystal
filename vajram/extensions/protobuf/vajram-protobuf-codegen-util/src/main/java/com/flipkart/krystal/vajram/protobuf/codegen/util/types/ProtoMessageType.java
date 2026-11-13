@@ -4,7 +4,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.google.common.collect.ImmutableList;
-import com.squareup.javapoet.CodeBlock;
+import com.palantir.javapoet.CodeBlock;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.type.TypeMirror;
 import lombok.EqualsAndHashCode;

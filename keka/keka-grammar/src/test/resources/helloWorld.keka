@@ -1,0 +1,8 @@
+package com.flipkart.krystal.keka.samples.helloWorld;
+
+vajram helloWorld() out `now void
+    inject (ConsoleWriter writer){
+ {
+   writer.println("Hello! World.")
+ }
+}

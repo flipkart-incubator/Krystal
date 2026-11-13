@@ -1,6 +1,5 @@
 package com.flipkart.krystal.krystex;
 
-import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy.DIRECT;
 
@@ -10,7 +9,6 @@ import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecoratorConfig;
 import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
-import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
 import com.flipkart.krystal.krystex.kryon.KrystalExecutorExecutionInfo;
 import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.GraphTraversalStrategy;
@@ -18,7 +16,6 @@ import com.flipkart.krystal.krystex.kryon.VajramKryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -33,9 +30,8 @@ import org.checkerframework.common.returnsreceiver.qual.This;
  *
  * @param decorationOrdering The ordering of logic decorators to be applied
  * @param outputLogicDecoratorConfigs The request scoped logic decorators to be applied
- * @param disabledDependentChains Invocation originating for these dependant chains will be blocked.
- *     Useful for avoid graph size explosion in case of recursive dependencies
- * @param kryonExecStrategy Currently on BATCH is supported. More might be added in future
+ * @param kryonExecStrategy Currently only {@link KryonExecStrategy#DIRECT} is supported. More might
+ *     be added in future
  * @param graphTraversalStrategy DEPTH is more performant and memory efficient. BREADTH is sometimes
  *     useful for debugging
  * @param kryonDecoratorConfigs The request scoped kryon decorators to be applied
@@ -53,7 +49,6 @@ import org.checkerframework.common.returnsreceiver.qual.This;
 public record KrystalExecutorConfig(
     @Nullable String executorId,
     DecorationOrdering decorationOrdering,
-    ImmutableSet<DependentChain> disabledDependentChains,
     KryonExecStrategy kryonExecStrategy,
     GraphTraversalStrategy graphTraversalStrategy,
     Map<String, OutputLogicDecoratorConfig> outputLogicDecoratorConfigs,
@@ -73,10 +68,6 @@ public record KrystalExecutorConfig(
     if (graphTraversalStrategy == null) {
       graphTraversalStrategy = DEPTH;
     }
-    if (kryonExecStrategy == DIRECT && graphTraversalStrategy == BREADTH) {
-      throw new UnsupportedOperationException(
-          "DIRECT kryon execution only supports DEPTH traversal strategy.");
-    }
     if (kryonDecoratorConfigs == null) {
       kryonDecoratorConfigs = ImmutableMap.of();
     } else {
@@ -91,9 +82,6 @@ public record KrystalExecutorConfig(
       outputLogicDecoratorConfigs = ImmutableMap.of();
     } else {
       outputLogicDecoratorConfigs = ImmutableMap.copyOf(outputLogicDecoratorConfigs);
-    }
-    if (disabledDependentChains == null) {
-      disabledDependentChains = ImmutableSet.of();
     }
     if (decorationOrdering == null) {
       decorationOrdering = DecorationOrdering.none();

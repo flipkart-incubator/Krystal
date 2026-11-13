@@ -1,0 +1,15 @@
+package keka_samples.products;
+
+import vajram concatStrings from lang.strings;
+
+// keka has no division/casts yet, so this joins the per-product details instead of
+// averaging a numeric price.
+vajram computeAveragePrice(List<string> productIds)
+    out string {
+
+  string... productDetails = ...getProductDetails(productId =... productIds);
+
+  string joined = concatStrings(strings = productDetails; separator = ", ");
+
+  { joined }
+}

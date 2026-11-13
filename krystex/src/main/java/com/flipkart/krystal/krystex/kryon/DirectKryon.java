@@ -19,7 +19,6 @@ import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyInvocation;
-import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationContext;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.google.common.collect.ImmutableList;
@@ -33,8 +32,7 @@ public final class DirectKryon extends AbstractKryon<MultiRequestDirectCommand, 
   DirectKryon(
       VajramKryonDefinition definition,
       VajramKryonExecutor kryonExecutor,
-      Function<LogicDecorationContext, List<OutputLogicDecorator>>
-          sortedOutputLogicDecoratorsSupplier,
+      Function<VajramID, List<OutputLogicDecorator>> sortedOutputLogicDecoratorsSupplier,
       Function<DependencyExecutionContext, List<DependencyDecorator>> depDecoratorSuppliers,
       DecorationOrdering decorationOrdering) {
     super(
@@ -76,10 +74,8 @@ public final class DirectKryon extends AbstractKryon<MultiRequestDirectCommand, 
 
               @Override
               public void executeOutputLogic() {
-                for (ExecutionItem executionItem : executionItems) {
-                  executeDecoratedOutputLogic(
-                      kryonDefinition.getOutputLogicDefinition(), executionItem, dependentChain);
-                }
+                executeDecoratedOutputLogic(
+                    kryonDefinition.getOutputLogicDefinition(), executionItems, dependentChain);
                 flushDecorators(dependentChain);
               }
             };
@@ -119,7 +115,7 @@ public final class DirectKryon extends AbstractKryon<MultiRequestDirectCommand, 
 
   private void executeDecoratedOutputLogic(
       OutputLogicDefinition<Object> outputLogicDefinition,
-      ExecutionItem executionItem,
+      List<ExecutionItem> executionItems,
       DependentChain dependentChain) {
     OutputLogic<Object> logic = outputLogicDefinition.logic();
 
@@ -140,9 +136,11 @@ public final class DirectKryon extends AbstractKryon<MultiRequestDirectCommand, 
     try {
       finalLogic.execute(
           new OutputLogicExecutionInput(
-              ImmutableList.of(executionItem), kryonExecutor.commandQueue(), getContextEnricher()));
+              executionItems, kryonExecutor.commandQueue(), getContextEnricher()));
     } catch (Throwable e) {
-      executionItem.response().completeExceptionally(wrapAsCompletionException(e));
+      for (ExecutionItem executionItem : executionItems) {
+        executionItem.response().completeExceptionally(wrapAsCompletionException(e));
+      }
     }
   }
 }

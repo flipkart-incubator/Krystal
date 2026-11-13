@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.exec;
 
 import static com.flipkart.krystal.vajram.exec.Vajrams.getVajramDefClass;
+import static com.flipkart.krystal.vajram.exec.Vajrams.parseComputeFieldEdges;
 import static com.flipkart.krystal.vajram.exec.Vajrams.parseInputResolvers;
 import static com.flipkart.krystal.vajram.exec.Vajrams.parseOutputLogicSources;
 import static com.flipkart.krystal.vajram.exec.Vajrams.parseOutputLogicTags;
@@ -8,6 +9,7 @@ import static com.flipkart.krystal.vajram.exec.Vajrams.parseVajramId;
 import static com.flipkart.krystal.vajram.exec.Vajrams.parseVajramTags;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Request;
@@ -18,10 +20,15 @@ import com.flipkart.krystal.tags.ElementTags;
 import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramDefRoot;
+import com.flipkart.krystal.vajram.batching.BatchesGroupedBy;
+import com.flipkart.krystal.vajram.exception.VajramDefinitionException;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
+import com.flipkart.krystal.vajram.utils.BatchingRules;
+import com.flipkart.krystal.vajram.utils.FacetDependencyGraph;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
@@ -76,6 +83,9 @@ public final class VajramDefinition {
     this.inputResolvers = parseInputResolvers(vajramDefRoot);
 
     this.metadata = new VajramMetadata(facetSpecs, vajramTags);
+
+    // Validate facet dependencies
+    validate();
   }
 
   public boolean isTrait() {
@@ -96,5 +106,64 @@ public final class VajramDefinition {
   @SuppressWarnings("unchecked")
   public <T> T getCustomMetadata(Class<T> clazz, Function<VajramDefinition, @NonNull T> computer) {
     return (T) customMetadata.computeIfAbsent(clazz, _c -> computer.apply(this));
+  }
+
+  /**
+   * Validates facet dependencies for cycles and the {@link BatchingRules}. This covers dependencies
+   * which the annotation processor cannot see, like the ones defined via {@code
+   * getSimpleInputResolvers()}.
+   */
+  private void validate() {
+    if (facetSpecs.isEmpty()) {
+      return;
+    }
+    FacetDependencyGraph graph = buildFacetDependencyGraph();
+    graph
+        .findCycle()
+        .ifPresent(
+            cycle -> {
+              throw new VajramDefinitionException(
+                  "Cycle detected in facet dependencies for vajram '%s': %s"
+                      .formatted(vajramId, String.join(" → ", cycle)));
+            });
+    validateBatchingRules(graph);
+  }
+
+  private FacetDependencyGraph buildFacetDependencyGraph() {
+    FacetDependencyGraph graph = new FacetDependencyGraph();
+    facetSpecs.forEach(facet -> graph.addFacet(facet.name()));
+    inputResolvers
+        .keySet()
+        .forEach(
+            resolver ->
+                graph.addDependencies(
+                    resolver.target().dependency().name(),
+                    resolver.sources().stream().map(Facet::name).toList()));
+    parseComputeFieldEdges(def).forEach(graph::addDependencies);
+    return graph;
+  }
+
+  private void validateBatchingRules(FacetDependencyGraph graph) {
+    List<BatchingRules.Violation> violations =
+        BatchingRules.validate(
+            facetSpecs.stream()
+                .map(
+                    facet ->
+                        new BatchingRules.FacetInfo(
+                            facet.name(),
+                            facet.facetType(),
+                            facet.isBatched(),
+                            facet.tags().getAnnotationByType(BatchesGroupedBy.class).isPresent()))
+                .toList(),
+            graph);
+    if (!violations.isEmpty()) {
+      throw new VajramDefinitionException(
+          "Invalid batching facets in vajram '%s': %s"
+              .formatted(
+                  vajramId,
+                  violations.stream()
+                      .map(BatchingRules.Violation::message)
+                      .collect(joining("; "))));
+    }
   }
 }

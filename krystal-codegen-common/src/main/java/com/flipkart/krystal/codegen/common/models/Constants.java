@@ -2,7 +2,7 @@ package com.flipkart.krystal.codegen.common.models;
 
 import static com.flipkart.krystal.model.PlainJavaObject.POJO;
 
-import com.squareup.javapoet.CodeBlock;
+import com.palantir.javapoet.CodeBlock;
 
 public final class Constants {
   public static final String CODEGEN_PHASE_KEY = "krystal.codegen.phase";

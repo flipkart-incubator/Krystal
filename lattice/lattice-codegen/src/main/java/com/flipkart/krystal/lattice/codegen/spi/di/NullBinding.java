@@ -1,8 +1,8 @@
 package com.flipkart.krystal.lattice.codegen.spi.di;
 
-import com.squareup.javapoet.AnnotationSpec;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.CodeBlock;
+import com.palantir.javapoet.AnnotationSpec;
+import com.palantir.javapoet.ClassName;
+import com.palantir.javapoet.CodeBlock;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Binds the type to a null value */

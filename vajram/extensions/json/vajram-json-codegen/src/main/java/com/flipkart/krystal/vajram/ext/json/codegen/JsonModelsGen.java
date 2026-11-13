@@ -40,17 +40,17 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.squareup.javapoet.AnnotationSpec;
-import com.squareup.javapoet.ArrayTypeName;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.FieldSpec;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterSpec;
-import com.squareup.javapoet.ParameterizedTypeName;
-import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeSpec;
-import com.squareup.javapoet.TypeSpec.Builder;
+import com.palantir.javapoet.AnnotationSpec;
+import com.palantir.javapoet.ArrayTypeName;
+import com.palantir.javapoet.ClassName;
+import com.palantir.javapoet.CodeBlock;
+import com.palantir.javapoet.FieldSpec;
+import com.palantir.javapoet.MethodSpec;
+import com.palantir.javapoet.ParameterSpec;
+import com.palantir.javapoet.ParameterizedTypeName;
+import com.palantir.javapoet.TypeName;
+import com.palantir.javapoet.TypeSpec;
+import com.palantir.javapoet.TypeSpec.Builder;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -192,13 +192,13 @@ final class JsonModelsGen implements CodeGenerator {
               .addAnnotation(Override.class)
               .build();
       MethodSpec.Builder getterBuilder =
-          MethodSpec.methodBuilder(pojoGetterMethod.name)
-              .returns(pojoGetterMethod.returnType)
-              .addParameters(pojoGetterMethod.parameters)
-              .addModifiers(pojoGetterMethod.modifiers)
-              .addAnnotations(pojoGetterMethod.annotations)
+          MethodSpec.methodBuilder(pojoGetterMethod.name())
+              .returns(pojoGetterMethod.returnType())
+              .addParameters(pojoGetterMethod.parameters())
+              .addModifiers(pojoGetterMethod.modifiers())
+              .addAnnotations(pojoGetterMethod.annotations())
               .addStatement("_deserialize()")
-              .addCode(pojoGetterMethod.code)
+              .addCode(pojoGetterMethod.code())
               .addAnnotation(JsonProperty.class);
       if (fieldModelRootInfo.isPresent() && !util.isEnumModel(fieldModelRootInfo.get().element())) {
         ClassName modelImmutClass =

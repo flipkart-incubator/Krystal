@@ -1,7 +1,7 @@
 package com.flipkart.krystal.lattice.codegen;
 
 import static com.flipkart.krystal.lattice.codegen.LatticeCodegenUtils.LATTICE_APP_IMPL_SUFFIX;
-import static com.squareup.javapoet.TypeName.VOID;
+import static com.palantir.javapoet.TypeName.VOID;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
@@ -13,13 +13,13 @@ import com.flipkart.krystal.lattice.codegen.spi.LatticeCodeGeneratorProvider;
 import com.flipkart.krystal.lattice.codegen.spi.di.DepInjectBinderGen;
 import com.flipkart.krystal.lattice.core.LatticeApplication;
 import com.google.auto.service.AutoService;
-import com.squareup.javapoet.AnnotationSpec;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.JavaFile;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterSpec;
-import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeSpec;
+import com.palantir.javapoet.AnnotationSpec;
+import com.palantir.javapoet.ClassName;
+import com.palantir.javapoet.JavaFile;
+import com.palantir.javapoet.MethodSpec;
+import com.palantir.javapoet.ParameterSpec;
+import com.palantir.javapoet.TypeName;
+import com.palantir.javapoet.TypeSpec;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.Collection;

@@ -9,4 +9,6 @@ public sealed interface DirectForwardReceive
     extends MultiRequestDirectCommand, ServerSideCommand<DirectResponse>
     permits DirectForwardCommand {
   List<ExecutionItem> executionItems(KryonDefinitionRegistry kryonDefinitionRegistry);
+
+  boolean shouldSkip();
 }

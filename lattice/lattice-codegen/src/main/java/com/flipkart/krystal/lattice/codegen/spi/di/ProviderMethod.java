@@ -1,9 +1,9 @@
 package com.flipkart.krystal.lattice.codegen.spi.di;
 
-import com.squareup.javapoet.AnnotationSpec;
-import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.ParameterSpec;
-import com.squareup.javapoet.TypeName;
+import com.palantir.javapoet.AnnotationSpec;
+import com.palantir.javapoet.CodeBlock;
+import com.palantir.javapoet.ParameterSpec;
+import com.palantir.javapoet.TypeName;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
 

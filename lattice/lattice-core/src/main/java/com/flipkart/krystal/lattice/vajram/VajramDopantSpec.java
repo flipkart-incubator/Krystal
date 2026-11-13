@@ -2,20 +2,13 @@ package com.flipkart.krystal.lattice.vajram;
 
 import static com.flipkart.krystal.lattice.vajram.VajramDopant.DOPANT_TYPE;
 
-import com.flipkart.krystal.krystex.VajramGraph.VajramGraphBuilder;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
 import com.flipkart.krystal.lattice.core.doping.SimpleDopantSpec;
 import com.flipkart.krystal.lattice.core.doping.SimpleDopantSpecBuilder;
 import lombok.Builder;
-import lombok.NonNull;
 
-public record VajramDopantSpec(VajramGraphBuilder vajramGraphBuilder)
-    implements SimpleDopantSpec<VajramDopant> {
-
-  @Builder(buildMethodName = "_buildSpec")
-  public static VajramDopantSpec create(@NonNull VajramGraphBuilder vajramGraphBuilder) {
-    return new VajramDopantSpec(vajramGraphBuilder);
-  }
+@Builder(buildMethodName = "_buildSpec")
+public record VajramDopantSpec() implements SimpleDopantSpec<VajramDopant> {
 
   @Override
   public Class<VajramDopant> dopantClass() {

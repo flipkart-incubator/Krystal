@@ -8,8 +8,8 @@ import static com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUti
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.codegen.common.datatypes.VariableCodeGenType;
 import com.flipkart.krystal.core.VajramID;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.TypeName;
+import com.palantir.javapoet.ClassName;
+import com.palantir.javapoet.TypeName;
 import java.util.List;
 import javax.lang.model.type.TypeMirror;
 

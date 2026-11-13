@@ -112,7 +112,7 @@ class AddUsingTraitsTest {
     try (VajramKryonExecutor krystexVajramExecutor =
         kGraph.build().createExecutor(executorConfig())) {
       // Execute the vajram
-      future = executeVajram(graph, krystexVajramExecutor, numbers1, numbers2, numbers3);
+      future = executeVajram(krystexVajramExecutor, numbers1, numbers2, numbers3);
     }
 
     // Verify results
@@ -137,7 +137,7 @@ class AddUsingTraitsTest {
         kGraph.build().createExecutor(executorConfig())) {
 
       // Execute the vajram with empty lists
-      future = executeVajram(graph, krystexVajramExecutor, emptyList, emptyList, emptyList);
+      future = executeVajram(krystexVajramExecutor, emptyList, emptyList, emptyList);
     }
 
     // Verify that all sums are 0 for empty lists
@@ -175,7 +175,7 @@ class AddUsingTraitsTest {
         kGraph.build().createExecutor(executorConfig())) {
 
       // Execute the vajram with different sized lists
-      future = executeVajram(graph, krystexVajramExecutor, smallList, mediumList, largeList);
+      future = executeVajram(krystexVajramExecutor, smallList, mediumList, largeList);
     }
 
     // Verify results
@@ -190,7 +190,6 @@ class AddUsingTraitsTest {
   }
 
   private static CompletableFuture<ThreeSums> executeVajram(
-      VajramGraph graph,
       VajramKryonExecutor krystexVajramExecutor,
       List<Integer> numbers1,
       List<Integer> numbers2,
@@ -202,10 +201,7 @@ class AddUsingTraitsTest {
             .numbers2(numbers2)
             .numbers3(numbers3)
             ._build(),
-        VajramExecutionConfig.builder()
-            .disabledDependentChains(getDisabledDependentChains(graph))
-            .executionId(REQUEST_ID)
-            .build());
+        VajramExecutionConfig.builder().executionId(REQUEST_ID).build());
   }
 
   private static ImmutableSet<DependentChain> getDisabledDependentChains(VajramGraph graph) {

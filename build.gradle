@@ -25,13 +25,6 @@ ext {
     kordamp_jandex_version = '2.3.0'
 }
 
-// Load the gradle.private.properties file for dev-local settings
-def privateProperties = new Properties()
-def privatePropertiesFile = rootProject.file('gradle.private.properties')
-if (privatePropertiesFile.exists()) {
-    new FileInputStream(privatePropertiesFile).withStream { stream -> privateProperties.load(stream) }
-}
-
 group = 'com.flipkart.krystal'
 configure(subprojects.findAll {
     //Only leaf projects are of interest to us
@@ -125,10 +118,6 @@ configure(subprojects.findAll {
     }
 }
 
-subprojects {
-    privateProperties.each { key, value -> project.extensions.extraProperties.set(key.toString(), value) }
-}
-
 configure(subprojects.findAll {
     //Only leaf projects are of interest to us
     it.subprojects.isEmpty()
@@ -188,7 +177,6 @@ configure(subprojects.findAll {
             c.api 'com.google.guava:guava:33.6.0-jre'
             c.implementation 'com.google.guava:guava:33.6.0-jre'
             c.implementation 'com.google.j2objc:j2objc-annotations:3.0.0'
-            c.implementation 'com.squareup:javapoet:1.13.0'
             c.implementation 'commons-cli:commons-cli:1.6.0'
             c.implementation 'jakarta.inject:jakarta.inject-api:2.0.1'
             c.api 'jakarta.ws.rs:jakarta.ws.rs-api:4.0.0'
@@ -235,7 +223,7 @@ configure(subprojects.findAll {
     // Exclude modules which should not be published or have custom publishing config
     // krystal-gradle-plugin has the 'java-gradle-plugin'  applied - which itself publishes to maven.
     // So we need to disable it here - else it will lead to duplicate publishing
-    if (project.name !in ['vajram-lang', 'krystal-gradle-plugin'] && project.subprojects.isEmpty()) {
+    if (project.name !in ['keka', 'krystal-gradle-plugin'] && project.subprojects.isEmpty()) {
         mavenPublishing {
             configure(new JavaLibrary(new JavadocJar.Empty(),//Javadoc is not being generated on delombok-ed code - need to fix
                     true))
@@ -295,7 +283,6 @@ configure(subprojects.findAll {
         knownModule('com.graphql-java:graphql-java', 'com.graphqljava')
         knownModule('com.graphql-java:graphql-java-extended-scalars', 'com.graphqljava.extendedscalars')
         knownModule('com.ibm.icu:icu4j', 'com.ibm.icu.icu4j')
-        knownModule('com.squareup:javapoet', 'com.squareup.javapoet')
         knownModule('jakarta.inject:jakarta.inject-api', 'jakarta.inject')
         knownModule('org.antlr:antlr4-runtime', 'org.antlr.antlr4.runtime')
         knownModule('org.checkerframework:checker-qual', 'org.checkerframework.checker.qual')

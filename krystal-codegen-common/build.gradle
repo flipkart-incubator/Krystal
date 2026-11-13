@@ -5,7 +5,7 @@ description = "Common utility code for Krystal code generation modules"
 
 dependencies {
     api project(':krystal-common')
-    implementation 'com.squareup:javapoet'
+    implementation libs.javapoet
     implementation 'com.google.googlejavaformat:google-java-format'
     implementation 'com.google.auto:auto-common'
 }

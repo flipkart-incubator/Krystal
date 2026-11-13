@@ -10,7 +10,7 @@ import com.flipkart.krystal.model.array.SimpleFloatArray;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Range;
-import com.squareup.javapoet.CodeBlock;
+import com.palantir.javapoet.CodeBlock;
 import java.net.URL;
 import java.time.Instant;
 import java.time.LocalDate;

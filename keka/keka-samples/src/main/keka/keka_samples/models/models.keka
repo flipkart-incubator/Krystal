@@ -1,0 +1,15 @@
+package keka_samples.models;
+
+// A value model: it has no `idField, so two Moneys are equal when all their fields are.
+model Money(int64 amountMinor; string currency = "INR")
+
+// An entity: `idField fields alone decide equality and hashing. `nickname is errable (`T?`): a value,
+// an error, or nil (absent); an omitted errable field is nil. Models compose other models.
+model Account(
+  `idField string id;
+  string owner;
+  Money balance;
+  string? nickname;
+  int32 tier = 1;
+  List<Money> history;
+)

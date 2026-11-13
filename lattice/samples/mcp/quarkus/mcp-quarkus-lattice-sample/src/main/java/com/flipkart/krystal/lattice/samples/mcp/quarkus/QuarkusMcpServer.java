@@ -2,7 +2,6 @@ package com.flipkart.krystal.lattice.samples.mcp.quarkus;
 
 import static com.flipkart.krystal.lattice.core.execution.ThreadingStrategy.POOLED_NATIVE_THREAD_PER_REQUEST;
 
-import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.lattice.core.LatticeApp;
 import com.flipkart.krystal.lattice.core.LatticeApplication;
 import com.flipkart.krystal.lattice.core.doping.DopeWith;
@@ -39,10 +38,7 @@ public abstract class QuarkusMcpServer extends LatticeApplication {
 
   @DopeWith
   public static VajramDopantSpecBuilder vajramGraph() {
-    return VajramDopantSpec.builder()
-        .vajramGraphBuilder(
-            VajramGraph.builder()
-                .loadFromPackage("com.flipkart.krystal.lattice.samples.mcp.quarkus.logic"));
+    return VajramDopantSpec.builder();
   }
 
   @DopeWith

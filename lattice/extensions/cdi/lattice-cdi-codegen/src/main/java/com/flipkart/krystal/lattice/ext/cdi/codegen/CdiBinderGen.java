@@ -6,7 +6,7 @@ import com.flipkart.krystal.lattice.codegen.spi.di.DepInjectBinderGen;
 import com.flipkart.krystal.lattice.core.LatticeApplication;
 import com.flipkart.krystal.lattice.ext.cdi.CdiFramework;
 import com.google.auto.service.AutoService;
-import com.squareup.javapoet.CodeBlock;
+import com.palantir.javapoet.CodeBlock;
 import java.util.Optional;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;

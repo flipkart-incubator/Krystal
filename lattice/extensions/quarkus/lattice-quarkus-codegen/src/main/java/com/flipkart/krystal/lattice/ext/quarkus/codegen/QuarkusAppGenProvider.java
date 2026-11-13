@@ -1,6 +1,6 @@
 package com.flipkart.krystal.lattice.ext.quarkus.codegen;
 
-import static com.squareup.javapoet.MethodSpec.constructorBuilder;
+import static com.palantir.javapoet.MethodSpec.constructorBuilder;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -11,10 +11,10 @@ import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.codegen.spi.LatticeCodeGeneratorProvider;
 import com.google.auto.service.AutoService;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.JavaFile;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.TypeName;
+import com.palantir.javapoet.ClassName;
+import com.palantir.javapoet.JavaFile;
+import com.palantir.javapoet.MethodSpec;
+import com.palantir.javapoet.TypeName;
 import io.quarkus.runtime.QuarkusApplication;
 import jakarta.inject.Inject;
 import javax.lang.model.element.Name;

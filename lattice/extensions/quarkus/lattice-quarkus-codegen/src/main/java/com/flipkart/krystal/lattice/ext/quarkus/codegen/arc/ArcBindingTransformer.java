@@ -2,7 +2,7 @@ package com.flipkart.krystal.lattice.ext.quarkus.codegen.arc;
 
 import com.flipkart.krystal.lattice.ext.cdi.codegen.BindingCodeTransformer;
 import com.google.auto.service.AutoService;
-import com.squareup.javapoet.MethodSpec;
+import com.palantir.javapoet.MethodSpec;
 import io.quarkus.arc.Unremovable;
 
 @AutoService(BindingCodeTransformer.class)

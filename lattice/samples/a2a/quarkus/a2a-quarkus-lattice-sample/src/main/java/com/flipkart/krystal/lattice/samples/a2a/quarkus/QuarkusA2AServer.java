@@ -2,7 +2,6 @@ package com.flipkart.krystal.lattice.samples.a2a.quarkus;
 
 import static com.flipkart.krystal.lattice.core.execution.ThreadingStrategy.POOLED_NATIVE_THREAD_PER_REQUEST;
 
-import com.flipkart.krystal.krystex.VajramGraph;
 import com.flipkart.krystal.lattice.core.LatticeApp;
 import com.flipkart.krystal.lattice.core.LatticeApplication;
 import com.flipkart.krystal.lattice.core.doping.DopeWith;
@@ -32,8 +31,8 @@ import com.flipkart.krystal.lattice.vajram.VajramDopantSpec.VajramDopantSpecBuil
  *   <li>{@code reverse} – reverses the characters of the user's input (no explicit canceller)
  * </ul>
  *
- * <p>The {@code AgentCard} is provided by {@link SampleAgentCardProducer} and is served
- * automatically at {@code /.well-known/agent.json}.
+ * <p>The {@code AgentCard} is provided by {@link A2AServerAppProducer} and is served automatically
+ * at {@code /.well-known/agent.json}.
  */
 @LatticeApp(
     description = "A sample A2A Server powered by Quarkus",
@@ -57,10 +56,7 @@ public abstract class QuarkusA2AServer extends LatticeApplication {
 
   @DopeWith
   public static VajramDopantSpecBuilder vajramGraph() {
-    return VajramDopantSpec.builder()
-        .vajramGraphBuilder(
-            VajramGraph.builder()
-                .loadFromPackage("com.flipkart.krystal.lattice.samples.a2a.quarkus.logic"));
+    return VajramDopantSpec.builder();
   }
 
   @DopeWith

@@ -35,15 +35,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.squareup.javapoet.AnnotationSpec;
-import com.squareup.javapoet.ArrayTypeName;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.FieldSpec;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterSpec;
-import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeSpec;
+import com.palantir.javapoet.AnnotationSpec;
+import com.palantir.javapoet.ArrayTypeName;
+import com.palantir.javapoet.ClassName;
+import com.palantir.javapoet.CodeBlock;
+import com.palantir.javapoet.FieldSpec;
+import com.palantir.javapoet.MethodSpec;
+import com.palantir.javapoet.ParameterSpec;
+import com.palantir.javapoet.TypeName;
+import com.palantir.javapoet.TypeSpec;
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -167,13 +167,13 @@ final class ForyModelsGen implements CodeGenerator {
               .build();
       // Wrap getter to call _deserialize() first
       MethodSpec.Builder getterBuilder =
-          MethodSpec.methodBuilder(pojoGetterMethod.name)
-              .returns(pojoGetterMethod.returnType)
-              .addParameters(pojoGetterMethod.parameters)
-              .addModifiers(pojoGetterMethod.modifiers)
-              .addAnnotations(pojoGetterMethod.annotations)
+          MethodSpec.methodBuilder(pojoGetterMethod.name())
+              .returns(pojoGetterMethod.returnType())
+              .addParameters(pojoGetterMethod.parameters())
+              .addModifiers(pojoGetterMethod.modifiers())
+              .addAnnotations(pojoGetterMethod.annotations())
               .addStatement("_deserialize()")
-              .addCode(pojoGetterMethod.code);
+              .addCode(pojoGetterMethod.code());
       methods.add(getterBuilder.build());
 
       // Private setter for field assignment

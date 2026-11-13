@@ -7,9 +7,9 @@ import com.flipkart.krystal.codegen.common.models.TypeNameVisitor;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.google.common.collect.ImmutableList;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.ParameterizedTypeName;
-import com.squareup.javapoet.TypeName;
+import com.palantir.javapoet.ClassName;
+import com.palantir.javapoet.ParameterizedTypeName;
+import com.palantir.javapoet.TypeName;
 import java.util.List;
 import java.util.stream.Stream;
 import javax.lang.model.element.TypeElement;
@@ -19,6 +19,7 @@ public record VajramInfo(
     VajramInfoLite lite,
     String packageName,
     ImmutableList<DefaultFacetModel> givenFacets,
+    ImmutableList<DefaultFacetModel> fields,
     ImmutableList<DependencyModel> dependencies,
     TypeElement definitionElement,
     @Nullable VajramInfoLite conformsToTraitInfo,
@@ -43,7 +44,7 @@ public record VajramInfo(
   }
 
   public Stream<FacetGenModel> facetStream() {
-    return Stream.concat(givenFacets.stream(), dependencies.stream());
+    return Stream.of(givenFacets.stream(), fields.stream(), dependencies.stream()).flatMap(s -> s);
   }
 
   public TypeElement vajramClassElem() {
