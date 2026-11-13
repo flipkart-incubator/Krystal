@@ -5,11 +5,15 @@ import com.flipkart.krystal.keka.KekaParser;
 import com.flipkart.krystal.keka.KekaParser.Annotated_delegatable_logic_blockContext;
 import com.flipkart.krystal.keka.KekaParser.Annotated_logic_blockContext;
 import com.flipkart.krystal.keka.KekaParser.AnnotationContext;
+import com.flipkart.krystal.keka.KekaParser.Annotation_defContext;
+import com.flipkart.krystal.keka.KekaParser.Annotation_fieldContext;
+import com.flipkart.krystal.keka.KekaParser.Annotation_field_typeContext;
+import com.flipkart.krystal.keka.KekaParser.Annotation_valueContext;
+import com.flipkart.krystal.keka.KekaParser.Annotation_value_atomContext;
 import com.flipkart.krystal.keka.KekaParser.Computed_facetContext;
 import com.flipkart.krystal.keka.KekaParser.Dep_input_resolverContext;
-import com.flipkart.krystal.keka.KekaParser.DependencyContext;
+import com.flipkart.krystal.keka.KekaParser.Dependency_declarationContext;
 import com.flipkart.krystal.keka.KekaParser.Dependency_invocationContext;
-import com.flipkart.krystal.keka.KekaParser.ErrableTypeContext;
 import com.flipkart.krystal.keka.KekaParser.ExprContext;
 import com.flipkart.krystal.keka.KekaParser.FieldContext;
 import com.flipkart.krystal.keka.KekaParser.Func_callContext;
@@ -17,20 +21,29 @@ import com.flipkart.krystal.keka.KekaParser.Func_call_in_output_logicContext;
 import com.flipkart.krystal.keka.KekaParser.Func_chainContext;
 import com.flipkart.krystal.keka.KekaParser.GrouperContext;
 import com.flipkart.krystal.keka.KekaParser.Imports_declContext;
+import com.flipkart.krystal.keka.KekaParser.Injection_declarationContext;
 import com.flipkart.krystal.keka.KekaParser.Injections_listContext;
-import com.flipkart.krystal.keka.KekaParser.Input_id_declarationContext;
+import com.flipkart.krystal.keka.KekaParser.Input_declarationContext;
 import com.flipkart.krystal.keka.KekaParser.Inputs_listContext;
+import com.flipkart.krystal.keka.KekaParser.Keka_fileContext;
+import com.flipkart.krystal.keka.KekaParser.Local_declarationContext;
 import com.flipkart.krystal.keka.KekaParser.Logic_blockContext;
+import com.flipkart.krystal.keka.KekaParser.Model_defContext;
+import com.flipkart.krystal.keka.KekaParser.Model_fieldContext;
+import com.flipkart.krystal.keka.KekaParser.Non_param_typeContext;
+import com.flipkart.krystal.keka.KekaParser.NowTypeContext;
 import com.flipkart.krystal.keka.KekaParser.Output_blockContext;
 import com.flipkart.krystal.keka.KekaParser.Param_listContext;
 import com.flipkart.krystal.keka.KekaParser.ProgramContext;
 import com.flipkart.krystal.keka.KekaParser.QualifiedNameContext;
 import com.flipkart.krystal.keka.KekaParser.StatementContext;
+import com.flipkart.krystal.keka.KekaParser.Top_level_file_elementContext;
 import com.flipkart.krystal.keka.KekaParser.TypeContext;
 import com.flipkart.krystal.keka.KekaParser.Vajram_defContext;
-import com.flipkart.krystal.keka.KekaParser.Vajram_fileContext;
 import com.flipkart.krystal.keka.KekaParser.Yield_statementContext;
 import com.flipkart.krystal.keka.rust.ast.Accessor;
+import com.flipkart.krystal.keka.rust.ast.AnnotationDef;
+import com.flipkart.krystal.keka.rust.ast.AnnotationDefFile;
 import com.flipkart.krystal.keka.rust.ast.Callers;
 import com.flipkart.krystal.keka.rust.ast.Callers.Caller;
 import com.flipkart.krystal.keka.rust.ast.ComputedFacet;
@@ -42,7 +55,10 @@ import com.flipkart.krystal.keka.rust.ast.Field;
 import com.flipkart.krystal.keka.rust.ast.InjectionDecl;
 import com.flipkart.krystal.keka.rust.ast.InputDecl;
 import com.flipkart.krystal.keka.rust.ast.LogicBlock;
+import com.flipkart.krystal.keka.rust.ast.ModelDef;
+import com.flipkart.krystal.keka.rust.ast.ModelFile;
 import com.flipkart.krystal.keka.rust.ast.OutputBlock;
+import com.flipkart.krystal.keka.rust.ast.ParsedSource;
 import com.flipkart.krystal.keka.rust.ast.SourceLocation;
 import com.flipkart.krystal.keka.rust.ast.Statement;
 import com.flipkart.krystal.keka.rust.ast.TypeRef;
@@ -53,6 +69,7 @@ import com.flipkart.krystal.keka.rust.diag.Diagnostics;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import org.antlr.v4.runtime.BaseErrorListener;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -83,6 +100,14 @@ public final class AstBuilder {
    * Returns no declarations when that source contains a parsing error.
    */
   public List<VajramFile> buildAll(Path path, String source) {
+    return buildSource(path, source).vajrams();
+  }
+
+  /**
+   * Parses and builds the AST for every top-level declaration (Vajrams and annotation definitions)
+   * in one {@code .keka} source file. Returns nothing when that source contains a parsing error.
+   */
+  public ParsedSource buildSource(Path path, String source) {
     currentFile = path.toString();
     int errorsBefore = diagnostics.errorCount();
     KekaLexer lexer = new KekaLexer(CharStreams.fromString(source, currentFile));
@@ -103,14 +128,131 @@ public final class AstBuilder {
         });
     ProgramContext program = parser.program();
     if (diagnostics.errorCount() > errorsBefore) {
-      return List.of();
+      return ParsedSource.EMPTY;
     }
-    Vajram_fileContext file = program.vajram_file();
+    Keka_fileContext file = program.keka_file();
     List<String> packageSegments = toQualifiedName(file.package_decl().qualifiedName());
+    List<VajramAnnotation> packageAnnotations =
+        file.package_decl().annotation().stream().map(this::toVajramAnnotation).toList();
     List<VajramFile.ImportDecl> imports = file.imports_decl().stream().map(this::toImport).toList();
-    return file.vajram_def().stream()
-        .map(vajram -> toVajramFile(path, packageSegments, imports, vajram))
-        .toList();
+    List<VajramFile> vajrams = new ArrayList<>();
+    List<AnnotationDefFile> annotationDefs = new ArrayList<>();
+    List<ModelFile> models = new ArrayList<>();
+    for (Top_level_file_elementContext element : file.top_level_file_element()) {
+      if (element.model_def() != null) {
+        models.add(
+            new ModelFile(
+                path,
+                packageSegments,
+                packageAnnotations,
+                imports,
+                toModelDef(element.model_def())));
+      } else if (element.vajram_def() != null) {
+        vajrams.add(
+            toVajramFile(path, packageSegments, packageAnnotations, imports, element.vajram_def()));
+      } else {
+        annotationDefs.add(
+            new AnnotationDefFile(
+                path,
+                packageSegments,
+                packageAnnotations,
+                imports,
+                toAnnotationDef(element.type_def().annotation_def())));
+      }
+    }
+    return new ParsedSource(List.copyOf(vajrams), List.copyOf(annotationDefs), List.copyOf(models));
+  }
+
+  private ModelDef toModelDef(Model_defContext ctx) {
+    List<ModelDef.FieldDecl> fields =
+        ctx.model_field_list() == null
+            ? List.of()
+            : ctx.model_field_list().model_field().stream().map(this::toModelField).toList();
+    return new ModelDef(
+        ctx.ID().getText(),
+        ctx.annotation().stream().map(this::toVajramAnnotation).toList(),
+        fields,
+        loc(ctx));
+  }
+
+  private ModelDef.FieldDecl toModelField(Model_fieldContext ctx) {
+    return new ModelDef.FieldDecl(
+        ctx.annotation().stream().map(this::toVajramAnnotation).toList(),
+        toNowType(ctx.nowType()),
+        ctx.ID().getText(),
+        ctx.annotation_value() == null ? null : toAnnotationValue(ctx.annotation_value()),
+        loc(ctx));
+  }
+
+  private AnnotationDef toAnnotationDef(Annotation_defContext ctx) {
+    List<AnnotationDef.Parameter> parameters =
+        ctx.annotation_def_field_list() == null
+            ? List.of()
+            : ctx.annotation_def_field_list().annotation_field().stream()
+                .map(this::toAnnotationParameter)
+                .toList();
+    return new AnnotationDef(
+        ctx.ID().getText(),
+        ctx.annotation().stream().map(this::toVajramAnnotation).toList(),
+        parameters,
+        loc(ctx));
+  }
+
+  private AnnotationDef.Parameter toAnnotationParameter(Annotation_fieldContext ctx) {
+    return new AnnotationDef.Parameter(
+        ctx.ID().getText(),
+        toAnnotationFieldType(ctx.annotation_field_type()),
+        ctx.annotation_value() == null ? null : toAnnotationValue(ctx.annotation_value()),
+        loc(ctx));
+  }
+
+  /** A scalar keeps its name; {@code [T]} becomes {@code List<T>}, as in the other type mapping. */
+  private TypeRef toAnnotationFieldType(Annotation_field_typeContext ctx) {
+    if (ctx.annotation_scalar_type() != null) {
+      return TypeRef.simple(ctx.annotation_scalar_type().getText());
+    }
+    return new TypeRef(
+        "List",
+        List.of(toAnnotationFieldType(ctx.annotation_field_type())),
+        false,
+        false,
+        false,
+        false);
+  }
+
+  /**
+   * The grammar already limits annotation values to constants; this keeps their shape as {@link
+   * Expr}.
+   */
+  private Expr toAnnotationValue(Annotation_valueContext ctx) {
+    if (ctx.annotation_value_atom() != null) {
+      return toAnnotationValueAtom(ctx.annotation_value_atom());
+    }
+    String operator = ctx.PLUS() != null ? "+" : "*";
+    return new Expr.BinaryOp(
+        toAnnotationValue(ctx.annotation_value(0)),
+        operator,
+        toAnnotationValue(ctx.annotation_value(1)));
+  }
+
+  private Expr toAnnotationValueAtom(Annotation_value_atomContext ctx) {
+    if (ctx.STRING_LITERAL() != null) {
+      return new Expr.StringLiteral(ctx.STRING_LITERAL().getText());
+    }
+    if (ctx.NUM_LITERAL() != null) {
+      return new Expr.IntLiteral(ctx.NUM_LITERAL().getText());
+    }
+    if (ctx.bool() != null) {
+      return new Expr.BoolLiteral(ctx.bool().TRUE() != null);
+    }
+    if (ctx.annotation_array() != null) {
+      return new Expr.Array(
+          ctx.annotation_array().annotation_value().stream().map(this::toAnnotationValue).toList());
+    }
+    if (ctx.qualifiedName() != null) {
+      return new Expr.VarUse(String.join(".", toQualifiedName(ctx.qualifiedName())), false);
+    }
+    return toAnnotationValue(ctx.annotation_value());
   }
 
   /** Parses one declaration, retaining the original API for single-Vajram callers. */
@@ -122,9 +264,10 @@ public final class AstBuilder {
   private VajramFile toVajramFile(
       Path path,
       List<String> packageSegments,
+      List<VajramAnnotation> packageAnnotations,
       List<VajramFile.ImportDecl> imports,
       Vajram_defContext vd) {
-    return new VajramFile(path, packageSegments, imports, toVajramDef(vd));
+    return new VajramFile(path, packageSegments, packageAnnotations, imports, toVajramDef(vd));
   }
 
   private VajramFile.ImportDecl toImport(Imports_declContext ctx) {
@@ -140,7 +283,7 @@ public final class AstBuilder {
         ctx.inputs_decl().inputs_list() == null
             ? List.of()
             : toInputsList(ctx.inputs_decl().inputs_list());
-    TypeRef outputType = toErrableType(ctx.output_decl().errableType());
+    TypeRef outputType = toType(ctx.output_decl().type());
     Callers callers = toCallers(ctx);
     List<InjectionDecl> injections =
         ctx.injection_decl() == null || ctx.injection_decl().injections_list() == null
@@ -153,6 +296,7 @@ public final class AstBuilder {
         ctx.annotation().stream().map(this::toVajramAnnotation).toList(),
         inputs,
         outputType,
+        ctx.output_decl().annotation().stream().map(this::toVajramAnnotation).toList(),
         callers,
         injections,
         computedFacets,
@@ -169,7 +313,8 @@ public final class AstBuilder {
         ctx.annotation_param_list().annotation_arg().stream()
             .map(
                 argument ->
-                    new VajramAnnotation.Argument(argument.ID().getText(), toExpr(argument.expr())))
+                    new VajramAnnotation.Argument(
+                        argument.ID().getText(), toAnnotationValue(argument.annotation_value())))
             .toList());
   }
 
@@ -177,12 +322,12 @@ public final class AstBuilder {
     if (ctx.field() != null) {
       return toField(ctx.field());
     }
-    return toDependency(ctx.dependency());
+    return toDependency(ctx.dependency_declaration());
   }
 
   private Field toField(FieldContext ctx) {
     return new Field(
-        ctx.annotation().stream().map(this::annotationName).toList(),
+        ctx.annotation().stream().map(this::toVajramAnnotation).toList(),
         toType(ctx.type()),
         ctx.FANOUT() != null,
         ctx.ID().getText(),
@@ -195,15 +340,16 @@ public final class AstBuilder {
       return null;
     }
     var callers = ctx.permissions().callers();
-    List<String> annotations = callers.annotation().stream().map(this::annotationName).toList();
+    List<VajramAnnotation> annotations =
+        callers.annotation().stream().map(this::toVajramAnnotation).toList();
     if (callers.PUBLIC() != null) {
       return new Callers.Public(annotations);
     }
     List<Caller> entries = new ArrayList<>();
-    List<String> pendingAnnotations = new ArrayList<>();
+    List<VajramAnnotation> pendingAnnotations = new ArrayList<>();
     for (ParseTree child : callers.children) {
       if (child instanceof AnnotationContext annotation) {
-        pendingAnnotations.add(annotationName(annotation));
+        pendingAnnotations.add(toVajramAnnotation(annotation));
       } else if (child instanceof TerminalNode terminal
           && terminal.getSymbol().getType() == KekaLexer.ID) {
         entries.add(new Caller(List.copyOf(pendingAnnotations), terminal.getText()));
@@ -215,80 +361,87 @@ public final class AstBuilder {
 
   private List<InputDecl> toInputsList(Inputs_listContext ctx) {
     List<InputDecl> result = new ArrayList<>();
-    String pendingGrouper = null;
-    List<String> pendingAnnotations = new ArrayList<>();
-    for (ParseTree child : ctx.children) {
-      if (child instanceof GrouperContext grouper) {
-        pendingGrouper = grouperName(grouper);
-      } else if (child instanceof AnnotationContext annotation) {
-        pendingAnnotations.add(annotationName(annotation));
-      } else if (child instanceof Input_id_declarationContext decl) {
-        result.add(
-            new InputDecl(
-                pendingGrouper,
-                List.copyOf(pendingAnnotations),
-                toErrableType(decl.errableType()),
-                decl.ID().getText()));
-        pendingGrouper = null;
-        pendingAnnotations = new ArrayList<>();
-      }
+    for (Input_declarationContext decl : ctx.input_declaration()) {
+      result.add(
+          new InputDecl(
+              decl.annotation().stream().map(this::toVajramAnnotation).toList(),
+              toNowType(decl.input_type().nowType()),
+              decl.ID().getText()));
     }
     return result;
   }
 
   private List<InjectionDecl> toInjectionsList(Injections_listContext ctx) {
     List<InjectionDecl> result = new ArrayList<>();
-    List<String> pendingAnnotations = new ArrayList<>();
-    for (ParseTree child : ctx.children) {
-      if (child instanceof AnnotationContext annotation) {
-        pendingAnnotations.add(annotationName(annotation));
-      } else if (child
-          instanceof com.flipkart.krystal.keka.KekaParser.Injection_id_declarationContext decl) {
-        result.add(
-            new InjectionDecl(
-                List.copyOf(pendingAnnotations),
-                toErrableType(decl.errableType()),
-                decl.ID().getText()));
-        pendingAnnotations = new ArrayList<>();
-      }
+    for (Injection_declarationContext decl : ctx.injection_declaration()) {
+      result.add(
+          new InjectionDecl(
+              decl.annotation().stream().map(this::toVajramAnnotation).toList(),
+              toNowType(decl.injection_type().nowType()),
+              decl.ID().getText()));
     }
     return result;
   }
 
+  /** The only {@code #name}s the language defines: the batch of inputs, and a call's request. */
+  private static final Set<String> GROUPER_NAMES = Set.of("batch", "req");
+
   private String grouperName(GrouperContext ctx) {
-    return ctx.ID().getText();
+    String name = ctx.ID().getText();
+    checkGrouperName(name, ctx);
+    return name;
   }
 
-  private String annotationName(AnnotationContext ctx) {
-    return ctx.ID().getText();
+  private void checkGrouperName(String name, ParserRuleContext ctx) {
+    if (!GROUPER_NAMES.contains(name)) {
+      diagnostics.error(loc(ctx), "Unknown '#" + name + "' - only #batch and #req are defined");
+    }
   }
 
-  private TypeRef toErrableType(ErrableTypeContext ctx) {
-    TypeRef base = toType(ctx.type());
-    return ctx.ERRABLE() == null
-        ? base
-        : new TypeRef(base.name(), base.typeArgs(), base.grouperType(), true, base.soon());
+  /** A type with no completion marker: only an optional {@code ?} (inputs and injections). */
+  private TypeRef toNowType(NowTypeContext ctx) {
+    String name = typeName(ctx.non_param_type());
+    boolean grouperType = isBareGrouper(ctx.non_param_type());
+    List<TypeRef> typeArgs = ctx.nowType().stream().map(this::toNowType).toList();
+    return new TypeRef(name, typeArgs, grouperType, ctx.ERRABLE() != null, false, false);
   }
 
   private TypeRef toType(TypeContext ctx) {
-    String name;
-    boolean grouperType = false;
-    if (ctx.non_param_type().ID() != null) {
-      name = ctx.non_param_type().ID().getText();
-    } else if (ctx.non_param_type().STRING() != null) {
-      name = "string";
-    } else if (ctx.non_param_type().VOID() != null) {
-      name = "void";
-    } else {
-      name = grouperName(ctx.non_param_type().grouper());
-      grouperType = true;
-    }
+    String name = typeName(ctx.non_param_type());
+    boolean grouperType = isBareGrouper(ctx.non_param_type());
     List<TypeRef> typeArgs = ctx.type().stream().map(this::toType).toList();
-    return new TypeRef(name, typeArgs, grouperType, ctx.ERRABLE() != null, ctx.SOON() != null);
+    var suffix = ctx.completion_suffix();
+    return new TypeRef(
+        name,
+        typeArgs,
+        grouperType,
+        suffix != null && suffix.ERRABLE() != null,
+        suffix != null && suffix.SOON() != null,
+        suffix != null && suffix.LATER() != null);
   }
 
-  private Dependency toDependency(DependencyContext ctx) {
-    List<String> annotations = ctx.annotation().stream().map(this::annotationName).toList();
+  /** A plain {@code #name} (this vajram's own generated type), not {@code vajram#name}. */
+  private static boolean isBareGrouper(Non_param_typeContext ctx) {
+    return ctx.ID() == null && ctx.grouper() != null;
+  }
+
+  private String typeName(Non_param_typeContext ctx) {
+    if (ctx.ID() != null) {
+      // `vajram#req` names a type generated for another vajram.
+      return ctx.grouper() == null
+          ? ctx.ID().getText()
+          : ctx.ID().getText() + "#" + grouperName(ctx.grouper());
+    } else if (ctx.STRING() != null) {
+      return "string";
+    } else if (ctx.VOID() != null) {
+      return "void";
+    }
+    return grouperName(ctx.grouper());
+  }
+
+  private Dependency toDependency(Dependency_declarationContext ctx) {
+    List<VajramAnnotation> annotations =
+        ctx.annotation().stream().map(this::toVajramAnnotation).toList();
     return new Dependency(
         annotations,
         toType(ctx.type()),
@@ -315,7 +468,7 @@ public final class AstBuilder {
 
   private DependencyInvocation.AnnotatedBlock toAnnotatedBlock(Annotated_logic_blockContext ctx) {
     return new DependencyInvocation.AnnotatedBlock(
-        ctx.annotation().stream().map(this::annotationName).toList(),
+        ctx.annotation().stream().map(this::toVajramAnnotation).toList(),
         toLogicBlock(ctx.logic_block()));
   }
 
@@ -344,7 +497,7 @@ public final class AstBuilder {
     boolean soon = adlb.completion_time() != null && adlb.completion_time().SOON() != null;
     boolean later = adlb.completion_time() != null && adlb.completion_time().LATER() != null;
     return new OutputBlock.Logic(
-        adlb.annotation().stream().map(this::annotationName).toList(),
+        adlb.annotation().stream().map(this::toVajramAnnotation).toList(),
         soon,
         later,
         toLogicBlock(adlb.logic_block()));
@@ -367,13 +520,12 @@ public final class AstBuilder {
   private Statement toStatement(StatementContext ctx) {
     if (ctx.assign_stat() != null) {
       var stat = ctx.assign_stat();
-      Input_id_declarationContext decl = stat.input_id_declaration();
+      Local_declarationContext decl = stat.local_declaration();
       if (decl == null) {
         return new Statement.Expression(toExpr(stat.expr()));
       }
       return new Statement.Assign(
-          InputDecl.of(toErrableType(decl.errableType()), decl.ID().getText()),
-          toExpr(stat.expr()));
+          InputDecl.of(toType(decl.type()), decl.ID().getText()), toExpr(stat.expr()));
     }
     return new Statement.Throw(toExpr(ctx.throw_stat().expr()));
   }
@@ -403,6 +555,9 @@ public final class AstBuilder {
         ctx.annotated_delegatable_logic_block() == null
             ? null
             : toLambdaBody(ctx.annotated_delegatable_logic_block());
+    if (isSpecial) {
+      checkGrouperName(ctx.ID().getText(), ctx);
+    }
     return new Expr.Call(ctx.ID().getText(), args, lambda, isNew, isSpecial);
   }
 
@@ -466,7 +621,17 @@ public final class AstBuilder {
         return toFuncChain(ctx.func_chain());
       }
       if (ctx.func_call_in_output_logic() != null) {
-        return toCall(ctx.func_call_in_output_logic(), ctx.NEW() != null, ctx.SPECIAL() != null);
+        return toCall(ctx.func_call_in_output_logic(), ctx.NEW() != null, ctx.HASH() != null);
+      }
+      if (ctx.new_model() != null) {
+        return new Expr.NewModel(
+            ctx.new_model().ID().getText(),
+            ctx.new_model().model_arg().stream()
+                .map(
+                    argument ->
+                        new Expr.NewModel.Argument(
+                            argument.ID().getText(), toExpr(argument.expr())))
+                .toList());
       }
       if (ctx.grouper() != null) {
         return new Expr.GrouperRef(grouperName(ctx.grouper()));

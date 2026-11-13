@@ -5,12 +5,17 @@ import java.util.List;
 /**
  * Grammar rule {@code type} (plus {@code non_param_type} and {@code errableType}): a possibly
  * generic, possibly errable/soon type reference, e.g. {@code Set<string>}, {@code ProductDetails?},
- * {@code Map<#batch, ProductDetails>~}.
+ * {@code Map<#batch, ProductDetails>~}, {@code string~~}.
  */
 public record TypeRef(
-    String name, List<TypeRef> typeArgs, boolean grouperType, boolean errable, boolean soon) {
+    String name,
+    List<TypeRef> typeArgs,
+    boolean grouperType,
+    boolean errable,
+    boolean soon,
+    boolean later) {
 
   public static TypeRef simple(String name) {
-    return new TypeRef(name, List.of(), false, false, false);
+    return new TypeRef(name, List.of(), false, false, false, false);
   }
 }

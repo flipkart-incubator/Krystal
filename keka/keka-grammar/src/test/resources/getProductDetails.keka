@@ -1,8 +1,8 @@
 package com.flipkart.krystal.keka.samples.products;
 
 vajram getProductDetails
-  (#batch string productId)
-  out ProductDetails?~
+  (`batched string productId)
+  out ProductDetails
   inject (ProductDB productDB){
 
   out ~{

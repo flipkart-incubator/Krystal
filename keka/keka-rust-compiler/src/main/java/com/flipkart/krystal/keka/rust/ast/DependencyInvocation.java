@@ -17,5 +17,5 @@ public record DependencyInvocation(
     SourceLocation location) {
 
   /** A trailing {@code `annotation { ... }} attached to a dependency invocation, e.g. skipIf. */
-  public record AnnotatedBlock(List<String> annotations, LogicBlock block) {}
+  public record AnnotatedBlock(List<VajramAnnotation> annotations, LogicBlock block) {}
 }

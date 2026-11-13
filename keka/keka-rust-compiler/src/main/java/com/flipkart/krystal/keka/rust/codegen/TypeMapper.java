@@ -78,10 +78,18 @@ public final class TypeMapper {
   }
 
   public static String toRustReturnType(TypeRef type) {
+    return toRustReturnType(type, type.errable());
+  }
+
+  /**
+   * {@code errable}: the Vajram yields one {@code Result} per input (see SymbolTable#isErrable).
+   */
+  public static String toRustReturnType(TypeRef type, boolean errable) {
     TypeRef valueType =
-        new TypeRef(type.name(), type.typeArgs(), type.grouperType(), false, type.soon());
+        new TypeRef(
+            type.name(), type.typeArgs(), type.grouperType(), false, type.soon(), type.later());
     String ownedValue = toRustOwnedType(valueType, "a");
-    return type.errable() ? "Result<" + ownedValue + ", VajramError>" : ownedValue;
+    return errable ? "Result<" + ownedValue + ", VajramError>" : ownedValue;
   }
 
   public static boolean isPrimitive(String name) {
@@ -90,7 +98,7 @@ public final class TypeMapper {
 
   private static String baseName(TypeRef type) {
     if (type.grouperType()) {
-      // `#mod`/`#batch` used as a type refers to the facet-group key type; the compiler doesn't
+      // `#batch`/`#req` used as a type refers to the facet-group key type; the compiler doesn't
       // synthesize it, it just names it consistently with the value-position mapping below.
       return capitalize(type.name()) + "Key";
     }

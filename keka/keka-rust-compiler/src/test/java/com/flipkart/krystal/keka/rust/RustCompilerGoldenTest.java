@@ -99,7 +99,7 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("hello.keka"),
         """
         package smoke;
-        vajram hello(int32 count) out string inject (ConsoleWriter console) {
+        vajram hello(int32 count) out `now string inject (ConsoleWriter console) {
           { console.println("hello"); "hello" }
         }
         """);
@@ -138,13 +138,13 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("source.keka"),
         """
         package lifecycle;
-        vajram laterLeaf() out string~ { ~~ { "leaf" } }
+        vajram laterLeaf() out string~~ { ~~ { "leaf" } }
         """);
     Files.writeString(
         sourceDir.resolve("caller.keka"),
         """
         package lifecycle;
-        vajram nowCaller() out string~ {
+        vajram nowCaller() out string~~ {
           string value = laterLeaf();
           { value }
         }
@@ -167,7 +167,7 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("first.keka"),
         """
         package external;
-        vajram first(string input) out string permit callers `outsideProcess public {
+        vajram first(string input) out `now string permit callers `outsideProcess public {
           { input }
         }
         """);
@@ -175,7 +175,7 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("second.keka"),
         """
         package external;
-        vajram second() out string permit callers `outsideProcess public {
+        vajram second() out `now string permit callers `outsideProcess public {
           { "second" }
         }
         """);
@@ -195,6 +195,28 @@ class RustCompilerGoldenTest {
   }
 
   @Test
+  void outsideProcessAcceptsRepeatedFlagListInputs(@TempDir Path tempDir) throws IOException {
+    Path sourceDir = tempDir.resolve("vajram");
+    Path outDir = tempDir.resolve("out");
+    Files.createDirectories(sourceDir);
+    Files.writeString(
+        sourceDir.resolve("join.keka"),
+        """
+        package external;
+        vajram join(List<string> names, List<int> counts) out `now string permit callers `outsideProcess public {
+          { "x" }
+        }
+        """);
+
+    assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
+    assertThat(Files.readString(outDir.resolve("main.rs")))
+        .contains(".or_default().push(_value)")
+        .contains("names: _arena.alloc(_inputs.get(\"names\").map(")
+        .contains(".get(\"counts\")")
+        .contains(".parse::<i64>()");
+  }
+
+  @Test
   void wasmTargetGeneratesTypedOutsideProcessDispatchers(@TempDir Path tempDir) throws IOException {
     Path sourceDir = tempDir.resolve("vajram");
     Path outDir = tempDir.resolve("out");
@@ -203,7 +225,7 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("dispatch.keka"),
         """
         package external;
-        vajram greet(string name, int count) out string permit callers `outsideProcess public {
+        vajram greet(string name, int count) out `now string permit callers `outsideProcess public {
           { name }
         }
         """);
@@ -233,7 +255,7 @@ class RustCompilerGoldenTest {
                 Path.of("callers.keka"),
                 """
                 package test;
-                vajram target() out void permit callers `first callerA, `second callerB {
+                vajram target() out `now void permit callers `first callerA, `second callerB {
                   { }
                 }
                 """);
@@ -245,7 +267,14 @@ class RustCompilerGoldenTest {
     var named = (com.flipkart.krystal.keka.rust.ast.Callers.Named) file.vajram().callers();
     assertThat(named.callers())
         .containsExactly(
-            new Caller(List.of("first"), "callerA"), new Caller(List.of("second"), "callerB"));
+            new Caller(
+                List.of(
+                    new com.flipkart.krystal.keka.rust.ast.VajramAnnotation("first", List.of())),
+                "callerA"),
+            new Caller(
+                List.of(
+                    new com.flipkart.krystal.keka.rust.ast.VajramAnnotation("second", List.of())),
+                "callerB"));
   }
 
   @Test
@@ -257,7 +286,7 @@ class RustCompilerGoldenTest {
                 Path.of("provider.keka"),
                 """
                 package test;
-                `provider(forScope = REQUEST) vajram database() out Database { { new Database() } }
+                `provider(forScope = REQUEST) vajram database() out `now Database { { new Database() } }
                 """);
 
     assertThat(diagnostics.hasErrors()).as(diagnostics.all().toString()).isFalse();
@@ -282,7 +311,7 @@ class RustCompilerGoldenTest {
                 Path.of("fields.keka"),
                 """
                 package test;
-                vajram fields() out void {
+                vajram fields() out `now void {
                   string values = ["one", "two"];
                   { }
                 }
@@ -307,10 +336,10 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("injected.keka"),
         """
         package injections;
-        vajram leaf() out string inject (string prefix) {
+        vajram leaf() out `now string inject (string prefix) {
           { prefix }
         }
-        vajram parent() out string {
+        vajram parent() out `now string {
           string value = leaf();
           { value }
         }
@@ -340,7 +369,7 @@ class RustCompilerGoldenTest {
         """
         package injections;
         import type ConsoleWriter from lang.process;
-        vajram logger() out void inject (ConsoleWriter writer) {
+        vajram logger() out `now void inject (ConsoleWriter writer) {
           { writer.println("hello") }
         }
         """);
@@ -359,7 +388,7 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("logger.keka"),
         """
         package test;
-        vajram logger(string message) out void {
+        vajram logger(string message) out `now void {
           { Console.log(message); }
         }
         """);
@@ -367,6 +396,142 @@ class RustCompilerGoldenTest {
     assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
     assertThat(Files.readString(outDir.resolve("test/logger.rs")))
         .contains("Console.log(_inputs.message);");
+  }
+
+  @Test
+  void rejectsConflictingOutputCompletionDeclarations(@TempDir Path tempDir) throws IOException {
+    for (String out :
+        List.of(
+            "string",
+            "string~",
+            "`now string",
+            "string?",
+            "`now string?",
+            "`now string~",
+            "`now string?~",
+            "`now string~?",
+            "string~~",
+            "`now string~~",
+            "`now string?~~")) {
+      Path source = Files.createDirectories(tempDir.resolve("src" + out.hashCode()));
+      Files.writeString(
+          source.resolve("v.keka"),
+          "package completion;\nvajram v() out " + out + " { { \"x\" } }\n");
+      // Rejected: conflicting markers, and a redundant `?` on a soon/later (non-`now) output.
+      boolean ok =
+          (!out.startsWith("`now") && !out.equals("string?"))
+              || out.equals("`now string")
+              || out.equals("`now string?");
+      assertThat(RustCompilerMain.compile(source, tempDir.resolve("out" + out.hashCode())))
+          .as(out)
+          .isEqualTo(ok);
+    }
+  }
+
+  @Test
+  void onlyBatchAndReqGroupersAreDefined(@TempDir Path tempDir) throws IOException {
+    for (String grouper : List.of("batch", "req", "mod", "foo")) {
+      Path source = Files.createDirectories(tempDir.resolve("src" + grouper));
+      Files.writeString(
+          source.resolve("v.keka"),
+          "package g;\nvajram v(`batched string a) out `now void { Map<#"
+              + grouper
+              + ", string> m = #"
+              + grouper
+              + "(); { } }\n");
+      boolean ok = grouper.equals("batch") || grouper.equals("req");
+      assertThat(RustCompilerMain.compile(source, tempDir.resolve("out" + grouper)))
+          .as(grouper)
+          .isEqualTo(ok);
+    }
+  }
+
+  @Test
+  void callPairsRequestsOfGeneratedVajrams(@TempDir Path tempDir) throws IOException {
+    String callee = "vajram leaf(string x) out string { ~{ yield x; } }\n";
+    String[][] cases = {
+      {"ok", "Call<_, string>... r = ...leaf(x =... xs);", "true"},
+      {"okExplicit", "Call<leaf#req, string>... r = ...leaf(x =... xs);", "true"},
+      {"handled", "Call<_, string?>... r = ...leaf(x =... xs);", "true"},
+      {"wrongReq", "Call<other#req, string>... r = ...leaf(x =... xs);", "false"},
+      {"single", "Call<_, string> r = leaf(x = a);", "true"},
+      {"singleHandled", "Call<_, string?> r = leaf(x = a);", "true"},
+      {"fanoutMismatch", "Call<_, string> r = ...leaf(x =... xs);", "false"},
+      {"strayInfer", "_... r = ...leaf(x =... xs);", "false"},
+    };
+    for (String[] c : cases) {
+      Path source = Files.createDirectories(tempDir.resolve("src" + c[0]));
+      Files.writeString(
+          source.resolve("v.keka"),
+          "package c;\n"
+              + callee
+              + "vajram v(string a) out string {\n  string... xs = [a];\n  "
+              + c[1]
+              + "\n  ~{ yield a; }\n}\n");
+      assertThat(RustCompilerMain.compile(source, tempDir.resolve("out" + c[0])))
+          .as(c[0])
+          .isEqualTo(Boolean.parseBoolean(c[2]));
+    }
+  }
+
+  @Test
+  void generatedTypesNeedADefinedPermittingVajramWithBatchedInputsForBatch(@TempDir Path tempDir)
+      throws IOException {
+    String vajrams =
+        "vajram open(string x) out `now string { { x } }\n"
+            + "vajram batchy(`batched string x) out `now string { { x } }\n"
+            + "vajram closed(string x) out `now string permit callers somebodyElse { { x } }\n";
+    String[][] cases = {
+      {"req", "open#req r", "true"},
+      {"batchFromOutside", "batchy#batch b", "false"},
+      {"bareBatchWithoutBatched", "Map<#batch, string> m", "false"},
+      {"undefined", "ghost#req r", "false"},
+      {"batchWithoutBatched", "open#batch b", "false"},
+      {"notPermitted", "closed#req r", "false"},
+      {"bareReq", "#req r", "true"},
+    };
+    for (String[] c : cases) {
+      Path source = Files.createDirectories(tempDir.resolve("src" + c[0]));
+      Files.writeString(
+          source.resolve("v.keka"),
+          "package g;\n"
+              + vajrams
+              + "vajram user("
+              + c[1]
+              + ") out `now void { { } }\n"
+              + "vajram batchedUser(`batched string x, #batch own, batchedUser#batch same)"
+              + " out `now void { { } }\n");
+      assertThat(RustCompilerMain.compile(source, tempDir.resolve("out" + c[0])))
+          .as(c[0])
+          .isEqualTo(Boolean.parseBoolean(c[2]));
+    }
+  }
+
+  @Test
+  void callerCannotCompleteEarlierThanItsDependency(@TempDir Path tempDir) throws IOException {
+    String[][] cases = {
+      {"`now string", "string", "false"},
+      {"`now string", "string~", "false"},
+      {"`now string", "string~~", "false"},
+      {"string", "string~~", "false"},
+      {"string", "`now string", "true"},
+      {"string~~", "string~", "true"},
+    };
+    for (int i = 0; i < cases.length; i++) {
+      Path source = Files.createDirectories(tempDir.resolve("src" + i));
+      Files.writeString(
+          source.resolve("v.keka"),
+          "package dep;\nvajram leaf() out "
+              + cases[i][1]
+              + " { "
+              + (cases[i][1].endsWith("~~") ? "~~ " : cases[i][1].endsWith("~") ? "~ " : "")
+              + "{ \"x\" } }\nvajram caller() out "
+              + cases[i][0]
+              + " { string v = leaf(); { v } }\n");
+      assertThat(RustCompilerMain.compile(source, tempDir.resolve("out" + i)))
+          .as(String.join(" <- ", cases[i]))
+          .isEqualTo(Boolean.parseBoolean(cases[i][2]));
+    }
   }
 
   @Test
@@ -378,7 +543,7 @@ class RustCompilerGoldenTest {
         scalarSource.resolve("scalar.keka"),
         """
         package fanout;
-        vajram scalar() out void {
+        vajram scalar() out `now void {
           string... values = "not a collection";
           { }
         }
@@ -391,13 +556,13 @@ class RustCompilerGoldenTest {
         mismatchSource.resolve("leaf.keka"),
         """
         package fanout;
-        vajram leaf() out string { { "leaf" } }
+        vajram leaf() out `now string { { "leaf" } }
         """);
     Files.writeString(
         mismatchSource.resolve("parent.keka"),
         """
         package fanout;
-        vajram parent() out void {
+        vajram parent() out `now void {
           string... values = leaf();
           { }
         }
@@ -415,7 +580,7 @@ class RustCompilerGoldenTest {
         """
         package system;
         import vajram readFileAsString from lang.fileSystem;
-        vajram reader(string filePath) out string~ permit callers public {
+        vajram reader(string filePath) out string permit callers public {
           string content = readFileAsString(path = filePath);
           out ~ { content }
         }
@@ -437,7 +602,7 @@ class RustCompilerGoldenTest {
         """
         package system;
         import vajram callHttp from lang.net;
-        vajram fetcher(string requestUrl) out string~ permit callers public {
+        vajram fetcher(string requestUrl) out string permit callers public {
           string body = callHttp(url = requestUrl);
           out ~ { body }
         }
@@ -449,7 +614,9 @@ class RustCompilerGoldenTest {
         .contains("reqwest::Client::new()")
         .contains(".get(_inputs.requestUrl.as_str())")
         .contains(".header(reqwest::header::USER_AGENT,");
-    assertThat(fetcher).contains(".text()").contains(".expect(\"callHttp failed\")");
+    assertThat(fetcher)
+        .contains(".text()")
+        .contains(".map_err(|_e| VajramError::from(_e.to_string()))");
     assertThat(fetcher).contains("let _body_fut = async move {");
   }
 
@@ -463,7 +630,7 @@ class RustCompilerGoldenTest {
         """
         package system;
         import vajram callHttp from lang.net;
-        vajram fetcher(string requestUrl) out string~ permit callers public {
+        vajram fetcher(string requestUrl) out string permit callers public {
           string body = callHttp(url = requestUrl);
           out ~ { body }
         }
@@ -487,7 +654,7 @@ class RustCompilerGoldenTest {
         """
         package system;
         import vajram readFileAsString from lang.fileSystem;
-        vajram reader(string filePath) out string {
+        vajram reader(string filePath) out `now string {
           out readFileAsString(path = filePath);
         }
         """);
@@ -505,7 +672,7 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("dispatch.keka"),
         """
         package external;
-        vajram greet(string name) out string~ permit callers `outsideProcess public {
+        vajram greet(string name) out string permit callers `outsideProcess public {
           ~ { name }
         }
         """);
@@ -528,9 +695,9 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("graph.keka"),
         """
         package graph;
-        vajram firstLeaf() out string~ { ~ { "first" } }
-        vajram secondLeaf() out string~ { ~ { "second" } }
-        vajram parent() out string~ {
+        vajram firstLeaf() out string { ~ { "first" } }
+        vajram secondLeaf() out string { ~ { "second" } }
+        vajram parent() out string {
           string first = firstLeaf();
           string second = secondLeaf();
           string firstValue = first + "";
@@ -557,8 +724,8 @@ class RustCompilerGoldenTest {
                 + "        let _secondValue_fut = async move {\n"
                 + "            let second = _secondValue_needs_second.await;\n")
         // Per-input entries are bound from the awaited facet vectors inside the batch loop.
-        .contains("let first = Clone::clone(&first[__i]);")
-        .contains("__v.push(&*_arena.alloc(first + \"\"));")
+        .contains("let first = match Clone::clone(&first[__i])")
+        .contains("Ok(&*_arena.alloc(first.to_string() + \"\"))")
         .doesNotContain("_secondValue_needs_first")
         .doesNotContain("_firstValue_needs_second")
         .contains(
@@ -578,10 +745,10 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("diamond.keka"),
         """
         package diamond;
-        vajram leafA() out string~ { ~ { "a" } }
-        vajram leafB() out string~ { ~ { "b" } }
-        vajram leafC() out string~ { ~ { "c" } }
-        vajram diamond() out string~ {
+        vajram leafA() out string { ~ { "a" } }
+        vajram leafB() out string { ~ { "b" } }
+        vajram leafC() out string { ~ { "c" } }
+        vajram diamond() out string {
           string a = leafA();
           string b = leafB();
           string c = leafC();
@@ -605,8 +772,8 @@ class RustCompilerGoldenTest {
         .contains("let _combined_fut = async move {\n")
         .contains("let a = _combined_needs_a.await;\n")
         .contains("let b = _combined_needs_b.await;\n")
-        .contains("let a = Clone::clone(&a[__i]);")
-        .contains("__v.push(&*_arena.alloc(a + b));");
+        .contains("let a = match Clone::clone(&a[__i])")
+        .contains("Ok(&*_arena.alloc(a.to_string() + b))");
     String combinedBody =
         diamond.substring(
             diamond.indexOf("let _combined_fut ="), diamond.indexOf("let (a, b, c, combined)"));
@@ -627,7 +794,7 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("hello.keka"),
         """
         package hello;
-        vajram greet(string name) out string {
+        vajram greet(string name) out `now string {
           { "Hello, " + name }
         }
         """);
@@ -647,7 +814,7 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("hello.keka"),
         """
         package hello;
-        vajram greet(string name) out string {
+        vajram greet(string name) out `now string {
           { "Hello, " + name + "!" }
         }
         """);
@@ -667,9 +834,9 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("math.keka"),
         """
         package math;
-        vajram sumInts(int left, int right) out int { { left + right } }
-        vajram sumFloats(float left, float right) out float { { left + right } }
-        vajram sumDoubles(double left, double right) out double { { left + right } }
+        vajram sumInts(int left, int right) out `now int { { left + right } }
+        vajram sumFloats(float left, float right) out `now float { { left + right } }
+        vajram sumDoubles(double left, double right) out `now double { { left + right } }
         """);
 
     assertThat(RustCompilerMain.compile(sourceDir, outDir)).isTrue();
@@ -687,7 +854,7 @@ class RustCompilerGoldenTest {
         """
         package system;
         import vajram concatStrings from lang.strings;
-        vajram join(string separator) out string {
+        vajram join(string separator) out `now string {
           string values = ["one", "two"];
           out concatStrings(strings = values; separator = separator);
         }
@@ -711,9 +878,9 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("combined.keka"),
         """
         package combined;
-        vajram leaf() out string { { "leaf" } }
+        vajram leaf() out `now string { { "leaf" } }
 
-        vajram caller() out string {
+        vajram caller() out `now string {
           string value = leaf();
           { value }
         }
@@ -741,8 +908,8 @@ class RustCompilerGoldenTest {
         sourceDir.resolve("fanout.keka"),
         """
         package fanout;
-        vajram leaf(string value) out string { { value } }
-        vajram parent() out List<string> {
+        vajram leaf(string value) out `now string { { value } }
+        vajram parent() out `now List<string> {
           string... values = ["one", "two"];
           string... results = leaf(value =... values);
           { results }
@@ -759,6 +926,320 @@ class RustCompilerGoldenTest {
         .contains("LeafInputs {")
         .contains("value: _arena.alloc(_it)")
         .doesNotContain("futures::future::join_all");
+  }
+
+  @Test
+  void parsesAnnotationDefinitions() {
+    var diagnostics = new com.flipkart.krystal.keka.rust.diag.Diagnostics();
+    var parsed =
+        new com.flipkart.krystal.keka.rust.parse.AstBuilder(diagnostics)
+            .buildSource(
+                Path.of("defs.keka"),
+                """
+                package test;
+                `target(kinds = [VAJRAM]) `type table(string name, bool indexed = false, [int32] sizes = [1, 2 * 3],)
+                `type marker()
+                `type flag
+                vajram v() out `now void { { } }
+                """);
+
+    assertThat(diagnostics.hasErrors()).as(diagnostics.all().toString()).isFalse();
+    assertThat(parsed.vajrams()).hasSize(1);
+    var table = parsed.annotationDefs().get(0).definition();
+    assertThat(table.name()).isEqualTo("table");
+    assertThat(table.metaAnnotations()).extracting(a -> a.name()).containsExactly("target");
+    assertThat(table.parameters())
+        .extracting(p -> p.name())
+        .containsExactly("name", "indexed", "sizes");
+    assertThat(table.parameters().get(0).defaultValue()).isNull();
+    assertThat(table.parameters().get(2).type().name()).isEqualTo("List");
+    assertThat(parsed.annotationDefs().get(1).definition().parameters()).isEmpty();
+    assertThat(parsed.annotationDefs().get(2).definition().name()).isEqualTo("flag");
+    assertThat(parsed.annotationDefs().get(2).definition().parameters()).isEmpty();
+  }
+
+  @Test
+  void annotationArgumentsMustBeConstantSyntax() {
+    for (String argument : List.of("foo()", "new Foo()", "a.b()", "not true", "#req")) {
+      var diagnostics = new com.flipkart.krystal.keka.rust.diag.Diagnostics();
+      new com.flipkart.krystal.keka.rust.parse.AstBuilder(diagnostics)
+          .buildSource(
+              Path.of("args.keka"),
+              "package test;\n`tag(value = " + argument + ") vajram v() out `now void { { } }\n");
+      assertThat(diagnostics.hasErrors()).as(argument).isTrue();
+    }
+  }
+
+  @Test
+  void validatesUsesOfDefinedAnnotations() {
+    String definitions =
+        "package test;\n"
+            + "`target(kinds = [VAJRAM]) `type table(string name, bool indexed = false, [int32] sizes = [1])\n"
+            + "`target(kinds = [INPUT]) `type column(string name)\n"
+            + "`type untargeted()\n";
+    record Case(String use, String expectedError) {}
+    for (Case testCase :
+        List.of(
+            new Case("`table(name = \"a\" + \"b\", sizes = [2 * 3, 4])", null),
+            new Case("`table(name = \"a\", indexed = true)", null),
+            new Case("`table(indexed = true)", "missing required parameter 'name'"),
+            new Case("`table(name = \"a\", color = \"red\")", "has no parameter 'color'"),
+            new Case("`table(name = \"a\", name = \"b\")", "more than once"),
+            new Case("`table(name = 5)", "must be a constant of type 'string'"),
+            new Case(
+                "`table(name = \"a\", sizes = [\"x\"])", "must be a constant of type '[int32]'"),
+            new Case(
+                "`table(name = \"a\", sizes = [3000000000])",
+                "must be a constant of type '[int32]'"),
+            new Case("`table(name = SOME_NAME)", "must be a constant of type 'string'"),
+            new Case("`table(name = \"a\" * 2)", "operands it does not support"),
+            new Case("`column(name = \"a\")", "cannot be applied to a vajram"),
+            new Case("`untargeted()", "allowed nowhere"),
+            new Case("`unknownBuiltin(anything = 1)", null))) {
+      var diagnostics = new com.flipkart.krystal.keka.rust.diag.Diagnostics();
+      var parsed =
+          new com.flipkart.krystal.keka.rust.parse.AstBuilder(diagnostics)
+              .buildSource(
+                  Path.of("uses.keka"),
+                  definitions + testCase.use() + " vajram v() out `now void { { } }\n");
+      assertThat(diagnostics.hasErrors()).as(diagnostics.all().toString()).isFalse();
+      var table =
+          com.flipkart.krystal.keka.rust.resolve.SymbolTable.build(
+              parsed.vajrams(), parsed.annotationDefs(), diagnostics);
+      com.flipkart.krystal.keka.rust.resolve.Resolver.validate(
+          parsed.vajrams(), table, diagnostics);
+      if (testCase.expectedError() == null) {
+        assertThat(diagnostics.hasErrors()).as(testCase.use() + diagnostics.all()).isFalse();
+      } else {
+        assertThat(diagnostics.all().toString())
+            .as(testCase.use())
+            .contains(testCase.expectedError());
+      }
+    }
+  }
+
+  @Test
+  void checksAnnotationTargetsAtEverySite() {
+    String template =
+        """
+        @@PACKAGE@@ package test;
+        `target(kinds = [PACKAGE]) `type pkgTag
+        `target(kinds = [VAJRAM]) `type vajTag
+        `target(kinds = [INPUT]) `type inTag
+        `target(kinds = [OUTPUT]) `type outTag
+        `target(kinds = [FACET]) `type facetTag
+        `target(kinds = [DEPENDENCY]) `type depTag
+        `target(kinds = [CALLERS]) `type callersTag
+        `target(kinds = [INJECTION]) `type injTag
+        vajram other(string a) out `now string { { a } }
+        @@VAJRAM@@ vajram v(@@INPUT@@ string a) out @@OUTPUT@@ `now string
+            inject (@@INJECTION@@ Logger logger) permit callers @@CALLERS@@ public {
+          @@FACET@@ string x = "a";
+          @@DEPENDENCY@@ string d = other(a = "x");
+          { d }
+        }
+        """;
+    java.util.Map<String, String> correct =
+        java.util.Map.of(
+            "PACKAGE", "`pkgTag",
+            "VAJRAM", "`vajTag",
+            "INPUT", "`inTag",
+            "OUTPUT", "`outTag",
+            "FACET", "`facetTag",
+            "DEPENDENCY", "`depTag",
+            "CALLERS", "`callersTag",
+            "INJECTION", "`injTag");
+    java.util.Map<String, String> siteNames =
+        java.util.Map.of(
+            "PACKAGE", "a package",
+            "VAJRAM", "a vajram",
+            "INPUT", "an input",
+            "OUTPUT", "an output",
+            "FACET", "a facet",
+            "DEPENDENCY", "a dependency",
+            "CALLERS", "a callers declaration",
+            "INJECTION", "an injection");
+    // Every annotation at its own site is accepted.
+    assertThat(diagnoseSource(fill(template, correct)).all().toString()).isEqualTo("[]");
+    // A wrong-target annotation at any one site is rejected, naming that site.
+    for (String site : correct.keySet()) {
+      java.util.Map<String, String> wrong = new java.util.HashMap<>(correct);
+      wrong.put(site, site.equals("INPUT") ? "`facetTag" : "`inTag");
+      assertThat(diagnoseSource(fill(template, wrong)).all().toString())
+          .as(site)
+          .contains("cannot be applied to " + siteNames.get(site));
+    }
+  }
+
+  @Test
+  void parsesModels() {
+    var diagnostics = new com.flipkart.krystal.keka.rust.diag.Diagnostics();
+    var parsed =
+        new com.flipkart.krystal.keka.rust.parse.AstBuilder(diagnostics)
+            .buildSource(
+                Path.of("models.keka"),
+                """
+                package test;
+                import model Money from other.pkg;
+                model Money(int64 amountMinor; string currency = "USD";)
+                model Account(
+                  `idField string id;
+                  `range(min = 0) int32 tier = 1 * 2;
+                  string? nickname;
+                  List<Money> history
+                )
+                model Empty()
+                vajram v() out `now void {
+                  Account a = new Account(id = "x"; history = []);
+                  { }
+                }
+                """);
+
+    assertThat(diagnostics.hasErrors()).as(diagnostics.all().toString()).isFalse();
+    assertThat(parsed.models())
+        .extracting(m -> m.model().name())
+        .containsExactly("Money", "Account", "Empty");
+    var account = parsed.models().get(1).model();
+    assertThat(account.isEntity()).isTrue();
+    assertThat(account.idFields()).extracting(f -> f.name()).containsExactly("id");
+    assertThat(parsed.models().get(0).model().isEntity()).isFalse();
+    assertThat(account.fields().get(1).annotations())
+        .extracting(a -> a.name())
+        .containsExactly("range");
+    assertThat(account.fields().get(1).defaultValue())
+        .isInstanceOf(com.flipkart.krystal.keka.rust.ast.Expr.BinaryOp.class);
+    assertThat(account.fields().get(2).type().errable()).isTrue();
+    assertThat(account.fields().get(3).type().name()).isEqualTo("List");
+    assertThat(parsed.models().get(2).model().fields()).isEmpty();
+    var field =
+        (com.flipkart.krystal.keka.rust.ast.Field)
+            parsed.vajrams().get(0).vajram().computedFacets().get(0);
+    assertThat(field.value()).isInstanceOf(com.flipkart.krystal.keka.rust.ast.Expr.NewModel.class);
+    var newModel = (com.flipkart.krystal.keka.rust.ast.Expr.NewModel) field.value();
+    assertThat(newModel.arguments()).extracting(a -> a.name()).containsExactly("id", "history");
+  }
+
+  @Test
+  void validatesModels() {
+    record Case(String source, String expectedError) {}
+    String money = "model Money(int64 amountMinor; string currency = \"USD\")\n";
+    String vajram = "vajram v() out `now void { { } }\n";
+    for (Case testCase :
+        List.of(
+            new Case(
+                money
+                    + "model Account(`idField string id; Money balance; string? nick; List<Money> hist; Map<string, Money> m; int32 t = 1 + 2; float64 f = 3)\n"
+                    + vajram,
+                null),
+            new Case("model A(string x; string x)\n" + vajram, "declares field 'x' more than once"),
+            new Case("model A(Foo x)\n" + vajram, "Unknown type 'Foo'"),
+            new Case("model A(#req x)\n" + vajram, "cannot be a generated type"),
+            new Case("model A(List<string, string> x)\n" + vajram, "takes 1 type argument"),
+            new Case("model A(string<int32> x)\n" + vajram, "takes no type arguments"),
+            new Case("model A(int32 x = \"s\")\n" + vajram, "must be a constant of type 'int32'"),
+            new Case(
+                money + "model A(Money m = 5)\n" + vajram, "defaults are limited to primitives"),
+            new Case("model A(B b)\nmodel B(A a)\n" + vajram, "contains itself (A -> B -> A)"),
+            new Case("model A(A? self)\n" + vajram, "contains itself (A -> A)"),
+            new Case("model A(List<A> children)\n" + vajram, null),
+            new Case("model A(`idField float64 id)\n" + vajram, "must be hashable"),
+            new Case("model A(`idField string? id)\n" + vajram, "cannot be errable"),
+            new Case("model A(`idField Map<string, string> id)\n" + vajram, "must be hashable"),
+            new Case("model A(Map<float64, string> m)\n" + vajram, "must be hashable"),
+            new Case("model A(string x)\nmodel A(string y)\n" + vajram, "Duplicate model name 'A'"),
+            new Case("model v(string x)\n" + vajram, "clashes with the model of the same name"),
+            new Case("`idField model A(string x)\n" + vajram, "cannot be applied to a model"),
+            new Case("`type idField()\n" + vajram, "built into the language"),
+            new Case(
+                "vajram w(`idField string a) out `now void { { } }\n",
+                "cannot be applied to an input"),
+            new Case(
+                money + "vajram w() out `now void { Money m = new Money(amountMinor = 1); { } }\n",
+                null),
+            new Case(
+                money
+                    + "vajram w() out `now void { Money m = new Money(amountMinor = 1; color = 2); { } }\n",
+                "has no field 'color'"),
+            new Case(
+                money
+                    + "vajram w() out `now void { Money m = new Money(amountMinor = 1; amountMinor = 2); { } }\n",
+                "is set twice"),
+            new Case(
+                money
+                    + "vajram w() out `now void { Money m = new Money(currency = \"EUR\"); { } }\n",
+                "Field 'amountMinor' of model 'Money' has no default"),
+            new Case(
+                money + "vajram w() out `now void { Money m = new Money(5); { } }\n",
+                "Create model 'Money' with named fields"),
+            new Case(
+                money + "vajram w() out `now void { Money m = new Money(); { } }\n",
+                "Field 'amountMinor' of model 'Money' has no default"),
+            new Case(
+                "model D(int32 a = 1; string b = \"x\")\nvajram w() out `now void { D d = new D(); { } }\n",
+                null),
+            new Case(
+                "vajram w() out `now void { Nope n = new Nope(a = 1); { } }\n",
+                "Unknown model 'Nope'"))) {
+      var diagnostics = diagnoseSource("package test;\n" + testCase.source());
+      if (testCase.expectedError() == null) {
+        assertThat(diagnostics.all().toString()).as(testCase.source()).isEqualTo("[]");
+      } else {
+        assertThat(diagnostics.all().toString())
+            .as(testCase.source())
+            .contains(testCase.expectedError());
+      }
+    }
+  }
+
+  private static String fill(String template, java.util.Map<String, String> values) {
+    String result = template;
+    for (var entry : values.entrySet()) {
+      result = result.replace("@@" + entry.getKey() + "@@", entry.getValue());
+    }
+    return result;
+  }
+
+  private static com.flipkart.krystal.keka.rust.diag.Diagnostics diagnoseSource(String source) {
+    var diagnostics = new com.flipkart.krystal.keka.rust.diag.Diagnostics();
+    var parsed =
+        new com.flipkart.krystal.keka.rust.parse.AstBuilder(diagnostics)
+            .buildSource(Path.of("sites.keka"), source);
+    var table =
+        com.flipkart.krystal.keka.rust.resolve.SymbolTable.build(
+            parsed.vajrams(), parsed.annotationDefs(), parsed.models(), diagnostics);
+    com.flipkart.krystal.keka.rust.resolve.Resolver.validate(parsed.vajrams(), table, diagnostics);
+    return diagnostics;
+  }
+
+  @Test
+  void rejectsInvalidAnnotationDefinitions() {
+    record Case(String definition, String expectedError) {}
+    for (Case testCase :
+        List.of(
+            new Case("`type a(string x, string x)", "more than once"),
+            new Case("`type a(Foo x)", "unsupported type 'Foo'"),
+            new Case("`type a(int32 x = \"s\")", "must be a constant of type 'int32'"),
+            new Case("`type a(int32 x = foo)", "must be a constant of type 'int32'"),
+            new Case("`target(kinds = [NOWHERE]) `type a()", "Unknown annotation target"),
+            new Case("`target(where = [VAJRAM]) `type a()", "takes one parameter"),
+            new Case("`type a() `type a()", "Duplicate annotation name 'a'"))) {
+      var diagnostics = new com.flipkart.krystal.keka.rust.diag.Diagnostics();
+      var parsed =
+          new com.flipkart.krystal.keka.rust.parse.AstBuilder(diagnostics)
+              .buildSource(
+                  Path.of("bad.keka"),
+                  "package test;\n"
+                      + testCase.definition()
+                      + "\nvajram v() out `now void { { } }\n");
+      var table =
+          com.flipkart.krystal.keka.rust.resolve.SymbolTable.build(
+              parsed.vajrams(), parsed.annotationDefs(), diagnostics);
+      com.flipkart.krystal.keka.rust.resolve.Resolver.validate(
+          parsed.vajrams(), table, diagnostics);
+      assertThat(diagnostics.all().toString())
+          .as(testCase.definition())
+          .contains(testCase.expectedError());
+    }
   }
 
   private static boolean commandAvailable(String command) {

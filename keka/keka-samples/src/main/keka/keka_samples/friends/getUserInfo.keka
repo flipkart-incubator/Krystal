@@ -4,5 +4,5 @@ vajram getUserInfo(string userId)
     out string
     permit callers sayHelloToFriends {
 
-  { "user-" + userId }
+  ~{ "user-" + userId }
 }

@@ -7,7 +7,7 @@ import java.util.List;
  */
 public sealed interface OutputBlock {
 
-  record Logic(List<String> annotations, boolean soon, boolean later, LogicBlock body)
+  record Logic(List<VajramAnnotation> annotations, boolean soon, boolean later, LogicBlock body)
       implements OutputBlock {}
 
   record Delegate(DependencyInvocation invocation) implements OutputBlock {}

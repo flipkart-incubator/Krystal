@@ -1,6 +1,6 @@
 package com.flipkart.krystal.keka.samples.products;
 
-vajram computeAveragePrice in (ProductCollection collection) out double?{
+vajram computeAveragePrice in (ProductCollection collection) out `now double?{
 
   ProductDetails?... productDetails =... getProductDetails(
       productId =... collection.productIds();

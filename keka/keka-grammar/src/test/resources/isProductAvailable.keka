@@ -2,7 +2,7 @@ package com.flipkart.krystal.keka.samples.products;
 
 vajram isProductAvailable
   in (string productId)
-  out bool?~
+  out bool
   inject (AvailabilityDB availabilityDB) {
 
   out ~{

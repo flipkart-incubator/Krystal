@@ -8,7 +8,7 @@ import `type local from lang.memory;
 // ./gradlew :keka:keka-samples:runVajram -Pvajram=headFile
 //    -PvajramArgs="--numChars 5 --filePath /path/to/file"
 vajram headFile(int32 numChars, string filePath)
-    out string~
+    out string
     inject (ConsoleWriter console)
     permit callers `outsideProcess public{
   `local string fileContent = readFileAsString(path = filePath);

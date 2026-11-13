@@ -6,7 +6,7 @@ import vajram getUserInfo from com.flipkart.krystal.keka.samples.friends;
 
 vajram sayHelloToFriendsV2
     (string userId)
-    out string
+    out `now string
     permit callers public {
 
   UserInfo userInfo = getUserInfo(userId = userId);

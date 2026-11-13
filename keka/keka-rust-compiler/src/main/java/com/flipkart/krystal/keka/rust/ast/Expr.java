@@ -41,6 +41,12 @@ public sealed interface Expr {
   /** {@code expr accessor func_chain} - a method-call chain continuing off a prior expression. */
   record ChainedCall(Expr target, Accessor accessor, FuncChain call) implements Expr {}
 
+  /** {@code new Model(field = value; ...)}: creates a model by naming its fields. */
+  record NewModel(String name, List<NewModel.Argument> arguments) implements Expr {
+
+    public record Argument(String name, Expr value) {}
+  }
+
   /** A reference to a {@code #groupName} facet grouper used as a value. */
   record GrouperRef(String name) implements Expr {}
 

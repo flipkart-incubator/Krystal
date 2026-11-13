@@ -1,5 +1,6 @@
 package com.flipkart.krystal.keka.rust.plugin;
 
+import com.flipkart.krystal.keka.rust.ast.VajramAnnotation;
 import com.flipkart.krystal.keka.rust.ast.VajramFile;
 import com.flipkart.krystal.keka.rust.cli.RustCompilerMain.Target;
 import com.flipkart.krystal.keka.rust.diag.Diagnostics;
@@ -32,6 +33,7 @@ public final class AnnotationProcessorRunner {
                   file ->
                       file.vajram().callers() != null
                           && file.vajram().callers().annotations().stream()
+                              .map(VajramAnnotation::name)
                               .anyMatch(processor.supportedAnnotations()::contains))
               .toList();
       if (matching.isEmpty()) {

@@ -36,9 +36,39 @@ class KekaSamplesTest {
   }
 
   @Test
+  void modelsCompareByIdentityOrByValue() throws Exception {
+    assertThat(runVajram("describeAccount", "--id", "a1")).isEqualTo("ram");
+    assertThat(runVajram("sameAccount", "--id", "a1")).isEqualTo("true");
+    assertThat(runVajram("sameMoney", "--amountMinor", "5")).isEqualTo("true");
+    assertThat(runVajram("differentMoney", "--amountMinor", "5")).isEqualTo("false");
+  }
+
+  @Test
+  void errableModelFieldsHoldNilOrAValue() throws Exception {
+    assertThat(runVajram("nicknameIsNil", "--id", "a1")).isEqualTo("true");
+    assertThat(runVajram("nicknameIsSet", "--id", "a1")).isEqualTo("true");
+  }
+
+  @Test
   void errableAsyncCalleeYieldsPerInputResults() throws Exception {
     assertThat(runVajram("checkErrors", "--input", "x")).isEqualTo("true");
     assertThat(runVajram("checkErrorsInFanout", "--input", "x")).isEqualTo("true");
+    assertThat(runVajram("checkSingleCall", "--input", "x")).isEqualTo("true");
+  }
+
+  @Test
+  void failureIsLimitedToItsOwnElementOfAFanout() throws Exception {
+    Path file = Files.createTempFile("vajram-partial-failure-", ".txt");
+    try {
+      Files.writeString(file, "hello");
+      assertThat(runVajram("checkPartialFailure", "--path", file.toString())).isEqualTo("true");
+      // Plain `string...`: the failed element is dropped, the input still succeeds.
+      assertThat(runVajram("readAvailable", "--path", file.toString())).isEqualTo("hello");
+      // `Call<_, string>`: the surviving pair still names the request it answers.
+      assertThat(runVajram("checkCallPairing", "--path", file.toString())).isEqualTo("true");
+    } finally {
+      Files.deleteIfExists(file);
+    }
   }
 
   @Test

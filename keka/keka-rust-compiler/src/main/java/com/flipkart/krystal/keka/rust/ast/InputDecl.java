@@ -1,17 +1,15 @@
 package com.flipkart.krystal.keka.rust.ast;
 
 import java.util.List;
-import org.jspecify.annotations.Nullable;
 
 /**
- * A single input/facet declaration: grammar rules {@code input_id_declaration} (used standalone in
- * {@code inputs_list} and inside {@code assign_stat}) combined with the optional grouper and
- * annotations that precede it in {@code inputs_list}.
+ * A single input/facet declaration: grammar rules {@code input_declaration} (in {@code
+ * inputs_list}) and {@code local_declaration} (inside {@code assign_stat}), with the annotations
+ * that precede it (e.g. {@code `batched} on an input).
  */
-public record InputDecl(
-    @Nullable String grouper, List<String> annotations, TypeRef type, String name) {
+public record InputDecl(List<VajramAnnotation> annotations, TypeRef type, String name) {
 
   public static InputDecl of(TypeRef type, String name) {
-    return new InputDecl(null, List.of(), type, name);
+    return new InputDecl(List.of(), type, name);
   }
 }

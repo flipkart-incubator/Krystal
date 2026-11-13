@@ -5,20 +5,20 @@ import vajram FriendServiceClient from com.flipkart.krystal.keka.samples.friends
 
 vajram getFriendsOfUser
     (string userId)
-    out Set<string>~
+    out Set<string>
     inject (FriendServiceClient svcClient)
     permit callers public {
 
   out ~{
     svcClient.getFriendsIds(
         new FriendServiceRequest(
-            #mod().stream()
+            #batch().stream()
                 .map{_.userId()}
                 .toSet()))
       ~?.results()
       ~? default(List.of())
       ~ .stream()
       ~ .toMap {
-          new #mod(_.userId()), _.friendIds()}
+          new #batch(_.userId()), _.friendIds()}
   }
 }

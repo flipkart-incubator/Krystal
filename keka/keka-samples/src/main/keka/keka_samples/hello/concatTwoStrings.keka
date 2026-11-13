@@ -1,0 +1,7 @@
+package keka_samples.hello;
+
+vajram concatTwoStrings(string first, string second)
+    out `now string
+    permit callers helloWorld2 {
+  { first + second }
+}

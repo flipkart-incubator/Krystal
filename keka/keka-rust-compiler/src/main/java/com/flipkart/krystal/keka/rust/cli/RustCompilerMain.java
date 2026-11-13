@@ -1,5 +1,8 @@
 package com.flipkart.krystal.keka.rust.cli;
 
+import com.flipkart.krystal.keka.rust.ast.AnnotationDefFile;
+import com.flipkart.krystal.keka.rust.ast.ModelFile;
+import com.flipkart.krystal.keka.rust.ast.ParsedSource;
 import com.flipkart.krystal.keka.rust.ast.VajramFile;
 import com.flipkart.krystal.keka.rust.codegen.Naming;
 import com.flipkart.krystal.keka.rust.codegen.RustEmitter;
@@ -88,9 +91,11 @@ public final class RustCompilerMain {
   /** Returns {@code true} on success (no diagnostic errors) for the selected Rust target. */
   public static boolean compile(Path srcDir, Path outDir, Target target) throws IOException {
     Diagnostics diagnostics = new Diagnostics();
-    List<VajramFile> files = parseAll(srcDir, diagnostics);
+    List<AnnotationDefFile> annotationDefs = new ArrayList<>();
+    List<ModelFile> modelFiles = new ArrayList<>();
+    List<VajramFile> files = parseAll(srcDir, diagnostics, annotationDefs, modelFiles);
 
-    SymbolTable symbolTable = SymbolTable.build(files, diagnostics);
+    SymbolTable symbolTable = SymbolTable.build(files, annotationDefs, modelFiles, diagnostics);
     Resolver.validate(files, symbolTable, diagnostics, target);
 
     if (diagnostics.hasErrors()) {
@@ -102,16 +107,27 @@ public final class RustCompilerMain {
     RustEmitter emitter = new RustEmitter(symbolTable, target);
     ModuleTree moduleTree = new ModuleTree();
     Map<Path, List<VajramFile>> filesBySource = new LinkedHashMap<>();
+    Map<Path, List<ModelFile>> modelsBySource = new LinkedHashMap<>();
     for (VajramFile file : files) {
       filesBySource.computeIfAbsent(file.sourcePath(), unused -> new ArrayList<>()).add(file);
     }
-    for (List<VajramFile> sourceFiles : filesBySource.values()) {
-      VajramFile firstFile = sourceFiles.get(0);
-      List<String> dir = firstFile.packageSegments().stream().map(Naming::toSnakeCase).toList();
-      String moduleName = Naming.sourceModuleName(firstFile.sourcePath());
+    for (ModelFile file : modelFiles) {
+      modelsBySource.computeIfAbsent(file.sourcePath(), unused -> new ArrayList<>()).add(file);
+    }
+    Set<Path> sources = new java.util.TreeSet<>(filesBySource.keySet());
+    sources.addAll(modelsBySource.keySet());
+    for (Path source : sources) {
+      List<VajramFile> sourceFiles = filesBySource.getOrDefault(source, List.of());
+      List<ModelFile> sourceModels = modelsBySource.getOrDefault(source, List.of());
+      List<String> packageSegments =
+          sourceFiles.isEmpty()
+              ? sourceModels.get(0).packageSegments()
+              : sourceFiles.get(0).packageSegments();
+      List<String> dir = packageSegments.stream().map(Naming::toSnakeCase).toList();
+      String moduleName = Naming.sourceModuleName(source);
       moduleTree.register(dir, moduleName);
       Path modulePath = outDir.resolve(joinPath(dir)).resolve(moduleName + ".rs");
-      writeFile(modulePath, emitter.emit(sourceFiles));
+      writeFile(modulePath, emitter.emit(source, sourceFiles, sourceModels));
     }
     moduleTree.writeModDeclarations(outDir, target);
     copyPrelude(outDir, target);
@@ -130,7 +146,11 @@ public final class RustCompilerMain {
     }
   }
 
-  private static List<VajramFile> parseAll(Path srcDir, Diagnostics diagnostics)
+  private static List<VajramFile> parseAll(
+      Path srcDir,
+      Diagnostics diagnostics,
+      List<AnnotationDefFile> annotationDefs,
+      List<ModelFile> modelFiles)
       throws IOException {
     List<VajramFile> files = new ArrayList<>();
     if (!Files.isDirectory(srcDir)) {
@@ -140,7 +160,10 @@ public final class RustCompilerMain {
       List<Path> vajramFiles = paths.filter(p -> p.toString().endsWith(".keka")).sorted().toList();
       for (Path path : vajramFiles) {
         String source = Files.readString(path);
-        files.addAll(new AstBuilder(diagnostics).buildAll(path, source));
+        ParsedSource parsed = new AstBuilder(diagnostics).buildSource(path, source);
+        files.addAll(parsed.vajrams());
+        annotationDefs.addAll(parsed.annotationDefs());
+        modelFiles.addAll(parsed.models());
       }
     }
     return files;

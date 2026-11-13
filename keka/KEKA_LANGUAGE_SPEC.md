@@ -67,6 +67,54 @@ Annotations in vajrams are written using the
 `` ` `` character followed by the name of the
 annotation provided they have been imported in the file.
 
+### Annotation definitions
+
+A custom annotation is declared with `` `type ``, at the top level of a file beside vajrams:
+
+```keka
+`target(kinds = [VAJRAM])
+`type table(string name, bool indexed = false, [int32] sizes = [1],)
+
+`type marker
+```
+
+* Parameters are written `Type name` (with an optional constant default `= value`), separated by commas; a trailing comma is allowed. With no parameters the parentheses are optional (a marker annotation).
+* A parameter type is a primitive, `string`, or a list of those (`[T]`).
+* Annotation arguments and defaults must be compile-time constants: literals, arrays, `+` and `*` over constants (`*` binds tighter), and named constants. Calls, variables and `new` are syntax errors.
+* `` `target(kinds = [...]) `` says where the annotation may be written: `VAJRAM`, `INPUT`, `OUTPUT`, `FACET`, `DEPENDENCY`, `INJECTION`, `CALLERS`, `PACKAGE`, `MODEL`, `FIELD`. Without it the annotation is allowed nowhere.
+* A use is checked against its definition at every site: unknown or repeated parameters, a missing required parameter, a value of the wrong type, and a wrong target are compile errors. Annotations with no definition (such as `` `batched ``) are not checked.
+* `` `idField `` is built in (target `FIELD`) and cannot be redefined.
+
+### Models
+
+All data is a model. A model is declared with `model`, a parenthesised list of fields separated by `;` (a trailing `;` is allowed):
+
+```keka
+model Money(int64 amountMinor; string currency = "USD";)
+
+model Account(
+  `idField string id;
+  string owner;
+  Money balance;
+  string? nickname;
+  int32 tier = 1;
+  List<Money> history;
+)
+
+vajram openAccount(string id) out `now string {
+  Account account = new Account(id = id; owner = "ram"; balance = new Money(amountMinor = 150); history = []);
+  { account.owner }
+}
+```
+
+* A model with `` `idField `` fields is an **entity**: its equality and hash use only those fields. Any other model is a **value**, compared field by field. Id fields must be hashable (no floats, sets or maps) and not errable.
+* Field types are primitives, other models, `List<T>`, `Set<T>`, `Map<K, V>`, and `T?`. A `T?` field is errable like everywhere else: it holds a value, an error, or `nil` (absent). A field may have a constant default.
+* A model cannot contain itself through plain or errable fields; a `List`, `Set` or `Map` breaks the cycle. Entity-typed fields embed a copy of the entity.
+* `new Model(field = value; ...)` creates an instance. An omitted field takes its default, an omitted `T?` field is `nil`, and any other omitted field is a compile error. `new Model()` works when every field has a default.
+* Model names are unique across the compilation and cannot match a vajram name.
+* `import model Name from package;` is accepted; models are visible everywhere by name.
+* Enums are not models yet; they will be added as tagged unions.
+
 ### Vajram inputs
 
 ### Vajram injections
@@ -108,6 +156,66 @@ The [output logic](#vajram-output) of a vajram can have exactly one of three del
 `out {}` implies NONE i.e the logic returns a now value,
 `out ~{}` implies SYNC i.e. the logic returns a soon value,
 `out ~~{}` implies ASYNC i.e. the logic returns a later value.
+
+### Vajram output completion
+
+A vajram's `out` type says when its output is available. At most one of the following may be given; giving more than one is a compile error:
+
+`out `now T` - the output is available now (the `now` annotation),
+`out T~` - the output is available soon,
+`out T~~` - the output is available later.
+
+With none of them, `out T` defaults to soon, i.e. it means `out T~`.
+
+A vajram cannot complete earlier than what it depends on: a `now` vajram cannot depend on a `~`/`~~` vajram, and a `~` vajram cannot depend on a `~~` vajram. A mismatch is a compile error.
+
+### Errability
+
+A vajram is *errable* if it declares its output as `` out `now T? `` **or** its completion is `~`/`~~` (soon or later, including the default `out T`). Work delegated outside the current thread can never be guaranteed to return a value, so every soon/later vajram is inherently errable. Because of this, writing `?` on a soon/later output (`out T?`, which defaults to soon) is a compile error as redundant: `?` is only meaningful together with `now`. Errability is never inferred from anything else.
+
+* A `now` vajram without `?` is non-errable. It cannot fail: a `throw` in it is a compile error.
+* A non-errable vajram cannot have a dependency facet declared as a plain `T` on an errable vajram (or delegate its output to one) - it has no way to fail in turn. It must declare the facet `T?` and handle the error itself.
+* The built-in `callHttp` and `readFileAsString` are soon, hence errable. Their failures (network errors, missing files) are per-input errors, not crashes.
+
+A facet declared `T?` is *handled*: the author sees the result with the errable accessors (`facet?valuePresent()`, `?errorPresent()`, `?default(...)`, etc.). A facet declared as plain `T` is *propagating*: see below.
+
+### Vectorized calls and failure isolation
+
+A vajram is always invoked with a vector (batch) of inputs - one logical call per element. This includes the elements produced by a fanout (`...dep(x =... list)`). **A failure is always limited to the element(s) of the vector that caused it**; other elements are never affected.
+
+* An errable vajram yields one result-or-error per input element. `throw` in an errable vajram fails only the element being processed.
+* **Auto-propagation.** If a dependency facet declared as plain `T` fails for element i, then every facet computed from it, and the vajram's own output, also fail for element i with that same error. So the error travels up the call chain only for the elements that originated it. The failed element is not passed to further dependencies: only the surviving elements are batched into their calls.
+* **Handled facets.** A facet declared `T?` receives the error as a value instead of propagating it.
+* **Fanout facets.** For a fanout dependency the facet holds one value per fanned element:
+  * `T?...` keeps one result-or-error per element, in the original positions, and never fails the element as a whole.
+  * Plain `T...` over an errable callee collapses the per-fanned-element results for each input: failed fanned elements are dropped (the list gets shorter, positions shift, the dropped errors are lost), and the input fails, with the first error, only if *all* its fanned elements failed. A group with no fanned elements is not a failure. This "all must fail" policy is the default; a future annotation will allow selecting "any fanned element fails" instead.
+* Failures that the compiler cannot prevent (IO, etc.) are likewise confined to the element.
+* When an outermost (entry-point) vajram call fails, the error is reported to the caller of the program (for the CLI: the error is printed and the exit code is non-zero).
+
+### Generated types (`#`) and batched inputs
+
+`#name` refers to a type that the compiler generates for a vajram. Inside a vajram, `#name` is shorthand for `thisVajram#name`; other vajrams' types are written `vajram#name` (only `#req` is available that way, see below). Only two names are defined; any other `#name` is a compile error.
+
+* `#batch` - the key of a batch of calls to a vajram whose inputs are marked batched. A batch is an implementation detail of its vajram: only code inside that vajram may name it (`#batch`, or `thisVajram#batch`); `other#batch` is a compile error, whatever `other` permits. It is also a compile error to use `#batch` in a vajram without a `` `batched `` input.
+* `#req` - the request type of a vajram: its inputs as one value. `getFriends#req` has a field per input of `getFriends`. For a fanout it holds the one fanned element, not the whole list. It is available only for vajrams defined in source (not the built-in system vajrams), and `vajram#req` is rejected if `vajram` doesn't permit the current vajram as a caller.
+
+An input is marked as batched with the `` `batched `` annotation (``(`batched string productId)``), not with a `#` prefix.
+
+### Pairing responses with their requests
+
+A dependency normally yields only responses. To keep a response next to the request that produced it, declare the facet as `Call<Req, Resp>` (a single call) or `Call<Req, Resp>...` (a fanout, one pair per fanned element):
+
+```
+Call<_, string> one = readFile(path = p);                    // .req and .resp
+string... paths = [a, b, c];
+Call<_, string>... calls = ...readFile(path =... paths);     // each element has .req and .resp
+```
+
+* `Req` is `_` (inferred) or `callee#req`. `_` is an `ID`, and means "infer" only here: it is a compile error anywhere else a type is written.
+* `Call<...>` is valid only on a dependency of a vajram defined in source. `Call<...>...` goes with a fanout, plain `Call<...>` with a single call.
+* For a single `Call<_, T>`, a failed response fails the input; `Call<_, T?>` keeps the error in `.resp`.
+* For a fanout, `Call<_, T>...` drops failed elements (the input fails with the first error only if all failed); the surviving elements still carry their request. `Call<_, T?>...` keeps failed elements, with `.resp` holding the error.
+* Requests are not unique: the same request may appear in several elements.
 
 ### Vajram Call Graph Delegation Mode
 
@@ -159,7 +267,7 @@ A provider vajram MUST satisfy these conditions
 Another way a value can be provided for injection is inside a vajram. A vajram can chose to provide values to its immediate and transitive dependencies at the point of dependency declaration. For example:
 
 ```vajram
-vajram computeValue(int seed) out Result {
+vajram computeValue(int seed) out `now Result {
   
   Result initialResult = computeInitialResult(input = seed; `provider {
     `selector1 Strategy initialStrategy = new ConservativeStrategy();

@@ -7,7 +7,7 @@ import java.util.List;
  * {@code UserInfo userInfo = getUserInfo(userId = userId);}.
  */
 public record Dependency(
-    List<String> annotations,
+    List<VajramAnnotation> annotations,
     TypeRef type,
     boolean fanout,
     String name,

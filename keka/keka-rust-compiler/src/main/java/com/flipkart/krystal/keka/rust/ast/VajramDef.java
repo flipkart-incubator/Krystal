@@ -9,6 +9,7 @@ public record VajramDef(
     List<VajramAnnotation> annotations,
     List<InputDecl> inputs,
     TypeRef outputType,
+    List<VajramAnnotation> outputAnnotations,
     @Nullable Callers callers,
     List<InjectionDecl> injections,
     List<ComputedFacet> computedFacets,

@@ -4,7 +4,7 @@ import vajram concatStrings from lang.strings;
 
 // Fans out getProductDetails over every product id, then joins the results.
 vajram getProductsDetails(List<string> productIds)
-    out string~ {
+    out string {
 
   string... details = ...getProductDetails(productId =... productIds);
 

@@ -50,7 +50,7 @@ Compiler extensions implement `VajramAnnotationProcessor` and register through J
 The bundled aggregating `outsideProcess` processor is selected by:
 
 ```vajram
-vajram hello() out string permit callers `outsideProcess public {
+vajram hello() out `now string permit callers `outsideProcess public {
   { "Hello" }
 }
 ```
