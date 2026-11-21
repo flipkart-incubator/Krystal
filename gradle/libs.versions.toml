@@ -1,9 +1,10 @@
 [versions]
+gradle = '8.14.7'
 assertj = '3.27.7'
 grpc = '1.83.1'
 guice = '7.0.0'
-jackson2 = '2.22'
-jackson3 = '3.1.6' #Latest LTS release
+jackson_annos = '2.21' #Latest LTS release
+jackson3 = '3.1.8' #Latest LTS release
 javapoet = '0.20.0'
 lombok = '1.18.46'
 mockito = '5.23.0'
@@ -32,7 +33,7 @@ slf4j-bom = { module = 'org.slf4j:slf4j-bom', version.ref = 'slf4j' }
 vertx-stack-depchain = { module = 'io.vertx:vertx-stack-depchain', version.ref = 'vertx' }
 
 # Libraries
-jackson-annotations = { module = 'com.fasterxml.jackson.core:jackson-annotations', version.ref = 'jackson2' }
+jackson-annotations = { module = 'com.fasterxml.jackson.core:jackson-annotations', version.ref = 'jackson_annos' }
 jackson-databind = { module = 'tools.jackson.core:jackson-databind', version.ref = 'jackson3' }
 jackson-dataformat-yaml = { module = 'tools.jackson.dataformat:jackson-dataformat-yaml', version.ref = 'jackson3' }
 jackson-datatype-guava = { module = 'tools.jackson.datatype:jackson-datatype-guava', version.ref = 'jackson3' }

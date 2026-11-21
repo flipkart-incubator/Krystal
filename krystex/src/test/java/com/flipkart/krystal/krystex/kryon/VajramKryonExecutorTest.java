@@ -386,12 +386,13 @@ class VajramKryonExecutorTest {
     CompletableFuture<String> multiHellos;
     requestContext.requestId("execute_multiResolverFanouts_permutesTheFanouts");
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
+    SingleThreadExecutor executorService = executorLease.get();
     try (VajramKryonExecutor krystexVajramExecutor =
         kGraph
             .build()
             .createExecutor(
                 KrystalExecutorConfig.builder()
-                    .executorService(executorLease.get())
+                    .executorService(executorService)
                     .kryonExecStrategy(kryonExecStrategy)
                     .graphTraversalStrategy(graphTraversalStrategy)
                     .configureWith(
@@ -411,6 +412,9 @@ class VajramKryonExecutorTest {
             Hello Friends of Firstname Lastname (user_id_1)! Firstname Lastname (user_id_1:friend_1), Firstname Lastname (user_id_1:friend_2)
             Hello Friends of Firstname Lastname (user_id_2)! Firstname Lastname (user_id_2:friend_1)
             Hello Friends of Firstname Lastname (user_id_2)! Firstname Lastname (user_id_2:friend_1), Firstname Lastname (user_id_2:friend_2)""");
+    // Wait for all commands to be finished so that we don't get Concurrent
+    // Modification Exceptions in kryonExecutionReport
+    executorService.submit(() -> {}).join();
     System.out.println(
         Json.MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(kryonExecutionReport));
   }
