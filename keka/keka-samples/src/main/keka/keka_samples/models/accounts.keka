@@ -31,7 +31,7 @@ vajram sameMoney(int64 amountMinor)
     out bool
     permit callers `outsideProcess public {
   Money first = new Money(amountMinor = amountMinor);
-  Money second = new Money(amountMinor = amountMinor; currency = "USD");
+  Money second = new Money(amountMinor = amountMinor; currency = "INR");
 
   ~{
     yield first eq second;

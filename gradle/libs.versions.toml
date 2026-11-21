@@ -1,4 +1,5 @@
 [versions]
+gradle = '8.14.7'
 assertj = '3.27.7'
 grpc = '1.83.1'
 guice = '7.0.0'

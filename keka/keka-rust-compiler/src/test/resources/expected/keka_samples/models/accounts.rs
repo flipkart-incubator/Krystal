@@ -30,7 +30,7 @@ pub mod describe_account {
                         owner: "ram".to_string(),
                         balance: Money {
                             amountMinor: 150,
-                            currency: "USD".to_string(),
+                            currency: "INR".to_string(),
                         },
                         nickname: crate::keka_rt::nil(),
                         tier: 1,
@@ -80,7 +80,7 @@ pub mod same_account {
                         owner: "a".to_string(),
                         balance: Money {
                             amountMinor: 1,
-                            currency: "USD".to_string(),
+                            currency: "INR".to_string(),
                         },
                         nickname: crate::keka_rt::nil(),
                         tier: 1,
@@ -102,7 +102,7 @@ pub mod same_account {
                         owner: "b".to_string(),
                         balance: Money {
                             amountMinor: 2,
-                            currency: "USD".to_string(),
+                            currency: "INR".to_string(),
                         },
                         nickname: crate::keka_rt::nil(),
                         tier: 1,
@@ -150,7 +150,7 @@ pub mod same_money {
                     let _inputs = &_inputs[__i];
                     __v.push(&*_arena.alloc(Money {
                         amountMinor: (*_inputs.amountMinor).clone(),
-                        currency: "USD".to_string(),
+                        currency: "INR".to_string(),
                     }));
                 }
                 __v
@@ -165,7 +165,7 @@ pub mod same_money {
                     let _inputs = &_inputs[__i];
                     __v.push(&*_arena.alloc(Money {
                         amountMinor: (*_inputs.amountMinor).clone(),
-                        currency: "USD".to_string(),
+                        currency: "INR".to_string(),
                     }));
                 }
                 __v
@@ -209,7 +209,7 @@ pub mod different_money {
                     let _inputs = &_inputs[__i];
                     __v.push(&*_arena.alloc(Money {
                         amountMinor: (*_inputs.amountMinor).clone(),
-                        currency: "USD".to_string(),
+                        currency: "INR".to_string(),
                     }));
                 }
                 __v
@@ -271,7 +271,7 @@ pub mod nickname_is_nil {
                         owner: "ram".to_string(),
                         balance: Money {
                             amountMinor: 1,
-                            currency: "USD".to_string(),
+                            currency: "INR".to_string(),
                         },
                         nickname: crate::keka_rt::nil(),
                         tier: 1,
@@ -321,7 +321,7 @@ pub mod nickname_is_set {
                         owner: "ram".to_string(),
                         balance: Money {
                             amountMinor: 1,
-                            currency: "USD".to_string(),
+                            currency: "INR".to_string(),
                         },
                         nickname: Ok("ramu".to_string()),
                         tier: 1,
