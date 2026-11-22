@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.exec;
 
+import static com.flipkart.krystal.facets.FacetType.INJECTION;
 import static com.flipkart.krystal.vajram.exec.Vajrams.getVajramDefClass;
 import static com.flipkart.krystal.vajram.exec.Vajrams.parseComputeFieldEdges;
 import static com.flipkart.krystal.vajram.exec.Vajrams.parseInputResolvers;
@@ -7,6 +8,7 @@ import static com.flipkart.krystal.vajram.exec.Vajrams.parseOutputLogicSources;
 import static com.flipkart.krystal.vajram.exec.Vajrams.parseOutputLogicTags;
 import static com.flipkart.krystal.vajram.exec.Vajrams.parseVajramId;
 import static com.flipkart.krystal.vajram.exec.Vajrams.parseVajramTags;
+import static com.flipkart.krystal.vajram.inputinjection.InputInjectionUtils.getQualifiers;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.joining;
@@ -28,6 +30,8 @@ import com.flipkart.krystal.vajram.utils.BatchingRules;
 import com.flipkart.krystal.vajram.utils.FacetDependencyGraph;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.lang.annotation.Annotation;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -117,6 +121,7 @@ public final class VajramDefinition {
     if (facetSpecs.isEmpty()) {
       return;
     }
+    validateNoMultipleQualifiers();
     FacetDependencyGraph graph = buildFacetDependencyGraph();
     graph
         .findCycle()
@@ -127,6 +132,22 @@ public final class VajramDefinition {
                       .formatted(vajramId, String.join(" → ", cycle)));
             });
     validateBatchingRules(graph);
+  }
+
+  private void validateNoMultipleQualifiers() {
+    for (FacetSpec facet : facetSpecs) {
+      if (!INJECTION.equals(facet.facetType())) {
+        continue;
+      }
+      Annotation[] qualifiers = getQualifiers(facet);
+      if (qualifiers.length > 1) {
+        throw new VajramDefinitionException(
+            ("Inject facet '%s' of vajram '%s' has more than one @jakarta.inject.Qualifier"
+                    + " annotation: %s. Only one @Qualifier annotation is allowed per inject"
+                    + " facet.")
+                .formatted(facet.name(), vajramId, Arrays.toString(qualifiers)));
+      }
+    }
   }
 
   private FacetDependencyGraph buildFacetDependencyGraph() {
